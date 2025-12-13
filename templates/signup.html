@@ -2,7 +2,7 @@
 
 {% block content %}
 <div class="auth-container">
-    <div class="auth-box">
+    <div class="auth-box" style="width: 350px;">
         <h2>Kayıt Ol</h2>
         {% if error %}
         <div class="error-msg">{{ error }}</div>
@@ -10,18 +10,46 @@
 
         <form action="/auth/signup" method="post">
             <div class="input-group-auth">
-                <i class="fa-solid fa-user"></i>
-                <input type="text" name="username" placeholder="Kullanıcı Adı Seç" required>
+                <i class="fa-solid fa-envelope"></i>
+                <input type="email" name="email" placeholder="E-posta Adresi" required>
             </div>
+
             <div class="input-group-auth">
                 <i class="fa-solid fa-lock"></i>
-                <input type="password" name="password" placeholder="Şifre Belirle" required>
+                <input type="password" name="password" id="pass1" placeholder="Şifre" required>
+                <i class="fa-solid fa-eye show-pass" onclick="togglePass('pass1', this)"></i>
             </div>
+
+            <div class="input-group-auth">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" name="password_confirm" id="pass2" placeholder="Şifre Tekrar" required>
+                <i class="fa-solid fa-eye show-pass" onclick="togglePass('pass2', this)"></i>
+            </div>
+
             <button type="submit" class="auth-btn red">Kayıt Ol</button>
         </form>
         <div class="auth-footer">
-            Zaten hesabın var mı? <a href="/login">Giriş Yap</a>
+            Hesabın var mı? <a href="/login">Giriş Yap</a>
         </div>
     </div>
 </div>
+<script>
+    function togglePass(inputId, icon) {
+        const input = document.getElementById(inputId);
+        if (input.type === "password") { input.type = "text"; icon.classList.remove("fa-eye"); icon.classList.add("fa-eye-slash"); }
+        else { input.type = "password"; icon.classList.remove("fa-eye-slash"); icon.classList.add("fa-eye"); }
+    }
+</script>
+<style>
+    .show-pass {
+        right: 15px;
+        cursor: pointer;
+        z-index: 10;
+        color: #aaa;
+    }
+
+    .show-pass:hover {
+        color: white;
+    }
+</style>
 {% endblock %}

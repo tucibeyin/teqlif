@@ -58,8 +58,11 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    username = Column(String, unique=True, index=True)
+    email = Column(String, unique=True, index=True, nullable=False) # Zorunlu
+    username = Column(String, unique=True, index=True, nullable=True) # BOŞ OLABİLİR
     password_hash = Column(String)
+    verification_code = Column(String)
+    is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
 
 # Tabloları oluştur
@@ -93,17 +96,17 @@ def create_access_token(data: dict):
 
 async def get_current_user(request: Request, db: Session = Depends(get_db)):
     token = request.cookies.get("access_token")
-    if not token:
-        return None
+    if not token: return None
     try:
         scheme, _, param = token.partition(" ")
         payload = jwt.decode(param, SECRET_KEY, algorithms=[ALGORITHM])
-        username: str = payload.get("sub")
-        if username is None: return None
+        email: str = payload.get("sub") # Username yerine email okuyoruz
+        if email is None: return None
     except JWTError:
         return None
     
-    user = db.query(User).filter(User.username == username).first()
+    # DB'den email ile bul
+    user = db.query(User).filter(User.email == email).first()
     return user
 
 # ==========================================
@@ -132,27 +135,65 @@ async def read_live(request: Request, user: Optional[User] = Depends(get_current
 
 # API: Kayıt Ol
 @app.post("/auth/signup")
-async def signup(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    db_user = db.query(User).filter(User.username == username).first()
-    if db_user:
-        return templates.TemplateResponse("signup.html", {"request": request, "error": "Bu kullanıcı adı zaten alınmış."})
+async def signup(
+    request: Request, 
+    email: str = Form(...), 
+    password: str = Form(...), 
+    password_confirm: str = Form(...),
+    db: Session = Depends(get_db)
+):
+    # 1. Şifre Kontrolü
+    if password != password_confirm:
+        return templates.TemplateResponse("signup.html", {"request": request, "error": "Şifreler uyuşmuyor."})
+
+    # 2. Email Kullanımda mı?
+    if db.query(User).filter(User.email == email).first():
+        return templates.TemplateResponse("signup.html", {"request": request, "error": "Bu e-posta adresi zaten kayıtlı."})
     
+    # 3. Kayıt (Username YOK)
     hashed_password = get_password_hash(password)
-    new_user = User(username=username, password_hash=hashed_password)
+    verification_code = str(random.randint(100000, 999999))
+    
+    new_user = User(
+        email=email,
+        username=None, # Başlangıçta boş
+        password_hash=hashed_password,
+        verification_code=verification_code,
+        is_verified=False
+    )
     db.add(new_user)
     db.commit()
     db.refresh(new_user)
     
-    return RedirectResponse(url="/login?msg=created", status_code=303)
+    # 4. Mail Gönder (Brevo)
+    # send_brevo_email(email, verification_code) # (Fonksiyonun kodda tanımlı olduğunu varsayıyorum)
+    print(f"DEBUG: Doğrulama Kodu: {verification_code}") # Test için konsola da yazalım
+    
+    return RedirectResponse(url=f"/verify?email={email}", status_code=303)
 
 # API: Giriş Yap
 @app.post("/auth/login")
-async def login(request: Request, username: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.username == username).first()
-    if not user or not verify_password(password, user.password_hash):
-        return templates.TemplateResponse("login.html", {"request": request, "error": "Kullanıcı adı veya şifre hatalı."})
+async def login(
+    request: Request, 
+    email: str = Form(...), # Username yerine Email alıyoruz
+    password: str = Form(...), 
+    db: Session = Depends(get_db)
+):
+    # Email'e göre kullanıcıyı bul
+    user = db.query(User).filter(User.email == email).first()
     
-    access_token = create_access_token(data={"sub": user.username})
+    if not user:
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Bu e-posta ile kayıtlı kullanıcı yok."})
+    
+    if not verify_password(password, user.password_hash):
+        return templates.TemplateResponse("login.html", {"request": request, "error": "Şifre hatalı."})
+    
+    if not user.is_verified:
+         return templates.TemplateResponse("login.html", {"request": request, "error": "Lütfen önce e-postanızı doğrulayın."})
+    
+    # Token oluştur (Identity olarak email kullanıyoruz artık)
+    access_token = create_access_token(data={"sub": user.email})
+    
     response = RedirectResponse(url="/", status_code=303)
     response.set_cookie(key="access_token", value=f"Bearer {access_token}", httponly=True)
     return response

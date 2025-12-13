@@ -12,18 +12,21 @@
 
 <body>
 
-    <header>
-        <a href="/" class="logo">TEQLIF<span>LIVE</span></a>
+<header>
+    <a href="/" class="logo">TEQLIF<span>LIVE</span></a>
 
-        <div class="nav-actions">
-            {% if user %}
-            <span class="user-welcome"><i class="fa-solid fa-user-circle"></i> {{ user.username }}</span>
-            <a href="/logout" class="nav-btn-text">Çıkış</a>
-            {% else %}
-            <a href="/login" class="nav-btn-text">Giriş Yap</a>
-            {% endif %}
-        </div>
-    </header>
+    <div class="nav-actions">
+        {% if user %}
+        <span class="user-welcome">
+            <i class="fa-solid fa-user-circle"></i>
+            {{ user.username if user.username else user.email }}
+        </span>
+        <a href="/logout" class="nav-btn-text">Çıkış</a>
+        {% else %}
+        <a href="/login" class="nav-btn-text">Giriş Yap</a>
+        {% endif %}
+    </div>
+</header>
 
     <main>
         {% block content %}{% endblock %}
