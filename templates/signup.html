@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h2>Kayıt Ol</h2>
+        {% if error %}
+        <div class="error-msg">{{ error }}</div>
+        {% endif %}
+
+        <form action="/auth/signup" method="post">
+            <div class="input-group-auth">
+                <i class="fa-solid fa-user"></i>
+                <input type="text" name="username" placeholder="Kullanıcı Adı Seç" required>
+            </div>
+            <div class="input-group-auth">
+                <i class="fa-solid fa-lock"></i>
+                <input type="password" name="password" placeholder="Şifre Belirle" required>
+            </div>
+            <button type="submit" class="auth-btn red">Kayıt Ol</button>
+        </form>
+        <div class="auth-footer">
+            Zaten hesabın var mı? <a href="/login">Giriş Yap</a>
+        </div>
+    </div>
+</div>
+{% endblock %}
