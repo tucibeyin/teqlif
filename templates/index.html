@@ -154,15 +154,15 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2000000 };
+                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1500000 };
                     mediaRecorder = new MediaRecorder(stream, options);
                     mediaRecorder.ondataavailable = (event) => {
                         if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // Backend 1 sn parça üretiyor, biz de 1 sn gönderiyoruz. SENKRONİZASYON BUDUR.
-                    mediaRecorder.start(1000);
+                    // 500ms (Yarım saniye) ile besle. Bu FFmpeg'i tok tutar ve akıcı yapar.
+                    mediaRecorder.start(500);
                 };
             } catch (err) { alert("Kamera hatası: " + err); }
         }
@@ -179,10 +179,10 @@
                     enableWorker: true,
                     lowLatencyMode: true,
                     backBufferLength: 30,
-                    // --- HIZLI AMA GÜVENLİ ---
-                    liveSyncDurationCount: 2,    // 2 parça (yani 2 saniye) geriden gel
+                    // Akıcılık için biraz tolerans tanıdık
+                    liveSyncDurationCount: 2,    // 2 parça (2-3 sn) geriden gel
                     liveMaxLatencyDurationCount: 4,
-                    maxLiveSyncPlaybackRate: 1.5,
+                    maxLiveSyncPlaybackRate: 1.2, // Hız değişimini yumuşat (Kekemeliği önler)
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);

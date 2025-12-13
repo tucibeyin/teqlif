@@ -40,36 +40,40 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. Hızlandırma Modu (1sn)...")
+    print("Yayıncı bağlandı. Akıcı Mod Aktif...")
 
     command = [
         "ffmpeg",
+        # --- GİRİŞ ZAMANLAMA DÜZELTMELERİ (Stutter Fix) ---
         "-f", "webm",
+        "-fflags", "+genpts",                  # Eksik zaman damgalarını üret
+        "-use_wallclock_as_timestamps", "1",   # Sunucu saatini baz al (Kesilmeyi önler)
         "-i", "pipe:0",
         
-        # --- TURBO VİDEO AYARLARI ---
+        # --- VİDEO İŞLEME ---
         "-vf", "scale=720:1280",      
         "-c:v", "libx264",
-        "-preset", "ultrafast",       # En hızlı mod (Gecikmeyi siler)
+        "-preset", "superfast",       # Ultrafast bazen kare atlar, Superfast daha akıcıdır
         "-tune", "zerolatency",
-        "-r", "30",                   
-        "-g", "30",                   # Her 1 saniyede bir Keyframe (ÖNEMLİ: hls_time ile aynı olmalı)
-        "-b:v", "2000k",              # 2 Mbps
-        "-bufsize", "4000k",          # Anlık dalgalanmayı yutacak kadar buffer
+        "-r", "30",                   # Çıktıyı 30 FPS'e zorla
+        "-g", "30",                   # Her 1 saniyede bir Keyframe
+        "-b:v", "1500k",              # 1.5 Mbps (Mobil için ideal akıcılık)
+        "-bufsize", "3000k",          
 
         "-c:a", "aac",
         "-ar", "44100",
-        "-af", "aresample=async=1",
+        "-af", "aresample=async=1",   # Ses senkronizasyonu
 
-        # --- LOW LATENCY HLS ---
+        # --- HLS AYARLARI ---
         "-f", "hls",
-        "-hls_time", "1",             # 1 Saniyelik Parçalar (Hızın sırrı)
-        "-hls_list_size", "3",        # Listede sadece son 3 saniye kalsın
+        "-hls_time", "1",             # 1 saniyelik parçalar
+        "-hls_list_size", "4",        # Oynatıcıya biraz pay bırak (Akıcılık için)
         "-hls_flags", "delete_segments",
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
     ]
 
+    # Hataları görmek için stderr=PIPE
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
     try:
