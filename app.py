@@ -49,17 +49,21 @@ async def broadcast_endpoint(websocket: WebSocket):
         "ffmpeg",
         "-i", "pipe:0",
         "-c:v", "libx264",
-        "-preset", "ultrafast",  # En hızlı sıkıştırma
-        "-tune", "zerolatency",  # Gecikme odaklı ayar
-        "-g", "30",              # Her 30 karede bir (1 saniyede) anahtar kare at (ÇOK ÖNEMLİ)
-        "-keyint_min", "30",     # Minimum keyframe aralığı
-        "-sc_threshold", "0",    # Sahne değişimini bekleme, zorla kes
+        "-preset", "superfast",   # Ultrafast yerine Superfast (Görüntü kalitesi artar, işlemciyi az yorar)
+        "-tune", "zerolatency",
+        
+        # --- DONMAYI ENGELLEYEN AYARLAR ---
+        "-b:v", "2500k",          # Bitrate'i 2500k'ya sabitle (Spike yapmasın)
+        "-maxrate", "2500k",      # Maksimum çıkabileceği hız
+        "-bufsize", "5000k",      # Tampon boyutu
+        "-g", "60",               # Her 2 saniyede bir anahtar kare (60 kare)
+        
         "-c:a", "aac",
         "-ar", "44100",
         "-f", "hls",
-        "-hls_time", "1",           # Parça süresi: 1 Saniye (Eskisi 2 idi)
-        "-hls_list_size", "3",      # Listede sadece son 3 parça tut (Eskisi 4 idi)
-        "-hls_flags", "delete_segments+omit_endlist", # Canlı yayın olduğu için 'bitti' deme
+        "-hls_time", "2",            # Parça süresi: 2 Saniye (Stabilite için ideal)
+        "-hls_list_size", "6",       # Listede 6 parça tut (İnternet yavaşlarsa kopmasın)
+        "-hls_flags", "delete_segments",
         "static/hls/stream.m3u8"
     ]
 

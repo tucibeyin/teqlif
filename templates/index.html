@@ -191,12 +191,11 @@
             var config = {
                 enableWorker: true,
                 lowLatencyMode: true,
-                backBufferLength: 90,
-                // Canlı yayının sadece 1.5 saniye gerisinden gelmeye çalış
-                liveSyncDurationCount: 1.5,
-                // Eğer çok geride kalırsan atla ve canlıya yetiş
-                liveMaxLatencyDurationCount: 3,
-                maxLiveSyncPlaybackRate: 2 // Geri kalırsa videoyu hızlandırarak yetiş
+
+                // Donmayı engelleyen kritik ayarlar:
+                liveSyncDurationCount: 3,     // Hedef: Canlı yayının 3 parça (yaklaşık 6 sn) gerisinden gel
+                liveMaxLatencyDurationCount: 5, // Eğer çok geride kalırsan atlama yap
+                maxLiveSyncPlaybackRate: 1.5, // Geri kalınca videoyu çok hafif hızlandır (Sesi bozmadan)
             };
 
             var hls = new Hls(config);
