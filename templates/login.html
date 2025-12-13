@@ -4,14 +4,14 @@
 <div class="auth-container">
     <div class="auth-box">
         <h2>Giriş Yap</h2>
-{% if request.query_params.get('msg') == 'verified' %}
-<div class="success-msg">
-    <i class="fa-solid fa-check-circle"></i> Tebrikler! Hesabınız doğrulandı.<br>Giriş yapabilirsiniz.
-</div>
-{% endif %}
-{% if error %}
-<div class="error-msg">{{ error }}</div>
-{% endif %}
+
+        {% if request.query_params.get('msg') == 'verified' %}
+        <div class="success-msg">
+            <i class="fa-solid fa-check-circle"></i> Tebrikler! Hesabınız doğrulandı.<br>Giriş yapabilirsiniz.
+        </div>
+        {% endif %}
+
+        {% if error %}
         <div class="error-msg">{{ error }}</div>
         {% endif %}
 
