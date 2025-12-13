@@ -8,7 +8,7 @@
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        /* --- MODERN TASARIM (CSS) --- */
+        /* --- GENEL AYARLAR --- */
         body {
             margin: 0;
             background: #000;
@@ -18,6 +18,7 @@
             color: white;
         }
 
+        /* Video Konteynerı: Ekranı kaplar ve içeriği ortalar */
         #video-container {
             position: absolute;
             top: 0;
@@ -28,30 +29,30 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            background: #1a1a1a;
+            background: #000;
         }
 
+        /* --- VİDEO AYARLARI (KRİTİK KISIM) --- */
         video {
             width: 100%;
             height: 100%;
+            /* contain: Görüntüyü ASLA kesmez, ekrana sığdırır. */
             object-fit: contain;
         }
 
+        /* Yayıncı için Ayna Efekti + Tam Görünüm */
         video.broadcaster {
             transform: scaleX(-1);
-            object-fit: cover;
         }
 
-        /* Yayıncı tam ekran doldurur */
-
-        /* Üst Bilgi Çubuğu */
+        /* --- ARAYÜZ (UI) --- */
         .top-bar {
             position: absolute;
             top: 0;
             left: 0;
             width: 100%;
             padding: 20px;
-            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
             z-index: 5;
             display: flex;
             justify-content: space-between;
@@ -70,6 +71,7 @@
             align-items: center;
             gap: 5px;
             animation: pulse 2s infinite;
+            text-shadow: none;
         }
 
         @keyframes pulse {
@@ -86,7 +88,6 @@
             }
         }
 
-        /* Ses Açma Butonu (Modern) */
         #unmuteBtn {
             pointer-events: auto;
             background: rgba(255, 255, 255, 0.2);
@@ -105,7 +106,6 @@
             background: rgba(255, 255, 255, 0.4);
         }
 
-        /* Ana Başlatma Butonları */
         .center-controls {
             position: absolute;
             top: 50%;
@@ -146,7 +146,6 @@
             background: linear-gradient(45deg, #2193b0, #6dd5ed);
         }
 
-        /* Alt Arayüz (Chat ve Kontroller) */
         .ui-layer {
             position: absolute;
             bottom: 0;
@@ -155,7 +154,6 @@
             height: 40%;
             z-index: 4;
             pointer-events: none;
-            /* Tıklamalar arkaya geçmesin, sadece child elementler tıklanabilsin */
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
@@ -169,9 +167,8 @@
             overflow-y: auto;
             margin-bottom: 15px;
             pointer-events: auto;
-            mask-image: linear-gradient(to bottom, transparent, black 10%);
-            /* Üstü silik chat */
             -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%);
+            mask-image: linear-gradient(to bottom, transparent, black 10%);
         }
 
         .msg {
@@ -185,6 +182,7 @@
             font-size: 14px;
             animation: slideIn 0.3s ease;
             border-left: 3px solid #f1c40f;
+            text-shadow: 1px 1px 2px black;
         }
 
         @keyframes slideIn {
@@ -251,7 +249,6 @@
             color: white;
         }
 
-        /* Kaydırma çubuğu gizleme */
         #chat-box::-webkit-scrollbar {
             width: 4px;
         }
@@ -294,7 +291,6 @@
     </div>
 
     <script>
-        // --- DEĞİŞMEYEN SAĞLAM MANTIK (CORE LOGIC) ---
         let wsBroadcast;
         let mediaRecorder;
 
@@ -306,6 +302,7 @@
 
         async function startBroadcasting() {
             try {
+                // Kamera 720p Dikey
                 const constraints = {
                     video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } },
                     audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
@@ -315,9 +312,8 @@
                 const videoEl = document.getElementById('localVideo');
                 videoEl.classList.add('broadcaster');
                 videoEl.srcObject = stream;
-                videoEl.muted = true;
+                videoEl.muted = true; // Yayıncı kendini duymaz
 
-                // UI Değişimleri
                 document.querySelector('.center-controls').style.display = 'none';
                 document.getElementById('uiLayer').style.display = 'flex';
 
@@ -325,7 +321,6 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    // 1500k Bitrate (Altın Oran)
                     const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1500000 };
                     mediaRecorder = new MediaRecorder(stream, options);
 
@@ -334,7 +329,6 @@
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // 1000ms Senkronizasyon
                     mediaRecorder.start(1000);
                 };
 
@@ -344,7 +338,7 @@
         function startWatching() {
             document.querySelector('.center-controls').style.display = 'none';
             document.getElementById('uiLayer').style.display = 'flex';
-            document.getElementById('unmuteBtn').style.display = 'block'; // Ses butonunu göster
+            document.getElementById('unmuteBtn').style.display = 'block';
 
             const videoEl = document.getElementById('localVideo');
 
@@ -358,7 +352,7 @@
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    videoEl.play().catch(e => console.log("Otomatik oynatma engellendi, buton bekleniyor."));
+                    videoEl.play().catch(e => console.log("Otomatik oynatma kısıtlaması:", e));
                 });
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
                 videoEl.src = '/static/hls/stream.m3u8';
@@ -366,13 +360,11 @@
             }
         }
 
-        // URL Kontrolü (?watch=true)
         if (location.search.includes('watch=true')) {
             document.getElementById('broadcastBtn').style.display = 'none';
-            document.getElementById('watchBtn').style.display = 'flex'; // Block yerine flex (hizalama için)
+            document.getElementById('watchBtn').style.display = 'flex';
         }
 
-        // Chat Sistemi
         const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
         const wsChat = new WebSocket(proto + "//" + location.host + "/ws/chat");
 
@@ -393,11 +385,8 @@
             }
         }
 
-        // Enter tuşu ile mesaj gönderme
         document.getElementById("msgInput").addEventListener("keypress", function (event) {
-            if (event.key === "Enter") {
-                sendChat();
-            }
+            if (event.key === "Enter") { sendChat(); }
         });
     </script>
 </body>
