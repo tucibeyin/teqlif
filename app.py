@@ -9,7 +9,7 @@ from typing import List
 
 app = FastAPI()
 
-# Temizlik
+# Temizlik ve Hazırlık
 os.system("rm -rf static/hls/*")
 os.makedirs("static/hls", exist_ok=True)
 
@@ -40,40 +40,45 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. Akıcı Mod Aktif...")
+    print("Yayıncı bağlandı. FPS Sabitleme Modu...")
 
     command = [
         "ffmpeg",
-        # --- GİRİŞ ZAMANLAMA DÜZELTMELERİ (Stutter Fix) ---
+        # --- GİRİŞ AYARLARI ---
         "-f", "webm",
-        "-fflags", "+genpts",                  # Eksik zaman damgalarını üret
-        "-use_wallclock_as_timestamps", "1",   # Sunucu saatini baz al (Kesilmeyi önler)
         "-i", "pipe:0",
         
-        # --- VİDEO İŞLEME ---
-        "-vf", "scale=720:1280",      
+        # --- VİDEO FİLTRELERİ (AKICILIK İÇİN KRİTİK) ---
+        # scale: Boyutu ayarlar
+        # fps=30: Eksik kareleri doldurur, fazlasını atar -> SABİT AKIŞ SAĞLAR
+        "-vf", "scale=720:1280,fps=30", 
+        
         "-c:v", "libx264",
-        "-preset", "superfast",       # Ultrafast bazen kare atlar, Superfast daha akıcıdır
+        "-preset", "ultrafast",       # Gecikme olmasın
         "-tune", "zerolatency",
-        "-r", "30",                   # Çıktıyı 30 FPS'e zorla
-        "-g", "30",                   # Her 1 saniyede bir Keyframe
-        "-b:v", "1500k",              # 1.5 Mbps (Mobil için ideal akıcılık)
-        "-bufsize", "3000k",          
+        
+        # --- KALİTE VE BUFFER ---
+        "-g", "30",                   # 1 Saniyede 1 Keyframe (HLS süresiyle eşleşir)
+        "-keyint_min", "30",          # Minimum aralık da 30 olsun
+        "-sc_threshold", "0",         # Sahne değişiminde ekstra keyframe atma (Stabilite için)
+        "-b:v", "2500k",              # 2.5 Mbps (Kaliteli görüntü)
+        "-maxrate", "3000k",
+        "-bufsize", "6000k",
 
+        # --- SES ---
         "-c:a", "aac",
         "-ar", "44100",
-        "-af", "aresample=async=1",   # Ses senkronizasyonu
+        "-af", "aresample=async=1",   # Ses kaymasını engelle
 
-        # --- HLS AYARLARI ---
+        # --- HLS ÇIKTI ---
         "-f", "hls",
         "-hls_time", "1",             # 1 saniyelik parçalar
-        "-hls_list_size", "4",        # Oynatıcıya biraz pay bırak (Akıcılık için)
-        "-hls_flags", "delete_segments",
+        "-hls_list_size", "3",        # 3 parça tut (3-4 sn gecikme hediye eder)
+        "-hls_flags", "delete_segments+omit_endlist",
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
     ]
 
-    # Hataları görmek için stderr=PIPE
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
     try:

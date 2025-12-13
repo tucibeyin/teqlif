@@ -141,7 +141,11 @@
 
         async function startBroadcasting() {
             try {
-                const constraints = { video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } }, audio: { echoCancellation: true, noiseSuppression: true } };
+                const constraints = {
+                    video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } },
+                    audio: { echoCancellation: true, noiseSuppression: true }
+                };
+
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 const videoEl = document.getElementById('localVideo');
                 videoEl.classList.add('broadcaster');
@@ -154,16 +158,19 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1500000 };
+                    // Bitrate 2.5Mbps - Kaliteli
+                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2500000 };
                     mediaRecorder = new MediaRecorder(stream, options);
+
                     mediaRecorder.ondataavailable = (event) => {
                         if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // 500ms (Yarım saniye) ile besle. Bu FFmpeg'i tok tutar ve akıcı yapar.
-                    mediaRecorder.start(500);
+                    // 1000ms gönderim -> 1000ms FFmpeg işleme (Mükemmel uyum)
+                    mediaRecorder.start(1000);
                 };
+
             } catch (err) { alert("Kamera hatası: " + err); }
         }
 
@@ -178,15 +185,14 @@
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    backBufferLength: 30,
-                    // Akıcılık için biraz tolerans tanıdık
-                    liveSyncDurationCount: 2,    // 2 parça (2-3 sn) geriden gel
+                    // --- DÜŞÜK GECİKME İÇİN EN İYİ AYARLAR ---
+                    liveSyncDurationCount: 2,    // 2 parça (2 sn) geriden gel
                     liveMaxLatencyDurationCount: 4,
-                    maxLiveSyncPlaybackRate: 1.2, // Hız değişimini yumuşat (Kekemeliği önler)
+                    maxLiveSyncPlaybackRate: 1.5,
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play());
+                hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(e => console.log(e)));
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
                 videoEl.src = '/static/hls/stream.m3u8';
                 videoEl.play();
@@ -208,6 +214,7 @@
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         };
+
         function sendChat() {
             const input = document.getElementById("msgInput");
             if (input.value) { wsChat.send(input.value); input.value = ""; }
