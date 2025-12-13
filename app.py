@@ -9,8 +9,10 @@ from typing import List
 
 app = FastAPI()
 
-# RAM Disk Klasörü
+# Temizlik ve Kurulum
+os.system("rm -rf static/hls/*")
 os.makedirs("static/hls", exist_ok=True)
+
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
@@ -38,39 +40,37 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. FFmpeg başlatılıyor...")
+    print("Yayıncı bağlandı. Low Latency Modu Aktif...")
 
     command = [
         "ffmpeg",
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- GÖRÜNTÜ VE HIZ AYARLARI ---
-        "-vf", "scale=720:1280",      # 720p Dikey Standart
+        # --- HIZ İÇİN OPTİMİZE EDİLMİŞ AYARLAR ---
+        "-vf", "scale=720:1280",
         "-c:v", "libx264",
-        "-preset", "superfast",       # Ultrafast bazen kaliteyi bozar, superfast daha dengelidir
-        "-tune", "zerolatency",
+        "-preset", "ultrafast",       # En yüksek hız
+        "-tune", "zerolatency",       # Gecikme yok
         "-r", "30",                   # 30 FPS
-        "-g", "60",                   # Keyframe aralığı (Stabilite için artırdık)
-        "-b:v", "2500k",              # Kalite için bitrate artırdık
-        "-maxrate", "3000k",
-        "-bufsize", "6000k",          # Tamponu genişlettik (Donmayı önler!)
+        "-g", "30",                   # Her 1 saniyede bir Keyframe (KRİTİK)
+        "-b:v", "2000k",              # 2 Mbps (Görüntü net olsun)
+        "-bufsize", "4000k",          
 
-        # --- SES AYARLARI ---
         "-c:a", "aac",
         "-ar", "44100",
-        "-af", "aresample=async=1",   # Ses kaymasını önle
+        "-af", "aresample=async=1",
 
-        # --- HLS AYARLARI ---
+        # --- LOW LATENCY HLS ---
         "-f", "hls",
-        "-hls_time", "1",             # Parça süresi 1 saniye
-        "-hls_list_size", "4",        # Güvenlik için son 4 parça tutulsun
+        "-hls_time", "1",             # 1 Saniyelik Parçalar (Eskisi 2 idi)
+        "-hls_list_size", "3",        # Listede sadece son 3 saniye kalsın
         "-hls_flags", "delete_segments",
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
     ]
 
-    stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
     try:
         while True:

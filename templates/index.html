@@ -28,17 +28,14 @@
             background: #000;
         }
 
-        /* İZLEYİCİ: Görüntüyü sığdır */
         video {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
-        /* YAYINCI: Aynalama yap ve Sığdır */
         video.broadcaster {
             transform: scaleX(-1);
-            object-fit: contain;
             border: 2px solid #e74c3c;
         }
 
@@ -116,7 +113,6 @@
             pointer-events: auto;
             cursor: pointer;
             border: none;
-            box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
         }
     </style>
 </head>
@@ -145,19 +141,7 @@
 
         async function startBroadcasting() {
             try {
-                const constraints = {
-                    video: {
-                        facingMode: "user",
-                        width: { ideal: 720 },
-                        height: { ideal: 1280 },
-                        frameRate: { ideal: 30 }
-                    },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true
-                    }
-                };
-
+                const constraints = { video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } }, audio: { echoCancellation: true, noiseSuppression: true } };
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 const videoEl = document.getElementById('localVideo');
                 videoEl.classList.add('broadcaster');
@@ -170,21 +154,18 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 3000000 };
+                    // Bitrate'i 2Mbps yaptik, görüntü net olsun
+                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2000000 };
                     mediaRecorder = new MediaRecorder(stream, options);
-
                     mediaRecorder.ondataavailable = (event) => {
                         if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // STABİLİTE İÇİN: 1 Saniyede bir gönder (FFmpeg bunu sever)
-                    mediaRecorder.start(1000);
+                    // 250ms veri gönderimi + 1s FFmpeg parçalama = Düşük Gecikme
+                    mediaRecorder.start(250);
                 };
-
-            } catch (err) {
-                alert("Kamera hatası: " + err);
-            }
+            } catch (err) { alert("Kamera hatası: " + err); }
         }
 
         function startWatching() {
@@ -199,16 +180,14 @@
                     enableWorker: true,
                     lowLatencyMode: true,
                     backBufferLength: 30,
-                    // DENGELİ AYARLAR (Donmayı Keser)
-                    liveSyncDurationCount: 3,    // Canlı yayının 3 parça (3-4 sn) gerisinden gel
-                    liveMaxLatencyDurationCount: 5,
-                    maxLiveSyncPlaybackRate: 1.2, // Çok hızlı sarma, sesi bozmasın
+                    // --- AGRESİF HIZ AYARLARI ---
+                    liveSyncDurationCount: 1.5,   // Canlı yayının 1.5 saniye gerisinden gel
+                    liveMaxLatencyDurationCount: 3,
+                    maxLiveSyncPlaybackRate: 2.0, // Geri kalırsan 2 kat hızla yetiş
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    videoEl.play().catch(e => console.log("Oynatma hatası:", e));
-                });
+                hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play());
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
                 videoEl.src = '/static/hls/stream.m3u8';
                 videoEl.play();
@@ -230,7 +209,6 @@
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         };
-
         function sendChat() {
             const input = document.getElementById("msgInput");
             if (input.value) { wsChat.send(input.value); input.value = ""; }
