@@ -47,16 +47,19 @@ async def broadcast_endpoint(websocket: WebSocket):
     # FFmpeg Komutu: Girdiyi "pipe:0" (Python'dan) al
     command = [
         "ffmpeg",
-        "-i", "pipe:0",           # Girdi: Standart Input (WebSocket'ten gelen)
-        "-c:v", "libx264",        # Video Codec
-        "-preset", "ultrafast",   # En hızlı işleme
-        "-tune", "zerolatency",   # Düşük gecikme
-        "-c:a", "aac",            # Ses Codec
+        "-i", "pipe:0",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",  # En hızlı sıkıştırma
+        "-tune", "zerolatency",  # Gecikme odaklı ayar
+        "-g", "30",              # Her 30 karede bir (1 saniyede) anahtar kare at (ÇOK ÖNEMLİ)
+        "-keyint_min", "30",     # Minimum keyframe aralığı
+        "-sc_threshold", "0",    # Sahne değişimini bekleme, zorla kes
+        "-c:a", "aac",
         "-ar", "44100",
-        "-f", "hls",              # Çıktı formatı: HLS
-        "-hls_time", "2",         # 2 saniyelik parçalar
-        "-hls_list_size", "4",    # Listede max 4 parça
-        "-hls_flags", "delete_segments",
+        "-f", "hls",
+        "-hls_time", "1",           # Parça süresi: 1 Saniye (Eskisi 2 idi)
+        "-hls_list_size", "3",      # Listede sadece son 3 parça tut (Eskisi 4 idi)
+        "-hls_flags", "delete_segments+omit_endlist", # Canlı yayın olduğu için 'bitti' deme
         "static/hls/stream.m3u8"
     ]
 

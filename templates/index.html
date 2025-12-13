@@ -177,27 +177,40 @@
             }
         }
 
-        // İZLEYİCİ KISMI
-        function startWatching() {
-            document.getElementById('watchBtn').style.display = 'none';
-            document.getElementById('broadcastBtn').style.display = 'none';
-            document.getElementById('uiLayer').style.display = 'flex';
+    // İZLEYİCİ KISMI
+    function startWatching() {
+        document.getElementById('watchBtn').style.display = 'none';
+        document.getElementById('broadcastBtn').style.display = 'none';
+        document.getElementById('uiLayer').style.display = 'flex';
 
-            const videoEl = document.getElementById('localVideo');
-            videoEl.classList.add('viewer-mode'); // Aynalamayı kapat
+        const videoEl = document.getElementById('localVideo');
+        videoEl.classList.add('viewer-mode');
 
-            if (Hls.isSupported()) {
-                var hls = new Hls();
-                hls.loadSource('/static/hls/stream.m3u8');
-                hls.attachMedia(videoEl);
-                hls.on(Hls.Events.MANIFEST_PARSED, function () {
-                    videoEl.play();
-                });
-            } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-                videoEl.src = '/static/hls/stream.m3u8';
+        if (Hls.isSupported()) {
+            // --- DÜŞÜK GECİKME AYARLARI ---
+            var config = {
+                enableWorker: true,
+                lowLatencyMode: true,
+                backBufferLength: 90,
+                // Canlı yayının sadece 1.5 saniye gerisinden gelmeye çalış
+                liveSyncDurationCount: 1.5,
+                // Eğer çok geride kalırsan atla ve canlıya yetiş
+                liveMaxLatencyDurationCount: 3,
+                maxLiveSyncPlaybackRate: 2 // Geri kalırsa videoyu hızlandırarak yetiş
+            };
+
+            var hls = new Hls(config);
+            hls.loadSource('/static/hls/stream.m3u8');
+            hls.attachMedia(videoEl);
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
                 videoEl.play();
-            }
+            });
+        } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+            // iPhone (Safari) için native player
+            videoEl.src = '/static/hls/stream.m3u8';
+            videoEl.play();
         }
+    }
 
         // Eğer URL'de ?watch=true varsa direkt izleme moduna geç (Basit mantık)
         if (window.location.search.includes('watch=true')) {
