@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="hero-container">
+    <div class="hero-title">Canlı Yayına Başla</div>
+    <div class="hero-desc">Dünyayla anlık bağlantı kur.</div>
+
+    <div class="action-cards">
+        <a href="/live?mode=broadcast" class="card red">
+            <i class="fa-solid fa-video"></i>
+            <div>Yayın Aç</div>
+        </a>
+
+        <a href="/live?mode=watch" class="card blue">
+            <i class="fa-solid fa-eye"></i>
+            <div>İzle</div>
+        </a>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Teqlif Live</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+</head>
+
+<body>
+
+    <header>
+        <a href="/" class="logo">TEQLIF<span>LIVE</span></a>
+        <button class="nav-btn" onclick="location.href='/'"><i class="fa-solid fa-house"></i></button>
+    </header>
+
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <a href="/" class="active"><i class="fa-solid fa-house"></i></a>
+        <a href="#"><i class="fa-solid fa-compass"></i></a>
+        <a href="#"><i class="fa-regular fa-user"></i></a>
+    </footer>
+
+    {% block scripts %}{% endblock %}
+</body>
+
+</html>

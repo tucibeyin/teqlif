@@ -9,13 +9,28 @@ from typing import List
 
 app = FastAPI()
 
-# Temizlik
+# 1. TEMİZLİK
 os.system("rm -rf static/hls/*")
 os.makedirs("static/hls", exist_ok=True)
+os.makedirs("static/css", exist_ok=True) # CSS klasörünü oluştur
 
+# 2. STATİK DOSYALAR (CSS ve HLS için)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
+# --- ROUTER (SAYFA YÖNLENDİRMELERİ) ---
+
+# Ana Sayfa (Home)
+@app.get("/", response_class=HTMLResponse)
+async def read_home(request: Request):
+    return templates.TemplateResponse("home.html", {"request": request})
+
+# Yayın Sayfası (Live)
+@app.get("/live", response_class=HTMLResponse)
+async def read_live(request: Request):
+    return templates.TemplateResponse("live.html", {"request": request})
+
+# --- GERİSİ AYNI (WEBSOCKET & FFMPEG) ---
 stream_process = None
 
 class ConnectionManager:
@@ -32,22 +47,17 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-@app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request})
-
 @app.websocket("/ws/broadcast")
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. Görüntü + Ses Modu...")
+    print("Yayıncı bağlandı...")
 
     command = [
         "ffmpeg",
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- GÖRÜNTÜ (Aynı kalıyor) ---
         "-vf", "scale=720:1280,fps=30",
         "-c:v", "libx264",
         "-preset", "superfast",
@@ -57,14 +67,12 @@ async def broadcast_endpoint(websocket: WebSocket):
         "-bufsize", "3000k",
         "-g", "30",
 
-        # --- SES KALİTE AYARLARI (GÜNCELLENDİ) ---
         "-c:a", "aac",
-        "-ar", "48000",               # 44100 yerine 48000 Hz (Daha net)
-        "-ac", "2",                   # Stereo
-        "-b:a", "192k",               # 128k yerine 192k (Stüdyo kalitesi)
+        "-ar", "48000",
+        "-ac", "2",
+        "-b:a", "192k",
         "-af", "aresample=async=1",   
 
-        # --- HLS ---
         "-f", "hls",
         "-hls_time", "1",
         "-hls_list_size", "4",

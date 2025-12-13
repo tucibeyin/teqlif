@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="live-badge"><i class="fa-solid fa-circle"></i> CANLI</div>
+
+<div id="video-container">
+    <video id="localVideo" autoplay muted playsinline></video>
+    <button id="unmuteBtn" onclick="enableAudio()"><i class="fa-solid fa-volume-high"></i> Sesi Aç</button>
+</div>
+
+<div class="ui-layer">
+    <div id="chat-box"></div>
+    <div class="controls">
+        <input type="text" id="msgInput" placeholder="Yorum yaz...">
+        <button class="send-btn" onclick="sendChat()"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    // URL'den modu al (broadcast mi, watch mı?)
+    const urlParams = new URLSearchParams(window.location.search);
+    const mode = urlParams.get('mode'); // 'broadcast' veya 'watch'
+
+    let wsBroadcast;
+    let mediaRecorder;
+
+    function enableAudio() {
+        const videoEl = document.getElementById('localVideo');
+        videoEl.muted = false;
+        document.getElementById('unmuteBtn').style.display = 'none';
+    }
+
+    // --- YAYINCI KODLARI ---
+    async function startBroadcasting() {
+        try {
+            const constraints = {
+                video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } },
+                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000, channelCount: 2 }
+            };
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const videoEl = document.getElementById('localVideo');
+            videoEl.classList.add('broadcaster');
+            videoEl.srcObject = stream;
+            videoEl.muted = true;
+
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
+
+            wsBroadcast.onopen = () => {
+                const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1500000, audioBitsPerSecond: 128000 };
+                mediaRecorder = new MediaRecorder(stream, options);
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) wsBroadcast.send(event.data);
+                };
+                mediaRecorder.start(1000);
+            };
+        } catch (err) { alert("Hata: " + err); window.location.href = '/'; }
+    }
+
+    // --- İZLEYİCİ KODLARI ---
+    function startWatching() {
+        document.getElementById('unmuteBtn').style.display = 'block';
+        const videoEl = document.getElementById('localVideo');
+
+        if (Hls.isSupported()) {
+            const hls = new Hls({ enableWorker: true, lowLatencyMode: true, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4 });
+            hls.loadSource('/static/hls/stream.m3u8');
+            hls.attachMedia(videoEl);
+            hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(e => console.log(e)));
+        } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+            videoEl.src = '/static/hls/stream.m3u8';
+            videoEl.play();
+        }
+    }
+
+    // Mod Seçimi
+    if (mode === 'broadcast') {
+        startBroadcasting();
+    } else {
+        startWatching();
+    }
+
+    // --- CHAT ---
+    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const wsChat = new WebSocket(proto + "//" + location.host + "/ws/chat");
+    wsChat.onmessage = (e) => {
+        const box = document.getElementById('chat-box');
+        const div = document.createElement('div');
+        div.className = 'msg';
+        div.innerHTML = `<span>Misafir:</span> ${e.data}`;
+        box.appendChild(div);
+        box.scrollTop = box.scrollHeight;
+    };
+    function sendChat() {
+        const input = document.getElementById("msgInput");
+        if (input.value) { wsChat.send(input.value); input.value = ""; }
+    }
+    document.getElementById("msgInput").addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat(); });
+
+</script>
+{% endblock %}
