@@ -9,7 +9,6 @@ from typing import List
 
 app = FastAPI()
 
-# RAM Disk Ayarı
 os.makedirs("static/hls", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -42,34 +41,30 @@ async def broadcast_endpoint(websocket: WebSocket):
 
     command = [
         "ffmpeg",
-        "-f", "webm",                 # Girdi Formatı
-        "-i", "pipe:0",               # WebSocket'ten oku
+        "-f", "webm",
+        "-i", "pipe:0",
         
-        # --- VİDEO İŞLEME (Sabitleme) ---
-        "-vf", "scale=720:1280",      # Zorla 720p Dikey yap (Kırpılmayı önler)
+        "-vf", "scale=720:1280", 
         "-c:v", "libx264",
-        "-preset", "ultrafast",       # Hız için ultrafast
+        "-preset", "ultrafast",
         "-tune", "zerolatency",
-        "-r", "30",                   # Çıktıyı 30 FPS'e sabitle
-        "-g", "60",                   # 2 saniyede bir keyframe
-        "-b:v", "2000k",              # Bitrate sınırı
+        "-r", "30",
+        "-g", "30",                   # Her 1 saniyede bir Keyframe (Önemli!)
+        "-b:v", "2000k",
         "-bufsize", "4000k",
 
-        # --- SES SENKRONİZASYONU (Donmayı önler) ---
         "-c:a", "aac",
         "-ar", "44100",
-        "-af", "aresample=async=1",   # Ses kaymasını otomatik düzelt (Kritik!)
+        "-af", "aresample=async=1",
 
-        # --- HLS ÇIKTI ---
         "-f", "hls",
-        "-hls_time", "1",             # 1 Saniyelik parçalar (Hız için)
-        "-hls_list_size", "4", 
+        "-hls_time", "1",             # 1 saniyelik parçalar
+        "-hls_list_size", "3",        # Listede SADECE son 3 parça olsun (Gecikmeyi zorla düşürür)
         "-hls_flags", "delete_segments",
         "static/hls/stream.m3u8"
     ]
 
-    stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL) 
-    # stderr=DEVNULL yaptık ki loglar terminali kilitlemesin
+    stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     try:
         while True:
