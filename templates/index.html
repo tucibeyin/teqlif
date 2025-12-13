@@ -9,7 +9,7 @@
     <style>
         body {
             margin: 0;
-            background: #000;
+            background: #111;
             font-family: sans-serif;
             overflow: hidden;
             height: 100vh;
@@ -22,18 +22,25 @@
             width: 100%;
             height: 100%;
             z-index: 1;
-            background: black;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #000;
         }
 
+        /* İZLEYİCİ: Görüntüyü sığdır (Kırpma yapma) */
         video {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
+        /* YAYINCI: Aynalama yap ve Sığdır (Saç kesilmez, tam kadraj görünür) */
         video.broadcaster {
-            object-fit: cover;
             transform: scaleX(-1);
+            object-fit: contain;
+            border: 2px solid #333;
+            /* Yayıncı olduğunu belli et */
         }
 
         .ui-layer {
@@ -101,7 +108,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            padding: 15px 30px;
+            padding: 20px 40px;
             font-size: 1.2rem;
             background: #e74c3c;
             color: white;
@@ -110,6 +117,7 @@
             pointer-events: auto;
             cursor: pointer;
             border: none;
+            box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
         }
     </style>
 </head>
@@ -138,10 +146,20 @@
 
         async function startBroadcasting() {
             try {
+                // Kamera Ayarları
                 const constraints = {
-                    video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } },
-                    audio: { echoCancellation: true, noiseSuppression: true }
+                    video: {
+                        facingMode: "user",
+                        width: { ideal: 720 },  // 720p iste
+                        height: { ideal: 1280 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    }
                 };
+
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 const videoEl = document.getElementById('localVideo');
                 videoEl.classList.add('broadcaster');
@@ -156,36 +174,42 @@
                 wsBroadcast.onopen = () => {
                     const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2500000 };
                     mediaRecorder = new MediaRecorder(stream, options);
+
                     mediaRecorder.ondataavailable = (event) => {
                         if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // 1000ms (1 saniye) gönderiyoruz. FFmpeg 1 sn parça üretiyor, tam eşleşiyor!
-                    mediaRecorder.start(1000);
+                    // HIZ AYARI: 250ms'de bir gönder. (Gecikmeyi düşürür)
+                    mediaRecorder.start(250);
                 };
-            } catch (err) { alert("Kamera hatası: " + err); }
+
+            } catch (err) {
+                alert("Kamera hatası: " + err);
+            }
         }
 
         function startWatching() {
             document.getElementById('watchBtn').style.display = 'none';
             document.getElementById('broadcastBtn').style.display = 'none';
             document.getElementById('uiLayer').style.display = 'flex';
+
             const videoEl = document.getElementById('localVideo');
 
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
-                    lowLatencyMode: true,
-                    backBufferLength: 90,
-                    // --- KRİTİK HIZ AYARLARI ---
-                    liveSyncDurationCount: 1.5, // Canlı yayın ucundan sadece 1.5 parça geride kal (Çok agresif)
-                    liveMaxLatencyDurationCount: 3, // Eğer 3 parça geriye düşerse...
-                    maxLiveSyncPlaybackRate: 1.5, // ...videoyu 1.5x hızlandır ve yetiş!
+                    lowLatencyMode: true,        // Düşük Gecikme Modu
+                    backBufferLength: 30,        // Eski veriyi hemen sil
+                    liveSyncDurationCount: 1.5,  // Canlı yayının sadece 1.5 parça gerisinden gel (Agresif)
+                    liveMaxLatencyDurationCount: 3,
+                    maxLiveSyncPlaybackRate: 2.0, // Geri kalırsan 2x hızla yetiş
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play());
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    videoEl.play().catch(e => console.log("Oynatma hatası:", e));
+                });
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
                 videoEl.src = '/static/hls/stream.m3u8';
                 videoEl.play();
@@ -207,6 +231,7 @@
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         };
+
         function sendChat() {
             const input = document.getElementById("msgInput");
             if (input.value) { wsChat.send(input.value); input.value = ""; }
