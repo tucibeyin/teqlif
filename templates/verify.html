@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-box">
+        <h2>Doğrulama</h2>
+        <p style="color:#aaa; font-size:0.9rem; margin-bottom:20px;">
+            <b>{{ email }}</b> adresine gönderilen kodu girin.
+            <br><span style="font-size: 0.8rem; color: #666;">(Spam klasörünü kontrol etmeyi unutmayın)</span>
+        </p>
+
+        {% if error %}
+        <div class="error-msg">{{ error }}</div>
+        {% endif %}
+
+        <form action="/auth/verify" method="post">
+            <input type="hidden" name="email" value="{{ email }}">
+
+            <div class="input-group-auth">
+                <i class="fa-solid fa-key"></i>
+                <input type="text" name="code" placeholder="Kodu Girin" maxlength="6"
+                    style="text-align:center; letter-spacing: 5px; font-size: 1.2rem; font-weight: bold;" required>
+            </div>
+
+            <button type="submit" class="auth-btn">Doğrula</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
