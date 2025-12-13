@@ -40,37 +40,37 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. AGRESİF DÜŞÜK GECİKME MODU...")
+    print("Yayıncı bağlandı. Hafifletilmiş Hız Modu (1000k)...")
 
     command = [
         "ffmpeg",
+        # --- GİRİŞ ZAMANLAMA DÜZELTMESİ (Kesilmeyi Önler) ---
         "-f", "webm",
+        "-fflags", "+genpts", 
         "-i", "pipe:0",
         
         # --- GÖRÜNTÜ İŞLEME ---
-        "-vf", "scale=720:1280,fps=30", # Kare doldurma aktif
+        "-vf", "scale=720:1280,fps=30", # Boyut ve FPS sabitleme
         "-c:v", "libx264",
-        "-preset", "superfast",
+        "-preset", "ultrafast",       # En hızlı çevirme modu
         "-tune", "zerolatency",
         
-        # --- DONMA ÖNLEYİCİ ---
-        "-force_key_frames", "expr:gte(t,n_forced*1)", # Her saniye zorla keyframe
-        "-sc_threshold", "0",
-        
-        # --- ORTA SEVİYE BITRATE ---
-        "-b:v", "1500k",              
-        "-maxrate", "2000k",
-        "-bufsize", "4000k",
+        # --- HIZ İÇİN BITRATE DÜŞÜRME ---
+        "-b:v", "1000k",              # 1 Mbps (Donmanın ilacı budur)
+        "-maxrate", "1200k",
+        "-bufsize", "2000k",          # Küçük tampon (Hız sağlar)
+        "-g", "30",                   # 1 saniyede 1 keyframe (HLS süresiyle uyumlu)
 
+        # --- SES ---
         "-c:a", "aac",
         "-ar", "44100",
-        "-af", "aresample=async=1",
+        "-af", "aresample=async=1",   # Ses senkronu
 
-        # --- HLS AGRESİF AYARLARI ---
+        # --- HLS AYARLARI ---
         "-f", "hls",
         "-hls_time", "1",             # 1 saniyelik parçalar
-        "-hls_list_size", "3",        # LİSTEYİ KISALTTIK (Gecikmeyi düşürür)
-        "-hls_flags", "delete_segments+split_by_time",
+        "-hls_list_size", "3",        # Listede sadece 3 parça (Gecikmeyi düşük tutar)
+        "-hls_flags", "delete_segments",
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
     ]
