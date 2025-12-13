@@ -9,7 +9,7 @@ from typing import List
 
 app = FastAPI()
 
-# Temizlik ve Kurulum
+# Temizlik
 os.system("rm -rf static/hls/*")
 os.makedirs("static/hls", exist_ok=True)
 
@@ -40,31 +40,32 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. Low Latency Modu Aktif...")
+    print("Yayıncı bağlandı. Stabil Mod Aktif...")
 
     command = [
         "ffmpeg",
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- HIZ İÇİN OPTİMİZE EDİLMİŞ AYARLAR ---
-        "-vf", "scale=720:1280",
+        # --- STABİL GÖRÜNTÜ AYARLARI ---
+        "-vf", "scale=720:1280",      
         "-c:v", "libx264",
-        "-preset", "ultrafast",       # En yüksek hız
-        "-tune", "zerolatency",       # Gecikme yok
-        "-r", "30",                   # 30 FPS
-        "-g", "30",                   # Her 1 saniyede bir Keyframe (KRİTİK)
-        "-b:v", "2000k",              # 2 Mbps (Görüntü net olsun)
-        "-bufsize", "4000k",          
+        "-preset", "veryfast",        # İşlemciyi biraz rahatlat
+        "-tune", "zerolatency",
+        "-r", "30",                   
+        "-g", "60",                   # Her 2 saniyede bir Keyframe (ÖNEMLİ: hls_time ile eşleşmeli)
+        "-b:v", "2000k",              # 2 Mbps (Kalite/Hız dengesi)
+        "-maxrate", "2500k",
+        "-bufsize", "5000k",          # Tamponu geniş tut, donmayı engelle
 
         "-c:a", "aac",
         "-ar", "44100",
         "-af", "aresample=async=1",
 
-        # --- LOW LATENCY HLS ---
+        # --- HLS AYARLARI ---
         "-f", "hls",
-        "-hls_time", "1",             # 1 Saniyelik Parçalar (Eskisi 2 idi)
-        "-hls_list_size", "3",        # Listede sadece son 3 saniye kalsın
+        "-hls_time", "2",             # 2 Saniyelik Parçalar (Donmanın ilacı budur)
+        "-hls_list_size", "5",        # Listede 5 parça tut (Güvenli alan)
         "-hls_flags", "delete_segments",
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"

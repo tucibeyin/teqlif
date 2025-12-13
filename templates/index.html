@@ -154,7 +154,6 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    // Bitrate'i 2Mbps yaptik, görüntü net olsun
                     const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2000000 };
                     mediaRecorder = new MediaRecorder(stream, options);
                     mediaRecorder.ondataavailable = (event) => {
@@ -162,8 +161,8 @@
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // 250ms veri gönderimi + 1s FFmpeg parçalama = Düşük Gecikme
-                    mediaRecorder.start(250);
+                    // FFmpeg'e her 1 saniyede bir taze veri gönder
+                    mediaRecorder.start(1000);
                 };
             } catch (err) { alert("Kamera hatası: " + err); }
         }
@@ -179,11 +178,10 @@
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    backBufferLength: 30,
-                    // --- AGRESİF HIZ AYARLARI ---
-                    liveSyncDurationCount: 1.5,   // Canlı yayının 1.5 saniye gerisinden gel
-                    liveMaxLatencyDurationCount: 3,
-                    maxLiveSyncPlaybackRate: 2.0, // Geri kalırsan 2 kat hızla yetiş
+                    // --- STABİL AYARLAR ---
+                    liveSyncDurationCount: 3,    // 3 parça (yani 6 saniye) geriden gel
+                    liveMaxLatencyDurationCount: 5,
+                    maxLiveSyncPlaybackRate: 1.1, // Hızlanırken sesi bozma
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
