@@ -141,6 +141,7 @@
 
         async function startBroadcasting() {
             try {
+                // Kamera 30 FPS
                 const constraints = {
                     video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } },
                     audio: { echoCancellation: true, noiseSuppression: true }
@@ -158,7 +159,10 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2000000 };
+                    // --- KRİTİK AYAR: 1200kbps ---
+                    // Telefonun upload hızını boğmamak için 1.2 Mbps yeterlidir.
+                    // Bu sayede "source" tarafında donma olmaz.
+                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1200000 };
                     mediaRecorder = new MediaRecorder(stream, options);
 
                     mediaRecorder.ondataavailable = (event) => {
@@ -166,7 +170,7 @@
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // Backend'e tam 1 saniyelik paketler gönder (Senkronizasyon için şart)
+                    // 1 saniyelik paketler gönder
                     mediaRecorder.start(1000);
                 };
 
@@ -185,17 +189,16 @@
                     enableWorker: true,
                     lowLatencyMode: true,
                     backBufferLength: 30,
-                    // --- SİHİRLİ DOKUNUŞ (Kesintisiz Akış) ---
-                    // Canlıdan 3 parça (yaklaşık 4-5 sn) geride kal ama pürüzsüz oynat
-                    liveSyncDurationCount: 3,
-                    liveMaxLatencyDurationCount: 6,
-                    maxLiveSyncPlaybackRate: 1.1,
+                    // Canlı yayına yakın takip (3-4 sn gecikme)
+                    liveSyncDurationCount: 2,
+                    liveMaxLatencyDurationCount: 4,
                 });
-                hls.loadSource('/static/hls/stream.m3u8');
+                // ARTIK MASTER PLAYLIST'i ÇAĞIRIYORUZ
+                hls.loadSource('/static/hls/master.m3u8');
                 hls.attachMedia(videoEl);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play());
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-                videoEl.src = '/static/hls/stream.m3u8';
+                videoEl.src = '/static/hls/master.m3u8';
                 videoEl.play();
             }
         }

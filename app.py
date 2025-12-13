@@ -9,7 +9,7 @@ from typing import List
 
 app = FastAPI()
 
-# Temizlik
+# Temizlik ve Klasör Yapısı
 os.system("rm -rf static/hls/*")
 os.makedirs("static/hls", exist_ok=True)
 
@@ -40,41 +40,44 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. KESİNTİSİZ MOD (CBR + Forced Keyframe)...")
+    print("Yayıncı bağlandı. ABR Modu (720p + 360p) Başlatılıyor...")
 
     command = [
         "ffmpeg",
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- GÖRÜNTÜ İŞLEME ---
-        "-vf", "scale=720:1280,fps=30", # Boyut ve FPS sabitleme
-        "-c:v", "libx264",
-        "-preset", "superfast",       # İşlemciyi yormadan hızlı çevir
+        # --- FILTRE KOMPLEKSI (Görüntüyü İkiye Böl) ---
+        # [v1]: 720p (Yüksek Kalite)
+        # [v2]: 360p (Düşük Kalite - Donmaması için)
+        "-filter_complex", 
+        "[0:v]split=2[v1][v2]; [v1]scale=720:1280,fps=30[v720]; [v2]scale=360:640,fps=30[v360]",
+        
+        # --- ORTAK HIZ AYARLARI ---
+        "-preset", "ultrafast",
         "-tune", "zerolatency",
+        "-sc_threshold", "0",
         
-        # --- CERRAHİ KESİM (STUTTER FIX) ---
-        "-force_key_frames", "expr:gte(t,n_forced*1)", # HER 1 SANİYEDE ZORLA KEYFRAME AT
-        "-sc_threshold", "0",         # Sahne değişimini bekleme, robot gibi kes
+        # --- AKIŞ 1: 720p (Yüksek) ---
+        "-map", "[v720]", "-c:v:0", "libx264", "-b:v:0", "1500k", "-maxrate:v:0", "1800k", "-bufsize:v:0", "3000k", "-g:v:0", "30",
         
-        # --- SABİT BITRATE (CBR) ---
-        "-b:v", "2000k",              # Hedef Hız
-        "-minrate", "2000k",          # Minimum Hız (Düşme!)
-        "-maxrate", "2000k",          # Maksimum Hız (Çıkma!)
-        "-bufsize", "4000k",          # Tampon
-
-        # --- SES ---
-        "-c:a", "aac",
-        "-ar", "44100",
-        "-af", "aresample=async=1",   # Ses senkronu
-
-        # --- HLS ÇIKTI ---
+        # --- AKIŞ 2: 360p (Düşük) ---
+        "-map", "[v360]", "-c:v:1", "libx264", "-b:v:1", "600k",  "-maxrate:v:1", "800k",  "-bufsize:v:1", "1200k", "-g:v:1", "30",
+        
+        # --- SES (Tek kaynak) ---
+        "-map", "0:a", "-c:a", "aac", "-ar", "44100", "-b:a", "64k", "-ac", "1",
+        
+        # --- HLS ÇIKTI AYARLARI (MASTER PLAYLIST) ---
         "-f", "hls",
-        "-hls_time", "1",             # Tam 1 saniyelik parçalar
-        "-hls_list_size", "4",        # 4 parça tut (Güvenli akış)
-        "-hls_flags", "delete_segments+split_by_time", # Süreye göre kesin böl
-        "-hls_allow_cache", "0",
-        "static/hls/stream.m3u8"
+        "-hls_time", "1",             # 1 saniyelik parçalar (Düşük Latency)
+        "-hls_list_size", "4",        # Son 4 parça
+        "-hls_flags", "delete_segments+independent_segments",
+        "-master_pl_name", "master.m3u8", # Ana yönetici dosya
+        
+        # Hangi akışın hangi ayarları kullanacağı
+        "-var_stream_map", "v:0,a:0,name:720p v:1,a:0,name:360p", 
+        
+        "static/hls/stream_%v.m3u8"
     ]
 
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
