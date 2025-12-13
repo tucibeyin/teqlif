@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Canlı Yayın</title>
+    <title>Teqlif Live</title>
     <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
     <style>
         body {
@@ -22,19 +22,20 @@
             width: 100%;
             height: 100%;
             z-index: 1;
+            background: black;
         }
 
+        /* İzleyici için 'contain' yaptık ki kafa kesilmesin, tamamı görünsün */
         video {
             width: 100%;
             height: 100%;
-            object-fit: cover;
-            transform: scaleX(-1);
-            /* Ayna efekti */
+            object-fit: contain;
         }
 
-        /* İzleyici modu için video düzeltme */
-        video.viewer-mode {
-            transform: scaleX(1);
+        /* Yayıncı kendini ayna gibi görsün ve tam ekran dolsun */
+        video.broadcaster {
+            object-fit: cover;
+            transform: scaleX(-1);
         }
 
         .ui-layer {
@@ -48,7 +49,7 @@
             display: flex;
             flex-direction: column;
             justify-content: flex-end;
-            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent 40%);
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent 30%);
             padding: 20px;
         }
 
@@ -67,7 +68,7 @@
         }
 
         .msg span {
-            color: #D4AF37;
+            color: #f1c40f;
             font-weight: bold;
         }
 
@@ -79,16 +80,17 @@
 
         input {
             flex: 1;
-            padding: 10px;
-            border-radius: 20px;
+            padding: 12px;
+            border-radius: 25px;
             border: none;
             outline: none;
             background: rgba(255, 255, 255, 0.2);
             color: white;
+            backdrop-filter: blur(5px);
         }
 
         button {
-            background: #D4AF37;
+            background: #f1c40f;
             border: none;
             padding: 10px 20px;
             border-radius: 20px;
@@ -101,7 +103,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            padding: 20px 40px;
+            padding: 15px 30px;
             font-size: 1.2rem;
             background: #e74c3c;
             color: white;
@@ -109,7 +111,7 @@
             z-index: 10;
             pointer-events: auto;
             cursor: pointer;
-            box-shadow: 0 0 20px rgba(231, 76, 60, 0.5);
+            border: none;
         }
     </style>
 </head>
@@ -133,114 +135,95 @@
     </div>
 
     <script>
-        // YAYINCI KISMI
-        let mediaRecorder;
         let wsBroadcast;
+        let mediaRecorder;
 
-    async function startBroadcasting() {
-        try {
-            // Kamerayı 30 FPS ve 720p'ye zorla (Stabilite için)
-            const constraints = {
-                video: {
-                    facingMode: "user",
-                    width: { ideal: 720 },
-                    height: { ideal: 1280 }, // Dikey olması için
-                    frameRate: { ideal: 30, max: 30 }
-                },
-                audio: true
-            };
-
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-
-            const videoEl = document.getElementById('localVideo');
-            videoEl.srcObject = stream;
-
-            document.getElementById('broadcastBtn').style.display = 'none';
-            document.getElementById('uiLayer').style.display = 'flex';
-
-            var wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            wsBroadcast = new WebSocket(wsProtocol + "//" + location.host + "/ws/broadcast");
-
-            wsBroadcast.onopen = () => {
-                // Kaydediciyi 2.5 Mbps ile sınırla (Backend ile uyumlu olsun)
-                const options = {
-                    mimeType: 'video/webm; codecs=vp8,opus',
-                    videoBitsPerSecond: 2500000
-                };
-
-                mediaRecorder = new MediaRecorder(stream, options);
-
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
-                        wsBroadcast.send(event.data);
+        async function startBroadcasting() {
+            try {
+                // Kamerayı Dikey 720p'ye zorla
+                const constraints = {
+                    video: {
+                        facingMode: "user",
+                        width: { ideal: 720 },
+                        height: { ideal: 1280 },
+                        frameRate: { ideal: 30 }
+                    },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
                     }
                 };
 
-                // Veriyi daha sık gönder (Latency düşer)
-                mediaRecorder.start(500);
-            };
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                const videoEl = document.getElementById('localVideo');
+                videoEl.classList.add('broadcaster'); // Yayıncı stili
+                videoEl.srcObject = stream;
 
-        } catch (err) {
-            alert("Kamera hatası: " + err);
-            console.error(err);
+                document.getElementById('broadcastBtn').style.display = 'none';
+                document.getElementById('uiLayer').style.display = 'flex';
+
+                const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+                wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
+
+                wsBroadcast.onopen = () => {
+                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2500000 };
+                    mediaRecorder = new MediaRecorder(stream, options);
+
+                    mediaRecorder.ondataavailable = (event) => {
+                        if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
+                            wsBroadcast.send(event.data);
+                        }
+                    };
+                    // 200ms'de bir veri gönder (Çok daha akıcı olur)
+                    mediaRecorder.start(200);
+                };
+
+            } catch (err) {
+                alert("Kamera hatası: " + err);
+            }
         }
-    }
 
-    // İZLEYİCİ KISMI
-    function startWatching() {
-        document.getElementById('watchBtn').style.display = 'none';
-        document.getElementById('broadcastBtn').style.display = 'none';
-        document.getElementById('uiLayer').style.display = 'flex';
+        function startWatching() {
+            document.getElementById('watchBtn').style.display = 'none';
+            document.getElementById('broadcastBtn').style.display = 'none';
+            document.getElementById('uiLayer').style.display = 'flex';
 
-        const videoEl = document.getElementById('localVideo');
-        videoEl.classList.add('viewer-mode');
+            const videoEl = document.getElementById('localVideo');
 
-        if (Hls.isSupported()) {
-            // --- DÜŞÜK GECİKME AYARLARI ---
-            var config = {
-                enableWorker: true,
-                lowLatencyMode: true,
-
-                // Donmayı engelleyen kritik ayarlar:
-                liveSyncDurationCount: 3,     // Hedef: Canlı yayının 3 parça (yaklaşık 6 sn) gerisinden gel
-                liveMaxLatencyDurationCount: 5, // Eğer çok geride kalırsan atlama yap
-                maxLiveSyncPlaybackRate: 1.5, // Geri kalınca videoyu çok hafif hızlandır (Sesi bozmadan)
-            };
-
-            var hls = new Hls(config);
-            hls.loadSource('/static/hls/stream.m3u8');
-            hls.attachMedia(videoEl);
-            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+            if (Hls.isSupported()) {
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    liveSyncDurationCount: 2, // Canlı yayının 2-3 sn gerisinden gel
+                });
+                hls.loadSource('/static/hls/stream.m3u8');
+                hls.attachMedia(videoEl);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play());
+            } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+                videoEl.src = '/static/hls/stream.m3u8';
                 videoEl.play();
-            });
-        } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-            // iPhone (Safari) için native player
-            videoEl.src = '/static/hls/stream.m3u8';
-            videoEl.play();
+            }
         }
-    }
 
-        // Eğer URL'de ?watch=true varsa direkt izleme moduna geç (Basit mantık)
-        if (window.location.search.includes('watch=true')) {
+        if (location.search.includes('watch=true')) {
             document.getElementById('broadcastBtn').style.display = 'none';
             document.getElementById('watchBtn').style.display = 'block';
         }
 
-        // CHAT KISMI
-        var wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-        var wsChat = new WebSocket(wsProtocol + "//" + location.host + "/ws/chat");
+        const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        const wsChat = new WebSocket(proto + "//" + location.host + "/ws/chat");
 
-        wsChat.onmessage = function (event) {
-            var box = document.getElementById('chat-box');
-            var div = document.createElement('div');
+        wsChat.onmessage = (e) => {
+            const box = document.getElementById('chat-box');
+            const div = document.createElement('div');
             div.className = 'msg';
-            div.innerHTML = `<span>User:</span> ${event.data}`;
+            div.innerHTML = `<span>Misafir:</span> ${e.data}`;
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         };
 
         function sendChat() {
-            var input = document.getElementById("msgInput");
+            const input = document.getElementById("msgInput");
             if (input.value) { wsChat.send(input.value); input.value = ""; }
         }
     </script>

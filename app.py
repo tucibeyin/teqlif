@@ -9,15 +9,13 @@ from typing import List
 
 app = FastAPI()
 
-# RAM Disk Ayarı (Dosyalar RAM'de)
+# RAM Disk Ayarı
 os.makedirs("static/hls", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-# Aktif yayın sürecini tutan değişken
 stream_process = None
 
-# Chat Yöneticisi
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -36,55 +34,49 @@ manager = ConnectionManager()
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
-# YAYINCI: Görüntüyü Buraya Gönderir (WebSocket)
 @app.websocket("/ws/broadcast")
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    
-    print("Yayıncı bağlandı, FFmpeg başlatılıyor...")
+    print("Yayıncı bağlandı. FFmpeg başlatılıyor...")
 
-    # FFmpeg Komutu: Girdiyi "pipe:0" (Python'dan) al
     command = [
         "ffmpeg",
-        # --- GİRİŞ AYARLARI (KRİTİK DÜZELTME) ---
-        "-f", "webm",                 # Gelen verinin formatı WebM
-        "-use_wallclock_as_timestamps", "1", # Tarayıcı zamanına güvenme, sunucu saatini kullan
-        "-fflags", "+genpts",         # Zaman çizelgesini yeniden oluştur
-        "-i", "pipe:0",               # Girdi: WebSocket
+        "-f", "webm",                 # Girdi Formatı
+        "-i", "pipe:0",               # WebSocket'ten oku
         
-        # --- ÇIKIŞ AYARLARI ---
+        # --- VİDEO İŞLEME (Sabitleme) ---
+        "-vf", "scale=720:1280",      # Zorla 720p Dikey yap (Kırpılmayı önler)
         "-c:v", "libx264",
-        "-preset", "superfast",
+        "-preset", "ultrafast",       # Hız için ultrafast
         "-tune", "zerolatency",
-        
-        "-b:v", "2000k",              # Bitrate (İnterneti yormamak için 2000k yeterli)
-        "-maxrate", "2500k",
-        "-bufsize", "5000k",
+        "-r", "30",                   # Çıktıyı 30 FPS'e sabitle
         "-g", "60",                   # 2 saniyede bir keyframe
-        "-r", "30",                   # Çıktıyı zorla 30 FPS yap (Dalgalanmayı önler)
-        
+        "-b:v", "2000k",              # Bitrate sınırı
+        "-bufsize", "4000k",
+
+        # --- SES SENKRONİZASYONU (Donmayı önler) ---
         "-c:a", "aac",
         "-ar", "44100",
+        "-af", "aresample=async=1",   # Ses kaymasını otomatik düzelt (Kritik!)
+
+        # --- HLS ÇIKTI ---
         "-f", "hls",
-        "-hls_time", "2",             
-        "-hls_list_size", "6", 
+        "-hls_time", "1",             # 1 Saniyelik parçalar (Hız için)
+        "-hls_list_size", "4", 
         "-hls_flags", "delete_segments",
         "static/hls/stream.m3u8"
     ]
 
-    # FFmpeg işlemini başlat ve girdiyi (stdin) aç
-    stream_process = subprocess.Popen(command, stdin=subprocess.PIPE)
+    stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL) 
+    # stderr=DEVNULL yaptık ki loglar terminali kilitlemesin
 
     try:
         while True:
-            # Tarayıcıdan gelen video verisini (blob) al
             data = await websocket.receive_bytes()
-            
-            # Veriyi FFmpeg'e yaz
             if stream_process and stream_process.stdin:
                 stream_process.stdin.write(data)
-                
+                stream_process.stdin.flush()
     except WebSocketDisconnect:
         print("Yayıncı ayrıldı.")
         if stream_process:
@@ -96,14 +88,13 @@ async def broadcast_endpoint(websocket: WebSocket):
         if stream_process:
             stream_process.terminate()
 
-# İZLEYİCİ: Chat
 @app.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket):
     await manager.connect(websocket)
     try:
         while True:
             data = await websocket.receive_text()
-            clean_data = data.replace("<", "&lt;").replace(">", "&gt;")
-            await manager.broadcast(clean_data)
-    except WebSocketDisconnect:
+            clean = data.replace("<", "&lt;")
+            await manager.broadcast(clean)
+    except:
         manager.disconnect(websocket)
