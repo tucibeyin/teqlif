@@ -39,6 +39,23 @@
             border: 2px solid #e74c3c;
         }
 
+        /* SES BUTONU STİLİ */
+        #unmuteBtn {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 5;
+            background: rgba(0, 0, 0, 0.6);
+            color: white;
+            border: 1px solid white;
+            padding: 10px 15px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 14px;
+            display: none;
+            /* Başlangıçta gizli, JS ile açacağız */
+        }
+
         .ui-layer {
             position: absolute;
             top: 0;
@@ -121,6 +138,7 @@
 
     <div id="video-container">
         <video id="localVideo" autoplay muted playsinline></video>
+        <button id="unmuteBtn" onclick="enableAudio()">🔊 SESİ AÇ</button>
     </div>
 
     <button id="broadcastBtn" class="start-btn" onclick="startBroadcasting()">YAYIN AÇ</button>
@@ -139,17 +157,25 @@
         let wsBroadcast;
         let mediaRecorder;
 
+        function enableAudio() {
+            const videoEl = document.getElementById('localVideo');
+            videoEl.muted = false; // Sesi aç
+            document.getElementById('unmuteBtn').style.display = 'none'; // Butonu gizle
+        }
+
         async function startBroadcasting() {
             try {
+                // Mikrofon iznini kesin olarak al
                 const constraints = {
                     video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } },
-                    audio: { echoCancellation: true, noiseSuppression: true }
+                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
                 };
 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 const videoEl = document.getElementById('localVideo');
                 videoEl.classList.add('broadcaster');
                 videoEl.srcObject = stream;
+                videoEl.muted = true; // Yayıncı kendi sesini duymasın (Eko yapar)
 
                 document.getElementById('broadcastBtn').style.display = 'none';
                 document.getElementById('uiLayer').style.display = 'flex';
@@ -158,7 +184,6 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    // 1.5 Mbps upload
                     const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1500000 };
                     mediaRecorder = new MediaRecorder(stream, options);
 
@@ -167,11 +192,10 @@
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // 1000ms gönderim (En güvenli ayar)
                     mediaRecorder.start(1000);
                 };
 
-            } catch (err) { alert("Kamera hatası: " + err); }
+            } catch (err) { alert("Kamera/Mikrofon hatası: " + err); }
         }
 
         function startWatching() {
@@ -179,20 +203,24 @@
             document.getElementById('broadcastBtn').style.display = 'none';
             document.getElementById('uiLayer').style.display = 'flex';
 
+            // İzleyici modunda ses butonunu göster
+            document.getElementById('unmuteBtn').style.display = 'block';
+
             const videoEl = document.getElementById('localVideo');
 
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    backBufferLength: 30,
-                    // Canlı yayının 2 parça (2-3 saniye) gerisinden gel
                     liveSyncDurationCount: 2,
-                    liveMaxLatencyDurationCount: 5,
+                    liveMaxLatencyDurationCount: 4,
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play());
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    // Video sessiz başlar (Tarayıcı kuralı)
+                    videoEl.play().catch(e => console.log("Oynatma hatası:", e));
+                });
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
                 videoEl.src = '/static/hls/stream.m3u8';
                 videoEl.play();

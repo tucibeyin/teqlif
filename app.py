@@ -40,39 +40,41 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. KURTARMA MODU (Sade ve Hızlı)...")
+    print("Yayıncı bağlandı. Görüntü + Ses Modu...")
 
     command = [
         "ffmpeg",
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- SADELEŞTİRİLMİŞ GÖRÜNTÜ AYARLARI ---
-        "-vf", "scale=720:1280",      # Sadece boyutlandır, fps zorlama (Stabilite için)
+        # --- GÖRÜNTÜ (Dokunmuyoruz, gayet iyi) ---
+        "-vf", "scale=720:1280",      
         "-c:v", "libx264",
-        "-preset", "ultrafast",       # En hızlı mod
+        "-preset", "superfast",       
         "-tune", "zerolatency",
         
-        "-r", "30",                   # 30 FPS hedefle
-        "-g", "30",                   # 1 saniyede 1 keyframe (Basit ayar)
-        "-b:v", "1500k",              # 1.5 Mbps (Mobil dostu)
-        "-bufsize", "3000k",
+        "-r", "30",                   
+        "-g", "30",                   
+        "-b:v", "1500k",              
+        "-maxrate", "2000k",
+        "-bufsize", "4000k",
 
-        # --- SES ---
-        "-c:a", "aac",
-        "-ar", "44100",
-        "-af", "aresample=async=1",
+        # --- SES AYARLARI (KRİTİK GÜNCELLEME) ---
+        "-c:a", "aac",                # HLS için standart ses formatı
+        "-ar", "44100",               # 44.1 KHz (Standart)
+        "-ac", "2",                   # Stereo Ses (Daha dolgun)
+        "-b:a", "128k",               # 128 Kbps (Net ses)
+        "-af", "aresample=async=1",   # Görüntüyle sesi zorla eşle (Sync Fix)
 
         # --- HLS AYARLARI ---
         "-f", "hls",
-        "-hls_time", "1",             # 1 saniyelik parçalar (Hız için)
-        "-hls_list_size", "4",        # Listede 4 parça tut (Güvenlik payı)
+        "-hls_time", "1",             
+        "-hls_list_size", "4",        
         "-hls_flags", "delete_segments",
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
     ]
 
-    # stderr=subprocess.PIPE ile hatayı yakalayalım ama süreci kilitlemeyelim
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
     try:
