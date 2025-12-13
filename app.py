@@ -40,32 +40,31 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. Stabil Mod Aktif...")
+    print("Yayıncı bağlandı. Hızlandırma Modu (1sn)...")
 
     command = [
         "ffmpeg",
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- STABİL GÖRÜNTÜ AYARLARI ---
+        # --- TURBO VİDEO AYARLARI ---
         "-vf", "scale=720:1280",      
         "-c:v", "libx264",
-        "-preset", "veryfast",        # İşlemciyi biraz rahatlat
+        "-preset", "ultrafast",       # En hızlı mod (Gecikmeyi siler)
         "-tune", "zerolatency",
         "-r", "30",                   
-        "-g", "60",                   # Her 2 saniyede bir Keyframe (ÖNEMLİ: hls_time ile eşleşmeli)
-        "-b:v", "2000k",              # 2 Mbps (Kalite/Hız dengesi)
-        "-maxrate", "2500k",
-        "-bufsize", "5000k",          # Tamponu geniş tut, donmayı engelle
+        "-g", "30",                   # Her 1 saniyede bir Keyframe (ÖNEMLİ: hls_time ile aynı olmalı)
+        "-b:v", "2000k",              # 2 Mbps
+        "-bufsize", "4000k",          # Anlık dalgalanmayı yutacak kadar buffer
 
         "-c:a", "aac",
         "-ar", "44100",
         "-af", "aresample=async=1",
 
-        # --- HLS AYARLARI ---
+        # --- LOW LATENCY HLS ---
         "-f", "hls",
-        "-hls_time", "2",             # 2 Saniyelik Parçalar (Donmanın ilacı budur)
-        "-hls_list_size", "5",        # Listede 5 parça tut (Güvenli alan)
+        "-hls_time", "1",             # 1 Saniyelik Parçalar (Hızın sırrı)
+        "-hls_list_size", "3",        # Listede sadece son 3 saniye kalsın
         "-hls_flags", "delete_segments",
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"

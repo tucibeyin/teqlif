@@ -161,7 +161,7 @@
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // FFmpeg'e her 1 saniyede bir taze veri gönder
+                    // Backend 1 sn parça üretiyor, biz de 1 sn gönderiyoruz. SENKRONİZASYON BUDUR.
                     mediaRecorder.start(1000);
                 };
             } catch (err) { alert("Kamera hatası: " + err); }
@@ -178,10 +178,11 @@
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    // --- STABİL AYARLAR ---
-                    liveSyncDurationCount: 3,    // 3 parça (yani 6 saniye) geriden gel
-                    liveMaxLatencyDurationCount: 5,
-                    maxLiveSyncPlaybackRate: 1.1, // Hızlanırken sesi bozma
+                    backBufferLength: 30,
+                    // --- HIZLI AMA GÜVENLİ ---
+                    liveSyncDurationCount: 2,    // 2 parça (yani 2 saniye) geriden gel
+                    liveMaxLatencyDurationCount: 4,
+                    maxLiveSyncPlaybackRate: 1.5,
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
