@@ -158,7 +158,6 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    // Upload hızını yormayan güvenli ayar: 1.5 Mbps
                     const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1500000 };
                     mediaRecorder = new MediaRecorder(stream, options);
 
@@ -167,7 +166,7 @@
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // 1000ms'de bir gönder (Backend ile senkronize)
+                    // Tam 1 saniyelik paketler
                     mediaRecorder.start(1000);
                 };
 
@@ -185,10 +184,11 @@
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    // --- DENGE AYARLARI ---
-                    liveSyncDurationCount: 3,    // 3 parça (3-4 sn) geriden gel
-                    liveMaxLatencyDurationCount: 5,
-                    maxLiveSyncPlaybackRate: 1.2,
+                    backBufferLength: 10, // Arkayı hemen temizle
+                    // --- BIÇAK SIRTI AYARLARI ---
+                    liveSyncDurationCount: 1.8,   // 1.8 Parça (Yaklaşık 3.5 sn gecikme hedefler)
+                    liveMaxLatencyDurationCount: 3,
+                    maxLiveSyncPlaybackRate: 1.5, // Geri kalırsan agresif hızlan
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);

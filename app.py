@@ -40,44 +40,41 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. Stabil 720p Modu Başlatılıyor...")
+    print("Yayıncı bağlandı. AGRESİF DÜŞÜK GECİKME MODU...")
 
     command = [
         "ffmpeg",
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- GÖRÜNTÜ SABİTLEME (AKICILIK İÇİN) ---
-        # scale: 720p Dikey
-        # fps=30: Kare atlamalarını doldur (Donmayı önler)
-        "-vf", "scale=720:1280,fps=30",
-        
+        # --- GÖRÜNTÜ İŞLEME ---
+        "-vf", "scale=720:1280,fps=30", # Kare doldurma aktif
         "-c:v", "libx264",
-        "-preset", "superfast",       # İşlemci dostu hız
+        "-preset", "superfast",
         "-tune", "zerolatency",
         
-        # --- BITRATE AYARLARI (DONMAMASI İÇİN KRİTİK) ---
-        # 1200k: Mobil upload için en güvenli limandır.
-        "-b:v", "1200k",              
-        "-maxrate", "1500k",
-        "-bufsize", "3000k",
-        "-g", "30",                   # 1 saniyede 1 anahtar kare
+        # --- DONMA ÖNLEYİCİ ---
+        "-force_key_frames", "expr:gte(t,n_forced*1)", # Her saniye zorla keyframe
+        "-sc_threshold", "0",
+        
+        # --- ORTA SEVİYE BITRATE ---
+        "-b:v", "1500k",              
+        "-maxrate", "2000k",
+        "-bufsize", "4000k",
 
-        # --- SES ---
         "-c:a", "aac",
         "-ar", "44100",
-        "-af", "aresample=async=1",   # Ses senkronu
+        "-af", "aresample=async=1",
 
-        # --- HLS ÇIKTI ---
+        # --- HLS AGRESİF AYARLARI ---
         "-f", "hls",
         "-hls_time", "1",             # 1 saniyelik parçalar
-        "-hls_list_size", "4",        # 4 parça tut
-        "-hls_flags", "delete_segments",
+        "-hls_list_size", "3",        # LİSTEYİ KISALTTIK (Gecikmeyi düşürür)
+        "-hls_flags", "delete_segments+split_by_time",
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
     ]
 
-    # stderr=subprocess.PIPE hatayı görmek için
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
     try:
