@@ -1,1 +1,1 @@
-teqlif Projesi.
+teqlif Projesi
