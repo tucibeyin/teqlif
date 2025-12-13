@@ -300,40 +300,56 @@
             document.getElementById('unmuteBtn').style.display = 'none';
         }
 
-        async function startBroadcasting() {
-            try {
-                // Kamera 720p Dikey
-                const constraints = {
-                    video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } },
-                    audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+    async function startBroadcasting() {
+        try {
+            const constraints = {
+                video: {
+                    facingMode: "user",
+                    width: { ideal: 720 },
+                    height: { ideal: 1280 },
+                    frameRate: { ideal: 30 }
+                },
+                // --- SES KALİTESİ İÇİN KRİTİK AYARLAR ---
+                audio: {
+                    echoCancellation: false,      // Yankı engelleyiciyi KAPAT (Sesi doğallaştırır)
+                    noiseSuppression: false,      // Gürültü bastırmayı KAPAT (Robot sesini engeller)
+                    autoGainControl: false,       // Otomatik ses seviyesini KAPAT (Dalgalanmayı engeller)
+                    sampleRate: 48000,            // Yüksek örnekleme hızı
+                    channelCount: 2               // Stereo ses iste
+                }
+            };
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            const videoEl = document.getElementById('localVideo');
+            videoEl.classList.add('broadcaster');
+            videoEl.srcObject = stream;
+            videoEl.muted = true;
+
+            document.querySelector('.center-controls').style.display = 'none';
+            document.getElementById('uiLayer').style.display = 'flex';
+
+            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
+
+            wsBroadcast.onopen = () => {
+                // Sesi de yüksek bitrate ile gönder
+                const options = {
+                    mimeType: 'video/webm; codecs=vp8,opus',
+                    videoBitsPerSecond: 1500000,
+                    audioBitsPerSecond: 128000 // Ses için tarayıcıya 128k limit ver
                 };
+                mediaRecorder = new MediaRecorder(stream, options);
 
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                const videoEl = document.getElementById('localVideo');
-                videoEl.classList.add('broadcaster');
-                videoEl.srcObject = stream;
-                videoEl.muted = true; // Yayıncı kendini duymaz
-
-                document.querySelector('.center-controls').style.display = 'none';
-                document.getElementById('uiLayer').style.display = 'flex';
-
-                const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-                wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
-
-                wsBroadcast.onopen = () => {
-                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1500000 };
-                    mediaRecorder = new MediaRecorder(stream, options);
-
-                    mediaRecorder.ondataavailable = (event) => {
-                        if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
-                            wsBroadcast.send(event.data);
-                        }
-                    };
-                    mediaRecorder.start(1000);
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
+                        wsBroadcast.send(event.data);
+                    }
                 };
+                mediaRecorder.start(1000);
+            };
 
-            } catch (err) { alert("Erişim hatası: " + err); }
-        }
+        } catch (err) { alert("Erişim hatası: " + err); }
+    }
 
         function startWatching() {
             document.querySelector('.center-controls').style.display = 'none';

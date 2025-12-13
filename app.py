@@ -47,29 +47,27 @@ async def broadcast_endpoint(websocket: WebSocket):
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- GÖRÜNTÜ (Dokunmuyoruz, gayet iyi) ---
-        "-vf", "scale=720:1280",      
+        # --- GÖRÜNTÜ (Aynı kalıyor) ---
+        "-vf", "scale=720:1280,fps=30",
         "-c:v", "libx264",
-        "-preset", "superfast",       
+        "-preset", "superfast",
         "-tune", "zerolatency",
-        
-        "-r", "30",                   
-        "-g", "30",                   
-        "-b:v", "1500k",              
-        "-maxrate", "2000k",
-        "-bufsize", "4000k",
+        "-b:v", "1200k",              
+        "-maxrate", "1500k",
+        "-bufsize", "3000k",
+        "-g", "30",
 
-        # --- SES AYARLARI (KRİTİK GÜNCELLEME) ---
-        "-c:a", "aac",                # HLS için standart ses formatı
-        "-ar", "44100",               # 44.1 KHz (Standart)
-        "-ac", "2",                   # Stereo Ses (Daha dolgun)
-        "-b:a", "128k",               # 128 Kbps (Net ses)
-        "-af", "aresample=async=1",   # Görüntüyle sesi zorla eşle (Sync Fix)
+        # --- SES KALİTE AYARLARI (GÜNCELLENDİ) ---
+        "-c:a", "aac",
+        "-ar", "48000",               # 44100 yerine 48000 Hz (Daha net)
+        "-ac", "2",                   # Stereo
+        "-b:a", "192k",               # 128k yerine 192k (Stüdyo kalitesi)
+        "-af", "aresample=async=1",   
 
-        # --- HLS AYARLARI ---
+        # --- HLS ---
         "-f", "hls",
-        "-hls_time", "1",             
-        "-hls_list_size", "4",        
+        "-hls_time", "1",
+        "-hls_list_size", "4",
         "-hls_flags", "delete_segments",
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
