@@ -1,20 +1,49 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+{% if user %}
 <div class="hero-container">
-    <div class="hero-title">Canlı Yayına Başla</div>
-    <div class="hero-desc">Dünyayla anlık bağlantı kur.</div>
+    <div class="user-greeting">
+        Merhaba, <span class="highlight">{{ user.username if user.username else user.email.split('@')[0] }}</span> 👋
+    </div>
+    <div class="hero-desc">Bugün ne yapmak istersin?</div>
 
     <div class="action-cards">
         <a href="/live?mode=broadcast" class="card red">
-            <i class="fa-solid fa-video"></i>
-            <div>Yayın Aç</div>
+            <div class="icon-circle"><i class="fa-solid fa-video"></i></div>
+            <div class="card-title">Yayın Başlat</div>
+            <div class="card-sub">Kendi sahnini kur</div>
         </a>
 
         <a href="/live?mode=watch" class="card blue">
-            <i class="fa-solid fa-eye"></i>
-            <div>İzle</div>
+            <div class="icon-circle"><i class="fa-solid fa-eye"></i></div>
+            <div class="card-title">Yayın İzle</div>
+            <div class="card-sub">Akışa katıl</div>
         </a>
     </div>
 </div>
+
+{% else %}
+<div class="landing-container">
+    <h1 class="landing-title">TEQLIF<span>LIVE</span></h1>
+    <p class="landing-slogan">Sınırları Kaldır, Anı Yakala.</p>
+    <p class="landing-desc">
+        Dünyanın her yerinden canlı yayınlar yap, izle ve etkileşime geç.
+        Gecikmesiz, kesintisiz ve özgür.
+    </p>
+
+    <div class="landing-buttons">
+        <a href="/signup" class="btn-primary">Hemen Başla 🚀</a>
+        <a href="/login" class="btn-secondary">Giriş Yap</a>
+    </div>
+
+    <div class="floating-icons">
+        <i class="fa-solid fa-play"></i>
+        <i class="fa-solid fa-microphone"></i>
+        <i class="fa-solid fa-bolt"></i>
+    </div>
+</div>
+{% endif %}
+
 {% endblock %}

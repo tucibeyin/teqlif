@@ -140,6 +140,38 @@ def send_brevo_email(to_email, code):
     except Exception as e:
         print("Email Hatası:", e)
 
+# --- HOŞ GELDİN MAİLİ GÖNDERME ---
+def send_welcome_email(to_email):
+    api_key = os.getenv("BREVO_API_KEY")
+    sender_email = os.getenv("SENDER_EMAIL", "no-reply@teqlif.com")
+    url = "https://api.brevo.com/v3/smtp/email"
+    
+    headers = {
+        "accept": "application/json",
+        "api-key": api_key,
+        "content-type": "application/json"
+    }
+    
+    data = {
+        "sender": {"name": "Teqlif Live", "email": sender_email},
+        "to": [{"email": to_email}],
+        "subject": "Hoş Geldiniz! Hesabınız Onaylandı ✅",
+        "htmlContent": f"""
+            <div style="font-family: sans-serif; text-align: center; padding: 20px; color: #333;">
+                <h1 style="color: #27ae60;">Tebrikler! 🎉</h1>
+                <p>Hesabınız başarıyla doğrulandı.</p>
+                <p>Artık Teqlif Live dünyasına giriş yapabilir, yayın açabilir ve sohbete katılabilirsiniz.</p>
+                <br>
+                <a href="https://teqlif.com/login" style="background: #e74c3c; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">Giriş Yap</a>
+            </div>
+        """
+    }
+    
+    try:
+        requests.post(url, json=data, headers=headers)
+    except Exception as e:
+        print("Welcome Email Hatası:", e)
+
 # ==========================================
 # 4. ROTALAR (ROUTES)
 # ==========================================
@@ -156,8 +188,13 @@ async def login_page(request: Request):
 async def signup_page(request: Request):
     return templates.TemplateResponse("signup.html", {"request": request})
 
+# --- YAYIN VE İZLEME EKRANI (GÜVENLİKLİ) ---
 @app.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, user: Optional[User] = Depends(get_current_user)):
+    # GÜVENLİK KONTROLÜ: Kullanıcı giriş yapmamışsa Login'e postala
+    if not user:
+        return RedirectResponse(url="/login?error=Lütfen önce giriş yapın", status_code=303)
+        
     return templates.TemplateResponse("live.html", {"request": request, "user": user})
 
 # --- KAYIT OL (EMAIL + ŞİFRE) ---
@@ -201,6 +238,7 @@ async def verify_page(request: Request, email: str):
     return templates.TemplateResponse("verify.html", {"request": request, "email": email})
 
 # --- DOĞRULAMA İŞLEMİ ---
+# --- DOĞRULAMA İŞLEMİ ---
 @app.post("/auth/verify")
 async def verify_code(
     request: Request, 
@@ -214,12 +252,17 @@ async def verify_code(
         return templates.TemplateResponse("verify.html", {"request": request, "email": email, "error": "Kullanıcı bulunamadı."})
     
     if user.verification_code != code:
-        return templates.TemplateResponse("verify.html", {"request": request, "email": email, "error": "Hatalı kod!"})
+        return templates.TemplateResponse("verify.html", {"request": request, "email": email, "error": "Hatalı kod, lütfen tekrar deneyin."})
     
+    # Başarılı Doğrulama
     user.is_verified = True
     user.verification_code = None
     db.commit()
     
+    # 1. Hoş Geldin Maili Gönder
+    send_welcome_email(email)
+    
+    # 2. Login Ekranına "Başarılı" mesajıyla gönder
     return RedirectResponse(url="/login?msg=verified", status_code=303)
 
 # --- GİRİŞ YAP (EMAIL İLE) ---
