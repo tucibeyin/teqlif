@@ -158,8 +158,7 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    // Bitrate 2.5Mbps - Kaliteli
-                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2500000 };
+                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2000000 };
                     mediaRecorder = new MediaRecorder(stream, options);
 
                     mediaRecorder.ondataavailable = (event) => {
@@ -167,7 +166,7 @@
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // 1000ms gönderim -> 1000ms FFmpeg işleme (Mükemmel uyum)
+                    // Backend'e tam 1 saniyelik paketler gönder (Senkronizasyon için şart)
                     mediaRecorder.start(1000);
                 };
 
@@ -185,14 +184,16 @@
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    // --- DÜŞÜK GECİKME İÇİN EN İYİ AYARLAR ---
-                    liveSyncDurationCount: 2,    // 2 parça (2 sn) geriden gel
-                    liveMaxLatencyDurationCount: 4,
-                    maxLiveSyncPlaybackRate: 1.5,
+                    backBufferLength: 30,
+                    // --- SİHİRLİ DOKUNUŞ (Kesintisiz Akış) ---
+                    // Canlıdan 3 parça (yaklaşık 4-5 sn) geride kal ama pürüzsüz oynat
+                    liveSyncDurationCount: 3,
+                    liveMaxLatencyDurationCount: 6,
+                    maxLiveSyncPlaybackRate: 1.1,
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(e => console.log(e)));
+                hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play());
             } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
                 videoEl.src = '/static/hls/stream.m3u8';
                 videoEl.play();
@@ -214,7 +215,6 @@
             box.appendChild(div);
             box.scrollTop = box.scrollHeight;
         };
-
         function sendChat() {
             const input = document.getElementById("msgInput");
             if (input.value) { wsChat.send(input.value); input.value = ""; }

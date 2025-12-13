@@ -9,7 +9,7 @@ from typing import List
 
 app = FastAPI()
 
-# Temizlik ve Hazırlık
+# Temizlik
 os.system("rm -rf static/hls/*")
 os.makedirs("static/hls", exist_ok=True)
 
@@ -40,41 +40,39 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. FPS Sabitleme Modu...")
+    print("Yayıncı bağlandı. KESİNTİSİZ MOD (CBR + Forced Keyframe)...")
 
     command = [
         "ffmpeg",
-        # --- GİRİŞ AYARLARI ---
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- VİDEO FİLTRELERİ (AKICILIK İÇİN KRİTİK) ---
-        # scale: Boyutu ayarlar
-        # fps=30: Eksik kareleri doldurur, fazlasını atar -> SABİT AKIŞ SAĞLAR
-        "-vf", "scale=720:1280,fps=30", 
-        
+        # --- GÖRÜNTÜ İŞLEME ---
+        "-vf", "scale=720:1280,fps=30", # Boyut ve FPS sabitleme
         "-c:v", "libx264",
-        "-preset", "ultrafast",       # Gecikme olmasın
+        "-preset", "superfast",       # İşlemciyi yormadan hızlı çevir
         "-tune", "zerolatency",
         
-        # --- KALİTE VE BUFFER ---
-        "-g", "30",                   # 1 Saniyede 1 Keyframe (HLS süresiyle eşleşir)
-        "-keyint_min", "30",          # Minimum aralık da 30 olsun
-        "-sc_threshold", "0",         # Sahne değişiminde ekstra keyframe atma (Stabilite için)
-        "-b:v", "2500k",              # 2.5 Mbps (Kaliteli görüntü)
-        "-maxrate", "3000k",
-        "-bufsize", "6000k",
+        # --- CERRAHİ KESİM (STUTTER FIX) ---
+        "-force_key_frames", "expr:gte(t,n_forced*1)", # HER 1 SANİYEDE ZORLA KEYFRAME AT
+        "-sc_threshold", "0",         # Sahne değişimini bekleme, robot gibi kes
+        
+        # --- SABİT BITRATE (CBR) ---
+        "-b:v", "2000k",              # Hedef Hız
+        "-minrate", "2000k",          # Minimum Hız (Düşme!)
+        "-maxrate", "2000k",          # Maksimum Hız (Çıkma!)
+        "-bufsize", "4000k",          # Tampon
 
         # --- SES ---
         "-c:a", "aac",
         "-ar", "44100",
-        "-af", "aresample=async=1",   # Ses kaymasını engelle
+        "-af", "aresample=async=1",   # Ses senkronu
 
         # --- HLS ÇIKTI ---
         "-f", "hls",
-        "-hls_time", "1",             # 1 saniyelik parçalar
-        "-hls_list_size", "3",        # 3 parça tut (3-4 sn gecikme hediye eder)
-        "-hls_flags", "delete_segments+omit_endlist",
+        "-hls_time", "1",             # Tam 1 saniyelik parçalar
+        "-hls_list_size", "4",        # 4 parça tut (Güvenli akış)
+        "-hls_flags", "delete_segments+split_by_time", # Süreye göre kesin böl
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
     ]
