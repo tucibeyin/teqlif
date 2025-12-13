@@ -40,7 +40,7 @@ async def read_root(request: Request):
 async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
-    print("Yayıncı bağlandı. FABRİKA AYARLARI (Stabil Mod)...")
+    print("Yayıncı bağlandı. Hedef: 3-4 Sn Latency...")
 
     command = [
         "ffmpeg",
@@ -48,17 +48,20 @@ async def broadcast_endpoint(websocket: WebSocket):
         "-i", "pipe:0",
         
         # --- GÖRÜNTÜ ---
-        "-vf", "scale=720:1280",      # 720p Dikey (fps zorlamasını kaldırdık, doğal akış olsun)
+        "-vf", "scale=720:1280",      # 720p Dikey
         "-c:v", "libx264",
-        "-preset", "veryfast",        # Superfast yerine Veryfast (Daha kaliteli sıkıştırma)
+        "-preset", "superfast",       # Hız/Kalite dengesi
         "-tune", "zerolatency",
         
-        # --- STABİLİTE İÇİN GENİŞ AYARLAR ---
-        "-r", "30",                   # 30 FPS
-        "-g", "60",                   # 2 Saniyede bir Keyframe (Stabilite'nin sırrı)
-        "-b:v", "2000k",              # 2 Mbps (Görüntü netleşir)
-        "-maxrate", "2500k",
-        "-bufsize", "5000k",          # Büyük tampon, donmayı engeller
+        # --- SENKRONİZASYON (KRİTİK) ---
+        "-force_key_frames", "expr:gte(t,n_forced*1)", # Her 1 saniyede ZORLA anahtar kare
+        "-g", "30",                   # GOP boyutu 30 (1 saniye)
+        "-sc_threshold", "0",         # Sahne değişimini bekleme
+        
+        # --- HIZ ---
+        "-b:v", "1500k",              # 1.5 Mbps (Donmaması için ideal sınır)
+        "-maxrate", "2000k",
+        "-bufsize", "4000k",
 
         "-c:a", "aac",
         "-ar", "44100",
@@ -66,14 +69,13 @@ async def broadcast_endpoint(websocket: WebSocket):
 
         # --- HLS AYARLARI ---
         "-f", "hls",
-        "-hls_time", "2",             # 2 SANİYELİK PARÇALAR (Eski akıcı haline döner)
-        "-hls_list_size", "5",        # Listede 5 parça tut (Güvenli)
-        "-hls_flags", "delete_segments",
+        "-hls_time", "1",             # 1 saniyelik parçalar (Hız için şart)
+        "-hls_list_size", "3",        # Listede sadece 3 parça tut
+        "-hls_flags", "delete_segments+split_by_time", # Zamanı baz alarak kes
         "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
     ]
 
-    # stderr=subprocess.PIPE hatayı görmek için
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
 
     try:
