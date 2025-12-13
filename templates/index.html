@@ -158,8 +158,8 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    // 1000k Bitrate ile veri gönderiyoruz (Hafif ve Hızlı)
-                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1000000 };
+                    // Upload hızını 2000k'ya çıkardık (Görüntü netleşsin)
+                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2000000 };
                     mediaRecorder = new MediaRecorder(stream, options);
 
                     mediaRecorder.ondataavailable = (event) => {
@@ -167,7 +167,7 @@
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // 1000ms (1 saniye) paketler
+                    // 1000ms gönderim iyidir, ellemeyelim.
                     mediaRecorder.start(1000);
                 };
 
@@ -185,11 +185,10 @@
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    backBufferLength: 30,
-                    // --- 3-4 SANİYE İÇİN HIZ AYARLARI ---
-                    liveSyncDurationCount: 2.0,   // Canlı yayının 2 saniye gerisinden gel
-                    liveMaxLatencyDurationCount: 4,
-                    maxLiveSyncPlaybackRate: 1.5, // Gerekirse hızlan
+                    // --- STABİL AYARLAR (Donma Yok) ---
+                    liveSyncDurationCount: 3,    // 3 parça (6 saniye) geriden gel
+                    liveMaxLatencyDurationCount: 6,
+                    maxLiveSyncPlaybackRate: 1.1, // Sesi bozmadan çok hafif hızlan
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
