@@ -14,7 +14,15 @@
 
     <header>
         <a href="/" class="logo">TEQLIF<span>LIVE</span></a>
-        <button class="nav-btn" onclick="location.href='/'"><i class="fa-solid fa-house"></i></button>
+
+        <div class="nav-actions">
+            {% if user %}
+            <span class="user-welcome"><i class="fa-solid fa-user-circle"></i> {{ user.username }}</span>
+            <a href="/logout" class="nav-btn-text">Çıkış</a>
+            {% else %}
+            <a href="/login" class="nav-btn-text">Giriş Yap</a>
+            {% endif %}
+        </div>
     </header>
 
     <main>
@@ -23,8 +31,12 @@
 
     <footer>
         <a href="/" class="active"><i class="fa-solid fa-house"></i></a>
-        <a href="#"><i class="fa-solid fa-compass"></i></a>
-        <a href="#"><i class="fa-regular fa-user"></i></a>
+        <a href="/live?mode=watch"><i class="fa-solid fa-compass"></i></a>
+        {% if user %}
+        <a href="#"><i class="fa-solid fa-user"></i></a>
+        {% else %}
+        <a href="/login"><i class="fa-regular fa-user"></i></a>
+        {% endif %}
     </footer>
 
     {% block scripts %}{% endblock %}
