@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Canlı Akış</title>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+    <style>
+        body {
+            margin: 0;
+            background: #000;
+            font-family: sans-serif;
+            overflow: hidden;
+            height: 100vh;
+        }
+
+        /* Video Katmanı (En altta) */
+        #video-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+        }
+
+        video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        /* Arayüz Katmanı (Üstte) */
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+            pointer-events: none;
+            /* Video tıklanabilir kalsın diye */
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 30%);
+            padding: 20px;
+            box-sizing: border-box;
+        }
+
+        /* Chat Alanı */
+        #chat-box {
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 15px;
+            pointer-events: auto;
+            /* Chat kaydırılabilir olsun */
+            mask-image: linear-gradient(to bottom, transparent, black 10%);
+            -webkit-mask-image: linear-gradient(to bottom, transparent, black 10%);
+        }
+
+        .msg {
+            color: white;
+            text-shadow: 1px 1px 2px black;
+            font-size: 14px;
+            margin-bottom: 8px;
+            animation: fadeIn 0.3s ease;
+        }
+
+        .msg span {
+            font-weight: bold;
+            color: #D4AF37;
+            margin-right: 5px;
+        }
+
+        /* Kontroller */
+        .input-area {
+            display: flex;
+            gap: 10px;
+            pointer-events: auto;
+        }
+
+        input {
+            flex: 1;
+            padding: 12px;
+            border-radius: 25px;
+            border: 1px solid rgba(255, 255, 255, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+            color: white;
+            outline: none;
+            backdrop-filter: blur(5px);
+        }
+
+        button {
+            background: #D4AF37;
+            border: none;
+            padding: 0 20px;
+            border-radius: 25px;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        /* Yönetici Paneli (Geçici) */
+        .admin-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 10;
+            pointer-events: auto;
+        }
+
+        .btn-live {
+            padding: 8px 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            margin-left: 5px;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="video-container">
+        <video id="video" autoplay muted playsinline></video>
+    </div>
+
+    <div class="admin-controls">
+        <button class="btn-live" onclick="toggleStream(true)" style="background:green; color:white;">Yayın Aç</button>
+        <button class="btn-live" onclick="toggleStream(false)" style="background:red; color:white;">Kapat</button>
+    </div>
+
+    <div class="ui-layer">
+        <div id="chat-box"></div>
+        <div class="input-area">
+            <input type="text" id="msgInput" placeholder="Yorum yap..." onkeypress="handleEnter(event)">
+            <button onclick="sendMessage()">Gönder</button>
+        </div>
+    </div>
+
+    <script>
+        var video = document.getElementById('video');
+        var streamUrl = '/static/hls/stream.m3u8';
+        var hls = null;
+
+        // Yayını İzleme Fonksiyonu
+        function loadStream() {
+            if (Hls.isSupported()) {
+                hls = new Hls();
+                hls.loadSource(streamUrl);
+                hls.attachMedia(video);
+                hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                    video.play().catch(e => console.log("Oynatma hatası (kullanıcı etkileşimi gerekebilir):", e));
+                });
+                // Yayın kesilirse veya hata verirse yeniden dene (Canlı yayın mantığı)
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal) {
+                        setTimeout(() => { hls.recoverMediaError(); }, 3000);
+                    }
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = streamUrl;
+                video.addEventListener('loadedmetadata', function () { video.play(); });
+            }
+        }
+
+        // Yayın Kontrolü (Backend'e istek atar)
+        async function toggleStream(start) {
+            let endpoint = start ? '/start_stream' : '/stop_stream';
+            let res = await fetch(endpoint, { method: 'POST' });
+            let data = await res.json();
+            console.log(data.status);
+            if (start) {
+                // Yayın başlaması için FFmpeg'in ısınmasını bekle (2 sn)
+                setTimeout(loadStream, 2000);
+            } else {
+                if (hls) hls.destroy();
+                video.pause();
+            }
+        }
+
+        // WebSocket Chat
+        var wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+        var ws = new WebSocket(wsProtocol + "//" + location.host + "/ws/chat");
+
+        ws.onmessage = function (event) {
+            var box = document.getElementById('chat-box');
+            var div = document.createElement('div');
+            div.className = 'msg';
+            // Rastgele bir kullanıcı adı simülasyonu
+            div.innerHTML = `<span>Misafir:</span> ${event.data}`;
+            box.appendChild(div);
+            box.scrollTop = box.scrollHeight;
+        };
+
+        function sendMessage() {
+            var input = document.getElementById("msgInput");
+            if (input.value.trim() !== "") {
+                ws.send(input.value);
+                input.value = "";
+            }
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+
+</html>
