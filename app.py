@@ -9,7 +9,7 @@ from typing import List
 
 app = FastAPI()
 
-# RAM Disk Kontrolü
+# RAM Disk Klasörü
 os.makedirs("static/hls", exist_ok=True)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -45,31 +45,31 @@ async def broadcast_endpoint(websocket: WebSocket):
         "-f", "webm",
         "-i", "pipe:0",
         
-        # --- GÖRÜNTÜ AYARLARI ---
-        "-vf", "scale=720:1280",      # Zorla 720p Dikey
+        # --- GÖRÜNTÜ VE HIZ AYARLARI ---
+        "-vf", "scale=720:1280",      # 720p Dikey Standart
         "-c:v", "libx264",
-        "-preset", "ultrafast",       # En hızlı mod
-        "-tune", "zerolatency",       # Gecikme yok
-        "-r", "30",                   # 30 FPS Sabit
-        "-g", "30",                   # Her 1 saniyede bir anahtar kare
-        "-b:v", "2000k",              # 2000k Bitrate
-        "-bufsize", "2000k",          # Tamponu küçük tut ki beklemesin
+        "-preset", "superfast",       # Ultrafast bazen kaliteyi bozar, superfast daha dengelidir
+        "-tune", "zerolatency",
+        "-r", "30",                   # 30 FPS
+        "-g", "60",                   # Keyframe aralığı (Stabilite için artırdık)
+        "-b:v", "2500k",              # Kalite için bitrate artırdık
+        "-maxrate", "3000k",
+        "-bufsize", "6000k",          # Tamponu genişlettik (Donmayı önler!)
 
         # --- SES AYARLARI ---
         "-c:a", "aac",
         "-ar", "44100",
         "-af", "aresample=async=1",   # Ses kaymasını önle
 
-        # --- HLS LOW LATENCY AYARLARI ---
+        # --- HLS AYARLARI ---
         "-f", "hls",
-        "-hls_time", "1",             # 1 saniyelik parçalar
-        "-hls_list_size", "2",        # Listede sadece SON 2 parça kalsın (Eskisi 3-4 tü)
+        "-hls_time", "1",             # Parça süresi 1 saniye
+        "-hls_list_size", "4",        # Güvenlik için son 4 parça tutulsun
         "-hls_flags", "delete_segments",
-        "-hls_allow_cache", "0",      # Asla önbellekleme
+        "-hls_allow_cache", "0",
         "static/hls/stream.m3u8"
     ]
 
-    # stderr=subprocess.DEVNULL ile log kirliliğini engelliyoruz
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
 
     try:

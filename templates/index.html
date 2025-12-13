@@ -28,19 +28,18 @@
             background: #000;
         }
 
-        /* İZLEYİCİ: Görüntüyü sığdır (Kırpma yapma) */
+        /* İZLEYİCİ: Görüntüyü sığdır */
         video {
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
-        /* YAYINCI: Aynalama yap ve Sığdır (Saç kesilmez, tam kadraj görünür) */
+        /* YAYINCI: Aynalama yap ve Sığdır */
         video.broadcaster {
             transform: scaleX(-1);
             object-fit: contain;
-            border: 2px solid #333;
-            /* Yayıncı olduğunu belli et */
+            border: 2px solid #e74c3c;
         }
 
         .ui-layer {
@@ -146,11 +145,10 @@
 
         async function startBroadcasting() {
             try {
-                // Kamera Ayarları
                 const constraints = {
                     video: {
                         facingMode: "user",
-                        width: { ideal: 720 },  // 720p iste
+                        width: { ideal: 720 },
                         height: { ideal: 1280 },
                         frameRate: { ideal: 30 }
                     },
@@ -172,7 +170,7 @@
                 wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
 
                 wsBroadcast.onopen = () => {
-                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 2500000 };
+                    const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 3000000 };
                     mediaRecorder = new MediaRecorder(stream, options);
 
                     mediaRecorder.ondataavailable = (event) => {
@@ -180,8 +178,8 @@
                             wsBroadcast.send(event.data);
                         }
                     };
-                    // HIZ AYARI: 250ms'de bir gönder. (Gecikmeyi düşürür)
-                    mediaRecorder.start(250);
+                    // STABİLİTE İÇİN: 1 Saniyede bir gönder (FFmpeg bunu sever)
+                    mediaRecorder.start(1000);
                 };
 
             } catch (err) {
@@ -199,11 +197,12 @@
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
-                    lowLatencyMode: true,        // Düşük Gecikme Modu
-                    backBufferLength: 30,        // Eski veriyi hemen sil
-                    liveSyncDurationCount: 1.5,  // Canlı yayının sadece 1.5 parça gerisinden gel (Agresif)
-                    liveMaxLatencyDurationCount: 3,
-                    maxLiveSyncPlaybackRate: 2.0, // Geri kalırsan 2x hızla yetiş
+                    lowLatencyMode: true,
+                    backBufferLength: 30,
+                    // DENGELİ AYARLAR (Donmayı Keser)
+                    liveSyncDurationCount: 3,    // Canlı yayının 3 parça (3-4 sn) gerisinden gel
+                    liveMaxLatencyDurationCount: 5,
+                    maxLiveSyncPlaybackRate: 1.2, // Çok hızlı sarma, sesi bozmasın
                 });
                 hls.loadSource('/static/hls/stream.m3u8');
                 hls.attachMedia(videoEl);
