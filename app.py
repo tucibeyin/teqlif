@@ -47,22 +47,28 @@ async def broadcast_endpoint(websocket: WebSocket):
     # FFmpeg Komutu: Girdiyi "pipe:0" (Python'dan) al
     command = [
         "ffmpeg",
-        "-i", "pipe:0",
+        # --- GİRİŞ AYARLARI (KRİTİK DÜZELTME) ---
+        "-f", "webm",                 # Gelen verinin formatı WebM
+        "-use_wallclock_as_timestamps", "1", # Tarayıcı zamanına güvenme, sunucu saatini kullan
+        "-fflags", "+genpts",         # Zaman çizelgesini yeniden oluştur
+        "-i", "pipe:0",               # Girdi: WebSocket
+        
+        # --- ÇIKIŞ AYARLARI ---
         "-c:v", "libx264",
-        "-preset", "superfast",   # Ultrafast yerine Superfast (Görüntü kalitesi artar, işlemciyi az yorar)
+        "-preset", "superfast",
         "-tune", "zerolatency",
         
-        # --- DONMAYI ENGELLEYEN AYARLAR ---
-        "-b:v", "2500k",          # Bitrate'i 2500k'ya sabitle (Spike yapmasın)
-        "-maxrate", "2500k",      # Maksimum çıkabileceği hız
-        "-bufsize", "5000k",      # Tampon boyutu
-        "-g", "60",               # Her 2 saniyede bir anahtar kare (60 kare)
+        "-b:v", "2000k",              # Bitrate (İnterneti yormamak için 2000k yeterli)
+        "-maxrate", "2500k",
+        "-bufsize", "5000k",
+        "-g", "60",                   # 2 saniyede bir keyframe
+        "-r", "30",                   # Çıktıyı zorla 30 FPS yap (Dalgalanmayı önler)
         
         "-c:a", "aac",
         "-ar", "44100",
         "-f", "hls",
-        "-hls_time", "2",            # Parça süresi: 2 Saniye (Stabilite için ideal)
-        "-hls_list_size", "6",       # Listede 6 parça tut (İnternet yavaşlarsa kopmasın)
+        "-hls_time", "2",             
+        "-hls_list_size", "6", 
         "-hls_flags", "delete_segments",
         "static/hls/stream.m3u8"
     ]

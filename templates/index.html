@@ -137,45 +137,54 @@
         let mediaRecorder;
         let wsBroadcast;
 
-        async function startBroadcasting() {
-            try {
-                // Kamera ve Mikrofon İzni İste
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "user" }, // Ön kamera
-                    audio: true
-                });
+    async function startBroadcasting() {
+        try {
+            // Kamerayı 30 FPS ve 720p'ye zorla (Stabilite için)
+            const constraints = {
+                video: {
+                    facingMode: "user",
+                    width: { ideal: 720 },
+                    height: { ideal: 1280 }, // Dikey olması için
+                    frameRate: { ideal: 30, max: 30 }
+                },
+                audio: true
+            };
 
-                // Kendi görüntümüzü ekrana verelim
-                const videoEl = document.getElementById('localVideo');
-                videoEl.srcObject = stream;
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-                document.getElementById('broadcastBtn').style.display = 'none';
-                document.getElementById('uiLayer').style.display = 'flex';
+            const videoEl = document.getElementById('localVideo');
+            videoEl.srcObject = stream;
 
-                // WebSocket ile sunucuya bağlan
-                var wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
-                wsBroadcast = new WebSocket(wsProtocol + "//" + location.host + "/ws/broadcast");
+            document.getElementById('broadcastBtn').style.display = 'none';
+            document.getElementById('uiLayer').style.display = 'flex';
 
-                wsBroadcast.onopen = () => {
-                    // Medya Kaydediciyi Başlat
-                    // MimeType tarayıcıya göre değişebilir (webm genelde desteklenir)
-                    const options = { mimeType: 'video/webm; codecs=vp8,opus' };
-                    mediaRecorder = new MediaRecorder(stream, options);
+            var wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
+            wsBroadcast = new WebSocket(wsProtocol + "//" + location.host + "/ws/broadcast");
 
-                    mediaRecorder.ondataavailable = (event) => {
-                        if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
-                            wsBroadcast.send(event.data);
-                        }
-                    };
-
-                    // Her 1 saniyede bir veri gönder (Latency'i etkiler)
-                    mediaRecorder.start(1000);
+            wsBroadcast.onopen = () => {
+                // Kaydediciyi 2.5 Mbps ile sınırla (Backend ile uyumlu olsun)
+                const options = {
+                    mimeType: 'video/webm; codecs=vp8,opus',
+                    videoBitsPerSecond: 2500000
                 };
 
-            } catch (err) {
-                alert("Kamera izni verilmedi: " + err);
-            }
+                mediaRecorder = new MediaRecorder(stream, options);
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) {
+                        wsBroadcast.send(event.data);
+                    }
+                };
+
+                // Veriyi daha sık gönder (Latency düşer)
+                mediaRecorder.start(500);
+            };
+
+        } catch (err) {
+            alert("Kamera hatası: " + err);
+            console.error(err);
         }
+    }
 
     // İZLEYİCİ KISMI
     function startWatching() {
