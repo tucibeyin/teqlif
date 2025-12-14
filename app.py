@@ -378,24 +378,25 @@ async def broadcast_endpoint(websocket: WebSocket):
     await websocket.accept()
     print("Yayıncı bağlandı...")
 
+# GÜVENLİ VE KARARLI FFMPEG KOMUTU
     command = [
         "ffmpeg", 
-        "-f", "webm",
-        "-i", "pipe:0",
-        "-c:v", "libx264",
-        "-preset", "ultrafast",
-        "-tune", "zerolatency",
-        "-b:v", "1500k",              # Kaliteyi biraz artırdım
-        "-g", "60",                   # KRİTİK AYAR: Her 60 karede (2 saniyede) bir kes
-        "-keyint_min", "60",          # Minimum anahtar kare aralığı
-        "-sc_threshold", "0",         # Sahne değişiminde ekstra kesme yapma
-        "-c:a", "aac",
-        "-ar", "44100",
+        "-f", "webm",                 # Tarayıcıdan gelen format
+        "-i", "pipe:0",               # Girdiyi standarttan oku
+        "-c:v", "libx264",            # H264'e çevir (En uyumlu format)
+        "-preset", "veryfast",        # Ultrafast yerine veryfast (Daha dengeli)
+        "-g", "60",                   # 2 saniyede bir anahtar kare (HLS için şart)
+        "-sc_threshold", "0",
+        "-b:v", "2500k",              # Bitrate (Kalite)
+        "-maxrate", "3000k",
+        "-bufsize", "6000k",
+        "-c:a", "aac",                # Ses formatı
         "-b:a", "128k",
-        "-f", "hls",
-        "-hls_time", "2",             # Parça süresi: 2 saniye
-        "-hls_list_size", "4",        # Liste boyutu: 4 (Daha az dosya, daha güncel liste)
-        "-hls_flags", "delete_segments+append_list", # Eski parçaları hemen sil
+        "-ar", "44100",
+        "-f", "hls",                  # HLS Çıktısı
+        "-hls_time", "2",             # Parça süresi
+        "-hls_list_size", "6",        # Liste boyutu
+        "-hls_flags", "delete_segments", 
         "static/hls/stream.m3u8"
     ]
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)

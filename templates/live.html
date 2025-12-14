@@ -309,19 +309,19 @@
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    // --- BÖLÜM 1: CHAT SİSTEMİ (ORTAK) ---
+    // --- CHAT SİSTEMİ ---
     const chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
 
-    chatWs.onmessage = function (event) {
+    chatWs.onmessage = (event) => {
         const data = JSON.parse(event.data);
-        const colors = ['#FF9A9E', '#FECFEF', '#A1C4FD', '#C2E9FB', '#81FBB8'];
-        const randomColor = colors[Math.floor(Math.random() * colors.length)];
+        const colors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f'];
+        const color = colors[Math.floor(Math.random() * colors.length)];
 
         chatBox.insertAdjacentHTML('beforeend', `
             <div class="chat-message">
-                <span class="chat-user" style="color: ${randomColor};">${data.user}</span> 
+                <span class="chat-user" style="color:${color}">${data.user}</span> 
                 <span class="chat-text">${data.msg}</span>
             </div>
         `);
@@ -330,84 +330,59 @@
 
     function sendMessage() {
         if (!chatInput) return;
-        const msg = chatInput.value;
-        if (msg.trim() !== "") { chatWs.send(msg); chatInput.value = ""; }
+        if (chatInput.value.trim() !== "") { chatWs.send(chatInput.value); chatInput.value = ""; }
     }
     if (chatInput) chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
 
 
-    // --- BÖLÜM 2: YAYINCI MODU (BROADCAST) ---
+    // --- YAYINCI MODU (BROADCAST) ---
     if (MODE === 'broadcast') {
         const preview = document.getElementById('preview');
         let broadcastWs;
         let mediaRecorder;
 
-        // 1. Tarayıcının desteklediği en iyi formatı bul
-        function getSupportedMimeType() {
-            const types = [
-                'video/webm;codecs=h264',
-                'video/webm;codecs=vp8',
-                'video/webm;codecs=vp9',
-                'video/webm', // En genel format
-                'video/mp4'   // Safari için
-            ];
-            for (const type of types) {
-                if (MediaRecorder.isTypeSupported(type)) {
-                    console.log("Seçilen Format:", type);
-                    return type;
-                }
-            }
-            return ''; // Hiçbiri yoksa boş döner
-        }
-
-        // 2. Kamerayı Aç
-        navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 720 }, height: { ideal: 1280 }, facingMode: "user" }, audio: true })
+        // Kamerayı Aç
+        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
             .then(stream => {
                 preview.srcObject = stream;
                 window.localStream = stream;
-                // Sessizce oynat ki eko yapmasın
                 preview.volume = 0;
             })
-            .catch(err => {
-                alert("Kamera hatası: " + err);
-                console.error(err);
-            });
+            .catch(err => alert("Kamera Açılamadı: " + err));
 
         window.startBroadcast = function () {
-            const mimeType = getSupportedMimeType();
-            if (!mimeType) {
-                alert("Tarayıcınız video kaydını desteklemiyor!");
-                return;
-            }
-
+            // Soketi Aç
             broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
             broadcastWs.onopen = () => {
+                console.log("Sunucuya bağlanıldı!");
                 document.getElementById('btn-start').style.display = 'none';
                 document.getElementById('btn-stop').style.display = 'inline-block';
                 document.querySelector('.live-tag').style.display = 'block';
 
-                try {
-                    mediaRecorder = new MediaRecorder(window.localStream, { mimeType: mimeType });
+                // --- ÖNEMLİ DEĞİŞİKLİK: FORMATI BASİTLEŞTİRDİK ---
+                // Linux/Android/Windows uyumlu en temel format
+                const options = { mimeType: 'video/webm' };
 
-                    mediaRecorder.ondataavailable = (event) => {
-                        if (event.data.size > 0 && broadcastWs.readyState === 1) {
-                            broadcastWs.send(event.data);
-                        }
-                    };
-                    // Veriyi daha sık gönder (Her 100ms yerine 500ms deneyelim, daha stabil olabilir)
-                    mediaRecorder.start(250);
-                    console.log("Yayın başladı! Format:", mimeType);
+                try {
+                    mediaRecorder = new MediaRecorder(window.localStream, options);
                 } catch (e) {
-                    alert("MediaRecorder Başlatılamadı: " + e);
-                    console.error(e);
+                    console.error("Format hatası, varsayılan deneniyor:", e);
+                    mediaRecorder = new MediaRecorder(window.localStream); // Hiçbir şey belirtme, tarayıcı seçsin
                 }
+
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && broadcastWs.readyState === 1) {
+                        broadcastWs.send(event.data);
+                    }
+                };
+                // Veri paketlerini 500ms'de bir gönder (Daha stabil)
+                mediaRecorder.start(500);
             };
 
             broadcastWs.onerror = (err) => {
-                console.error("WebSocket Hatası:", err);
-                // Hatayı kullanıcıya gösterelim ki ne olduğunu anlayalım
-                alert("Sunucu bağlantı hatası! Lütfen sayfayı yenileyip tekrar deneyin.");
+                console.error("Socket Hatası:", err);
+                alert("Yayın Hatası! Tarayıcı konsoluna (F12) bakınız.");
             };
         }
 
@@ -418,34 +393,35 @@
         }
     }
 
-    // --- BÖLÜM 3: İZLEYİCİ MODU (WATCH) ---
+    // --- İZLEYİCİ MODU (WATCH) ---
     else if (MODE === 'watch') {
         var video = document.getElementById('video');
         var videoSrc = '/static/hls/stream.m3u8';
 
         if (Hls.isSupported()) {
-            var config = {
-                liveSyncDurationCount: 2, // Biraz daha güvenli mod (donmaması için)
+            var hls = new Hls({
                 maxBufferLength: 10,
-                manifestLoadingTimeOut: 10000,
-                manifestLoadingMaxRetry: 10,
-            };
-            var hls = new Hls(config);
+                liveSyncDurationCount: 3
+            });
             hls.loadSource(videoSrc);
             hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, function () { video.play().catch(e => console.log("Oto-oynatma engellendi")); });
+            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => console.log("Oto-oynatma engellendi")));
 
             hls.on(Hls.Events.ERROR, function (event, data) {
                 if (data.fatal) {
-                    // Yayın yoksa veya hata varsa 2 saniyede bir dene
-                    setTimeout(() => { hls.loadSource(videoSrc); hls.attachMedia(video); }, 2000);
+                    // Yayın yoksa 2 saniyede bir dene
+                    setTimeout(() => {
+                        hls.loadSource(videoSrc);
+                        hls.attachMedia(video);
+                    }, 2000);
                 }
             });
         }
         else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = videoSrc;
-            video.addEventListener('loadedmetadata', function () { video.play(); });
+            video.addEventListener('loadedmetadata', () => video.play());
         }
     }
 </script>
+
 {% endblock %}
