@@ -379,23 +379,29 @@ async def broadcast_endpoint(websocket: WebSocket):
     print("Yayıncı bağlandı...")
 
 # GÜVENLİ VE KARARLI FFMPEG KOMUTU
+# HD YAYIN İÇİN FFMPEG KOMUTU
     command = [
         "ffmpeg", 
-        "-f", "webm",                 # Tarayıcıdan gelen format
-        "-i", "pipe:0",               # Girdiyi standarttan oku
-        "-c:v", "libx264",            # H264'e çevir (En uyumlu format)
-        "-preset", "veryfast",        # Ultrafast yerine veryfast (Daha dengeli)
-        "-g", "60",                   # 2 saniyede bir anahtar kare (HLS için şart)
-        "-sc_threshold", "0",
-        "-b:v", "2500k",              # Bitrate (Kalite)
-        "-maxrate", "3000k",
-        "-bufsize", "6000k",
-        "-c:a", "aac",                # Ses formatı
-        "-b:a", "128k",
+        "-i", "pipe:0",               # Girdi (Artık HD geliyor)
+        
+        "-c:v", "libx264",            # Video Codec
+        "-preset", "superfast",       # İşlemciyi yormadan hızlı çevir (Kalite/Hız dengesi)
+        "-tune", "zerolatency",       # Düşük gecikme
+        
+        # --- KALİTE AYARLARI ---
+        "-b:v", "2500k",              # Hedef Bitrate: 2500k (720p için ideal)
+        "-maxrate", "3000k",          # Maksimum anlık bitrate
+        "-bufsize", "6000k",          # Tampon boyutu
+        "-vf", "scale=1280:-2",       # Çözünürlüğü 1280x720'ye sabitle (Gelen ne olursa olsun)
+        "-g", "60",                   # GOP (2 saniye)
+        
+        "-c:a", "aac",                # Ses Codec
+        "-b:a", "128k",               # Ses Kalitesi
         "-ar", "44100",
-        "-f", "hls",                  # HLS Çıktısı
-        "-hls_time", "2",             # Parça süresi
-        "-hls_list_size", "6",        # Liste boyutu
+        
+        "-f", "hls",
+        "-hls_time", "2",
+        "-hls_list_size", "5",
         "-hls_flags", "delete_segments", 
         "static/hls/stream.m3u8"
     ]

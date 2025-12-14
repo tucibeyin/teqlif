@@ -198,49 +198,54 @@
         const preview = document.getElementById('preview');
         let broadcastWs, mediaRecorder;
 
-        // Kamerayı Aç
-        navigator.mediaDevices.getUserMedia({ video: true, audio: true })
+        // 1. HD KAMERA AYARLARI (1280x720)
+        const constraints = {
+            audio: true,
+            video: {
+                width: { ideal: 1280 },  // İdeal olarak 720p genişlik
+                height: { ideal: 720 },  // İdeal olarak 720p yükseklik
+                frameRate: { ideal: 30 }, // 30 FPS
+                facingMode: "user"
+            }
+        };
+
+        navigator.mediaDevices.getUserMedia(constraints)
             .then(stream => {
                 preview.srcObject = stream;
                 window.localStream = stream;
                 preview.volume = 0;
-                logInfo("Kamera açıldı, hazır.");
+                logInfo("Kamera HD modunda açıldı.");
             })
             .catch(err => logError("Kamera Hatası: " + err));
 
         window.startBroadcast = function () {
             logInfo("Sunucuya bağlanılıyor...");
-
-            try {
-                broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-            } catch (e) {
-                logError("Socket oluşturulamadı: " + e);
-                return;
-            }
+            try { broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`); }
+            catch (e) { logError(e); return; }
 
             broadcastWs.onopen = () => {
-                logInfo("Sunucu bağlantısı BAŞARILI!");
+                logInfo("Bağlantı Başarılı! HD Yayın Başlıyor...");
                 document.getElementById('btn-start').style.display = 'none';
                 document.getElementById('btn-stop').style.display = 'inline-block';
                 document.querySelector('.live-tag').style.display = 'block';
 
-                // Format Denemesi
-                let options = { mimeType: 'video/webm;codecs=h264' };
+                // 2. YÜKSEK BITRATE AYARLARI
+                // WebM/H264 formatı ve 2.5 Mbps Bitrate
+                let options = {
+                    mimeType: 'video/webm;codecs=h264',
+                    videoBitsPerSecond: 2500000 // 2.5 Mbps (HD Kalitesi için şart)
+                };
+
+                // Eğer H264 desteklenmiyorsa VP8 dene ama yine yüksek bitrate iste
                 if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                    logError("H264 desteklenmiyor, VP8 deneniyor...");
-                    options = { mimeType: 'video/webm' };
-                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                        logError("VP8 de desteklenmiyor! Tarayıcı uyumsuz.");
-                        options = {}; // Son çare boş bırak
-                    }
+                    options = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
                 }
 
                 try {
                     mediaRecorder = new MediaRecorder(window.localStream, options);
-                    logInfo("Kayıt başladı: " + (options.mimeType || "Varsayılan"));
                 } catch (e) {
-                    logError("MediaRecorder Başlamadı: " + e);
-                    return;
+                    // Hiçbiri olmazsa varsayılan
+                    mediaRecorder = new MediaRecorder(window.localStream);
                 }
 
                 mediaRecorder.ondataavailable = (event) => {
@@ -248,7 +253,7 @@
                         broadcastWs.send(event.data);
                     }
                 };
-                mediaRecorder.start(250);
+                mediaRecorder.start(250); // 250ms paket gönderimi
             };
 
             broadcastWs.onerror = (err) => {
