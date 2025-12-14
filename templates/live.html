@@ -7,6 +7,7 @@
 
     {% if mode == 'broadcast' %}
     <div class="screen">
+
         <video id="preview" class="cinema-video" autoplay muted playsinline></video>
 
         <div class="glass-interface">
@@ -51,15 +52,15 @@
                 <div class="header">
                     <div class="brand-logo">teqlif</div>
                     <div class="viewer-actions">
-                        <span class="view-count">1.2k izleyici</span>
+                        <span class="view-count">Canlı İzleyici</span>
                         <a href="/" class="close-x"><i class="fa-solid fa-xmark"></i></a>
                     </div>
                 </div>
 
                 <div class="auction-status">
                     <div class="label">ŞU ANKİ TEKLİF</div>
-                    <div class="price-tag blink-update" id="price-{{ stream.username }}">₺ 1.500</div>
-                    <div class="last-bidder">Son teklif: @ahmet_yilmaz</div>
+                    <div class="price-tag blink-update" id="price-{{ stream.username }}">₺ 0</div>
+                    <div class="last-bidder">Son teklif: --</div>
                 </div>
 
                 <div class="bottom-section">
@@ -100,11 +101,9 @@
 <style>
     /* --- TEQLIF OS DESIGN SYSTEM --- */
     :root {
-        --glass: rgba(20, 20, 20, 0.4);
-        --glass-border: rgba(255, 255, 255, 0.1);
         --primary: #FFF;
         --accent: #34C759;
-        /* Apple Green - Para Rengi */
+        /* Para Yeşili */
         --danger: #FF3B30;
         --text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
@@ -150,7 +149,7 @@
         overflow: hidden;
     }
 
-    /* --- SİNEMATİK VİDEO (SAF) --- */
+    /* --- VİDEO (SAF - FİLTRESİZ) --- */
     .cinema-video {
         position: absolute;
         top: 0;
@@ -161,6 +160,7 @@
         z-index: 1;
         filter: none !important;
         opacity: 1 !important;
+        background: black;
     }
 
     #preview {
@@ -176,7 +176,6 @@
         flex-direction: column;
         justify-content: space-between;
         pointer-events: none;
-        /* Arkaya tıkla */
         padding: max(20px, env(safe-area-inset-top)) 20px max(30px, env(safe-area-inset-bottom)) 20px;
     }
 
@@ -189,7 +188,6 @@
     }
 
     .brand-logo {
-        font-family: 'SF Pro Display', sans-serif;
         font-weight: 700;
         font-size: 24px;
         letter-spacing: -1px;
@@ -243,8 +241,8 @@
         align-self: center;
         text-align: center;
         margin-top: 20px;
-        /* Hafif cam arka plan */
         background: rgba(255, 255, 255, 0.1);
+        /* Çok hafif şeffaf beyaz */
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
         padding: 15px 30px;
@@ -252,7 +250,6 @@
         border: 1px solid rgba(255, 255, 255, 0.15);
         box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         pointer-events: auto;
-        animation: float 3s ease-in-out infinite;
     }
 
     .label {
@@ -277,7 +274,7 @@
         color: #eee;
     }
 
-    /* --- ALT BÖLÜM (SOHBET & TEKLİF) --- */
+    /* --- ALT BÖLÜM --- */
     .bottom-section {
         display: flex;
         flex-direction: column;
@@ -294,9 +291,9 @@
         justify-content: flex-end;
         align-items: flex-start;
         gap: 8px;
+        scrollbar-width: none;
         mask-image: linear-gradient(to top, black 80%, transparent 100%);
         -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
-        scrollbar-width: none;
     }
 
     .chat-bubble {
@@ -304,7 +301,6 @@
         padding: 8px 14px;
         border-radius: 16px;
         border-bottom-left-radius: 4px;
-        /* Konuşma balonu hissi */
         font-size: 13px;
         color: #FFF;
         backdrop-filter: blur(4px);
@@ -318,7 +314,7 @@
         margin-right: 5px;
     }
 
-    /* --- BID DOCK (TEKLİF İSTASYONU) --- */
+    /* --- TEKLİF İSTASYONU --- */
     .bid-dock {
         background: rgba(20, 20, 20, 0.85);
         /* Koyu Cam */
@@ -333,7 +329,6 @@
         gap: 12px;
     }
 
-    /* Hızlı Peyler */
     .quick-bids {
         display: grid;
         grid-template-columns: 1fr 1fr 1fr;
@@ -357,7 +352,6 @@
         transform: scale(0.95);
     }
 
-    /* Manuel Giriş */
     .manual-bid {
         display: flex;
         gap: 8px;
@@ -374,13 +368,8 @@
         text-align: center;
     }
 
-    .manual-bid input::placeholder {
-        color: rgba(255, 255, 255, 0.3);
-    }
-
     .bid-send-btn {
         background: var(--accent);
-        /* YEŞİL */
         color: black;
         border: none;
         padding: 0 20px;
@@ -468,7 +457,6 @@
         gap: 20px;
     }
 
-    /* Animasyonlar */
     @keyframes pulse {
         0% {
             opacity: 1
@@ -480,20 +468,6 @@
 
         100% {
             opacity: 1
-        }
-    }
-
-    @keyframes float {
-        0% {
-            transform: translateY(0px)
-        }
-
-        50% {
-            transform: translateY(-5px)
-        }
-
-        100% {
-            transform: translateY(0px)
         }
     }
 
@@ -521,7 +495,6 @@
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     window.CURRENT_SOCKET = null;
 
-    // --- KAMERA & STREAM ---
     function unmuteVideo(u) {
         const v = document.getElementById(`video-${u}`);
         if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; }
@@ -530,7 +503,9 @@
     if (MODE === 'broadcast') {
         const prev = document.getElementById('preview');
         let rec, active = false;
-        navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
+
+        // HD Kamera (720p @ 30FPS)
+        navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: true })
             .then(s => { prev.srcObject = s; window.localStream = s; prev.volume = 0; });
 
         window.startBroadcast = function () {
@@ -541,22 +516,23 @@
 
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
             ws.onopen = () => {
-                let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 }; // HD Kalite
-                if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
+                // Yüksek Bitrate (3000k)
+                let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 3000000 };
+                if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 3000000 };
                 rec = new MediaRecorder(window.localStream, opts);
-                rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+
+                // 🔥 1 saniyelik parçalar (Sunucuyu yormaz)
                 rec.start(1000);
+                rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
             };
             window.stopBroadcast = function () { fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
         }
     } else {
-        // İzleyici Observer (Aynı kod)
         let obs = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 const u = e.target.dataset.username;
                 const v = document.getElementById(`video-${u}`);
                 if (e.isIntersecting) {
-                    // HLS Yükleme (Kısa tutuyorum)
                     const src = `/static/hls/${u}/stream.m3u8`;
                     if (Hls.isSupported()) {
                         const h = new Hls(); h.loadSource(src); h.attachMedia(v);
@@ -569,7 +545,7 @@
         document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
 
-    // --- CHAT & TEKLİF SİSTEMİ ---
+    // --- CHAT & TEKLİF ---
     function connectChat(target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let sName = target === 'broadcast' ? "{{ user.username if user else 'anon' }}" : target;
@@ -581,17 +557,14 @@
             const boxId = target === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${target}`;
             const box = document.getElementById(boxId);
 
-            // Eğer mesaj bir TEKLİF ise (Özel format: BID:TUTAR)
             if (d.msg.startsWith("BID:")) {
                 const amount = d.msg.split(":")[1];
                 updatePriceDisplay(amount, target);
-                // Ayrıca chat'e de yazsın
                 if (box) {
-                    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble" style="border-color:#34C759"><b>${d.user}</b>: ₺${amount} teklif verdi! 💸</div>`);
+                    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble" style="border-color:#34C759"><b>${d.user}</b>: ₺${amount} teklif verdi!</div>`);
                     box.scrollTop = box.scrollHeight;
                 }
             } else {
-                // Normal Mesaj
                 if (box) {
                     box.insertAdjacentHTML('beforeend', `<div class="chat-bubble"><b>${d.user}</b>: ${d.msg}</div>`);
                     box.scrollTop = box.scrollHeight;
@@ -600,33 +573,22 @@
         };
     }
 
-    // Fiyatı Ekranda Güncelle
     function updatePriceDisplay(amount, target) {
-        // İzleyici ekranındaki fiyat
         const viewerPrice = document.getElementById(`price-${target}`);
         if (viewerPrice) {
             viewerPrice.innerHTML = `₺ ${amount}`;
             viewerPrice.classList.remove("blink-update");
-            void viewerPrice.offsetWidth; // Restart animation
+            void viewerPrice.offsetWidth;
             viewerPrice.classList.add("blink-update");
         }
-        // Yayıncı ekranındaki fiyat
         const streamerPrice = document.getElementById('current-price-display');
         if (streamerPrice) streamerPrice.innerHTML = `₺ ${amount}`;
     }
 
-    // Teklif Gönder (WebSocket üzerinden özel mesaj)
     window.sendBid = function (target, amount) {
-        // Mevcut fiyatı alıp üstüne eklemek lazım ama şimdilik direkt artış simülasyonu yapıyoruz
-        // Gerçekte backend'den son fiyatı bilmeliyiz. 
-        // Basitlik için: "Pey Verildi" mesajı atalım.
-
-        // Şimdilik demo mantığı: Rastgele bir baz fiyata ekleyelim veya static artış.
-        // En doğrusu: Backend'e "BID" mesajı yolla.
         const currentText = document.getElementById(`price-${target}`)?.innerText.replace('₺', '').trim() || "0";
         const currentVal = parseInt(currentText.replace('.', ''));
         const newVal = currentVal + amount;
-
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${newVal}`);
     }
 
@@ -637,11 +599,7 @@
             inp.value = "";
         }
     }
-
-    // Yayıncı Test Butonu
-    window.simulateBid = function (amount) {
-        if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${amount}`);
-    }
+    window.simulateBid = function (amount) { if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${amount}`); }
 
 </script>
 {% endblock %}

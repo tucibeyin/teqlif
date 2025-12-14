@@ -142,9 +142,10 @@ class ConnectionManager:
                 except Exception as e: 
                     print(f"⚠️ Mesaj gönderme hatası: {e}")
                     self.disconnect(connection, room_name)
-            print(f"📤 DAĞITILDI ({room_name}): {message}") 
+            # Log kalabalığı yapmasın diye print'i kapattım
+            # print(f"📤 DAĞITILDI ({room_name}): {message}") 
         else:
-            print(f"⚠️ HATA: '{room_name}' odası boş veya yok.")
+            pass
 
 manager = ConnectionManager()
 
@@ -283,7 +284,7 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         while True:
             data = await websocket.receive_text()
             if data.strip():
-                print(f"📩 CHAT GELDI ({room_name}): {username} -> {data}")
+                # print(f"📩 CHAT GELDI ({room_name}): {username} -> {data}")
                 msg_payload = json.dumps({"user": username, "msg": data.replace("<", "&lt;")})
                 await manager.broadcast_to_room(msg_payload, room_name)
     except: manager.disconnect(websocket, room_name)
@@ -311,27 +312,44 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(stream_dir, exist_ok=True)
     
     stream_path = f"{stream_dir}/stream.m3u8"
-    print(f"🎥 YAYIN BAŞLIYOR (HD): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
-    # 🔥 HD KALİTE (720p - 2500k Bitrate) 🔥
+    # 🔥 PROFESYONEL VE DAYANIKLI YAYIN KOMUTU 🔥
     command = [
-        "ffmpeg", "-i", "pipe:0",
+        "ffmpeg", 
+        "-f", "webm",
+        "-i", "pipe:0",
+        
+        # Kesilmeyi ve drift'i önleyen kritik komutlar:
+        "-use_wallclock_as_timestamps", "1", 
+        "-fflags", "+genpts+nobuffer",
+        "-thread_queue_size", "1024",
+
+        # Video Ayarları (Yüksek Kalite)
         "-c:v", "libx264", 
-        "-preset", "superfast",  # Kalite arttı
+        "-preset", "superfast", 
         "-tune", "zerolatency",
-        "-threads", "4",         # CPU gücünü kullan
-        "-r", "30",              # 30 FPS Akıcı
-        "-b:v", "2500k",         # 2.5 Mbps (Net)
+        "-threads", "4",
+        "-r", "30",
+        "-g", "60",
+        "-b:v", "3000k",
         "-maxrate", "3000k",
         "-bufsize", "6000k",
-        "-g", "60",              # Keyframe
+        "-pix_fmt", "yuv420p",
+
+        # Ses Ayarları
         "-c:a", "aac", 
-        "-b:a", "128k",          # Kaliteli ses
+        "-b:a", "128k",
         "-ar", "44100",
+        "-ac", "2",
+
+        # HLS Çıkış
         "-f", "hls", 
         "-hls_time", "2", 
-        "-hls_list_size", "3",
-        "-hls_flags", "delete_segments+append_list", 
+        "-hls_list_size", "5",
+        "-hls_flags", "delete_segments+append_list+omit_endlist", 
+        "-hls_segment_type", "mpegts",
+        
         stream_path 
     ]
     
@@ -341,11 +359,14 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     try:
         while True:
             data = await websocket.receive_bytes()
-            if process.stdin: 
-                process.stdin.write(data)
-                process.stdin.flush()
+            if process.stdin:
+                try:
+                    process.stdin.write(data)
+                    process.stdin.flush()
+                except BrokenPipeError:
+                    break
     except Exception as e:
-        print(f"❌ Yayın Hatası (Socket): {e}")
+        print(f"❌ Yayın Hatası: {e}")
     finally:
-        print(f"🔌 Bağlantı koptu, temizleniyor: {user.username}")
+        print(f"🔌 Yayın Bitti: {user.username}")
         cleanup_stream(user.username, db)
