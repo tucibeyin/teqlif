@@ -17,9 +17,9 @@
                     <div class="status-badge">🔴 CANLI</div>
                 </div>
                 <div class="controls-area">
-                    <button id="btn-start" onclick="startBroadcast()" class="btn-primary">BAŞLAT 🚀</button>
-                    <button id="btn-stop" onclick="stopBroadcast()" class="btn-danger" style="display:none;">BİTİR
-                        ⏹</button>
+                    <button id="btn-start" onclick="startBroadcast()" class="btn-primary">BAŞLAT</button>
+                    <button id="btn-stop" onclick="stopBroadcast()" class="btn-danger"
+                        style="display:none;">BİTİR</button>
                 </div>
             </div>
 
@@ -99,7 +99,6 @@
     .app-container {
         width: 100%;
         height: 100dvh;
-        /* Mobil uyumlu tam boy */
         background: black;
         max-width: 500px;
         margin: 0 auto;
@@ -121,7 +120,7 @@
         overflow: hidden;
     }
 
-    /* --- VİDEO (HİÇBİR FİLTRE YOK!) --- */
+    /* --- VİDEO (SAF HALİ) --- */
     .bg-video {
         position: absolute;
         top: 0;
@@ -131,16 +130,18 @@
         object-fit: cover;
         z-index: 1;
 
-        /* 🔥 %100 HAM GÖRÜNTÜ 🔥 */
+        /* 🔥 BURASI ÇOK ÖNEMLİ: HİÇBİR FİLTRE YOK 🔥 */
         filter: none !important;
         opacity: 1 !important;
+        background: #000;
+        /* Video yüklenirken siyah olsun */
     }
 
     #preview {
         transform: scaleX(-1);
     }
 
-    /* --- ARAYÜZ KATMANI --- */
+    /* --- ARAYÜZ KATMANI (ARKA PLANI YOK!) --- */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -149,13 +150,13 @@
         height: 100%;
         z-index: 999;
         pointer-events: none;
-        /* Arkadaki videoya tıklanabilsin */
+        background: transparent !important;
+        /* UI katmanı da şeffaf */
     }
 
-    /* --- ÜST PANEL (SABİT VE ŞEFFAF) --- */
+    /* --- ÜST PANEL (TAMAMEN ŞEFFAF) --- */
     .top-dock {
         position: absolute;
-        /* Tavana çiviledik */
         top: 0;
         left: 0;
         width: 100%;
@@ -166,16 +167,15 @@
         align-items: center;
         padding: 15px;
         padding-top: max(20px, env(safe-area-inset-top));
-        /* Çentik payı */
 
+        /* 🔥 GÖLGE YOK, RENK YOK 🔥 */
         background: transparent !important;
-        /* Arkası tamamen şeffaf */
+        box-shadow: none !important;
     }
 
-    /* --- ALT PANEL (SABİT VE ŞEFFAF) --- */
+    /* --- ALT PANEL (TAMAMEN ŞEFFAF) --- */
     .bottom-dock {
         position: absolute;
-        /* Tabana çiviledik */
         bottom: 0;
         left: 0;
         width: 100%;
@@ -183,17 +183,19 @@
 
         padding: 15px;
         padding-bottom: max(20px, env(safe-area-inset-bottom));
-        /* iPhone alt çizgi payı */
 
         display: flex;
         flex-direction: column;
         gap: 10px;
 
+        /* 🔥 GÖLGE YOK, RENK YOK 🔥 */
         background: transparent !important;
-        /* Arkası tamamen şeffaf */
+        box-shadow: none !important;
     }
 
-    /* --- STİLLER (YAZI GÖLGELİ - FİLTRESİZ OKUNURLUK İÇİN) --- */
+    /* --- BUTONLAR VE YAZILAR (OKUNABİLİRLİK İÇİN GÖLGELİ) --- */
+    /* Arka plan şeffaf olduğu için yazılara gölge ekledim ki beyaz duvarda okunsun */
+
     .status-badge {
         background: red;
         color: white;
@@ -201,12 +203,12 @@
         border-radius: 6px;
         font-weight: 800;
         font-size: 14px;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     }
 
     .user-badge {
-        /* Sadece yazının arkası çok hafif koyu */
-        background: rgba(0, 0, 0, 0.4);
+        /* Sadece badge'in kendisi hafif koyu, etrafı değil */
+        background: rgba(0, 0, 0, 0.5);
         color: white;
         padding: 6px 12px;
         border-radius: 20px;
@@ -240,7 +242,7 @@
         width: 35px;
         height: 35px;
         border-radius: 50%;
-        background: rgba(0, 0, 0, 0.4);
+        background: rgba(0, 0, 0, 0.5);
         color: white;
         display: flex;
         align-items: center;
@@ -262,17 +264,16 @@
     }
 
     .msg {
-        /* Mesajların arkası hafif koyu (okunabilirlik için şart ama ekranı karartmaz) */
-        background: rgba(0, 0, 0, 0.4);
+        /* Sadece baloncuk koyu, kutunun tamamı değil */
+        background: rgba(0, 0, 0, 0.5);
         color: white;
         padding: 6px 12px;
         border-radius: 12px;
         width: fit-content;
         max-width: 85%;
         font-size: 14px;
-
-        /* 🔥 GÜÇLÜ YAZI GÖLGESİ (VİDEO BEYAZ OLSA DA OKUNSUN) */
-        text-shadow: 1px 1px 2px black, 0 0 1em black;
+        /* Güçlü yazı gölgesi */
+        text-shadow: 1px 1px 2px black;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
@@ -284,7 +285,7 @@
     .system {
         background: transparent;
         font-style: italic;
-        color: #eee;
+        color: #fff;
         text-shadow: 1px 1px 2px black;
         border: none;
     }
@@ -301,6 +302,7 @@
         padding: 12px;
         border-radius: 25px;
         border: 1px solid rgba(255, 255, 255, 0.5);
+        /* Input içi hafif koyu olsun ki ne yazdığımızı görelim */
         background: rgba(0, 0, 0, 0.4);
         color: white;
         font-size: 14px;
@@ -364,7 +366,7 @@
         const preview = document.getElementById('preview');
         let rec, active = false;
 
-        // 480p Optimize
+        // Optimize (480p)
         const constraints = { video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 20 } }, audio: true };
 
         navigator.mediaDevices.getUserMedia(constraints)
