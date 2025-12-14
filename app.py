@@ -379,11 +379,23 @@ async def broadcast_endpoint(websocket: WebSocket):
     print("Yayıncı bağlandı...")
 
     command = [
-        "ffmpeg", "-f", "webm", "-i", "pipe:0",
-        "-vf", "scale=720:1280,fps=30", "-c:v", "libx264", "-preset", "superfast", "-tune", "zerolatency",
-        "-b:v", "1200k", "-maxrate", "1500k", "-bufsize", "3000k", "-g", "30",
-        "-c:a", "aac", "-ar", "48000", "-ac", "2", "-b:a", "192k", "-af", "aresample=async=1",
-        "-f", "hls", "-hls_time", "1", "-hls_list_size", "4", "-hls_flags", "delete_segments", "-hls_allow_cache", "0",
+        "ffmpeg", 
+        "-f", "webm",
+        "-i", "pipe:0",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",
+        "-tune", "zerolatency",
+        "-b:v", "1500k",              # Kaliteyi biraz artırdım
+        "-g", "60",                   # KRİTİK AYAR: Her 60 karede (2 saniyede) bir kes
+        "-keyint_min", "60",          # Minimum anahtar kare aralığı
+        "-sc_threshold", "0",         # Sahne değişiminde ekstra kesme yapma
+        "-c:a", "aac",
+        "-ar", "44100",
+        "-b:a", "128k",
+        "-f", "hls",
+        "-hls_time", "2",             # Parça süresi: 2 saniye
+        "-hls_list_size", "4",        # Liste boyutu: 4 (Daha az dosya, daha güncel liste)
+        "-hls_flags", "delete_segments+append_list", # Eski parçaları hemen sil
         "static/hls/stream.m3u8"
     ]
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
