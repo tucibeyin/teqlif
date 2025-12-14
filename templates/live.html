@@ -166,7 +166,7 @@
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    // --- CHAT (AYNI) ---
+    // --- CHAT ---
     const chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
@@ -178,15 +178,14 @@
     };
     function sendMessage() { if (chatInput.value.trim()) { chatWs.send(chatInput.value); chatInput.value = ""; } }
 
-    // --- YAYINCI (GÜNCELLENDİ) ---
+    // --- YAYINCI ---
     if (MODE === 'broadcast') {
         const preview = document.getElementById('preview');
         let broadcastWs, mediaRecorder;
 
-        // HD Kamera
         navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
             .then(stream => { preview.srcObject = stream; window.localStream = stream; preview.volume = 0; })
-            .catch(err => alert("Kamera Hatası: " + err));
+            .catch(err => console.log("Kamera Hatası: " + err));
 
         window.startBroadcast = function () {
             broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
@@ -196,54 +195,46 @@
                 document.getElementById('btn-stop').style.display = 'inline-block';
                 document.querySelector('.live-tag').style.display = 'block';
 
-                // 1. KAYIT BAŞLAT
+                // 1. KAYIT
                 let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                 if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
-
                 try {
                     mediaRecorder = new MediaRecorder(window.localStream, options);
-                    mediaRecorder.ondataavailable = (e) => {
-                        if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data);
-                    };
+                    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
                     mediaRecorder.start(250);
-                } catch (e) { alert("Yayın başlatılamadı: " + e); }
+                } catch (e) { alert("Yayın hatası: " + e); }
 
-                // 2. THUMBNAIL GÖNDERİCİ (YENİ EKLENEN KISIM) 📸
+                // 2. FOTOĞRAF ÇEK VE GÖNDER (10 Saniyede bir) 📸
                 setInterval(() => {
                     if (broadcastWs.readyState === 1) {
                         const canvas = document.createElement('canvas');
-                        canvas.width = 640; canvas.height = 360; // 360p yeterli
+                        canvas.width = 640; canvas.height = 360;
                         canvas.getContext('2d').drawImage(preview, 0, 0, canvas.width, canvas.height);
-
-                        const dataURL = canvas.toDataURL('image/jpeg', 0.6); // %60 kalite
+                        const dataURL = canvas.toDataURL('image/jpeg', 0.6);
 
                         fetch('/broadcast/thumbnail', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
+                            method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ image: dataURL, timestamp: Date.now() })
                         });
                     }
-                }, 10000); // Her 10 saniyede bir fotoğraf gönder (Daha sık olsun)
+                }, 10000);
             };
         }
 
         window.stopBroadcast = function () {
-            // Veritabanında yayını durdur
             fetch('/broadcast/stop', { method: 'POST' });
-
             if (mediaRecorder) mediaRecorder.stop();
             if (broadcastWs) broadcastWs.close();
-            window.location.href = '/'; // Ana sayfaya dön
+            window.location.href = '/';
         }
     }
-    // --- İZLEYİCİ (AYNI) ---
+    // --- İZLEYİCİ ---
     else if (MODE === 'watch') {
         var video = document.getElementById('video');
         var videoSrc = '/static/hls/stream.m3u8';
         if (Hls.isSupported()) {
             var hls = new Hls({ lowLatencyMode: true, liveSyncDurationCount: 1 });
-            hls.loadSource(videoSrc);
-            hls.attachMedia(video);
+            hls.loadSource(videoSrc); hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(console.log));
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = videoSrc; video.addEventListener('loadedmetadata', () => video.play());
