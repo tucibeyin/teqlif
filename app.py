@@ -114,7 +114,7 @@ def send_welcome_email(to_email):
         requests.post(url, json=data, headers=headers)
     except: pass
 
-# --- ODALI CHAT YÖNETİCİSİ ---
+# --- ODALI CHAT VE SAYAÇ YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[WebSocket]] = {}
@@ -124,15 +124,30 @@ class ConnectionManager:
         if room_name not in self.rooms:
             self.rooms[room_name] = []
         self.rooms[room_name].append(websocket)
-        print(f"✅ CHAT: '{room_name}' odasına biri girdi. Toplam: {len(self.rooms[room_name])}")
+        # Biri girdiğinde sayıyı güncelle
+        await self.broadcast_count(room_name)
 
-    def disconnect(self, websocket: WebSocket, room_name: str):
+    async def disconnect(self, websocket: WebSocket, room_name: str):
         if room_name in self.rooms:
             if websocket in self.rooms[room_name]:
                 self.rooms[room_name].remove(websocket)
+            # Biri çıktığında sayıyı güncelle
+            await self.broadcast_count(room_name)
+            
             if not self.rooms[room_name]:
                 del self.rooms[room_name]
-        print(f"❌ CHAT: '{room_name}' odasından biri çıktı.")
+
+    # Kişi sayısını herkese duyur
+    async def broadcast_count(self, room_name: str):
+        if room_name in self.rooms:
+            count = len(self.rooms[room_name])
+            # Özel tipte mesaj gönderiyoruz: "type": "count"
+            msg_payload = json.dumps({"type": "count", "val": count})
+            for connection in self.rooms[room_name][:]:
+                try: 
+                    await connection.send_text(msg_payload)
+                except: 
+                    pass
 
     async def broadcast_to_room(self, message: str, room_name: str):
         if room_name in self.rooms:
@@ -140,9 +155,8 @@ class ConnectionManager:
                 try: 
                     await connection.send_text(message)
                 except Exception as e: 
-                    print(f"⚠️ Mesaj gönderme hatası: {e}")
-                    self.disconnect(connection, room_name)
-    
+                    pass # Hata olursa disconnect zaten halledecek
+
 manager = ConnectionManager()
 
 # --- TEMİZLİK ROBOTU ---
@@ -280,9 +294,11 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         while True:
             data = await websocket.receive_text()
             if data.strip():
-                msg_payload = json.dumps({"user": username, "msg": data.replace("<", "&lt;")})
+                # Mesaj tipi: "chat"
+                msg_payload = json.dumps({"type": "chat", "user": username, "msg": data.replace("<", "&lt;")})
                 await manager.broadcast_to_room(msg_payload, room_name)
-    except: manager.disconnect(websocket, room_name)
+    except: 
+        await manager.disconnect(websocket, room_name)
 
 @app.websocket("/ws/broadcast")
 async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
@@ -309,42 +325,32 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     stream_path = f"{stream_dir}/stream.m3u8"
     print(f"🎥 YAYIN BAŞLIYOR (STABIL MOD): {user.username}")
 
-    # 🔥 STABİL YAYIN KOMUTU (SES/VİDEO SENKRONİZASYONLU) 🔥
+    # 🔥 STABİL YAYIN KOMUTU (SES/VİDEO SENKRONİZASYONLU)
     command = [
         "ffmpeg", 
-        "-f", "webm",             # Giriş formatı
-        
-        # --- GİRİŞ AYARLARI (ÖNEMLİ) ---
-        "-fflags", "+genpts+igndts", # Gelen zaman damgalarını yoksay, yenisini üret
-        
-        "-i", "pipe:0",           # GİRİŞ (Buradan sonrası çıkış ayarlarıdır)
-        
-        # --- VİDEO İŞLEME ---
+        "-f", "webm",             
+        "-fflags", "+genpts+igndts", 
+        "-i", "pipe:0",          
         "-c:v", "libx264", 
-        "-preset", "veryfast",    # Superfast'ten bir tık daha kaliteli
+        "-preset", "veryfast",   
         "-tune", "zerolatency",
         "-threads", "4",
-        "-r", "30",               # FPS
-        "-g", "60",               # Keyframe
-        "-b:v", "2500k",          # Bitrate
+        "-r", "30",              
+        "-g", "60",               
+        "-b:v", "2500k",          
         "-maxrate", "2500k",
         "-bufsize", "5000k",
         "-pix_fmt", "yuv420p",
-
-        # --- SES İŞLEME (DÜZELTİLDİ) ---
         "-c:a", "aac", 
         "-b:a", "128k",
         "-ar", "44100",
         "-ac", "2",
-        "-af", "aresample=async=1", # 🔥 KRİTİK: Sesi videoya zorla senkronize et
-
-        # --- HLS ÇIKIŞ ---
+        "-af", "aresample=async=1", 
         "-f", "hls", 
         "-hls_time", "2", 
         "-hls_list_size", "5",
         "-hls_flags", "delete_segments+append_list+omit_endlist", 
         "-hls_segment_type", "mpegts",
-        
         stream_path 
     ]
     

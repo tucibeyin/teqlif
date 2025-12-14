@@ -7,14 +7,17 @@
 
     {% if mode == 'broadcast' %}
     <div class="screen">
-
         <video id="preview" class="cinema-video" autoplay muted playsinline></video>
 
         <div class="glass-interface">
             <div class="header">
                 <div class="brand-logo">teqlif</div>
-                <div class="live-indicator">
-                    <div class="dot"></div> CANLI
+                <div class="header-right">
+                    <div class="viewer-pill"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span>
+                    </div>
+                    <div class="live-indicator">
+                        <div class="dot"></div> CANLI
+                    </div>
                 </div>
             </div>
 
@@ -25,7 +28,6 @@
 
             <div class="control-deck">
                 <div id="chat-box-broadcast" class="chat-flow"></div>
-
                 <div class="action-row">
                     <button class="btn-glass" onclick="simulateBid(100)">+100 ₺ (Test)</button>
                     <button id="btn-start" onclick="startBroadcast()" class="btn-primary">YAYINI BAŞLAT</button>
@@ -52,7 +54,8 @@
                 <div class="header">
                     <div class="brand-logo">teqlif</div>
                     <div class="viewer-actions">
-                        <span class="view-count">Canlı İzleyici</span>
+                        <div class="viewer-pill"><i class="fa-solid fa-eye"></i> <span
+                                id="live-count-{{ stream.username }}">0</span></div>
                         <a href="/" class="close-x"><i class="fa-solid fa-xmark"></i></a>
                     </div>
                 </div>
@@ -64,7 +67,6 @@
                 </div>
 
                 <div class="bottom-section">
-
                     <div id="chat-box-{{ stream.username }}" class="chat-flow">
                         <div class="chat-bubble system">Mezat odasına bağlandınız.</div>
                     </div>
@@ -75,14 +77,12 @@
                             <button onclick="sendBid('{{ stream.username }}', 250)">+250₺</button>
                             <button onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
                         </div>
-
                         <div class="manual-bid">
                             <input type="number" id="manual-bid-{{ stream.username }}" placeholder="Tutar gir...">
                             <button class="bid-send-btn" onclick="sendManualBid('{{ stream.username }}')">TEKLİF
                                 VER</button>
                         </div>
                     </div>
-
                 </div>
             </div>
         </div>
@@ -103,7 +103,6 @@
     :root {
         --primary: #FFF;
         --accent: #34C759;
-        /* Para Yeşili */
         --danger: #FF3B30;
         --text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
@@ -149,7 +148,7 @@
         overflow: hidden;
     }
 
-    /* --- VİDEO (SAF - FİLTRESİZ) --- */
+    /* VİDEO */
     .cinema-video {
         position: absolute;
         top: 0;
@@ -167,7 +166,7 @@
         transform: scaleX(-1);
     }
 
-    /* --- CAM ARAYÜZ KATMANI --- */
+    /* ARAYÜZ */
     .glass-interface {
         position: absolute;
         inset: 0;
@@ -179,7 +178,7 @@
         padding: max(20px, env(safe-area-inset-top)) 20px max(30px, env(safe-area-inset-bottom)) 20px;
     }
 
-    /* --- HEADER --- */
+    /* HEADER */
     .header {
         display: flex;
         justify-content: space-between;
@@ -195,9 +194,24 @@
         text-shadow: var(--text-shadow);
     }
 
-    .brand-logo.large {
-        font-size: 48px;
-        margin-bottom: 20px;
+    .header-right,
+    .viewer-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .viewer-pill {
+        background: rgba(0, 0, 0, 0.4);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 13px;
+        font-weight: 600;
+        backdrop-filter: blur(10px);
+        display: flex;
+        align-items: center;
+        gap: 6px;
     }
 
     .live-indicator {
@@ -207,26 +221,18 @@
         font-size: 12px;
         font-weight: 600;
         text-transform: uppercase;
-        background: rgba(0, 0, 0, 0.3);
-        padding: 4px 10px;
+        background: var(--danger);
+        padding: 5px 10px;
         border-radius: 20px;
-        backdrop-filter: blur(10px);
+        box-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
     }
 
     .dot {
-        width: 8px;
-        height: 8px;
-        background: var(--danger);
+        width: 6px;
+        height: 6px;
+        background: white;
         border-radius: 50%;
         animation: pulse 1.5s infinite;
-    }
-
-    .view-count {
-        font-size: 13px;
-        font-weight: 500;
-        opacity: 0.9;
-        text-shadow: var(--text-shadow);
-        margin-right: 15px;
     }
 
     .close-x {
@@ -236,19 +242,16 @@
         text-shadow: var(--text-shadow);
     }
 
-    /* --- MEZAT DURUMU (ORTA) --- */
+    /* MEZAT */
     .auction-status {
         align-self: center;
         text-align: center;
         margin-top: 20px;
         background: rgba(255, 255, 255, 0.1);
-        /* Çok hafif şeffaf beyaz */
         backdrop-filter: blur(12px);
-        -webkit-backdrop-filter: blur(12px);
         padding: 15px 30px;
         border-radius: 24px;
         border: 1px solid rgba(255, 255, 255, 0.15);
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
         pointer-events: auto;
     }
 
@@ -274,7 +277,7 @@
         color: #eee;
     }
 
-    /* --- ALT BÖLÜM --- */
+    /* ALT BÖLÜM */
     .bottom-section {
         display: flex;
         flex-direction: column;
@@ -282,7 +285,6 @@
         pointer-events: auto;
     }
 
-    /* Sohbet Akışı */
     .chat-flow {
         height: 150px;
         overflow-y: auto;
@@ -314,16 +316,12 @@
         margin-right: 5px;
     }
 
-    /* --- TEKLİF İSTASYONU --- */
     .bid-dock {
         background: rgba(20, 20, 20, 0.85);
-        /* Koyu Cam */
         backdrop-filter: blur(20px);
-        -webkit-backdrop-filter: blur(20px);
         padding: 15px;
         border-radius: 24px;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
         display: flex;
         flex-direction: column;
         gap: 12px;
@@ -380,12 +378,6 @@
         box-shadow: 0 0 15px rgba(52, 199, 89, 0.4);
     }
 
-    .bid-send-btn:active {
-        transform: scale(0.95);
-        opacity: 0.9;
-    }
-
-    /* --- YAYINCI KONTROLLERİ --- */
     .control-deck {
         display: flex;
         flex-direction: column;
@@ -503,8 +495,6 @@
     if (MODE === 'broadcast') {
         const prev = document.getElementById('preview');
         let rec, active = false;
-
-        // HD Kamera (720p @ 30FPS)
         navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: true })
             .then(s => { prev.srcObject = s; window.localStream = s; prev.volume = 0; });
 
@@ -516,12 +506,9 @@
 
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
             ws.onopen = () => {
-                // Yüksek Bitrate (3000k)
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 3000000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 3000000 };
                 rec = new MediaRecorder(window.localStream, opts);
-
-                // 🔥 1 saniyelik parçalar (Sunucuyu yormaz)
                 rec.start(1000);
                 rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
             };
@@ -545,7 +532,7 @@
         document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
 
-    // --- CHAT & TEKLİF ---
+    // --- CHAT & TEKLİF & SAYAÇ ---
     function connectChat(target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let sName = target === 'broadcast' ? "{{ user.username if user else 'anon' }}" : target;
@@ -554,6 +541,16 @@
 
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
+
+            // --- GÜNCELLEME: SAYAÇ KONTROLÜ ---
+            if (d.type === 'count') {
+                const countId = target === 'broadcast' ? 'live-count-broadcast' : `live-count-${target}`;
+                const countEl = document.getElementById(countId);
+                if (countEl) countEl.innerText = d.val;
+                return; // Sayı güncellemesi ise aşağıyı çalıştırma
+            }
+
+            // Normal Chat ve Peyler
             const boxId = target === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${target}`;
             const box = document.getElementById(boxId);
 
