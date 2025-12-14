@@ -13,17 +13,18 @@
         {% endif %}
     </div>
 
-    <div class="top-overlay">
-        <div class="live-tag">CANLI</div>
+<div class="top-overlay">
+    <div class="live-tag">CANLI</div>
+
+    <div class="right-controls">
         <div class="viewer-count"><i class="fa-solid fa-eye"></i> <span id="view-count">0</span></div>
 
         {% if mode == 'broadcast' %}
-        <div class="broadcast-actions">
-            <button id="btn-start" onclick="startBroadcast()" class="btn-insta start">Yayınla</button>
-            <button id="btn-stop" onclick="stopBroadcast()" class="btn-insta stop" style="display:none;">Bitir</button>
-        </div>
+        <button id="btn-start" onclick="startBroadcast()" class="btn-insta start">Başlat</button>
+        <button id="btn-stop" onclick="stopBroadcast()" class="btn-insta stop" style="display:none;">Bitir</button>
         {% endif %}
     </div>
+</div>
 
     <div class="bottom-overlay">
 
@@ -43,19 +44,26 @@
 </div>
 
 <style>
+    /* GENEL SIFIRLAMA (ÖNEMLİ) */
+    * {
+        box-sizing: border-box;
+    }
+
     /* 1. KAPSAYICI (Tüm Ekranı Kapla) */
     .insta-layout {
         position: relative;
         width: 100%;
-        max-width: 500px;
-        /* Mobilde tam ekran, masaüstünde telefon boyutu */
-        height: calc(100vh - 80px);
-        /* Header hariç tüm alan */
+        max-width: 480px;
+        /* Telefon genişliği standardı */
+        /* Header (yaklaşık 80px) + Alt boşluk payı bırakıyoruz */
+        height: calc(100vh - 90px);
         margin: 0 auto;
         background: #000;
         border-radius: 15px;
         overflow: hidden;
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
+        /* Dışarı taşanları gizle */
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+        border: 1px solid #333;
     }
 
     /* 2. VİDEO KATMANI (En altta) */
@@ -66,23 +74,27 @@
         width: 100%;
         height: 100%;
         z-index: 1;
+        background: black;
     }
 
     video {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        /* Instagram gibi ekranı doldurur */
+        /* Ekranı doldur */
+        display: block;
     }
 
-    /* 3. ÜST KATMAN (Bilgiler) */
+    /* 3. ÜST KATMAN (Bilgiler ve Yayıncı Butonları) */
     .top-overlay {
         position: absolute;
-        top: 20px;
+        top: 0;
         left: 0;
         width: 100%;
-        z-index: 10;
-        padding: 0 20px;
+        z-index: 20;
+        /* En üstte */
+        padding: 15px;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
         display: flex;
         justify-content: space-between;
         align-items: center;
@@ -91,132 +103,177 @@
     .live-tag {
         background: #e74c3c;
         color: white;
-        padding: 5px 10px;
+        padding: 4px 8px;
         font-weight: bold;
-        font-size: 0.8rem;
-        border-radius: 5px;
+        font-size: 0.75rem;
+        border-radius: 4px;
+        text-transform: uppercase;
         animation: pulse 2s infinite;
     }
 
-    .viewer-count {
-        background: rgba(0, 0, 0, 0.5);
-        color: white;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-        backdrop-filter: blur(5px);
+    .right-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 
+    .viewer-count {
+        background: rgba(0, 0, 0, 0.4);
+        color: white;
+        padding: 4px 10px;
+        border-radius: 12px;
+        font-size: 0.8rem;
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    /* Yayıncı Butonları (Yarım görünme sorunu için fixed width yok) */
     .btn-insta {
-        padding: 8px 20px;
+        padding: 6px 15px;
         border: none;
         border-radius: 20px;
-        font-weight: bold;
+        font-weight: 600;
+        font-size: 0.85rem;
         cursor: pointer;
         color: white;
+        white-space: nowrap;
+        /* Metni alt satıra indirme */
     }
 
     .start {
-        background: #fff;
-        color: #000;
+        background: white;
+        color: black;
     }
 
     .stop {
         background: #e74c3c;
+        color: white;
     }
 
-    /* 4. ALT KATMAN (Sohbet) */
+    /* 4. ALT KATMAN (Sohbet ve Input) */
     .bottom-overlay {
         position: absolute;
         bottom: 0;
         left: 0;
         width: 100%;
-        z-index: 10;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
-        /* Karartma efekti */
-        padding: 20px;
+        z-index: 20;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 10%, transparent);
+        padding: 15px;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        height: 50%;
-        /* Ekranın yarısına kadar sohbet çıkabilir */
+        max-height: 60%;
+        /* Sohbet ekranın %60'ına kadar çıkabilsin */
     }
 
     .chat-flow {
         overflow-y: auto;
-        margin-bottom: 15px;
+        margin-bottom: 10px;
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
         scrollbar-width: none;
-        /* Scrollbar'ı gizle */
+        /* Firefox scrollbar gizle */
+        mask-image: linear-gradient(to bottom, transparent, black 20%);
+        /* Üstten yumuşak geçiş */
+        -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%);
     }
 
     .chat-flow::-webkit-scrollbar {
         display: none;
     }
 
+    /* Chrome gizle */
+
     .chat-message {
         color: white;
-        font-size: 0.95rem;
-        text-shadow: 1px 1px 2px black;
-        animation: slideIn 0.3s ease;
+        font-size: 0.9rem;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        animation: slideIn 0.2s ease-out;
     }
 
     .chat-user {
-        font-weight: bold;
-        opacity: 0.9;
-        margin-right: 5px;
+        font-weight: 700;
+        margin-right: 6px;
     }
 
     .chat-text {
-        opacity: 0.8;
+        opacity: 0.9;
+        font-weight: 400;
     }
 
-    /* Input Alanı */
+    /* INPUT ALANI (Kayık görüntüyü düzelten kısım) */
     .chat-input-row {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         align-items: center;
+        width: 100%;
     }
 
     .chat-input-row input {
         flex: 1;
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        padding: 12px;
+        /* Kalan tüm alanı kapla */
+        min-width: 0;
+        /* Flexbox taşmasını önler (ÇOK ÖNEMLİ) */
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 10px 15px;
         border-radius: 25px;
         color: white;
+        font-size: 0.9rem;
         outline: none;
         backdrop-filter: blur(5px);
     }
 
     .chat-input-row input::placeholder {
-        color: rgba(255, 255, 255, 0.7);
+        color: rgba(255, 255, 255, 0.6);
     }
 
     .chat-input-row button {
-        background: transparent;
+        flex-shrink: 0;
+        /* Butonun sıkışmasını engelle */
+        width: 40px;
+        height: 40px;
+        background: #3498db;
         border: none;
+        border-radius: 50%;
         color: white;
-        font-size: 1.2rem;
+        font-size: 1rem;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    }
+
+    .chat-input-row button:active {
+        transform: scale(0.95);
     }
 
     .login-warning {
-        font-size: 0.8rem;
-        color: #aaa;
+        font-size: 0.85rem;
+        color: #bbb;
         text-align: center;
         width: 100%;
+        padding: 5px;
     }
 
+    .login-warning a {
+        color: #f1c40f;
+        text-decoration: none;
+        font-weight: bold;
+    }
+
+    /* Animasyonlar */
     @keyframes pulse {
         0% {
             opacity: 1;
         }
 
         50% {
-            opacity: 0.5;
+            opacity: 0.6;
         }
 
         100% {
@@ -236,12 +293,14 @@
         }
     }
 
-    /* Mobil Düzenleme */
+    /* Mobil İyileştirme */
     @media (max-width: 768px) {
         .insta-layout {
             max-width: 100%;
-            height: calc(100vh - 60px);
             border-radius: 0;
+            border: none;
+            height: calc(100vh - 65px);
+            /* Header mobilde daha küçükse burayı ayarla */
         }
     }
 </style>
