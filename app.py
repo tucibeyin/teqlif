@@ -36,6 +36,7 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 
 
 # --- GÜVENLİ KLASÖR TEMİZLİĞİ ---
+# Hata alsa bile çökmez, devam eder.
 try:
     if os.path.exists("static/hls"):
         shutil.rmtree("static/hls", ignore_errors=True)
@@ -113,10 +114,9 @@ def send_welcome_email(to_email):
         requests.post(url, json=data, headers=headers)
     except: pass
 
-# --- ODALI CHAT YÖNETİCİSİ ---
+# --- ODALI CHAT YÖNETİCİSİ (LOGLU) ---
 class ConnectionManager:
     def __init__(self):
-        # Odaları tutar: {"ahmet": [ws1, ws2], "mehmet": [ws3]}
         self.rooms: Dict[str, List[WebSocket]] = {}
 
     async def connect(self, websocket: WebSocket, room_name: str):
@@ -124,6 +124,7 @@ class ConnectionManager:
         if room_name not in self.rooms:
             self.rooms[room_name] = []
         self.rooms[room_name].append(websocket)
+        print(f"✅ CHAT: Bir kullanıcı '{room_name}' odasına girdi.")
 
     def disconnect(self, websocket: WebSocket, room_name: str):
         if room_name in self.rooms:
@@ -131,12 +132,15 @@ class ConnectionManager:
                 self.rooms[room_name].remove(websocket)
             if not self.rooms[room_name]:
                 del self.rooms[room_name]
+        print(f"❌ CHAT: Bir kullanıcı '{room_name}' odasından çıktı.")
 
     async def broadcast_to_room(self, message: str, room_name: str):
         if room_name in self.rooms:
             for connection in self.rooms[room_name][:]:
                 try: await connection.send_text(message)
                 except: self.disconnect(connection, room_name)
+        else:
+            print(f"⚠️ UYARI: '{room_name}' odası yok, mesaj iletilemedi.")
 
 manager = ConnectionManager()
 
@@ -238,7 +242,6 @@ async def upload_thumbnail(request: Request, user: User = Depends(get_current_us
 
 @app.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Session = Depends(get_db)):
-    # Stream parametresi ODA ADI olarak kullanılır
     room_name = stream
     await manager.connect(websocket, room_name)
     
@@ -255,6 +258,7 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         while True:
             data = await websocket.receive_text()
             if data.strip():
+                print(f"📩 MESAJ ({room_name}): {username} -> {data}")
                 msg_payload = json.dumps({"user": username, "msg": data.replace("<", "&lt;")})
                 await manager.broadcast_to_room(msg_payload, room_name)
     except: manager.disconnect(websocket, room_name)

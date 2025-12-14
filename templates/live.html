@@ -84,7 +84,7 @@
 </div>
 
 <style>
-    /* --- TEMEL AYARLAR --- */
+    /* --- TEMEL --- */
     * {
         box-sizing: border-box;
         margin: 0;
@@ -101,7 +101,7 @@
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* --- PC ORTALAMA --- */
+    /* --- PC MERKEZLEME --- */
     .desktop-center-wrapper {
         width: 100%;
         height: 100%;
@@ -118,7 +118,6 @@
         height: 100%;
         background: black;
         max-width: 480px;
-        /* PC'de mobil boyutunda kalsın */
         box-shadow: 0 0 40px rgba(0, 0, 0, 0.5);
     }
 
@@ -140,7 +139,7 @@
         background: #000;
     }
 
-    /* --- VİDEO (FİLTRESİZ, NET) --- */
+    /* --- VİDEO --- */
     .video-layer {
         position: absolute;
         top: 0;
@@ -161,7 +160,7 @@
         transform: scaleX(-1);
     }
 
-    /* --- ARAYÜZ (UI) --- */
+    /* --- ARAYÜZ (CAM EFEKTİ) --- */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -174,7 +173,6 @@
         justify-content: space-between;
         pointer-events: none;
         padding: 15px;
-        /* Kenarlardan boşluk */
     }
 
     .header,
@@ -192,7 +190,6 @@
         padding-top: 10px;
     }
 
-    /* Etiketler */
     .badge {
         padding: 6px 14px;
         border-radius: 20px;
@@ -214,7 +211,6 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    /* Butonlar */
     .btn {
         padding: 8px 20px;
         border-radius: 30px;
@@ -263,7 +259,6 @@
         padding-bottom: 20px;
     }
 
-    /* Sohbet Baloncukları */
     .chat-list {
         max-height: 250px;
         overflow-y: auto;
@@ -275,7 +270,6 @@
 
     .chat-msg {
         background: rgba(0, 0, 0, 0.4);
-        /* Yarı saydam siyah */
         padding: 8px 14px;
         border-radius: 16px;
         color: white;
@@ -299,7 +293,6 @@
         opacity: 0.8;
     }
 
-    /* Input Alanı */
     .input-row {
         display: flex;
         gap: 10px;
@@ -332,7 +325,6 @@
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     }
 
-    /* Ses Butonu */
     .unmute-overlay {
         position: absolute;
         top: 50%;
@@ -349,7 +341,6 @@
         font-weight: bold;
     }
 
-    /* Boş Durum */
     .empty-state {
         width: 100%;
         height: 100%;
@@ -443,7 +434,6 @@
 
         window.stopBroadcast = function () { active = false; fetch('/broadcast/stop', { method: 'POST' }); if (rec) rec.stop(); if (ws) ws.close(); window.location.href = '/'; };
 
-        // Yayıncı kendi odasına bağlanır
         connectChat('broadcast');
     }
 
@@ -457,7 +447,7 @@
 
                 if (entry.isIntersecting) {
                     loadStream(username, video);
-                    connectChat(username); // O yayının odasına gir
+                    connectChat(username);
                 } else {
                     if (video) { video.pause(); if (video.hls) video.hls.destroy(); video.src = ""; }
                 }
@@ -484,17 +474,13 @@
 
     // --- DİNAMİK CHAT BAĞLANTISI ---
     let activeWs = null;
+
     function connectChat(targetStreamer) {
         if (activeWs) { activeWs.close(); activeWs = null; }
 
         let streamName = targetStreamer;
 
-        // Eğer yayıncı modundaysak, kendi adımızı (user.username) backend'den almamız gerekir
-        // Ama basit çözüm: Yayıncı broadcast modunda ise kendi kullanıcı adını temsil eden bir isimle bağlanır.
-        // İzleyici ise izlediği kişinin adıyla bağlanır.
-
-        // Backend'de user session'ı olduğu için, broadcast modunda streamName'i 'me' veya özel bir parametre yapabiliriz
-        // Şimdilik template'den user'ı çekiyoruz:
+        // Kullanıcı Adını Al
         {% if user and user.username %}
         const myUsername = "{{ user.username }}";
         {% else %}
@@ -507,18 +493,29 @@
 
         activeWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
 
-        const boxId = targetStreamer === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${targetStreamer}`;
-        const box = document.getElementById(boxId);
+        // Kutu ID'sini belirle
+        let boxId = targetStreamer === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${targetStreamer}`;
+
+        activeWs.onopen = () => console.log(`💬 Sohbete bağlanıldı: ${streamName}`);
 
         activeWs.onmessage = (e) => {
             const d = JSON.parse(e.data);
-            if (box) { box.insertAdjacentHTML('beforeend', `<div class="chat-msg"><b>${d.user}:</b> ${d.msg}</div>`); box.scrollTop = box.scrollHeight; }
+            // Kutuyu her seferinde yeniden bul (Hata koruması)
+            const box = document.getElementById(boxId);
+            if (box) {
+                box.insertAdjacentHTML('beforeend', `<div class="chat-msg"><b>${d.user}:</b> ${d.msg}</div>`);
+                box.scrollTop = box.scrollHeight;
+            }
         };
 
         window.sendMsg = function (uName) {
             const inpId = uName === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${uName}`;
             const inp = document.getElementById(inpId);
-            if (inp && inp.value.trim() && activeWs && activeWs.readyState === 1) { activeWs.send(inp.value); inp.value = ""; inp.focus(); }
+            if (inp && inp.value.trim() && activeWs && activeWs.readyState === 1) {
+                activeWs.send(inp.value);
+                inp.value = "";
+                inp.focus();
+            }
         }
     }
 </script>
