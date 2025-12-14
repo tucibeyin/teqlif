@@ -13,8 +13,10 @@
         <div class="ui-layer">
 
             <div class="top-dock">
-                <div class="status-badge">🔴 CANLI</div>
-                <div class="controls-container">
+                <div class="badge-area">
+                    <div class="status-badge">🔴 CANLI</div>
+                </div>
+                <div class="controls-area">
                     <button id="btn-start" onclick="startBroadcast()" class="btn-primary">BAŞLAT 🚀</button>
                     <button id="btn-stop" onclick="stopBroadcast()" class="btn-danger" style="display:none;">BİTİR
                         ⏹</button>
@@ -30,7 +32,6 @@
                     <button onclick="sendMsg('broadcast')">YAZ</button>
                 </div>
             </div>
-
         </div>
     </div>
 
@@ -61,7 +62,7 @@
                         <div class="msg system"><i>Sohbet yükleniyor...</i></div>
                     </div>
                     <div class="input-area">
-                        <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum yap..."
+                        <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum..."
                             autocomplete="off">
                         <button onclick="sendMsg('{{ stream.username }}')"><i
                                 class="fa-solid fa-paper-plane"></i></button>
@@ -95,14 +96,13 @@
         width: 100vw;
         height: 100vh;
         overflow: hidden;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
 
-    /* --- KAPLAYICI --- */
     .app-container {
         width: 100%;
         height: 100dvh;
-        background: #000;
+        background: black;
         max-width: 500px;
         margin: 0 auto;
         position: relative;
@@ -123,36 +123,35 @@
         overflow: hidden;
     }
 
-    /* --- VİDEO (FİLTRESİZ) --- */
-.bg-video {
-        position: absolute; top: 0; left: 0;
-        width: 100%; height: 100%;
-        object-fit: cover;
-        z-index: 1;
-        
-        /* 🔥 SİHİRLİ MAKYAJ KODLARI 🔥 */
-        filter: brightness(1.15) contrast(1.1) saturate(1.2);
-        /* brightness(1.15) -> %15 daha parlak yap
-           contrast(1.1)    -> Zıtlıkları artır (siyahlar daha siyah, beyazlar daha beyaz)
-           saturate(1.2)    -> Renkleri %20 canlandır (solukluğu al)
-        */
-        
-        opacity: 1;
-    }
-    #preview { transform: scaleX(-1); }
-
-    #preview {
-        transform: scaleX(-1);
-    }
-
-    /* --- ARAYÜZ KATMANI --- */
-    .ui-layer {
+    /* --- VİDEO (EN ALT KATMAN) --- */
+    .bg-video {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: 999;
+        object-fit: cover;
+        z-index: 1 !important;
+        /* Kesinlikle altta */
+
+        /* Makyaj (Parlak Görüntü) */
+        filter: brightness(1.1) contrast(1.05) saturate(1.1);
+    }
+
+    #preview {
+        transform: scaleX(-1);
+    }
+
+    /* --- ARAYÜZ KATMANI (EN ÜST KATMAN) --- */
+    .ui-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        /* Tam Kapla */
+        z-index: 9999 !important;
+        /* Kesinlikle üstte */
         display: flex;
         flex-direction: column;
         justify-content: space-between;
@@ -160,93 +159,95 @@
         /* Boşluklara tıklayınca arkaya geçsin */
     }
 
-    /* --- ÜST KISIM (ŞEFFAF) --- */
+    /* --- ÜST PANEL (TOP DOCK) --- */
     .top-dock {
         pointer-events: auto;
+        /* Tıklanabilsin */
         width: 100%;
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 15px;
-        padding-top: max(15px, env(safe-area-inset-top));
+        /* Çentik Payı (Daha güvenli ayar) */
+        padding-top: max(25px, env(safe-area-inset-top));
+        min-height: 80px;
+        /* Yükseklik garantisi */
 
-        /* 🔥 BURASI ÖNEMLİ: ARKAPLAN YOK */
-        background: transparent !important;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
     }
 
     .status-badge {
         background: red;
         color: white;
-        padding: 5px 10px;
-        border-radius: 5px;
-        font-weight: bold;
-        font-size: 12px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-        /* Gölgeyle okunurluk */
-    }
-
-    .user-badge {
-        background: rgba(0, 0, 0, 0.5);
-        /* Sadece yazının arkası hafif koyu */
-        color: white;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-weight: bold;
-        font-size: 13px;
+        padding: 6px 12px;
+        border-radius: 6px;
+        font-weight: 800;
+        font-size: 14px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
     }
 
     .btn-primary {
         background: white;
         color: black;
         border: none;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-weight: bold;
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-weight: 800;
         cursor: pointer;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        font-size: 14px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     }
 
     .btn-danger {
         background: red;
         color: white;
         border: none;
-        padding: 8px 15px;
-        border-radius: 20px;
-        font-weight: bold;
+        padding: 10px 20px;
+        border-radius: 30px;
+        font-weight: 800;
         cursor: pointer;
     }
 
     .btn-close {
-        background: rgba(0, 0, 0, 0.5);
         width: 35px;
         height: 35px;
         border-radius: 50%;
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        color: white;
         text-decoration: none;
+        border: 1px solid rgba(255, 255, 255, 0.3);
     }
 
-    /* --- ALT KISIM (ŞEFFAF) --- */
+    .user-badge {
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    /* --- ORTA BOŞLUK --- */
     .mid-spacer {
         flex: 1;
     }
 
+    /* --- ALT PANEL (BOTTOM DOCK) --- */
     .bottom-dock {
         pointer-events: auto;
         padding: 15px;
         padding-bottom: max(20px, env(safe-area-inset-bottom));
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
         display: flex;
         flex-direction: column;
         gap: 10px;
-
-        /* 🔥 ARKAPLAN YOK */
-        background: transparent !important;
     }
 
     .chat-area {
-        height: 200px;
+        height: 250px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
@@ -255,10 +256,8 @@
         scrollbar-width: none;
     }
 
-    /* Mesaj Baloncuğu (Sadece yazının arkası koyu) */
     .msg {
         background: rgba(0, 0, 0, 0.5);
-        /* Yarı saydam siyah */
         color: white;
         padding: 6px 12px;
         border-radius: 12px;
@@ -279,21 +278,20 @@
         color: #ddd;
     }
 
-    /* Input Alanı */
     .input-area {
         display: flex;
-        gap: 8px;
+        gap: 10px;
         align-items: center;
     }
 
     .input-area input {
         flex: 1;
-        padding: 10px 15px;
+        padding: 12px;
         border-radius: 25px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.4);
         background: rgba(0, 0, 0, 0.5);
         color: white;
-        /* Cam efekti */
+        font-size: 14px;
     }
 
     .input-area button {
@@ -301,9 +299,10 @@
         color: white;
         border: none;
         padding: 0 15px;
+        height: 44px;
         border-radius: 25px;
         font-weight: bold;
-        height: 40px;
+        cursor: pointer;
     }
 
     .unmute-btn {
@@ -351,12 +350,8 @@
         const preview = document.getElementById('preview');
         let rec, active = false;
 
-        // 🔥 OPTİMİZE EDİLMİŞ KAMERA AYARLARI (480p)
-        // HD (720p) yerine 480p istiyoruz. Telefondan izleyen için fark edilmez ama sunucuyu kurtarır.
-        const constraints = {
-            video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 20 } },
-            audio: true
-        };
+        // 480p Optimize
+        const constraints = { video: { width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 20 } }, audio: true };
 
         navigator.mediaDevices.getUserMedia(constraints)
             .then(s => { preview.srcObject = s; window.localStream = s; preview.volume = 0; })
@@ -371,7 +366,6 @@
 
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
             ws.onopen = () => {
-                // Bitrate'i de düşürdük (1Mbit -> 800kbit)
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 800000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 800000 };
 
@@ -390,11 +384,6 @@
             window.stopBroadcast = function () { active = false; fetch('/broadcast/stop', { method: 'POST' }); if (rec) rec.stop(); window.location.href = '/'; };
         };
     }
-
-    // (GERİSİ AYNI KALACAK - Chat ve İzleyici Kodları)
-    // Önceki live.html'in script kısmındaki broadcast dışındaki yerleri aynen kullanabilirsin
-    // veya önceki attığım live.html'deki scripti bu yeni broadcast ayarlarıyla değiştir.
-    // Kolaylık olsun diye aşağıda FULL scripti veriyorum:
 
     // --- İZLEYİCİ ---
     else {
