@@ -5,8 +5,9 @@ import json
 import random
 import requests
 import base64
+import shutil
 from datetime import datetime, timedelta
-from typing import Optional, List
+from typing import Optional, List, Dict
 
 from dotenv import load_dotenv
 load_dotenv()
@@ -35,7 +36,9 @@ ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 
 
 # Klasör Temizlik ve Hazırlık
-os.system("rm -rf static/hls/*")
+# Her başlangıçta hls klasörünü temizle ama ana klasörü tut
+if os.path.exists("static/hls"):
+    shutil.rmtree("static/hls")
 os.makedirs("static/hls", exist_ok=True)
 os.makedirs("static/css", exist_ok=True)
 os.makedirs("static/thumbnails", exist_ok=True)
@@ -57,8 +60,6 @@ class User(Base):
     verification_code = Column(String)
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
-    # --- VİTRİN ÖZELLİKLERİ ---
     is_live = Column(Boolean, default=False)       
     stream_title = Column(String, default="")      
     thumbnail = Column(String, default="")         
@@ -121,18 +122,16 @@ class ConnectionManager:
             self.active_connections.remove(websocket)
     async def broadcast(self, message: str):
         for connection in self.active_connections:
-            await connection.send_text(message)
+            try: await connection.send_text(message)
+            except: pass
+
+manager = ConnectionManager()
 
 # --- ROTALAR ---
-
 @app.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
     active_streams = db.query(User).filter(User.is_live == True).all()
-    return templates.TemplateResponse("index.html", {
-        "request": request, 
-        "user": user, 
-        "streams": active_streams
-    })
+    return templates.TemplateResponse("index.html", {"request": request, "user": user, "streams": active_streams})
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request): return templates.TemplateResponse("login.html", {"request": request})
@@ -142,38 +141,19 @@ async def signup_page(request: Request): return templates.TemplateResponse("sign
 
 @app.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
-    if not user:
-        return RedirectResponse(url="/login", status_code=303)
+    if not user: return RedirectResponse(url="/login", status_code=303)
     
-    # Eğer YAYINCI ise: Sadece kendini görsün
     if mode == "broadcast":
-        return templates.TemplateResponse("live.html", {
-            "request": request, 
-            "user": user, 
-            "mode": "broadcast",
-            "streams": [] # Yayıncı için liste boş olabilir
-        })
-    
-    # Eğer İZLEYİCİ ise: Tüm aktif yayınları çek
+        return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": []})
     else:
         active_streams = db.query(User).filter(User.is_live == True).all()
-        
-        # Eğer URL'de ?broadcaster=tucibeyin varsa, o yayını listenin en başına al (Önce o açılsın)
-        if broadcaster:
-            active_streams.sort(key=lambda x: x.username != broadcaster)
-
-        return templates.TemplateResponse("live.html", {
-            "request": request, 
-            "user": user, 
-            "mode": "watch",
-            "streams": active_streams # Listeyi HTML'e gönderiyoruz
-        })
+        if broadcaster: active_streams.sort(key=lambda x: x.username != broadcaster)
+        return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "watch", "streams": active_streams})
 
 @app.post("/auth/signup")
 async def signup(request: Request, email: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), db: Session = Depends(get_db)):
     if password != password_confirm: return templates.TemplateResponse("signup.html", {"request": request, "error": "Şifreler uyuşmuyor."})
     if db.query(User).filter(User.email == email).first(): return templates.TemplateResponse("signup.html", {"request": request, "error": "Kayıtlı email."})
-    
     new_user = User(email=email, password_hash=get_password_hash(password), verification_code=str(random.randint(100000, 999999)))
     db.add(new_user); db.commit()
     send_brevo_email(email, new_user.verification_code)
@@ -194,7 +174,6 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.password_hash): return templates.TemplateResponse("login.html", {"request": request, "error": "Hatalı bilgi."})
     if not user.is_verified: return templates.TemplateResponse("login.html", {"request": request, "error": "Onaylayın."})
-    
     resp = RedirectResponse(url="/", status_code=303)
     resp.set_cookie(key="access_token", value=f"Bearer {create_access_token({'sub': user.email})}", httponly=True)
     return resp
@@ -244,7 +223,6 @@ async def upload_thumbnail(request: Request, user: User = Depends(get_current_us
         return {"status": "ok"}
     except: return {"status": "error"}
 
-manager = ConnectionManager()
 @app.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     await manager.connect(websocket)
@@ -263,46 +241,51 @@ async def chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
             if data.strip(): await manager.broadcast(json.dumps({"user": username, "msg": data.replace("<", "&lt;")}))
     except: manager.disconnect(websocket)
 
-stream_process = None
+# 🔥 ÇOKLU YAYINCI SİSTEMİ (ARTIK HERKESİN KENDİ STREAM SÜRECİ VAR)
+active_processes: Dict[str, subprocess.Popen] = {}
+
 @app.websocket("/ws/broadcast")
-async def broadcast_endpoint(websocket: WebSocket):
-    global stream_process
+async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
     
-    # 🚀 OPTİMİZE EDİLMİŞ FFMPEG KOMUTU (VPS DOSTU)
+    # 1. Yayıncının kim olduğunu bul
+    user = None
+    try:
+        token = websocket.cookies.get("access_token")
+        if token:
+            payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
+            user = db.query(User).filter(User.email == payload.get("sub")).first()
+    except: pass
+
+    if not user or not user.username:
+        await websocket.close()
+        return
+
+    # 2. Yayıncıya Özel Klasör Oluştur
+    stream_dir = f"static/hls/{user.username}"
+    os.makedirs(stream_dir, exist_ok=True)
+    stream_path = f"{stream_dir}/stream.m3u8"
+
+    # 3. FFmpeg Komutu (O kişiye özel dosyaya yazar)
     command = [
-        "ffmpeg", 
-        "-i", "pipe:0",
-        "-c:v", "libx264",
-        "-preset", "ultrafast",       # CPU Dostu: En hızlı çevirme modu
-        "-tune", "zerolatency",
-        "-threads", "2",              # CPU Limiti: Sadece 2 çekirdek kullan (Kilitlenmeyi önler)
-        
-        "-r", "24",                   # FPS Limiti: 60fps yerine 24fps (Sinema modu, %60 daha az CPU)
-        "-b:v", "1000k",              # Bitrate: 1000k (Düşük ama yeterli kalite)
-        "-maxrate", "1200k",          
-        "-bufsize", "2400k",
-        
-        # "-vf", "scale=1280:-2",     # İPTAL: Sunucuda boyutlandırma yapma (CPU'yu çok yorar)
-        "-g", "48",                   # GOP: 2 saniye (24fps * 2)
-        
-        "-c:a", "aac",
-        "-b:a", "64k",                # Ses: 64k (Konuşma için yeterli, işlemci dostu)
-        "-ar", "44100",
-        
-        "-f", "hls",
-        "-hls_time", "2",
-        "-hls_list_size", "3",
+        "ffmpeg", "-i", "pipe:0",
+        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
+        "-threads", "2", "-r", "24", "-b:v", "1000k", "-maxrate", "1200k", "-bufsize", "2400k",
+        "-g", "48", "-c:a", "aac", "-b:a", "64k", "-ar", "44100",
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "3",
         "-hls_flags", "delete_segments+append_list", 
-        "static/hls/stream.m3u8"
+        stream_path # <-- ARTIK KİŞİYE ÖZEL YOL
     ]
     
-    stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    active_processes[user.username] = process
+
     try:
         while True:
             data = await websocket.receive_bytes()
-            if stream_process and stream_process.stdin: 
-                stream_process.stdin.write(data)
-                stream_process.stdin.flush()
+            if process.stdin: 
+                process.stdin.write(data)
+                process.stdin.flush()
     except: 
-        if stream_process: stream_process.terminate()
+        if process: process.terminate()
+        if user.username in active_processes: del active_processes[user.username]

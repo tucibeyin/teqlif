@@ -3,76 +3,89 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<div class="feed-container">
+<div class="desktop-center-wrapper">
 
-    {% if mode == 'broadcast' %}
-    <div class="stream-slide" id="slide-broadcast">
-        <div class="video-layer">
-            <video id="preview" autoplay muted playsinline></video>
-        </div>
-        <div class="ui-layer">
-            <header class="header">
-                <div class="badge live">🔴 CANLI</div>
-                <button onclick="stopBroadcast()" class="btn stop">BİTİR ⏹</button>
-            </header>
-            <div class="spacer"></div>
-            <footer class="footer">
-                <div id="debug-log" style="display:none;"></div>
-                <div id="chat-box-broadcast" class="chat-list"></div>
-                <div class="input-row">
-                    <input type="text" id="chat-input-broadcast" placeholder="Yayıncı sohbeti..." autocomplete="off">
-                    <button onclick="sendMsg('broadcast')"><i class="fa-solid fa-paper-plane"></i></button>
-                </div>
-            </footer>
-        </div>
-    </div>
+    <div class="app-frame">
 
-    {% else %}
-    {% for stream in streams %}
-    <div class="stream-slide" data-username="{{ stream.username }}">
+        {% if mode == 'broadcast' %}
+        <div class="stream-slide">
+            <div class="video-layer">
+                <video id="preview" autoplay muted playsinline></video>
+            </div>
+            <div class="ui-layer">
+                <header class="header">
+                    <div class="badge live">🔴 CANLI</div>
+                    <div class="actions">
+                        <button id="btn-start" onclick="startBroadcast()" class="btn start">BAŞLAT 🚀</button>
+                        <button id="btn-stop" onclick="stopBroadcast()" class="btn stop" style="display:none;">BİTİR
+                            ⏹</button>
+                    </div>
+                </header>
 
-        <div class="video-layer">
-            <video id="video-{{ stream.username }}" class="feed-video" loop muted playsinline
-                poster="{{ stream.thumbnail }}"></video>
-
-            <div class="unmute-overlay" onclick="unmuteVideo('{{ stream.username }}')">
-                <i class="fa-solid fa-volume-high"></i> SESİ AÇ
+                <div class="spacer"></div>
+                <footer class="footer">
+                    <div id="debug-log" style="display:none;"></div>
+                    <div id="chat-box-broadcast" class="chat-list"></div>
+                    <div class="input-row">
+                        <input type="text" id="chat-input-broadcast" placeholder="Yayıncı sohbeti..."
+                            autocomplete="off">
+                        <button onclick="sendMsg('broadcast')"><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </footer>
             </div>
         </div>
 
-        <div class="ui-layer">
-            <header class="header">
-                <div class="badge viewer"><i class="fa-solid fa-user"></i> {{ stream.username }}</div>
-                <a href="/" class="btn close"><i class="fa-solid fa-xmark"></i></a>
-            </header>
+        {% else %}
+        <div class="feed-container">
+            {% for stream in streams %}
+            <div class="stream-slide" data-username="{{ stream.username }}">
 
-            <div class="spacer"></div>
-            <footer class="footer">
-                <div id="chat-box-{{ stream.username }}" class="chat-list">
-                    <div class="chat-msg" style="opacity:0.7"><i>Sohbete bağlanılıyor...</i></div>
+                <div class="video-layer">
+                    <video id="video-{{ stream.username }}" class="feed-video" loop muted playsinline
+                        poster="{{ stream.thumbnail }}"></video>
+
+                    <div class="unmute-overlay" onclick="unmuteVideo('{{ stream.username }}')">
+                        <i class="fa-solid fa-volume-high"></i> SESİ AÇ
+                    </div>
                 </div>
-                <div class="input-row">
-                    <input type="text" id="chat-input-{{ stream.username }}"
-                        placeholder="{{ stream.username }} kanalına yaz..." autocomplete="off">
-                    <button onclick="sendMsg('{{ stream.username }}')"><i class="fa-solid fa-paper-plane"></i></button>
+
+                <div class="ui-layer">
+                    <header class="header">
+                        <div class="badge viewer"><i class="fa-solid fa-user"></i> {{ stream.username }}</div>
+                        <a href="/" class="btn close"><i class="fa-solid fa-xmark"></i></a>
+                    </header>
+
+                    <div class="spacer"></div>
+
+                    <footer class="footer">
+                        <div id="chat-box-{{ stream.username }}" class="chat-list">
+                            <div class="chat-msg" style="opacity:0.7; font-style:italic;">Sohbete bağlanılıyor...</div>
+                        </div>
+                        <div class="input-row">
+                            <input type="text" id="chat-input-{{ stream.username }}"
+                                placeholder="{{ stream.username }} yayınına yaz..." autocomplete="off">
+                            <button onclick="sendMsg('{{ stream.username }}')"><i
+                                    class="fa-solid fa-paper-plane"></i></button>
+                        </div>
+                    </footer>
                 </div>
-            </footer>
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <i class="fa-solid fa-satellite-dish"></i>
+                <h3>Aktif yayın bulunamadı</h3>
+                <p>İlk yayını sen başlat!</p>
+                <a href="/live?mode=broadcast" class="btn start" style="margin-top:20px;">YAYIN AÇ</a>
+            </div>
+            {% endfor %}
         </div>
-    </div>
-    {% else %}
-    <div class="stream-slide empty-state">
-        <i class="fa-solid fa-satellite-dish"></i>
-        <h3>Şu an aktif yayın yok</h3>
-        <p>Sahne senin, ilk yayını sen aç!</p>
-        <a href="/live?mode=broadcast" class="btn start" style="margin-top:20px;">YAYIN AÇ</a>
-    </div>
-    {% endfor %}
-    {% endif %}
+        {% endif %}
 
+    </div>
 </div>
 
 <style>
-    /* --- TEMEL AYARLAR --- */
+    /* --- GENEL AYARLAR --- */
     * {
         box-sizing: border-box;
         margin: 0;
@@ -82,41 +95,58 @@
     }
 
     body {
-        background: #000;
+        background-color: #121212;
+        /* PC Arka Planı */
+        width: 100vw;
+        height: 100vh;
         overflow: hidden;
-        font-family: sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    /* --- PC MERKEZLEME --- */
+    .desktop-center-wrapper {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    /* --- MOBİL ÇERÇEVE --- */
+    .app-frame {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: black;
+        overflow: hidden;
+        max-width: 480px;
+        /* PC'de mobil boyutunda sınırla */
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
     }
 
     /* --- FEED (KAYDIRMA ALANI) --- */
     .feed-container {
-        width: 100vw;
-        height: 100vh;
-        height: 100dvh;
-        /* Mobil uyumlu tam boy */
+        width: 100%;
+        height: 100%;
         overflow-y: scroll;
-        /* Aşağı kaydırmaya izin ver */
-
-        /* MIKNATIS ETKİSİ (Scroll Snap) */
+        /* Kaydırma açık */
         scroll-snap-type: y mandatory;
+        /* Mıknatıs etkisi */
         scroll-behavior: smooth;
     }
 
-    /* --- TEKİL SLAYT (HER BİR YAYIN) --- */
+    /* --- SLAYT YAPISI --- */
     .stream-slide {
         position: relative;
         width: 100%;
         height: 100%;
-        /* Tam ekran */
-
-        /* Kaydırınca burada dursun */
         scroll-snap-align: start;
         scroll-snap-stop: always;
-
-        background: #111;
+        background: #000;
         overflow: hidden;
     }
 
-    /* --- VİDEO --- */
+    /* --- VIDEO --- */
     .video-layer {
         position: absolute;
         top: 0;
@@ -124,19 +154,14 @@
         width: 100%;
         height: 100%;
         z-index: 1;
-        display: flex;
-        align-items: center;
-        justify-content: center;
     }
 
-    /* PC: 480px ile sınırla, Mobil: %100 */
     video {
         width: 100%;
         height: 100%;
         object-fit: cover;
         /* Boşluksuz doldur */
-        max-width: 480px;
-        /* PC'de dev gibi olmasın */
+        object-position: center;
     }
 
     #preview {
@@ -155,13 +180,6 @@
         flex-direction: column;
         justify-content: space-between;
         pointer-events: none;
-        /* Arkaya tıklamaya izin ver */
-
-        /* PC'de ortalayalım */
-        max-width: 480px;
-        margin: 0 auto;
-        left: 0;
-        right: 0;
     }
 
     .header,
@@ -170,32 +188,33 @@
         pointer-events: auto;
     }
 
-    /* HEADER */
+    /* Header */
     .header {
-        padding: 20px;
+        padding: 15px;
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent);
     }
 
     .badge {
         padding: 6px 12px;
         border-radius: 6px;
-        font-weight: bold;
-        font-size: 0.9rem;
+        font-weight: 800;
+        font-size: 0.85rem;
         color: white;
     }
 
     .live {
-        background: red;
+        background: #e74c3c;
         animation: pulse 2s infinite;
+        box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
     }
 
     .viewer {
         background: rgba(0, 0, 0, 0.5);
-        border: 1px solid rgba(255, 255, 255, 0.3);
         backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
     .btn {
@@ -205,8 +224,9 @@
         font-weight: bold;
         cursor: pointer;
         text-decoration: none;
-        display: inline-flex;
+        display: flex;
         align-items: center;
+        justify-content: center;
     }
 
     .start {
@@ -215,7 +235,7 @@
     }
 
     .stop {
-        background: red;
+        background: #e74c3c;
         color: white;
     }
 
@@ -225,16 +245,17 @@
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.2);
         color: white;
-        justify-content: center;
+        padding: 0;
+        font-size: 1.2rem;
     }
 
-    /* FOOTER (CHAT) */
+    /* Footer (Chat) */
     .spacer {
         flex: 1;
     }
 
     .footer {
-        padding: 20px;
+        padding: 15px;
         background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
         display: flex;
         flex-direction: column;
@@ -247,8 +268,8 @@
         display: flex;
         flex-direction: column;
         gap: 6px;
-        mask-image: linear-gradient(to bottom, transparent, black 15%);
         scrollbar-width: none;
+        mask-image: linear-gradient(to bottom, transparent, black 15%);
     }
 
     .chat-msg {
@@ -258,6 +279,7 @@
         color: white;
         font-size: 0.9rem;
         width: fit-content;
+        max-width: 90%;
         backdrop-filter: blur(2px);
         text-shadow: 1px 1px 1px black;
     }
@@ -269,7 +291,7 @@
 
     .input-row {
         display: flex;
-        gap: 10px;
+        gap: 8px;
     }
 
     .input-row input {
@@ -279,19 +301,23 @@
         border: 1px solid rgba(255, 255, 255, 0.3);
         background: rgba(0, 0, 0, 0.5);
         color: white;
+        font-size: 1rem;
     }
 
     .input-row button {
-        width: 40px;
-        height: 40px;
+        width: 42px;
+        height: 42px;
         border-radius: 50%;
         border: none;
         background: #3498db;
         color: white;
         cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    /* SES BUTONU */
+    /* Ses Aç Butonu */
     .unmute-overlay {
         position: absolute;
         top: 50%;
@@ -299,7 +325,7 @@
         transform: translate(-50%, -50%);
         background: rgba(0, 0, 0, 0.6);
         color: white;
-        padding: 15px 30px;
+        padding: 12px 24px;
         border-radius: 50px;
         border: 1px solid white;
         cursor: pointer;
@@ -308,19 +334,31 @@
         font-weight: bold;
     }
 
-    /* BOŞ DURUM */
+    /* Boş Durum */
     .empty-state {
+        width: 100%;
+        height: 100%;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        color: #555;
+        color: #666;
         text-align: center;
     }
 
     .empty-state i {
         font-size: 4rem;
         margin-bottom: 20px;
+        color: #333;
+    }
+
+    #debug-log {
+        font-size: 0.7rem;
+        color: #ff6b6b;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 5px;
+        border-radius: 4px;
+        margin-bottom: 5px;
     }
 
     @keyframes pulse {
@@ -342,37 +380,47 @@
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    // --- YARDIMCILAR ---
-    function logError(msg) { console.error(msg); }
+    function logError(msg) { const d = document.getElementById('debug-log'); if (d) { d.style.display = 'block'; d.innerHTML = `⚠️ ${msg}`; } console.error(msg); }
+
+    // İzleyici sesi açtığında
     function unmuteVideo(username) {
         const vid = document.getElementById(`video-${username}`);
         if (vid) {
             vid.muted = false; vid.volume = 1.0;
-            vid.parentElement.querySelector('.unmute-overlay').style.display = 'none';
+            const overlay = vid.parentElement.querySelector('.unmute-overlay');
+            if (overlay) overlay.style.display = 'none';
         }
     }
 
     // --- YAYINCI KODLARI (Sadece broadcast modunda çalışır) ---
     if (MODE === 'broadcast') {
-        // ... (Yayıncı kodları aynı kalacak, aşağıda özet geçtim) ...
         const preview = document.getElementById('preview');
         let ws, rec, active = false;
 
+        // Kamerayı aç
         navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
             .then(s => { preview.srcObject = s; window.localStream = s; preview.volume = 0; })
-            .catch(e => alert("Kamera Hatası"));
+            .catch(e => logError("Kamera Hatası: " + e));
 
         window.startBroadcast = function () {
             active = true;
+            document.getElementById('btn-start').style.display = 'none';
+            document.getElementById('btn-stop').style.display = 'inline-flex';
+
             ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+
             ws.onopen = () => {
+                // Kayıt Ayarları (Bitrate 1.5M - Stabilite için)
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1500000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
-                rec = new MediaRecorder(window.localStream, opts);
-                rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
-                rec.start(1000);
 
-                // Thumbnail döngüsü
+                try {
+                    rec = new MediaRecorder(window.localStream, opts);
+                    rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+                    rec.start(1000); // 1 saniyelik parçalar gönder
+                } catch (e) { logError("Kayıt Başlatılamadı"); }
+
+                // Thumbnail Gönderimi (15 saniyede bir)
                 setInterval(() => {
                     if (active && ws.readyState === 1) {
                         const c = document.createElement('canvas'); c.width = 640; c.height = 360;
@@ -381,16 +429,23 @@
                     }
                 }, 15000);
             };
+            ws.onclose = () => { if (active) setTimeout(window.startBroadcast, 1000); }; // Koparsa tekrar bağlan
         };
-        window.stopBroadcast = function () { active = false; fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
 
-        // Yayıncı için Chat
+        window.stopBroadcast = function () {
+            active = false;
+            fetch('/broadcast/stop', { method: 'POST' });
+            if (rec) rec.stop(); if (ws) ws.close();
+            window.location.href = '/';
+        };
+
+        // Yayıncı Chat Bağlantısı
         connectChat('broadcast');
     }
 
-    // --- İZLEYİCİ FEED MANTIĞI (ÖNEMLİ KISIM) ---
+    // --- İZLEYİCİ KODLARI (FEED MANTIĞI) ---
     else {
-        // Hangi videonun ekranda olduğunu algıla
+        // Hangi video ekranda görünüyor?
         let observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 const slide = entry.target;
@@ -398,34 +453,48 @@
                 const video = document.getElementById(`video-${username}`);
 
                 if (entry.isIntersecting) {
-                    console.log("Görüntülenen Yayın:", username);
-                    loadStream(username, video); // Videoyu yükle ve oynat
-                    connectChat(username);       // O yayının sohbetine bağlan
+                    // Ekrana giren yayını yükle ve oynat
+                    console.log("İzleniyor:", username);
+                    loadStream(username, video);
+                    connectChat(username);
                 } else {
-                    // Ekrandan çıktıysa durdur (Performans için)
-                    if (video) { video.pause(); video.src = ""; }
-                    // Chat'i kes (opsiyonel)
+                    // Ekrandan çıkan yayını durdur (Performans)
+                    if (video) {
+                        video.pause();
+                        if (video.hls) video.hls.destroy();
+                        video.src = ""; // Kaynağı boşalt
+                    }
                 }
             });
-        }, { threshold: 0.6 }); // %60'ı görünüyorsa aktif et
+        }, { threshold: 0.6 }); // %60'ı görünüyorsa aktif say
 
-        // Tüm slaytları izlemeye al
+        // Tüm slaytları takip et
         document.querySelectorAll('.stream-slide').forEach(slide => observer.observe(slide));
     }
 
-    // --- STREAM YÜKLEME (HLS) ---
+    // --- STREAM YÜKLEME (HLS) - KİŞİYE ÖZEL ---
     function loadStream(username, video) {
-        // Backend'de her kullanıcı için ayrı bir .m3u8 yolu olmalı. 
-        // Şimdilik hepsi aynı 'stream.m3u8' kullanıyor ama ileride '/static/hls/{username}/index.m3u8' olacak.
-        // Demo için sabit dosya kullanıyoruz:
-        const src = '/static/hls/stream.m3u8';
+        // Backend'de oluşturulan kişiye özel klasöre gider
+        const src = `/static/hls/${username}/stream.m3u8`;
 
         if (Hls.isSupported()) {
-            const hls = new Hls();
+            if (video.hls) video.hls.destroy();
+
+            const hls = new Hls({ enableWorker: true, liveSyncDurationCount: 3, maxBufferLength: 30 });
+            video.hls = hls;
             hls.loadSource(src);
             hls.attachMedia(video);
+
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
                 video.play().catch(e => console.log("Oto-oynatma engellendi"));
+            });
+
+            // Yayın yoksa veya hata varsa tekrar dene
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                    console.log("Yayın aranıyor...");
+                    setTimeout(() => hls.startLoad(), 2000);
+                }
             });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = src;
@@ -433,14 +502,13 @@
         }
     }
 
-    // --- SOHBET ---
+    // --- CHAT SİSTEMİ ---
     let activeWs = null;
     function connectChat(username) {
         if (activeWs) activeWs.close(); // Önceki sohbetten çık
 
-        // URL'ye ?room=username ekleyebilirsin ileride
         activeWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
-        const box = document.getElementById(`chat-box-${username}`);
+        const box = document.getElementById(username === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${username}`);
 
         activeWs.onmessage = (e) => {
             const d = JSON.parse(e.data);
@@ -451,10 +519,9 @@
         };
 
         window.sendMsg = function (uName) {
-            const inp = document.getElementById(`chat-input-${uName}`);
+            const inp = document.getElementById(uName === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${uName}`);
             if (inp && inp.value.trim() && activeWs.readyState === 1) {
-                activeWs.send(inp.value);
-                inp.value = "";
+                activeWs.send(inp.value); inp.value = "";
             }
         }
     }
