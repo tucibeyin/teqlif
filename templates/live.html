@@ -217,28 +217,28 @@
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    // --- SESİ AÇMA FONKSİYONU ---
+    // --- YARDIMCI FONKSİYONLAR ---
+    function logError(msg) {
+        document.getElementById('debug-log').style.display = 'block';
+        document.getElementById('debug-log').innerHTML = `❌ ${msg}`; // Son hatayı göster
+        console.error(msg);
+    }
+
     function unmuteVideo() {
         const vid = document.getElementById('video');
         if (vid) {
             vid.muted = false;
             vid.volume = 1.0;
-            // Butonu gizle
             document.getElementById('unmute-overlay').style.display = 'none';
         }
     }
 
-    // --- DEBUG ---
-    function logError(msg) { document.getElementById('debug-log').style.display = 'block'; document.getElementById('debug-log').innerHTML += `❌ ${msg}<br>`; console.error(msg); }
-
-    // --- CHAT (WebSocket) ---
-    // Bağlantı koparsa otomatik tekrar bağlanmaya çalışır
+    // --- CHAT MOTORU (Otomatik Bağlanmalı) ---
     function connectChat() {
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
+        let ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
         const chatBox = document.getElementById("chat-box");
         const chatInput = document.getElementById("chat-input");
 
-        ws.onopen = () => console.log("Chat bağlandı");
         ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
             chatBox.insertAdjacentHTML('beforeend', `<div class="chat-message"><b>${data.user}:</b> ${data.msg}</div>`);
@@ -250,53 +250,105 @@
             if (chatInput.value.trim() && ws.readyState === 1) { ws.send(chatInput.value); chatInput.value = ""; }
         }
     }
-    connectChat(); // Chat'i başlat
+    connectChat();
 
-    // --- YAYINCI (BROADCASTER) ---
+    // ==========================================
+    // 🔥 YAYINCI MODU (AUTO-RECONNECT + GÜVENLİ BITRATE)
+    // ==========================================
     if (MODE === 'broadcast') {
         const preview = document.getElementById('preview');
-        let broadcastWs, mediaRecorder;
+        let broadcastWs = null;
+        let mediaRecorder = null;
+        let isBroadcasting = false; // Kullanıcı "Yayınla" dedi mi?
 
+        // 1. Kamerayı Başlat
         navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
-            .then(stream => { preview.srcObject = stream; window.localStream = stream; preview.volume = 0; })
-            .catch(err => logError("Kamera Hatası: " + err));
+            .then(stream => {
+                preview.srcObject = stream;
+                window.localStream = stream;
+                preview.volume = 0;
+            })
+            .catch(err => logError("Kamera Açılamadı: " + err));
 
-        window.startBroadcast = function () {
+        // 2. Yayın Fonksiyonu (Koparsa kendini tekrar çağırır)
+        function setupSocket() {
+            if (!isBroadcasting) return; // Yayın durdurulduysa bağlanma
+
             broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
             broadcastWs.onopen = () => {
-                document.getElementById('btn-start').style.display = 'none';
-                document.getElementById('btn-stop').style.display = 'inline-block';
+                console.log("Sunucuya bağlandı ✅");
                 document.querySelector('.live-tag').style.display = 'block';
 
-                // YAYIN AYARLARI (2.5 Mbps - HD)
-                let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
-                if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
+                // --- GÜVENLİ BITRATE AYARI (1.5 Mbps) ---
+                // 2.5 Mbps çok yüksek gelip bağlantıyı koparıyorsa 1.5 Mbps idealdir.
+                let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1500000 };
+
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
+                }
 
                 try {
-                    mediaRecorder = new MediaRecorder(window.localStream, options);
-                    mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
-                    mediaRecorder.start(250);
-                } catch (e) { logError("Yayın Başlatılamadı: " + e); }
-
-                // THUMBNAIL (15 saniyede bir)
-                setInterval(() => {
-                    if (broadcastWs.readyState === 1) {
-                        const canvas = document.createElement('canvas');
-                        canvas.width = 640; canvas.height = 360;
-                        canvas.getContext('2d').drawImage(preview, 0, 0, canvas.width, canvas.height);
-                        const dataURL = canvas.toDataURL('image/jpeg', 0.5);
-                        fetch('/broadcast/thumbnail', {
-                            method: 'POST', headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ image: dataURL, timestamp: Date.now() })
-                        });
+                    // Eğer eski recorder varsa temizle
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+                        mediaRecorder.stop();
                     }
-                }, 15000);
+
+                    mediaRecorder = new MediaRecorder(window.localStream, options);
+
+                    mediaRecorder.ondataavailable = (e) => {
+                        if (e.data.size > 0 && broadcastWs.readyState === 1) {
+                            broadcastWs.send(e.data);
+                        }
+                    };
+                    // 1 saniyelik parçalar gönder (Buffer şişmesini önler)
+                    mediaRecorder.start(1000);
+
+                } catch (e) {
+                    logError("Kayıt Başlatılamadı: " + e);
+                }
             };
-            broadcastWs.onerror = () => logError("Sunucu bağlantısı koptu!");
+
+            broadcastWs.onclose = () => {
+                console.log("Bağlantı koptu! Tekrar bağlanılıyor... 🔄");
+                if (mediaRecorder) mediaRecorder.stop();
+
+                // Yayıncı hala yayındaysa 1 saniye sonra tekrar dene
+                if (isBroadcasting) {
+                    setTimeout(setupSocket, 1000);
+                }
+            };
+
+            broadcastWs.onerror = (err) => {
+                console.error("Socket Hatası:", err);
+                broadcastWs.close(); // Close çağırınca onclose tetiklenir ve tekrar bağlanır
+            };
+        }
+
+        // --- BUTONLAR ---
+        window.startBroadcast = function () {
+            isBroadcasting = true;
+            document.getElementById('btn-start').style.display = 'none';
+            document.getElementById('btn-stop').style.display = 'inline-block';
+            setupSocket(); // Yayını başlat
+
+            // THUMBNAIL (Sadece 1 kere başlatılır)
+            setInterval(() => {
+                if (isBroadcasting && broadcastWs && broadcastWs.readyState === 1) {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = 640; canvas.height = 360;
+                    canvas.getContext('2d').drawImage(preview, 0, 0, canvas.width, canvas.height);
+                    const dataURL = canvas.toDataURL('image/jpeg', 0.5);
+                    fetch('/broadcast/thumbnail', {
+                        method: 'POST', headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ image: dataURL, timestamp: Date.now() })
+                    }).catch(e => console.log("Thumb hatası (önemsiz)"));
+                }
+            }, 15000);
         }
 
         window.stopBroadcast = function () {
+            isBroadcasting = false; // Tekrar bağlanmayı durdur
             fetch('/broadcast/stop', { method: 'POST' });
             if (mediaRecorder) mediaRecorder.stop();
             if (broadcastWs) broadcastWs.close();
@@ -304,7 +356,9 @@
         }
     }
 
-    // --- İZLEYİCİ (WATCHER) - GÜNCELLENMİŞ STABİL AYARLAR ---
+    // ==========================================
+    // 📺 İZLEYİCİ MODU (STABİL)
+    // ==========================================
     else if (MODE === 'watch') {
         var video = document.getElementById('video');
         var videoSrc = '/static/hls/stream.m3u8';
@@ -313,18 +367,10 @@
 
         if (Hls.isSupported()) {
             var config = {
-                // DONMAYI ENGELLEYEN AYARLAR:
                 enableWorker: true,
-                lowLatencyMode: false,       // <-- STABİLİTE İÇİN KAPATTIK
-
-                liveSyncDurationCount: 3,    // Yayının 3 parça (6sn) gerisinden gel (Güvenli Bölge)
-                liveMaxLatencyDurationCount: 10,
-
-                maxBufferLength: 30,         // Tamponda 30 saniye video tutabilsin
-                backBufferLength: 30,
-
+                liveSyncDurationCount: 3,
+                maxBufferLength: 30,
                 manifestLoadingTimeOut: 10000,
-                manifestLoadingMaxRetry: 5,
             };
 
             var hls = new Hls(config);
@@ -332,20 +378,16 @@
             hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                // Otomatik Başlat (Sessiz)
                 var playPromise = video.play();
                 if (playPromise !== undefined) {
-                    playPromise.then(_ => {
-                        console.log("Video başladı.");
-                        document.getElementById('unmute-overlay').style.display = 'block';
-                    }).catch(error => console.log("Otomatik oynatma engellendi."));
+                    playPromise.then(_ => document.getElementById('unmute-overlay').style.display = 'block')
+                        .catch(error => console.log("Oto-oynatma engellendi."));
                 }
             });
 
-            // Hata olursa otomatik kurtar
+            // Hata Yönetimi
             hls.on(Hls.Events.ERROR, function (event, data) {
                 if (data.fatal) {
-                    console.log("Hata: " + data.type + ", Kurtarılıyor...");
                     switch (data.type) {
                         case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
                         case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
@@ -360,4 +402,5 @@
         }
     }
 </script>
+
 {% endblock %}
