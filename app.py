@@ -1,6 +1,7 @@
 import os
 import subprocess
 import asyncio
+import json
 import random # Kod üretmek için
 import requests # Brevo maili için
 from datetime import datetime, timedelta
@@ -397,13 +398,52 @@ async def broadcast_endpoint(websocket: WebSocket):
     except Exception:
         if stream_process: stream_process.terminate()
 
+# --- YENİ AKILLI CHAT MOTORU ---
 @app.websocket("/ws/chat")
-async def chat_endpoint(websocket: WebSocket):
+async def chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     await manager.connect(websocket)
+    
+    # 1. KULLANICIYI TANI (KİMLİK KONTROLÜ)
+    username = "Misafir" # Varsayılan
+    try:
+        token = websocket.cookies.get("access_token")
+        if token:
+            scheme, _, param = token.partition(" ")
+            payload = jwt.decode(param, SECRET_KEY, algorithms=[ALGORITHM])
+            email = payload.get("sub")
+            
+            # Veritabanından en güncel ismini çek
+            user = db.query(User).filter(User.email == email).first()
+            if user:
+                # Kullanıcı adı varsa onu al, yoksa emailin başını al
+                username = user.username if user.username else user.email.split("@")[0]
+    except:
+        pass # Hata olursa Misafir kalır
+    
     try:
         while True:
+            # Mesajı al
             data = await websocket.receive_text()
-            clean = data.replace("<", "&lt;")
-            await manager.broadcast(clean)
-    except:
+            
+            # XSS Güvenliği (HTML etiketlerini temizle)
+            clean_msg = data.replace("<", "&lt;").replace(">", "&gt;")
+            
+            # Mesaj boşsa gönderme
+            if not clean_msg.strip():
+                continue
+
+            # 2. MESAJI PAKETLE (JSON)
+            # Sadece metni değil, kimin gönderdiğini de paketliyoruz
+            message_package = json.dumps({
+                "user": username,
+                "msg": clean_msg
+            })
+            
+            # Herkese gönder
+            await manager.broadcast(message_package)
+            
+    except WebSocketDisconnect:
+        manager.disconnect(websocket)
+    except Exception as e:
+        print(f"Chat Hatası: {e}")
         manager.disconnect(websocket)

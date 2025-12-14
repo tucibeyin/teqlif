@@ -1,104 +1,295 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="live-badge"><i class="fa-solid fa-circle"></i> CANLI</div>
+<div class="live-container">
 
-<div id="video-container">
-    <video id="localVideo" autoplay muted playsinline></video>
-    <button id="unmuteBtn" onclick="enableAudio()"><i class="fa-solid fa-volume-high"></i> Sesi Aç</button>
-</div>
-
-<div class="ui-layer">
-    <div id="chat-box"></div>
-    <div class="controls">
-        <input type="text" id="msgInput" placeholder="Yorum yaz...">
-        <button class="send-btn" onclick="sendChat()"><i class="fa-solid fa-paper-plane"></i></button>
+    <div class="video-wrapper">
+        <div class="live-badge">CANLI</div>
+        <video id="video" controls autoplay muted></video>
+        <div class="stream-info">
+            <h3>Canlı Yayın</h3>
+            <p>Teqlif Live Stream</p>
+        </div>
     </div>
+
+    <div class="chat-wrapper">
+        <div class="chat-header">
+            <i class="fa-solid fa-comments"></i> Canlı Sohbet
+        </div>
+
+        <div id="chat-box" class="chat-box">
+            <div class="chat-message system">
+                <span class="chat-text">Sohbete hoş geldiniz! 👋</span>
+            </div>
+        </div>
+
+        <div class="chat-input-area">
+            {% if user %}
+            <input type="text" id="chat-input" placeholder="Bir şeyler yaz..." autocomplete="off">
+            <button onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+            {% else %}
+            <div style="text-align:center; width:100%; font-size:0.9rem; color:#888;">
+                Sohbet etmek için <a href="/login" style="color:#f1c40f;">Giriş Yap</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
 </div>
-{% endblock %}
 
-{% block scripts %}
-<script>
-    // URL'den modu al (broadcast mi, watch mı?)
-    const urlParams = new URLSearchParams(window.location.search);
-    const mode = urlParams.get('mode'); // 'broadcast' veya 'watch'
-
-    let wsBroadcast;
-    let mediaRecorder;
-
-    function enableAudio() {
-        const videoEl = document.getElementById('localVideo');
-        videoEl.muted = false;
-        document.getElementById('unmuteBtn').style.display = 'none';
+<style>
+    .live-container {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+        height: calc(100vh - 80px);
+        /* Header payı düşünülerek */
     }
 
-    // --- YAYINCI KODLARI ---
-    async function startBroadcasting() {
-        try {
-            const constraints = {
-                video: { facingMode: "user", width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: { ideal: 30 } },
-                audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false, sampleRate: 48000, channelCount: 2 }
-            };
-
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            const videoEl = document.getElementById('localVideo');
-            videoEl.classList.add('broadcaster');
-            videoEl.srcObject = stream;
-            videoEl.muted = true;
-
-            const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-            wsBroadcast = new WebSocket(proto + "//" + location.host + "/ws/broadcast");
-
-            wsBroadcast.onopen = () => {
-                const options = { mimeType: 'video/webm; codecs=vp8,opus', videoBitsPerSecond: 1500000, audioBitsPerSecond: 128000 };
-                mediaRecorder = new MediaRecorder(stream, options);
-                mediaRecorder.ondataavailable = (event) => {
-                    if (event.data.size > 0 && wsBroadcast.readyState === WebSocket.OPEN) wsBroadcast.send(event.data);
-                };
-                mediaRecorder.start(1000);
-            };
-        } catch (err) { alert("Hata: " + err); window.location.href = '/'; }
+    /* Video Alanı */
+    .video-wrapper {
+        flex: 3;
+        /* Geniş alan */
+        background: #000;
+        border-radius: 15px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        min-width: 300px;
     }
 
-    // --- İZLEYİCİ KODLARI ---
-    function startWatching() {
-        document.getElementById('unmuteBtn').style.display = 'block';
-        const videoEl = document.getElementById('localVideo');
+    video {
+        width: 100%;
+        height: auto;
+        max-height: 80vh;
+        background: black;
+    }
 
-        if (Hls.isSupported()) {
-            const hls = new Hls({ enableWorker: true, lowLatencyMode: true, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4 });
-            hls.loadSource('/static/hls/stream.m3u8');
-            hls.attachMedia(videoEl);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => videoEl.play().catch(e => console.log(e)));
-        } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-            videoEl.src = '/static/hls/stream.m3u8';
-            videoEl.play();
+    .live-badge {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        background: red;
+        color: white;
+        padding: 5px 10px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        border-radius: 5px;
+        z-index: 10;
+        animation: pulse 2s infinite;
+    }
+
+    .stream-info {
+        padding: 15px;
+        background: #1a1a1a;
+        color: white;
+    }
+
+    .stream-info h3 {
+        margin: 0;
+        font-size: 1.2rem;
+    }
+
+    .stream-info p {
+        margin: 5px 0 0;
+        color: #888;
+        font-size: 0.9rem;
+    }
+
+    /* Chat Alanı */
+    .chat-wrapper {
+        flex: 1;
+        /* Dar alan */
+        background: #1e1e1e;
+        border-radius: 15px;
+        display: flex;
+        flex-direction: column;
+        min-width: 300px;
+        border: 1px solid #333;
+        height: 100%;
+        max-height: 80vh;
+    }
+
+    .chat-header {
+        padding: 15px;
+        border-bottom: 1px solid #333;
+        font-weight: bold;
+        background: #252525;
+        border-radius: 15px 15px 0 0;
+    }
+
+    .chat-box {
+        flex: 1;
+        overflow-y: auto;
+        padding: 15px;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    /* Mesaj Tasarımları */
+    .chat-message {
+        font-size: 0.95rem;
+        line-height: 1.4;
+        word-wrap: break-word;
+    }
+
+    .chat-user {
+        font-weight: bold;
+        margin-right: 5px;
+    }
+
+    .chat-text {
+        color: #ddd;
+    }
+
+    .chat-message.system {
+        color: #f1c40f;
+        font-style: italic;
+        font-size: 0.8rem;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+
+    /* Input Alanı */
+    .chat-input-area {
+        padding: 15px;
+        border-top: 1px solid #333;
+        display: flex;
+        gap: 10px;
+        background: #252525;
+        border-radius: 0 0 15px 15px;
+    }
+
+    .chat-input-area input {
+        flex: 1;
+        padding: 10px;
+        border-radius: 5px;
+        border: 1px solid #444;
+        background: #111;
+        color: white;
+        outline: none;
+    }
+
+    .chat-input-area button {
+        padding: 10px 15px;
+        background: #3498db;
+        border: none;
+        border-radius: 5px;
+        color: white;
+        cursor: pointer;
+    }
+
+    .chat-input-area button:hover {
+        background: #2980b9;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+
+        100% {
+            opacity: 1;
         }
     }
 
-    // Mod Seçimi
-    if (mode === 'broadcast') {
-        startBroadcasting();
-    } else {
-        startWatching();
+    /* Mobil Uyumluluk */
+    @media (max-width: 768px) {
+        .live-container {
+            flex-direction: column;
+            height: auto;
+        }
+
+        .video-wrapper,
+        .chat-wrapper {
+            flex: none;
+            width: 100%;
+            height: 500px;
+        }
+    }
+</style>
+
+<script>
+    // --- 1. HLS VIDEO OYNATICI ---
+    var video = document.getElementById('video');
+    var videoSrc = '/static/hls/stream.m3u8';
+
+    if (Hls.isSupported()) {
+        var hls = new Hls();
+        hls.loadSource(videoSrc);
+        hls.attachMedia(video);
+        hls.on(Hls.Events.MANIFEST_PARSED, function () {
+            video.play().catch(e => console.log("Otomatik oynatma engellendi, kullanıcı etkileşimi bekleniyor."));
+        });
+        // Yayın hatası olursa (yayın yoksa) 3 sn sonra tekrar dene
+        hls.on(Hls.Events.ERROR, function (event, data) {
+            if (data.fatal) {
+                setTimeout(() => {
+                    hls.loadSource(videoSrc);
+                    hls.attachMedia(video);
+                }, 3000);
+            }
+        });
+    }
+    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = videoSrc;
+        video.addEventListener('loadedmetadata', function () {
+            video.play();
+        });
     }
 
-    // --- CHAT ---
-    const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-    const wsChat = new WebSocket(proto + "//" + location.host + "/ws/chat");
-    wsChat.onmessage = (e) => {
-        const box = document.getElementById('chat-box');
-        const div = document.createElement('div');
-        div.className = 'msg';
-        div.innerHTML = `<span>Misafir:</span> ${e.data}`;
-        box.appendChild(div);
-        box.scrollTop = box.scrollHeight;
+    // --- 2. CHAT SİSTEMİ (JSON DESTEKLİ) ---
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
+
+    const chatBox = document.getElementById("chat-box");
+    const chatInput = document.getElementById("chat-input");
+
+    ws.onmessage = function (event) {
+        // Backend'den gelen JSON verisini çözüyoruz
+        const data = JSON.parse(event.data);
+
+        // Rastgele renk seçimi (İsteğe bağlı, şimdilik sabit mavi yapalım)
+        const userColor = "#3498db";
+
+        // HTML Mesajını Oluştur
+        const messageHtml = `
+            <div class="chat-message">
+                <span class="chat-user" style="color: ${userColor};">${data.user}:</span> 
+                <span class="chat-text">${data.msg}</span>
+            </div>
+        `;
+
+        // Kutuya ekle ve en aşağı kaydır
+        chatBox.insertAdjacentHTML('beforeend', messageHtml);
+        chatBox.scrollTop = chatBox.scrollHeight;
     };
-    function sendChat() {
-        const input = document.getElementById("msgInput");
-        if (input.value) { wsChat.send(input.value); input.value = ""; }
-    }
-    document.getElementById("msgInput").addEventListener("keypress", (e) => { if (e.key === "Enter") sendChat(); });
 
+    function sendMessage() {
+        if (!chatInput) return; // Giriş yapmamışsa input yoktur
+        const msg = chatInput.value;
+        if (msg.trim() !== "") {
+            ws.send(msg); // Sadece metni gönderiyoruz, kimliği backend ekliyor
+            chatInput.value = "";
+        }
+    }
+
+    // Enter tuşu desteği
+    if (chatInput) {
+        chatInput.addEventListener("keypress", function (event) {
+            if (event.key === "Enter") {
+                sendMessage();
+            }
+        });
+    }
 </script>
 {% endblock %}
