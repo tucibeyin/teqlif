@@ -23,8 +23,6 @@
                 </div>
             </div>
 
-            <div class="mid-spacer"></div>
-
             <div class="bottom-dock">
                 <div id="chat-box-broadcast" class="chat-area"></div>
                 <div class="input-area">
@@ -32,6 +30,7 @@
                     <button onclick="sendMsg('broadcast')">YAZ</button>
                 </div>
             </div>
+
         </div>
     </div>
 
@@ -54,8 +53,6 @@
                     </div>
                     <a href="/" class="btn-close"><i class="fa-solid fa-xmark"></i></a>
                 </div>
-
-                <div class="mid-spacer"></div>
 
                 <div class="bottom-dock">
                     <div id="chat-box-{{ stream.username }}" class="chat-area">
@@ -102,6 +99,7 @@
     .app-container {
         width: 100%;
         height: 100dvh;
+        /* Mobil uyumlu tam boy */
         background: black;
         max-width: 500px;
         margin: 0 auto;
@@ -123,7 +121,7 @@
         overflow: hidden;
     }
 
-    /* --- VİDEO (EN ALT KATMAN) --- */
+    /* --- VİDEO (HİÇBİR FİLTRE YOK!) --- */
     .bg-video {
         position: absolute;
         top: 0;
@@ -131,51 +129,71 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        z-index: 1 !important;
-        /* Kesinlikle altta */
+        z-index: 1;
 
-        /* Makyaj (Parlak Görüntü) */
-        filter: brightness(1.1) contrast(1.05) saturate(1.1);
+        /* 🔥 %100 HAM GÖRÜNTÜ 🔥 */
+        filter: none !important;
+        opacity: 1 !important;
     }
 
     #preview {
         transform: scaleX(-1);
     }
 
-    /* --- ARAYÜZ KATMANI (EN ÜST KATMAN) --- */
+    /* --- ARAYÜZ KATMANI --- */
     .ui-layer {
         position: absolute;
         top: 0;
         left: 0;
-        right: 0;
-        bottom: 0;
-        /* Tam Kapla */
-        z-index: 9999 !important;
-        /* Kesinlikle üstte */
-        display: flex;
-        flex-direction: column;
-        justify-content: space-between;
+        width: 100%;
+        height: 100%;
+        z-index: 999;
         pointer-events: none;
-        /* Boşluklara tıklayınca arkaya geçsin */
+        /* Arkadaki videoya tıklanabilsin */
     }
 
-    /* --- ÜST PANEL (TOP DOCK) --- */
+    /* --- ÜST PANEL (SABİT VE ŞEFFAF) --- */
     .top-dock {
-        pointer-events: auto;
-        /* Tıklanabilsin */
+        position: absolute;
+        /* Tavana çiviledik */
+        top: 0;
+        left: 0;
         width: 100%;
+        pointer-events: auto;
+
         display: flex;
         justify-content: space-between;
         align-items: center;
         padding: 15px;
-        /* Çentik Payı (Daha güvenli ayar) */
-        padding-top: max(25px, env(safe-area-inset-top));
-        min-height: 80px;
-        /* Yükseklik garantisi */
+        padding-top: max(20px, env(safe-area-inset-top));
+        /* Çentik payı */
 
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
+        background: transparent !important;
+        /* Arkası tamamen şeffaf */
     }
 
+    /* --- ALT PANEL (SABİT VE ŞEFFAF) --- */
+    .bottom-dock {
+        position: absolute;
+        /* Tabana çiviledik */
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        pointer-events: auto;
+
+        padding: 15px;
+        padding-bottom: max(20px, env(safe-area-inset-bottom));
+        /* iPhone alt çizgi payı */
+
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+
+        background: transparent !important;
+        /* Arkası tamamen şeffaf */
+    }
+
+    /* --- STİLLER (YAZI GÖLGELİ - FİLTRESİZ OKUNURLUK İÇİN) --- */
     .status-badge {
         background: red;
         color: white;
@@ -184,6 +202,16 @@
         font-weight: 800;
         font-size: 14px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
+    .user-badge {
+        /* Sadece yazının arkası çok hafif koyu */
+        background: rgba(0, 0, 0, 0.4);
+        color: white;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: bold;
+        border: 1px solid rgba(255, 255, 255, 0.4);
     }
 
     .btn-primary {
@@ -212,40 +240,16 @@
         width: 35px;
         height: 35px;
         border-radius: 50%;
-        background: rgba(0, 0, 0, 0.5);
+        background: rgba(0, 0, 0, 0.4);
         color: white;
         display: flex;
         align-items: center;
         justify-content: center;
         text-decoration: none;
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.4);
     }
 
-    .user-badge {
-        background: rgba(0, 0, 0, 0.5);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: bold;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    /* --- ORTA BOŞLUK --- */
-    .mid-spacer {
-        flex: 1;
-    }
-
-    /* --- ALT PANEL (BOTTOM DOCK) --- */
-    .bottom-dock {
-        pointer-events: auto;
-        padding: 15px;
-        padding-bottom: max(20px, env(safe-area-inset-bottom));
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.8), transparent);
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-    }
-
+    /* --- CHAT KUTUSU --- */
     .chat-area {
         height: 250px;
         overflow-y: auto;
@@ -254,17 +258,22 @@
         justify-content: flex-end;
         gap: 6px;
         scrollbar-width: none;
+        margin-bottom: 5px;
     }
 
     .msg {
-        background: rgba(0, 0, 0, 0.5);
+        /* Mesajların arkası hafif koyu (okunabilirlik için şart ama ekranı karartmaz) */
+        background: rgba(0, 0, 0, 0.4);
         color: white;
         padding: 6px 12px;
         border-radius: 12px;
         width: fit-content;
         max-width: 85%;
         font-size: 14px;
-        text-shadow: 1px 1px 1px black;
+
+        /* 🔥 GÜÇLÜ YAZI GÖLGESİ (VİDEO BEYAZ OLSA DA OKUNSUN) */
+        text-shadow: 1px 1px 2px black, 0 0 1em black;
+        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .msg b {
@@ -275,9 +284,12 @@
     .system {
         background: transparent;
         font-style: italic;
-        color: #ddd;
+        color: #eee;
+        text-shadow: 1px 1px 2px black;
+        border: none;
     }
 
+    /* Input */
     .input-area {
         display: flex;
         gap: 10px;
@@ -288,10 +300,11 @@
         flex: 1;
         padding: 12px;
         border-radius: 25px;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.4);
         color: white;
         font-size: 14px;
+        text-shadow: 1px 1px 1px black;
     }
 
     .input-area button {
@@ -303,6 +316,7 @@
         border-radius: 25px;
         font-weight: bold;
         cursor: pointer;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     }
 
     .unmute-btn {
