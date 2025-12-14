@@ -6,6 +6,7 @@ import random
 import requests
 import base64
 import shutil
+import time
 from datetime import datetime, timedelta
 from typing import Optional, List, Dict
 
@@ -35,13 +36,13 @@ if not SECRET_KEY: raise ValueError("SECRET_KEY yok!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 
 
-# --- GÜVENLİ KLASÖR TEMİZLİĞİ ---
-# Hata alsa bile çökmez, devam eder.
+# --- BAŞLANGIÇ TEMİZLİĞİ ---
+# Sunucu her başladığında eski kalan tüm yayın artıklarını temizle
 try:
     if os.path.exists("static/hls"):
         shutil.rmtree("static/hls", ignore_errors=True)
 except Exception as e:
-    print(f"⚠️ HLS klasörü temizlenirken hata (önemsiz): {e}")
+    print(f"⚠️ Başlangıç temizliği hatası: {e}")
 
 os.makedirs("static/hls", exist_ok=True)
 os.makedirs("static/css", exist_ok=True)
@@ -114,7 +115,7 @@ def send_welcome_email(to_email):
         requests.post(url, json=data, headers=headers)
     except: pass
 
-# --- ODALI CHAT YÖNETİCİSİ (LOGLU) ---
+# --- ODALI CHAT YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[WebSocket]] = {}
@@ -124,7 +125,7 @@ class ConnectionManager:
         if room_name not in self.rooms:
             self.rooms[room_name] = []
         self.rooms[room_name].append(websocket)
-        print(f"✅ CHAT: Bir kullanıcı '{room_name}' odasına girdi.")
+        print(f"✅ CHAT: '{room_name}' odasına giriş yapıldı.")
 
     def disconnect(self, websocket: WebSocket, room_name: str):
         if room_name in self.rooms:
@@ -132,21 +133,56 @@ class ConnectionManager:
                 self.rooms[room_name].remove(websocket)
             if not self.rooms[room_name]:
                 del self.rooms[room_name]
-        print(f"❌ CHAT: Bir kullanıcı '{room_name}' odasından çıktı.")
 
     async def broadcast_to_room(self, message: str, room_name: str):
         if room_name in self.rooms:
             for connection in self.rooms[room_name][:]:
                 try: await connection.send_text(message)
                 except: self.disconnect(connection, room_name)
-        else:
-            print(f"⚠️ UYARI: '{room_name}' odası yok, mesaj iletilemedi.")
 
 manager = ConnectionManager()
+
+# --- YAYIN SÜREÇLERİ SÖZLÜĞÜ ---
+active_processes: Dict[str, subprocess.Popen] = {}
+
+# 🔥 TEMİZLİK ROBOTU (FONKSİYON) 🔥
+def cleanup_stream(username: str, db: Session):
+    print(f"🧹 TEMİZLİK BAŞLADI: {username}")
+    
+    # 1. Veritabanını Güncelle
+    try:
+        user = db.query(User).filter(User.username == username).first()
+        if user:
+            user.is_live = False
+            db.commit()
+            print(f"✅ DB Güncellendi: {username} çevrimdışı.")
+    except Exception as e:
+        print(f"❌ DB Hatası: {e}")
+
+    # 2. FFmpeg Sürecini Öldür
+    if username in active_processes:
+        proc = active_processes[username]
+        try:
+            proc.terminate()
+            proc.wait(timeout=2) # Kibarca kapanmasını bekle
+        except:
+            proc.kill() # Kapanmazsa zorla öldür
+        del active_processes[username]
+        print(f"✅ FFmpeg Öldürüldü: {username}")
+
+    # 3. Dosyaları Sil (Diski Temizle)
+    folder_path = f"static/hls/{username}"
+    if os.path.exists(folder_path):
+        try:
+            shutil.rmtree(folder_path, ignore_errors=True)
+            print(f"✅ Dosyalar Silindi: {folder_path}")
+        except Exception as e:
+            print(f"⚠️ Dosya silme hatası: {e}")
 
 # --- ROTALAR ---
 @app.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
+    # Sadece gerçekten "is_live=True" olanları göster
     active_streams = db.query(User).filter(User.is_live == True).all()
     return templates.TemplateResponse("index.html", {"request": request, "user": user, "streams": active_streams})
 
@@ -220,10 +256,12 @@ async def start_broadcast_api(title: str = Form(...), user: User = Depends(get_c
     user.is_live = True; user.stream_title = title; db.commit()
     return {"status": "success"}
 
+# MANUEL DURDURMA İÇİN API
 @app.post("/broadcast/stop")
 async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
-    user.is_live = False; db.commit()
+    # Temizlik Robotunu Çağır
+    cleanup_stream(user.username, db)
     return {"status": "stopped"}
 
 @app.post("/broadcast/thumbnail")
@@ -251,20 +289,18 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         if token:
             payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
             user = db.query(User).filter(User.email == payload.get("sub")).first()
-            if user: username = user.username if user.username else user.email.split("@")[0]
+            if user and user.username: username = user.username
     except: pass
     
     try:
         while True:
             data = await websocket.receive_text()
             if data.strip():
-                print(f"📩 MESAJ ({room_name}): {username} -> {data}")
+                print(f"📩 CHAT ({room_name}): {username} -> {data}")
                 msg_payload = json.dumps({"user": username, "msg": data.replace("<", "&lt;")})
                 await manager.broadcast_to_room(msg_payload, room_name)
     except: manager.disconnect(websocket, room_name)
 
-# --- ÇOKLU YAYINCI SİSTEMİ ---
-active_processes: Dict[str, subprocess.Popen] = {}
 
 @app.websocket("/ws/broadcast")
 async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
@@ -282,12 +318,12 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         await websocket.close()
         return
 
-    # Kişiye Özel Klasör (static/hls/KULLANICI_ADI/stream.m3u8)
+    # Kişiye Özel Klasör
     stream_dir = f"static/hls/{user.username}"
     os.makedirs(stream_dir, exist_ok=True)
     stream_path = f"{stream_dir}/stream.m3u8"
 
-    # FFmpeg Komutu (Stabil, CPU Dostu)
+    # FFmpeg Komutu
     command = [
         "ffmpeg", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
@@ -307,6 +343,9 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             if process.stdin: 
                 process.stdin.write(data)
                 process.stdin.flush()
-    except: 
-        if process: process.terminate()
-        if user.username in active_processes: del active_processes[user.username]
+    except Exception as e:
+        print(f"❌ Yayın Hatası: {e}")
+    finally:
+        # 🔥 BAĞLANTI KOPUNCA OTOMATİK TEMİZLİK 🔥
+        print(f"🔌 Bağlantı koptu, temizlik başlıyor: {user.username}")
+        cleanup_stream(user.username, db)
