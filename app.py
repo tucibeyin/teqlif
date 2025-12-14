@@ -142,11 +142,7 @@ class ConnectionManager:
                 except Exception as e: 
                     print(f"⚠️ Mesaj gönderme hatası: {e}")
                     self.disconnect(connection, room_name)
-            # Log kalabalığı yapmasın diye print'i kapattım
-            # print(f"📤 DAĞITILDI ({room_name}): {message}") 
-        else:
-            pass
-
+    
 manager = ConnectionManager()
 
 # --- TEMİZLİK ROBOTU ---
@@ -284,7 +280,6 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         while True:
             data = await websocket.receive_text()
             if data.strip():
-                # print(f"📩 CHAT GELDI ({room_name}): {username} -> {data}")
                 msg_payload = json.dumps({"user": username, "msg": data.replace("<", "&lt;")})
                 await manager.broadcast_to_room(msg_payload, room_name)
     except: manager.disconnect(websocket, room_name)
@@ -312,20 +307,22 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(stream_dir, exist_ok=True)
     
     stream_path = f"{stream_dir}/stream.m3u8"
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (HD): {user.username}")
 
-    # 🔥 PROFESYONEL VE DAYANIKLI YAYIN KOMUTU 🔥
+    # 🔥 DÜZELTİLMİŞ FFMPEG KOMUTU 🔥
+    # 'thread_queue_size' ve 'use_wallclock' GİRİŞ (-i) parametresinden önce olmalı.
     command = [
         "ffmpeg", 
-        "-f", "webm",
-        "-i", "pipe:0",
         
-        # Kesilmeyi ve drift'i önleyen kritik komutlar:
-        "-use_wallclock_as_timestamps", "1", 
-        "-fflags", "+genpts+nobuffer",
-        "-thread_queue_size", "1024",
-
-        # Video Ayarları (Yüksek Kalite)
+        # --- GİRİŞ AYARLARI (ÖNCE YAZILMALI) ---
+        "-thread_queue_size", "1024",       # Giriş kuyruğunu artır (Drop önler)
+        "-use_wallclock_as_timestamps", "1",# Zaman kaymasını (Drift) önler
+        "-f", "webm",                       # Giriş formatı
+        "-fflags", "+genpts+nobuffer",      # Zaman damgası üretimi
+        
+        "-i", "pipe:0",                     # GİRİŞ BURADA
+        
+        # --- ÇIKIŞ AYARLARI (SONRA YAZILMALI) ---
         "-c:v", "libx264", 
         "-preset", "superfast", 
         "-tune", "zerolatency",
@@ -337,13 +334,11 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "-bufsize", "6000k",
         "-pix_fmt", "yuv420p",
 
-        # Ses Ayarları
         "-c:a", "aac", 
         "-b:a", "128k",
         "-ar", "44100",
         "-ac", "2",
 
-        # HLS Çıkış
         "-f", "hls", 
         "-hls_time", "2", 
         "-hls_list_size", "5",
@@ -364,6 +359,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                     process.stdin.write(data)
                     process.stdin.flush()
                 except BrokenPipeError:
+                    print("❌ HATA: FFmpeg borusu kırıldı.")
                     break
     except Exception as e:
         print(f"❌ Yayın Hatası: {e}")
