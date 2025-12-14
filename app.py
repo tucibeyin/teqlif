@@ -35,10 +35,14 @@ if not SECRET_KEY: raise ValueError("SECRET_KEY yok!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 
 
-# Klasör Temizlik ve Hazırlık
-# Her başlangıçta hls klasörünü temizle ama ana klasörü tut
-if os.path.exists("static/hls"):
-    shutil.rmtree("static/hls")
+# --- KRİTİK DÜZELTME: GÜVENLİ KLASÖR TEMİZLİĞİ ---
+# Klasör meşgulse hata verip çökme, devam et.
+try:
+    if os.path.exists("static/hls"):
+        shutil.rmtree("static/hls", ignore_errors=True)
+except Exception as e:
+    print(f"⚠️ HLS klasörü temizlenirken hata (önemsiz): {e}")
+
 os.makedirs("static/hls", exist_ok=True)
 os.makedirs("static/css", exist_ok=True)
 os.makedirs("static/thumbnails", exist_ok=True)
@@ -241,14 +245,13 @@ async def chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
             if data.strip(): await manager.broadcast(json.dumps({"user": username, "msg": data.replace("<", "&lt;")}))
     except: manager.disconnect(websocket)
 
-# 🔥 ÇOKLU YAYINCI SİSTEMİ (ARTIK HERKESİN KENDİ STREAM SÜRECİ VAR)
+# ÇOKLU YAYINCI SİSTEMİ
 active_processes: Dict[str, subprocess.Popen] = {}
 
 @app.websocket("/ws/broadcast")
 async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
     
-    # 1. Yayıncının kim olduğunu bul
     user = None
     try:
         token = websocket.cookies.get("access_token")
@@ -261,12 +264,12 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         await websocket.close()
         return
 
-    # 2. Yayıncıya Özel Klasör Oluştur
+    # Kişiye Özel Klasör
     stream_dir = f"static/hls/{user.username}"
     os.makedirs(stream_dir, exist_ok=True)
     stream_path = f"{stream_dir}/stream.m3u8"
 
-    # 3. FFmpeg Komutu (O kişiye özel dosyaya yazar)
+    # FFmpeg Komutu
     command = [
         "ffmpeg", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
@@ -274,7 +277,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "-g", "48", "-c:a", "aac", "-b:a", "64k", "-ar", "44100",
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "3",
         "-hls_flags", "delete_segments+append_list", 
-        stream_path # <-- ARTIK KİŞİYE ÖZEL YOL
+        stream_path 
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
