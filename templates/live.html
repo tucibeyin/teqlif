@@ -13,12 +13,9 @@
         <div class="ui-layer">
 
             <div class="top-dock">
-                <div class="badge-container">
-                    <div class="status-badge">🔴 CANLI</div>
-                </div>
-
+                <div class="status-badge">🔴 CANLI</div>
                 <div class="controls-container">
-                    <button id="btn-start" onclick="startBroadcast()" class="btn-primary">YAYINA BAŞLA 🚀</button>
+                    <button id="btn-start" onclick="startBroadcast()" class="btn-primary">BAŞLAT 🚀</button>
                     <button id="btn-stop" onclick="stopBroadcast()" class="btn-danger" style="display:none;">BİTİR
                         ⏹</button>
                 </div>
@@ -29,8 +26,8 @@
             <div class="bottom-dock">
                 <div id="chat-box-broadcast" class="chat-area"></div>
                 <div class="input-area">
-                    <input type="text" id="chat-input-broadcast" placeholder="Yayıncı olarak yaz..." autocomplete="off">
-                    <button onclick="sendMsg('broadcast')">GÖNDER</button>
+                    <input type="text" id="chat-input-broadcast" placeholder="Yayıncı mesajı..." autocomplete="off">
+                    <button onclick="sendMsg('broadcast')">YAZ</button>
                 </div>
             </div>
 
@@ -61,7 +58,7 @@
 
                 <div class="bottom-dock">
                     <div id="chat-box-{{ stream.username }}" class="chat-area">
-                        <div class="msg system"><i>Sohbete bağlanıldı...</i></div>
+                        <div class="msg system"><i>Sohbet yükleniyor...</i></div>
                     </div>
                     <div class="input-area">
                         <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum yap..."
@@ -74,8 +71,8 @@
         </div>
         {% else %}
         <div class="empty-state">
-            <h3>Şu an yayın yok</h3>
-            <a href="/live?mode=broadcast" class="btn-primary">İLK YAYINI AÇ</a>
+            <h3>Yayın Yok</h3>
+            <a href="/live?mode=broadcast" class="btn-primary">YAYIN AÇ</a>
         </div>
         {% endfor %}
     </div>
@@ -98,21 +95,17 @@
         width: 100vw;
         height: 100vh;
         overflow: hidden;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
-    /* --- ANA KAPLAYICI --- */
+    /* --- KAPLAYICI --- */
     .app-container {
         width: 100%;
-        height: 100%;
         height: 100dvh;
-        /* Mobil uyumlu yükseklik */
         background: #000;
         max-width: 500px;
         margin: 0 auto;
         position: relative;
-        /* PC'de ortala */
-        box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
     }
 
     .feed-wrapper {
@@ -130,7 +123,7 @@
         overflow: hidden;
     }
 
-    /* VIDEO */
+    /* --- VİDEO (FİLTRESİZ) --- */
     .bg-video {
         position: absolute;
         top: 0;
@@ -139,76 +132,73 @@
         height: 100%;
         object-fit: cover;
         z-index: 1;
+        /* HİÇBİR FİLTRE YOK */
+        filter: none;
+        opacity: 1;
     }
 
     #preview {
         transform: scaleX(-1);
     }
 
-    /* ARAYÜZ KATMANI */
+    /* --- ARAYÜZ KATMANI --- */
     .ui-layer {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: 10;
+        z-index: 999;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        /* Üstü tepeye, altı dibe it */
         pointer-events: none;
+        /* Boşluklara tıklayınca arkaya geçsin */
     }
 
-    /* --- ÜST PANEL (DÜZELTİLEN KISIM) --- */
+    /* --- ÜST KISIM (ŞEFFAF) --- */
     .top-dock {
         pointer-events: auto;
         width: 100%;
         display: flex;
         justify-content: space-between;
-        /* Biri sağa biri sola */
         align-items: center;
-        /* Dikey ortala */
-
-        /* 🔥 GÜVENLİ ALAN AYARLARI (Kesilmeyi Önler) 🔥 */
         padding: 15px;
-        padding-top: max(20px, env(safe-area-inset-top));
-        /* Çentik payı */
+        padding-top: max(15px, env(safe-area-inset-top));
 
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+        /* 🔥 BURASI ÖNEMLİ: ARKAPLAN YOK */
+        background: transparent !important;
     }
 
-    /* Üst Öğeler */
     .status-badge {
         background: red;
         color: white;
-        padding: 6px 12px;
-        border-radius: 6px;
-        font-weight: 800;
-        font-size: 13px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 12px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        /* Gölgeyle okunurluk */
     }
 
     .user-badge {
         background: rgba(0, 0, 0, 0.5);
+        /* Sadece yazının arkası hafif koyu */
         color: white;
-        padding: 6px 12px;
+        padding: 5px 12px;
         border-radius: 20px;
         font-weight: bold;
-        font-size: 14px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        backdrop-filter: blur(4px);
+        font-size: 13px;
     }
 
     .btn-primary {
         background: white;
         color: black;
         border: none;
-        padding: 8px 16px;
+        padding: 8px 15px;
         border-radius: 20px;
         font-weight: bold;
         cursor: pointer;
-        font-size: 13px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     }
 
@@ -216,45 +206,43 @@
         background: red;
         color: white;
         border: none;
-        padding: 8px 16px;
+        padding: 8px 15px;
         border-radius: 20px;
         font-weight: bold;
         cursor: pointer;
     }
 
     .btn-close {
-        background: rgba(0, 0, 0, 0.4);
-        color: white;
-        width: 40px;
-        height: 40px;
+        background: rgba(0, 0, 0, 0.5);
+        width: 35px;
+        height: 35px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
+        color: white;
         text-decoration: none;
-        border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    /* --- ALT PANEL --- */
+    /* --- ALT KISIM (ŞEFFAF) --- */
     .mid-spacer {
         flex: 1;
     }
-
-    /* Boş alan */
 
     .bottom-dock {
         pointer-events: auto;
         padding: 15px;
         padding-bottom: max(20px, env(safe-area-inset-bottom));
-        /* iPhone alt çizgi payı */
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 10%, transparent);
         display: flex;
         flex-direction: column;
         gap: 10px;
+
+        /* 🔥 ARKAPLAN YOK */
+        background: transparent !important;
     }
 
     .chat-area {
-        height: 250px;
+        height: 200px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
@@ -263,8 +251,10 @@
         scrollbar-width: none;
     }
 
+    /* Mesaj Baloncuğu (Sadece yazının arkası koyu) */
     .msg {
         background: rgba(0, 0, 0, 0.5);
+        /* Yarı saydam siyah */
         color: white;
         padding: 6px 12px;
         border-radius: 12px;
@@ -272,7 +262,6 @@
         max-width: 85%;
         font-size: 14px;
         text-shadow: 1px 1px 1px black;
-        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .msg b {
@@ -282,24 +271,25 @@
 
     .system {
         background: transparent;
-        border: none;
         font-style: italic;
-        color: #ccc;
+        color: #ddd;
     }
 
+    /* Input Alanı */
     .input-area {
         display: flex;
-        gap: 10px;
+        gap: 8px;
+        align-items: center;
     }
 
     .input-area input {
         flex: 1;
-        padding: 12px;
+        padding: 10px 15px;
         border-radius: 25px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.5);
+        background: rgba(0, 0, 0, 0.5);
         color: white;
-        font-size: 14px;
+        /* Cam efekti */
     }
 
     .input-area button {
@@ -309,7 +299,7 @@
         padding: 0 15px;
         border-radius: 25px;
         font-weight: bold;
-        font-size: 12px;
+        height: 40px;
     }
 
     .unmute-btn {
@@ -341,7 +331,6 @@
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    // Global Değişkenler
     window.CURRENT_SOCKET = null;
     window.CURRENT_BOX_ID = null;
 
@@ -367,7 +356,6 @@
             document.getElementById('btn-start').style.display = 'none';
             document.getElementById('btn-stop').style.display = 'inline-block';
 
-            // Sohbeti Başlat
             connectChat('broadcast');
 
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
@@ -398,7 +386,16 @@
                     const u = entry.target.dataset.username;
                     const v = document.getElementById(`video-${u}`);
 
-                    loadStream(u, v);
+                    const src = `/static/hls/${u}/stream.m3u8`;
+                    if (Hls.isSupported()) {
+                        const hls = new Hls();
+                        hls.loadSource(src); hls.attachMedia(v);
+                        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => { }));
+                        hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) setTimeout(() => hls.startLoad(), 2000); });
+                        v.hls = hls;
+                    } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                        v.src = src; v.addEventListener('loadedmetadata', () => v.play());
+                    }
                     connectChat(u);
                 } else {
                     const v = entry.target.querySelector('video');
@@ -407,20 +404,6 @@
             });
         }, { threshold: 0.6 });
         document.querySelectorAll('.stream-item').forEach(s => observer.observe(s));
-    }
-
-    function loadStream(username, video) {
-        const src = `/static/hls/${username}/stream.m3u8`;
-        if (Hls.isSupported()) {
-            if (video.hls) video.hls.destroy();
-            const hls = new Hls();
-            hls.loadSource(src); hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => { }));
-            hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) setTimeout(() => hls.startLoad(), 2000); });
-            video.hls = hls;
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = src; video.addEventListener('loadedmetadata', () => video.play());
-        }
     }
 
     // --- CHAT ---
