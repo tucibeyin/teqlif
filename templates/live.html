@@ -223,27 +223,36 @@
         if (vid) {
             vid.muted = false;
             vid.volume = 1.0;
+            // Butonu gizle
             document.getElementById('unmute-overlay').style.display = 'none';
         }
     }
 
     // --- DEBUG ---
     function logError(msg) { document.getElementById('debug-log').style.display = 'block'; document.getElementById('debug-log').innerHTML += `❌ ${msg}<br>`; console.error(msg); }
-    function logInfo(msg) { console.log(msg); }
 
-    // --- CHAT ---
-    const chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
-    const chatBox = document.getElementById("chat-box");
-    const chatInput = document.getElementById("chat-input");
+    // --- CHAT (WebSocket) ---
+    // Bağlantı koparsa otomatik tekrar bağlanmaya çalışır
+    function connectChat() {
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
+        const chatBox = document.getElementById("chat-box");
+        const chatInput = document.getElementById("chat-input");
 
-    chatWs.onmessage = (e) => {
-        const data = JSON.parse(e.data);
-        chatBox.insertAdjacentHTML('beforeend', `<div class="chat-message"><b>${data.user}:</b> ${data.msg}</div>`);
-        chatBox.scrollTop = chatBox.scrollHeight;
-    };
-    function sendMessage() { if (chatInput.value.trim()) { chatWs.send(chatInput.value); chatInput.value = ""; } }
+        ws.onopen = () => console.log("Chat bağlandı");
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            chatBox.insertAdjacentHTML('beforeend', `<div class="chat-message"><b>${data.user}:</b> ${data.msg}</div>`);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        };
+        ws.onclose = () => setTimeout(connectChat, 3000); // Koparsa 3sn sonra tekrar dene
 
-    // --- YAYINCI ---
+        window.sendMessage = function () {
+            if (chatInput.value.trim() && ws.readyState === 1) { ws.send(chatInput.value); chatInput.value = ""; }
+        }
+    }
+    connectChat(); // Chat'i başlat
+
+    // --- YAYINCI (BROADCASTER) ---
     if (MODE === 'broadcast') {
         const preview = document.getElementById('preview');
         let broadcastWs, mediaRecorder;
@@ -260,7 +269,7 @@
                 document.getElementById('btn-stop').style.display = 'inline-block';
                 document.querySelector('.live-tag').style.display = 'block';
 
-                // 1. KAYIT (HD)
+                // YAYIN AYARLARI (2.5 Mbps - HD)
                 let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                 if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
 
@@ -268,25 +277,23 @@
                     mediaRecorder = new MediaRecorder(window.localStream, options);
                     mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
                     mediaRecorder.start(250);
-                } catch (e) { logError("MediaRecorder Hatası: " + e); }
+                } catch (e) { logError("Yayın Başlatılamadı: " + e); }
 
-                // 2. THUMBNAIL (10sn'de bir)
+                // THUMBNAIL (15 saniyede bir)
                 setInterval(() => {
                     if (broadcastWs.readyState === 1) {
                         const canvas = document.createElement('canvas');
                         canvas.width = 640; canvas.height = 360;
                         canvas.getContext('2d').drawImage(preview, 0, 0, canvas.width, canvas.height);
-                        const dataURL = canvas.toDataURL('image/jpeg', 0.6);
-
+                        const dataURL = canvas.toDataURL('image/jpeg', 0.5);
                         fetch('/broadcast/thumbnail', {
                             method: 'POST', headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({ image: dataURL, timestamp: Date.now() })
                         });
                     }
-                }, 10000);
+                }, 15000);
             };
-
-            broadcastWs.onerror = (err) => logError("Socket Bağlantı Hatası!");
+            broadcastWs.onerror = () => logError("Sunucu bağlantısı koptu!");
         }
 
         window.stopBroadcast = function () {
@@ -296,31 +303,26 @@
             window.location.href = '/';
         }
     }
-    // --- İZLEYİCİ ---
- // --- İZLEYİCİ MODU (Watch) ---
+
+    // --- İZLEYİCİ (WATCHER) - GÜNCELLENMİŞ STABİL AYARLAR ---
     else if (MODE === 'watch') {
         var video = document.getElementById('video');
         var videoSrc = '/static/hls/stream.m3u8';
 
-        // Ses açıldığında donmayı engellemek için buton kontrolü
-        video.onvolumechange = () => {
-            if (!video.muted) document.getElementById('unmute-overlay').style.display = 'none';
-        };
+        video.onvolumechange = () => { if (!video.muted) document.getElementById('unmute-overlay').style.display = 'none'; };
 
         if (Hls.isSupported()) {
-            // --- GÜNCELLENMİŞ STABİL AYARLAR ---
             var config = {
+                // DONMAYI ENGELLEYEN AYARLAR:
                 enableWorker: true,
-                lowLatencyMode: true,
+                lowLatencyMode: false,       // <-- STABİLİTE İÇİN KAPATTIK
 
-                // ÖNCEKİ: 1 ve 2 (Çok dardı, donma yapıyordu)
-                // YENİ: 3 ve 10 (Daha güvenli)
-                liveSyncDurationCount: 3,    // Yayının 6 saniye gerisinden gel (Donmayı önler)
+                liveSyncDurationCount: 3,    // Yayının 3 parça (6sn) gerisinden gel (Güvenli Bölge)
                 liveMaxLatencyDurationCount: 10,
-                maxBufferLength: 10,         // Tamponda 10 saniye tutabilsin (Ses senkronu için şart)
-                backBufferLength: 10,
 
-                // Bağlantı koparsa hızlı toparla
+                maxBufferLength: 30,         // Tamponda 30 saniye video tutabilsin
+                backBufferLength: 30,
+
                 manifestLoadingTimeOut: 10000,
                 manifestLoadingMaxRetry: 5,
             };
@@ -330,35 +332,28 @@
             hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                // Otomatik Başlat (Sessiz)
                 var playPromise = video.play();
                 if (playPromise !== undefined) {
                     playPromise.then(_ => {
+                        console.log("Video başladı.");
                         document.getElementById('unmute-overlay').style.display = 'block';
-                        console.log("Video başladı (Sessiz).");
-                    })
-                        .catch(error => console.log("Oto-oynatma engellendi."));
+                    }).catch(error => console.log("Otomatik oynatma engellendi."));
                 }
             });
 
-            // Hata Yönetimi (Yayın kesilirse)
+            // Hata olursa otomatik kurtar
             hls.on(Hls.Events.ERROR, function (event, data) {
                 if (data.fatal) {
-                    console.log("Hata oluştu, tekrar deneniyor...");
+                    console.log("Hata: " + data.type + ", Kurtarılıyor...");
                     switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR:
-                            hls.startLoad();
-                            break;
-                        case Hls.ErrorTypes.MEDIA_ERROR:
-                            hls.recoverMediaError();
-                            break;
-                        default:
-                            hls.destroy();
-                            break;
+                        case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                        case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                        default: hls.destroy(); break;
                     }
                 }
             });
         }
-        // iPhone (Safari) için Native Player
         else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = videoSrc;
             video.addEventListener('loadedmetadata', () => video.play());
