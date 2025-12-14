@@ -3,61 +3,76 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<div class="desktop-center-wrapper">
+<div class="feed-container">
 
-    <div class="app-frame">
-
+    {% if mode == 'broadcast' %}
+    <div class="stream-slide" id="slide-broadcast">
         <div class="video-layer">
-            {% if mode == 'broadcast' %}
             <video id="preview" autoplay muted playsinline></video>
-            {% else %}
-            <video id="video" autoplay muted playsinline></video>
-            <div id="unmute-btn" onclick="unmuteVideo()">
-                <i class="fa-solid fa-volume-high"></i> SESİ AÇ
-            </div>
-            {% endif %}
         </div>
-
         <div class="ui-layer">
-
             <header class="header">
-                <div class="status-box">
-                    {% if mode == 'broadcast' %}
-                    <div class="badge live">🔴 CANLI</div>
-                    {% else %}
-                    <div class="badge viewer"><i class="fa-solid fa-eye"></i> İZLENİYOR</div>
-                    {% endif %}
-                </div>
-
-                <div class="actions">
-                    {% if mode == 'broadcast' %}
-                    <button id="btn-start" onclick="startBroadcast()" class="btn start">BAŞLAT 🚀</button>
-                    <button id="btn-stop" onclick="stopBroadcast()" class="btn stop" style="display:none;">BİTİR
-                        ⏹</button>
-                    {% else %}
-                    <a href="/" class="btn close"><i class="fa-solid fa-xmark"></i></a>
-                    {% endif %}
-                </div>
+                <div class="badge live">🔴 CANLI</div>
+                <button onclick="stopBroadcast()" class="btn stop">BİTİR ⏹</button>
             </header>
-
-            <div class="spacer" onclick="toggleUI()"></div>
-
+            <div class="spacer"></div>
             <footer class="footer">
                 <div id="debug-log" style="display:none;"></div>
-
-                <div id="chat-box" class="chat-list"></div>
-
+                <div id="chat-box-broadcast" class="chat-list"></div>
                 <div class="input-row">
-                    <input type="text" id="chat-input" placeholder="Yorum ekle..." autocomplete="off">
-                    <button onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+                    <input type="text" id="chat-input-broadcast" placeholder="Yayıncı sohbeti..." autocomplete="off">
+                    <button onclick="sendMsg('broadcast')"><i class="fa-solid fa-paper-plane"></i></button>
                 </div>
             </footer>
         </div>
     </div>
+
+    {% else %}
+    {% for stream in streams %}
+    <div class="stream-slide" data-username="{{ stream.username }}">
+
+        <div class="video-layer">
+            <video id="video-{{ stream.username }}" class="feed-video" loop muted playsinline
+                poster="{{ stream.thumbnail }}"></video>
+
+            <div class="unmute-overlay" onclick="unmuteVideo('{{ stream.username }}')">
+                <i class="fa-solid fa-volume-high"></i> SESİ AÇ
+            </div>
+        </div>
+
+        <div class="ui-layer">
+            <header class="header">
+                <div class="badge viewer"><i class="fa-solid fa-user"></i> {{ stream.username }}</div>
+                <a href="/" class="btn close"><i class="fa-solid fa-xmark"></i></a>
+            </header>
+
+            <div class="spacer"></div>
+            <footer class="footer">
+                <div id="chat-box-{{ stream.username }}" class="chat-list">
+                    <div class="chat-msg" style="opacity:0.7"><i>Sohbete bağlanılıyor...</i></div>
+                </div>
+                <div class="input-row">
+                    <input type="text" id="chat-input-{{ stream.username }}"
+                        placeholder="{{ stream.username }} kanalına yaz..." autocomplete="off">
+                    <button onclick="sendMsg('{{ stream.username }}')"><i class="fa-solid fa-paper-plane"></i></button>
+                </div>
+            </footer>
+        </div>
+    </div>
+    {% else %}
+    <div class="stream-slide empty-state">
+        <i class="fa-solid fa-satellite-dish"></i>
+        <h3>Şu an aktif yayın yok</h3>
+        <p>Sahne senin, ilk yayını sen aç!</p>
+        <a href="/live?mode=broadcast" class="btn start" style="margin-top:20px;">YAYIN AÇ</a>
+    </div>
+    {% endfor %}
+    {% endif %}
+
 </div>
 
 <style>
-    /* --- SIFIRLAMA --- */
+    /* --- TEMEL AYARLAR --- */
     * {
         box-sizing: border-box;
         margin: 0;
@@ -67,38 +82,38 @@
     }
 
     body {
-        background-color: #121212;
-        /* PC Arka Planı (Koyu Gri) */
+        background: #000;
+        overflow: hidden;
+        font-family: sans-serif;
+    }
+
+    /* --- FEED (KAYDIRMA ALANI) --- */
+    .feed-container {
         width: 100vw;
         height: 100vh;
-        overflow: hidden;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        height: 100dvh;
+        /* Mobil uyumlu tam boy */
+        overflow-y: scroll;
+        /* Aşağı kaydırmaya izin ver */
+
+        /* MIKNATIS ETKİSİ (Scroll Snap) */
+        scroll-snap-type: y mandatory;
+        scroll-behavior: smooth;
     }
 
-    /* --- PC MERKEZLEME (Instagram Web Mantığı) --- */
-    .desktop-center-wrapper {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        justify-content: center;
-        align-items: center;
-    }
-
-    /* --- MOBİL ÇERÇEVE (SABİT ORAN) --- */
-    .app-frame {
+    /* --- TEKİL SLAYT (HER BİR YAYIN) --- */
+    .stream-slide {
         position: relative;
         width: 100%;
         height: 100%;
-        background: black;
+        /* Tam ekran */
+
+        /* Kaydırınca burada dursun */
+        scroll-snap-align: start;
+        scroll-snap-stop: always;
+
+        background: #111;
         overflow: hidden;
-
-        /* PC İÇİN KISITLAMA (Mobil Görünüm) */
-        max-width: 480px;
-        /* Standart Mobil Genişliği */
-        /* PC'de ise yükseklik tam ekran olsun ama kenarlardan taşmasın */
-
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
-        /* PC'de şık gölge */
     }
 
     /* --- VİDEO --- */
@@ -109,14 +124,19 @@
         width: 100%;
         height: 100%;
         z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
+    /* PC: 480px ile sınırla, Mobil: %100 */
     video {
         width: 100%;
         height: 100%;
-        /* COVER: En önemli kod! Ekranı doldurur, fazlalığı keser (Zoom yapar) */
         object-fit: cover;
-        object-position: center;
+        /* Boşluksuz doldur */
+        max-width: 480px;
+        /* PC'de dev gibi olmasın */
     }
 
     #preview {
@@ -135,42 +155,47 @@
         flex-direction: column;
         justify-content: space-between;
         pointer-events: none;
+        /* Arkaya tıklamaya izin ver */
+
+        /* PC'de ortalayalım */
+        max-width: 480px;
+        margin: 0 auto;
+        left: 0;
+        right: 0;
     }
 
     .header,
     .footer,
-    #unmute-btn {
+    .unmute-overlay {
         pointer-events: auto;
     }
 
-    /* --- HEADER --- */
+    /* HEADER */
     .header {
-        padding: 15px 20px;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6), transparent);
+        padding: 20px;
         display: flex;
         justify-content: space-between;
-        align-items: center;
+        align-items: flex-start;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.5), transparent);
     }
 
     .badge {
         padding: 6px 12px;
         border-radius: 6px;
-        font-weight: 800;
-        font-size: 0.85rem;
+        font-weight: bold;
+        font-size: 0.9rem;
         color: white;
-        letter-spacing: 0.5px;
     }
 
     .live {
-        background: #e74c3c;
+        background: red;
         animation: pulse 2s infinite;
-        box-shadow: 0 0 10px rgba(231, 76, 60, 0.5);
     }
 
     .viewer {
-        background: rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.3);
         backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
     .btn {
@@ -179,16 +204,9 @@
         border: none;
         font-weight: bold;
         cursor: pointer;
-        font-size: 0.9rem;
-        transition: 0.2s;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
-        justify-content: center;
-    }
-
-    .btn:active {
-        transform: scale(0.95);
     }
 
     .start {
@@ -197,7 +215,7 @@
     }
 
     .stop {
-        background: #e74c3c;
+        background: red;
         color: white;
     }
 
@@ -207,45 +225,41 @@
         border-radius: 50%;
         background: rgba(255, 255, 255, 0.2);
         color: white;
-        padding: 0;
-        font-size: 1.2rem;
+        justify-content: center;
     }
 
-    /* --- FOOTER (CHAT) --- */
+    /* FOOTER (CHAT) */
     .spacer {
         flex: 1;
     }
 
-    /* Boşluk */
-
     .footer {
         padding: 20px;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 10%, transparent);
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 10px;
     }
 
     .chat-list {
-        max-height: 250px;
+        max-height: 200px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         gap: 6px;
-        scrollbar-width: none;
         mask-image: linear-gradient(to bottom, transparent, black 15%);
+        scrollbar-width: none;
     }
 
     .chat-msg {
         background: rgba(255, 255, 255, 0.15);
-        padding: 6px 12px;
-        border-radius: 12px;
+        padding: 5px 10px;
+        border-radius: 10px;
         color: white;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         width: fit-content;
-        max-width: 90%;
-        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
         backdrop-filter: blur(2px);
+        text-shadow: 1px 1px 1px black;
     }
 
     .chat-msg b {
@@ -255,61 +269,58 @@
 
     .input-row {
         display: flex;
-        gap: 8px;
-        width: 100%;
+        gap: 10px;
     }
 
     .input-row input {
         flex: 1;
-        padding: 12px 18px;
-        border-radius: 25px;
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 10px 15px;
+        border-radius: 20px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
         background: rgba(0, 0, 0, 0.5);
         color: white;
-        font-size: 1rem;
-        backdrop-filter: blur(5px);
     }
 
     .input-row button {
-        width: 46px;
-        height: 46px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         border: none;
         background: #3498db;
         color: white;
         cursor: pointer;
-        font-size: 1.1rem;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     }
 
-    /* --- SES BUTONU --- */
-    #unmute-btn {
+    /* SES BUTONU */
+    .unmute-overlay {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         background: rgba(0, 0, 0, 0.6);
         color: white;
-        padding: 12px 24px;
+        padding: 15px 30px;
         border-radius: 50px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 1px solid white;
         cursor: pointer;
         z-index: 50;
-        display: none;
-        font-weight: bold;
         backdrop-filter: blur(4px);
+        font-weight: bold;
     }
 
-    #debug-log {
-        font-size: 0.7rem;
-        color: #ff6b6b;
-        background: rgba(0, 0, 0, 0.8);
-        padding: 5px;
-        border-radius: 4px;
-        margin-bottom: 5px;
+    /* BOŞ DURUM */
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: #555;
+        text-align: center;
+    }
+
+    .empty-state i {
+        font-size: 4rem;
+        margin-bottom: 20px;
     }
 
     @keyframes pulse {
@@ -331,91 +342,120 @@
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    function logError(msg) { const d = document.getElementById('debug-log'); d.style.display = 'block'; d.innerHTML = `⚠️ ${msg}`; console.error(msg); }
-    function unmuteVideo() { const v = document.getElementById('video'); if (v) { v.muted = false; v.volume = 1.0; document.getElementById('unmute-btn').style.display = 'none'; } }
-
-    // --- CHAT ---
-    function connectChat() {
-        let ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
-        const box = document.getElementById("chat-box");
-        const inp = document.getElementById("chat-input");
-
-        ws.onmessage = (e) => {
-            const d = JSON.parse(e.data);
-            box.insertAdjacentHTML('beforeend', `<div class="chat-msg"><b>${d.user}:</b> ${d.msg}</div>`);
-            box.scrollTop = box.scrollHeight;
-        };
-        ws.onclose = () => setTimeout(connectChat, 3000);
-
-        window.sendMessage = function () {
-            if (inp.value.trim() && ws.readyState === 1) { ws.send(inp.value); inp.value = ""; }
+    // --- YARDIMCILAR ---
+    function logError(msg) { console.error(msg); }
+    function unmuteVideo(username) {
+        const vid = document.getElementById(`video-${username}`);
+        if (vid) {
+            vid.muted = false; vid.volume = 1.0;
+            vid.parentElement.querySelector('.unmute-overlay').style.display = 'none';
         }
     }
-    connectChat();
 
-    // --- YAYINCI ---
+    // --- YAYINCI KODLARI (Sadece broadcast modunda çalışır) ---
     if (MODE === 'broadcast') {
+        // ... (Yayıncı kodları aynı kalacak, aşağıda özet geçtim) ...
         const preview = document.getElementById('preview');
-        let ws = null, rec = null, active = false;
+        let ws, rec, active = false;
 
-        // HD İste ama CSS kesecek
         navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
             .then(s => { preview.srcObject = s; window.localStream = s; preview.volume = 0; })
-            .catch(e => logError("Kamera Hatası"));
+            .catch(e => alert("Kamera Hatası"));
 
-        function setupSocket() {
-            if (!active) return;
+        window.startBroadcast = function () {
+            active = true;
             ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
             ws.onopen = () => {
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1500000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
-                try {
-                    if (rec && rec.state !== 'inactive') rec.stop();
-                    rec = new MediaRecorder(window.localStream, opts);
-                    rec.ondataavailable = (e) => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
-                    rec.start(1000);
-                } catch (e) { logError("Kayıt Hatası"); }
+                rec = new MediaRecorder(window.localStream, opts);
+                rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+                rec.start(1000);
+
+                // Thumbnail döngüsü
+                setInterval(() => {
+                    if (active && ws.readyState === 1) {
+                        const c = document.createElement('canvas'); c.width = 640; c.height = 360;
+                        c.getContext('2d').drawImage(preview, 0, 0, 640, 360);
+                        fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: c.toDataURL('image/jpeg', 0.5), timestamp: Date.now() }) }).catch(e => { });
+                    }
+                }, 15000);
             };
-            ws.onclose = () => { if (active) setTimeout(setupSocket, 1000); };
-        }
+        };
+        window.stopBroadcast = function () { active = false; fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
 
-        window.startBroadcast = function () {
-            active = true;
-            document.getElementById('btn-start').style.display = 'none';
-            document.getElementById('btn-stop').style.display = 'inline-block';
-            setupSocket();
-            // Thumbnail (Mobil formatta crop edilmiş gibi görünmesi için backend'de scale yapılabilir ama şimdilik client gönderiyor)
-            setInterval(() => {
-                if (active && ws && ws.readyState === 1) {
-                    const c = document.createElement('canvas'); c.width = 640; c.height = 360;
-                    c.getContext('2d').drawImage(preview, 0, 0, c.width, c.height);
-                    const d = c.toDataURL('image/jpeg', 0.5);
-                    fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: d, timestamp: Date.now() }) }).catch(e => { });
-                }
-            }, 15000);
-        }
-
-        window.stopBroadcast = function () {
-            active = false; fetch('/broadcast/stop', { method: 'POST' });
-            if (rec) rec.stop(); if (ws) ws.close(); window.location.href = '/';
-        }
+        // Yayıncı için Chat
+        connectChat('broadcast');
     }
-    // --- İZLEYİCİ ---
-    else if (MODE === 'watch') {
-        var v = document.getElementById('video');
-        var src = '/static/hls/stream.m3u8';
-        v.onvolumechange = () => { if (!v.muted) document.getElementById('unmute-btn').style.display = 'none'; };
+
+    // --- İZLEYİCİ FEED MANTIĞI (ÖNEMLİ KISIM) ---
+    else {
+        // Hangi videonun ekranda olduğunu algıla
+        let observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                const slide = entry.target;
+                const username = slide.dataset.username;
+                const video = document.getElementById(`video-${username}`);
+
+                if (entry.isIntersecting) {
+                    console.log("Görüntülenen Yayın:", username);
+                    loadStream(username, video); // Videoyu yükle ve oynat
+                    connectChat(username);       // O yayının sohbetine bağlan
+                } else {
+                    // Ekrandan çıktıysa durdur (Performans için)
+                    if (video) { video.pause(); video.src = ""; }
+                    // Chat'i kes (opsiyonel)
+                }
+            });
+        }, { threshold: 0.6 }); // %60'ı görünüyorsa aktif et
+
+        // Tüm slaytları izlemeye al
+        document.querySelectorAll('.stream-slide').forEach(slide => observer.observe(slide));
+    }
+
+    // --- STREAM YÜKLEME (HLS) ---
+    function loadStream(username, video) {
+        // Backend'de her kullanıcı için ayrı bir .m3u8 yolu olmalı. 
+        // Şimdilik hepsi aynı 'stream.m3u8' kullanıyor ama ileride '/static/hls/{username}/index.m3u8' olacak.
+        // Demo için sabit dosya kullanıyoruz:
+        const src = '/static/hls/stream.m3u8';
 
         if (Hls.isSupported()) {
-            var hls = new Hls({ enableWorker: true, liveSyncDurationCount: 3, maxBufferLength: 30 });
-            hls.loadSource(src); hls.attachMedia(v);
+            const hls = new Hls();
+            hls.loadSource(src);
+            hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                var p = v.play();
-                if (p !== undefined) p.then(_ => document.getElementById('unmute-btn').style.display = 'block').catch(e => { });
+                video.play().catch(e => console.log("Oto-oynatma engellendi"));
             });
-            hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) { if (d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad(); else hls.destroy(); } });
-        } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-            v.src = src; v.addEventListener('loadedmetadata', () => v.play());
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = src;
+            video.addEventListener('loadedmetadata', () => video.play());
+        }
+    }
+
+    // --- SOHBET ---
+    let activeWs = null;
+    function connectChat(username) {
+        if (activeWs) activeWs.close(); // Önceki sohbetten çık
+
+        // URL'ye ?room=username ekleyebilirsin ileride
+        activeWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
+        const box = document.getElementById(`chat-box-${username}`);
+
+        activeWs.onmessage = (e) => {
+            const d = JSON.parse(e.data);
+            if (box) {
+                box.insertAdjacentHTML('beforeend', `<div class="chat-msg"><b>${d.user}:</b> ${d.msg}</div>`);
+                box.scrollTop = box.scrollHeight;
+            }
+        };
+
+        window.sendMsg = function (uName) {
+            const inp = document.getElementById(`chat-input-${uName}`);
+            if (inp && inp.value.trim() && activeWs.readyState === 1) {
+                activeWs.send(inp.value);
+                inp.value = "";
+            }
         }
     }
 </script>

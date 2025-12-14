@@ -141,9 +141,33 @@ async def login_page(request: Request): return templates.TemplateResponse("login
 async def signup_page(request: Request): return templates.TemplateResponse("signup.html", {"request": request})
 
 @app.get("/live", response_class=HTMLResponse)
-async def read_live(request: Request, user: Optional[User] = Depends(get_current_user)):
-    if not user: return RedirectResponse(url="/login", status_code=303)
-    return templates.TemplateResponse("live.html", {"request": request, "user": user})
+async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    
+    # Eğer YAYINCI ise: Sadece kendini görsün
+    if mode == "broadcast":
+        return templates.TemplateResponse("live.html", {
+            "request": request, 
+            "user": user, 
+            "mode": "broadcast",
+            "streams": [] # Yayıncı için liste boş olabilir
+        })
+    
+    # Eğer İZLEYİCİ ise: Tüm aktif yayınları çek
+    else:
+        active_streams = db.query(User).filter(User.is_live == True).all()
+        
+        # Eğer URL'de ?broadcaster=tucibeyin varsa, o yayını listenin en başına al (Önce o açılsın)
+        if broadcaster:
+            active_streams.sort(key=lambda x: x.username != broadcaster)
+
+        return templates.TemplateResponse("live.html", {
+            "request": request, 
+            "user": user, 
+            "mode": "watch",
+            "streams": active_streams # Listeyi HTML'e gönderiyoruz
+        })
 
 @app.post("/auth/signup")
 async def signup(request: Request, email: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), db: Session = Depends(get_db)):
