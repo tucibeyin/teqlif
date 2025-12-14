@@ -311,23 +311,23 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(stream_dir, exist_ok=True)
     
     stream_path = f"{stream_dir}/stream.m3u8"
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (HD): {user.username}")
 
-    # 🔥 CPU DOSTU FFmpeg KOMUTU 🔥
+    # 🔥 HD KALİTE (720p - 2500k Bitrate) 🔥
     command = [
         "ffmpeg", "-i", "pipe:0",
         "-c:v", "libx264", 
-        "-preset", "ultrafast",  # En hızlı preset (CPU'yu en az yoran)
+        "-preset", "superfast",  # Kalite arttı
         "-tune", "zerolatency",
-        "-threads", "2",         # Sadece 2 çekirdek kullan
-        "-r", "20",              # 24 yerine 20 FPS (Büyük rahatlama sağlar)
-        "-b:v", "800k",          # 1000k yerine 800k (Daha az veri, daha az takılma)
-        "-maxrate", "1000k",
-        "-bufsize", "2000k",
-        "-g", "40",              # Keyframe aralığı (2 saniye)
+        "-threads", "4",         # CPU gücünü kullan
+        "-r", "30",              # 30 FPS Akıcı
+        "-b:v", "2500k",         # 2.5 Mbps (Net)
+        "-maxrate", "3000k",
+        "-bufsize", "6000k",
+        "-g", "60",              # Keyframe
         "-c:a", "aac", 
-        "-b:a", "32k",           # Ses kalitesini düşürdük (Hız için)
-        "-ar", "22050",          # Ses frekansını düşürdük
+        "-b:a", "128k",          # Kaliteli ses
+        "-ar", "44100",
         "-f", "hls", 
         "-hls_time", "2", 
         "-hls_list_size", "3",
