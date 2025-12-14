@@ -6,6 +6,7 @@ import random # Kod üretmek için
 import requests # Brevo maili için
 from datetime import datetime, timedelta
 from typing import Optional, List
+import base64
 
 # --- .ENV YÜKLEME ---
 from dotenv import load_dotenv
@@ -60,12 +61,17 @@ Base = declarative_base()
 class User(Base):
     __tablename__ = "users"
     id = Column(Integer, primary_key=True, index=True)
-    email = Column(String, unique=True, index=True, nullable=False) # Zorunlu
-    username = Column(String, unique=True, index=True, nullable=True) # Boş olabilir
+    email = Column(String, unique=True, index=True, nullable=False)
+    username = Column(String, unique=True, index=True, nullable=True)
     password_hash = Column(String)
     verification_code = Column(String)
-    is_verified = Column(Boolean, default=False) # Boolean hatası düzeldi
+    is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # --- YENİ EKLENEN VİTRİN ÖZELLİKLERİ ---
+    is_live = Column(Boolean, default=False)       # Yayında mı?
+    stream_title = Column(String, default="")      # Yayın Başlığı
+    thumbnail = Column(String, default="")         # Kapak Fotoğrafı
 
 Base.metadata.create_all(bind=engine)
 
@@ -178,8 +184,15 @@ def send_welcome_email(to_email):
 # ==========================================
 
 @app.get("/", response_class=HTMLResponse)
-async def read_home(request: Request, user: Optional[User] = Depends(get_current_user)):
-    return templates.TemplateResponse("home.html", {"request": request, "user": user})
+async def read_home(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
+    # Sadece yayında olanları çek
+    active_streams = db.query(User).filter(User.is_live == True).all()
+    # home.html yerine yeni yapacağımız index.html'i kullanacağız
+    return templates.TemplateResponse("index.html", {
+        "request": request, 
+        "user": user, 
+        "streams": active_streams
+    })
 
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request):
@@ -466,3 +479,102 @@ async def chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     except Exception as e:
         print(f"Chat Hatası: {e}")
         manager.disconnect(websocket)
+
+# --- YAYIN BAŞLATMA (BAŞLIK KAYDET) ---
+@app.post("/broadcast/start")
+async def start_broadcast_api(
+    title: str = Form(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user.is_live = True
+    user.stream_title = title
+    db.commit()
+    return {"status": "success"}
+
+# --- YAYIN BİTİRME ---
+@app.post("/broadcast/stop")
+async def stop_broadcast_api(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    user.is_live = False
+    db.commit()
+    return {"status": "stopped"}
+
+# --- THUMBNAIL YÜKLEME (OTOMATİK) ---
+import base64
+@app.post("/broadcast/thumbnail")
+async def upload_thumbnail(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    data = await request.json()
+    image_data = data['image'].split(",")[1] # "data:image/jpeg;base64,..." kısmını temizle
+    
+    # Resmi Kaydet
+    filename = f"thumb_{user.username}.jpg"
+    file_path = f"static/thumbnails/{filename}"
+    
+    with open(file_path, "wb") as f:
+        f.write(base64.b64decode(image_data))
+        
+    # Veritabanına Yaz
+    user.thumbnail = f"/static/thumbnails/{filename}?t={data['timestamp']}" # Cache bozmak için timestamp
+    db.commit()
+    return {"status": "ok"}
+
+# ==========================================
+# 7. VİTRİN API (YAYIN BAŞLATMA VE THUMBNAIL)
+# ==========================================
+
+@app.post("/broadcast/start")
+async def start_broadcast_api(
+    title: str = Form(...),
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not user: return {"status": "error"}
+    user.is_live = True
+    user.stream_title = title
+    db.commit()
+    return {"status": "success"}
+
+@app.post("/broadcast/stop")
+async def stop_broadcast_api(
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not user: return {"status": "error"}
+    user.is_live = False
+    db.commit()
+    return {"status": "stopped"}
+
+@app.post("/broadcast/thumbnail")
+async def upload_thumbnail(
+    request: Request,
+    user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if not user: return {"status": "error"}
+    
+    try:
+        data = await request.json()
+        # "data:image/jpeg;base64,....." kısmını temizle
+        image_data = data['image'].split(",")[1]
+        
+        # Resmi Kaydet
+        filename = f"thumb_{user.username}.jpg"
+        file_path = f"static/thumbnails/{filename}"
+        
+        with open(file_path, "wb") as f:
+            f.write(base64.b64decode(image_data))
+            
+        # Veritabanına Yaz (?t=timestamp ekleyerek cache'i bozuyoruz)
+        user.thumbnail = f"/static/thumbnails/{filename}?t={data['timestamp']}"
+        db.commit()
+        return {"status": "ok"}
+    except Exception as e:
+        print(f"Thumbnail Hatası: {e}")
+        return {"status": "error"}
