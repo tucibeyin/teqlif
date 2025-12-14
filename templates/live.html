@@ -297,38 +297,69 @@
         }
     }
     // --- İZLEYİCİ ---
+ // --- İZLEYİCİ MODU (Watch) ---
     else if (MODE === 'watch') {
         var video = document.getElementById('video');
         var videoSrc = '/static/hls/stream.m3u8';
 
-        // Kullanıcı sesi açabilsin diye butonu göster
-        video.onvolumechange = () => { if (!video.muted) document.getElementById('unmute-overlay').style.display = 'none'; };
+        // Ses açıldığında donmayı engellemek için buton kontrolü
+        video.onvolumechange = () => {
+            if (!video.muted) document.getElementById('unmute-overlay').style.display = 'none';
+        };
 
         if (Hls.isSupported()) {
-            var hls = new Hls({ lowLatencyMode: true, liveSyncDurationCount: 1 });
+            // --- GÜNCELLENMİŞ STABİL AYARLAR ---
+            var config = {
+                enableWorker: true,
+                lowLatencyMode: true,
+
+                // ÖNCEKİ: 1 ve 2 (Çok dardı, donma yapıyordu)
+                // YENİ: 3 ve 10 (Daha güvenli)
+                liveSyncDurationCount: 3,    // Yayının 6 saniye gerisinden gel (Donmayı önler)
+                liveMaxLatencyDurationCount: 10,
+                maxBufferLength: 10,         // Tamponda 10 saniye tutabilsin (Ses senkronu için şart)
+                backBufferLength: 10,
+
+                // Bağlantı koparsa hızlı toparla
+                manifestLoadingTimeOut: 10000,
+                manifestLoadingMaxRetry: 5,
+            };
+
+            var hls = new Hls(config);
             hls.loadSource(videoSrc);
             hls.attachMedia(video);
 
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                // OTOMATİK OYNATMA (Sessiz modda)
                 var playPromise = video.play();
                 if (playPromise !== undefined) {
                     playPromise.then(_ => {
-                        // Otomatik başladı
                         document.getElementById('unmute-overlay').style.display = 'block';
+                        console.log("Video başladı (Sessiz).");
                     })
-                        .catch(error => {
-                            console.log("Oto-oynatma engellendi, etkileşim bekleniyor.");
-                        });
+                        .catch(error => console.log("Oto-oynatma engellendi."));
                 }
             });
 
+            // Hata Yönetimi (Yayın kesilirse)
             hls.on(Hls.Events.ERROR, function (event, data) {
                 if (data.fatal) {
-                    setTimeout(() => { hls.loadSource(videoSrc); hls.attachMedia(video); }, 1000);
+                    console.log("Hata oluştu, tekrar deneniyor...");
+                    switch (data.type) {
+                        case Hls.ErrorTypes.NETWORK_ERROR:
+                            hls.startLoad();
+                            break;
+                        case Hls.ErrorTypes.MEDIA_ERROR:
+                            hls.recoverMediaError();
+                            break;
+                        default:
+                            hls.destroy();
+                            break;
+                    }
                 }
             });
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        }
+        // iPhone (Safari) için Native Player
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = videoSrc;
             video.addEventListener('loadedmetadata', () => video.play());
         }
