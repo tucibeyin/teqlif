@@ -30,7 +30,9 @@ app = FastAPI()
 
 # --- AYARLAR ---
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+if not SQLALCHEMY_DATABASE_URL: raise ValueError("DATABASE_URL yok!")
 SECRET_KEY = os.getenv("SECRET_KEY")
+if not SECRET_KEY: raise ValueError("SECRET_KEY yok!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 
 
@@ -97,10 +99,20 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
 
 # --- MAİL ---
 def send_brevo_email(to_email, code):
-    # (Mail kodları aynı kalabilir)
-    pass
+    try:
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {"accept": "application/json", "api-key": os.getenv("BREVO_API_KEY"), "content-type": "application/json"}
+        data = {"sender": {"name": "Teqlif", "email": os.getenv("SENDER_EMAIL")}, "to": [{"email": to_email}], "subject": "Doğrulama Kodu", "htmlContent": f"<h1>{code}</h1>"}
+        requests.post(url, json=data, headers=headers)
+    except: pass
+
 def send_welcome_email(to_email):
-    pass
+    try:
+        url = "https://api.brevo.com/v3/smtp/email"
+        headers = {"accept": "application/json", "api-key": os.getenv("BREVO_API_KEY"), "content-type": "application/json"}
+        data = {"sender": {"name": "Teqlif", "email": os.getenv("SENDER_EMAIL")}, "to": [{"email": to_email}], "subject": "Hoş Geldiniz!", "htmlContent": "<p>Hesabınız onaylandı.</p>"}
+        requests.post(url, json=data, headers=headers)
+    except: pass
 
 # --- ODALI CHAT YÖNETİCİSİ ---
 class ConnectionManager:
@@ -130,7 +142,7 @@ class ConnectionManager:
                 except Exception as e: 
                     print(f"⚠️ Mesaj gönderme hatası: {e}")
                     self.disconnect(connection, room_name)
-            print(f"📤 DAĞITILDI ({room_name}): {message}") # <-- BU LOG ÖNEMLİ
+            print(f"📤 DAĞITILDI ({room_name}): {message}") 
         else:
             print(f"⚠️ HATA: '{room_name}' odası boş veya yok.")
 
@@ -179,10 +191,6 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
         active_streams = db.query(User).filter(User.is_live == True).all()
         if broadcaster: active_streams.sort(key=lambda x: x.username != broadcaster)
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "watch", "streams": active_streams})
-
-# (AUTH ve DİĞER FONKSİYONLAR AYNI - KISALIK İÇİN TEKRARLAMIYORUM)
-# Lütfen önceki kodlardaki auth/signup/verify/login/logout/settings/update kısımlarını koru veya önceki app.py'den al.
-# Sadece broadcast ve chat kısımlarını değiştiriyorum:
 
 @app.post("/auth/signup")
 async def signup(request: Request, email: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), db: Session = Depends(get_db)):
@@ -293,33 +301,40 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     except: pass
 
     if not user or not user.username:
-        print("❌ HATA: Kimliksiz yayın girişimi")
         await websocket.close()
         return
 
-    # Klasör Hazırlığı
     stream_dir = f"static/hls/{user.username}"
-    # Yetki hatası olmasın diye önce silip sonra oluşturuyoruz
     if os.path.exists(stream_dir):
         try: shutil.rmtree(stream_dir, ignore_errors=True)
         except: pass
     os.makedirs(stream_dir, exist_ok=True)
     
     stream_path = f"{stream_dir}/stream.m3u8"
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username} -> {stream_path}")
+    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
-    # FFmpeg Komutu (Hataları görmek için stderr'i konsola basıyoruz)
+    # 🔥 CPU DOSTU FFmpeg KOMUTU 🔥
     command = [
         "ffmpeg", "-i", "pipe:0",
-        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
-        "-threads", "2", "-r", "24", "-b:v", "1000k", "-maxrate", "1200k", "-bufsize", "2400k",
-        "-g", "48", "-c:a", "aac", "-b:a", "64k", "-ar", "44100",
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "3",
+        "-c:v", "libx264", 
+        "-preset", "ultrafast",  # En hızlı preset (CPU'yu en az yoran)
+        "-tune", "zerolatency",
+        "-threads", "2",         # Sadece 2 çekirdek kullan
+        "-r", "20",              # 24 yerine 20 FPS (Büyük rahatlama sağlar)
+        "-b:v", "800k",          # 1000k yerine 800k (Daha az veri, daha az takılma)
+        "-maxrate", "1000k",
+        "-bufsize", "2000k",
+        "-g", "40",              # Keyframe aralığı (2 saniye)
+        "-c:a", "aac", 
+        "-b:a", "32k",           # Ses kalitesini düşürdük (Hız için)
+        "-ar", "22050",          # Ses frekansını düşürdük
+        "-f", "hls", 
+        "-hls_time", "2", 
+        "-hls_list_size", "3",
         "-hls_flags", "delete_segments+append_list", 
         stream_path 
     ]
     
-    # stderr=sys.stderr ile FFmpeg hatalarını journalctl'de görebileceğiz
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
 
