@@ -272,15 +272,55 @@
         }
     }
     // --- İZLEYİCİ ---
+    // --- İZLEYİCİ MODU (ULTRA DÜŞÜK GECİKME AYARLARI) ---
     else if (MODE === 'watch') {
         var video = document.getElementById('video');
         var videoSrc = '/static/hls/stream.m3u8';
+
         if (Hls.isSupported()) {
-            var hls = new Hls();
+            var config = {
+                enableWorker: true,          // Performans için worker kullan
+                lowLatencyMode: true,        // Düşük gecikme modunu aç
+                backBufferLength: 0,         // Geriye dönük tampon tutma
+
+                // KRİTİK AYARLAR:
+                liveSyncDurationCount: 1,    // Canlı yayının sadece 1 parça (2sn) gerisinden gel
+                liveMaxLatencyDurationCount: 2, // En fazla 2 parça (4sn) geriye düşmeye izin ver
+                maxBufferLength: 2,          // Tamponda en fazla 2 saniye video tut
+
+                // Hata toleransı
+                manifestLoadingTimeOut: 5000,
+            };
+
+            var hls = new Hls(config);
             hls.loadSource(videoSrc);
             hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => console.log("Play blocked")));
-        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                video.play().catch(e => console.log("Oto-oynatma engellendi"));
+            });
+
+            // Canlı yayın ucuna atla (Drift düzeltme)
+            setInterval(() => {
+                if (video.paused) return;
+                // Eğer canlıdan 4 saniyeden fazla geri düştüyse
+                if (hls.latency > 4) {
+                    console.log("Gecikme arttı, ileri sarılıyor...");
+                    video.currentTime = video.buffered.end(video.buffered.length - 1) - 0.5;
+                }
+            }, 3000);
+
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    setTimeout(() => {
+                        hls.loadSource(videoSrc);
+                        hls.attachMedia(video);
+                    }, 1000);
+                }
+            });
+        }
+        // iPhone (Safari) için Native Player
+        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = videoSrc;
             video.addEventListener('loadedmetadata', () => video.play());
         }

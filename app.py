@@ -401,8 +401,8 @@ async def broadcast_endpoint(websocket: WebSocket):
         
         "-f", "hls",
         "-hls_time", "2",
-        "-hls_list_size", "5",
-        "-hls_flags", "delete_segments", 
+        "-hls_list_size", "3",
+        "-hls_flags", "delete_segments+append_list", 
         "static/hls/stream.m3u8"
     ]
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
