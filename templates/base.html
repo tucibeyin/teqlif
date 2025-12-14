@@ -17,11 +17,18 @@
 
     <div class="nav-actions">
         {% if user %}
-        <span class="user-welcome">
+        <a href="/settings" class="user-welcome" style="text-decoration: none;">
             <i class="fa-solid fa-user-circle"></i>
-            {{ user.username if user.username else user.email }}
-        </span>
-        <a href="/logout" class="nav-btn-text">Çıkış</a>
+            {% if user.username %}
+            {{ user.username }}
+            {% else %}
+            <span style="color: #f1c40f; font-size: 0.8rem;">(İsim Belirle)</span>
+            {% endif %}
+        </a>
+
+        <a href="/settings" class="nav-btn-text" title="Ayarlar"><i class="fa-solid fa-gear"></i></a>
+
+        <a href="/logout" class="nav-btn-text" style="border-color: #e74c3c; color: #e74c3c;">Çıkış</a>
         {% else %}
         <a href="/login" class="nav-btn-text">Giriş Yap</a>
         {% endif %}

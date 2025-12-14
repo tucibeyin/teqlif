@@ -313,6 +313,62 @@ class ConnectionManager:
         for connection in self.active_connections:
             await connection.send_text(message)
 
+
+# ==========================================
+# 6. AYARLAR VE PROFİL (YENİ)
+# ==========================================
+
+# --- AYARLAR SAYFASI (GÖRÜNTÜLE) ---
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request, user: Optional[User] = Depends(get_current_user)):
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse("settings.html", {"request": request, "user": user})
+
+# --- PROFİL GÜNCELLEME (İŞLEM) ---
+@app.post("/settings/update")
+async def update_profile(
+    request: Request,
+    username: str = Form(...),
+    user: User = Depends(get_current_user), # Giriş yapmış kullanıcı şart
+    db: Session = Depends(get_db)
+):
+    if not user:
+        return RedirectResponse(url="/login", status_code=303)
+
+    # 1. Kullanıcı adı değişmiş mi kontrol et
+    # Eğer aynı ismi gönderdiyse işlem yapmaya gerek yok ama hata da verme
+    if username == user.username:
+        return templates.TemplateResponse("settings.html", {
+            "request": request, "user": user, "success": "Bilgiler güncel."
+        })
+
+    # 2. AYNI İSİM BAŞKASINDA VAR MI? (Kritik Nokta)
+    # Veritabanında bu username'e sahip, ama ID'si benim ID'm olmayan biri var mı?
+    existing_user = db.query(User).filter(User.username == username).first()
+    
+    if existing_user:
+        return templates.TemplateResponse("settings.html", {
+            "request": request, 
+            "user": user, 
+            "error": f"Üzgünüz, '{username}' kullanıcı adı başkası tarafından alınmış."
+        })
+
+    # 3. Güncelleme İşlemi
+    try:
+        user.username = username
+        db.commit()
+        db.refresh(user)
+        return templates.TemplateResponse("settings.html", {
+            "request": request, 
+            "user": user, 
+            "success": "Profiliniz başarıyla güncellendi! 🎉"
+        })
+    except Exception as e:
+        return templates.TemplateResponse("settings.html", {
+            "request": request, "user": user, "error": "Bir hata oluştu."
+        })
+
 manager = ConnectionManager()
 
 @app.websocket("/ws/broadcast")
