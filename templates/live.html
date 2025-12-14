@@ -155,7 +155,6 @@
         height: 100%;
         object-fit: cover;
         object-position: center;
-        /* Parlaklık ayarı gerekirse buradan açabilirsin: filter: brightness(1.1); */
     }
 
     #preview {
@@ -184,13 +183,12 @@
         pointer-events: auto;
     }
 
-    /* HEADER - Arkaplan ŞEFFAF yapıldı */
+    /* HEADER */
     .header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         background: transparent;
-        /* Siyahlık kalktı */
         padding-top: 10px;
     }
 
@@ -202,7 +200,6 @@
         font-size: 0.85rem;
         color: white;
         text-shadow: 0 2px 5px rgba(0, 0, 0, 0.8);
-        /* Yazı okunabilirliği için gölge */
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     }
 
@@ -253,7 +250,7 @@
         backdrop-filter: blur(4px);
     }
 
-    /* FOOTER - Arkaplan ŞEFFAF yapıldı */
+    /* FOOTER */
     .spacer {
         flex: 1;
     }
@@ -263,7 +260,6 @@
         flex-direction: column;
         gap: 10px;
         background: transparent;
-        /* Siyahlık kalktı */
         padding-bottom: 20px;
     }
 
@@ -275,7 +271,6 @@
         flex-direction: column;
         gap: 8px;
         scrollbar-width: none;
-        /* Maskeleme kaldırıldı, yazı net görünsün */
     }
 
     .chat-msg {
@@ -288,7 +283,6 @@
         width: fit-content;
         max-width: 85%;
         backdrop-filter: blur(3px);
-        /* Cam efekti */
         text-shadow: 0 1px 2px black;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
@@ -318,7 +312,6 @@
         border-radius: 30px;
         border: 1px solid rgba(255, 255, 255, 0.3);
         background: rgba(0, 0, 0, 0.5);
-        /* Hafif koyu cam */
         color: white;
         font-size: 1rem;
         backdrop-filter: blur(5px);
@@ -413,6 +406,7 @@
         }
     }
 
+    // --- YAYINCI KODLARI ---
     if (MODE === 'broadcast') {
         const preview = document.getElementById('preview');
         let ws, rec, active = false;
@@ -448,9 +442,12 @@
         };
 
         window.stopBroadcast = function () { active = false; fetch('/broadcast/stop', { method: 'POST' }); if (rec) rec.stop(); if (ws) ws.close(); window.location.href = '/'; };
+
+        // Yayıncı kendi odasına bağlanır
         connectChat('broadcast');
     }
 
+    // --- İZLEYİCİ KODLARI ---
     else {
         let observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
@@ -460,7 +457,7 @@
 
                 if (entry.isIntersecting) {
                     loadStream(username, video);
-                    connectChat(username);
+                    connectChat(username); // O yayının odasına gir
                 } else {
                     if (video) { video.pause(); if (video.hls) video.hls.destroy(); video.src = ""; }
                 }
@@ -485,18 +482,43 @@
         }
     }
 
+    // --- DİNAMİK CHAT BAĞLANTISI ---
     let activeWs = null;
-    function connectChat(username) {
-        if (activeWs) activeWs.close();
-        activeWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
-        const box = document.getElementById(username === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${username}`);
+    function connectChat(targetStreamer) {
+        if (activeWs) { activeWs.close(); activeWs = null; }
+
+        let streamName = targetStreamer;
+
+        // Eğer yayıncı modundaysak, kendi adımızı (user.username) backend'den almamız gerekir
+        // Ama basit çözüm: Yayıncı broadcast modunda ise kendi kullanıcı adını temsil eden bir isimle bağlanır.
+        // İzleyici ise izlediği kişinin adıyla bağlanır.
+
+        // Backend'de user session'ı olduğu için, broadcast modunda streamName'i 'me' veya özel bir parametre yapabiliriz
+        // Şimdilik template'den user'ı çekiyoruz:
+        {% if user and user.username %}
+        const myUsername = "{{ user.username }}";
+        {% else %}
+        const myUsername = "anon";
+        {% endif %}
+
+        if (targetStreamer === 'broadcast') {
+            streamName = myUsername;
+        }
+
+        activeWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
+
+        const boxId = targetStreamer === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${targetStreamer}`;
+        const box = document.getElementById(boxId);
+
         activeWs.onmessage = (e) => {
             const d = JSON.parse(e.data);
             if (box) { box.insertAdjacentHTML('beforeend', `<div class="chat-msg"><b>${d.user}:</b> ${d.msg}</div>`); box.scrollTop = box.scrollHeight; }
         };
+
         window.sendMsg = function (uName) {
-            const inp = document.getElementById(uName === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${uName}`);
-            if (inp && inp.value.trim() && activeWs.readyState === 1) { activeWs.send(inp.value); inp.value = ""; }
+            const inpId = uName === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${uName}`;
+            const inp = document.getElementById(inpId);
+            if (inp && inp.value.trim() && activeWs && activeWs.readyState === 1) { activeWs.send(inp.value); inp.value = ""; inp.focus(); }
         }
     }
 </script>

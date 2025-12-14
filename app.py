@@ -35,8 +35,7 @@ if not SECRET_KEY: raise ValueError("SECRET_KEY yok!")
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 
 
-# --- KRİTİK DÜZELTME: GÜVENLİ KLASÖR TEMİZLİĞİ ---
-# Klasör meşgulse hata verip çökme, devam et.
+# --- GÜVENLİ KLASÖR TEMİZLİĞİ ---
 try:
     if os.path.exists("static/hls"):
         shutil.rmtree("static/hls", ignore_errors=True)
@@ -97,7 +96,7 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     except JWTError: return None
     return db.query(User).filter(User.email == email).first()
 
-# --- MAİL FONKSİYONLARI ---
+# --- MAİL ---
 def send_brevo_email(to_email, code):
     try:
         url = "https://api.brevo.com/v3/smtp/email"
@@ -114,20 +113,30 @@ def send_welcome_email(to_email):
         requests.post(url, json=data, headers=headers)
     except: pass
 
-# --- WEBSOCKET MANAGER ---
+# --- ODALI CHAT YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
-        self.active_connections: List[WebSocket] = []
-    async def connect(self, websocket: WebSocket):
+        # Odaları tutar: {"ahmet": [ws1, ws2], "mehmet": [ws3]}
+        self.rooms: Dict[str, List[WebSocket]] = {}
+
+    async def connect(self, websocket: WebSocket, room_name: str):
         await websocket.accept()
-        self.active_connections.append(websocket)
-    def disconnect(self, websocket: WebSocket):
-        if websocket in self.active_connections:
-            self.active_connections.remove(websocket)
-    async def broadcast(self, message: str):
-        for connection in self.active_connections:
-            try: await connection.send_text(message)
-            except: pass
+        if room_name not in self.rooms:
+            self.rooms[room_name] = []
+        self.rooms[room_name].append(websocket)
+
+    def disconnect(self, websocket: WebSocket, room_name: str):
+        if room_name in self.rooms:
+            if websocket in self.rooms[room_name]:
+                self.rooms[room_name].remove(websocket)
+            if not self.rooms[room_name]:
+                del self.rooms[room_name]
+
+    async def broadcast_to_room(self, message: str, room_name: str):
+        if room_name in self.rooms:
+            for connection in self.rooms[room_name][:]:
+                try: await connection.send_text(message)
+                except: self.disconnect(connection, room_name)
 
 manager = ConnectionManager()
 
@@ -228,8 +237,11 @@ async def upload_thumbnail(request: Request, user: User = Depends(get_current_us
     except: return {"status": "error"}
 
 @app.websocket("/ws/chat")
-async def chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
-    await manager.connect(websocket)
+async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Session = Depends(get_db)):
+    # Stream parametresi ODA ADI olarak kullanılır
+    room_name = stream
+    await manager.connect(websocket, room_name)
+    
     username = "Misafir"
     try:
         token = websocket.cookies.get("access_token")
@@ -242,10 +254,12 @@ async def chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             data = await websocket.receive_text()
-            if data.strip(): await manager.broadcast(json.dumps({"user": username, "msg": data.replace("<", "&lt;")}))
-    except: manager.disconnect(websocket)
+            if data.strip():
+                msg_payload = json.dumps({"user": username, "msg": data.replace("<", "&lt;")})
+                await manager.broadcast_to_room(msg_payload, room_name)
+    except: manager.disconnect(websocket, room_name)
 
-# ÇOKLU YAYINCI SİSTEMİ
+# --- ÇOKLU YAYINCI SİSTEMİ ---
 active_processes: Dict[str, subprocess.Popen] = {}
 
 @app.websocket("/ws/broadcast")
@@ -264,12 +278,12 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         await websocket.close()
         return
 
-    # Kişiye Özel Klasör
+    # Kişiye Özel Klasör (static/hls/KULLANICI_ADI/stream.m3u8)
     stream_dir = f"static/hls/{user.username}"
     os.makedirs(stream_dir, exist_ok=True)
     stream_path = f"{stream_dir}/stream.m3u8"
 
-    # FFmpeg Komutu
+    # FFmpeg Komutu (Stabil, CPU Dostu)
     command = [
         "ffmpeg", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency",
