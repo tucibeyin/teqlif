@@ -1,49 +1,56 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="lobby-container">
-    <div class="action-panel">
-        <h1 class="welcome-title">TEQLIF<span style="color:#3498db;">LIVE</span></h1>
-        <p class="subtitle">Kendi sahneni kur, dünyayla paylaş.</p>
-        <div class="action-buttons">
-            {% if user %}
-            <button onclick="openModal()" class="big-btn start-btn">
-                <div class="icon-circle"><i class="fa-solid fa-video"></i></div><span>Yayın Başlat</span>
-            </button>
-            {% else %}
-            <a href="/login" class="big-btn login-btn">
-                <div class="icon-circle"><i class="fa-solid fa-right-to-bracket"></i></div><span>Giriş Yap</span>
-            </a>
-            {% endif %}
-        </div>
-    </div>
+<div class="scrollable-wrapper">
+    <div class="lobby-container">
 
-    <div class="showcase-panel">
-        <h3 class="section-title"><i class="fa-solid fa-signal" style="color:red;"></i> Şu An Yayında</h3>
-        <div class="streams-grid">
-            {% for stream in streams %}
-            <a href="/live?mode=watch&broadcaster={{ stream.username }}" class="stream-card">
-                <div class="card-thumb">
-                    <img src="{{ stream.thumbnail }}"
-                        onerror="this.src='https://via.placeholder.com/640x360/000000/FFFFFF/?text=YAYIN';" alt="Yayın">
-                    <div class="live-badge">CANLI</div>
-                    <div class="viewer-pill"><i class="fa-solid fa-play"></i> İZLE</div>
-                </div>
-                <div class="card-info">
-                    <div class="avatar-circle">{{ stream.username[0] | upper }}</div>
-                    <div class="text-info">
-                        <div class="stream-title">{{ stream.stream_title }}</div>
-                        <div class="streamer-name">{{ stream.username }}</div>
-                    </div>
-                </div>
-            </a>
-            {% else %}
-            <div class="empty-state">
-                <i class="fa-solid fa-satellite-dish" style="font-size:3rem; margin-bottom:20px;"></i>
-                <p>Aktif yayın yok. İlk sen ol!</p>
+        <div class="action-panel">
+            <h1 class="welcome-title">TEQLIF<span style="color:#3498db;">LIVE</span></h1>
+            <p class="subtitle">Kendi sahneni kur, dünyayla paylaş.</p>
+            <div class="action-buttons">
+                {% if user %}
+                <button onclick="openModal()" class="big-btn start-btn">
+                    <div class="icon-circle"><i class="fa-solid fa-video"></i></div><span>Yayın Başlat</span>
+                </button>
+                {% else %}
+                <a href="/login" class="big-btn login-btn">
+                    <div class="icon-circle"><i class="fa-solid fa-right-to-bracket"></i></div><span>Giriş Yap</span>
+                </a>
+                {% endif %}
             </div>
-            {% endfor %}
         </div>
+
+        <div class="showcase-panel">
+            <h3 class="section-title"><i class="fa-solid fa-signal" style="color:red;"></i> Şu An Yayında</h3>
+            <div class="streams-grid">
+                {% for stream in streams %}
+                <a href="/live?mode=watch&broadcaster={{ stream.username }}" class="stream-card">
+                    <div class="card-thumb">
+                        <img src="{{ stream.thumbnail }}"
+                            onerror="this.src='https://via.placeholder.com/640x360/000000/FFFFFF/?text=YAYIN';"
+                            alt="Yayın">
+                        <div class="live-badge">CANLI</div>
+                        <div class="viewer-pill"><i class="fa-solid fa-play"></i> İZLE</div>
+                    </div>
+                    <div class="card-info">
+                        <div class="avatar-circle">{{ stream.username[0] | upper }}</div>
+                        <div class="text-info">
+                            <div class="stream-title">{{ stream.stream_title }}</div>
+                            <div class="streamer-name">{{ stream.username }}</div>
+                        </div>
+                    </div>
+                </a>
+                {% else %}
+                <div class="empty-state">
+                    <i class="fa-solid fa-satellite-dish" style="font-size:3rem; margin-bottom:20px;"></i>
+                    <p>Aktif yayın yok. İlk sen ol!</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <div style="height: 100px;"></div>
+
     </div>
 </div>
 
@@ -59,10 +66,24 @@
 </div>
 
 <style>
+    /* --- SCROLL KİLİDİNİ AÇAN KOD --- */
+    .scrollable-wrapper {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow-y: auto;
+        /* DİKEY KAYDIRMAYI AKTİF ET */
+        -webkit-overflow-scrolling: touch;
+        /* Mobilde yumuşak kaydırma */
+        padding-top: 20px;
+    }
+
     .lobby-container {
         max-width: 1000px;
         margin: 0 auto;
-        padding: 20px;
+        padding: 0 20px;
     }
 
     .action-panel {
