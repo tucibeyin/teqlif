@@ -1,43 +1,48 @@
 {% extends "base.html" %}
 
 {% block content %}
+{% set mode = request.query_params.get('mode') %}
+
 <div class="live-container">
 
     <div class="video-wrapper">
         <div class="live-badge">CANLI</div>
+
+        {% if mode == 'broadcast' %}
+        <video id="preview" autoplay muted style="transform: scaleX(-1);"></video>
+        <div class="broadcast-controls">
+            <div id="status-text" style="margin-bottom:10px; color:#aaa;">Kamera Hazır</div>
+            <button id="btn-start" onclick="startBroadcast()" class="btn-action green"><i class="fa-solid fa-video"></i>
+                Yayını Başlat</button>
+            <button id="btn-stop" onclick="stopBroadcast()" class="btn-action red" style="display:none;"><i
+                    class="fa-solid fa-stop"></i> Yayını Bitir</button>
+        </div>
+
+        {% else %}
         <video id="video" controls autoplay muted></video>
         <div class="stream-info">
             <h3>Canlı Yayın</h3>
-            <p>Teqlif Live Stream</p>
+            <p>Şu an izliyorsunuz...</p>
         </div>
+        {% endif %}
     </div>
 
     <div class="chat-wrapper">
-        <div class="chat-header">
-            <i class="fa-solid fa-comments"></i> Canlı Sohbet
-        </div>
-
-        <div id="chat-box" class="chat-box">
-            <div class="chat-message system">
-                <span class="chat-text">Sohbete hoş geldiniz! 👋</span>
-            </div>
-        </div>
-
+        <div class="chat-header"><i class="fa-solid fa-comments"></i> Canlı Sohbet</div>
+        <div id="chat-box" class="chat-box"></div>
         <div class="chat-input-area">
             {% if user %}
-            <input type="text" id="chat-input" placeholder="Bir şeyler yaz..." autocomplete="off">
+            <input type="text" id="chat-input" placeholder="Mesaj yaz..." autocomplete="off">
             <button onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
             {% else %}
-            <div style="text-align:center; width:100%; font-size:0.9rem; color:#888;">
-                Sohbet etmek için <a href="/login" style="color:#f1c40f;">Giriş Yap</a>
-            </div>
+            <div style="text-align:center; width:100%; font-size:0.9rem; color:#888;">Giriş Yapmalısınız</div>
             {% endif %}
         </div>
     </div>
-
 </div>
 
 <style>
+    /* GENEL DÜZEN */
     .live-container {
         display: flex;
         flex-wrap: wrap;
@@ -46,13 +51,10 @@
         margin: 0 auto;
         padding: 20px;
         height: calc(100vh - 80px);
-        /* Header payı düşünülerek */
     }
 
-    /* Video Alanı */
     .video-wrapper {
         flex: 3;
-        /* Geniş alan */
         background: #000;
         border-radius: 15px;
         overflow: hidden;
@@ -64,46 +66,55 @@
 
     video {
         width: 100%;
-        height: auto;
-        max-height: 80vh;
+        height: 100%;
         background: black;
+        object-fit: contain;
     }
 
-    .live-badge {
+    /* YAYINCI KONTROLLERİ */
+    .broadcast-controls {
         position: absolute;
-        top: 15px;
-        left: 15px;
-        background: red;
+        bottom: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        padding: 15px 30px;
+        border-radius: 30px;
+        text-align: center;
+        backdrop-filter: blur(5px);
+        width: 80%;
+    }
+
+    .btn-action {
+        padding: 10px 20px;
+        border: none;
+        border-radius: 20px;
         color: white;
-        padding: 5px 10px;
-        font-size: 0.8rem;
         font-weight: bold;
-        border-radius: 5px;
-        z-index: 10;
-        animation: pulse 2s infinite;
+        cursor: pointer;
+        font-size: 1rem;
+        transition: 0.3s;
     }
 
-    .stream-info {
-        padding: 15px;
-        background: #1a1a1a;
-        color: white;
+    .btn-action.green {
+        background: #2ecc71;
     }
 
-    .stream-info h3 {
-        margin: 0;
-        font-size: 1.2rem;
+    .btn-action.green:hover {
+        background: #27ae60;
     }
 
-    .stream-info p {
-        margin: 5px 0 0;
-        color: #888;
-        font-size: 0.9rem;
+    .btn-action.red {
+        background: #e74c3c;
     }
 
-    /* Chat Alanı */
+    .btn-action.red:hover {
+        background: #c0392b;
+    }
+
+    /* CHAT TASARIMI */
     .chat-wrapper {
         flex: 1;
-        /* Dar alan */
         background: #1e1e1e;
         border-radius: 15px;
         display: flex;
@@ -111,15 +122,14 @@
         min-width: 300px;
         border: 1px solid #333;
         height: 100%;
-        max-height: 80vh;
     }
 
     .chat-header {
         padding: 15px;
         border-bottom: 1px solid #333;
-        font-weight: bold;
         background: #252525;
         border-radius: 15px 15px 0 0;
+        font-weight: bold;
     }
 
     .chat-box {
@@ -131,10 +141,8 @@
         gap: 10px;
     }
 
-    /* Mesaj Tasarımları */
     .chat-message {
         font-size: 0.95rem;
-        line-height: 1.4;
         word-wrap: break-word;
     }
 
@@ -147,15 +155,6 @@
         color: #ddd;
     }
 
-    .chat-message.system {
-        color: #f1c40f;
-        font-style: italic;
-        font-size: 0.8rem;
-        text-align: center;
-        margin-bottom: 10px;
-    }
-
-    /* Input Alanı */
     .chat-input-area {
         padding: 15px;
         border-top: 1px solid #333;
@@ -184,25 +183,20 @@
         cursor: pointer;
     }
 
-    .chat-input-area button:hover {
-        background: #2980b9;
+    .live-badge {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        background: red;
+        color: white;
+        padding: 5px 10px;
+        font-size: 0.8rem;
+        font-weight: bold;
+        border-radius: 5px;
+        z-index: 10;
+        display: none;
     }
 
-    @keyframes pulse {
-        0% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.5;
-        }
-
-        100% {
-            opacity: 1;
-        }
-    }
-
-    /* Mobil Uyumluluk */
     @media (max-width: 768px) {
         .live-container {
             flex-direction: column;
@@ -211,85 +205,106 @@
 
         .video-wrapper,
         .chat-wrapper {
-            flex: none;
-            width: 100%;
             height: 500px;
         }
     }
 </style>
 
 <script>
-    // --- 1. HLS VIDEO OYNATICI ---
-    var video = document.getElementById('video');
-    var videoSrc = '/static/hls/stream.m3u8';
-
-    if (Hls.isSupported()) {
-        var hls = new Hls();
-        hls.loadSource(videoSrc);
-        hls.attachMedia(video);
-        hls.on(Hls.Events.MANIFEST_PARSED, function () {
-            video.play().catch(e => console.log("Otomatik oynatma engellendi, kullanıcı etkileşimi bekleniyor."));
-        });
-        // Yayın hatası olursa (yayın yoksa) 3 sn sonra tekrar dene
-        hls.on(Hls.Events.ERROR, function (event, data) {
-            if (data.fatal) {
-                setTimeout(() => {
-                    hls.loadSource(videoSrc);
-                    hls.attachMedia(video);
-                }, 3000);
-            }
-        });
-    }
-    else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-        video.src = videoSrc;
-        video.addEventListener('loadedmetadata', function () {
-            video.play();
-        });
-    }
-
-    // --- 2. CHAT SİSTEMİ (JSON DESTEKLİ) ---
+    const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
 
+    // --- BÖLÜM 1: CHAT SİSTEMİ (ORTAK) ---
+    const chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
     const chatBox = document.getElementById("chat-box");
     const chatInput = document.getElementById("chat-input");
 
-    ws.onmessage = function (event) {
-        // Backend'den gelen JSON verisini çözüyoruz
+    chatWs.onmessage = function (event) {
         const data = JSON.parse(event.data);
-
-        // Rastgele renk seçimi (İsteğe bağlı, şimdilik sabit mavi yapalım)
-        const userColor = "#3498db";
-
-        // HTML Mesajını Oluştur
-        const messageHtml = `
+        const color = "#3498db";
+        chatBox.insertAdjacentHTML('beforeend', `
             <div class="chat-message">
-                <span class="chat-user" style="color: ${userColor};">${data.user}:</span> 
+                <span class="chat-user" style="color: ${color};">${data.user}:</span> 
                 <span class="chat-text">${data.msg}</span>
             </div>
-        `;
-
-        // Kutuya ekle ve en aşağı kaydır
-        chatBox.insertAdjacentHTML('beforeend', messageHtml);
+        `);
         chatBox.scrollTop = chatBox.scrollHeight;
     };
 
     function sendMessage() {
-        if (!chatInput) return; // Giriş yapmamışsa input yoktur
+        if (!chatInput) return;
         const msg = chatInput.value;
-        if (msg.trim() !== "") {
-            ws.send(msg); // Sadece metni gönderiyoruz, kimliği backend ekliyor
-            chatInput.value = "";
+        if (msg.trim() !== "") { chatWs.send(msg); chatInput.value = ""; }
+    }
+    if (chatInput) chatInput.addEventListener("keypress", (e) => { if (e.key === "Enter") sendMessage(); });
+
+
+    // --- BÖLÜM 2: YAYINCI MODU (BROADCAST) ---
+    if (MODE === 'broadcast') {
+        const preview = document.getElementById('preview');
+        const badge = document.querySelector('.live-badge');
+        let broadcastWs;
+        let mediaRecorder;
+
+        // Kamerayı Aç
+        navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: true })
+            .then(stream => { preview.srcObject = stream; window.localStream = stream; })
+            .catch(err => alert("Kamera hatası: " + err));
+
+        function startBroadcast() {
+            broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+
+            broadcastWs.onopen = () => {
+                document.getElementById('status-text').innerText = "🔴 YAYINDASINIZ";
+                document.getElementById('status-text').style.color = "red";
+                badge.style.display = "block";
+                document.getElementById('btn-start').style.display = 'none';
+                document.getElementById('btn-stop').style.display = 'inline-block';
+
+                // Kayıt ve Gönderim Başlıyor
+                mediaRecorder = new MediaRecorder(window.localStream, { mimeType: 'video/webm; codecs=h264' });
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0 && broadcastWs.readyState === 1) {
+                        broadcastWs.send(event.data);
+                    }
+                };
+                mediaRecorder.start(100); // Her 100ms'de bir veri gönder
+            };
+        }
+
+        function stopBroadcast() {
+            if (mediaRecorder) mediaRecorder.stop();
+            if (broadcastWs) broadcastWs.close();
+            badge.style.display = "none";
+            document.getElementById('status-text').innerText = "Yayın Durduruldu";
+            document.getElementById('status-text').style.color = "white";
+            document.getElementById('btn-start').style.display = 'inline-block';
+            document.getElementById('btn-stop').style.display = 'none';
+            // Sayfayı yenile ki HLS dosyaları temizlensin
+            setTimeout(() => window.location.reload(), 1000);
         }
     }
 
-    // Enter tuşu desteği
-    if (chatInput) {
-        chatInput.addEventListener("keypress", function (event) {
-            if (event.key === "Enter") {
-                sendMessage();
-            }
-        });
+    // --- BÖLÜM 3: İZLEYİCİ MODU (WATCH) ---
+    else if (MODE === 'watch') {
+        var video = document.getElementById('video');
+        var videoSrc = '/static/hls/stream.m3u8';
+        document.querySelector('.live-badge').style.display = "block";
+
+        if (Hls.isSupported()) {
+            var hls = new Hls();
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+            hls.on(Hls.Events.MANIFEST_PARSED, function () {
+                video.play().catch(e => console.log("Otomatik oynatma engellendi."));
+            });
+            // Hata Yönetimi: Yayın yoksa sürekli dene
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    setTimeout(() => { hls.loadSource(videoSrc); hls.attachMedia(video); }, 3000);
+                }
+            });
+        }
     }
 </script>
 {% endblock %}
