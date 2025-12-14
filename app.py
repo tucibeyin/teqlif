@@ -58,7 +58,7 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
-    # --- YENİ EKLENEN VİTRİN ÖZELLİKLERİ ---
+    # --- VİTRİN ÖZELLİKLERİ ---
     is_live = Column(Boolean, default=False)       
     stream_title = Column(String, default="")      
     thumbnail = Column(String, default="")         
@@ -109,7 +109,7 @@ def send_welcome_email(to_email):
         requests.post(url, json=data, headers=headers)
     except: pass
 
-# --- WEBSOCKET MANAGER (BU EKSİKTİ!) ---
+# --- WEBSOCKET MANAGER ---
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
@@ -117,7 +117,8 @@ class ConnectionManager:
         await websocket.accept()
         self.active_connections.append(websocket)
     def disconnect(self, websocket: WebSocket):
-        self.active_connections.remove(websocket)
+        if websocket in self.active_connections:
+            self.active_connections.remove(websocket)
     async def broadcast(self, message: str):
         for connection in self.active_connections:
             await connection.send_text(message)
@@ -244,16 +245,40 @@ async def broadcast_endpoint(websocket: WebSocket):
     global stream_process
     await websocket.accept()
     
+    # 🚀 OPTİMİZE EDİLMİŞ FFMPEG KOMUTU (VPS DOSTU)
     command = [
-        "ffmpeg", "-i", "pipe:0", "-c:v", "libx264", "-preset", "superfast", "-tune", "zerolatency",
-        "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "6000k", "-vf", "scale=1280:-2", "-g", "60",
-        "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-f", "hls", "-hls_time", "2",
-        "-hls_list_size", "3", "-hls_flags", "delete_segments+append_list", "static/hls/stream.m3u8"
+        "ffmpeg", 
+        "-i", "pipe:0",
+        "-c:v", "libx264",
+        "-preset", "ultrafast",       # CPU Dostu: En hızlı çevirme modu
+        "-tune", "zerolatency",
+        "-threads", "2",              # CPU Limiti: Sadece 2 çekirdek kullan (Kilitlenmeyi önler)
+        
+        "-r", "24",                   # FPS Limiti: 60fps yerine 24fps (Sinema modu, %60 daha az CPU)
+        "-b:v", "1000k",              # Bitrate: 1000k (Düşük ama yeterli kalite)
+        "-maxrate", "1200k",          
+        "-bufsize", "2400k",
+        
+        # "-vf", "scale=1280:-2",     # İPTAL: Sunucuda boyutlandırma yapma (CPU'yu çok yorar)
+        "-g", "48",                   # GOP: 2 saniye (24fps * 2)
+        
+        "-c:a", "aac",
+        "-b:a", "64k",                # Ses: 64k (Konuşma için yeterli, işlemci dostu)
+        "-ar", "44100",
+        
+        "-f", "hls",
+        "-hls_time", "2",
+        "-hls_list_size", "3",
+        "-hls_flags", "delete_segments+append_list", 
+        "static/hls/stream.m3u8"
     ]
+    
     stream_process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     try:
         while True:
             data = await websocket.receive_bytes()
-            if stream_process and stream_process.stdin: stream_process.stdin.write(data); stream_process.stdin.flush()
+            if stream_process and stream_process.stdin: 
+                stream_process.stdin.write(data)
+                stream_process.stdin.flush()
     except: 
         if stream_process: stream_process.terminate()
