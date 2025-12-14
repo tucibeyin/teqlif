@@ -124,18 +124,22 @@
     }
 
     /* --- VİDEO (FİLTRESİZ) --- */
-    .bg-video {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+.bg-video {
+        position: absolute; top: 0; left: 0;
+        width: 100%; height: 100%;
         object-fit: cover;
         z-index: 1;
-        /* HİÇBİR FİLTRE YOK */
-        filter: none;
+        
+        /* 🔥 SİHİRLİ MAKYAJ KODLARI 🔥 */
+        filter: brightness(1.15) contrast(1.1) saturate(1.2);
+        /* brightness(1.15) -> %15 daha parlak yap
+           contrast(1.1)    -> Zıtlıkları artır (siyahlar daha siyah, beyazlar daha beyaz)
+           saturate(1.2)    -> Renkleri %20 canlandır (solukluğu al)
+        */
+        
         opacity: 1;
     }
+    #preview { transform: scaleX(-1); }
 
     #preview {
         transform: scaleX(-1);
