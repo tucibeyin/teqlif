@@ -3,11 +3,12 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
+<div id="visual-debug"
+    style="position:fixed; top:0; left:0; width:100%; background:rgba(255,0,0,0.8); color:white; font-size:12px; z-index:99999; display:none; padding:5px;">
+</div>
+
 <div class="desktop-center-wrapper">
-
     <div class="app-frame">
-
-        <div id="debug-log"></div>
 
         {% if mode == 'broadcast' %}
         <div class="stream-slide">
@@ -23,9 +24,7 @@
                             style="display:none;">BİTİR</button>
                     </div>
                 </header>
-
                 <div class="spacer"></div>
-
                 <footer class="footer">
                     <div id="chat-box-broadcast" class="chat-list"></div>
                     <div class="input-row">
@@ -41,30 +40,25 @@
         <div class="feed-container">
             {% for stream in streams %}
             <div class="stream-slide" data-username="{{ stream.username }}">
-
                 <div class="video-layer">
                     <video id="video-{{ stream.username }}" class="feed-video" loop muted playsinline
                         poster="{{ stream.thumbnail }}"></video>
-
                     <div class="unmute-overlay" onclick="unmuteVideo('{{ stream.username }}')">
                         <i class="fa-solid fa-volume-high"></i> SESİ AÇ
                     </div>
                 </div>
-
                 <div class="ui-layer">
                     <header class="header">
                         <div class="badge viewer"><i class="fa-solid fa-user"></i> {{ stream.username }}</div>
                         <a href="/" class="btn close"><i class="fa-solid fa-xmark"></i></a>
                     </header>
-
                     <div class="spacer"></div>
-
                     <footer class="footer">
                         <div id="chat-box-{{ stream.username }}" class="chat-list">
-                            <div class="chat-msg system"><i>Sohbet bağlanıyor...</i></div>
+                            <div class="chat-msg system"><i>Sohbet yükleniyor...</i></div>
                         </div>
                         <div class="input-row">
-                            <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum ekle..."
+                            <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum yap..."
                                 autocomplete="off">
                             <button onclick="sendMsg('{{ stream.username }}')"><i
                                     class="fa-solid fa-paper-plane"></i></button>
@@ -86,49 +80,22 @@
 </div>
 
 <style>
-    /* --- TEMEL --- */
+    /* CSS AYARLARI */
     * {
         box-sizing: border-box;
         margin: 0;
         padding: 0;
         outline: none;
-        -webkit-tap-highlight-color: transparent;
     }
 
     body {
-        background-color: #000;
+        background: #000;
         width: 100vw;
         height: 100vh;
         overflow: hidden;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: sans-serif;
     }
 
-    /* --- GÖRÜNTÜ AYARLARI (FİLTRESİZ) --- */
-    .video-layer {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 1;
-        background: black;
-    }
-
-    video {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-        object-position: center;
-        /* Tüm filtreleri sıfırla */
-        filter: none !important;
-        opacity: 1 !important;
-    }
-
-    #preview {
-        transform: scaleX(-1);
-    }
-
-    /* --- PC MERKEZLEME --- */
     .desktop-center-wrapper {
         width: 100%;
         height: 100%;
@@ -144,10 +111,9 @@
         height: 100%;
         background: black;
         max-width: 480px;
-        box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
+        box-shadow: 0 0 50px rgba(0, 0, 0, 0.5);
     }
 
-    /* --- FEED --- */
     .feed-container {
         width: 100%;
         height: 100%;
@@ -165,7 +131,25 @@
         background: #000;
     }
 
-    /* --- ARAYÜZ (CAM GİBİ) --- */
+    .video-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+    }
+
+    video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    #preview {
+        transform: scaleX(-1);
+    }
+
     .ui-layer {
         position: absolute;
         top: 0;
@@ -177,7 +161,6 @@
         flex-direction: column;
         justify-content: space-between;
         pointer-events: none;
-        /* Tıklamalar arkaya geçsin */
         padding: 15px;
     }
 
@@ -187,24 +170,19 @@
         pointer-events: auto;
     }
 
-    /* Üst Kısım */
     .header {
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
-        background: transparent;
-        /* Arkaplan yok */
         padding-top: 10px;
     }
 
     .badge {
-        padding: 6px 14px;
+        padding: 6px 12px;
         border-radius: 20px;
         font-weight: 800;
-        font-size: 0.85rem;
         color: white;
-        text-shadow: 1px 1px 2px black;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     }
 
     .live {
@@ -213,11 +191,10 @@
     }
 
     .viewer {
-        background: rgba(0, 0, 0, 0.4);
+        background: rgba(0, 0, 0, 0.5);
         border: 1px solid rgba(255, 255, 255, 0.3);
     }
 
-    /* Alt Kısım */
     .spacer {
         flex: 1;
     }
@@ -226,44 +203,40 @@
         display: flex;
         flex-direction: column;
         gap: 10px;
-        background: transparent;
-        /* Arkaplan yok */
         padding-bottom: 20px;
     }
 
-    /* Sohbet Listesi */
+    /* CHAT KUTUSU (GÖRÜNÜRLÜK GARANTİSİ) */
     .chat-list {
-        height: 300px;
-        /* Sabit yükseklik verdim */
-        overflow-y: auto;
         display: flex;
         flex-direction: column;
-        justify-content: flex-end;
-        /* Mesajlar alttan başlasın */
         gap: 8px;
-        /* Maskeleme kaldırdım, net görünsün */
+        max-height: 250px;
+        min-height: 100px;
+        /* Mutlaka yer kaplasın */
+        overflow-y: auto;
+        justify-content: flex-end;
+        /* Mesajları alttan başlat */
+        text-shadow: 1px 1px 1px black;
+        /* Kaydırma çubuğunu gizle */
         scrollbar-width: none;
     }
 
     .chat-msg {
-        background: rgba(0, 0, 0, 0.5);
-        /* Okunabilirlik için koyu fon */
+        background: rgba(0, 0, 0, 0.4);
         padding: 8px 12px;
         border-radius: 12px;
         color: white;
-        font-size: 0.95rem;
+        font-size: 0.9rem;
         width: fit-content;
         max-width: 90%;
-        text-shadow: 0 1px 1px black;
+        backdrop-filter: blur(2px);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        display: block;
-        /* Görünürlüğü zorla */
-        opacity: 1;
         animation: fadeIn 0.3s ease;
     }
 
     .chat-msg b {
-        color: #ffd700;
+        color: #f1c40f;
         margin-right: 5px;
     }
 
@@ -272,89 +245,78 @@
         border: none;
         font-style: italic;
         opacity: 0.8;
+        color: #aaa;
     }
 
-    /* Input */
     .input-row {
         display: flex;
         gap: 10px;
-        align-items: center;
     }
 
     .input-row input {
         flex: 1;
         padding: 12px 20px;
         border-radius: 30px;
-        border: 1px solid rgba(255, 255, 255, 0.4);
-        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        background: rgba(0, 0, 0, 0.5);
         color: white;
-        font-size: 1rem;
-        text-shadow: 0 1px 1px black;
     }
 
     .input-row button {
-        width: 48px;
-        height: 48px;
+        width: 45px;
+        height: 45px;
         border-radius: 50%;
         border: none;
-        background: #007bff;
+        background: #3498db;
         color: white;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
     }
 
-    /* Diğerleri */
+    .btn {
+        padding: 8px 16px;
+        border-radius: 20px;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+        color: white;
+    }
+
+    .start {
+        background: white;
+        color: black;
+    }
+
+    .stop {
+        background: red;
+    }
+
+    .close {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.2rem;
+        text-decoration: none;
+    }
+
     .unmute-overlay {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(0, 0, 0, 0.7);
         color: white;
         padding: 15px 30px;
         border-radius: 50px;
         border: 2px solid white;
         cursor: pointer;
         z-index: 50;
-        font-weight: bold;
-    }
-
-    .empty-state {
-        width: 100%;
-        height: 100%;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        color: #888;
-        text-align: center;
-    }
-
-    .empty-state i {
-        font-size: 4rem;
-        margin-bottom: 20px;
-        color: #444;
-    }
-
-    /* Debug Kutusu (Sol üstte şeffaf) */
-    #debug-log {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        max-height: 100px;
-        overflow-y: auto;
-        background: rgba(0, 0, 0, 0.5);
-        color: #00ff00;
-        font-size: 10px;
-        z-index: 9999;
-        padding: 5px;
-        pointer-events: none;
-        display: none;
-        /* İstersen açabilirsin */
     }
 
     @keyframes pulse {
@@ -382,40 +344,6 @@
             transform: translateY(0);
         }
     }
-
-    .btn {
-        padding: 8px 20px;
-        border-radius: 30px;
-        border: none;
-        font-weight: bold;
-        cursor: pointer;
-        text-decoration: none;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    }
-
-    .start {
-        background: white;
-        color: black;
-    }
-
-    .stop {
-        background: #ff0000;
-        color: white;
-    }
-
-    .close {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: rgba(0, 0, 0, 0.5);
-        color: white;
-        padding: 0;
-        font-size: 1.2rem;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
 </style>
 
 <script>
@@ -424,20 +352,20 @@
 
     // 🔥 GLOBAL DEĞİŞKENLER
     window.CURRENT_SOCKET = null;
-    window.CURRENT_CHAT_ID = null; // Hangi kutuya yazacağımızı tutar
+    window.CURRENT_BOX_ID = null;
 
-    function logDebug(msg) {
+    // Hata Ayıklama (Ekrana basar)
+    function debugVis(msg) {
         console.log(msg);
-        const d = document.getElementById('debug-log');
-        if (d) { d.innerHTML = `> ${msg}<br>` + d.innerHTML; }
+        // const d = document.getElementById('visual-debug');
+        // if(d) { d.style.display='block'; d.innerHTML = msg + "<br>" + d.innerHTML; }
     }
 
     function unmuteVideo(username) {
         const vid = document.getElementById(`video-${username}`);
         if (vid) {
             vid.muted = false; vid.volume = 1.0;
-            const overlay = vid.parentElement.querySelector('.unmute-overlay');
-            if (overlay) overlay.style.display = 'none';
+            vid.parentElement.querySelector('.unmute-overlay').style.display = 'none';
         }
     }
 
@@ -448,36 +376,35 @@
 
         navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
             .then(s => { preview.srcObject = s; window.localStream = s; preview.volume = 0; })
-            .catch(e => logDebug("Kamera Hatası: " + e));
+            .catch(e => debugVis("Kamera Hatası: " + e));
 
         window.startBroadcast = function () {
             active = true;
             document.getElementById('btn-start').style.display = 'none';
             document.getElementById('btn-stop').style.display = 'inline-flex';
 
-            // Yayıncı Kendi Sohbetine Bağlanır
+            // Sohbeti başlat
             connectChat('broadcast');
 
-            const wsBroadcast = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-            wsBroadcast.onopen = () => {
-                logDebug("🎥 Yayın Başladı");
+            const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+            ws.onopen = () => {
+                debugVis("🎥 Yayın başladı");
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1500000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
                 try {
                     rec = new MediaRecorder(window.localStream, opts);
-                    rec.ondataavailable = e => { if (e.data.size > 0 && wsBroadcast.readyState === 1) wsBroadcast.send(e.data); };
+                    rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
                     rec.start(1000);
-                } catch (e) { logDebug("Kayıt Başlatılamadı"); }
+                } catch (e) { debugVis("Kayıt Hatası"); }
 
                 setInterval(() => {
-                    if (active && wsBroadcast.readyState === 1) {
+                    if (active && ws.readyState === 1) {
                         const c = document.createElement('canvas'); c.width = 640; c.height = 360;
                         c.getContext('2d').drawImage(preview, 0, 0, 640, 360);
                         fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: c.toDataURL('image/jpeg', 0.5), timestamp: Date.now() }) }).catch(e => { });
                     }
                 }, 15000);
             };
-
             window.stopBroadcast = function () { active = false; fetch('/broadcast/stop', { method: 'POST' }); if (rec) rec.stop(); window.location.href = '/'; };
         };
     }
@@ -489,7 +416,6 @@
                 const slide = entry.target;
                 const username = slide.dataset.username;
                 const video = document.getElementById(`video-${username}`);
-
                 if (entry.isIntersecting) {
                     loadStream(username, video);
                     connectChat(username);
@@ -503,24 +429,20 @@
 
     function loadStream(username, video) {
         const src = `/static/hls/${username}/stream.m3u8`;
-        logDebug(`📺 Video Yükleniyor: ${username}`);
         if (Hls.isSupported()) {
             if (video.hls) video.hls.destroy();
             const hls = new Hls({ enableWorker: true, liveSyncDurationCount: 3, maxBufferLength: 30 });
             video.hls = hls;
             hls.loadSource(src); hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(e => console.log("Oto-oynatma engellendi")); });
-            hls.on(Hls.Events.ERROR, function (event, data) {
-                if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) { setTimeout(() => hls.startLoad(), 2000); }
-            });
+            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(e => { }));
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = src; video.addEventListener('loadedmetadata', () => video.play());
         }
     }
 
-    // --- SOHBET MOTORU (GARANTİLİ) ---
+    // --- CHAT MOTORU (DÜZELTİLDİ) ---
     function connectChat(targetStreamer) {
-        if (window.CURRENT_SOCKET) { window.CURRENT_SOCKET.close(); window.CURRENT_SOCKET = null; }
+        if (window.CURRENT_SOCKET) { window.CURRENT_SOCKET.close(); }
 
         let streamName = targetStreamer;
 
@@ -533,44 +455,52 @@
 
         if (targetStreamer === 'broadcast') { streamName = myUsername; }
 
-        logDebug(`🔌 Chat Bağlanıyor: ${streamName}`);
+        debugVis(`🔌 Sohbete bağlanılıyor: ${streamName}`);
 
-        // 🔥 HANGİ KUTUYA YAZACAĞIMIZI KAYDEDELİM
-        window.CURRENT_CHAT_ID = targetStreamer === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${targetStreamer}`;
+        // HEDEF KUTUYU BELİRLE VE KAYDET
+        window.CURRENT_BOX_ID = targetStreamer === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${targetStreamer}`;
 
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
         window.CURRENT_SOCKET = ws;
 
-        ws.onopen = () => logDebug(`✅ Chat Açıldı`);
+        ws.onopen = () => {
+            addSystemMsg("✅ Sohbet Bağlandı");
+        };
 
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
-            logDebug(`📩 Mesaj: ${d.msg}`);
-
-            // Kutuyu dinamik bul
-            const box = document.getElementById(window.CURRENT_CHAT_ID);
+            const box = document.getElementById(window.CURRENT_BOX_ID);
 
             if (box) {
-                box.insertAdjacentHTML('beforeend', `<div class="chat-msg"><b>${d.user}:</b> ${d.msg}</div>`);
+                // Mesajı Ekle
+                const div = document.createElement("div");
+                div.className = "chat-msg";
+                div.innerHTML = `<b>${d.user}:</b> ${d.msg}`;
+                box.appendChild(div);
+
+                // En alta kaydır
                 box.scrollTop = box.scrollHeight;
             } else {
-                logDebug(`❌ Kutu bulunamadı: ${window.CURRENT_CHAT_ID}`);
+                console.error("❌ Kutu bulunamadı ID:", window.CURRENT_BOX_ID);
             }
         };
+    }
+
+    function addSystemMsg(msg) {
+        const box = document.getElementById(window.CURRENT_BOX_ID);
+        if (box) {
+            box.insertAdjacentHTML('beforeend', `<div class="chat-msg system" style="color:#0f0;">${msg}</div>`);
+            box.scrollTop = box.scrollHeight;
+        }
     }
 
     window.sendMsg = function (uName) {
         const inpId = uName === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${uName}`;
         const inp = document.getElementById(inpId);
-
-        if (inp && inp.value.trim()) {
-            if (window.CURRENT_SOCKET && window.CURRENT_SOCKET.readyState === 1) {
-                window.CURRENT_SOCKET.send(inp.value);
-                inp.value = "";
-                inp.focus();
-            } else {
-                alert("Sohbet bağlantısı kopmuş. Sayfayı yenileyin.");
-            }
+        if (inp && inp.value.trim() && window.CURRENT_SOCKET && window.CURRENT_SOCKET.readyState === 1) {
+            window.CURRENT_SOCKET.send(inp.value);
+            inp.value = "";
+            inp.focus();
         }
     }
 </script>
