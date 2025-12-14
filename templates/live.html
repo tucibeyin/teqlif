@@ -3,42 +3,56 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<div class="insta-layout">
-    <div class="video-layer">
-        {% if mode == 'broadcast' %}
-        <video id="preview" autoplay muted playsinline style="transform: scaleX(-1);"></video>
-        {% else %}
-        <video id="video" autoplay muted playsinline controls></video>
+<div class="app-container">
 
+    <div class="video-background">
+        {% if mode == 'broadcast' %}
+        <video id="preview" autoplay muted playsinline></video>
+        {% else %}
+        <video id="video" autoplay muted playsinline></video>
         <div id="unmute-overlay" onclick="unmuteVideo()">
-            <i class="fa-solid fa-volume-xmark"></i> Sesi Açmak İçin Dokun
+            <i class="fa-solid fa-volume-high"></i> Sesi Aç
         </div>
         {% endif %}
     </div>
 
-    <div class="top-overlay">
-        <div class="live-tag" style="display:none;">CANLI</div>
-        <div class="right-controls">
-            {% if mode == 'broadcast' %}
-            <button id="btn-start" onclick="startBroadcast()" class="btn-insta start">YAYINLA</button>
-            <button id="btn-stop" onclick="stopBroadcast()" class="btn-insta stop" style="display:none;">BİTİR</button>
-            {% endif %}
-        </div>
-    </div>
+    <div class="ui-layer">
 
-    <div class="bottom-overlay">
-        <div id="debug-log" style="display:none;"></div>
-
-        <div id="chat-box" class="chat-flow"></div>
-        <div class="chat-input-row">
-            <input type="text" id="chat-input" placeholder="Yorum yap..." autocomplete="off">
-            <button onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+        <div class="header-bar">
+            <div class="live-badge" style="display:none;">🔴 CANLI</div>
+            <div class="controls-top">
+                {% if mode == 'broadcast' %}
+                <button id="btn-start" onclick="startBroadcast()" class="btn-action start">
+                    <i class="fa-solid fa-signal"></i> YAYINI BAŞLAT
+                </button>
+                <button id="btn-stop" onclick="stopBroadcast()" class="btn-action stop" style="display:none;">
+                    <i class="fa-solid fa-power-off"></i> BİTİR
+                </button>
+                {% else %}
+                <div class="viewer-count"><i class="fa-solid fa-eye"></i> İzleniyor</div>
+                {% endif %}
+            </div>
         </div>
+
+        <div class="spacer" onclick="toggleUI()"></div>
+
+        <div class="footer-bar">
+            <div id="debug-log" style="display:none;"></div>
+
+            <div id="chat-box" class="chat-area">
+            </div>
+
+            <div class="input-area">
+                <input type="text" id="chat-input" placeholder="Bir şeyler yaz..." autocomplete="off">
+                <button onclick="sendMessage()"><i class="fa-solid fa-paper-plane"></i></button>
+            </div>
+        </div>
+
     </div>
 </div>
 
 <style>
-    /* SIFIRLAMA & TEMEL AYARLAR */
+    /* --- TEMEL AYARLAR --- */
     * {
         box-sizing: border-box;
         margin: 0;
@@ -46,186 +60,117 @@
         outline: none;
     }
 
+    /* Sayfanın kaymasını engelle */
     body,
     html {
         width: 100%;
         height: 100%;
         overflow: hidden;
-        /* Sayfa kaydırmayı engelle */
         background: #000;
     }
 
-    /* ANA KONTEYNER (TÜM EKRANI KAPLAR) */
-    .insta-layout {
+    /* ANA KUTU: Ekranın tamamını kaplar */
+    .app-container {
         position: fixed;
-        /* Ekrana çivile */
         top: 0;
         left: 0;
+        right: 0;
+        bottom: 0;
         width: 100vw;
-        /* Ekran genişliği */
         height: 100vh;
-        /* Ekran yüksekliği */
-        /* Mobilde adres çubuğu sorununu çözer: */
+        /* Mobil tarayıcıların alt barını hesaba katar */
         height: 100dvh;
         z-index: 10;
-        background: #000;
     }
 
-    /* VİDEO KATMANI */
-    .video-layer {
+    /* --- VİDEO KATMANI --- */
+    .video-background {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
         z-index: 1;
+        /* En altta */
+        background: #000;
     }
 
-    /* VIDEO ELEMENTİ (SİHİR BURADA ✨) */
     video {
         width: 100%;
         height: 100%;
-        /* COVER: En-Boy oranını koruyarak boşluk bırakmadan doldurur */
         object-fit: cover;
+        /* Ekrana tam otursun, boşluk kalmasın */
         object-position: center;
-        /* Ortadan odakla */
     }
 
-    /* ÜST KONTROLLER (YÜZEN KATMAN) */
-    .top-overlay {
+    /* Yayıncı aynalanmış görsün */
+    #preview {
+        transform: scaleX(-1);
+    }
+
+    /* --- ARAYÜZ KATMANI (UI) --- */
+    .ui-layer {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
+        height: 100%;
+        z-index: 10;
+        /* Videonun üstünde */
+        display: flex;
+        flex-direction: column;
+        /* Yukarıdan aşağı diz */
+        justify-content: space-between;
+        /* Üstü tepeye, altı dibe it */
+        pointer-events: none;
+        /* Boşluklara tıklayınca arkadaki videoya geçsin */
+    }
+
+    /* Tıklanabilir öğeler için pointer'ı geri aç */
+    .header-bar,
+    .footer-bar,
+    #unmute-overlay {
+        pointer-events: auto;
+    }
+
+    /* --- ÜST KISIM --- */
+    .header-bar {
         padding: 20px;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
-        z-index: 20;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
         display: flex;
         justify-content: space-between;
         align-items: center;
+        width: 100%;
     }
 
-    .live-tag {
+    .live-badge {
         background: #e74c3c;
         color: white;
-        padding: 5px 12px;
+        padding: 5px 15px;
         font-weight: 800;
-        font-size: 0.85rem;
-        border-radius: 6px;
-        box-shadow: 0 0 15px rgba(231, 76, 60, 0.6);
+        border-radius: 5px;
+        font-size: 0.9rem;
         animation: pulse 2s infinite;
         letter-spacing: 1px;
+        box-shadow: 0 0 15px rgba(231, 76, 60, 0.5);
     }
 
-    /* ALT KISIM (SOHBET & GİRİŞ) */
-    .bottom-overlay {
-        position: absolute;
-        bottom: 0;
-        left: 0;
-        width: 100%;
-        z-index: 20;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 10%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
-        padding: 20px 20px 30px 20px;
-        /* Alttan biraz pay bırak (iPhone barı için) */
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-    }
-
-    /* SOHBET AKIŞI */
-    .chat-flow {
-        max-height: 40vh;
-        /* Ekranın %40'ını geçmesin */
-        overflow-y: auto;
-        margin-bottom: 15px;
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-        /* Scrollbar gizle */
-        scrollbar-width: none;
-        -ms-overflow-style: none;
-    }
-
-    .chat-flow::-webkit-scrollbar {
-        display: none;
-    }
-
-    .chat-message {
-        color: white;
-        font-size: 0.95rem;
-        text-shadow: 1px 1px 2px black;
-        background: rgba(0, 0, 0, 0.25);
-        /* Okunabilirlik için hafif fon */
-        padding: 6px 12px;
-        border-radius: 12px;
-        width: fit-content;
-        max-width: 85%;
-        backdrop-filter: blur(2px);
-    }
-
-    .chat-message b {
-        color: #f1c40f;
-        margin-right: 5px;
-    }
-
-    /* INPUT ALANI (MODERN) */
-    .chat-input-row {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-    }
-
-    .chat-input-row input {
-        flex: 1;
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.2);
-        padding: 12px 20px;
+    .btn-action {
+        padding: 10px 25px;
         border-radius: 30px;
-        color: white;
-        font-size: 1rem;
-        backdrop-filter: blur(10px);
-        transition: 0.3s;
-    }
-
-    .chat-input-row input::placeholder {
-        color: rgba(255, 255, 255, 0.6);
-    }
-
-    .chat-input-row input:focus {
-        background: rgba(0, 0, 0, 0.6);
-        border-color: #3498db;
-    }
-
-    .chat-input-row button {
-        background: #3498db;
         border: none;
-        width: 46px;
-        height: 46px;
-        border-radius: 50%;
-        color: white;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        transition: 0.2s;
-    }
-
-    .chat-input-row button:active {
-        transform: scale(0.9);
-    }
-
-    /* YAYINCI BUTONLARI */
-    .btn-insta {
-        padding: 10px 24px;
-        border: none;
-        border-radius: 30px;
         font-weight: bold;
-        cursor: pointer;
         font-size: 0.9rem;
-        transition: 0.3s;
-        text-transform: uppercase;
-        letter-spacing: 1px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        transition: 0.2s;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .btn-action:hover {
+        transform: scale(1.05);
     }
 
     .start {
@@ -238,35 +183,136 @@
         color: white;
     }
 
-    /* Sesi Aç Uyarısı (Ortada) */
+    .viewer-count {
+        background: rgba(0, 0, 0, 0.5);
+        color: #ddd;
+        padding: 5px 15px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* --- ORTA BOŞLUK --- */
+    .spacer {
+        flex: 1;
+        /* Kalan tüm alanı kapla */
+    }
+
+    /* --- ALT KISIM (CHAT) --- */
+    .footer-bar {
+        padding: 20px;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, transparent 100%);
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    /* PC DÜZENLEMESİ: Chat çok yayılmasın */
+    @media (min-width: 1024px) {
+        .footer-bar {
+            width: 450px;
+            /* Genişliği sabitle */
+            margin-left: 20px;
+            /* Sola yasla */
+            margin-bottom: 20px;
+            border-radius: 15px;
+        }
+    }
+
+    .chat-area {
+        max-height: 250px;
+        /* Çok uzamasın */
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        scrollbar-width: none;
+        /* Scrollbar gizle */
+        mask-image: linear-gradient(to bottom, transparent, black 20%);
+    }
+
+    .chat-message {
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
+        padding: 8px 12px;
+        border-radius: 12px;
+        color: white;
+        font-size: 0.95rem;
+        width: fit-content;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.8);
+    }
+
+    .chat-message b {
+        color: #f1c40f;
+        margin-right: 5px;
+    }
+
+    .input-area {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+    }
+
+    .input-area input {
+        flex: 1;
+        padding: 12px 20px;
+        border-radius: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(0, 0, 0, 0.5);
+        color: white;
+        transition: 0.3s;
+    }
+
+    .input-area input:focus {
+        background: rgba(0, 0, 0, 0.8);
+        border-color: #3498db;
+    }
+
+    .input-area button {
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        border: none;
+        background: #3498db;
+        color: white;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        transition: 0.2s;
+    }
+
+    .input-area button:hover {
+        transform: scale(1.1);
+    }
+
+    /* Sesi Aç Uyarısı */
     #unmute-overlay {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        background: rgba(0, 0, 0, 0.6);
+        background: rgba(0, 0, 0, 0.7);
         color: white;
         padding: 15px 30px;
         border-radius: 50px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
+        border: 2px solid white;
         cursor: pointer;
         z-index: 50;
         display: none;
-        backdrop-filter: blur(5px);
+        font-weight: bold;
+        font-size: 1.1rem;
     }
 
+    /* Debug */
     #debug-log {
-        position: absolute;
-        top: 60px;
-        left: 10px;
-        z-index: 100;
-        max-width: 300px;
         color: #ff5555;
-        background: rgba(0, 0, 0, 0.9);
-        padding: 10px;
         font-size: 0.8rem;
+        margin-bottom: 10px;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 5px;
         border-radius: 5px;
-        pointer-events: none;
     }
 
     @keyframes pulse {
@@ -275,19 +321,11 @@
         }
 
         50% {
-            opacity: 0.7
+            opacity: 0.6
         }
 
         100% {
             opacity: 1
-        }
-    }
-
-    /* PC DÜZENİ İÇİN (Çok geniş ekranlarda sohbet dağılmasın) */
-    @media (min-width: 1024px) {
-        .bottom-overlay {
-            width: 40%;
-            min-width: 400px;
         }
     }
 </style>
@@ -296,23 +334,24 @@
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    // --- YARDIMCI FONKSİYONLAR ---
+    // UI Gizle/Göster (Ekrana tıklayınca temiz görüntü)
+    function toggleUI() {
+        // İstersen burayı aktif edebilirsin
+        // document.querySelector('.footer-bar').style.opacity = ...
+    }
+
     function logError(msg) {
         document.getElementById('debug-log').style.display = 'block';
-        document.getElementById('debug-log').innerHTML = `❌ ${msg}`; // Son hatayı göster
+        document.getElementById('debug-log').innerHTML = `⚠️ ${msg}`;
         console.error(msg);
     }
 
     function unmuteVideo() {
         const vid = document.getElementById('video');
-        if (vid) {
-            vid.muted = false;
-            vid.volume = 1.0;
-            document.getElementById('unmute-overlay').style.display = 'none';
-        }
+        if (vid) { vid.muted = false; vid.volume = 1.0; document.getElementById('unmute-overlay').style.display = 'none'; }
     }
 
-    // --- CHAT MOTORU (Otomatik Bağlanmalı) ---
+    // --- CHAT ---
     function connectChat() {
         let ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
         const chatBox = document.getElementById("chat-box");
@@ -323,7 +362,7 @@
             chatBox.insertAdjacentHTML('beforeend', `<div class="chat-message"><b>${data.user}:</b> ${data.msg}</div>`);
             chatBox.scrollTop = chatBox.scrollHeight;
         };
-        ws.onclose = () => setTimeout(connectChat, 3000); // Koparsa 3sn sonra tekrar dene
+        ws.onclose = () => setTimeout(connectChat, 3000);
 
         window.sendMessage = function () {
             if (chatInput.value.trim() && ws.readyState === 1) { ws.send(chatInput.value); chatInput.value = ""; }
@@ -331,87 +370,50 @@
     }
     connectChat();
 
-    // ==========================================
-    // 🔥 YAYINCI MODU (AUTO-RECONNECT + GÜVENLİ BITRATE)
-    // ==========================================
+    // --- YAYINCI ---
     if (MODE === 'broadcast') {
         const preview = document.getElementById('preview');
         let broadcastWs = null;
         let mediaRecorder = null;
-        let isBroadcasting = false; // Kullanıcı "Yayınla" dedi mi?
+        let isBroadcasting = false;
 
-        // 1. Kamerayı Başlat
         navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
-            .then(stream => {
-                preview.srcObject = stream;
-                window.localStream = stream;
-                preview.volume = 0;
-            })
-            .catch(err => logError("Kamera Açılamadı: " + err));
+            .then(stream => { preview.srcObject = stream; window.localStream = stream; preview.volume = 0; })
+            .catch(err => logError("Kamera Hatası: " + err));
 
-        // 2. Yayın Fonksiyonu (Koparsa kendini tekrar çağırır)
         function setupSocket() {
-            if (!isBroadcasting) return; // Yayın durdurulduysa bağlanma
+            if (!isBroadcasting) return;
 
             broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
             broadcastWs.onopen = () => {
-                console.log("Sunucuya bağlandı ✅");
-                document.querySelector('.live-tag').style.display = 'block';
+                document.querySelector('.live-badge').style.display = 'block';
 
-                // --- GÜVENLİ BITRATE AYARI (1.5 Mbps) ---
-                // 2.5 Mbps çok yüksek gelip bağlantıyı koparıyorsa 1.5 Mbps idealdir.
                 let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1500000 };
-
-                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                    options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
-                }
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
 
                 try {
-                    // Eğer eski recorder varsa temizle
-                    if (mediaRecorder && mediaRecorder.state !== 'inactive') {
-                        mediaRecorder.stop();
-                    }
-
+                    if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
                     mediaRecorder = new MediaRecorder(window.localStream, options);
-
                     mediaRecorder.ondataavailable = (e) => {
-                        if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            broadcastWs.send(e.data);
-                        }
+                        if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data);
                     };
-                    // 1 saniyelik parçalar gönder (Buffer şişmesini önler)
                     mediaRecorder.start(1000);
-
-                } catch (e) {
-                    logError("Kayıt Başlatılamadı: " + e);
-                }
+                } catch (e) { logError("Kayıt Hatası: " + e); }
             };
 
             broadcastWs.onclose = () => {
-                console.log("Bağlantı koptu! Tekrar bağlanılıyor... 🔄");
-                if (mediaRecorder) mediaRecorder.stop();
-
-                // Yayıncı hala yayındaysa 1 saniye sonra tekrar dene
-                if (isBroadcasting) {
-                    setTimeout(setupSocket, 1000);
-                }
-            };
-
-            broadcastWs.onerror = (err) => {
-                console.error("Socket Hatası:", err);
-                broadcastWs.close(); // Close çağırınca onclose tetiklenir ve tekrar bağlanır
+                if (isBroadcasting) setTimeout(setupSocket, 1000);
             };
         }
 
-        // --- BUTONLAR ---
         window.startBroadcast = function () {
             isBroadcasting = true;
             document.getElementById('btn-start').style.display = 'none';
-            document.getElementById('btn-stop').style.display = 'inline-block';
-            setupSocket(); // Yayını başlat
+            document.getElementById('btn-stop').style.display = 'flex'; // flex ile ortalar
+            setupSocket();
 
-            // THUMBNAIL (Sadece 1 kere başlatılır)
+            // Thumbnail
             setInterval(() => {
                 if (isBroadcasting && broadcastWs && broadcastWs.readyState === 1) {
                     const canvas = document.createElement('canvas');
@@ -421,13 +423,13 @@
                     fetch('/broadcast/thumbnail', {
                         method: 'POST', headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({ image: dataURL, timestamp: Date.now() })
-                    }).catch(e => console.log("Thumb hatası (önemsiz)"));
+                    }).catch(e => { });
                 }
             }, 15000);
         }
 
         window.stopBroadcast = function () {
-            isBroadcasting = false; // Tekrar bağlanmayı durdur
+            isBroadcasting = false;
             fetch('/broadcast/stop', { method: 'POST' });
             if (mediaRecorder) mediaRecorder.stop();
             if (broadcastWs) broadcastWs.close();
@@ -435,51 +437,28 @@
         }
     }
 
-    // ==========================================
-    // 📺 İZLEYİCİ MODU (STABİL)
-    // ==========================================
+    // --- İZLEYİCİ ---
     else if (MODE === 'watch') {
         var video = document.getElementById('video');
         var videoSrc = '/static/hls/stream.m3u8';
-
         video.onvolumechange = () => { if (!video.muted) document.getElementById('unmute-overlay').style.display = 'none'; };
 
         if (Hls.isSupported()) {
-            var config = {
-                enableWorker: true,
-                liveSyncDurationCount: 3,
-                maxBufferLength: 30,
-                manifestLoadingTimeOut: 10000,
-            };
-
-            var hls = new Hls(config);
-            hls.loadSource(videoSrc);
-            hls.attachMedia(video);
-
+            var hls = new Hls({ enableWorker: true, liveSyncDurationCount: 3, maxBufferLength: 30 });
+            hls.loadSource(videoSrc); hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                var playPromise = video.play();
-                if (playPromise !== undefined) {
-                    playPromise.then(_ => document.getElementById('unmute-overlay').style.display = 'block')
-                        .catch(error => console.log("Oto-oynatma engellendi."));
-                }
+                var p = video.play();
+                if (p !== undefined) p.then(_ => document.getElementById('unmute-overlay').style.display = 'block').catch(e => { });
             });
-
-            // Hata Yönetimi
             hls.on(Hls.Events.ERROR, function (event, data) {
                 if (data.fatal) {
-                    switch (data.type) {
-                        case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-                        case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                        default: hls.destroy(); break;
-                    }
+                    if (data.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+                    else hls.destroy();
                 }
             });
-        }
-        else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = videoSrc;
-            video.addEventListener('loadedmetadata', () => video.play());
+        } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+            video.src = videoSrc; video.addEventListener('loadedmetadata', () => video.play());
         }
     }
 </script>
-
 {% endblock %}
