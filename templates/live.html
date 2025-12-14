@@ -385,12 +385,8 @@
 <script>
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-
-    // 🔥 GLOBAL DEĞİŞKEN (Sorunu çözen kısım)
-    // Artık bağlantı değişkeni her yerden erişilebilir.
     window.CURRENT_SOCKET = null;
 
-    // Debug Log Fonksiyonu
     function logDebug(msg) {
         console.log(msg);
         const debugBox = document.getElementById('debug-log');
@@ -423,16 +419,11 @@
             document.getElementById('btn-start').style.display = 'none';
             document.getElementById('btn-stop').style.display = 'inline-flex';
 
-            // Yayıncı için Socket Başlat
             connectChat('broadcast');
-
-            // Socket açılınca kaydı başlat
-            // (connectChat içindeki socket'i kullanacağız ama burada veri gönderimi için ayrı kanal da açabiliriz,
-            // ama chat socketi üzerinden video atmak yavaş olur. O yüzden broadcast socketi ayrı kalmalı.)
 
             const wsBroadcast = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
             wsBroadcast.onopen = () => {
-                logDebug("Yayın akışı başladı 🚀");
+                logDebug("🎥 Video Socket Açıldı");
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1500000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
                 try {
@@ -441,7 +432,6 @@
                     rec.start(1000);
                 } catch (e) { logDebug("Kayıt Başlatılamadı"); }
 
-                // Thumbnail
                 setInterval(() => {
                     if (active && wsBroadcast.readyState === 1) {
                         const c = document.createElement('canvas'); c.width = 640; c.height = 360;
@@ -450,13 +440,9 @@
                     }
                 }, 15000);
             };
-
-            window.stopBroadcast = function () {
-                active = false; fetch('/broadcast/stop', { method: 'POST' });
-                if (rec) rec.stop(); if (wsBroadcast) wsBroadcast.close();
-                window.location.href = '/';
-            };
         };
+
+        window.stopBroadcast = function () { active = false; fetch('/broadcast/stop', { method: 'POST' }); if (rec) rec.stop(); window.location.href = '/'; };
     }
 
     // --- İZLEYİCİ KODLARI ---
@@ -466,10 +452,9 @@
                 const slide = entry.target;
                 const username = slide.dataset.username;
                 const video = document.getElementById(`video-${username}`);
-
                 if (entry.isIntersecting) {
                     loadStream(username, video);
-                    connectChat(username); // Odaya bağlan
+                    connectChat(username);
                 } else {
                     if (video) { video.pause(); if (video.hls) video.hls.destroy(); video.src = ""; }
                 }
@@ -480,6 +465,8 @@
 
     function loadStream(username, video) {
         const src = `/static/hls/${username}/stream.m3u8`;
+        logDebug(`📺 Video yükleniyor: ${src}`);
+
         if (Hls.isSupported()) {
             if (video.hls) video.hls.destroy();
             const hls = new Hls({ enableWorker: true, liveSyncDurationCount: 3, maxBufferLength: 30 });
@@ -487,87 +474,62 @@
             hls.loadSource(src); hls.attachMedia(video);
             hls.on(Hls.Events.MANIFEST_PARSED, () => { video.play().catch(e => console.log("Oto-oynatma engellendi")); });
             hls.on(Hls.Events.ERROR, function (event, data) {
-                if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) { setTimeout(() => hls.startLoad(), 2000); }
+                if (data.fatal && data.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                    logDebug("Video bekleniyor...");
+                    setTimeout(() => hls.startLoad(), 2000);
+                }
             });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
             video.src = src; video.addEventListener('loadedmetadata', () => video.play());
         }
     }
 
-    // --- SOHBET MOTORU (DÜZELTİLMİŞ) ---
+    // --- SOHBET MOTORU ---
     function connectChat(targetStreamer) {
-        // Eski bağlantıyı kapat
-        if (window.CURRENT_SOCKET) {
-            window.CURRENT_SOCKET.close();
-            window.CURRENT_SOCKET = null;
-        }
+        if (window.CURRENT_SOCKET) { window.CURRENT_SOCKET.close(); window.CURRENT_SOCKET = null; }
 
         let streamName = targetStreamer;
-
-        // Kullanıcı adını belirle
         {% if user and user.username %}
         const myUsername = "{{ user.username }}";
         {% else %}
         const myUsername = "anon";
         {% endif %}
 
-        // Yayıncıysak oda ismi kendi ismimizdir
-        if (targetStreamer === 'broadcast') {
-            streamName = myUsername;
-        }
+        if (targetStreamer === 'broadcast') { streamName = myUsername; }
 
         logDebug(`🔌 Sohbete bağlanılıyor: ${streamName}`);
 
-        // Yeni bağlantı oluştur
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
-        window.CURRENT_SOCKET = ws; // Global değişkene ata
+        window.CURRENT_SOCKET = ws;
 
-        // Hangi kutuya yazılacak?
         let boxId = targetStreamer === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${targetStreamer}`;
 
-        ws.onopen = () => logDebug(`✅ Sohbet Bağlandı: ${streamName}`);
-        ws.onerror = (e) => logDebug(`❌ Sohbet Hatası: ${e}`);
+        ws.onopen = () => logDebug(`✅ Sohbet Açıldı: ${streamName}`);
 
         ws.onmessage = (e) => {
+            logDebug("📩 HAM VERİ GELDİ: " + e.data); // <-- BU SATIR ÖNEMLİ
             const d = JSON.parse(e.data);
             const box = document.getElementById(boxId);
             if (box) {
                 box.insertAdjacentHTML('beforeend', `<div class="chat-msg"><b>${d.user}:</b> ${d.msg}</div>`);
                 box.scrollTop = box.scrollHeight;
+            } else {
+                logDebug("❌ Kutu bulunamadı: " + boxId);
             }
         };
     }
 
-    // --- MESAJ GÖNDERME FONKSİYONU ---
     window.sendMsg = function (uName) {
-        logDebug("📩 Gönder butonuna basıldı: " + uName);
-
-        // Input kutusunu bul
         const inpId = uName === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${uName}`;
         const inp = document.getElementById(inpId);
-
-        if (!inp) {
-            logDebug("❌ HATA: Input kutusu bulunamadı ID: " + inpId);
-            return;
-        }
-
-        const msg = inp.value.trim();
-        if (!msg) {
-            logDebug("⚠️ Boş mesaj gönderilemez.");
-            return;
-        }
-
-        // Socket kontrolü
-        if (window.CURRENT_SOCKET && window.CURRENT_SOCKET.readyState === 1) {
-            window.CURRENT_SOCKET.send(msg);
-            logDebug("📤 Sunucuya gönderildi: " + msg);
+        if (inp && inp.value.trim() && window.CURRENT_SOCKET && window.CURRENT_SOCKET.readyState === 1) {
+            window.CURRENT_SOCKET.send(inp.value);
             inp.value = "";
             inp.focus();
         } else {
-            logDebug("❌ HATA: Socket bağlı değil! Durum: " + (window.CURRENT_SOCKET ? window.CURRENT_SOCKET.readyState : "NULL"));
-            alert("Bağlantı kopuk, sayfa yenileniyor...");
-            // connectChat(uName); // Otomatik tekrar bağlanmayı dene
+            logDebug("❌ Mesaj gönderilemedi");
         }
     }
 </script>
+
 {% endblock %}
