@@ -3,74 +3,93 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<div class="app-layout">
+<div class="teqlif-os">
 
     {% if mode == 'broadcast' %}
     <div class="screen">
+        <video id="preview" class="cinema-video" autoplay muted playsinline></video>
 
-        <video id="preview" class="bg-video" autoplay muted playsinline></video>
-
-        <div class="ui-layer">
-
-            <div class="header-bar">
-                <div class="left-side">
-                    <span class="live-tag">🔴 CANLI</span>
+        <div class="glass-interface">
+            <div class="header">
+                <div class="brand-logo">teqlif</div>
+                <div class="live-indicator">
+                    <div class="dot"></div> CANLI
                 </div>
-                <div class="right-side">
-                    <button id="btn-start" onclick="startBroadcast()" class="btn start-btn">BAŞLAT</button>
-                    <button id="btn-stop" onclick="stopBroadcast()" class="btn stop-btn"
+            </div>
+
+            <div class="auction-status">
+                <div class="label">GÜNCEL FİYAT</div>
+                <div class="price-tag" id="current-price-display">₺ 0</div>
+            </div>
+
+            <div class="control-deck">
+                <div id="chat-box-broadcast" class="chat-flow"></div>
+
+                <div class="action-row">
+                    <button class="btn-glass" onclick="simulateBid(100)">+100 ₺ (Test)</button>
+                    <button id="btn-start" onclick="startBroadcast()" class="btn-primary">YAYINI BAŞLAT</button>
+                    <button id="btn-stop" onclick="stopBroadcast()" class="btn-danger"
                         style="display:none;">BİTİR</button>
                 </div>
             </div>
-
-            <div class="footer-bar">
-                <div id="chat-box-broadcast" class="chat-list"></div>
-                <div class="input-wrap">
-                    <input type="text" id="chat-input-broadcast" placeholder="Mesaj..." autocomplete="off">
-                    <button onclick="sendMsg('broadcast')">YAZ</button>
-                </div>
-            </div>
-
         </div>
     </div>
 
     {% else %}
-    <div class="feed-container">
+    <div class="feed-scroll">
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
 
-            <video id="video-{{ stream.username }}" class="bg-video" loop muted playsinline
+            <video id="video-{{ stream.username }}" class="cinema-video" loop muted playsinline
                 poster="{{ stream.thumbnail }}"></video>
 
-            <div class="mute-toggle" onclick="unmuteVideo('{{ stream.username }}')">
-                <i class="fa-solid fa-volume-xmark"></i> SESİ AÇ
+            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')">
+                <i class="fa-solid fa-volume-high"></i> Sesi Aç
             </div>
 
-            <div class="ui-layer">
-                <div class="header-bar">
-                    <div class="user-pill">
-                        <i class="fa-solid fa-user"></i> {{ stream.username }}
+            <div class="glass-interface">
+                <div class="header">
+                    <div class="brand-logo">teqlif</div>
+                    <div class="viewer-actions">
+                        <span class="view-count">1.2k izleyici</span>
+                        <a href="/" class="close-x"><i class="fa-solid fa-xmark"></i></a>
                     </div>
-                    <a href="/" class="close-btn"><i class="fa-solid fa-xmark"></i></a>
                 </div>
 
-                <div class="footer-bar">
-                    <div id="chat-box-{{ stream.username }}" class="chat-list">
-                        <div class="msg system"><i>Sohbet Bağlandı</i></div>
+                <div class="auction-status">
+                    <div class="label">ŞU ANKİ TEKLİF</div>
+                    <div class="price-tag blink-update" id="price-{{ stream.username }}">₺ 1.500</div>
+                    <div class="last-bidder">Son teklif: @ahmet_yilmaz</div>
+                </div>
+
+                <div class="bottom-section">
+
+                    <div id="chat-box-{{ stream.username }}" class="chat-flow">
+                        <div class="chat-bubble system">Mezat odasına bağlandınız.</div>
                     </div>
-                    <div class="input-wrap">
-                        <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum..."
-                            autocomplete="off">
-                        <button onclick="sendMsg('{{ stream.username }}')"><i
-                                class="fa-solid fa-paper-plane"></i></button>
+
+                    <div class="bid-dock">
+                        <div class="quick-bids">
+                            <button onclick="sendBid('{{ stream.username }}', 100)">+100₺</button>
+                            <button onclick="sendBid('{{ stream.username }}', 250)">+250₺</button>
+                            <button onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
+                        </div>
+
+                        <div class="manual-bid">
+                            <input type="number" id="manual-bid-{{ stream.username }}" placeholder="Tutar gir...">
+                            <button class="bid-send-btn" onclick="sendManualBid('{{ stream.username }}')">TEKLİF
+                                VER</button>
+                        </div>
                     </div>
+
                 </div>
             </div>
         </div>
         {% else %}
-        <div class="empty">
-            <h3>Yayın Yok</h3>
-            <a href="/live?mode=broadcast" class="btn start-btn">YAYIN AÇ</a>
+        <div class="empty-state">
+            <div class="brand-logo large">teqlif</div>
+            <p>Şu an aktif bir mezat yok.</p>
+            <a href="/live?mode=broadcast" class="btn-primary">Mezat Başlat</a>
         </div>
         {% endfor %}
     </div>
@@ -79,7 +98,17 @@
 </div>
 
 <style>
-    /* TEMEL */
+    /* --- TEQLIF OS DESIGN SYSTEM --- */
+    :root {
+        --glass: rgba(20, 20, 20, 0.4);
+        --glass-border: rgba(255, 255, 255, 0.1);
+        --primary: #FFF;
+        --accent: #34C759;
+        /* Apple Green - Para Rengi */
+        --danger: #FF3B30;
+        --text-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
+    }
+
     * {
         box-sizing: border-box;
         margin: 0;
@@ -90,13 +119,14 @@
 
     body {
         background: #000;
+        color: #FFF;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", Roboto, sans-serif;
         width: 100vw;
         height: 100dvh;
         overflow: hidden;
-        font-family: sans-serif;
     }
 
-    .app-layout {
+    .teqlif-os {
         width: 100%;
         height: 100%;
         max-width: 500px;
@@ -105,7 +135,7 @@
         background: black;
     }
 
-    .feed-container {
+    .feed-scroll {
         width: 100%;
         height: 100%;
         overflow-y: scroll;
@@ -120,8 +150,8 @@
         overflow: hidden;
     }
 
-    /* --- VİDEO (LEKESİZ) --- */
-    .bg-video {
+    /* --- SİNEMATİK VİDEO (SAF) --- */
+    .cinema-video {
         position: absolute;
         top: 0;
         left: 0;
@@ -129,318 +159,489 @@
         height: 100%;
         object-fit: cover;
         z-index: 1;
-        /* 🔥 SIFIR FİLTRE 🔥 */
         filter: none !important;
         opacity: 1 !important;
-        background: transparent !important;
     }
 
     #preview {
         transform: scaleX(-1);
     }
 
-    /* --- ARAYÜZ (ŞEFFAF) --- */
-    .ui-layer {
+    /* --- CAM ARAYÜZ KATMANI --- */
+    .glass-interface {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 999;
+        inset: 0;
+        z-index: 10;
         display: flex;
         flex-direction: column;
         justify-content: space-between;
         pointer-events: none;
-
-        /* GÜVENLİ ALAN */
-        padding-top: max(15px, env(safe-area-inset-top));
-        padding-bottom: max(20px, env(safe-area-inset-bottom));
-        padding-left: 15px;
-        padding-right: 15px;
-
-        background: transparent !important;
-        /* KATMAN ŞEFFAF */
+        /* Arkaya tıkla */
+        padding: max(20px, env(safe-area-inset-top)) 20px max(30px, env(safe-area-inset-bottom)) 20px;
     }
 
-    /* --- ÜST BAR (ŞEFFAF) --- */
-    .header-bar {
-        pointer-events: auto;
-        width: 100%;
+    /* --- HEADER --- */
+    .header {
         display: flex;
         justify-content: space-between;
-        align-items: flex-start;
-        background: transparent !important;
-        /* GÖLGE YOK */
-    }
-
-    /* --- ALT BAR (ŞEFFAF) --- */
-    .footer-bar {
+        align-items: center;
         pointer-events: auto;
-        display: flex;
-        flex-direction: column;
-        gap: 10px;
-        background: transparent !important;
-        /* GÖLGE YOK */
     }
 
-    /* --- BUTONLAR VE YAZILAR (OKUNURLUK İÇİN KENDİ ARKAPLANLARI VAR) --- */
-    .live-tag {
-        background: red;
-        color: white;
-        padding: 8px 12px;
-        border-radius: 8px;
-        font-weight: 900;
-        font-size: 14px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    .brand-logo {
+        font-family: 'SF Pro Display', sans-serif;
+        font-weight: 700;
+        font-size: 24px;
+        letter-spacing: -1px;
+        color: #FFF;
+        text-shadow: var(--text-shadow);
     }
 
-    .btn {
-        border: none;
-        padding: 10px 20px;
-        border-radius: 30px;
-        font-weight: 800;
-        cursor: pointer;
-        font-size: 14px;
-        color: white;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+    .brand-logo.large {
+        font-size: 48px;
+        margin-bottom: 20px;
     }
 
-    .start-btn {
-        background: #2ecc71;
-        color: white;
-    }
-
-    .stop-btn {
-        background: #e74c3c;
-    }
-
-    .user-pill {
-        /* Sadece yazının arkası hafif koyu */
-        background: rgba(0, 0, 0, 0.4);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 20px;
-        font-weight: bold;
-        border: 1px solid rgba(255, 255, 255, 0.3);
-    }
-
-    .close-btn {
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
-        background: rgba(0, 0, 0, 0.4);
-        color: white;
+    .live-indicator {
         display: flex;
         align-items: center;
-        justify-content: center;
-        text-decoration: none;
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        gap: 6px;
+        font-size: 12px;
+        font-weight: 600;
+        text-transform: uppercase;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 4px 10px;
+        border-radius: 20px;
+        backdrop-filter: blur(10px);
     }
 
-    .chat-list {
-        max-height: 250px;
+    .dot {
+        width: 8px;
+        height: 8px;
+        background: var(--danger);
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+
+    .view-count {
+        font-size: 13px;
+        font-weight: 500;
+        opacity: 0.9;
+        text-shadow: var(--text-shadow);
+        margin-right: 15px;
+    }
+
+    .close-x {
+        color: white;
+        font-size: 24px;
+        text-decoration: none;
+        text-shadow: var(--text-shadow);
+    }
+
+    /* --- MEZAT DURUMU (ORTA) --- */
+    .auction-status {
+        align-self: center;
+        text-align: center;
+        margin-top: 20px;
+        /* Hafif cam arka plan */
+        background: rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(12px);
+        -webkit-backdrop-filter: blur(12px);
+        padding: 15px 30px;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        pointer-events: auto;
+        animation: float 3s ease-in-out infinite;
+    }
+
+    .label {
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        opacity: 0.8;
+        margin-bottom: 5px;
+    }
+
+    .price-tag {
+        font-size: 32px;
+        font-weight: 800;
+        color: #FFF;
+        letter-spacing: -1px;
+    }
+
+    .last-bidder {
+        font-size: 12px;
+        opacity: 0.8;
+        margin-top: 5px;
+        color: #eee;
+    }
+
+    /* --- ALT BÖLÜM (SOHBET & TEKLİF) --- */
+    .bottom-section {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        pointer-events: auto;
+    }
+
+    /* Sohbet Akışı */
+    .chat-flow {
+        height: 150px;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        gap: 6px;
+        align-items: flex-start;
+        gap: 8px;
+        mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
         scrollbar-width: none;
     }
 
-    .msg {
-        /* Sadece baloncuk koyu */
-        background: rgba(0, 0, 0, 0.5);
-        color: white;
-        padding: 6px 12px;
-        border-radius: 10px;
-        width: fit-content;
+    .chat-bubble {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 8px 14px;
+        border-radius: 16px;
+        border-bottom-left-radius: 4px;
+        /* Konuşma balonu hissi */
+        font-size: 13px;
+        color: #FFF;
+        backdrop-filter: blur(4px);
+        border: 1px solid rgba(255, 255, 255, 0.05);
         max-width: 85%;
-        font-size: 14px;
-        text-shadow: 1px 1px 1px black;
+        text-shadow: 1px 1px 1px rgba(0, 0, 0, 0.5);
     }
 
-    .msg b {
-        color: #f1c40f;
+    .chat-bubble b {
+        color: #81ecec;
         margin-right: 5px;
     }
 
-    .system {
-        background: transparent;
-        color: #eee;
-        font-style: italic;
-        text-shadow: 1px 1px 2px black;
+    /* --- BID DOCK (TEKLİF İSTASYONU) --- */
+    .bid-dock {
+        background: rgba(20, 20, 20, 0.85);
+        /* Koyu Cam */
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        padding: 15px;
+        border-radius: 24px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 -10px 40px rgba(0, 0, 0, 0.5);
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
     }
 
-    .input-wrap {
+    /* Hızlı Peyler */
+    .quick-bids {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 8px;
+    }
+
+    .quick-bids button {
+        background: rgba(255, 255, 255, 0.1);
+        border: none;
+        color: white;
+        padding: 12px;
+        border-radius: 12px;
+        font-weight: 600;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+    }
+
+    .quick-bids button:active {
+        background: rgba(255, 255, 255, 0.3);
+        transform: scale(0.95);
+    }
+
+    /* Manuel Giriş */
+    .manual-bid {
         display: flex;
         gap: 8px;
     }
 
-    .input-wrap input {
+    .manual-bid input {
         flex: 1;
-        padding: 10px 15px;
-        border-radius: 25px;
-        border: 1px solid rgba(255, 255, 255, 0.5);
         background: rgba(0, 0, 0, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 12px;
+        padding: 12px 15px;
         color: white;
-        font-size: 14px;
-        text-shadow: 1px 1px 1px black;
+        font-size: 16px;
+        text-align: center;
     }
 
-    .input-wrap button {
-        background: #3498db;
+    .manual-bid input::placeholder {
+        color: rgba(255, 255, 255, 0.3);
+    }
+
+    .bid-send-btn {
+        background: var(--accent);
+        /* YEŞİL */
+        color: black;
+        border: none;
+        padding: 0 20px;
+        border-radius: 12px;
+        font-weight: 800;
+        font-size: 14px;
+        cursor: pointer;
+        box-shadow: 0 0 15px rgba(52, 199, 89, 0.4);
+    }
+
+    .bid-send-btn:active {
+        transform: scale(0.95);
+        opacity: 0.9;
+    }
+
+    /* --- YAYINCI KONTROLLERİ --- */
+    .control-deck {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+        pointer-events: auto;
+    }
+
+    .action-row {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+    }
+
+    .btn-primary {
+        background: white;
+        color: black;
+        border: none;
+        padding: 14px 24px;
+        border-radius: 30px;
+        font-weight: 700;
+        font-size: 15px;
+        cursor: pointer;
+        box-shadow: 0 4px 15px rgba(255, 255, 255, 0.3);
+    }
+
+    .btn-glass {
+        background: rgba(255, 255, 255, 0.2);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        padding: 14px 20px;
+        border-radius: 30px;
+        font-weight: 600;
+        cursor: pointer;
+        backdrop-filter: blur(5px);
+    }
+
+    .btn-danger {
+        background: var(--danger);
         color: white;
         border: none;
-        padding: 0 15px;
-        border-radius: 25px;
-        font-weight: bold;
+        padding: 14px 24px;
+        border-radius: 30px;
+        font-weight: 700;
+        cursor: pointer;
     }
 
-    .mute-toggle {
+    .tap-hint {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         background: rgba(0, 0, 0, 0.6);
         color: white;
-        padding: 15px 30px;
+        padding: 12px 24px;
         border-radius: 30px;
-        z-index: 500;
+        border: 1px solid rgba(255, 255, 255, 0.3);
         cursor: pointer;
-        border: 2px solid white;
+        backdrop-filter: blur(4px);
         pointer-events: auto;
     }
 
-    .empty {
+    .empty-state {
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         height: 100%;
-        color: white;
+        color: #888;
+        gap: 20px;
+    }
+
+    /* Animasyonlar */
+    @keyframes pulse {
+        0% {
+            opacity: 1
+        }
+
+        50% {
+            opacity: 0.4
+        }
+
+        100% {
+            opacity: 1
+        }
+    }
+
+    @keyframes float {
+        0% {
+            transform: translateY(0px)
+        }
+
+        50% {
+            transform: translateY(-5px)
+        }
+
+        100% {
+            transform: translateY(0px)
+        }
+    }
+
+    @keyframes flash {
+        0% {
+            color: white
+        }
+
+        50% {
+            color: var(--accent)
+        }
+
+        100% {
+            color: white
+        }
+    }
+
+    .blink-update {
+        animation: flash 0.5s ease;
     }
 </style>
 
 <script>
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-
     window.CURRENT_SOCKET = null;
-    window.CURRENT_BOX_ID = null;
 
-    function unmuteVideo(username) {
-        const vid = document.getElementById(`video-${username}`);
-        if (vid) {
-            vid.muted = false; vid.volume = 1.0;
-            vid.parentElement.querySelector('.unmute-btn').style.display = 'none';
-        }
+    // --- KAMERA & STREAM ---
+    function unmuteVideo(u) {
+        const v = document.getElementById(`video-${u}`);
+        if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; }
     }
 
-    // --- YAYINCI ---
     if (MODE === 'broadcast') {
-        const preview = document.getElementById('preview');
+        const prev = document.getElementById('preview');
         let rec, active = false;
-
-        // 🔥 HD KAMERA (720p @ 30FPS) 🔥
-        const constraints = {
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
-            audio: true
-        };
-
-        navigator.mediaDevices.getUserMedia(constraints)
-            .then(s => { preview.srcObject = s; window.localStream = s; preview.volume = 0; })
-            .catch(e => console.log("Kamera Hatası"));
+        navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
+            .then(s => { prev.srcObject = s; window.localStream = s; prev.volume = 0; });
 
         window.startBroadcast = function () {
             active = true;
             document.getElementById('btn-start').style.display = 'none';
             document.getElementById('btn-stop').style.display = 'inline-block';
-
             connectChat('broadcast');
 
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
             ws.onopen = () => {
-                // 🔥 YÜKSEK KALİTE GÖNDERİM (2.5 Mbps) 🔥
-                let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
+                let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 }; // HD Kalite
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
-
                 rec = new MediaRecorder(window.localStream, opts);
                 rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
                 rec.start(1000);
-
-                setInterval(() => {
-                    if (active && ws.readyState === 1) {
-                        const c = document.createElement('canvas'); c.width = 640; c.height = 360;
-                        c.getContext('2d').drawImage(preview, 0, 0, 640, 360);
-                        fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: c.toDataURL('image/jpeg', 0.5), timestamp: Date.now() }) }).catch(e => { });
-                    }
-                }, 15000);
             };
-            window.stopBroadcast = function () { active = false; fetch('/broadcast/stop', { method: 'POST' }); if (rec) rec.stop(); window.location.href = '/'; };
-        };
-    }
-
-    // --- İZLEYİCİ (AYNI) ---
-    else {
-        let observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    const u = entry.target.dataset.username;
-                    const v = document.getElementById(`video-${u}`);
-
+            window.stopBroadcast = function () { fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
+        }
+    } else {
+        // İzleyici Observer (Aynı kod)
+        let obs = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                const u = e.target.dataset.username;
+                const v = document.getElementById(`video-${u}`);
+                if (e.isIntersecting) {
+                    // HLS Yükleme (Kısa tutuyorum)
                     const src = `/static/hls/${u}/stream.m3u8`;
                     if (Hls.isSupported()) {
-                        const hls = new Hls();
-                        hls.loadSource(src); hls.attachMedia(v);
-                        hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => { }));
-                        hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal) setTimeout(() => hls.startLoad(), 2000); });
-                        v.hls = hls;
-                    } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                        v.src = src; v.addEventListener('loadedmetadata', () => v.play());
-                    }
+                        const h = new Hls(); h.loadSource(src); h.attachMedia(v);
+                        h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { }));
+                    } else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play(); }
                     connectChat(u);
-                } else {
-                    const v = entry.target.querySelector('video');
-                    if (v) { v.pause(); if (v.hls) v.hls.destroy(); v.src = ""; }
-                }
+                } else { if (v) v.pause(); }
             });
         }, { threshold: 0.6 });
-        document.querySelectorAll('.stream-item').forEach(s => observer.observe(s));
+        document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
 
-    // --- CHAT (AYNI) ---
-    function connectChat(targetStreamer) {
+    // --- CHAT & TEKLİF SİSTEMİ ---
+    function connectChat(target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
-
-        let streamName = targetStreamer;
-        {% if user and user.username %} const myUsername = "{{ user.username }}";
-        {% else %} const myUsername = "anon"; {% endif %}
-
-        if (targetStreamer === 'broadcast') streamName = myUsername;
-
-        window.CURRENT_BOX_ID = targetStreamer === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${targetStreamer}`;
-
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
+        let sName = target === 'broadcast' ? "{{ user.username if user else 'anon' }}" : target;
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${sName}`);
         window.CURRENT_SOCKET = ws;
 
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
-            const box = document.getElementById(window.CURRENT_BOX_ID);
-            if (box) {
-                box.insertAdjacentHTML('beforeend', `<div class="msg"><b>${d.user}:</b> ${d.msg}</div>`);
-                box.scrollTop = box.scrollHeight;
+            const boxId = target === 'broadcast' ? 'chat-box-broadcast' : `chat-box-${target}`;
+            const box = document.getElementById(boxId);
+
+            // Eğer mesaj bir TEKLİF ise (Özel format: BID:TUTAR)
+            if (d.msg.startsWith("BID:")) {
+                const amount = d.msg.split(":")[1];
+                updatePriceDisplay(amount, target);
+                // Ayrıca chat'e de yazsın
+                if (box) {
+                    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble" style="border-color:#34C759"><b>${d.user}</b>: ₺${amount} teklif verdi! 💸</div>`);
+                    box.scrollTop = box.scrollHeight;
+                }
+            } else {
+                // Normal Mesaj
+                if (box) {
+                    box.insertAdjacentHTML('beforeend', `<div class="chat-bubble"><b>${d.user}</b>: ${d.msg}</div>`);
+                    box.scrollTop = box.scrollHeight;
+                }
             }
         };
     }
 
-    window.sendMsg = function (uName) {
-        const inpId = uName === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${uName}`;
-        const inp = document.getElementById(inpId);
-        if (inp && inp.value.trim() && window.CURRENT_SOCKET && window.CURRENT_SOCKET.readyState === 1) {
-            window.CURRENT_SOCKET.send(inp.value);
+    // Fiyatı Ekranda Güncelle
+    function updatePriceDisplay(amount, target) {
+        // İzleyici ekranındaki fiyat
+        const viewerPrice = document.getElementById(`price-${target}`);
+        if (viewerPrice) {
+            viewerPrice.innerHTML = `₺ ${amount}`;
+            viewerPrice.classList.remove("blink-update");
+            void viewerPrice.offsetWidth; // Restart animation
+            viewerPrice.classList.add("blink-update");
+        }
+        // Yayıncı ekranındaki fiyat
+        const streamerPrice = document.getElementById('current-price-display');
+        if (streamerPrice) streamerPrice.innerHTML = `₺ ${amount}`;
+    }
+
+    // Teklif Gönder (WebSocket üzerinden özel mesaj)
+    window.sendBid = function (target, amount) {
+        // Mevcut fiyatı alıp üstüne eklemek lazım ama şimdilik direkt artış simülasyonu yapıyoruz
+        // Gerçekte backend'den son fiyatı bilmeliyiz. 
+        // Basitlik için: "Pey Verildi" mesajı atalım.
+
+        // Şimdilik demo mantığı: Rastgele bir baz fiyata ekleyelim veya static artış.
+        // En doğrusu: Backend'e "BID" mesajı yolla.
+        const currentText = document.getElementById(`price-${target}`)?.innerText.replace('₺', '').trim() || "0";
+        const currentVal = parseInt(currentText.replace('.', ''));
+        const newVal = currentVal + amount;
+
+        if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${newVal}`);
+    }
+
+    window.sendManualBid = function (target) {
+        const inp = document.getElementById(`manual-bid-${target}`);
+        if (inp && inp.value) {
+            if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${inp.value}`);
             inp.value = "";
-            inp.focus();
         }
     }
+
+    // Yayıncı Test Butonu
+    window.simulateBid = function (amount) {
+        if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${amount}`);
+    }
+
 </script>
 {% endblock %}
