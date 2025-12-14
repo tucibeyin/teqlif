@@ -307,38 +307,38 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(stream_dir, exist_ok=True)
     
     stream_path = f"{stream_dir}/stream.m3u8"
-    print(f"🎥 YAYIN BAŞLIYOR (HD): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (STABIL MOD): {user.username}")
 
-    # 🔥 DÜZELTİLMİŞ FFMPEG KOMUTU 🔥
-    # 'thread_queue_size' ve 'use_wallclock' GİRİŞ (-i) parametresinden önce olmalı.
+    # 🔥 STABİL YAYIN KOMUTU (SES/VİDEO SENKRONİZASYONLU) 🔥
     command = [
         "ffmpeg", 
+        "-f", "webm",             # Giriş formatı
         
-        # --- GİRİŞ AYARLARI (ÖNCE YAZILMALI) ---
-        "-thread_queue_size", "1024",       # Giriş kuyruğunu artır (Drop önler)
-        "-use_wallclock_as_timestamps", "1",# Zaman kaymasını (Drift) önler
-        "-f", "webm",                       # Giriş formatı
-        "-fflags", "+genpts+nobuffer",      # Zaman damgası üretimi
+        # --- GİRİŞ AYARLARI (ÖNEMLİ) ---
+        "-fflags", "+genpts+igndts", # Gelen zaman damgalarını yoksay, yenisini üret
         
-        "-i", "pipe:0",                     # GİRİŞ BURADA
+        "-i", "pipe:0",           # GİRİŞ (Buradan sonrası çıkış ayarlarıdır)
         
-        # --- ÇIKIŞ AYARLARI (SONRA YAZILMALI) ---
+        # --- VİDEO İŞLEME ---
         "-c:v", "libx264", 
-        "-preset", "superfast", 
+        "-preset", "veryfast",    # Superfast'ten bir tık daha kaliteli
         "-tune", "zerolatency",
         "-threads", "4",
-        "-r", "30",
-        "-g", "60",
-        "-b:v", "3000k",
-        "-maxrate", "3000k",
-        "-bufsize", "6000k",
+        "-r", "30",               # FPS
+        "-g", "60",               # Keyframe
+        "-b:v", "2500k",          # Bitrate
+        "-maxrate", "2500k",
+        "-bufsize", "5000k",
         "-pix_fmt", "yuv420p",
 
+        # --- SES İŞLEME (DÜZELTİLDİ) ---
         "-c:a", "aac", 
         "-b:a", "128k",
         "-ar", "44100",
         "-ac", "2",
+        "-af", "aresample=async=1", # 🔥 KRİTİK: Sesi videoya zorla senkronize et
 
+        # --- HLS ÇIKIŞ ---
         "-f", "hls", 
         "-hls_time", "2", 
         "-hls_list_size", "5",
@@ -359,7 +359,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                     process.stdin.write(data)
                     process.stdin.flush()
                 except BrokenPipeError:
-                    print("❌ HATA: FFmpeg borusu kırıldı.")
+                    print("❌ FFmpeg borusu kırıldı.")
                     break
     except Exception as e:
         print(f"❌ Yayın Hatası: {e}")
