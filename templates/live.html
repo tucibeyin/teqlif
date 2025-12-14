@@ -8,7 +8,11 @@
         {% if mode == 'broadcast' %}
         <video id="preview" autoplay muted playsinline style="transform: scaleX(-1);"></video>
         {% else %}
-        <video id="video" autoplay playsinline controls></video>
+        <video id="video" autoplay muted playsinline controls></video>
+
+        <div id="unmute-overlay" onclick="unmuteVideo()">
+            <i class="fa-solid fa-volume-xmark"></i> Sesi Açmak İçin Dokun
+        </div>
         {% endif %}
     </div>
 
@@ -23,9 +27,7 @@
     </div>
 
     <div class="bottom-overlay">
-        <div id="debug-log"
-            style="color: #ff5555; background:rgba(0,0,0,0.8); padding:5px; font-size:0.8rem; border-radius:5px; margin-bottom:5px; display:none;">
-        </div>
+        <div id="debug-log" style="display:none;"></div>
 
         <div id="chat-box" class="chat-flow"></div>
         <div class="chat-input-row">
@@ -40,6 +42,7 @@
         box-sizing: border-box;
     }
 
+    /* Ana Çerçeve */
     .insta-layout {
         position: relative;
         width: 100%;
@@ -65,9 +68,12 @@
     video {
         width: 100%;
         height: 100%;
-        object-fit: cover;
+        object-fit: contain;
     }
 
+    /* Görüntü sığsın */
+
+    /* Üst Kontroller */
     .top-overlay {
         position: absolute;
         top: 0;
@@ -82,24 +88,29 @@
     .live-tag {
         background: red;
         color: white;
-        padding: 5px;
+        padding: 5px 10px;
         font-weight: bold;
         font-size: 0.8rem;
         border-radius: 4px;
+        animation: pulse 2s infinite;
     }
 
+    /* ALT KISIM (SOHBET) - DÜZENLENDİ */
     .bottom-overlay {
         position: absolute;
-        bottom: 0;
+        bottom: 60px;
+        /* Player çubuğu için yer açtım (ÇAKIŞMAYI ÖNLER) */
         left: 0;
         width: 100%;
         z-index: 20;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
+        /* Arkası hafif siyah olsun ki yazılar okunsun */
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
         padding: 15px;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        max-height: 60%;
+        max-height: 50%;
+        /* Ekranın yarısını geçmesin */
     }
 
     .chat-flow {
@@ -114,7 +125,7 @@
     .chat-message {
         color: white;
         font-size: 0.9rem;
-        text-shadow: 1px 1px 1px black;
+        text-shadow: 1px 1px 2px black;
     }
 
     .chat-input-row {
@@ -124,7 +135,6 @@
 
     .chat-input-row input {
         flex: 1;
-        min-width: 0;
         background: rgba(255, 255, 255, 0.2);
         border: none;
         padding: 10px;
@@ -143,6 +153,7 @@
         cursor: pointer;
     }
 
+    /* Butonlar */
     .btn-insta {
         padding: 8px 20px;
         border: none;
@@ -160,11 +171,65 @@
         background: red;
         color: white;
     }
+
+    /* Sesi Aç Uyarısı */
+    #unmute-overlay {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        padding: 15px 25px;
+        border-radius: 30px;
+        border: 1px solid white;
+        cursor: pointer;
+        z-index: 30;
+        display: none;
+    }
+
+    /* Debug */
+    #debug-log {
+        color: #ff5555;
+        background: rgba(0, 0, 0, 0.8);
+        padding: 5px;
+        font-size: 0.8rem;
+        border-radius: 5px;
+        margin-bottom: 5px;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 1
+        }
+
+        50% {
+            opacity: 0.5
+        }
+
+        100% {
+            opacity: 1
+        }
+    }
 </style>
 
 <script>
     const MODE = "{{ mode }}";
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+
+    // --- SESİ AÇMA FONKSİYONU ---
+    function unmuteVideo() {
+        const vid = document.getElementById('video');
+        if (vid) {
+            vid.muted = false;
+            vid.volume = 1.0;
+            document.getElementById('unmute-overlay').style.display = 'none';
+        }
+    }
+
+    // --- DEBUG ---
+    function logError(msg) { document.getElementById('debug-log').style.display = 'block'; document.getElementById('debug-log').innerHTML += `❌ ${msg}<br>`; console.error(msg); }
+    function logInfo(msg) { console.log(msg); }
 
     // --- CHAT ---
     const chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat`);
@@ -185,7 +250,7 @@
 
         navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 } }, audio: true })
             .then(stream => { preview.srcObject = stream; window.localStream = stream; preview.volume = 0; })
-            .catch(err => console.log("Kamera Hatası: " + err));
+            .catch(err => logError("Kamera Hatası: " + err));
 
         window.startBroadcast = function () {
             broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
@@ -195,16 +260,17 @@
                 document.getElementById('btn-stop').style.display = 'inline-block';
                 document.querySelector('.live-tag').style.display = 'block';
 
-                // 1. KAYIT
+                // 1. KAYIT (HD)
                 let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                 if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
+
                 try {
                     mediaRecorder = new MediaRecorder(window.localStream, options);
                     mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
                     mediaRecorder.start(250);
-                } catch (e) { alert("Yayın hatası: " + e); }
+                } catch (e) { logError("MediaRecorder Hatası: " + e); }
 
-                // 2. FOTOĞRAF ÇEK VE GÖNDER (10 Saniyede bir) 📸
+                // 2. THUMBNAIL (10sn'de bir)
                 setInterval(() => {
                     if (broadcastWs.readyState === 1) {
                         const canvas = document.createElement('canvas');
@@ -219,6 +285,8 @@
                     }
                 }, 10000);
             };
+
+            broadcastWs.onerror = (err) => logError("Socket Bağlantı Hatası!");
         }
 
         window.stopBroadcast = function () {
@@ -232,14 +300,38 @@
     else if (MODE === 'watch') {
         var video = document.getElementById('video');
         var videoSrc = '/static/hls/stream.m3u8';
+
+        // Kullanıcı sesi açabilsin diye butonu göster
+        video.onvolumechange = () => { if (!video.muted) document.getElementById('unmute-overlay').style.display = 'none'; };
+
         if (Hls.isSupported()) {
             var hls = new Hls({ lowLatencyMode: true, liveSyncDurationCount: 1 });
-            hls.loadSource(videoSrc); hls.attachMedia(video);
-            hls.on(Hls.Events.MANIFEST_PARSED, () => video.play().catch(console.log));
+            hls.loadSource(videoSrc);
+            hls.attachMedia(video);
+
+            hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                // OTOMATİK OYNATMA (Sessiz modda)
+                var playPromise = video.play();
+                if (playPromise !== undefined) {
+                    playPromise.then(_ => {
+                        // Otomatik başladı
+                        document.getElementById('unmute-overlay').style.display = 'block';
+                    })
+                        .catch(error => {
+                            console.log("Oto-oynatma engellendi, etkileşim bekleniyor.");
+                        });
+                }
+            });
+
+            hls.on(Hls.Events.ERROR, function (event, data) {
+                if (data.fatal) {
+                    setTimeout(() => { hls.loadSource(videoSrc); hls.attachMedia(video); }, 1000);
+                }
+            });
         } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-            video.src = videoSrc; video.addEventListener('loadedmetadata', () => video.play());
+            video.src = videoSrc;
+            video.addEventListener('loadedmetadata', () => video.play());
         }
     }
 </script>
-
 {% endblock %}
