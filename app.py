@@ -4,7 +4,7 @@ import asyncio
 import json
 import random
 import requests
-import base64  # EKLENDİ
+import base64
 from datetime import datetime, timedelta
 from typing import Optional, List
 
@@ -38,7 +38,7 @@ ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24
 os.system("rm -rf static/hls/*")
 os.makedirs("static/hls", exist_ok=True)
 os.makedirs("static/css", exist_ok=True)
-os.makedirs("static/thumbnails", exist_ok=True) # Thumbnail klasörü
+os.makedirs("static/thumbnails", exist_ok=True)
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
@@ -59,9 +59,9 @@ class User(Base):
     created_at = Column(DateTime, default=datetime.utcnow)
     
     # --- YENİ EKLENEN VİTRİN ÖZELLİKLERİ ---
-    is_live = Column(Boolean, default=False)       # Yayında mı?
-    stream_title = Column(String, default="")      # Yayın Başlığı
-    thumbnail = Column(String, default="")         # Kapak Fotoğrafı
+    is_live = Column(Boolean, default=False)       
+    stream_title = Column(String, default="")      
+    thumbnail = Column(String, default="")         
 
 Base.metadata.create_all(bind=engine)
 
@@ -109,9 +109,21 @@ def send_welcome_email(to_email):
         requests.post(url, json=data, headers=headers)
     except: pass
 
+# --- WEBSOCKET MANAGER (BU EKSİKTİ!) ---
+class ConnectionManager:
+    def __init__(self):
+        self.active_connections: List[WebSocket] = []
+    async def connect(self, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections.append(websocket)
+    def disconnect(self, websocket: WebSocket):
+        self.active_connections.remove(websocket)
+    async def broadcast(self, message: str):
+        for connection in self.active_connections:
+            await connection.send_text(message)
+
 # --- ROTALAR ---
 
-# ANA SAYFA (GÜNCELLENDİ: index.html ve aktif yayınlar)
 @app.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
     active_streams = db.query(User).filter(User.is_live == True).all()
@@ -132,7 +144,6 @@ async def read_live(request: Request, user: Optional[User] = Depends(get_current
     if not user: return RedirectResponse(url="/login", status_code=303)
     return templates.TemplateResponse("live.html", {"request": request, "user": user})
 
-# AUTH ROTALARI
 @app.post("/auth/signup")
 async def signup(request: Request, email: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), db: Session = Depends(get_db)):
     if password != password_confirm: return templates.TemplateResponse("signup.html", {"request": request, "error": "Şifreler uyuşmuyor."})
@@ -169,7 +180,6 @@ async def logout():
     resp.delete_cookie("access_token")
     return resp
 
-# AYARLAR
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, user: Optional[User] = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/login", status_code=303)
@@ -183,7 +193,6 @@ async def update_profile(request: Request, username: str = Form(...), user: User
     user.username = username; db.commit()
     return templates.TemplateResponse("settings.html", {"request": request, "user": user, "success": "Güncellendi."})
 
-# --- YAYIN VE THUMBNAIL API (YENİ) ---
 @app.post("/broadcast/start")
 async def start_broadcast_api(title: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
@@ -210,7 +219,6 @@ async def upload_thumbnail(request: Request, user: User = Depends(get_current_us
         return {"status": "ok"}
     except: return {"status": "error"}
 
-# WEBSOCKET MANAGER
 manager = ConnectionManager()
 @app.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
