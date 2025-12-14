@@ -64,7 +64,10 @@ class User(Base):
     verification_code = Column(String)
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
+    
+    # Yayın Durumları
     is_live = Column(Boolean, default=False)       
+    is_auction_active = Column(Boolean, default=False) # 🔥 YENİ: Mezat modu açık mı?
     stream_title = Column(String, default="")      
     thumbnail = Column(String, default="")         
 
@@ -114,7 +117,7 @@ def send_welcome_email(to_email):
         requests.post(url, json=data, headers=headers)
     except: pass
 
-# --- ODALI CHAT VE SAYAÇ YÖNETİCİSİ ---
+# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[WebSocket]] = {}
@@ -124,38 +127,29 @@ class ConnectionManager:
         if room_name not in self.rooms:
             self.rooms[room_name] = []
         self.rooms[room_name].append(websocket)
-        # Biri girdiğinde sayıyı güncelle
         await self.broadcast_count(room_name)
 
     async def disconnect(self, websocket: WebSocket, room_name: str):
         if room_name in self.rooms:
             if websocket in self.rooms[room_name]:
                 self.rooms[room_name].remove(websocket)
-            # Biri çıktığında sayıyı güncelle
             await self.broadcast_count(room_name)
-            
             if not self.rooms[room_name]:
                 del self.rooms[room_name]
 
-    # Kişi sayısını herkese duyur
     async def broadcast_count(self, room_name: str):
         if room_name in self.rooms:
             count = len(self.rooms[room_name])
-            # Özel tipte mesaj gönderiyoruz: "type": "count"
             msg_payload = json.dumps({"type": "count", "val": count})
             for connection in self.rooms[room_name][:]:
-                try: 
-                    await connection.send_text(msg_payload)
-                except: 
-                    pass
+                try: await connection.send_text(msg_payload)
+                except: pass
 
     async def broadcast_to_room(self, message: str, room_name: str):
         if room_name in self.rooms:
             for connection in self.rooms[room_name][:]:
-                try: 
-                    await connection.send_text(message)
-                except Exception as e: 
-                    pass # Hata olursa disconnect zaten halledecek
+                try: await connection.send_text(message)
+                except: pass
 
 manager = ConnectionManager()
 
@@ -168,6 +162,7 @@ def cleanup_stream(username: str, db: Session):
         user = db.query(User).filter(User.username == username).first()
         if user:
             user.is_live = False
+            user.is_auction_active = False # Yayını kapatınca mezadı da kapat
             db.commit()
     except: pass
 
@@ -196,12 +191,19 @@ async def signup_page(request: Request): return templates.TemplateResponse("sign
 @app.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse(url="/login", status_code=303)
+    
+    # Yayıncının mezat durumunu öğrenelim
+    auction_status = False
+    if broadcaster:
+        target_user = db.query(User).filter(User.username == broadcaster).first()
+        if target_user: auction_status = target_user.is_auction_active
+
     if mode == "broadcast":
-        return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": []})
+        return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
         active_streams = db.query(User).filter(User.is_live == True).all()
         if broadcaster: active_streams.sort(key=lambda x: x.username != broadcaster)
-        return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "watch", "streams": active_streams})
+        return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "watch", "streams": active_streams, "auction_active": auction_status})
 
 @app.post("/auth/signup")
 async def signup(request: Request, email: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), db: Session = Depends(get_db)):
@@ -262,6 +264,18 @@ async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session
     cleanup_stream(user.username, db)
     return {"status": "stopped"}
 
+# 🔥 YENİ: Mezat Modunu Aç/Kapat
+@app.post("/broadcast/toggle_auction")
+async def toggle_auction(active: bool = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user: return {"status": "error"}
+    user.is_auction_active = active
+    db.commit()
+    # Soket üzerinden herkese durumu bildir
+    msg = json.dumps({"type": "auction_state", "active": active})
+    await manager.broadcast_to_room(msg, user.username) # İzleyicilere
+    await manager.broadcast_to_room(msg, "broadcast")   # Kendisine
+    return {"status": "ok", "active": active}
+
 @app.post("/broadcast/thumbnail")
 async def upload_thumbnail(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
@@ -294,7 +308,6 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         while True:
             data = await websocket.receive_text()
             if data.strip():
-                # Mesaj tipi: "chat"
                 msg_payload = json.dumps({"type": "chat", "user": username, "msg": data.replace("<", "&lt;")})
                 await manager.broadcast_to_room(msg_payload, room_name)
     except: 
@@ -323,34 +336,15 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(stream_dir, exist_ok=True)
     
     stream_path = f"{stream_dir}/stream.m3u8"
-    print(f"🎥 YAYIN BAŞLIYOR (STABIL MOD): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (STABIL): {user.username}")
 
-    # 🔥 STABİL YAYIN KOMUTU (SES/VİDEO SENKRONİZASYONLU)
+    # Stabil FFmpeg Komutu
     command = [
-        "ffmpeg", 
-        "-f", "webm",             
-        "-fflags", "+genpts+igndts", 
-        "-i", "pipe:0",          
-        "-c:v", "libx264", 
-        "-preset", "veryfast",   
-        "-tune", "zerolatency",
-        "-threads", "4",
-        "-r", "30",              
-        "-g", "60",               
-        "-b:v", "2500k",          
-        "-maxrate", "2500k",
-        "-bufsize", "5000k",
-        "-pix_fmt", "yuv420p",
-        "-c:a", "aac", 
-        "-b:a", "128k",
-        "-ar", "44100",
-        "-ac", "2",
-        "-af", "aresample=async=1", 
-        "-f", "hls", 
-        "-hls_time", "2", 
-        "-hls_list_size", "5",
-        "-hls_flags", "delete_segments+append_list+omit_endlist", 
-        "-hls_segment_type", "mpegts",
+        "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts", "-i", "pipe:0",
+        "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
+        "-threads", "4", "-r", "30", "-g", "60", "-b:v", "2500k", "-maxrate", "2500k", "-bufsize", "5000k", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2", "-af", "aresample=async=1",
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "5", "-hls_flags", "delete_segments+append_list+omit_endlist", "-hls_segment_type", "mpegts",
         stream_path 
     ]
     
@@ -361,14 +355,9 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         while True:
             data = await websocket.receive_bytes()
             if process.stdin:
-                try:
-                    process.stdin.write(data)
-                    process.stdin.flush()
-                except BrokenPipeError:
-                    print("❌ FFmpeg borusu kırıldı.")
-                    break
-    except Exception as e:
-        print(f"❌ Yayın Hatası: {e}")
+                try: process.stdin.write(data); process.stdin.flush()
+                except BrokenPipeError: break
+    except Exception as e: print(f"❌ Yayın Hatası: {e}")
     finally:
         print(f"🔌 Yayın Bitti: {user.username}")
         cleanup_stream(user.username, db)
