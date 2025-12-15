@@ -794,7 +794,7 @@
                 const v = document.getElementById(`video-${u}`);
                 if (e.isIntersecting) {
                     // Cache Busting
-                    const src = `/static/hls/${u}/stream.m3u8?t=${Date.now()}`;
+                    const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
                     const attemptPlay = () => {
                         v.play().catch(error => { console.log("Sesli bloklandı"); v.muted = true; v.play(); const hint = v.parentElement.querySelector('.tap-hint'); if (hint) hint.style.display = 'block'; });
                     };
