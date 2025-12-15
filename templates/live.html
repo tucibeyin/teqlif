@@ -808,6 +808,44 @@
     }
 
     function connectChat(target) {
+            if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
+            let sName = target === 'broadcast' ? "{{ user.username if user else 'anon' }}" : target;
+            const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${sName}`);
+            window.CURRENT_SOCKET = ws;
+
+            ws.onmessage = (e) => {
+                const d = JSON.parse(e.data);
+
+                // 🔥 1. BAŞLANGIÇ DURUMUNU YAKALA
+                if (d.type === 'init') {
+                    // Fiyatı ve Lideri Güncelle
+                    updatePriceDisplay(d.price, target, d.leader);
+                    return;
+                }
+
+                if (d.type === 'auction_state') {
+                    const layer = document.getElementById(target === 'broadcast' ? '' : `bid-layer-${target}`);
+                    const board = document.getElementById(target === 'broadcast' ? '' : `price-board-${target}`);
+                    if (layer) layer.style.display = d.active ? 'flex' : 'none';
+                    if (board) board.style.display = d.active ? 'flex' : 'none';
+                    return;
+                }
+                // ... (Sayaç ve Chat kodları aynı) ...
+
+                // 🔥 CHAT / TEKLİF MANTIĞI (Aynen korundu)
+                if (d.type === 'chat') {
+                    if (d.msg.startsWith("BID:")) {
+                        const amount = d.msg.split(":")[1];
+                        updatePriceDisplay(amount, target, d.user);
+                        // ... (Bubble oluşturma kodu) ...
+                    } else {
+                        // ... (Mesaj oluşturma kodu) ...
+                    }
+                }
+            };
+        }
+
+    function connectChat(target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let sName = target === 'broadcast' ? "{{ user.username if user else 'anon' }}" : target;
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${sName}`);

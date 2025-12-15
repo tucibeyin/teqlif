@@ -20,7 +20,7 @@ from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordBearer
 
 # VERİTABANI
-from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Table, ForeignKey
+from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Table, ForeignKey, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
 from passlib.context import CryptContext
@@ -76,6 +76,10 @@ class User(Base):
     is_auction_active = Column(Boolean, default=False)
     stream_title = Column(String, default="")      
     thumbnail = Column(String, default="")
+    
+    # Mezat Durumu (Kalıcı)
+    current_price = Column(Integer, default=0)
+    highest_bidder = Column(String, nullable=True)
 
     # Takip İlişkisi
     followed = relationship(
@@ -85,6 +89,16 @@ class User(Base):
         secondaryjoin=(followers_table.c.followed_id == id),
         backref="followers"
     )
+
+# Mesaj Geçmişi Modeli
+class StreamMessage(Base):
+    __tablename__ = "stream_messages"
+    id = Column(Integer, primary_key=True, index=True)
+    room_name = Column(String, index=True)
+    sender = Column(String)
+    message = Column(String)
+    is_bid = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
 
 Base.metadata.create_all(bind=engine)
 
@@ -167,7 +181,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# --- TEMİZLİK ---
+# --- TEMİZLİK ROBOTU ---
 active_processes: Dict[str, subprocess.Popen] = {}
 
 def cleanup_stream(username: str, db: Session):
@@ -175,21 +189,35 @@ def cleanup_stream(username: str, db: Session):
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
-            user.is_live = False; user.is_auction_active = False
-            db.commit()
-    except: pass
+            user.is_live = False
+            user.is_auction_active = False
+            
+            # 🔥 YAYIN BİTİNCE HER ŞEYİ SIFIRLA 🔥
+            user.current_price = 0
+            user.highest_bidder = None
+            db.commit() # Kullanıcıyı kaydet
+            
+            # 🔥 SOHBET GEÇMİŞİNİ SİL 🔥
+            db.query(StreamMessage).filter(StreamMessage.room_name == username).delete()
+            db.commit() # Silme işlemini onayla
+            
+    except Exception as e: 
+        print(f"Temizlik hatası: {e}")
+
     if username in active_processes:
         proc = active_processes[username]
         try: proc.terminate(); proc.wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
-    if os.path.exists(f"static/hls/{username}"): shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
+
+    folder_path = f"static/hls/{username}"
+    if os.path.exists(folder_path):
+        shutil.rmtree(folder_path, ignore_errors=True)
 
 # --- ROTALAR ---
 @app.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
     active_streams = db.query(User).filter(User.is_live == True).all()
-    # Takip edilenleri öne al
     if user:
         followed_ids = [u.id for u in user.followed]
         active_streams.sort(key=lambda x: x.id not in followed_ids)
@@ -210,7 +238,6 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
         active_streams = db.query(User).filter(User.is_live == True).all()
-        # Sıralama: Seçili > Takip Edilen > Diğerleri
         followed_ids = [u.id for u in user.followed]
         active_streams.sort(key=lambda x: (x.username == broadcaster, x.id in followed_ids), reverse=True)
         
@@ -224,7 +251,6 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
             "broadcaster": target_user
         })
 
-# --- AUTH ---
 @app.post("/auth/login")
 async def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
@@ -256,7 +282,6 @@ async def verify_code(request: Request, email: str = Form(...), code: str = Form
 async def logout():
     resp = RedirectResponse(url="/", status_code=303); resp.delete_cookie("access_token"); return resp
 
-# --- PROFİL & TAKİP ---
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, user: Optional[User] = Depends(get_current_user)):
     if not user: return RedirectResponse(url="/login", status_code=303)
@@ -281,7 +306,6 @@ async def follow_user(username: str = Form(...), user: User = Depends(get_curren
     else:
         user.followed.remove(target); db.commit(); return JSONResponse({"status": "unfollowed"})
 
-# --- YAYIN API ---
 @app.post("/broadcast/start")
 async def start_broadcast_api(title: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
@@ -315,25 +339,69 @@ async def upload_thumbnail(request: Request, user: User = Depends(get_current_us
         return {"status": "ok"}
     except: return {"status": "error"}
 
-# --- WEBSOCKETS ---
 @app.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Session = Depends(get_db)):
     await manager.connect(websocket, stream)
-    username = "Misafir"
+    
+    current_username = "Misafir"
     try:
         token = websocket.cookies.get("access_token")
         if token:
             payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
             u = db.query(User).filter(User.email == payload.get("sub")).first()
-            if u: username = u.username
+            if u: current_username = u.username
     except: pass
-    
+
+    # BAŞLANGIÇ BİLGİSİNİ GÖNDER
+    broadcaster = db.query(User).filter(User.username == stream).first()
+    if broadcaster:
+        # Fiyat ve Lider
+        init_msg = json.dumps({
+            "type": "init",
+            "price": broadcaster.current_price,
+            "leader": broadcaster.highest_bidder
+        })
+        await websocket.send_text(init_msg)
+
+        # Eski Mesajlar (Son 30)
+        last_msgs = db.query(StreamMessage).filter(StreamMessage.room_name == stream)\
+                      .order_by(desc(StreamMessage.created_at)).limit(30).all()
+        for msg in reversed(last_msgs):
+            hist_payload = json.dumps({
+                "type": "chat",
+                "user": msg.sender,
+                "msg": msg.message
+            })
+            await websocket.send_text(hist_payload)
+
     try:
         while True:
             data = await websocket.receive_text()
             if data.strip():
-                msg = json.dumps({"type": "chat", "user": username, "msg": data.replace("<", "&lt;")})
-                await manager.broadcast_to_room(msg, stream)
+                is_bid = data.startswith("BID:")
+                
+                # Veritabanına Kaydet
+                new_msg = StreamMessage(
+                    room_name=stream,
+                    sender=current_username,
+                    message=data.replace("<", "&lt;"),
+                    is_bid=is_bid
+                )
+                db.add(new_msg)
+                
+                # Teklifse Fiyatı Güncelle
+                if is_bid and broadcaster:
+                    try:
+                        amount = int(data.split(":")[1])
+                        if amount > broadcaster.current_price:
+                            broadcaster.current_price = amount
+                            broadcaster.highest_bidder = current_username
+                    except: pass
+                
+                db.commit()
+
+                msg_payload = json.dumps({"type": "chat", "user": current_username, "msg": data.replace("<", "&lt;")})
+                await manager.broadcast_to_room(msg_payload, stream)
     except: await manager.disconnect(websocket, stream)
 
 @app.websocket("/ws/broadcast")
@@ -354,27 +422,20 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(stream_dir, exist_ok=True)
     
     print(f"🎥 YAYIN: {user.username}")
-    # 🔥 YÜKSEK KALİTE (2.5 Mbps) & STABİL FFmpeg
+    
+    # YÜKSEK KALİTE (2.5 Mbps) & DÜŞÜK GECİKME
     cmd = [
         "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
-        "-c:v", "libx264", 
-        "-preset", "veryfast", # Kalite/Hız dengesi
-        "-profile:v", "high",  # HD Profil
-        "-tune", "zerolatency",
+        "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "high", "-tune", "zerolatency",
         "-threads", "0", "-r", "30", "-g", "60",
-        
-        "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "3000k", # Buffer optimize edildi
-        "-pix_fmt", "yuv420p",
-        
-        "-c:a", "aac", "-b:a", "160k", # Yüksek ses kalitesi
-        "-ar", "44100", "-ac", "2", "-af", "aresample=async=1000",
-        
+        "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "3000k", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-ac", "2", "-af", "aresample=async=1000",
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "5", 
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start", "-hls_segment_type", "mpegts",
-        
         "-max_muxing_queue_size", "1024", "-loglevel", "error",
         f"{stream_dir}/stream.m3u8"
     ]
+    
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = proc
 
