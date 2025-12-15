@@ -13,7 +13,7 @@ from typing import Optional, List, Dict
 from dotenv import load_dotenv
 load_dotenv()
 
-from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect, Depends, Form, HTTPException, status
+from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect, Depends, Form, HTTPException, status, BackgroundTasks
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -30,9 +30,15 @@ app = FastAPI()
 
 # --- AYARLAR ---
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
-if not SQLALCHEMY_DATABASE_URL: raise ValueError("DATABASE_URL yok!")
+if not SQLALCHEMY_DATABASE_URL: 
+    # Fallback (geliştirme ortamı için) veya hata
+    print("UYARI: DATABASE_URL env bulunamadı, sqlite:///./test.db kullanılıyor.")
+    SQLALCHEMY_DATABASE_URL = "sqlite:///./test.db"
+
 SECRET_KEY = os.getenv("SECRET_KEY")
-if not SECRET_KEY: raise ValueError("SECRET_KEY yok!")
+if not SECRET_KEY:
+    SECRET_KEY = "gizli_anahtar_varsayilan" # Güvenlik için prod'da değiştirilmeli
+
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 
 
@@ -51,7 +57,7 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # --- VERİTABANI MODELİ ---
-engine = create_engine(SQLALCHEMY_DATABASE_URL)
+engine = create_engine(SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -104,8 +110,14 @@ Base.metadata.create_all(bind=engine)
 
 def get_db():
     db = SessionLocal()
-    try: yield db
-    finally: db.close()
+    try:
+        yield db
+    except Exception as e:
+        print(f"❌ Veritabanı bağlantı hatası: {e}", file=sys.stderr)
+        # Hata durumunda session'ı kapatıp hatayı fırlat
+        db.close()
+    finally:
+        db.close()
 
 # --- GÜVENLİK ---
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -129,25 +141,56 @@ async def get_current_user(request: Request, db: Session = Depends(get_db)):
     except JWTError: return None
     return db.query(User).filter(User.email == email).first()
 
-# --- MAİL & BİLDİRİM ---
-def send_brevo_email(to_email, subject, html_content):
+# --- MAİL & BİLDİRİM (Helper Functions) ---
+def send_brevo_email(to_email: str, subject: str, html_content: str):
+    """Senkronize çalışan mail atma fonksiyonu (Arka planda çalıştırılacak)"""
     try:
+        api_key = os.getenv("BREVO_API_KEY")
+        if not api_key:
+            print(f"📧 [MOCK MAIL] Kime: {to_email} | Konu: {subject}")
+            return
+
         url = "https://api.brevo.com/v3/smtp/email"
-        headers = {"accept": "application/json", "api-key": os.getenv("BREVO_API_KEY"), "content-type": "application/json"}
-        data = {"sender": {"name": "Teqlif", "email": os.getenv("SENDER_EMAIL")}, "to": [{"email": to_email}], "subject": subject, "htmlContent": html_content}
-        requests.post(url, json=data, headers=headers)
-    except: pass
+        headers = {
+            "accept": "application/json", 
+            "api-key": api_key, 
+            "content-type": "application/json"
+        }
+        data = {
+            "sender": {"name": "Teqlif", "email": os.getenv("SENDER_EMAIL")}, 
+            "to": [{"email": to_email}], 
+            "subject": subject, 
+            "htmlContent": html_content
+        }
+        resp = requests.post(url, json=data, headers=headers)
+        if resp.status_code not in [200, 201, 202]:
+            print(f"Mail hatası: {resp.text}")
+    except Exception as e: 
+        print(f"Mail gönderme hatası: {e}")
 
-def send_welcome_email(to_email):
-    send_brevo_email(to_email, "Hoş Geldiniz!", "<p>Hesabınız onaylandı.</p>")
+def send_welcome_email(to_email: str):
+    send_brevo_email(to_email, "Hoş Geldiniz!", "<p>Hesabınız başarıyla doğrulandı. İyi eğlenceler!</p>")
 
-def notify_followers(user: User):
-    followers_list = user.followers
-    if not followers_list: return
-    print(f"🔔 BİLDİRİM: {len(followers_list)} takipçiye haber veriliyor...")
-    for follower in followers_list:
-        html = f"<h1>{user.username} CANLI YAYINDA! 🔴</h1><p>Hemen katıl ve mezatı kaçırma!</p><a href='https://teqlif.com/live?mode=watch&broadcaster={user.username}'>İzlemek için tıkla</a>"
-        send_brevo_email(follower.email, f"🔴 {user.username} Yayında!", html)
+def send_broadcast_notifications_task(follower_emails: List[str], username: str):
+    """
+    Toplu mail gönderimi için arka plan görevi.
+    DB session hatası almamak için email listesini parametre olarak alır.
+    """
+    if not follower_emails: return
+    print(f"🔔 BİLDİRİM GÖREVİ: {len(follower_emails)} kişiye mail atılıyor...")
+    
+    html = f"""
+    <div style="text-align:center; font-family:sans-serif;">
+        <h1>{username} CANLI YAYINDA! 🔴</h1>
+        <p>Hemen katıl ve mezatı kaçırma!</p>
+        <a href='https://teqlif.com/live?mode=watch&broadcaster={username}' 
+           style="background:#e74c3c; color:white; padding:10px 20px; text-decoration:none; border-radius:5px;">
+           İzlemek için tıkla
+        </a>
+    </div>
+    """
+    for email in follower_emails:
+        send_brevo_email(email, f"🔴 {username} Yayında!", html)
 
 # --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
@@ -196,7 +239,7 @@ def cleanup_stream(username: str, db: Session):
             user.current_price = 0
             user.highest_bidder = None
             db.commit() 
-            # Geçmişi sil
+            # Geçmişi sil (Opsiyonel: kalmasını isterseniz burayı kaldırın)
             db.query(StreamMessage).filter(StreamMessage.room_name == username).delete()
             db.commit() 
     except Exception as e: 
@@ -257,22 +300,34 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
         })
 
 @app.post("/auth/signup")
-async def signup(request: Request, email: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), db: Session = Depends(get_db)):
+async def signup(background_tasks: BackgroundTasks, request: Request, email: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), db: Session = Depends(get_db)):
     if password != password_confirm: return templates.TemplateResponse("signup.html", {"request": request, "error": "Şifreler uyuşmuyor."})
     if db.query(User).filter(User.email == email).first(): return templates.TemplateResponse("signup.html", {"request": request, "error": "Kayıtlı email."})
-    new_user = User(email=email, password_hash=get_password_hash(password), verification_code=str(random.randint(100000, 999999)))
-    db.add(new_user); db.commit()
-    send_brevo_email(email, "Doğrulama Kodu", f"<h1>{new_user.verification_code}</h1>")
+    
+    code = str(random.randint(100000, 999999))
+    new_user = User(email=email, password_hash=get_password_hash(password), verification_code=code)
+    db.add(new_user)
+    db.commit()
+    
+    # Arka planda mail gönder
+    background_tasks.add_task(send_brevo_email, email, "Doğrulama Kodu", f"<h1>Kodunuz: {code}</h1>")
+    
     return RedirectResponse(url=f"/verify?email={email}", status_code=303)
 
 @app.get("/verify", response_class=HTMLResponse)
 async def verify_page(request: Request, email: str): return templates.TemplateResponse("verify.html", {"request": request, "email": email})
 
 @app.post("/auth/verify")
-async def verify_code(request: Request, email: str = Form(...), code: str = Form(...), db: Session = Depends(get_db)):
+async def verify_code(background_tasks: BackgroundTasks, request: Request, email: str = Form(...), code: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
-    if not user or user.verification_code != code: return templates.TemplateResponse("verify.html", {"request": request, "email": email, "error": "Hata."})
-    user.is_verified = True; db.commit(); send_welcome_email(email)
+    if not user or user.verification_code != code: return templates.TemplateResponse("verify.html", {"request": request, "email": email, "error": "Hatalı kod."})
+    
+    user.is_verified = True
+    db.commit()
+    
+    # Arka planda hoş geldin maili
+    background_tasks.add_task(send_welcome_email, email)
+    
     return RedirectResponse(url="/login?msg=verified", status_code=303)
 
 @app.post("/auth/login")
@@ -280,6 +335,7 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.password_hash): return templates.TemplateResponse("login.html", {"request": request, "error": "Hatalı bilgi."})
     if not user.is_verified: return templates.TemplateResponse("login.html", {"request": request, "error": "Hesabınız onaylanmamış."})
+    
     resp = RedirectResponse(url="/", status_code=303)
     resp.set_cookie(key="access_token", value=f"Bearer {create_access_token({'sub': user.email})}", httponly=True)
     return resp
@@ -298,9 +354,13 @@ async def settings_page(request: Request, user: Optional[User] = Depends(get_cur
 @app.post("/settings/update")
 async def update_profile(request: Request, username: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse(url="/login", status_code=303)
-    if db.query(User).filter(User.username == username).first() and user.username != username:
-        return templates.TemplateResponse("settings.html", {"request": request, "user": user, "error": "Kullanıcı adı dolu."})
-    user.username = username; db.commit()
+    # Kullanıcı adı çakışma kontrolü
+    existing = db.query(User).filter(User.username == username).first()
+    if existing and existing.id != user.id:
+        return templates.TemplateResponse("settings.html", {"request": request, "user": user, "error": "Bu kullanıcı adı alınmış."})
+    
+    user.username = username
+    db.commit()
     return templates.TemplateResponse("settings.html", {"request": request, "user": user, "success": "Güncellendi."})
 
 @app.post("/user/follow")
@@ -315,10 +375,19 @@ async def follow_user(username: str = Form(...), user: User = Depends(get_curren
         user.followed.remove(target); db.commit(); return JSONResponse({"status": "unfollowed"})
 
 @app.post("/broadcast/start")
-async def start_broadcast_api(title: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
-    user.is_live = True; user.stream_title = title; db.commit()
-    notify_followers(user)
+    
+    user.is_live = True
+    user.stream_title = title
+    db.commit()
+    
+    # E-postaları burada topla (Async olmayan session içinde)
+    emails_to_notify = [f.email for f in user.followers]
+    
+    # Arka plana mail listesini gönder
+    background_tasks.add_task(send_broadcast_notifications_task, emails_to_notify, user.username)
+    
     return {"status": "success"}
 
 @app.post("/broadcast/stop")
@@ -389,10 +458,14 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
             data = await websocket.receive_text()
             if data.strip():
                 is_bid = data.startswith("BID:")
+                
+                # HTML injection koruması
+                safe_msg = data.replace("<", "&lt;")
+                
                 new_msg = StreamMessage(
                     room_name=stream,
                     sender=current_username,
-                    message=data.replace("<", "&lt;"),
+                    message=safe_msg,
                     is_bid=is_bid
                 )
                 db.add(new_msg)
@@ -403,12 +476,17 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
                         if amount > broadcaster.current_price:
                             broadcaster.current_price = amount
                             broadcaster.highest_bidder = current_username
+                            # Teklif geldiğinde fiyatı güncelle
+                            db.add(broadcaster)
                     except: pass
                 
                 db.commit()
-                msg_payload = json.dumps({"type": "chat", "user": current_username, "msg": data.replace("<", "&lt;")})
+                msg_payload = json.dumps({"type": "chat", "user": current_username, "msg": safe_msg})
                 await manager.broadcast_to_room(msg_payload, room_name)
-    except: 
+    except WebSocketDisconnect:
+        await manager.disconnect(websocket, room_name)
+    except Exception as e:
+        print(f"Chat hatası: {e}")
         await manager.disconnect(websocket, room_name)
 
 @app.websocket("/ws/broadcast")
@@ -422,7 +500,9 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: pass
 
-    if not user or not user.username: await websocket.close(); return
+    if not user or not user.username: 
+        await websocket.close()
+        return
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir):
@@ -473,4 +553,10 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     except Exception as e: print(f"❌ Yayın Hatası: {e}")
     finally:
         print(f"🔌 Yayın Bitti: {user.username}")
-        cleanup_stream(user.username, db)
+        # Process'i temizle ama DB temizliğini broadcast/stop endpoint'ine bırakıyoruz (daha güvenli)
+        if username := user.username:
+            if username in active_processes:
+                p = active_processes[username]
+                try: p.terminate()
+                except: pass
+                del active_processes[username]

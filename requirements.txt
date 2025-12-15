@@ -4,3 +4,8 @@ jinja2
 python-multipart
 websockets
 aiofiles
+sqlalchemy
+passlib[bcrypt]
+python-jose
+python-dotenv
+requests
