@@ -14,12 +14,13 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect, Depends, Form, HTTPException, status
-from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse
+# JSONResponse'u ekledik, bazı API çağrıları için gerekli
+from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordBearer
 
-# VERİTABANI
+# VERİTABANI: İlişkisel tablolar ve sıralama için gerekli importlar eklendi
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Table, ForeignKey, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
@@ -55,7 +56,7 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Takipçiler Tablosu (Many-to-Many)
+# Takipçiler Tablosu (Many-to-Many ilişkisi için gerekli)
 followers_table = Table('followers', Base.metadata,
     Column('follower_id', Integer, ForeignKey('users.id'), primary_key=True),
     Column('followed_id', Integer, ForeignKey('users.id'), primary_key=True)
@@ -77,7 +78,7 @@ class User(Base):
     stream_title = Column(String, default="")      
     thumbnail = Column(String, default="")
     
-    # Mezat Durumu (Kalıcı)
+    # 🔥 KALICI MEZAT DURUMU (Önceki adımda eklenmişti)
     current_price = Column(Integer, default=0)
     highest_bidder = Column(String, nullable=True)
 
@@ -90,7 +91,7 @@ class User(Base):
         backref="followers"
     )
 
-# Mesaj Geçmişi Modeli
+# 🔥 KALICI SOHBET VE TEKLİF GEÇMİŞİ (Önceki adımda eklenmişti)
 class StreamMessage(Base):
     __tablename__ = "stream_messages"
     id = Column(Integer, primary_key=True, index=True)
@@ -137,6 +138,10 @@ def send_brevo_email(to_email, subject, html_content):
         data = {"sender": {"name": "Teqlif", "email": os.getenv("SENDER_EMAIL")}, "to": [{"email": to_email}], "subject": subject, "htmlContent": html_content}
         requests.post(url, json=data, headers=headers)
     except: pass
+
+def send_welcome_email(to_email):
+    # Bu fonksiyon sadece doğru mail içeriği ile send_brevo_email'i çağırır
+    send_brevo_email(to_email, "Hoş Geldiniz!", "<p>Hesabınız onaylandı.</p>")
 
 def notify_followers(user: User):
     """Yayın açıldığında takipçilere mail atar"""
@@ -192,14 +197,14 @@ def cleanup_stream(username: str, db: Session):
             user.is_live = False
             user.is_auction_active = False
             
-            # 🔥 YAYIN BİTİNCE HER ŞEYİ SIFIRLA 🔥
+            # 🔥 YAYIN BİTİNCE MEZAT BİLGİLERİNİ SIFIRLA 🔥 (Önceki adımda düzeltildi)
             user.current_price = 0
             user.highest_bidder = None
-            db.commit() # Kullanıcıyı kaydet
+            db.commit() 
             
-            # 🔥 SOHBET GEÇMİŞİNİ SİL 🔥
+            # 🔥 SOHBET GEÇMİŞİNİ SİL 🔥 (Önceki adımda düzeltildi)
             db.query(StreamMessage).filter(StreamMessage.room_name == username).delete()
-            db.commit() # Silme işlemini onayla
+            db.commit() 
             
     except Exception as e: 
         print(f"Temizlik hatası: {e}")
@@ -220,11 +225,22 @@ async def read_home(request: Request, db: Session = Depends(get_db), user: Optio
     active_streams = db.query(User).filter(User.is_live == True).all()
     if user:
         followed_ids = [u.id for u in user.followed]
+        # Takip edilen yayınları öne çıkar
         active_streams.sort(key=lambda x: x.id not in followed_ids)
     return templates.TemplateResponse("index.html", {"request": request, "user": user, "streams": active_streams})
 
+# 🔥 HATA GİDERİLDİ: EKSİK OLAN LOGIN GET ROTASI EKLENDİ! 🔥
+@app.get("/login", response_class=HTMLResponse)
+async def login_page(request: Request): 
+    return templates.TemplateResponse("login.html", {"request": request})
+
+@app.get("/signup", response_class=HTMLResponse)
+async def signup_page(request: Request): 
+    return templates.TemplateResponse("signup.html", {"request": request})
+
 @app.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Kullanıcı giriş yapmamışsa /login'e yönlendir (Log'daki 303 bu yüzden gelmişti)
     if not user: return RedirectResponse(url="/login", status_code=303)
     
     target_user = None
@@ -239,6 +255,7 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
     else:
         active_streams = db.query(User).filter(User.is_live == True).all()
         followed_ids = [u.id for u in user.followed]
+        # İzlenen yayını en öne, takip edilenleri sonra sırala
         active_streams.sort(key=lambda x: (x.username == broadcaster, x.id in followed_ids), reverse=True)
         
         return templates.TemplateResponse("live.html", {
@@ -250,14 +267,6 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
             "is_following": is_following,
             "broadcaster": target_user
         })
-
-@app.post("/auth/login")
-async def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
-    user = db.query(User).filter(User.email == email).first()
-    if not user or not verify_password(password, user.password_hash): return templates.TemplateResponse("login.html", {"request": request, "error": "Hatalı bilgi."})
-    resp = RedirectResponse(url="/", status_code=303)
-    resp.set_cookie(key="access_token", value=f"Bearer {create_access_token({'sub': user.email})}", httponly=True)
-    return resp
 
 @app.post("/auth/signup")
 async def signup(request: Request, email: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), db: Session = Depends(get_db)):
@@ -278,9 +287,20 @@ async def verify_code(request: Request, email: str = Form(...), code: str = Form
     user.is_verified = True; db.commit(); send_welcome_email(email)
     return RedirectResponse(url="/login?msg=verified", status_code=303)
 
+@app.post("/auth/login")
+async def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user or not verify_password(password, user.password_hash): return templates.TemplateResponse("login.html", {"request": request, "error": "Hatalı bilgi."})
+    if not user.is_verified: return templates.TemplateResponse("login.html", {"request": request, "error": "Onaylayın."})
+    resp = RedirectResponse(url="/", status_code=303)
+    resp.set_cookie(key="access_token", value=f"Bearer {create_access_token({'sub': user.email})}", httponly=True)
+    return resp
+
 @app.get("/logout")
 async def logout():
-    resp = RedirectResponse(url="/", status_code=303); resp.delete_cookie("access_token"); return resp
+    resp = RedirectResponse(url="/", status_code=303)
+    resp.delete_cookie("access_token")
+    return resp
 
 @app.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, user: Optional[User] = Depends(get_current_user)):
@@ -306,11 +326,12 @@ async def follow_user(username: str = Form(...), user: User = Depends(get_curren
     else:
         user.followed.remove(target); db.commit(); return JSONResponse({"status": "unfollowed"})
 
+
 @app.post("/broadcast/start")
 async def start_broadcast_api(title: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
     user.is_live = True; user.stream_title = title; db.commit()
-    notify_followers(user)
+    notify_followers(user) # Takipçi bildirimi
     return {"status": "success"}
 
 @app.post("/broadcast/stop")
@@ -322,26 +343,31 @@ async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session
 @app.post("/broadcast/toggle_auction")
 async def toggle_auction(active: bool = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
-    user.is_auction_active = active; db.commit()
+    user.is_auction_active = active
+    db.commit()
     msg = json.dumps({"type": "auction_state", "active": active})
-    await manager.broadcast_to_room(msg, user.username)
-    await manager.broadcast_to_room(msg, "broadcast")
-    return {"status": "ok"}
+    await manager.broadcast_to_room(msg, user.username) 
+    await manager.broadcast_to_room(msg, "broadcast")   
+    return {"status": "ok", "active": active}
 
 @app.post("/broadcast/thumbnail")
 async def upload_thumbnail(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user: return {"status": "error"}
     try:
         data = await request.json()
-        with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f:
-            f.write(base64.b64decode(data['image'].split(",")[1]))
-        user.thumbnail = f"/static/thumbnails/thumb_{user.username}.jpg?t={data['timestamp']}"
+        image_data = data['image'].split(",")[1]
+        filename = f"thumb_{user.username}.jpg"
+        file_path = f"static/thumbnails/{filename}"
+        with open(file_path, "wb") as f: f.write(base64.b64decode(image_data))
+        user.thumbnail = f"/static/thumbnails/{filename}?t={data['timestamp']}"
         db.commit()
         return {"status": "ok"}
     except: return {"status": "error"}
 
 @app.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Session = Depends(get_db)):
-    await manager.connect(websocket, stream)
+    room_name = stream
+    await manager.connect(websocket, room_name)
     
     current_username = "Misafir"
     try:
@@ -352,10 +378,10 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
             if u: current_username = u.username
     except: pass
 
-    # BAŞLANGIÇ BİLGİSİNİ GÖNDER
+    # 🔥 BAŞLANGIÇ BİLGİSİ VE GEÇMİŞ GÖNDERİMİ 🔥 (Önceki adımda eklenmişti)
     broadcaster = db.query(User).filter(User.username == stream).first()
     if broadcaster:
-        # Fiyat ve Lider
+        # 1. INIT (Fiyat ve Lider)
         init_msg = json.dumps({
             "type": "init",
             "price": broadcaster.current_price,
@@ -363,7 +389,7 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         })
         await websocket.send_text(init_msg)
 
-        # Eski Mesajlar (Son 30)
+        # 2. Eski Mesajlar (Son 30)
         last_msgs = db.query(StreamMessage).filter(StreamMessage.room_name == stream)\
                       .order_by(desc(StreamMessage.created_at)).limit(30).all()
         for msg in reversed(last_msgs):
@@ -401,12 +427,14 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
                 db.commit()
 
                 msg_payload = json.dumps({"type": "chat", "user": current_username, "msg": data.replace("<", "&lt;")})
-                await manager.broadcast_to_room(msg_payload, stream)
-    except: await manager.disconnect(websocket, stream)
+                await manager.broadcast_to_room(msg_payload, room_name)
+    except: 
+        await manager.disconnect(websocket, room_name)
 
 @app.websocket("/ws/broadcast")
 async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
+    
     user = None
     try:
         token = websocket.cookies.get("access_token")
@@ -415,35 +443,41 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: pass
 
-    if not user: await websocket.close(); return
+    if not user or not user.username:
+        await websocket.close()
+        return
 
     stream_dir = f"static/hls/{user.username}"
-    if os.path.exists(stream_dir): shutil.rmtree(stream_dir, ignore_errors=True)
+    if os.path.exists(stream_dir):
+        try: shutil.rmtree(stream_dir, ignore_errors=True)
+        except: pass
     os.makedirs(stream_dir, exist_ok=True)
     
-    print(f"🎥 YAYIN: {user.username}")
-    
-    # YÜKSEK KALİTE (2.5 Mbps) & DÜŞÜK GECİKME
-    cmd = [
-        "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
-        "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "high", "-tune", "zerolatency",
-        "-threads", "0", "-r", "30", "-g", "60",
-        "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "3000k", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-ac", "2", "-af", "aresample=async=1000",
+    stream_path = f"{stream_dir}/stream.m3u8"
+    print(f"🎥 YAYIN BAŞLIYOR (STABIL): {user.username}")
+
+    # FFmpeg Komutu (Önceki kararlı sürümü kullandık)
+    command = [
+        "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts", "-i", "pipe:0",
+        "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
+        "-threads", "4", "-r", "30", "-g", "60", 
+        "-b:v", "2500k", "-maxrate", "2500k", "-bufsize", "5000k", "-pix_fmt", "yuv420p",
+        "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2", "-af", "aresample=async=1",
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "5", 
-        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start", "-hls_segment_type", "mpegts",
-        "-max_muxing_queue_size", "1024", "-loglevel", "error",
-        f"{stream_dir}/stream.m3u8"
+        "-hls_flags", "delete_segments+append_list+omit_endlist", "-hls_segment_type", "mpegts",
+        stream_path 
     ]
     
-    proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=sys.stderr)
-    active_processes[user.username] = proc
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
+    active_processes[user.username] = process
 
     try:
         while True:
             data = await websocket.receive_bytes()
-            if proc.stdin: 
-                try: proc.stdin.write(data); proc.stdin.flush()
-                except: break
-    except: pass
-    finally: cleanup_stream(user.username, db)
+            if process.stdin:
+                try: process.stdin.write(data); process.stdin.flush()
+                except BrokenPipeError: break
+    except Exception as e: print(f"❌ Yayın Hatası: {e}")
+    finally:
+        print(f"🔌 Yayın Bitti: {user.username}")
+        cleanup_stream(user.username, db)
