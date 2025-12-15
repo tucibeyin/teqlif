@@ -77,13 +77,13 @@ class User(Base):
     stream_title = Column(String, default="")      
     thumbnail = Column(String, default="")
 
-    # Takip İlişkisi: 'followed' = benim takip ettiklerim
+    # Takip İlişkisi
     followed = relationship(
         "User", 
         secondary=followers_table,
         primaryjoin=(followers_table.c.follower_id == id),
         secondaryjoin=(followers_table.c.followed_id == id),
-        backref="followers" # Beni takip edenler user.followers olarak gelir
+        backref="followers"
     )
 
 Base.metadata.create_all(bind=engine)
@@ -126,7 +126,7 @@ def send_brevo_email(to_email, subject, html_content):
 
 def notify_followers(user: User):
     """Yayın açıldığında takipçilere mail atar"""
-    followers_list = user.followers # Beni takip edenler
+    followers_list = user.followers
     if not followers_list: return
     
     print(f"🔔 BİLDİRİM: {len(followers_list)} takipçiye haber veriliyor...")
@@ -134,7 +134,7 @@ def notify_followers(user: User):
         html = f"<h1>{user.username} CANLI YAYINDA! 🔴</h1><p>Hemen katıl ve mezatı kaçırma!</p><a href='https://teqlif.com/live?mode=watch&broadcaster={user.username}'>İzlemek için tıkla</a>"
         send_brevo_email(follower.email, f"🔴 {user.username} Yayında!", html)
 
-# --- SOCKET ---
+# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[WebSocket]] = {}
@@ -189,47 +189,30 @@ def cleanup_stream(username: str, db: Session):
 @app.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
     active_streams = db.query(User).filter(User.is_live == True).all()
-    
-    # Takip edilenleri öne al (Sorting)
+    # Takip edilenleri öne al
     if user:
         followed_ids = [u.id for u in user.followed]
-        # x.id followed listesinde DEĞİLSE (False=0, True=1) -> Sort mantığıyla False (0) öne gelir.
-        # Tam tersi mantık: ID listede VARSA öne gelmeli.
-        # Python sort stable'dır. True (1) > False (0). key=is_following (True) -> sona atar.
-        # O yüzden `not in` kullanıyoruz ki True olanlar (takip edilmeyenler) 1 olsun ve sona gitsin.
         active_streams.sort(key=lambda x: x.id not in followed_ids)
-
     return templates.TemplateResponse("index.html", {"request": request, "user": user, "streams": active_streams})
 
 @app.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse(url="/login", status_code=303)
     
-    # Yayıncının durumu
     target_user = None
     is_following = False
     
     if broadcaster:
         target_user = db.query(User).filter(User.username == broadcaster).first()
-        if target_user:
-            # Takip ediyor muyum?
-            if target_user in user.followed: is_following = True
+        if target_user and target_user in user.followed: is_following = True
 
     if mode == "broadcast":
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
         active_streams = db.query(User).filter(User.is_live == True).all()
-        # Sıralama: Seçili yayıncı en başta, sonra takip edilenler, sonra diğerleri
+        # Sıralama: Seçili > Takip Edilen > Diğerleri
         followed_ids = [u.id for u in user.followed]
-        
-        def sort_key(stream_user):
-            is_selected = (stream_user.username == broadcaster)
-            is_followed = (stream_user.id in followed_ids)
-            # Tuple sıralaması: (Selected?, Followed?) -> False < True. 
-            # Reverse=True ile sıralarsak: True (1) en başa gelir.
-            return (is_selected, is_followed)
-
-        active_streams.sort(key=sort_key, reverse=True)
+        active_streams.sort(key=lambda x: (x.username == broadcaster, x.id in followed_ids), reverse=True)
         
         return templates.TemplateResponse("live.html", {
             "request": request, 
@@ -237,11 +220,11 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
             "mode": "watch", 
             "streams": active_streams, 
             "auction_active": target_user.is_auction_active if target_user else False,
-            "is_following": is_following, # Frontend'e gönder
+            "is_following": is_following,
             "broadcaster": target_user
         })
 
-# --- AUTH & USER ---
+# --- AUTH ---
 @app.post("/auth/login")
 async def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
@@ -250,11 +233,43 @@ async def login(request: Request, email: str = Form(...), password: str = Form(.
     resp.set_cookie(key="access_token", value=f"Bearer {create_access_token({'sub': user.email})}", httponly=True)
     return resp
 
+@app.post("/auth/signup")
+async def signup(request: Request, email: str = Form(...), password: str = Form(...), password_confirm: str = Form(...), db: Session = Depends(get_db)):
+    if password != password_confirm: return templates.TemplateResponse("signup.html", {"request": request, "error": "Şifreler uyuşmuyor."})
+    if db.query(User).filter(User.email == email).first(): return templates.TemplateResponse("signup.html", {"request": request, "error": "Kayıtlı email."})
+    new_user = User(email=email, password_hash=get_password_hash(password), verification_code=str(random.randint(100000, 999999)))
+    db.add(new_user); db.commit()
+    send_brevo_email(email, "Doğrulama Kodu", f"<h1>{new_user.verification_code}</h1>")
+    return RedirectResponse(url=f"/verify?email={email}", status_code=303)
+
+@app.get("/verify", response_class=HTMLResponse)
+async def verify_page(request: Request, email: str): return templates.TemplateResponse("verify.html", {"request": request, "email": email})
+
+@app.post("/auth/verify")
+async def verify_code(request: Request, email: str = Form(...), code: str = Form(...), db: Session = Depends(get_db)):
+    user = db.query(User).filter(User.email == email).first()
+    if not user or user.verification_code != code: return templates.TemplateResponse("verify.html", {"request": request, "email": email, "error": "Hata."})
+    user.is_verified = True; db.commit(); send_welcome_email(email)
+    return RedirectResponse(url="/login?msg=verified", status_code=303)
+
 @app.get("/logout")
 async def logout():
     resp = RedirectResponse(url="/", status_code=303); resp.delete_cookie("access_token"); return resp
 
-# --- TAKİP SİSTEMİ API ---
+# --- PROFİL & TAKİP ---
+@app.get("/settings", response_class=HTMLResponse)
+async def settings_page(request: Request, user: Optional[User] = Depends(get_current_user)):
+    if not user: return RedirectResponse(url="/login", status_code=303)
+    return templates.TemplateResponse("settings.html", {"request": request, "user": user})
+
+@app.post("/settings/update")
+async def update_profile(request: Request, username: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user: return RedirectResponse(url="/login", status_code=303)
+    if db.query(User).filter(User.username == username).first() and user.username != username:
+        return templates.TemplateResponse("settings.html", {"request": request, "user": user, "error": "Kullanıcı adı dolu."})
+    user.username = username; db.commit()
+    return templates.TemplateResponse("settings.html", {"request": request, "user": user, "success": "Güncellendi."})
+
 @app.post("/user/follow")
 async def follow_user(username: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return JSONResponse({"status": "error"}, 401)
@@ -262,20 +277,15 @@ async def follow_user(username: str = Form(...), user: User = Depends(get_curren
     if not target or target.id == user.id: return JSONResponse({"status": "error"}, 400)
     
     if target not in user.followed:
-        user.followed.append(target)
-        db.commit()
-        return JSONResponse({"status": "followed"})
+        user.followed.append(target); db.commit(); return JSONResponse({"status": "followed"})
     else:
-        user.followed.remove(target)
-        db.commit()
-        return JSONResponse({"status": "unfollowed"})
+        user.followed.remove(target); db.commit(); return JSONResponse({"status": "unfollowed"})
 
 # --- YAYIN API ---
 @app.post("/broadcast/start")
 async def start_broadcast_api(title: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
     user.is_live = True; user.stream_title = title; db.commit()
-    # 🔥 TAKİPÇİLERE BİLDİRİM GÖNDER
     notify_followers(user)
     return {"status": "success"}
 
@@ -344,46 +354,26 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(stream_dir, exist_ok=True)
     
     print(f"🎥 YAYIN: {user.username}")
-    command = [
-        "ffmpeg", 
-        "-f", "webm",                 
-        "-fflags", "+genpts+igndts+nobuffer", 
-        "-i", "pipe:0",               
-        
-        # Görüntü Kalitesi Ayarları
+    # 🔥 YÜKSEK KALİTE (2.5 Mbps) & STABİL FFmpeg
+    cmd = [
+        "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
         "-c:v", "libx264", 
-        "-preset", "veryfast",        # 🔥 Kalite/Performans dengesi (Ultrafast'ten çok daha iyidir)
-        "-profile:v", "high",         # 🔥 HD detaylar için Yüksek Profil
-        "-level:v", "4.1",            # Geniş uyumluluk
-        "-tune", "zerolatency",       
-        "-threads", "0",              
-        "-r", "30",                   
-        "-g", "60",                   
+        "-preset", "veryfast", # Kalite/Hız dengesi
+        "-profile:v", "high",  # HD Profil
+        "-tune", "zerolatency",
+        "-threads", "0", "-r", "30", "-g", "60",
         
-        # Bitrate Yönetimi (2.5 Mbps - HD Kalite)
-        "-b:v", "2500k",          
-        "-maxrate", "3000k",          # İhtiyaç anında 3 Mbps'e çıkabilir
-        "-bufsize", "6000k",          # 🔥 Tamponu genişlettik (Donmayı önler)
-        "-pix_fmt", "yuv420p",        
-
-        # Ses Ayarları (Yüksek Kalite)
-        "-c:a", "aac", 
-        "-b:a", "160k",               # 🔥 Ses kalitesi artırıldı (128k -> 160k)
-        "-ar", "44100",
-        "-ac", "2",
-        "-af", "aresample=async=1000", 
-
-        # HLS Çıktı Ayarları
-        "-f", "hls", 
-        "-hls_time", "2",             
-        "-hls_list_size", "5",        
-        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start", 
-        "-hls_segment_type", "mpegts",
+        "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "3000k", # Buffer optimize edildi
+        "-pix_fmt", "yuv420p",
         
-        "-max_muxing_queue_size", "1024",
-        "-loglevel", "error",         
+        "-c:a", "aac", "-b:a", "160k", # Yüksek ses kalitesi
+        "-ar", "44100", "-ac", "2", "-af", "aresample=async=1000",
         
-        stream_path 
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "5", 
+        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start", "-hls_segment_type", "mpegts",
+        
+        "-max_muxing_queue_size", "1024", "-loglevel", "error",
+        f"{stream_dir}/stream.m3u8"
     ]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = proc

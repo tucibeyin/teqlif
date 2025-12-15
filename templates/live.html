@@ -129,7 +129,7 @@
 </div>
 
 <style>
-    /* --- STYLES --- */
+    /* --- CSS SYSTEM --- */
     :root {
         --accent: #34C759;
         --chat-bg: rgba(0, 0, 0, 0.6);
@@ -203,7 +203,7 @@
         padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
 
-    /* TOP BAR (GÜNCEL) */
+    /* TOP BAR */
     .top-bar {
         display: flex;
         justify-content: space-between;
@@ -245,9 +245,16 @@
         margin-right: 2px;
     }
 
+    .brand {
+        font-weight: 800;
+        font-size: 18px;
+        text-shadow: 0 1px 2px black;
+    }
+
+    .viewer-float,
     .viewer-pill {
         background: rgba(0, 0, 0, 0.5);
-        padding: 5px 10px;
+        padding: 4px 8px;
         border-radius: 12px;
         font-size: 12px;
         font-weight: 600;
@@ -283,6 +290,7 @@
         color: #ddd;
     }
 
+    /* ORTA BÖLÜM - ALTA YASLI */
     .mid-section {
         flex: 1;
         display: flex;
@@ -696,34 +704,13 @@
             document.getElementById('btn-start').style.display = 'none';
             document.getElementById('btn-stop').style.display = 'inline-block';
             connectChat('broadcast');
-
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
             ws.onopen = () => {
-                // 🔥 GÜNCELLEME: Yüksek Kalite (2.5 Mbps Video + 160 Kbps Ses)
-                let options = {
-                    mimeType: 'video/webm;codecs=h264',
-                    videoBitsPerSecond: 2500000, // 2.5 Mbps (Cam gibi görüntü)
-                    audioBitsPerSecond: 160000   // 160 Kbps (Stüdyo kalitesine yakın ses)
-                };
-
-                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                    options = {
-                        mimeType: 'video/webm',
-                        videoBitsPerSecond: 2500000,
-                        audioBitsPerSecond: 160000
-                    };
-                }
-
-                rec = new MediaRecorder(window.localStream, options);
-
-                // Veri paketlerini sık gönder (300ms) ki akıcı olsun
-                rec.start(300);
-
-                rec.ondataavailable = e => {
-                    if (e.data.size > 0 && ws.readyState === 1) {
-                        ws.send(e.data);
-                    }
-                };
+                let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
+                if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
+                rec = new MediaRecorder(window.localStream, opts);
+                rec.start(1000);
+                rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
             };
             window.stopBroadcast = function () { fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
         }
@@ -742,7 +729,8 @@
                 const u = e.target.dataset.username;
                 const v = document.getElementById(`video-${u}`);
                 if (e.isIntersecting) {
-                    const src = `/static/hls/${u}/stream.m3u8`;
+                    // Cache Busting
+                    const src = `/static/hls/${u}/stream.m3u8?t=${Date.now()}`;
                     const attemptPlay = () => {
                         v.play().catch(error => { console.log("Sesli bloklandı"); v.muted = true; v.play(); const hint = v.parentElement.querySelector('.tap-hint'); if (hint) hint.style.display = 'block'; });
                     };
@@ -755,19 +743,15 @@
         document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
 
-    // 🔥 TAKİP ETME FONKSİYONU
+    // TAKİP ET
     window.toggleFollow = function (username) {
         const btn = document.getElementById(`follow-btn-${username}`);
         const formData = new FormData(); formData.append('username', username);
-
         fetch('/user/follow', { method: 'POST', body: formData })
             .then(res => res.json())
             .then(data => {
-                if (data.status === 'followed') {
-                    btn.classList.add('following'); btn.innerText = 'Takip Ediliyor';
-                } else {
-                    btn.classList.remove('following'); btn.innerText = 'Takip Et';
-                }
+                if (data.status === 'followed') { btn.classList.add('following'); btn.innerText = 'Takip Ediliyor'; }
+                else { btn.classList.remove('following'); btn.innerText = 'Takip Et'; }
             });
     }
 
@@ -779,7 +763,6 @@
 
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
-
             if (d.type === 'auction_state') {
                 const layer = document.getElementById(target === 'broadcast' ? '' : `bid-layer-${target}`);
                 const board = document.getElementById(target === 'broadcast' ? '' : `price-board-${target}`);
@@ -791,7 +774,6 @@
                 const cId = target === 'broadcast' ? 'live-count-broadcast' : `live-count-${target}`;
                 const cEl = document.getElementById(cId); if (cEl) cEl.innerText = d.val; return;
             }
-
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
 
