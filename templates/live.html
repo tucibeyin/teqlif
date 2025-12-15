@@ -696,13 +696,34 @@
             document.getElementById('btn-start').style.display = 'none';
             document.getElementById('btn-stop').style.display = 'inline-block';
             connectChat('broadcast');
+
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
             ws.onopen = () => {
-                let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
-                if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
-                rec = new MediaRecorder(window.localStream, opts);
-                rec.start(1000);
-                rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+                // 🔥 GÜNCELLEME: Yüksek Kalite (2.5 Mbps Video + 160 Kbps Ses)
+                let options = {
+                    mimeType: 'video/webm;codecs=h264',
+                    videoBitsPerSecond: 2500000, // 2.5 Mbps (Cam gibi görüntü)
+                    audioBitsPerSecond: 160000   // 160 Kbps (Stüdyo kalitesine yakın ses)
+                };
+
+                if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                    options = {
+                        mimeType: 'video/webm',
+                        videoBitsPerSecond: 2500000,
+                        audioBitsPerSecond: 160000
+                    };
+                }
+
+                rec = new MediaRecorder(window.localStream, options);
+
+                // Veri paketlerini sık gönder (300ms) ki akıcı olsun
+                rec.start(300);
+
+                rec.ondataavailable = e => {
+                    if (e.data.size > 0 && ws.readyState === 1) {
+                        ws.send(e.data);
+                    }
+                };
             };
             window.stopBroadcast = function () { fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
         }

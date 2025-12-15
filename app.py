@@ -344,13 +344,46 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(stream_dir, exist_ok=True)
     
     print(f"🎥 YAYIN: {user.username}")
-    cmd = [
-        "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts", "-i", "pipe:0",
-        "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
-        "-threads", "4", "-r", "30", "-g", "60", "-b:v", "2500k", "-maxrate", "2500k", "-bufsize", "5000k", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2", "-af", "aresample=async=1",
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "5", "-hls_flags", "delete_segments+append_list+omit_endlist", "-hls_segment_type", "mpegts",
-        f"{stream_dir}/stream.m3u8"
+    command = [
+        "ffmpeg", 
+        "-f", "webm",                 
+        "-fflags", "+genpts+igndts+nobuffer", 
+        "-i", "pipe:0",               
+        
+        # Görüntü Kalitesi Ayarları
+        "-c:v", "libx264", 
+        "-preset", "veryfast",        # 🔥 Kalite/Performans dengesi (Ultrafast'ten çok daha iyidir)
+        "-profile:v", "high",         # 🔥 HD detaylar için Yüksek Profil
+        "-level:v", "4.1",            # Geniş uyumluluk
+        "-tune", "zerolatency",       
+        "-threads", "0",              
+        "-r", "30",                   
+        "-g", "60",                   
+        
+        # Bitrate Yönetimi (2.5 Mbps - HD Kalite)
+        "-b:v", "2500k",          
+        "-maxrate", "3000k",          # İhtiyaç anında 3 Mbps'e çıkabilir
+        "-bufsize", "6000k",          # 🔥 Tamponu genişlettik (Donmayı önler)
+        "-pix_fmt", "yuv420p",        
+
+        # Ses Ayarları (Yüksek Kalite)
+        "-c:a", "aac", 
+        "-b:a", "160k",               # 🔥 Ses kalitesi artırıldı (128k -> 160k)
+        "-ar", "44100",
+        "-ac", "2",
+        "-af", "aresample=async=1000", 
+
+        # HLS Çıktı Ayarları
+        "-f", "hls", 
+        "-hls_time", "2",             
+        "-hls_list_size", "5",        
+        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start", 
+        "-hls_segment_type", "mpegts",
+        
+        "-max_muxing_queue_size", "1024",
+        "-loglevel", "error",         
+        
+        stream_path 
     ]
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = proc
