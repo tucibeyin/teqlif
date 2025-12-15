@@ -35,6 +35,11 @@
                 </div>
 
                 <div class="admin-controls">
+                    <div class="select-wrapper">
+                        <i class="fa-solid fa-microphone"></i>
+                        <select id="audioSource" onchange="restartStream()"></select>
+                    </div>
+
                     <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">MEZAT AÇ 🔨</button>
                     <button id="btn-start" onclick="startBroadcast()" class="btn-start">BAŞLAT</button>
                     <button id="btn-stop" onclick="stopBroadcast()" class="btn-stop"
@@ -52,7 +57,7 @@
             <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
                 poster="{{ stream.thumbnail }}"></video>
 
-            <div class="tap-hint" style="display:none;" onclick="unmuteVideo('{{ stream.username }}')">
+            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;">
                 <i class="fa-solid fa-volume-high"></i> Sesi Aç
             </div>
 
@@ -79,7 +84,6 @@
                 </div>
 
                 <div class="bottom-dock">
-
                     <div class="bid-layer" id="bid-layer-{{ stream.username }}"
                         style="display: {{ 'flex' if auction_active else 'none' }}">
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 50)">+50₺</button>
@@ -99,7 +103,6 @@
                         <button class="send-icon-btn" onclick="sendMsg('{{ stream.username }}')"><i
                                 class="fa-solid fa-paper-plane"></i></button>
                     </div>
-
                 </div>
 
             </div>
@@ -117,7 +120,7 @@
 </div>
 
 <style>
-    /* --- TASARIM SİSTEMİ --- */
+    /* --- CSS SYSTEM --- */
     :root {
         --accent: #34C759;
         --chat-bg: rgba(0, 0, 0, 0.6);
@@ -165,7 +168,6 @@
         overflow: hidden;
     }
 
-    /* VIDEO */
     .cinema-video {
         position: absolute;
         top: 0;
@@ -180,7 +182,6 @@
         transform: scaleX(-1);
     }
 
-    /* UI LAYOUT */
     .ui-overlay {
         position: absolute;
         inset: 0;
@@ -193,7 +194,6 @@
         padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
 
-    /* TOP BAR */
     .top-bar {
         display: flex;
         justify-content: space-between;
@@ -246,7 +246,6 @@
         text-shadow: 0 1px 2px black;
     }
 
-    /* MID SECTION */
     .mid-section {
         flex: 1;
         position: relative;
@@ -401,7 +400,6 @@
         }
     }
 
-    /* BOTTOM DOCK */
     .bottom-dock {
         width: 100%;
         display: flex;
@@ -498,6 +496,7 @@
         display: flex;
         justify-content: center;
         gap: 8px;
+        align-items: center;
     }
 
     .btn-start {
@@ -528,6 +527,37 @@
         border-radius: 20px;
         font-weight: 700;
         font-size: 12px;
+    }
+
+    /* 🔥 MİKROFON SEÇİCİ STİLİ */
+    .select-wrapper {
+        position: relative;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        padding: 0 10px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .select-wrapper i {
+        color: #aaa;
+        font-size: 12px;
+    }
+
+    .select-wrapper select {
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 8px 5px;
+        font-size: 11px;
+        outline: none;
+        width: 100px;
+    }
+
+    .select-wrapper select option {
+        background: #222;
+        color: white;
     }
 
     .tap-hint {
@@ -588,8 +618,55 @@
     if (MODE === 'broadcast') {
         const prev = document.getElementById('preview');
         let rec, active = false;
-        navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: true })
-            .then(s => { prev.srcObject = s; window.localStream = s; prev.volume = 0; });
+
+        // --- 🔥 MİKROFON YÖNETİMİ ---
+        async function getDevices() {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioSelect = document.getElementById('audioSource');
+            audioSelect.innerHTML = ''; // Temizle
+
+            const audioInputs = devices.filter(device => device.kind === 'audioinput');
+            audioInputs.forEach(device => {
+                const option = document.createElement('option');
+                option.value = device.deviceId;
+                option.text = device.label || `Mikrofon ${audioSelect.length + 1}`;
+                audioSelect.appendChild(option);
+            });
+        }
+
+        // Seçilen mikrofonla yayını başlat/yenile
+        async function initStream(audioDeviceId = null) {
+            // Eğer belirli bir cihaz seçilmediyse ilki (varsayılan) kullanılır
+            const constraints = {
+                video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
+                audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                window.localStream = stream;
+                prev.srcObject = stream;
+                prev.volume = 0; // Kendini duyma
+
+                // Cihaz isimlerini (label) almak için izin alındıktan sonra tekrar listele
+                if (!audioDeviceId) getDevices();
+            } catch (err) {
+                console.error("Kamera/Mikrofon hatası:", err);
+                alert("Kamera veya mikrofona erişilemedi!");
+            }
+        }
+
+        // Sayfa yüklenince başlat
+        initStream();
+
+        // Mikrofon değişince
+        window.restartStream = function () {
+            const audioSelect = document.getElementById('audioSource');
+            if (window.localStream) {
+                window.localStream.getTracks().forEach(track => track.stop());
+            }
+            initStream(audioSelect.value);
+        }
 
         window.startBroadcast = function () {
             active = true;
@@ -601,6 +678,8 @@
             ws.onopen = () => {
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
+
+                // Güncel akışı kullan
                 rec = new MediaRecorder(window.localStream, opts);
                 rec.start(1000);
                 rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
@@ -631,11 +710,10 @@
                 if (e.isIntersecting) {
                     const src = `/static/hls/${u}/stream.m3u8`;
 
-                    // --- 🔥 AKILLI OYNATMA FONKSİYONU 🔥 ---
+                    // AKILLI OYNATMA
                     const attemptPlay = () => {
                         v.play().catch(error => {
                             console.log("Sesli başlatma engellendi, sessize geçiliyor...", error);
-                            // Sesli başlatamazsa: Mute yap -> Oynat -> Butonu Göster
                             v.muted = true;
                             v.play();
                             const hint = v.parentElement.querySelector('.tap-hint');
