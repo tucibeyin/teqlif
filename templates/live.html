@@ -765,8 +765,17 @@
                 rec.start(250);
 
                 rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+
+                // --- THUMBNAIL BAŞLAT ---
+                sendThumbnailSnapshot(); // İlk kareyi hemen gönder
+                window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000); // 60 saniyede bir güncelle
             };
-            window.stopBroadcast = function () { fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
+
+            window.stopBroadcast = function () {
+                if (window.thumbInterval) clearInterval(window.thumbInterval);
+                fetch('/broadcast/stop', { method: 'POST' });
+                window.location.href = '/';
+            };
         }
 
         window.toggleAuction = function () {
@@ -920,5 +929,31 @@
         if (inp && inp.value.trim()) { if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(inp.value); inp.value = ""; inp.focus(); }
     }
     window.simulateBid = function (amount) { if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${amount}`); }
+
+    // --- SNAPSHOT GÖNDERME FONKSİYONU ---
+    async function sendThumbnailSnapshot() {
+        const video = document.getElementById('preview');
+        if (!video) return;
+
+        const canvas = document.createElement('canvas');
+        canvas.width = 640; // Thumbnail boyutu
+        canvas.height = 360;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // 0.6 kalite yeterli
+
+        try {
+            await fetch('/broadcast/thumbnail', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataUrl, timestamp: Date.now() })
+            });
+            console.log("📸 Thumbnail güncellendi.");
+        } catch (err) {
+            console.error("Thumbnail hatası:", err);
+        }
+    }
 </script>
 {% endblock %}
