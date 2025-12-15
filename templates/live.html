@@ -20,6 +20,7 @@
                         <i class="fa-solid fa-crown"></i> <span class="name">--</span>
                     </div>
                 </div>
+
                 <div class="brand">teqlif <span class="badge">YAYINDA</span></div>
                 <div class="viewer-count"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
             </div>
@@ -39,9 +40,12 @@
                     <button class="send-icon-btn" onclick="sendMsg('broadcast')"><i
                             class="fa-solid fa-paper-plane"></i></button>
                 </div>
+
                 <div class="admin-controls">
-                    <div class="select-wrapper"><i class="fa-solid fa-microphone"></i><select id="audioSource"
-                            onchange="restartStream()"></select></div>
+                    <div class="select-wrapper">
+                        <i class="fa-solid fa-microphone"></i>
+                        <select id="audioSource" onchange="restartStream()"></select>
+                    </div>
                     <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">MEZAT AÇ 🔨</button>
                     <button id="btn-start" onclick="startBroadcast()" class="btn-start">BAŞLAT</button>
                     <button id="btn-stop" onclick="stopBroadcast()" class="btn-stop"
@@ -55,10 +59,13 @@
     <div class="feed-scroll">
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
+
             <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
                 poster="{{ stream.thumbnail }}"></video>
-            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;"><i
-                    class="fa-solid fa-volume-high"></i> Sesi Aç</div>
+
+            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;">
+                <i class="fa-solid fa-volume-high"></i> Sesi Aç
+            </div>
 
             <div class="ui-overlay">
                 <div class="top-bar">
@@ -66,15 +73,21 @@
                         <div class="price-board" id="price-board-{{ stream.username }}"
                             style="display: {{ 'flex' if auction_active else 'none' }}">
                             <span class="label">GÜNCEL</span>
-                            <div class="price-row"><span class="currency">₺</span><span id="price-{{ stream.username }}"
-                                    class="amount">0</span></div>
-                            <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;"><i
-                                    class="fa-solid fa-crown"></i> <span class="name">--</span></div>
+                            <div class="price-row">
+                                <span class="currency">₺</span><span id="price-{{ stream.username }}"
+                                    class="amount">0</span>
+                            </div>
+                            <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;">
+                                <i class="fa-solid fa-crown"></i> <span class="name">--</span>
+                            </div>
                         </div>
+
                         <button class="follow-btn {{ 'following' if is_following else '' }}"
-                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">{{
-                            'Takip Ediliyor' if is_following else 'Takip Et' }}</button>
+                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">
+                            {{ 'Takip Ediliyor' if is_following else 'Takip Et' }}
+                        </button>
                     </div>
+
                     <div class="header-right">
                         <div class="viewer-pill"><i class="fa-solid fa-eye"></i> <span
                                 id="live-count-{{ stream.username }}">0</span></div>
@@ -103,6 +116,7 @@
                             <button onclick="sendManualBid('{{ stream.username }}')">OK</button>
                         </div>
                     </div>
+
                     <div class="chat-input-bar">
                         <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum yaz..."
                             autocomplete="off">
@@ -110,19 +124,23 @@
                                 class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
+
             </div>
         </div>
         {% else %}
         <div class="empty-state">
             <div class="brand-logo large">teqlif</div>
-            <p>Aktif yayın yok.</p><a href="/live?mode=broadcast" class="btn-start">Yayın Aç</a>
+            <p>Aktif yayın yok.</p>
+            <a href="/live?mode=broadcast" class="btn-start">Yayın Aç</a>
         </div>
         {% endfor %}
     </div>
     {% endif %}
+
 </div>
 
 <style>
+    /* STİL DOSYASI */
     :root {
         --accent: #34C759;
         --gold: #FFD700;
@@ -205,15 +223,16 @@
         pointer-events: auto;
     }
 
-    .header-left,
+    .header-left {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
     .header-right {
         display: flex;
         align-items: center;
         gap: 10px;
-    }
-
-    .header-left {
-        align-items: flex-start;
     }
 
     .price-board {
@@ -720,7 +739,7 @@
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 window.localStream = stream; prev.srcObject = stream; prev.volume = 0;
                 if (!audioDeviceId) getDevices();
-            } catch (err) { console.error(err); alert("Kamera/Mikrofon Hatası!"); }
+            } catch (err) { console.error(err); alert("Kamera/Mikrofon Hatası! (İzinleri Kontrol Et)"); }
         }
         initStream();
 
@@ -740,12 +759,17 @@
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
                 rec = new MediaRecorder(window.localStream, opts);
-                // 🔥 0.5 Saniyelik paketler gönder (FFmpeg ayarına uygun)
-                rec.start(250);
+
+                // 1 saniyelik HLS için 500ms ile buffer'ı beslemek güvenlidir
+                rec.start(500);
+
                 rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+
+                // Thumbnail Başlat
                 sendThumbnailSnapshot();
                 window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
             };
+
             window.stopBroadcast = function () {
                 if (window.thumbInterval) clearInterval(window.thumbInterval);
                 fetch('/broadcast/stop', { method: 'POST' });
@@ -762,40 +786,27 @@
             else { btn.innerText = "MEZAT AÇ 🔨"; btn.style.background = "rgba(255, 255, 255, 0.2)"; }
         }
     } else {
+        // İZLEYİCİ TARAFI
         let obs = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 const u = e.target.dataset.username;
                 const v = document.getElementById(`video-${u}`);
                 if (e.isIntersecting) {
                     const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
+
                     const attemptPlay = () => {
                         v.play().catch(error => { console.log("Sesli bloklandı"); v.muted = true; v.play(); const hint = v.parentElement.querySelector('.tap-hint'); if (hint) hint.style.display = 'block'; });
                     };
 
                     if (Hls.isSupported()) {
-                        // 🔥 AGRESİF DÜŞÜK GECİKME AYARLARI
+                        // 🔥 STABİL AYARLAR (4-5 SN Gecikme)
                         const hlsConfig = {
                             enableWorker: true,
                             lowLatencyMode: true,
-
-                            // Tamponda (Buffer) en az 3 saniyelik görüntü tutmaya çalış
-                            // Bu sayede anlık internet kopmalarında donma olmaz
-                            backBufferLength: 30,
-
-                            // Canlı yayının 3.5 segment gerisinden gel (3.5 * 1sn = 3.5sn hedef)
-                            liveSyncDurationCount: 3.5,
-
-                            // Eğer çok geride kalırsa (1.2x hızla yetiş - çok hızlı yapıp sesi bozma)
-                            maxLiveSyncPlaybackRate: 1.2,
-
-                            // 6 saniyeden fazla geride kalırsa direkt atla
-                            liveMaxLatencyDurationCount: 6,
+                            backBufferLength: 30, // 30sn geriyi hafızada tut
+                            liveSyncDurationCount: 3.5, // 3.5 segment geriden gel (3.5 saniye)
+                            maxLiveSyncPlaybackRate: 1.2, // Çok hızlanma, sesi bozma
                         };
-                        const h = new Hls(hlsConfig);
-                        h.loadSource(src);
-                        h.attachMedia(v);
-                        h.on(Hls.Events.MANIFEST_PARSED, attemptPlay);
-                    }
                         const h = new Hls(hlsConfig);
                         h.loadSource(src);
                         h.attachMedia(v);
@@ -899,6 +910,7 @@
     }
     window.simulateBid = function (amount) { if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${amount}`); }
 
+    // --- THUMBNAIL SNAPSHOT ---
     async function sendThumbnailSnapshot() {
         const video = document.getElementById('preview');
         if (!video) return;
