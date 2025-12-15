@@ -121,8 +121,7 @@
     /* --- CSS SYSTEM --- */
     :root {
         --accent: #34C759;
-        --chat-bg: rgba(0, 0, 0, 0.65);
-        /* Daha koyu, okunur */
+        --chat-bg: rgba(0, 0, 0, 0.6);
         --glass-border: 1px solid rgba(255, 255, 255, 0.15);
     }
 
@@ -248,7 +247,7 @@
         text-shadow: 0 1px 2px black;
     }
 
-    /* MID SECTION (SOHBET & BID) */
+    /* MID SECTION */
     .mid-section {
         flex: 1;
         position: relative;
@@ -256,45 +255,50 @@
         pointer-events: none;
     }
 
-    /* 🔥 SOHBET ALANI (GÖRÜNÜRLÜK AYARI) 🔥 */
+    /* SOHBET ALANI (Daha Alçak) */
     .chat-zone {
         position: absolute;
-        bottom: 100px;
-        /* Input barının üstüne çıkardık */
+        bottom: 90px;
+        /* Biraz daha aşağıda */
         left: 15px;
         width: 65%;
-        height: 250px;
-        /* Yükseklik garantisi */
+        height: 180px;
+        /* Yükseklik kısıldı, yukarı tırmanmaz */
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        pointer-events: auto;
+        pointer-events: none;
+        /* Tıklamaları engelle, akış olsun */
         z-index: 50;
-        /* Kesinlikle üstte */
     }
 
     .chat-scroller {
         max-height: 100%;
-        overflow-y: auto;
-        scrollbar-width: none;
+        overflow-y: hidden;
+        /* Scroll yok, sadece akış */
         display: flex;
         flex-direction: column;
-        gap: 6px;
-        /* Üstten silinme efekti */
+        gap: 8px;
+        /* Üstten yumuşak silinme efekti */
         mask-image: linear-gradient(to top, black 80%, transparent 100%);
         -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
     }
 
+    /* Mesaj Stili (Animasyonlu) */
     .msg {
         background: var(--chat-bg);
         color: #fff;
-        padding: 6px 10px;
-        border-radius: 10px;
+        padding: 6px 12px;
+        border-radius: 12px;
         border-bottom-left-radius: 2px;
         font-size: 13px;
         width: fit-content;
         text-shadow: 0 1px 1px black;
-        border: 1px solid rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+
+        /* GİRİŞ ANİMASYONU */
+        animation: slideInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+        transform-origin: bottom left;
     }
 
     .msg b {
@@ -313,10 +317,11 @@
     /* TEKLİF ALANI */
     .bid-zone {
         position: absolute;
-        bottom: 100px;
+        bottom: 90px;
         right: 15px;
         width: 30%;
-        height: 250px;
+        height: 180px;
+        /* Yükseklik kısıldı */
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
@@ -333,18 +338,62 @@
         width: 100%;
     }
 
+    /* Teklif Stili (Animasyonlu) */
     .bid-bubble {
         background: rgba(52, 199, 89, 0.9);
         color: white;
-        padding: 8px;
+        padding: 8px 12px;
         border-radius: 15px;
         border-bottom-right-radius: 2px;
         font-weight: 700;
         font-size: 13px;
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-        animation: slideInRight 0.3s ease;
         text-align: right;
         border: 1px solid rgba(255, 255, 255, 0.4);
+
+        /* GİRİŞ ANİMASYONU */
+        animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+    }
+
+    /* ÇIKIŞ (KAYBOLMA) EFEKTİ */
+    .fade-out {
+        animation: fadeOut 0.5s ease-out forwards;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.9);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        to {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
     }
 
     /* BOTTOM DOCK */
@@ -356,7 +405,7 @@
         pointer-events: auto;
         padding: 10px;
         z-index: 60;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 10%, transparent);
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 20%, transparent);
     }
 
     .bid-layer {
@@ -491,16 +540,8 @@
         gap: 20px;
     }
 
-    @keyframes slideInRight {
-        from {
-            transform: translateX(100%);
-            opacity: 0;
-        }
-
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
+    .blink-anim {
+        animation: flash 0.3s ease-out;
     }
 
     @keyframes flash {
@@ -518,10 +559,6 @@
             transform: scale(1);
             color: white;
         }
-    }
-
-    .blink-anim {
-        animation: flash 0.3s ease-out;
     }
 </style>
 
@@ -616,11 +653,12 @@
                 return;
             }
 
-            // 🔥 ID DÜZELTMESİ YAPILDI: "chat-feed-"
+            // --- MESAJ & TEKLİF MANTIĞI (GÜNCELLENDİ) ---
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
 
             if (d.type === 'chat') {
+                // EĞER TEKLİF İSE
                 if (d.msg.startsWith("BID:")) {
                     const amount = d.msg.split(":")[1];
                     updatePriceDisplay(amount, target);
@@ -628,17 +666,33 @@
                     const bidFeedId = target === 'broadcast' ? 'bid-feed-broadcast' : `bid-feed-${target}`;
                     const bidFeed = document.getElementById(bidFeedId);
                     if (bidFeed) {
-                        const html = `<div class="bid-bubble"><span class="bidder">${d.user}</span> ₺${amount}</div>`;
-                        bidFeed.insertAdjacentHTML('beforeend', html);
+                        const div = document.createElement('div');
+                        div.className = 'bid-bubble';
+                        div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`;
+                        bidFeed.appendChild(div);
                         bidFeed.scrollTop = bidFeed.scrollHeight;
+
+                        // 🔥 OTO SİLME (TEKLİF)
+                        setTimeout(() => {
+                            div.classList.add('fade-out');
+                            div.addEventListener('animationend', () => div.remove());
+                        }, 10000); // 10 Saniye
                     }
-                } else {
+                }
+                // EĞER NORMAL SOHBET İSE
+                else {
                     if (feed) {
-                        const html = `<div class="msg"><b>${d.user}:</b> ${d.msg}</div>`;
-                        feed.insertAdjacentHTML('beforeend', html);
+                        const div = document.createElement('div');
+                        div.className = 'msg';
+                        div.innerHTML = `<b>${d.user}:</b> ${d.msg}`;
+                        feed.appendChild(div);
                         feed.scrollTop = feed.scrollHeight;
-                    } else {
-                        console.log("Chat feed bulunamadı:", feedId);
+
+                        // 🔥 OTO SİLME (SOHBET)
+                        setTimeout(() => {
+                            div.classList.add('fade-out');
+                            div.addEventListener('animationend', () => div.remove());
+                        }, 8000); // 8 Saniye (Biraz daha hızlı)
                     }
                 }
             }
