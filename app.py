@@ -55,7 +55,7 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Takipçiler Tablosu (Many-to-Many ilişkisi)
+# Takipçiler Tablosu
 followers_table = Table('followers', Base.metadata,
     Column('follower_id', Integer, ForeignKey('users.id'), primary_key=True),
     Column('followed_id', Integer, ForeignKey('users.id'), primary_key=True)
@@ -192,16 +192,13 @@ def cleanup_stream(username: str, db: Session):
         if user:
             user.is_live = False
             user.is_auction_active = False
-            
-            # 🔥 YAYIN BİTİNCE MEZAT VE FİYAT BİLGİLERİNİ SIFIRLA
+            # Yayın bitince bilgileri sıfırla
             user.current_price = 0
             user.highest_bidder = None
             db.commit() 
-            
-            # 🔥 SOHBET GEÇMİŞİNİ SİL
+            # Geçmişi sil
             db.query(StreamMessage).filter(StreamMessage.room_name == username).delete()
             db.commit() 
-            
     except Exception as e: 
         print(f"Temizlik hatası: {e}")
 
@@ -224,7 +221,6 @@ async def read_home(request: Request, db: Session = Depends(get_db), user: Optio
         active_streams.sort(key=lambda x: x.id not in followed_ids)
     return templates.TemplateResponse("index.html", {"request": request, "user": user, "streams": active_streams})
 
-# ✅ EKSİK OLAN LOGIN GET ROTASI EKLENDİ
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request): 
     return templates.TemplateResponse("login.html", {"request": request})
@@ -250,7 +246,6 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
         active_streams = db.query(User).filter(User.is_live == True).all()
         followed_ids = [u.id for u in user.followed]
         active_streams.sort(key=lambda x: (x.username == broadcaster, x.id in followed_ids), reverse=True)
-        
         return templates.TemplateResponse("live.html", {
             "request": request, 
             "user": user, 
@@ -372,7 +367,6 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
 
     broadcaster = db.query(User).filter(User.username == stream).first()
     if broadcaster:
-        # INIT (Fiyat ve Lider)
         init_msg = json.dumps({
             "type": "init",
             "price": broadcaster.current_price,
@@ -380,7 +374,6 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         })
         await websocket.send_text(init_msg)
 
-        # Eski Mesajlar (Son 30)
         last_msgs = db.query(StreamMessage).filter(StreamMessage.room_name == stream)\
                       .order_by(desc(StreamMessage.created_at)).limit(30).all()
         for msg in reversed(last_msgs):
@@ -396,8 +389,6 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
             data = await websocket.receive_text()
             if data.strip():
                 is_bid = data.startswith("BID:")
-                
-                # Veritabanına Kaydet
                 new_msg = StreamMessage(
                     room_name=stream,
                     sender=current_username,
@@ -406,7 +397,6 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
                 )
                 db.add(new_msg)
                 
-                # Teklifse Fiyatı Güncelle
                 if is_bid and broadcaster:
                     try:
                         amount = int(data.split(":")[1])
@@ -416,7 +406,6 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
                     except: pass
                 
                 db.commit()
-
                 msg_payload = json.dumps({"type": "chat", "user": current_username, "msg": data.replace("<", "&lt;")})
                 await manager.broadcast_to_room(msg_payload, room_name)
     except: 
@@ -425,7 +414,6 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
 @app.websocket("/ws/broadcast")
 async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
-    
     user = None
     try:
         token = websocket.cookies.get("access_token")
@@ -445,7 +433,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     stream_path = f"{stream_dir}/stream.m3u8"
     print(f"🎥 YAYIN BAŞLIYOR (ULTRA LOW LATENCY): {user.username}")
 
-    # ✅ DÜŞÜK GECİKME İÇİN OPTİMİZE EDİLMİŞ FFmpeg KOMUTU
+    # 🔥 DÜŞÜK GECİKME İÇİN OPTİMİZE EDİLMİŞ FFmpeg KOMUTU
     command = [
         "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
         
@@ -456,7 +444,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         
         "-threads", "0", 
         "-r", "30",             
-        "-g", "30",             # Keyframe her 1 saniyede bir
+        "-g", "30",             # 🔥 Keyframe her 1 saniyede bir (Gecikmeyi düşürür)
         
         "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "3000k", 
         "-pix_fmt", "yuv420p",
@@ -464,8 +452,8 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-ac", "2", "-af", "aresample=async=1000",
         
         "-f", "hls", 
-        "-hls_time", "1",       # Parçalar 1 saniyelik olacak
-        "-hls_list_size", "3",  # Listede sadece son 3 parça tut
+        "-hls_time", "1",       # 🔥 Parçalar 1 saniyelik olacak
+        "-hls_list_size", "4",  # Liste boyutu 4
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start", 
         "-hls_segment_type", "mpegts",
         
