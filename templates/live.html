@@ -12,8 +12,15 @@
         <div class="ui-overlay">
             <div class="top-bar">
                 <div class="price-board">
-                    <span class="currency">₺</span><span id="current-price-display">0</span>
+                    <span class="label">GÜNCEL FİYAT</span>
+                    <div class="price-row">
+                        <span class="currency">₺</span><span id="current-price-display">0</span>
+                    </div>
+                    <div class="leader-row" id="leader-display-broadcast" style="display: none;">
+                        <i class="fa-solid fa-crown"></i> <span class="name">--</span>
+                    </div>
                 </div>
+
                 <div class="brand">teqlif <span class="badge">YAYINDA</span></div>
                 <div class="viewer-count"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
             </div>
@@ -66,8 +73,13 @@
                         <div class="price-board" id="price-board-{{ stream.username }}"
                             style="display: {{ 'flex' if auction_active else 'none' }}">
                             <span class="label">GÜNCEL</span>
-                            <div><span class="currency">₺</span><span id="price-{{ stream.username }}"
-                                    class="amount">0</span></div>
+                            <div class="price-row">
+                                <span class="currency">₺</span><span id="price-{{ stream.username }}"
+                                    class="amount">0</span>
+                            </div>
+                            <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;">
+                                <i class="fa-solid fa-crown"></i> <span class="name">--</span>
+                            </div>
                         </div>
 
                         <button class="follow-btn {{ 'following' if is_following else '' }}"
@@ -132,6 +144,7 @@
     /* --- CSS SYSTEM --- */
     :root {
         --accent: #34C759;
+        --gold: #FFD700;
         --chat-bg: rgba(0, 0, 0, 0.6);
         --glass-border: 1px solid rgba(255, 255, 255, 0.15);
     }
@@ -224,25 +237,68 @@
         gap: 10px;
     }
 
+    /* FİYAT TABELASI GÜNCELLEMESİ */
     .price-board {
-        background: rgba(30, 30, 30, 0.8);
-        backdrop-filter: blur(10px);
+        background: rgba(30, 30, 30, 0.85);
+        backdrop-filter: blur(12px);
         border: var(--glass-border);
-        padding: 5px 12px;
-        border-radius: 12px;
+        padding: 6px 12px;
+        border-radius: 14px;
         display: flex;
         flex-direction: column;
+        min-width: 90px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .price-board .label {
+        font-size: 9px;
+        opacity: 0.7;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .price-board .price-row {
+        display: flex;
+        align-items: baseline;
     }
 
     .price-board .amount {
-        font-size: 18px;
+        font-size: 20px;
         font-weight: 800;
+        line-height: 1.1;
     }
 
     .price-board .currency {
         color: var(--accent);
         font-weight: 700;
         margin-right: 2px;
+        font-size: 14px;
+    }
+
+    /* 🔥 LİDER SATIRI STİLİ */
+    .leader-row {
+        margin-top: 4px;
+        padding-top: 4px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: var(--gold);
+        font-weight: 700;
+        animation: slideInUp 0.3s ease-out;
+    }
+
+    .leader-row i {
+        font-size: 10px;
+    }
+
+    .leader-row .name {
+        color: #fff;
+        max-width: 80px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .brand {
@@ -270,7 +326,6 @@
         text-shadow: 0 1px 2px black;
     }
 
-    /* TAKİP BUTONU */
     .follow-btn {
         background: var(--accent);
         color: black;
@@ -290,7 +345,6 @@
         color: #ddd;
     }
 
-    /* ORTA BÖLÜM - ALTA YASLI */
     .mid-section {
         flex: 1;
         display: flex;
@@ -729,7 +783,6 @@
                 const u = e.target.dataset.username;
                 const v = document.getElementById(`video-${u}`);
                 if (e.isIntersecting) {
-                    // Cache Busting
                     const src = `/static/hls/${u}/stream.m3u8?t=${Date.now()}`;
                     const attemptPlay = () => {
                         v.play().catch(error => { console.log("Sesli bloklandı"); v.muted = true; v.play(); const hint = v.parentElement.querySelector('.tap-hint'); if (hint) hint.style.display = 'block'; });
@@ -743,7 +796,6 @@
         document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
 
-    // TAKİP ET
     window.toggleFollow = function (username) {
         const btn = document.getElementById(`follow-btn-${username}`);
         const formData = new FormData(); formData.append('username', username);
@@ -780,7 +832,8 @@
             if (d.type === 'chat') {
                 if (d.msg.startsWith("BID:")) {
                     const amount = d.msg.split(":")[1];
-                    updatePriceDisplay(amount, target);
+                    // 🔥 GÜNCELLEME: İSMİ DE GÖNDER
+                    updatePriceDisplay(amount, target, d.user);
                     const bidFeedId = target === 'broadcast' ? 'bid-feed-broadcast' : `bid-feed-${target}`;
                     const bidFeed = document.getElementById(bidFeedId);
                     if (bidFeed) {
@@ -801,10 +854,19 @@
         };
     }
 
-    function updatePriceDisplay(amount, target) {
+    // 🔥 GÜNCELLEME: BIDDER NAME EKLENDİ
+    function updatePriceDisplay(amount, target, bidderName) {
         const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`;
         const el = document.getElementById(id);
         if (el) { el.innerText = amount; el.classList.remove("blink-anim"); void el.offsetWidth; el.classList.add("blink-anim"); }
+
+        // Lider İsmi Güncelle
+        const leaderRowId = target === 'broadcast' ? 'leader-display-broadcast' : `leader-display-${target}`;
+        const leaderRow = document.getElementById(leaderRowId);
+        if (leaderRow && bidderName) {
+            leaderRow.style.display = 'flex';
+            leaderRow.querySelector('.name').innerText = bidderName;
+        }
     }
 
     window.sendBid = function (target, amount) {
