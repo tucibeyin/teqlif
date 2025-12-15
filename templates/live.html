@@ -72,7 +72,6 @@
                 <div class="mid-section">
                     <div class="chat-zone">
                         <div id="chat-feed-{{ stream.username }}" class="chat-scroller">
-                            <div class="msg system">Sohbete bağlandı...</div>
                         </div>
                     </div>
                     <div class="bid-zone">
@@ -89,7 +88,6 @@
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 200)">+200₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 1000)">+1000₺</button>
-
                         <div class="manual-bid-wrapper">
                             <input type="number" id="manual-bid-{{ stream.username }}" placeholder="Tutar">
                             <button onclick="sendManualBid('{{ stream.username }}')">OK</button>
@@ -120,7 +118,7 @@
 </div>
 
 <style>
-    /* --- CSS SYSTEM --- */
+    /* --- TASARIM SİSTEMİ --- */
     :root {
         --accent: #34C759;
         --chat-bg: rgba(0, 0, 0, 0.6);
@@ -183,7 +181,7 @@
         transform: scaleX(-1);
     }
 
-    /* UI LAYOUT */
+    /* UI LAYOUT (FLEXBOX) */
     .ui-overlay {
         position: absolute;
         inset: 0;
@@ -196,7 +194,6 @@
         padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
 
-    /* TOP BAR */
     .top-bar {
         display: flex;
         justify-content: space-between;
@@ -249,25 +246,33 @@
         text-shadow: 0 1px 2px black;
     }
 
-    /* MID SECTION */
+    /* --- ORTA BÖLÜM (KRİTİK DÜZENLEME) --- */
+    /* Absolute yerine Flexbox kullanıyoruz. Böylece alt panelin (dock) tam üstüne oturuyor. */
     .mid-section {
         flex: 1;
-        position: relative;
+        /* Boşluğu doldur */
+        display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+        /* İçerikleri en alta yasla */
+        justify-content: space-between;
+        /* Sağa ve sola dağıt */
         width: 100%;
+        padding-bottom: 5px;
+        /* Dock ile çok az mesafe */
         pointer-events: none;
     }
 
+    /* SOHBET KUTUSU */
     .chat-zone {
-        position: absolute;
-        bottom: 90px;
-        left: 15px;
-        width: 65%;
-        height: 180px;
+        width: 60%;
+        max-height: 250px;
+        /* Çok uzarsa yukarı taşmasın */
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        pointer-events: none;
-        z-index: 50;
+        padding-left: 15px;
+        pointer-events: auto;
     }
 
     .chat-scroller {
@@ -300,25 +305,16 @@
         font-weight: 700;
     }
 
-    .system {
-        background: transparent;
-        border: none;
-        font-style: italic;
-        color: #ddd;
-    }
-
+    /* TEKLİF KUTUSU */
     .bid-zone {
-        position: absolute;
-        bottom: 90px;
-        right: 15px;
-        width: 30%;
-        height: 180px;
+        width: 35%;
+        max-height: 250px;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
         align-items: flex-end;
+        padding-right: 15px;
         pointer-events: none;
-        z-index: 50;
     }
 
     .bid-scroller {
@@ -411,6 +407,7 @@
         }
     }
 
+    /* BOTTOM DOCK */
     .bottom-dock {
         width: 100%;
         display: flex;
@@ -422,23 +419,18 @@
         background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 20%, transparent);
     }
 
-    /* 🔥 GÜNCEL CSS: Genişlik ve Kaydırma */
     .bid-layer {
         display: flex;
         gap: 6px;
         overflow-x: auto;
-        /* Yanlamasına kaydırma */
         padding-bottom: 5px;
         align-items: center;
         scrollbar-width: none;
-        /* Scrollbar'ı gizle */
     }
 
     .bid-layer::-webkit-scrollbar {
         display: none;
     }
-
-    /* Chrome için gizle */
 
     .bid-chip {
         background: rgba(255, 255, 255, 0.1);
@@ -450,7 +442,6 @@
         font-size: 12px;
         white-space: nowrap;
         flex-shrink: 0;
-        /* Küçülmesini engelle */
     }
 
     .manual-bid-wrapper {
@@ -461,7 +452,6 @@
 
     .manual-bid-wrapper input {
         width: 100px;
-        /* 🔥 GENİŞLETİLDİ: 60px -> 100px */
         background: rgba(0, 0, 0, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.3);
         border-radius: 12px;
