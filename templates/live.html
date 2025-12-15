@@ -20,7 +20,6 @@
                         <i class="fa-solid fa-crown"></i> <span class="name">--</span>
                     </div>
                 </div>
-
                 <div class="brand">teqlif <span class="badge">YAYINDA</span></div>
                 <div class="viewer-count"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
             </div>
@@ -40,12 +39,9 @@
                     <button class="send-icon-btn" onclick="sendMsg('broadcast')"><i
                             class="fa-solid fa-paper-plane"></i></button>
                 </div>
-
                 <div class="admin-controls">
-                    <div class="select-wrapper">
-                        <i class="fa-solid fa-microphone"></i>
-                        <select id="audioSource" onchange="restartStream()"></select>
-                    </div>
+                    <div class="select-wrapper"><i class="fa-solid fa-microphone"></i><select id="audioSource"
+                            onchange="restartStream()"></select></div>
                     <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">MEZAT AÇ 🔨</button>
                     <button id="btn-start" onclick="startBroadcast()" class="btn-start">BAŞLAT</button>
                     <button id="btn-stop" onclick="stopBroadcast()" class="btn-stop"
@@ -59,13 +55,10 @@
     <div class="feed-scroll">
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
-
             <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
                 poster="{{ stream.thumbnail }}"></video>
-
-            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;">
-                <i class="fa-solid fa-volume-high"></i> Sesi Aç
-            </div>
+            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;"><i
+                    class="fa-solid fa-volume-high"></i> Sesi Aç</div>
 
             <div class="ui-overlay">
                 <div class="top-bar">
@@ -73,21 +66,15 @@
                         <div class="price-board" id="price-board-{{ stream.username }}"
                             style="display: {{ 'flex' if auction_active else 'none' }}">
                             <span class="label">GÜNCEL</span>
-                            <div class="price-row">
-                                <span class="currency">₺</span><span id="price-{{ stream.username }}"
-                                    class="amount">0</span>
-                            </div>
-                            <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;">
-                                <i class="fa-solid fa-crown"></i> <span class="name">--</span>
-                            </div>
+                            <div class="price-row"><span class="currency">₺</span><span id="price-{{ stream.username }}"
+                                    class="amount">0</span></div>
+                            <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;"><i
+                                    class="fa-solid fa-crown"></i> <span class="name">--</span></div>
                         </div>
-
                         <button class="follow-btn {{ 'following' if is_following else '' }}"
-                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">
-                            {{ 'Takip Ediliyor' if is_following else 'Takip Et' }}
-                        </button>
+                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">{{
+                            'Takip Ediliyor' if is_following else 'Takip Et' }}</button>
                     </div>
-
                     <div class="header-right">
                         <div class="viewer-pill"><i class="fa-solid fa-eye"></i> <span
                                 id="live-count-{{ stream.username }}">0</span></div>
@@ -111,13 +98,11 @@
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 100)">+100₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 200)">+200₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
-                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 1000)">+1000₺</button>
                         <div class="manual-bid-wrapper">
                             <input type="number" id="manual-bid-{{ stream.username }}" placeholder="Tutar">
                             <button onclick="sendManualBid('{{ stream.username }}')">OK</button>
                         </div>
                     </div>
-
                     <div class="chat-input-bar">
                         <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum yaz..."
                             autocomplete="off">
@@ -125,23 +110,19 @@
                                 class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
-
             </div>
         </div>
         {% else %}
         <div class="empty-state">
             <div class="brand-logo large">teqlif</div>
-            <p>Aktif yayın yok.</p>
-            <a href="/live?mode=broadcast" class="btn-start">Yayın Aç</a>
+            <p>Aktif yayın yok.</p><a href="/live?mode=broadcast" class="btn-start">Yayın Aç</a>
         </div>
         {% endfor %}
     </div>
     {% endif %}
-
 </div>
 
 <style>
-    /* --- CSS SYSTEM (ORİJİNAL KOD KORUNDU) --- */
     :root {
         --accent: #34C759;
         --gold: #FFD700;
@@ -224,16 +205,15 @@
         pointer-events: auto;
     }
 
-    .header-left {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
+    .header-left,
     .header-right {
         display: flex;
         align-items: center;
         gap: 10px;
+    }
+
+    .header-left {
+        align-items: flex-start;
     }
 
     .price-board {
@@ -760,17 +740,12 @@
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
                 rec = new MediaRecorder(window.localStream, opts);
-
-                // 🔥 LOW LATENCY İÇİN 250ms'de BİR GÖNDER
+                // 🔥 0.5 Saniyelik paketler gönder (FFmpeg ayarına uygun)
                 rec.start(250);
-
                 rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
-
-                // --- THUMBNAIL BAŞLAT ---
-                sendThumbnailSnapshot(); // İlk kareyi hemen gönder
-                window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000); // 60 saniyede bir güncelle
+                sendThumbnailSnapshot();
+                window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
             };
-
             window.stopBroadcast = function () {
                 if (window.thumbInterval) clearInterval(window.thumbInterval);
                 fetch('/broadcast/stop', { method: 'POST' });
@@ -787,27 +762,31 @@
             else { btn.innerText = "MEZAT AÇ 🔨"; btn.style.background = "rgba(255, 255, 255, 0.2)"; }
         }
     } else {
-        // İZLEYİCİ TARAFI
         let obs = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 const u = e.target.dataset.username;
                 const v = document.getElementById(`video-${u}`);
                 if (e.isIntersecting) {
-                    // Cache Busting
                     const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
                     const attemptPlay = () => {
                         v.play().catch(error => { console.log("Sesli bloklandı"); v.muted = true; v.play(); const hint = v.parentElement.querySelector('.tap-hint'); if (hint) hint.style.display = 'block'; });
                     };
 
                     if (Hls.isSupported()) {
-                        // 🔥 LOW LATENCY CONFIG
+                        // 🔥 AGRESİF DÜŞÜK GECİKME AYARLARI
                         const hlsConfig = {
                             enableWorker: true,
                             lowLatencyMode: true,
-                            backBufferLength: 90,
-                            liveSyncDurationCount: 1.5,
-                            liveMaxLatencyDurationCount: 3,
-                            maxLiveSyncPlaybackRate: 1.5
+                            backBufferLength: 30,
+
+                            // Canlı yayının sadece 1.5 - 2 saniye gerisinden gel
+                            liveSyncDurationCount: 2.0,
+
+                            // Geride kalırsa 1.5x hızla yetiş
+                            maxLiveSyncPlaybackRate: 1.5,
+
+                            // Çok geride kalırsa (4s) direkt atla
+                            liveMaxLatencyDurationCount: 4,
                         };
                         const h = new Hls(hlsConfig);
                         h.loadSource(src);
@@ -828,12 +807,10 @@
     window.toggleFollow = function (username) {
         const btn = document.getElementById(`follow-btn-${username}`);
         const formData = new FormData(); formData.append('username', username);
-        fetch('/user/follow', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                if (data.status === 'followed') { btn.classList.add('following'); btn.innerText = 'Takip Ediliyor'; }
-                else { btn.classList.remove('following'); btn.innerText = 'Takip Et'; }
-            });
+        fetch('/user/follow', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
+            if (data.status === 'followed') { btn.classList.add('following'); btn.innerText = 'Takip Ediliyor'; }
+            else { btn.classList.remove('following'); btn.innerText = 'Takip Et'; }
+        });
     }
 
     function connectChat(target) {
@@ -841,15 +818,9 @@
         let sName = target === 'broadcast' ? "{{ user.username if user else 'anon' }}" : target;
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${sName}`);
         window.CURRENT_SOCKET = ws;
-
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
-
-            if (d.type === 'init') {
-                updatePriceDisplay(d.price, target, d.leader);
-                return;
-            }
-
+            if (d.type === 'init') { updatePriceDisplay(d.price, target, d.leader); return; }
             if (d.type === 'auction_state') {
                 const layer = document.getElementById(target === 'broadcast' ? '' : `bid-layer-${target}`);
                 const board = document.getElementById(target === 'broadcast' ? '' : `price-board-${target}`);
@@ -857,15 +828,9 @@
                 if (board) board.style.display = d.active ? 'flex' : 'none';
                 return;
             }
-
-            if (d.type === 'count') {
-                const cId = target === 'broadcast' ? 'live-count-broadcast' : `live-count-${target}`;
-                const cEl = document.getElementById(cId); if (cEl) cEl.innerText = d.val; return;
-            }
-
+            if (d.type === 'count') { const cId = target === 'broadcast' ? 'live-count-broadcast' : `live-count-${target}`; const cEl = document.getElementById(cId); if (cEl) cEl.innerText = d.val; return; }
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
-
             if (d.type === 'chat') {
                 if (d.msg.startsWith("BID:")) {
                     const amount = d.msg.split(":")[1];
@@ -894,13 +859,9 @@
         const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`;
         const el = document.getElementById(id);
         if (el) { el.innerText = amount; el.classList.remove("blink-anim"); void el.offsetWidth; el.classList.add("blink-anim"); }
-
         const leaderRowId = target === 'broadcast' ? 'leader-display-broadcast' : `leader-display-${target}`;
         const leaderRow = document.getElementById(leaderRowId);
-        if (leaderRow && bidderName) {
-            leaderRow.style.display = 'flex';
-            leaderRow.querySelector('.name').innerText = bidderName;
-        }
+        if (leaderRow && bidderName) { leaderRow.style.display = 'flex'; leaderRow.querySelector('.name').innerText = bidderName; }
     }
 
     window.sendBid = function (target, amount) {
@@ -930,30 +891,15 @@
     }
     window.simulateBid = function (amount) { if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${amount}`); }
 
-    // --- SNAPSHOT GÖNDERME FONKSİYONU ---
     async function sendThumbnailSnapshot() {
         const video = document.getElementById('preview');
         if (!video) return;
-
         const canvas = document.createElement('canvas');
-        canvas.width = 640; // Thumbnail boyutu
-        canvas.height = 360;
-
+        canvas.width = 640; canvas.height = 360;
         const ctx = canvas.getContext('2d');
         ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-        const dataUrl = canvas.toDataURL('image/jpeg', 0.6); // 0.6 kalite yeterli
-
-        try {
-            await fetch('/broadcast/thumbnail', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: dataUrl, timestamp: Date.now() })
-            });
-            console.log("📸 Thumbnail güncellendi.");
-        } catch (err) {
-            console.error("Thumbnail hatası:", err);
-        }
+        const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+        try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: dataUrl, timestamp: Date.now() }) }); console.log("📸 Thumbnail güncellendi."); } catch (err) { console.error("Thumbnail hatası:", err); }
     }
 </script>
 {% endblock %}

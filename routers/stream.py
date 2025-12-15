@@ -176,65 +176,59 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     if not user or not user.username: await websocket.close(); return
 
-    # Klasör yapısını ayarla: static/hls/user/v0, static/hls/user/v1 vb.
     stream_dir = f"static/hls/{user.username}"
     shutil.rmtree(stream_dir, ignore_errors=True)
     
-    # Alt klasörleri oluştur (FFmpeg otomatik oluşturmazsa diye)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True)
     os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True)
     
-    print(f"🎥 ADAPTİF YAYIN BAŞLIYOR: {user.username}")
+    print(f"🎥 ULTRA LOW LATENCY YAYIN: {user.username}")
 
-    # 🔥 ABR (ADAPTIVE BITRATE) FFMPEG KOMUTU
+    # 🔥 ULTRA DÜŞÜK GECİKME İÇİN OPTİMİZE EDİLMİŞ AYARLAR
+    # HLS Time: 0.5s (Yarım saniye parçalar)
+    # GOP Size: 15 (Her 15 karede bir anahtar kare, yani 0.5 saniyede bir)
     command = [
         "ffmpeg", 
         "-f", "webm", 
         "-fflags", "+genpts+igndts+nobuffer", 
         "-i", "pipe:0",
 
-        # --- GÖRÜNTÜ İŞLEME VE BOYUTLANDIRMA ---
         "-filter_complex", 
-        "[0:v]split=3[v1][v2][v3];"            # Gelen videoyu 3 kopyaya ayır
-        "[v1]scale=-2:720[v720];"             # Kopya 1 -> 720p
-        "[v2]scale=-2:480[v480];"             # Kopya 2 -> 480p
-        "[v3]scale=-2:360[v360]",             # Kopya 3 -> 360p
+        "[0:v]split=3[v1][v2][v3];"            
+        "[v1]scale=-2:720[v720];"             
+        "[v2]scale=-2:480[v480];"             
+        "[v3]scale=-2:360[v360]",             
 
-        # --- 720p AYARLARI (Yüksek Kalite) ---
+        # 720p - Hız Odaklı
         "-map", "[v720]", "-map", "0:a",
-        "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "2800k",
+        "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "1500k",
         "-c:a:0", "aac", "-b:a:0", "128k",
 
-        # --- 480p AYARLARI (Orta Kalite) ---
+        # 480p
         "-map", "[v480]", "-map", "0:a",
-        "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "1400k",
+        "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "800k",
         "-c:a:1", "aac", "-b:a:1", "96k",
 
-        # --- 360p AYARLARI (Düşük Kalite / Mobil) ---
+        # 360p
         "-map", "[v360]", "-map", "0:a",
-        "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "700k", "-bufsize:v:2", "700k",
+        "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "700k", "-bufsize:v:2", "400k",
         "-c:a:2", "aac", "-b:a:2", "64k",
 
-        # --- ORTAK AYARLAR (Hız ve Gecikme) ---
-        "-preset", "veryfast",                # İşlemciyi daha az yorar
-        "-tune", "zerolatency",               # Düşük gecikme için
-        "-g", "60",                           # 2 saniyede bir keyframe (HLS time 2sn ile uyumlu)
-        "-sc_threshold", "0",
+        "-preset", "ultrafast",               # 🚀 En hızlı işleme
+        "-tune", "zerolatency",               # Gecikme yok
+        "-g", "15",                           # 🔥 Keyframe her 0.5 saniyede bir (Çok önemli)
+        "-sc_threshold", "0",                 # Sahne geçişlerini yoksay (Stabilite için)
         
-        # --- HLS YAPILANDIRMASI ---
         "-f", "hls",
-        "-hls_time", "2",                     # Parça uzunluğu 2 saniye
-        "-hls_list_size", "4",                # Listede son 4 parça tutulur
+        "-hls_time", "0.5",                   # 🔥 Parçalar SADECE 0.5 SANİYE
+        "-hls_list_size", "6",                # Liste kısa
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         
-        # --- MASTER PLAYLIST OLUŞTURMA ---
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p",
-        "-master_pl_name", "master.m3u8",     # Ana dosya ismi
-        
-        # --- ÇIKTI DOSYA YOLLARI ---
-        "-hls_segment_filename", f"{stream_dir}/%v/seg_%03d.ts",  # Parçalar: 720p/seg_001.ts
-        f"{stream_dir}/%v/stream.m3u8",                           # Alt listeler: 720p/stream.m3u8
+        "-master_pl_name", "master.m3u8",
+        "-hls_segment_filename", f"{stream_dir}/%v/seg_%04d.ts",
+        f"{stream_dir}/%v/stream.m3u8",
         
         "-loglevel", "error"
     ]
