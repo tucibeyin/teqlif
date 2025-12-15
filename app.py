@@ -14,13 +14,12 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, WebSocket, Request, WebSocketDisconnect, Depends, Form, HTTPException, status
-# JSONResponse'u ekledik, bazı API çağrıları için gerekli
 from fastapi.responses import HTMLResponse, RedirectResponse, JSONResponse 
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.security import OAuth2PasswordBearer
 
-# VERİTABANI: İlişkisel tablolar ve sıralama için gerekli importlar eklendi
+# VERİTABANI
 from sqlalchemy import create_engine, Column, Integer, String, DateTime, Boolean, Table, ForeignKey, desc
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, Session, relationship
@@ -56,7 +55,7 @@ engine = create_engine(SQLALCHEMY_DATABASE_URL)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
-# Takipçiler Tablosu (Many-to-Many ilişkisi için gerekli)
+# Takipçiler Tablosu (Many-to-Many ilişkisi)
 followers_table = Table('followers', Base.metadata,
     Column('follower_id', Integer, ForeignKey('users.id'), primary_key=True),
     Column('followed_id', Integer, ForeignKey('users.id'), primary_key=True)
@@ -78,7 +77,7 @@ class User(Base):
     stream_title = Column(String, default="")      
     thumbnail = Column(String, default="")
     
-    # 🔥 KALICI MEZAT DURUMU (Önceki adımda eklenmişti)
+    # Kalıcı Mezat Durumu
     current_price = Column(Integer, default=0)
     highest_bidder = Column(String, nullable=True)
 
@@ -91,7 +90,7 @@ class User(Base):
         backref="followers"
     )
 
-# 🔥 KALICI SOHBET VE TEKLİF GEÇMİŞİ (Önceki adımda eklenmişti)
+# Sohbet ve Teklif Geçmişi
 class StreamMessage(Base):
     __tablename__ = "stream_messages"
     id = Column(Integer, primary_key=True, index=True)
@@ -140,14 +139,11 @@ def send_brevo_email(to_email, subject, html_content):
     except: pass
 
 def send_welcome_email(to_email):
-    # Bu fonksiyon sadece doğru mail içeriği ile send_brevo_email'i çağırır
     send_brevo_email(to_email, "Hoş Geldiniz!", "<p>Hesabınız onaylandı.</p>")
 
 def notify_followers(user: User):
-    """Yayın açıldığında takipçilere mail atar"""
     followers_list = user.followers
     if not followers_list: return
-    
     print(f"🔔 BİLDİRİM: {len(followers_list)} takipçiye haber veriliyor...")
     for follower in followers_list:
         html = f"<h1>{user.username} CANLI YAYINDA! 🔴</h1><p>Hemen katıl ve mezatı kaçırma!</p><a href='https://teqlif.com/live?mode=watch&broadcaster={user.username}'>İzlemek için tıkla</a>"
@@ -197,12 +193,12 @@ def cleanup_stream(username: str, db: Session):
             user.is_live = False
             user.is_auction_active = False
             
-            # 🔥 YAYIN BİTİNCE MEZAT BİLGİLERİNİ SIFIRLA 🔥 (Önceki adımda düzeltildi)
+            # 🔥 YAYIN BİTİNCE MEZAT VE FİYAT BİLGİLERİNİ SIFIRLA
             user.current_price = 0
             user.highest_bidder = None
             db.commit() 
             
-            # 🔥 SOHBET GEÇMİŞİNİ SİL 🔥 (Önceki adımda düzeltildi)
+            # 🔥 SOHBET GEÇMİŞİNİ SİL
             db.query(StreamMessage).filter(StreamMessage.room_name == username).delete()
             db.commit() 
             
@@ -225,11 +221,10 @@ async def read_home(request: Request, db: Session = Depends(get_db), user: Optio
     active_streams = db.query(User).filter(User.is_live == True).all()
     if user:
         followed_ids = [u.id for u in user.followed]
-        # Takip edilen yayınları öne çıkar
         active_streams.sort(key=lambda x: x.id not in followed_ids)
     return templates.TemplateResponse("index.html", {"request": request, "user": user, "streams": active_streams})
 
-# 🔥 HATA GİDERİLDİ: EKSİK OLAN LOGIN GET ROTASI EKLENDİ! 🔥
+# ✅ EKSİK OLAN LOGIN GET ROTASI EKLENDİ
 @app.get("/login", response_class=HTMLResponse)
 async def login_page(request: Request): 
     return templates.TemplateResponse("login.html", {"request": request})
@@ -240,7 +235,6 @@ async def signup_page(request: Request):
 
 @app.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Kullanıcı giriş yapmamışsa /login'e yönlendir (Log'daki 303 bu yüzden gelmişti)
     if not user: return RedirectResponse(url="/login", status_code=303)
     
     target_user = None
@@ -255,7 +249,6 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
     else:
         active_streams = db.query(User).filter(User.is_live == True).all()
         followed_ids = [u.id for u in user.followed]
-        # İzlenen yayını en öne, takip edilenleri sonra sırala
         active_streams.sort(key=lambda x: (x.username == broadcaster, x.id in followed_ids), reverse=True)
         
         return templates.TemplateResponse("live.html", {
@@ -291,7 +284,7 @@ async def verify_code(request: Request, email: str = Form(...), code: str = Form
 async def login(request: Request, email: str = Form(...), password: str = Form(...), db: Session = Depends(get_db)):
     user = db.query(User).filter(User.email == email).first()
     if not user or not verify_password(password, user.password_hash): return templates.TemplateResponse("login.html", {"request": request, "error": "Hatalı bilgi."})
-    if not user.is_verified: return templates.TemplateResponse("login.html", {"request": request, "error": "Onaylayın."})
+    if not user.is_verified: return templates.TemplateResponse("login.html", {"request": request, "error": "Hesabınız onaylanmamış."})
     resp = RedirectResponse(url="/", status_code=303)
     resp.set_cookie(key="access_token", value=f"Bearer {create_access_token({'sub': user.email})}", httponly=True)
     return resp
@@ -326,12 +319,11 @@ async def follow_user(username: str = Form(...), user: User = Depends(get_curren
     else:
         user.followed.remove(target); db.commit(); return JSONResponse({"status": "unfollowed"})
 
-
 @app.post("/broadcast/start")
 async def start_broadcast_api(title: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
     user.is_live = True; user.stream_title = title; db.commit()
-    notify_followers(user) # Takipçi bildirimi
+    notify_followers(user)
     return {"status": "success"}
 
 @app.post("/broadcast/stop")
@@ -378,10 +370,9 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
             if u: current_username = u.username
     except: pass
 
-    # 🔥 BAŞLANGIÇ BİLGİSİ VE GEÇMİŞ GÖNDERİMİ 🔥 (Önceki adımda eklenmişti)
     broadcaster = db.query(User).filter(User.username == stream).first()
     if broadcaster:
-        # 1. INIT (Fiyat ve Lider)
+        # INIT (Fiyat ve Lider)
         init_msg = json.dumps({
             "type": "init",
             "price": broadcaster.current_price,
@@ -389,7 +380,7 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         })
         await websocket.send_text(init_msg)
 
-        # 2. Eski Mesajlar (Son 30)
+        # Eski Mesajlar (Son 30)
         last_msgs = db.query(StreamMessage).filter(StreamMessage.room_name == stream)\
                       .order_by(desc(StreamMessage.created_at)).limit(30).all()
         for msg in reversed(last_msgs):
@@ -443,9 +434,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: pass
 
-    if not user or not user.username:
-        await websocket.close()
-        return
+    if not user or not user.username: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir):
@@ -454,17 +443,33 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(stream_dir, exist_ok=True)
     
     stream_path = f"{stream_dir}/stream.m3u8"
-    print(f"🎥 YAYIN BAŞLIYOR (STABIL): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (ULTRA LOW LATENCY): {user.username}")
 
-    # FFmpeg Komutu (Önceki kararlı sürümü kullandık)
+    # ✅ DÜŞÜK GECİKME İÇİN OPTİMİZE EDİLMİŞ FFmpeg KOMUTU
     command = [
-        "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts", "-i", "pipe:0",
-        "-c:v", "libx264", "-preset", "veryfast", "-tune", "zerolatency",
-        "-threads", "4", "-r", "30", "-g", "60", 
-        "-b:v", "2500k", "-maxrate", "2500k", "-bufsize", "5000k", "-pix_fmt", "yuv420p",
-        "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2", "-af", "aresample=async=1",
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "5", 
-        "-hls_flags", "delete_segments+append_list+omit_endlist", "-hls_segment_type", "mpegts",
+        "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
+        
+        "-c:v", "libx264", 
+        "-preset", "veryfast",  
+        "-profile:v", "high",   
+        "-tune", "zerolatency", 
+        
+        "-threads", "0", 
+        "-r", "30",             
+        "-g", "30",             # Keyframe her 1 saniyede bir
+        
+        "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "3000k", 
+        "-pix_fmt", "yuv420p",
+        
+        "-c:a", "aac", "-b:a", "160k", "-ar", "44100", "-ac", "2", "-af", "aresample=async=1000",
+        
+        "-f", "hls", 
+        "-hls_time", "1",       # Parçalar 1 saniyelik olacak
+        "-hls_list_size", "3",  # Listede sadece son 3 parça tut
+        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start", 
+        "-hls_segment_type", "mpegts",
+        
+        "-max_muxing_queue_size", "1024", "-loglevel", "error", 
         stream_path 
     ]
     
