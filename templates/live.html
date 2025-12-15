@@ -1,351 +1,937 @@
 {% extends "base.html" %}
-{% block title %}Canlı Yayın{% endblock %}
-{% block content %}
 
-<div class="main-container">
+{% block content %}
+{% set mode = request.query_params.get('mode') %}
+
+<div class="teqlif-os">
 
     {% if mode == 'broadcast' %}
-    <div class="stream-container broadcast-view">
-        <video id="localVideo" autoplay muted></video>
-        <div class="overlay-controls">
-            <input type="text" id="streamTitle" placeholder="Yayın başlığı" value="{{ user.stream_title }}">
-            <button id="startBtn" onclick="startBroadcast()">YAYINI BAŞLAT</button>
-            <button id="stopBtn" onclick="stopBroadcast()" style="display:none;">YAYINI BİTİR</button>
-            <div class="auction-toggle">
-                <label>Mezat Aktif:</label>
-                <input type="checkbox" id="auctionActiveToggle" onchange="toggleAuction(this.checked)" {% if
-                    auction_active %}checked{% endif %}>
+    <div class="screen">
+        <video id="preview" class="cinema-video" autoplay muted playsinline></video>
+
+        <div class="ui-overlay">
+            <div class="top-bar">
+                <div class="price-board">
+                    <span class="label">GÜNCEL FİYAT</span>
+                    <div class="price-row">
+                        <span class="currency">₺</span><span id="current-price-display">0</span>
+                    </div>
+                    <div class="leader-row" id="leader-display-broadcast" style="display: none;">
+                        <i class="fa-solid fa-crown"></i> <span class="name">--</span>
+                    </div>
+                </div>
+
+                <div class="brand">teqlif <span class="badge">YAYINDA</span></div>
+                <div class="viewer-count"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
+            </div>
+
+            <div class="mid-section">
+                <div class="chat-zone">
+                    <div id="chat-feed-broadcast" class="chat-scroller"></div>
+                </div>
+                <div class="bid-zone">
+                    <div id="bid-feed-broadcast" class="bid-scroller"></div>
+                </div>
+            </div>
+
+            <div class="bottom-dock">
+                <div class="chat-input-bar">
+                    <input type="text" id="chat-input-broadcast" placeholder="Mesaj yaz..." autocomplete="off">
+                    <button class="send-icon-btn" onclick="sendMsg('broadcast')"><i
+                            class="fa-solid fa-paper-plane"></i></button>
+                </div>
+
+                <div class="admin-controls">
+                    <div class="select-wrapper">
+                        <i class="fa-solid fa-microphone"></i>
+                        <select id="audioSource" onchange="restartStream()"></select>
+                    </div>
+                    <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">MEZAT AÇ 🔨</button>
+                    <button id="btn-start" onclick="startBroadcast()" class="btn-start">BAŞLAT</button>
+                    <button id="btn-stop" onclick="stopBroadcast()" class="btn-stop"
+                        style="display:none;">BİTİR</button>
+                </div>
             </div>
         </div>
     </div>
 
     {% else %}
-    <div class="stream-container watch-view">
-        {% if broadcaster and broadcaster.is_live %}
-        <div class="stream-item active-stream" data-username="{{ broadcaster.username }}"
-            data-stream-id="{{ broadcaster.id }}">
-            <video id="video-{{ broadcaster.username }}" controls autoplay playsinline class="main-video"></video>
-            <div class="tap-hint" style="display:none;">Sesi açmak için dokun.</div>
-            <div class="stream-info">
-                <img src="{{ broadcaster.thumbnail or '/static/img/default-thumb.jpg' }}" alt="Yayıncı"
-                    class="stream-info-thumb">
-                <div class="stream-meta">
-                    <h3>{{ broadcaster.stream_title or 'Başlıksız Yayın' }}</h3>
-                    <p class="stream-username">{{ broadcaster.username }}</p>
-                </div>
-                <div class="auction-status" id="auction-status-{{ broadcaster.username }}"
-                    data-active="{{ broadcaster.is_auction_active | lower }}">
-                    {% if broadcaster.is_auction_active %}
-                    <span class="badge active">MEZAT AKTİF</span>
-                    {% else %}
-                    <span class="badge inactive">MEZAT KAPALI</span>
-                    {% endif %}
-                </div>
-                <button class="follow-btn" onclick="toggleFollow('{{ broadcaster.username }}')">
-                    <i class="fa-solid fa-user-{{ 'check' if is_following else 'plus' }}"></i> <span id="follow-text">{{
-                        'Takip Ediliyor' if is_following else 'Takip Et' }}</span>
-                </button>
-            </div>
-            <div class="stream-live-count">
-                <i class="fa-solid fa-eye"></i> <span id="count-{{ broadcaster.username }}">0</span>
-            </div>
-        </div>
+    <div class="feed-scroll">
+        {% for stream in streams %}
+        <div class="screen stream-item" data-username="{{ stream.username }}">
 
-        <div class="side-panel">
-            <div class="auction-info-box">
-                <h4>Anlık Teklif</h4>
-                <div class="price-leader">
-                    <span class="price" id="current-price">₺{{ broadcaster.current_price }}</span>
-                    <span class="leader" id="highest-bidder">Lider: {{ broadcaster.highest_bidder or 'Yok' }}</span>
-                </div>
-                <form id="bidForm" onsubmit="sendBid(event)">
-                    <input type="number" id="bidAmount"
-                        placeholder="Teklifiniz (Min: ₺{{ broadcaster.current_price + 1 }})"
-                        min="{{ broadcaster.current_price + 1 }}">
-                    <button type="submit">TEKLİF VER</button>
-                </form>
+            <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
+                poster="{{ stream.thumbnail }}"></video>
+
+            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;">
+                <i class="fa-solid fa-volume-high"></i> Sesi Aç
             </div>
 
-            <div class="chat-box">
-                <div class="chat-messages" id="chat-messages">
+            <div class="ui-overlay">
+                <div class="top-bar">
+                    <div class="header-left">
+                        <div class="price-board" id="price-board-{{ stream.username }}"
+                            style="display: {{ 'flex' if auction_active else 'none' }}">
+                            <span class="label">GÜNCEL</span>
+                            <div class="price-row">
+                                <span class="currency">₺</span><span id="price-{{ stream.username }}"
+                                    class="amount">0</span>
+                            </div>
+                            <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;">
+                                <i class="fa-solid fa-crown"></i> <span class="name">--</span>
+                            </div>
+                        </div>
+
+                        <button class="follow-btn {{ 'following' if is_following else '' }}"
+                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">
+                            {{ 'Takip Ediliyor' if is_following else 'Takip Et' }}
+                        </button>
+                    </div>
+
+                    <div class="header-right">
+                        <div class="viewer-pill"><i class="fa-solid fa-eye"></i> <span
+                                id="live-count-{{ stream.username }}">0</span></div>
+                        <a href="/" class="close-btn"><i class="fa-solid fa-xmark"></i></a>
+                    </div>
                 </div>
-                <form id="chatForm" onsubmit="sendMessage(event)">
-                    <input type="text" id="chatInput" placeholder="Mesaj veya Teklif (BID:100)">
-                    <button type="submit"><i class="fa-solid fa-paper-plane"></i></button>
-                </form>
+
+                <div class="mid-section">
+                    <div class="chat-zone">
+                        <div id="chat-feed-{{ stream.username }}" class="chat-scroller"></div>
+                    </div>
+                    <div class="bid-zone">
+                        <div id="bid-feed-{{ stream.username }}" class="bid-scroller"></div>
+                    </div>
+                </div>
+
+                <div class="bottom-dock">
+                    <div class="bid-layer" id="bid-layer-{{ stream.username }}"
+                        style="display: {{ 'flex' if auction_active else 'none' }}">
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 50)">+50₺</button>
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 100)">+100₺</button>
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 200)">+200₺</button>
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 1000)">+1000₺</button>
+                        <div class="manual-bid-wrapper">
+                            <input type="number" id="manual-bid-{{ stream.username }}" placeholder="Tutar">
+                            <button onclick="sendManualBid('{{ stream.username }}')">OK</button>
+                        </div>
+                    </div>
+
+                    <div class="chat-input-bar">
+                        <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum yaz..."
+                            autocomplete="off">
+                        <button class="send-icon-btn" onclick="sendMsg('{{ stream.username }}')"><i
+                                class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+
             </div>
         </div>
         {% else %}
-        <p>Yayıncı offline veya bulunamadı.</p>
-        {% endif %}
-    </div>
-
-    <div class="sidebar-streams">
-        <h3>Diğer Canlı Yayınlar</h3>
-        {% for stream in streams %}
-        {% if stream.username != broadcaster.username %}
-        <a href="/live?mode=watch&broadcaster={{ stream.username }}" class="stream-sidebar-item">
-            <div class="stream-thumbnail-wrapper">
-                <img src="{{ stream.thumbnail or '/static/img/default-thumb.jpg' }}" alt="{{ stream.username }}">
-                <span class="live-indicator">CANLI</span>
-            </div>
-            <div class="stream-details">
-                <p class="title">{{ stream.stream_title or 'Başlıksız Yayın' }}</p>
-                <p class="username">{{ stream.username }}</p>
-            </div>
-        </a>
-        {% endif %}
+        <div class="empty-state">
+            <div class="brand-logo large">teqlif</div>
+            <p>Aktif yayın yok.</p>
+            <a href="/live?mode=broadcast" class="btn-start">Yayın Aç</a>
+        </div>
         {% endfor %}
-        {% if not streams or (broadcaster and streams | length == 1 and streams[0].username == broadcaster.username) %}
-        <p>Şu an aktif başka yayın yok.</p>
-        {% endif %}
     </div>
     {% endif %}
 
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
+<style>
+    /* --- CSS SYSTEM --- */
+    :root {
+        --accent: #34C759;
+        --gold: #FFD700;
+        --chat-bg: rgba(0, 0, 0, 0.6);
+        --glass-border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+        outline: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+        background: #000;
+        color: #fff;
+        font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
+        width: 100vw;
+        height: 100dvh;
+        overflow: hidden;
+    }
+
+    .teqlif-os {
+        width: 100%;
+        height: 100%;
+        max-width: 500px;
+        margin: 0 auto;
+        position: relative;
+        background: #000;
+    }
+
+    .feed-scroll {
+        width: 100%;
+        height: 100%;
+        overflow-y: scroll;
+        scroll-snap-type: y mandatory;
+    }
+
+    .screen {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        scroll-snap-align: start;
+        overflow: hidden;
+    }
+
+    .cinema-video {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 1;
+    }
+
+    #preview {
+        transform: scaleX(-1);
+    }
+
+    .ui-overlay {
+        position: absolute;
+        inset: 0;
+        z-index: 10;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        pointer-events: none;
+        padding-top: max(10px, env(safe-area-inset-top));
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
+    }
+
+    /* TOP BAR */
+    .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 10px 15px;
+        pointer-events: auto;
+    }
+
+    .header-left {
+        display: flex;
+        align-items: flex-start;
+        gap: 10px;
+    }
+
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+
+    /* FİYAT TABELASI GÜNCELLEMESİ */
+    .price-board {
+        background: rgba(30, 30, 30, 0.85);
+        backdrop-filter: blur(12px);
+        border: var(--glass-border);
+        padding: 6px 12px;
+        border-radius: 14px;
+        display: flex;
+        flex-direction: column;
+        min-width: 90px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .price-board .label {
+        font-size: 9px;
+        opacity: 0.7;
+        font-weight: 700;
+        letter-spacing: 0.5px;
+    }
+
+    .price-board .price-row {
+        display: flex;
+        align-items: baseline;
+    }
+
+    .price-board .amount {
+        font-size: 20px;
+        font-weight: 800;
+        line-height: 1.1;
+    }
+
+    .price-board .currency {
+        color: var(--accent);
+        font-weight: 700;
+        margin-right: 2px;
+        font-size: 14px;
+    }
+
+    /* 🔥 LİDER SATIRI STİLİ */
+    .leader-row {
+        margin-top: 4px;
+        padding-top: 4px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 11px;
+        color: var(--gold);
+        font-weight: 700;
+        animation: slideInUp 0.3s ease-out;
+    }
+
+    .leader-row i {
+        font-size: 10px;
+    }
+
+    .leader-row .name {
+        color: #fff;
+        max-width: 80px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    .brand {
+        font-weight: 800;
+        font-size: 18px;
+        text-shadow: 0 1px 2px black;
+    }
+
+    .viewer-float,
+    .viewer-pill {
+        background: rgba(0, 0, 0, 0.5);
+        padding: 4px 8px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: 600;
+        border: var(--glass-border);
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+
+    .close-btn {
+        color: white;
+        font-size: 22px;
+        text-shadow: 0 1px 2px black;
+    }
+
+    .follow-btn {
+        background: var(--accent);
+        color: black;
+        border: none;
+        padding: 6px 12px;
+        border-radius: 20px;
+        font-weight: 700;
+        font-size: 12px;
+        cursor: pointer;
+        transition: all 0.3s;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .follow-btn.following {
+        background: transparent;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: #ddd;
+    }
+
+    .mid-section {
+        flex: 1;
+        display: flex;
+        flex-direction: row;
+        align-items: flex-end;
+        justify-content: space-between;
+        width: 100%;
+        padding-bottom: 0px;
+        pointer-events: none;
+    }
+
+    .chat-zone {
+        width: 65%;
+        max-height: 35vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding-left: 15px;
+        pointer-events: auto;
+    }
+
+    .chat-scroller {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        justify-content: flex-end;
+        mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
+    }
+
+    .msg {
+        background: var(--chat-bg);
+        color: #fff;
+        padding: 5px 10px;
+        border-radius: 10px;
+        border-bottom-left-radius: 2px;
+        font-size: 13px;
+        width: fit-content;
+        text-shadow: 0 1px 1px black;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        margin-bottom: 2px;
+        animation: slideInUp 0.3s ease-out forwards;
+        transform-origin: bottom left;
+    }
+
+    .msg b {
+        color: #f1c40f;
+        margin-right: 4px;
+        font-weight: 700;
+    }
+
+    .bid-zone {
+        width: 30%;
+        max-height: 35vh;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        align-items: flex-end;
+        padding-right: 15px;
+        pointer-events: none;
+    }
+
+    .bid-scroller {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        align-items: flex-end;
+        justify-content: flex-end;
+    }
+
+    .bid-bubble {
+        background: rgba(52, 199, 89, 0.9);
+        color: white;
+        padding: 6px 10px;
+        border-radius: 12px;
+        border-bottom-right-radius: 2px;
+        font-weight: 700;
+        font-size: 12px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        text-align: right;
+        border: 1px solid rgba(255, 255, 255, 0.4);
+        margin-bottom: 2px;
+        animation: slideInRight 0.3s ease-out forwards;
+    }
+
+    .bottom-dock {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        pointer-events: auto;
+        padding: 10px 10px 5px 10px;
+        z-index: 60;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
+    }
+
+    .bid-layer {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-bottom: 2px;
+        align-items: center;
+        scrollbar-width: none;
+    }
+
+    .bid-layer::-webkit-scrollbar {
+        display: none;
+    }
+
+    .bid-chip {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 6px 10px;
+        border-radius: 12px;
+        font-weight: 700;
+        font-size: 11px;
+        white-space: nowrap;
+        flex-shrink: 0;
+    }
+
+    .manual-bid-wrapper {
+        display: flex;
+        gap: 4px;
+        flex-shrink: 0;
+    }
+
+    .manual-bid-wrapper input {
+        width: 80px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        border-radius: 10px;
+        color: white;
+        text-align: center;
+        padding: 5px;
+        font-size: 13px;
+    }
+
+    .manual-bid-wrapper button {
+        background: var(--accent);
+        border: none;
+        color: black;
+        padding: 0 10px;
+        border-radius: 10px;
+        font-weight: 800;
+        font-size: 11px;
+    }
+
+    .chat-input-bar {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(10px);
+        border-radius: 20px;
+        padding: 6px 6px 6px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .chat-input-bar input {
+        flex: 1;
+        background: transparent;
+        border: none;
+        color: white;
+        font-size: 13px;
+    }
+
+    .send-icon-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: var(--accent);
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: black;
+        font-size: 13px;
+    }
+
+    .admin-controls {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        align-items: center;
+    }
+
+    .btn-start {
+        background: white;
+        color: black;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 15px;
+        font-weight: 800;
+        font-size: 11px;
+    }
+
+    .btn-stop {
+        background: red;
+        color: white;
+        border: none;
+        padding: 8px 15px;
+        border-radius: 15px;
+        font-weight: 800;
+        font-size: 11px;
+    }
+
+    .btn-glass {
+        background: rgba(255, 255, 255, 0.2);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 15px;
+        font-weight: 700;
+        font-size: 11px;
+    }
+
+    .select-wrapper {
+        position: relative;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        padding: 0 8px;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .select-wrapper i {
+        color: #aaa;
+        font-size: 10px;
+    }
+
+    .select-wrapper select {
+        background: transparent;
+        border: none;
+        color: white;
+        padding: 6px 4px;
+        font-size: 10px;
+        outline: none;
+        width: 80px;
+    }
+
+    .select-wrapper select option {
+        background: #222;
+        color: white;
+    }
+
+    .tap-hint {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0, 0, 0, 0.6);
+        color: white;
+        padding: 12px 24px;
+        border-radius: 30px;
+        pointer-events: auto;
+    }
+
+    .empty-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #888;
+        gap: 20px;
+    }
+
+    .blink-anim {
+        animation: flash 0.3s ease-out;
+    }
+
+    .fade-out {
+        animation: fadeOut 0.5s ease-out forwards;
+    }
+
+    .error-shake {
+        animation: shake 0.4s ease-in-out;
+        border-color: red !important;
+        background: rgba(255, 0, 0, 0.2) !important;
+    }
+
+    @keyframes slideInUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px) scale(0.95);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+        }
+    }
+
+    @keyframes slideInRight {
+        from {
+            opacity: 0;
+            transform: translateX(20px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes fadeOut {
+        from {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        to {
+            opacity: 0;
+            transform: translateY(-10px);
+        }
+    }
+
+    @keyframes shake {
+        0% {
+            transform: translateX(0);
+        }
+
+        25% {
+            transform: translateX(-5px);
+        }
+
+        50% {
+            transform: translateX(5px);
+        }
+
+        75% {
+            transform: translateX(-5px);
+        }
+
+        100% {
+            transform: translateX(0);
+        }
+    }
+
+    @keyframes flash {
+        0% {
+            transform: scale(1);
+            color: white;
+        }
+
+        50% {
+            transform: scale(1.1);
+            color: var(--accent);
+        }
+
+        100% {
+            transform: scale(1);
+            color: white;
+        }
+    }
+</style>
+
 <script>
-    const MODE = '{{ mode }}';
-    const BROADCASTER_USERNAME = '{{ broadcaster.username if broadcaster else "" }}';
-    let wsChat = null;
-    let rec = null;
-    let localStream = null;
-    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const MODE = "{{ mode }}";
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    window.CURRENT_SOCKET = null;
+    let AUCTION_ACTIVE = {{ 'true' if auction_active else 'false' }};
 
-    // --- CHAT VE AUCTION FONKSİYONLARI ---
-    function connectChat(username) {
-        if (wsChat && wsChat.readyState === WebSocket.OPEN) wsChat.close();
-        wsChat = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${username}`);
+    function unmuteVideo(u) {
+        const v = document.getElementById(`video-${u}`);
+        if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; }
+    }
 
-        wsChat.onmessage = (event) => {
-            const data = JSON.parse(event.data);
-            const messagesDiv = document.getElementById('chat-messages');
+    if (MODE === 'broadcast') {
+        const prev = document.getElementById('preview');
+        let rec, active = false;
 
-            if (data.type === 'init') {
-                updateAuctionInfo(data.price, data.leader);
-            } else if (data.type === 'chat') {
-                const isBid = data.msg.startsWith('BID:');
-                const msgElement = document.createElement('div');
-                msgElement.classList.add('chat-message');
-                if (isBid) msgElement.classList.add('bid-message');
-                msgElement.innerHTML = `<strong>${data.user}:</strong> ${data.msg}`;
-                messagesDiv.appendChild(msgElement);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        async function getDevices() {
+            try {
+                await navigator.mediaDevices.getUserMedia({ audio: true });
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const audioSelect = document.getElementById('audioSource');
+                audioSelect.innerHTML = '';
+                const audioInputs = devices.filter(device => device.kind === 'audioinput');
+                audioInputs.forEach(device => {
+                    const option = document.createElement('option');
+                    option.value = device.deviceId;
+                    option.text = device.label || `Mikrofon ${audioSelect.length + 1}`;
+                    audioSelect.appendChild(option);
+                });
+            } catch (e) { console.error(e); }
+        }
 
-                // Fiyatsa Güncelle
-                if (isBid && BROADCASTER_USERNAME) {
-                    try {
-                        const newPrice = parseInt(data.msg.split(':')[1]);
-                        updateAuctionInfo(newPrice, data.user);
-                    } catch { }
+        async function initStream(audioDeviceId = null) {
+            const constraints = { video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }, audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true };
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                window.localStream = stream; prev.srcObject = stream; prev.volume = 0;
+                if (!audioDeviceId) getDevices();
+            } catch (err) { console.error(err); alert("Kamera/Mikrofon Hatası!"); }
+        }
+        initStream();
+
+        window.restartStream = function () {
+            const audioSelect = document.getElementById('audioSource');
+            if (window.localStream) window.localStream.getTracks().forEach(t => t.stop());
+            initStream(audioSelect.value);
+        }
+
+        window.startBroadcast = function () {
+            active = true;
+            document.getElementById('btn-start').style.display = 'none';
+            document.getElementById('btn-stop').style.display = 'inline-block';
+            connectChat('broadcast');
+            const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+            ws.onopen = () => {
+                let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
+                if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
+                rec = new MediaRecorder(window.localStream, opts);
+                rec.start(1000);
+                rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+            };
+            window.stopBroadcast = function () { fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
+        }
+
+        window.toggleAuction = function () {
+            AUCTION_ACTIVE = !AUCTION_ACTIVE;
+            const btn = document.getElementById('btn-auction-toggle');
+            const formData = new FormData(); formData.append('active', AUCTION_ACTIVE);
+            fetch('/broadcast/toggle_auction', { method: 'POST', body: formData });
+            if (AUCTION_ACTIVE) { btn.innerText = "MEZATI KAPAT 🚫"; btn.style.background = "rgba(255, 59, 48, 0.4)"; }
+            else { btn.innerText = "MEZAT AÇ 🔨"; btn.style.background = "rgba(255, 255, 255, 0.2)"; }
+        }
+    } else {
+        let obs = new IntersectionObserver((entries) => {
+            entries.forEach(e => {
+                const u = e.target.dataset.username;
+                const v = document.getElementById(`video-${u}`);
+                if (e.isIntersecting) {
+                    const src = `/static/hls/${u}/stream.m3u8?t=${Date.now()}`;
+                    const attemptPlay = () => {
+                        v.play().catch(error => { console.log("Sesli bloklandı"); v.muted = true; v.play(); const hint = v.parentElement.querySelector('.tap-hint'); if (hint) hint.style.display = 'block'; });
+                    };
+                    if (Hls.isSupported()) { const h = new Hls(); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, attemptPlay); }
+                    else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; attemptPlay(); }
+                    connectChat(u);
+                } else { if (v) v.pause(); }
+            });
+        }, { threshold: 0.6 });
+        document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
+    }
+
+    window.toggleFollow = function (username) {
+        const btn = document.getElementById(`follow-btn-${username}`);
+        const formData = new FormData(); formData.append('username', username);
+        fetch('/user/follow', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'followed') { btn.classList.add('following'); btn.innerText = 'Takip Ediliyor'; }
+                else { btn.classList.remove('following'); btn.innerText = 'Takip Et'; }
+            });
+    }
+
+    function connectChat(target) {
+            if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
+            let sName = target === 'broadcast' ? "{{ user.username if user else 'anon' }}" : target;
+            const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${sName}`);
+            window.CURRENT_SOCKET = ws;
+
+            ws.onmessage = (e) => {
+                const d = JSON.parse(e.data);
+
+                // 🔥 1. BAŞLANGIÇ DURUMUNU YAKALA
+                if (d.type === 'init') {
+                    // Fiyatı ve Lideri Güncelle
+                    updatePriceDisplay(d.price, target, d.leader);
+                    return;
                 }
-            } else if (data.type === 'count') {
-                const countSpan = document.getElementById(`count-${BROADCASTER_USERNAME}`);
-                if (countSpan) countSpan.textContent = data.val;
-            } else if (data.type === 'auction_state') {
-                const statusElement = document.getElementById(`auction-status-${BROADCASTER_USERNAME}`);
-                if (statusElement) {
-                    statusElement.dataset.active = data.active;
-                    if (data.active) {
-                        statusElement.innerHTML = '<span class="badge active">MEZAT AKTİF</span>';
+
+                if (d.type === 'auction_state') {
+                    const layer = document.getElementById(target === 'broadcast' ? '' : `bid-layer-${target}`);
+                    const board = document.getElementById(target === 'broadcast' ? '' : `price-board-${target}`);
+                    if (layer) layer.style.display = d.active ? 'flex' : 'none';
+                    if (board) board.style.display = d.active ? 'flex' : 'none';
+                    return;
+                }
+                // ... (Sayaç ve Chat kodları aynı) ...
+
+                // 🔥 CHAT / TEKLİF MANTIĞI (Aynen korundu)
+                if (d.type === 'chat') {
+                    if (d.msg.startsWith("BID:")) {
+                        const amount = d.msg.split(":")[1];
+                        updatePriceDisplay(amount, target, d.user);
+                        // ... (Bubble oluşturma kodu) ...
                     } else {
-                        statusElement.innerHTML = '<span class="badge inactive">MEZAT KAPALI</span>';
+                        // ... (Mesaj oluşturma kodu) ...
+                    }
+                }
+            };
+        }
+
+    function connectChat(target) {
+        if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
+        let sName = target === 'broadcast' ? "{{ user.username if user else 'anon' }}" : target;
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${sName}`);
+        window.CURRENT_SOCKET = ws;
+
+        ws.onmessage = (e) => {
+            const d = JSON.parse(e.data);
+            if (d.type === 'auction_state') {
+                const layer = document.getElementById(target === 'broadcast' ? '' : `bid-layer-${target}`);
+                const board = document.getElementById(target === 'broadcast' ? '' : `price-board-${target}`);
+                if (layer) layer.style.display = d.active ? 'flex' : 'none';
+                if (board) board.style.display = d.active ? 'flex' : 'none';
+                return;
+            }
+            if (d.type === 'count') {
+                const cId = target === 'broadcast' ? 'live-count-broadcast' : `live-count-${target}`;
+                const cEl = document.getElementById(cId); if (cEl) cEl.innerText = d.val; return;
+            }
+            const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
+            const feed = document.getElementById(feedId);
+
+            if (d.type === 'chat') {
+                if (d.msg.startsWith("BID:")) {
+                    const amount = d.msg.split(":")[1];
+                    // 🔥 GÜNCELLEME: İSMİ DE GÖNDER
+                    updatePriceDisplay(amount, target, d.user);
+                    const bidFeedId = target === 'broadcast' ? 'bid-feed-broadcast' : `bid-feed-${target}`;
+                    const bidFeed = document.getElementById(bidFeedId);
+                    if (bidFeed) {
+                        const div = document.createElement('div');
+                        div.className = 'bid-bubble'; div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`;
+                        bidFeed.appendChild(div); bidFeed.scrollTop = bidFeed.scrollHeight;
+                        setTimeout(() => { div.classList.add('fade-out'); div.addEventListener('animationend', () => div.remove()); }, 10000);
+                    }
+                } else {
+                    if (feed) {
+                        const div = document.createElement('div');
+                        div.className = 'msg'; div.innerHTML = `<b>${d.user}:</b> ${d.msg}`;
+                        feed.appendChild(div); feed.scrollTop = feed.scrollHeight;
+                        setTimeout(() => { div.classList.add('fade-out'); div.addEventListener('animationend', () => div.remove()); }, 8000);
                     }
                 }
             }
         };
     }
 
-    function updateAuctionInfo(price, leader) {
-        const priceElement = document.getElementById('current-price');
-        const leaderElement = document.getElementById('highest-bidder');
-        const bidInput = document.getElementById('bidAmount');
+    // 🔥 GÜNCELLEME: BIDDER NAME EKLENDİ
+    function updatePriceDisplay(amount, target, bidderName) {
+        const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`;
+        const el = document.getElementById(id);
+        if (el) { el.innerText = amount; el.classList.remove("blink-anim"); void el.offsetWidth; el.classList.add("blink-anim"); }
 
-        if (priceElement) priceElement.textContent = `₺${price}`;
-        if (leaderElement) leaderElement.textContent = `Lider: ${leader || 'Yok'}`;
-        if (bidInput) bidInput.min = price + 1;
-    }
-
-    function sendMessage(event) {
-        event.preventDefault();
-        const input = document.getElementById('chatInput');
-        if (input.value.trim() && wsChat && wsChat.readyState === WebSocket.OPEN) {
-            wsChat.send(input.value);
-            input.value = '';
+        // Lider İsmi Güncelle
+        const leaderRowId = target === 'broadcast' ? 'leader-display-broadcast' : `leader-display-${target}`;
+        const leaderRow = document.getElementById(leaderRowId);
+        if (leaderRow && bidderName) {
+            leaderRow.style.display = 'flex';
+            leaderRow.querySelector('.name').innerText = bidderName;
         }
     }
 
-    function sendBid(event) {
-        event.preventDefault();
-        const input = document.getElementById('bidAmount');
-        const currentPrice = parseInt(document.getElementById('current-price').textContent.replace('₺', '')) || 0;
-        const bidAmount = parseInt(input.value);
+    window.sendBid = function (target, amount) {
+        const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`;
+        const el = document.getElementById(id);
+        const currentVal = parseInt(el ? el.innerText.replace('.', '') : "0") || 0;
+        const newVal = currentVal + amount;
+        if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${newVal}`);
+    }
 
-        if (bidAmount > currentPrice && wsChat && wsChat.readyState === WebSocket.OPEN) {
-            wsChat.send(`BID:${bidAmount}`);
-            input.value = bidAmount + 1; // Bir sonraki teklifi hazırlar
-        } else {
-            alert('Teklifiniz mevcut fiyattan yüksek olmalıdır.');
+    window.sendManualBid = function (target) {
+        const inp = document.getElementById(`manual-bid-${target}`);
+        const currentPriceEl = document.getElementById(target === 'broadcast' ? 'current-price-display' : `price-${target}`);
+        let currentPrice = 0;
+        if (currentPriceEl) { currentPrice = parseInt(currentPriceEl.innerText.replace(/\./g, '')) || 0; }
+        if (inp && inp.value) {
+            const offer = parseInt(inp.value);
+            if (offer <= currentPrice) { inp.classList.add('error-shake'); inp.value = ""; inp.placeholder = "Düşük!"; setTimeout(() => { inp.classList.remove('error-shake'); inp.placeholder = "Tutar"; }, 1000); return; }
+            if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${inp.value}`); inp.value = "";
         }
     }
 
-    function toggleFollow(username) {
-        fetch('/user/follow', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `username=${username}`
-        })
-            .then(response => response.json())
-            .then(data => {
-                const btn = document.querySelector('.follow-btn');
-                const text = document.getElementById('follow-text');
-                if (data.status === 'followed') {
-                    btn.innerHTML = '<i class="fa-solid fa-user-check"></i> <span id="follow-text">Takip Ediliyor</span>';
-                } else if (data.status === 'unfollowed') {
-                    btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> <span id="follow-text">Takip Et</span>';
-                }
-            });
+    window.sendMsg = function (target) {
+        const inpId = target === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${target}`;
+        const inp = document.getElementById(inpId);
+        if (inp && inp.value.trim()) { if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(inp.value); inp.value = ""; inp.focus(); }
     }
-
-    // --- YAYINCI FONKSİYONLARI ---
-    if (MODE === 'broadcast') {
-        const localVideo = document.getElementById('localVideo');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const streamTitleInput = document.getElementById('streamTitle');
-        const auctionToggle = document.getElementById('auctionActiveToggle');
-
-        navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: true })
-            .then(stream => {
-                localStream = stream;
-                localVideo.srcObject = stream;
-                localVideo.onloadedmetadata = () => { localVideo.play(); };
-            })
-            .catch(err => { console.error("Kamera/Mikrofon erişimi reddedildi: ", err); });
-
-        window.startBroadcast = function () {
-            if (!localStream) { alert('Kamera/Mikrofon izni bekleniyor.'); return; }
-            const title = streamTitleInput.value || 'Yeni Yayın';
-
-            fetch('/broadcast/start', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `title=${encodeURIComponent(title)}`
-            })
-                .then(r => r.json())
-                .then(data => {
-                    if (data.status === 'success') {
-                        startBtn.style.display = 'none';
-                        stopBtn.style.display = 'inline-block';
-                        streamTitleInput.disabled = true;
-
-                        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-                        ws.onopen = () => {
-                            let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
-                            if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
-                            rec = new MediaRecorder(localStream, opts);
-
-                            // ✅ DÜZELTME: Veri gönderme sıklığı 250ms'ye düşürüldü (Low Latency)
-                            rec.start(250);
-
-                            rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
-                        };
-                        ws.onclose = () => { window.stopBroadcast(); };
-                    } else { alert('Yayın başlatılamadı.'); }
-                });
-
-            // Başlangıçta thumbnail oluştur
-            setTimeout(createThumbnail, 1000);
-
-            // Chat bağlantısını aç
-            connectChat('{{ user.username }}');
-        }
-
-        window.stopBroadcast = function () {
-            if (rec) { rec.stop(); rec = null; }
-            if (wsChat) { wsChat.close(); wsChat = null; }
-            if (localStream) { localStream.getTracks().forEach(track => track.stop()); localStream = null; }
-            fetch('/broadcast/stop', { method: 'POST' });
-            // Sayfa yenileme yerine arayüzü resetleyebiliriz ama Redirect daha temizdir.
-            window.location.href = '/';
-        };
-
-        window.toggleAuction = function (active) {
-            fetch('/broadcast/toggle_auction', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                body: `active=${active}`
-            });
-        };
-
-        function createThumbnail() {
-            const canvas = document.createElement('canvas');
-            canvas.width = localVideo.videoWidth;
-            canvas.height = localVideo.videoHeight;
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(localVideo, 0, 0, canvas.width, canvas.height);
-            const image = canvas.toDataURL('image/jpeg', 0.8);
-
-            fetch('/broadcast/thumbnail', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ image: image, timestamp: Date.now() })
-            });
-        }
-
-    } else {
-        // --- İZLEYİCİ TARAFI ---
-        let hlsInstances = {};
-
-        let obs = new IntersectionObserver((entries) => {
-            entries.forEach(e => {
-                const u = e.target.dataset.username;
-                const v = document.getElementById(`video-${u}`);
-
-                if (e.isIntersecting) {
-                    if (hlsInstances[u]) return; // Zaten oynatılıyorsa tekrar başlatma
-
-                    const src = `/static/hls/${u}/stream.m3u8?t=${Date.now()}`;
-
-                    const attemptPlay = () => {
-                        v.play().catch(error => { console.log("Sesli bloklandı"); v.muted = true; v.play(); const hint = v.parentElement.querySelector('.tap-hint'); if (hint) hint.style.display = 'block'; });
-                    };
-
-                    if (Hls.isSupported()) {
-                        // ✅ KRİTİK AYAR: DÜŞÜK GECİKME KONFİGÜRASYONU
-                        const hlsConfig = {
-                            enableWorker: true,
-                            lowLatencyMode: true,       // Düşük gecikme modunu aç
-                            backBufferLength: 90,
-                            // Canlı yayının sadece 1.5 parça (1.5 sn) gerisinden gelmeye çalış
-                            liveSyncDurationCount: 1.5,
-                            liveMaxLatencyDurationCount: 3,
-                            maxLiveSyncPlaybackRate: 1.5
-                        };
-
-                        const h = new Hls(hlsConfig);
-                        hlsInstances[u] = h;
-                        h.loadSource(src);
-                        h.attachMedia(v);
-                        h.on(Hls.Events.MANIFEST_PARSED, attemptPlay);
-                    }
-                    else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                        v.src = src;
-                        attemptPlay();
-                    }
-                    if (u === BROADCASTER_USERNAME) connectChat(u);
-                } else {
-                    if (v) v.pause();
-                    if (hlsInstances[u]) {
-                        hlsInstances[u].destroy();
-                        delete hlsInstances[u];
-                    }
-                }
-            });
-        }, { threshold: 0.6 });
-
-        document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
-    }
+    window.simulateBid = function (amount) { if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${amount}`); }
 </script>
 {% endblock %}
