@@ -49,10 +49,10 @@
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
 
-            <video id="video-{{ stream.username }}" class="cinema-video" loop muted playsinline
+            <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
                 poster="{{ stream.thumbnail }}"></video>
 
-            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')">
+            <div class="tap-hint" style="display:none;" onclick="unmuteVideo('{{ stream.username }}')">
                 <i class="fa-solid fa-volume-high"></i> Sesi Aç
             </div>
 
@@ -71,8 +71,7 @@
 
                 <div class="mid-section">
                     <div class="chat-zone">
-                        <div id="chat-feed-{{ stream.username }}" class="chat-scroller">
-                        </div>
+                        <div id="chat-feed-{{ stream.username }}" class="chat-scroller"></div>
                     </div>
                     <div class="bid-zone">
                         <div id="bid-feed-{{ stream.username }}" class="bid-scroller"></div>
@@ -181,7 +180,7 @@
         transform: scaleX(-1);
     }
 
-    /* UI LAYOUT (FLEXBOX) */
+    /* UI LAYOUT */
     .ui-overlay {
         position: absolute;
         inset: 0;
@@ -194,6 +193,7 @@
         padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
 
+    /* TOP BAR */
     .top-bar {
         display: flex;
         justify-content: space-between;
@@ -246,33 +246,25 @@
         text-shadow: 0 1px 2px black;
     }
 
-    /* --- ORTA BÖLÜM (KRİTİK DÜZENLEME) --- */
-    /* Absolute yerine Flexbox kullanıyoruz. Böylece alt panelin (dock) tam üstüne oturuyor. */
+    /* MID SECTION */
     .mid-section {
         flex: 1;
-        /* Boşluğu doldur */
-        display: flex;
-        flex-direction: row;
-        align-items: flex-end;
-        /* İçerikleri en alta yasla */
-        justify-content: space-between;
-        /* Sağa ve sola dağıt */
+        position: relative;
         width: 100%;
-        padding-bottom: 5px;
-        /* Dock ile çok az mesafe */
         pointer-events: none;
     }
 
-    /* SOHBET KUTUSU */
     .chat-zone {
-        width: 60%;
-        max-height: 250px;
-        /* Çok uzarsa yukarı taşmasın */
+        position: absolute;
+        bottom: 90px;
+        left: 15px;
+        width: 65%;
+        height: 180px;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        padding-left: 15px;
-        pointer-events: auto;
+        pointer-events: none;
+        z-index: 50;
     }
 
     .chat-scroller {
@@ -305,16 +297,18 @@
         font-weight: 700;
     }
 
-    /* TEKLİF KUTUSU */
     .bid-zone {
-        width: 35%;
-        max-height: 250px;
+        position: absolute;
+        bottom: 90px;
+        right: 15px;
+        width: 30%;
+        height: 180px;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
         align-items: flex-end;
-        padding-right: 15px;
         pointer-events: none;
+        z-index: 50;
     }
 
     .bid-scroller {
@@ -636,10 +630,26 @@
                 const v = document.getElementById(`video-${u}`);
                 if (e.isIntersecting) {
                     const src = `/static/hls/${u}/stream.m3u8`;
+
+                    // --- 🔥 AKILLI OYNATMA FONKSİYONU 🔥 ---
+                    const attemptPlay = () => {
+                        v.play().catch(error => {
+                            console.log("Sesli başlatma engellendi, sessize geçiliyor...", error);
+                            // Sesli başlatamazsa: Mute yap -> Oynat -> Butonu Göster
+                            v.muted = true;
+                            v.play();
+                            const hint = v.parentElement.querySelector('.tap-hint');
+                            if (hint) hint.style.display = 'block';
+                        });
+                    };
+
                     if (Hls.isSupported()) {
                         const h = new Hls(); h.loadSource(src); h.attachMedia(v);
-                        h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { }));
-                    } else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play(); }
+                        h.on(Hls.Events.MANIFEST_PARSED, attemptPlay);
+                    } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                        v.src = src;
+                        attemptPlay();
+                    }
                     connectChat(u);
                 } else { if (v) v.pause(); }
             });
