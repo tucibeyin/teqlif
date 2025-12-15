@@ -777,17 +777,25 @@
                         const hlsConfig = {
                             enableWorker: true,
                             lowLatencyMode: true,
+
+                            // Tamponda (Buffer) en az 3 saniyelik görüntü tutmaya çalış
+                            // Bu sayede anlık internet kopmalarında donma olmaz
                             backBufferLength: 30,
 
-                            // Canlı yayının sadece 1.5 - 2 saniye gerisinden gel
-                            liveSyncDurationCount: 2.0,
+                            // Canlı yayının 3.5 segment gerisinden gel (3.5 * 1sn = 3.5sn hedef)
+                            liveSyncDurationCount: 3.5,
 
-                            // Geride kalırsa 1.5x hızla yetiş
-                            maxLiveSyncPlaybackRate: 1.5,
+                            // Eğer çok geride kalırsa (1.2x hızla yetiş - çok hızlı yapıp sesi bozma)
+                            maxLiveSyncPlaybackRate: 1.2,
 
-                            // Çok geride kalırsa (4s) direkt atla
-                            liveMaxLatencyDurationCount: 4,
+                            // 6 saniyeden fazla geride kalırsa direkt atla
+                            liveMaxLatencyDurationCount: 6,
                         };
+                        const h = new Hls(hlsConfig);
+                        h.loadSource(src);
+                        h.attachMedia(v);
+                        h.on(Hls.Events.MANIFEST_PARSED, attemptPlay);
+                    }
                         const h = new Hls(hlsConfig);
                         h.loadSource(src);
                         h.attachMedia(v);

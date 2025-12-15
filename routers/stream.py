@@ -188,6 +188,10 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     # 🔥 ULTRA DÜŞÜK GECİKME İÇİN OPTİMİZE EDİLMİŞ AYARLAR
     # HLS Time: 0.5s (Yarım saniye parçalar)
     # GOP Size: 15 (Her 15 karede bir anahtar kare, yani 0.5 saniyede bir)
+# ... (Üst kısımlar aynı) ...
+    # 🔥 STABİL LOW LATENCY (4-5 SN GECİKME) İÇİN OPTİMİZE EDİLMİŞ AYARLAR
+    # HLS Time: 1s (Daha güvenli parça boyutu)
+    # GOP Size: 30 (Her 1 saniyede bir anahtar kare)
     command = [
         "ffmpeg", 
         "-f", "webm", 
@@ -200,29 +204,29 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v2]scale=-2:480[v480];"             
         "[v3]scale=-2:360[v360]",             
 
-        # 720p - Hız Odaklı
+        # 720p - Kalite/Hız Dengesi
         "-map", "[v720]", "-map", "0:a",
-        "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "1500k",
+        "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "3000k",
         "-c:a:0", "aac", "-b:a:0", "128k",
 
         # 480p
         "-map", "[v480]", "-map", "0:a",
-        "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "800k",
+        "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "1500k",
         "-c:a:1", "aac", "-b:a:1", "96k",
 
         # 360p
         "-map", "[v360]", "-map", "0:a",
-        "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "700k", "-bufsize:v:2", "400k",
+        "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "700k", "-bufsize:v:2", "800k",
         "-c:a:2", "aac", "-b:a:2", "64k",
 
-        "-preset", "ultrafast",               # 🚀 En hızlı işleme
-        "-tune", "zerolatency",               # Gecikme yok
-        "-g", "15",                           # 🔥 Keyframe her 0.5 saniyede bir (Çok önemli)
-        "-sc_threshold", "0",                 # Sahne geçişlerini yoksay (Stabilite için)
+        "-preset", "veryfast",                # İşlemciyi Ultrafast kadar yormaz, kaliteyi korur
+        "-tune", "zerolatency",               
+        "-g", "30",                           # 🔥 Keyframe her 1 saniyede bir (Stabil)
+        "-sc_threshold", "0",                 
         
         "-f", "hls",
-        "-hls_time", "0.5",                   # 🔥 Parçalar SADECE 0.5 SANİYE
-        "-hls_list_size", "6",                # Liste kısa
+        "-hls_time", "1",                     # 🔥 Parçalar 1 SANİYE (0.5 yerine 1 yaptık)
+        "-hls_list_size", "5",                # Listede 5 parça tut
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p",
@@ -232,6 +236,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         
         "-loglevel", "error"
     ]
+# ... (Alt kısımlar aynı) ...
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
