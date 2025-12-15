@@ -73,7 +73,6 @@
                 <div class="mid-section">
                     <div class="chat-zone">
                         <div id="chat-feed-{{ stream.username }}" class="chat-scroller">
-                            <div class="msg system">Sohbete bağlandı...</div>
                         </div>
                     </div>
                     <div class="bid-zone">
@@ -255,36 +254,29 @@
         pointer-events: none;
     }
 
-    /* SOHBET ALANI (Daha Alçak) */
     .chat-zone {
         position: absolute;
         bottom: 90px;
-        /* Biraz daha aşağıda */
         left: 15px;
         width: 65%;
         height: 180px;
-        /* Yükseklik kısıldı, yukarı tırmanmaz */
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
         pointer-events: none;
-        /* Tıklamaları engelle, akış olsun */
         z-index: 50;
     }
 
     .chat-scroller {
         max-height: 100%;
         overflow-y: hidden;
-        /* Scroll yok, sadece akış */
         display: flex;
         flex-direction: column;
         gap: 8px;
-        /* Üstten yumuşak silinme efekti */
         mask-image: linear-gradient(to top, black 80%, transparent 100%);
         -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
     }
 
-    /* Mesaj Stili (Animasyonlu) */
     .msg {
         background: var(--chat-bg);
         color: #fff;
@@ -295,8 +287,6 @@
         width: fit-content;
         text-shadow: 0 1px 1px black;
         border: 1px solid rgba(255, 255, 255, 0.1);
-
-        /* GİRİŞ ANİMASYONU */
         animation: slideInUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         transform-origin: bottom left;
     }
@@ -314,14 +304,12 @@
         color: #ddd;
     }
 
-    /* TEKLİF ALANI */
     .bid-zone {
         position: absolute;
         bottom: 90px;
         right: 15px;
         width: 30%;
         height: 180px;
-        /* Yükseklik kısıldı */
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
@@ -338,7 +326,6 @@
         width: 100%;
     }
 
-    /* Teklif Stili (Animasyonlu) */
     .bid-bubble {
         background: rgba(52, 199, 89, 0.9);
         color: white;
@@ -350,14 +337,18 @@
         box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
         text-align: right;
         border: 1px solid rgba(255, 255, 255, 0.4);
-
-        /* GİRİŞ ANİMASYONU */
         animation: slideInRight 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
     }
 
-    /* ÇIKIŞ (KAYBOLMA) EFEKTİ */
     .fade-out {
         animation: fadeOut 0.5s ease-out forwards;
+    }
+
+    /* Hata durumunda input titreme efekti */
+    .error-shake {
+        animation: shake 0.4s ease-in-out;
+        border-color: red !important;
+        background: rgba(255, 0, 0, 0.2) !important;
     }
 
     @keyframes slideInUp {
@@ -396,7 +387,28 @@
         }
     }
 
-    /* BOTTOM DOCK */
+    @keyframes shake {
+        0% {
+            transform: translateX(0);
+        }
+
+        25% {
+            transform: translateX(-5px);
+        }
+
+        50% {
+            transform: translateX(5px);
+        }
+
+        75% {
+            transform: translateX(-5px);
+        }
+
+        100% {
+            transform: translateX(0);
+        }
+    }
+
     .bottom-dock {
         width: 100%;
         display: flex;
@@ -653,12 +665,10 @@
                 return;
             }
 
-            // --- MESAJ & TEKLİF MANTIĞI (GÜNCELLENDİ) ---
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
 
             if (d.type === 'chat') {
-                // EĞER TEKLİF İSE
                 if (d.msg.startsWith("BID:")) {
                     const amount = d.msg.split(":")[1];
                     updatePriceDisplay(amount, target);
@@ -672,14 +682,12 @@
                         bidFeed.appendChild(div);
                         bidFeed.scrollTop = bidFeed.scrollHeight;
 
-                        // 🔥 OTO SİLME (TEKLİF)
                         setTimeout(() => {
                             div.classList.add('fade-out');
                             div.addEventListener('animationend', () => div.remove());
-                        }, 10000); // 10 Saniye
+                        }, 10000);
                     }
                 }
-                // EĞER NORMAL SOHBET İSE
                 else {
                     if (feed) {
                         const div = document.createElement('div');
@@ -688,11 +696,10 @@
                         feed.appendChild(div);
                         feed.scrollTop = feed.scrollHeight;
 
-                        // 🔥 OTO SİLME (SOHBET)
                         setTimeout(() => {
                             div.classList.add('fade-out');
                             div.addEventListener('animationend', () => div.remove());
-                        }, 8000); // 8 Saniye (Biraz daha hızlı)
+                        }, 8000);
                     }
                 }
             }
@@ -718,9 +725,36 @@
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${newVal}`);
     }
 
+    // 🔥 GÜNCELLENEN FONKSİYON: Fiyat Kontrolü
     window.sendManualBid = function (target) {
         const inp = document.getElementById(`manual-bid-${target}`);
+        const currentPriceEl = document.getElementById(target === 'broadcast' ? 'current-price-display' : `price-${target}`);
+
+        let currentPrice = 0;
+        if (currentPriceEl) {
+            // Noktaları temizle ve sayıya çevir
+            currentPrice = parseInt(currentPriceEl.innerText.replace(/\./g, '')) || 0;
+        }
+
         if (inp && inp.value) {
+            const offer = parseInt(inp.value);
+
+            // KONTROL: Teklif <= Güncel Fiyat ise engelle
+            if (offer <= currentPrice) {
+                // Görsel uyarı: Input kırmızı olsun ve titresin
+                inp.classList.add('error-shake');
+                inp.value = ""; // Yanlış değeri sil
+                inp.placeholder = "Düşük!";
+
+                // Animasyon bitince class'ı kaldır ki tekrar çalışabilsin
+                setTimeout(() => {
+                    inp.classList.remove('error-shake');
+                    inp.placeholder = "Tutar";
+                }, 1000);
+                return; // Gönderme
+            }
+
+            // Sorun yoksa gönder
             if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${inp.value}`);
             inp.value = "";
         }
