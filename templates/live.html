@@ -20,8 +20,7 @@
 
             <div class="mid-section">
                 <div class="chat-zone">
-                    <div id="chat-feed-broadcast" class="chat-scroller">
-                    </div>
+                    <div id="chat-feed-broadcast" class="chat-scroller"></div>
                 </div>
                 <div class="bid-zone">
                     <div id="bid-feed-broadcast" class="bid-scroller"></div>
@@ -73,6 +72,7 @@
                 <div class="mid-section">
                     <div class="chat-zone">
                         <div id="chat-feed-{{ stream.username }}" class="chat-scroller">
+                            <div class="msg system">Sohbete bağlandı...</div>
                         </div>
                     </div>
                     <div class="bid-zone">
@@ -84,9 +84,12 @@
 
                     <div class="bid-layer" id="bid-layer-{{ stream.username }}"
                         style="display: {{ 'flex' if auction_active else 'none' }}">
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 50)">+50₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 100)">+100₺</button>
-                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 250)">+250₺</button>
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 200)">+200₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 1000)">+1000₺</button>
+
                         <div class="manual-bid-wrapper">
                             <input type="number" id="manual-bid-{{ stream.username }}" placeholder="Tutar">
                             <button onclick="sendManualBid('{{ stream.username }}')">OK</button>
@@ -344,7 +347,6 @@
         animation: fadeOut 0.5s ease-out forwards;
     }
 
-    /* Hata durumunda input titreme efekti */
     .error-shake {
         animation: shake 0.4s ease-in-out;
         border-color: red !important;
@@ -420,13 +422,23 @@
         background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 20%, transparent);
     }
 
+    /* 🔥 GÜNCEL CSS: Genişlik ve Kaydırma */
     .bid-layer {
         display: flex;
         gap: 6px;
         overflow-x: auto;
+        /* Yanlamasına kaydırma */
         padding-bottom: 5px;
-        justify-content: center;
+        align-items: center;
+        scrollbar-width: none;
+        /* Scrollbar'ı gizle */
     }
+
+    .bid-layer::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Chrome için gizle */
 
     .bid-chip {
         background: rgba(255, 255, 255, 0.1);
@@ -437,15 +449,19 @@
         font-weight: 700;
         font-size: 12px;
         white-space: nowrap;
+        flex-shrink: 0;
+        /* Küçülmesini engelle */
     }
 
     .manual-bid-wrapper {
         display: flex;
         gap: 4px;
+        flex-shrink: 0;
     }
 
     .manual-bid-wrapper input {
-        width: 60px;
+        width: 100px;
+        /* 🔥 GENİŞLETİLDİ: 60px -> 100px */
         background: rgba(0, 0, 0, 0.6);
         border: 1px solid rgba(255, 255, 255, 0.3);
         border-radius: 12px;
@@ -725,36 +741,30 @@
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${newVal}`);
     }
 
-    // 🔥 GÜNCELLENEN FONKSİYON: Fiyat Kontrolü
     window.sendManualBid = function (target) {
         const inp = document.getElementById(`manual-bid-${target}`);
         const currentPriceEl = document.getElementById(target === 'broadcast' ? 'current-price-display' : `price-${target}`);
 
         let currentPrice = 0;
         if (currentPriceEl) {
-            // Noktaları temizle ve sayıya çevir
             currentPrice = parseInt(currentPriceEl.innerText.replace(/\./g, '')) || 0;
         }
 
         if (inp && inp.value) {
             const offer = parseInt(inp.value);
 
-            // KONTROL: Teklif <= Güncel Fiyat ise engelle
             if (offer <= currentPrice) {
-                // Görsel uyarı: Input kırmızı olsun ve titresin
                 inp.classList.add('error-shake');
-                inp.value = ""; // Yanlış değeri sil
+                inp.value = "";
                 inp.placeholder = "Düşük!";
 
-                // Animasyon bitince class'ı kaldır ki tekrar çalışabilsin
                 setTimeout(() => {
                     inp.classList.remove('error-shake');
                     inp.placeholder = "Tutar";
                 }, 1000);
-                return; // Gönderme
+                return;
             }
 
-            // Sorun yoksa gönder
             if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${inp.value}`);
             inp.value = "";
         }
