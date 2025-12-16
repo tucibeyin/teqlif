@@ -49,7 +49,12 @@
 </div>
 
 <style>
-    /* --- PREMIUM KATEGORİ BAR --- */
+    /* 🔥 KRİTİK: Base.html'den gelen varsayılan Footer'ı BU sayfada gizle 🔥 */
+    footer {
+        display: none !important;
+    }
+
+    /* --- KATEGORİ BAR --- */
     .category-bar {
         display: flex;
         align-items: center;
@@ -82,8 +87,7 @@
         font-weight: 500;
         text-decoration: none;
         white-space: nowrap;
-        transition: all 0.3s;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        transition: all 0.2s;
     }
 
     .cat-chip:active {
@@ -98,15 +102,17 @@
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
     }
 
-    /* --- KART IZGARASI --- */
+    /* --- IZGARA & İÇERİK --- */
     .grid-container {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: 12px;
         padding: 15px;
 
-        /* 🔥 DÜZELTME BURADA: Alt boşluğu artırdık (90px -> 120px) 🔥 */
-        padding-bottom: calc(120px + env(safe-area-inset-bottom));
+        /* 🔥 DÜZELTME: İçeriğin alt boşluğunu artırdık (Footer payı) */
+        padding-bottom: calc(130px + env(safe-area-inset-bottom));
+        min-height: 80vh;
+        /* Sayfa boşsa bile dolu görünsün */
     }
 
     .grid-card {
@@ -201,7 +207,7 @@
         margin-top: 2px;
     }
 
-    /* --- ALT MENÜ --- */
+    /* --- ALT MENÜ (Bottom Nav) --- */
     .bottom-nav {
         position: fixed;
         bottom: 0;
@@ -215,7 +221,8 @@
         display: flex;
         justify-content: space-around;
         align-items: center;
-        z-index: 100;
+        z-index: 2000;
+        /* En üstte durması için yüksek z-index */
         padding-bottom: env(safe-area-inset-bottom);
     }
 
@@ -246,16 +253,16 @@
         box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
     }
 
-    /* --- BOŞ DURUM (YUKARI ALINDI) --- */
+    /* --- BOŞ DURUM --- */
     .empty-feed {
         grid-column: 1 / -1;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
+        height: 100%;
+        /* Konteynerin tamamını kapla */
         min-height: 300px;
-        margin-top: 50px;
-        /* Üstten biraz pay bıraktık */
         color: #555;
     }
 
@@ -275,8 +282,6 @@
         font-size: 13px;
         font-weight: bold;
         transition: background 0.3s;
-
-        /* Tıklanabilirlik Garantisi */
         position: relative;
         z-index: 10;
     }
