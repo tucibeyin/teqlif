@@ -9,7 +9,10 @@
         <a href="/?category=Sohbet" class="cat-chip {{ 'active' if current_category == 'Sohbet' else '' }}">Sohbet
             💬</a>
         <a href="/?category=Oyun" class="cat-chip {{ 'active' if current_category == 'Oyun' else '' }}">Oyun 🎮</a>
+        <a href="/?category=Müzik" class="cat-chip {{ 'active' if current_category == 'Müzik' else '' }}">Müzik 🎵</a>
         <a href="/?category=Genel" class="cat-chip {{ 'active' if current_category == 'Genel' else '' }}">Genel</a>
+        <a href="/?category=Dans" class="cat-chip {{ 'active' if current_category == 'Dans' else '' }}">Dans 💃</a>
+        <a href="/?category=Spor" class="cat-chip {{ 'active' if current_category == 'Spor' else '' }}">Spor ⚽</a>
     </div>
 
     <div class="grid-container">
@@ -31,8 +34,8 @@
         </a>
         {% else %}
         <div class="empty-feed">
-            <div class="empty-icon"><i class="fa-solid fa-video-slash"></i></div>
-            <p>Bu kategoride yayın yok.</p>
+            <div class="empty-icon"><i class="fa-solid fa-layer-group"></i></div>
+            <p>Bu kategoride henüz yayın yok.</p>
             <a href="/live?mode=broadcast" class="btn-start-now">Yayın Aç</a>
         </div>
         {% endfor %}
@@ -46,36 +49,122 @@
 </div>
 
 <style>
-    /* IZGARA YAPISI (Responsive - Küçültülmüş) */
-    .grid-container {
-        display: grid;
-        /* En az 160px olacak şekilde yan yana sığdır (PC'de 4-5 tane, Mobilde 2 tane sığar) */
-        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    /* --- PREMIUM KATEGORİ BAR --- */
+    .category-bar {
+        display: flex;
+        align-items: center;
         gap: 12px;
-        padding: 12px;
-        padding-bottom: 80px;
+        padding: 15px 20px;
+
+        /* Kaydırma Ayarları */
+        overflow-x: auto;
+        scroll-behavior: smooth;
+        scrollbar-width: none;
+        /* Firefox gizle */
+        -ms-overflow-style: none;
+        /* IE gizle */
+
+        /* Glassmorphism (Buzlu Cam) Efekti */
+        background: rgba(15, 15, 15, 0.85);
+        /* Hafif transparan siyah */
+        backdrop-filter: blur(15px);
+        /* Arka planı bulanıklaştır */
+        -webkit-backdrop-filter: blur(15px);
+        /* Safari desteği */
+
+        /* Sabitleme */
+        position: sticky;
+        top: 0;
+        z-index: 1000;
+        /* En üstte durması için */
+
+        /* Alt Çizgi (Ayrım İçin) */
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+        /* Hafif gölge */
     }
 
-    /* KART TASARIMI */
+    .category-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Chrome gizle */
+
+    .cat-chip {
+        /* "Birbirine girme" sorununu çözen kod: */
+        flex-shrink: 0;
+
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        color: #bbb;
+
+        padding: 8px 18px;
+        border-radius: 24px;
+        /* Hap şeklinde */
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        white-space: nowrap;
+        /* Metni kaydırma */
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+
+        /* Hafif parlama */
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    }
+
+    .cat-chip:active {
+        transform: scale(0.95);
+    }
+
+    .cat-chip.active {
+        background: #fff;
+        color: #000;
+        border-color: #fff;
+        font-weight: 700;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+    }
+
+    /* İnce Dokunuş: Hover efekti (Desktop için) */
+    @media (hover: hover) {
+        .cat-chip:hover {
+            background: rgba(255, 255, 255, 0.15);
+            border-color: rgba(255, 255, 255, 0.3);
+            color: white;
+        }
+
+        .cat-chip.active:hover {
+            background: #f0f0f0;
+        }
+    }
+
+    /* --- IZGARA & DİĞERLERİ (Önceki responsive ayar) --- */
+    .grid-container {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+        gap: 12px;
+        padding: 15px;
+        padding-bottom: 90px;
+    }
+
     .grid-card {
         text-decoration: none;
         color: white;
         background: rgba(255, 255, 255, 0.03);
-        border-radius: 12px;
+        border-radius: 16px;
         overflow: hidden;
         border: 1px solid rgba(255, 255, 255, 0.05);
         transition: transform 0.2s;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
     }
 
     .grid-card:active {
-        transform: scale(0.98);
+        transform: scale(0.97);
     }
 
     .card-image {
         position: relative;
         width: 100%;
         aspect-ratio: 16 / 10;
-        /* Daha yatay ve kısa kartlar (Eskiden 1/1.2 idi) */
         background: #222;
     }
 
@@ -87,47 +176,49 @@
 
     .live-badge {
         position: absolute;
-        top: 6px;
-        left: 6px;
+        top: 8px;
+        left: 8px;
         background: #ff3b30;
         color: white;
         font-size: 8px;
-        font-weight: 900;
-        padding: 2px 5px;
-        border-radius: 4px;
+        font-weight: 800;
+        padding: 3px 6px;
+        border-radius: 6px;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     }
 
     .viewer-badge {
         position: absolute;
-        bottom: 6px;
-        right: 6px;
+        bottom: 8px;
+        right: 8px;
         background: rgba(0, 0, 0, 0.6);
         color: white;
         font-size: 9px;
-        padding: 2px 5px;
-        border-radius: 4px;
+        padding: 3px 6px;
+        border-radius: 6px;
         backdrop-filter: blur(4px);
+        font-weight: 600;
     }
 
     .card-info {
-        padding: 8px;
+        padding: 10px;
         display: flex;
-        gap: 8px;
+        gap: 10px;
         align-items: center;
     }
 
     .card-avatar {
-        width: 24px;
-        height: 24px;
+        width: 28px;
+        height: 28px;
         border-radius: 50%;
-        background: linear-gradient(45deg, #34C759, #00d2ff);
+        background: linear-gradient(135deg, #34C759, #00d2ff);
         color: black;
-        font-weight: bold;
-        font-size: 10px;
+        font-weight: 800;
+        font-size: 11px;
         display: flex;
         align-items: center;
         justify-content: center;
+        border: 2px solid rgba(0, 0, 0, 0.5);
     }
 
     .card-text {
@@ -136,53 +227,17 @@
     }
 
     .card-title {
-        font-size: 11px;
-        font-weight: bold;
+        font-size: 12px;
+        font-weight: 700;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
     .card-cat {
-        font-size: 9px;
+        font-size: 10px;
         color: #888;
-        margin-top: 1px;
-    }
-
-    /* KATEGORİ BAR */
-    .category-bar {
-        display: flex;
-        gap: 8px;
-        padding: 12px 10px;
-        overflow-x: auto;
-        scrollbar-width: none;
-        position: sticky;
-        top: 0;
-        background: rgba(0, 0, 0, 0.9);
-        z-index: 50;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .category-bar::-webkit-scrollbar {
-        display: none;
-    }
-
-    .cat-chip {
-        background: rgba(255, 255, 255, 0.1);
-        color: #ccc;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 11px;
-        font-weight: 600;
-        text-decoration: none;
-        white-space: nowrap;
-        border: 1px solid transparent;
-    }
-
-    .cat-chip.active {
-        background: #fff;
-        color: #000;
-        border-color: #fff;
+        margin-top: 2px;
     }
 
     /* ALT NAVİGASYON */
@@ -191,9 +246,12 @@
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 55px;
-        background: #000;
-        border-top: 1px solid #222;
+        height: 65px;
+        background: rgba(10, 10, 10, 0.95);
+        /* Yarı saydam */
+        backdrop-filter: blur(20px);
+        -webkit-backdrop-filter: blur(20px);
+        border-top: 1px solid rgba(255, 255, 255, 0.08);
         display: flex;
         justify-content: space-around;
         align-items: center;
@@ -202,14 +260,15 @@
     }
 
     .nav-item {
-        color: #666;
-        font-size: 18px;
+        color: #555;
+        font-size: 20px;
         width: 50px;
         height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
         text-decoration: none;
+        transition: color 0.3s;
     }
 
     .nav-item.active {
@@ -219,17 +278,17 @@
     .center-btn {
         background: #00d2ff;
         color: black !important;
-        width: 38px;
-        height: 38px;
-        border-radius: 12px;
-        font-size: 16px;
+        width: 44px;
+        height: 44px;
+        border-radius: 14px;
+        font-size: 20px;
         margin-bottom: 8px;
+        box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
     }
 
     /* BOŞ DURUM */
     .empty-feed {
         grid-column: 1 / -1;
-        /* Tüm satırı kapla */
         display: flex;
         flex-direction: column;
         align-items: center;
@@ -239,20 +298,25 @@
     }
 
     .empty-icon {
-        font-size: 35px;
+        font-size: 40px;
         margin-bottom: 15px;
-        opacity: 0.3;
+        opacity: 0.2;
     }
 
     .btn-start-now {
         background: #333;
         color: white;
-        padding: 8px 16px;
-        border-radius: 10px;
+        padding: 10px 20px;
+        border-radius: 12px;
         text-decoration: none;
         margin-top: 15px;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: bold;
+        transition: background 0.3s;
+    }
+
+    .btn-start-now:hover {
+        background: #444;
     }
 </style>
 {% endblock %}
