@@ -55,60 +55,34 @@
         align-items: center;
         gap: 12px;
         padding: 15px 20px;
-
-        /* Kaydırma Ayarları */
         overflow-x: auto;
-        scroll-behavior: smooth;
         scrollbar-width: none;
-        /* Firefox gizle */
-        -ms-overflow-style: none;
-        /* IE gizle */
-
-        /* Glassmorphism (Buzlu Cam) Efekti */
         background: rgba(15, 15, 15, 0.85);
-        /* Hafif transparan siyah */
         backdrop-filter: blur(15px);
-        /* Arka planı bulanıklaştır */
         -webkit-backdrop-filter: blur(15px);
-        /* Safari desteği */
-
-        /* Sabitleme */
         position: sticky;
         top: 0;
         z-index: 1000;
-        /* En üstte durması için */
-
-        /* Alt Çizgi (Ayrım İçin) */
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
-        /* Hafif gölge */
     }
 
     .category-bar::-webkit-scrollbar {
         display: none;
     }
 
-    /* Chrome gizle */
-
     .cat-chip {
-        /* "Birbirine girme" sorununu çözen kod: */
         flex-shrink: 0;
-
         background: rgba(255, 255, 255, 0.06);
         border: 1px solid rgba(255, 255, 255, 0.1);
         color: #bbb;
-
         padding: 8px 18px;
         border-radius: 24px;
-        /* Hap şeklinde */
         font-size: 13px;
         font-weight: 500;
         text-decoration: none;
         white-space: nowrap;
-        /* Metni kaydırma */
-        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-
-        /* Hafif parlama */
+        transition: all 0.3s;
         box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     }
 
@@ -124,26 +98,15 @@
         box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
     }
 
-    /* İnce Dokunuş: Hover efekti (Desktop için) */
-    @media (hover: hover) {
-        .cat-chip:hover {
-            background: rgba(255, 255, 255, 0.15);
-            border-color: rgba(255, 255, 255, 0.3);
-            color: white;
-        }
-
-        .cat-chip.active:hover {
-            background: #f0f0f0;
-        }
-    }
-
-    /* --- IZGARA & DİĞERLERİ (Önceki responsive ayar) --- */
+    /* --- KART IZGARASI --- */
     .grid-container {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
         gap: 12px;
         padding: 15px;
-        padding-bottom: 90px;
+
+        /* 🔥 DÜZELTME BURADA: Alt boşluğu artırdık (90px -> 120px) 🔥 */
+        padding-bottom: calc(120px + env(safe-area-inset-bottom));
     }
 
     .grid-card {
@@ -184,7 +147,6 @@
         font-weight: 800;
         padding: 3px 6px;
         border-radius: 6px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     }
 
     .viewer-badge {
@@ -197,7 +159,6 @@
         padding: 3px 6px;
         border-radius: 6px;
         backdrop-filter: blur(4px);
-        font-weight: 600;
     }
 
     .card-info {
@@ -240,7 +201,7 @@
         margin-top: 2px;
     }
 
-    /* ALT NAVİGASYON */
+    /* --- ALT MENÜ --- */
     .bottom-nav {
         position: fixed;
         bottom: 0;
@@ -248,7 +209,6 @@
         width: 100%;
         height: 65px;
         background: rgba(10, 10, 10, 0.95);
-        /* Yarı saydam */
         backdrop-filter: blur(20px);
         -webkit-backdrop-filter: blur(20px);
         border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -286,14 +246,16 @@
         box-shadow: 0 4px 15px rgba(0, 210, 255, 0.3);
     }
 
-    /* BOŞ DURUM */
+    /* --- BOŞ DURUM (YUKARI ALINDI) --- */
     .empty-feed {
         grid-column: 1 / -1;
         display: flex;
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        height: 300px;
+        min-height: 300px;
+        margin-top: 50px;
+        /* Üstten biraz pay bıraktık */
         color: #555;
     }
 
@@ -306,13 +268,17 @@
     .btn-start-now {
         background: #333;
         color: white;
-        padding: 10px 20px;
+        padding: 12px 24px;
         border-radius: 12px;
         text-decoration: none;
         margin-top: 15px;
         font-size: 13px;
         font-weight: bold;
         transition: background 0.3s;
+
+        /* Tıklanabilirlik Garantisi */
+        position: relative;
+        z-index: 10;
     }
 
     .btn-start-now:hover {
