@@ -5,7 +5,7 @@ from fastapi.staticfiles import StaticFiles
 from database import engine, Base
 from routers import auth, general, stream
 
-# Veritabanı Tablolarını Oluştur
+# Veritabanı Tablolarını Oluştur (Otomatik)
 Base.metadata.create_all(bind=engine)
 
 # Uygulama Başlat
@@ -22,7 +22,7 @@ if os.path.exists("static/hls"):
 
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Rotaları Dahil Et
+# Rotaları (Router) Dahil Et - BURASI ÇOK ÖNEMLİ
 app.include_router(auth.router)
 app.include_router(general.router)
 app.include_router(stream.router)

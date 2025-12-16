@@ -94,7 +94,7 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
             "is_following": is_following, "broadcaster": target_user
         })
 
-# 🔥 HEDİYE GÖNDERME API 🔥
+# 🔥 HEDİYE GÖNDERME API (BU KISIM EKSİK OLABİLİR, LÜTFEN KONTROL ET) 🔥
 @router.post("/gift/send")
 async def send_gift(
     target_username: str = Form(...), 
