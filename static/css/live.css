@@ -281,14 +281,32 @@ body {
 .msg {
     background: var(--chat-bg);
     color: #fff;
-    padding: 5px 10px;
-    border-radius: 10px;
+    padding: 6px 12px;
+    border-radius: 12px;
     border-bottom-left-radius: 2px;
     font-size: 13px;
+
+    /* Genişlik Ayarları */
     width: fit-content;
+    /* İçerik kadar genişle */
+    max-width: 85%;
+    /* Ama ekranın %85'ini geçme */
+
+    /* Metin Kaydırma (Çok Önemli) */
+    white-space: normal;
+    /* Alt satıra geçmeye izin ver */
+    word-wrap: break-word;
+    /* Uzun kelimeleri kır */
+    word-break: break-word;
+    /* Uzun kelimeleri kır (Alternatif) */
+    line-height: 1.4;
+    /* Satır aralığını aç */
+
     text-shadow: 0 1px 1px black;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    margin-bottom: 2px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    margin-bottom: 4px;
+
+    /* Giriş Animasyonu */
     animation: slideInUp 0.3s ease-out forwards;
     transform-origin: bottom left;
 }
@@ -330,8 +348,19 @@ body {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     text-align: right;
     border: 1px solid rgba(255, 255, 255, 0.4);
-    margin-bottom: 2px;
+    margin-bottom: 4px;
+
+    /* Genişlik ve Kaydırma */
+    max-width: 85%;
+    white-space: normal;
+    word-wrap: break-word;
+
     animation: slideInRight 0.3s ease-out forwards;
+}
+
+.fade-out {
+    animation: fadeOut 0.5s ease-out forwards !important;
+    /* !important ekledik ki başka bir animation kuralı bunu ezmesin */
 }
 
 /* =========================================
@@ -777,12 +806,12 @@ body {
 }
 
 @keyframes fadeOut {
-    from {
+    0% {
         opacity: 1;
         transform: translateY(0);
     }
 
-    to {
+    100% {
         opacity: 0;
         transform: translateY(-10px);
     }
