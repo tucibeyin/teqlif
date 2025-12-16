@@ -1,49 +1,83 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="auth-container" style="flex-direction: column; gap: 20px; padding: 20px 0;">
+<div class="auth-container" style="flex-direction: column; padding: 20px 0;">
 
-    <div class="auth-box" style="width: 400px; text-align: left;">
-        <h2 style="text-align: center; margin-bottom: 20px;">Profil Ayarları ⚙️</h2>
+    <div id="menu-screen" class="auth-box" style="width: 350px; text-align: center; border-color: #333;">
+        <h2 style="margin-bottom: 30px;">Ayarlar</h2>
 
-        {% if error %}
-        <div class="error-msg">{{ error }}</div>
-        {% endif %}
+        <div class="menu-list">
+            <button class="menu-item" onclick="showScreen('profile-screen')">
+                <div class="icon-box"><i class="fa-solid fa-user-gear"></i></div>
+                <div class="text-box">
+                    <span class="title">Profil Ayarları</span>
+                    <span class="desc">Kullanıcı adı, E-posta</span>
+                </div>
+                <i class="fa-solid fa-chevron-right arrow"></i>
+            </button>
 
-        {% if success %}
-        <div class="success-msg">
-            <i class="fa-solid fa-check"></i> {{ success }}
+            <button class="menu-item diamond-theme" onclick="showScreen('shop-screen')">
+                <div class="icon-box"><i class="fa-solid fa-gem"></i></div>
+                <div class="text-box">
+                    <span class="title">Elmas Mağazası</span>
+                    <span class="desc">Bakiye: <b>{{ user.diamonds }}</b> 💎</span>
+                </div>
+                <i class="fa-solid fa-chevron-right arrow"></i>
+            </button>
+
+            <a href="/logout" class="menu-item logout-theme">
+                <div class="icon-box"><i class="fa-solid fa-right-from-bracket"></i></div>
+                <div class="text-box">
+                    <span class="title">Çıkış Yap</span>
+                </div>
+            </a>
         </div>
-        {% endif %}
 
-        <form action="/settings/update" method="post">
-            <div class="form-group" style="margin-bottom: 20px;">
-                <label style="color: #aaa; font-size: 0.9rem; margin-left: 10px;">E-Posta (Değiştirilemez)</label>
+        <div style="margin-top: 30px;">
+            <a href="/" class="back-link"><i class="fa-solid fa-xmark"></i> Kapat</a>
+        </div>
+    </div>
+
+    <div id="profile-screen" class="auth-box" style="width: 350px; display: none;">
+        <div class="screen-header">
+            <button class="icon-btn" onclick="showScreen('menu-screen')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3>Profil Düzenle</h3>
+            <div style="width: 30px;"></div>
+        </div>
+
+        {% if error %} <div class="error-msg">{{ error }}</div> {% endif %}
+        {% if success %} <div class="success-msg">{{ success }}</div> {% endif %}
+
+        <form action="/settings/update" method="post" style="margin-top: 20px;">
+            <div class="form-group" style="margin-bottom: 20px; text-align: left;">
+                <label style="color: #666; font-size: 12px; margin-left: 10px;">E-Posta</label>
                 <div class="input-group-auth" style="opacity: 0.5;">
                     <i class="fa-solid fa-envelope"></i>
-                    <input type="text" value="{{ user.email }}" disabled style="cursor: not-allowed;">
+                    <input type="text" value="{{ user.email }}" disabled>
                 </div>
             </div>
 
-            <div class="form-group">
-                <label style="color: #fff; font-size: 0.9rem; margin-left: 10px; font-weight: bold;">Kullanıcı
-                    Adı</label>
+            <div class="form-group" style="text-align: left;">
+                <label style="color: #aaa; font-size: 12px; margin-left: 10px;">Kullanıcı Adı</label>
                 <div class="input-group-auth">
                     <i class="fa-solid fa-at"></i>
-                    <input type="text" name="username" value="{{ user.username if user.username else '' }}"
-                        placeholder="örn: tucibeyin" required>
+                    <input type="text" name="username" value="{{ user.username if user.username else '' }}" required>
                 </div>
             </div>
 
-            <button type="submit" class="auth-btn" style="margin-top: 10px;">Kaydet</button>
+            <button type="submit" class="auth-btn" style="margin-top: 20px;">Kaydet</button>
         </form>
     </div>
 
-    <div class="auth-box" style="width: 400px; text-align: left; border-color: #00d2ff;">
-        <h2 style="text-align: center; margin-bottom: 10px; color: #00d2ff;">Elmas Mağazası 💎</h2>
+    <div id="shop-screen" class="auth-box" style="width: 400px; display: none; border-color: #00d2ff;">
+        <div class="screen-header">
+            <button class="icon-btn" onclick="showScreen('menu-screen')"><i class="fa-solid fa-arrow-left"></i></button>
+            <h3 style="color: #00d2ff;">Elmas Mağazası 💎</h3>
+            <div style="width: 30px;"></div>
+        </div>
 
-        <div style="text-align: center; margin-bottom: 20px; font-size: 1.2rem;">
-            Bakiyeniz: <span id="diamond-balance" style="color: white; font-weight: bold;">{{ user.diamonds }}</span> 💎
+        <div class="balance-display">
+            Mevcut: <span id="diamond-balance">{{ user.diamonds }}</span> 💎
         </div>
 
         <div class="diamond-grid">
@@ -69,17 +103,31 @@
                 <div class="d-price">5.000 TL</div>
             </div>
         </div>
-
-        <div style="text-align: center; margin-top: 20px;">
-            <a href="/" style="color: #888; text-decoration: none; font-size: 0.9rem;">
-                <i class="fa-solid fa-arrow-left"></i> Ana Sayfaya Dön
-            </a>
-        </div>
     </div>
 
 </div>
 
 <script>
+    // Sayfa Yüklendiğinde Hangi Ekranın Açılacağını Belirle
+    // Eğer backend'den bir mesaj geldiyse (güncelleme sonrası), Profil ekranında kal.
+    const hasMessage = {{ 'true' if error or success else 'false' }};
+    if (hasMessage) {
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('profile-screen').style.display = 'block';
+    }
+
+    function showScreen(screenId) {
+        // Tüm ekranları gizle
+        document.getElementById('menu-screen').style.display = 'none';
+        document.getElementById('profile-screen').style.display = 'none';
+        document.getElementById('shop-screen').style.display = 'none';
+
+        // İstenilen ekranı göster
+        const screen = document.getElementById(screenId);
+        screen.style.display = 'block';
+        screen.style.animation = "fadeIn 0.3s ease-out";
+    }
+
     function buyDiamonds(amount) {
         if (!confirm(amount + " Elmas'ı " + amount + " TL karşılığında satın almak istiyor musunuz?")) return;
 
@@ -96,23 +144,124 @@
                 if (data.status === 'success') {
                     alert(data.msg);
                     document.getElementById('diamond-balance').innerText = data.new_balance;
-
-                    // Animasyonlu artış efekti (Basit)
-                    const bal = document.getElementById('diamond-balance');
-                    bal.style.color = "#00ff00";
-                    setTimeout(() => bal.style.color = "white", 1000);
                 } else {
                     alert("Hata: " + data.msg);
                 }
-            })
-            .catch(err => {
-                btn.style.opacity = "1";
-                alert("Bir hata oluştu.");
             });
     }
 </script>
 
 <style>
+    /* Menü Listesi Tasarımı */
+    .menu-list {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+
+    .menu-item {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 15px;
+        border-radius: 15px;
+        display: flex;
+        align-items: center;
+        text-decoration: none;
+        color: white;
+        cursor: pointer;
+        transition: background 0.2s;
+        text-align: left;
+        width: 100%;
+    }
+
+    .menu-item:hover {
+        background: rgba(255, 255, 255, 0.1);
+    }
+
+    .icon-box {
+        width: 40px;
+        height: 40px;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-right: 15px;
+        font-size: 18px;
+    }
+
+    .text-box {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .text-box .title {
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .text-box .desc {
+        font-size: 11px;
+        color: #aaa;
+        margin-top: 2px;
+    }
+
+    .arrow {
+        color: #555;
+    }
+
+    /* Özel Temalar */
+    .diamond-theme .icon-box {
+        color: #00d2ff;
+        background: rgba(0, 210, 255, 0.1);
+    }
+
+    .diamond-theme:hover {
+        border-color: #00d2ff;
+    }
+
+    .logout-theme {
+        border-color: rgba(231, 76, 60, 0.3);
+    }
+
+    .logout-theme .icon-box {
+        color: #e74c3c;
+        background: rgba(231, 76, 60, 0.1);
+    }
+
+    /* Header ve Butonlar */
+    .screen-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 20px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 15px;
+    }
+
+    .icon-btn {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 18px;
+        cursor: pointer;
+    }
+
+    .back-link {
+        color: #888;
+        text-decoration: none;
+        font-size: 13px;
+    }
+
+    /* Elmas Kartları */
+    .balance-display {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 18px;
+        font-weight: bold;
+    }
+
     .diamond-grid {
         display: grid;
         grid-template-columns: 1fr 1fr;
@@ -126,34 +275,25 @@
         padding: 15px;
         text-align: center;
         cursor: pointer;
-        transition: all 0.2s;
         position: relative;
         overflow: hidden;
     }
 
-    .diamond-card:hover {
-        background: rgba(0, 210, 255, 0.1);
-        border-color: #00d2ff;
-        transform: translateY(-2px);
-    }
-
     .d-amount {
-        font-size: 1.1rem;
+        font-size: 16px;
         font-weight: bold;
-        color: white;
     }
 
     .d-price {
-        font-size: 0.9rem;
+        font-size: 12px;
         color: #aaa;
         margin-top: 5px;
     }
 
     .diamond-card.popular {
+        grid-column: span 2;
         border-color: #f1c40f;
         background: rgba(241, 196, 15, 0.1);
-        grid-column: span 2;
-        /* Geniş kart */
     }
 
     .diamond-card.popular .badge {
@@ -162,7 +302,7 @@
         right: 0;
         background: #f1c40f;
         color: black;
-        font-size: 0.6rem;
+        font-size: 9px;
         padding: 2px 6px;
         font-weight: bold;
         border-bottom-left-radius: 5px;
@@ -170,8 +310,20 @@
 
     .diamond-card.premium {
         grid-column: span 2;
-        background: linear-gradient(45deg, rgba(155, 89, 182, 0.2), rgba(0, 0, 0, 0));
         border-color: #9b59b6;
+        background: linear-gradient(45deg, rgba(155, 89, 182, 0.2), transparent);
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
     }
 </style>
 {% endblock %}
