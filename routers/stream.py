@@ -4,11 +4,11 @@ import shutil
 import subprocess
 import sys
 import base64
+import asyncio 
 from typing import Dict, List, Optional
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks, HTTPException
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User, StreamMessage
@@ -38,6 +38,7 @@ class ConnectionManager:
         if room_name in self.rooms:
             count = len(self.rooms[room_name])
             msg = json.dumps({"type": "count", "val": count})
+            # Kopyası üzerinde dönerek hata riskini azalt
             for conn in self.rooms[room_name][:]:
                 try: await conn.send_text(msg)
                 except: pass
@@ -69,6 +70,14 @@ def cleanup_stream(username: str, db: Session):
     
     shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
 
+# FFMPEG'e yazma işlemi (Bloklayıcı olduğu için ayrı fonksiyonda)
+def write_to_ffmpeg(process, data):
+    try:
+        if process.stdin:
+            process.stdin.write(data)
+            process.stdin.flush()
+    except: pass
+
 # --- ENDPOINTLER ---
 
 @router.get("/live", response_class=HTMLResponse)
@@ -77,7 +86,6 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
     target_user = None
     is_following = False
     
-    # Kullanıcının güncel elmas bilgisini alalım
     db.refresh(user)
     
     if broadcaster:
@@ -94,71 +102,33 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
             "is_following": is_following, "broadcaster": target_user
         })
 
-# 🔥 HEDİYE GÖNDERME API (BU KISIM EKSİK OLABİLİR, LÜTFEN KONTROL ET) 🔥
 @router.post("/gift/send")
-async def send_gift(
-    target_username: str = Form(...), 
-    gift_type: str = Form(...), # rose, heart, car, rocket
-    user: User = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
+async def send_gift(target_username: str = Form(...), gift_type: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return JSONResponse({"status": "error", "msg": "Giriş yapın"}, 401)
-    
     target = db.query(User).filter(User.username == target_username).first()
-    if not target: return JSONResponse({"status": "error", "msg": "Kullanıcı bulunamadı"}, 404)
+    if not target: return JSONResponse({"status": "error", "msg": "Kullanıcı yok"}, 404)
 
-    # Hediye Fiyatları
     prices = {"rose": 10, "heart": 50, "car": 500, "rocket": 5000}
     cost = prices.get(gift_type, 0)
     
-    if cost == 0: return JSONResponse({"status": "error", "msg": "Geçersiz hediye"}, 400)
     if user.diamonds < cost: return JSONResponse({"status": "error", "msg": "Yetersiz Elmas!"}, 400)
 
-    # Transfer İşlemi
     user.diamonds -= cost
-    target.diamonds += cost # Yayincıya elmas ekle
+    target.diamonds += cost
     
-    # Loglama
-    msg_entry = StreamMessage(
-        room_name=target_username,
-        sender=user.username,
-        message=f"{gift_type} gönderdi!",
-        is_gift=True,
-        gift_type=gift_type
-    )
-    db.add(msg_entry)
-    db.commit()
+    msg_entry = StreamMessage(room_name=target_username, sender=user.username, message=f"{gift_type} gönderdi!", is_gift=True, gift_type=gift_type)
+    db.add(msg_entry); db.commit()
 
-    # WebSocket ile tüm izleyicilere animasyon sinyali gönder
-    payload = json.dumps({
-        "type": "gift",
-        "sender": user.username,
-        "gift_type": gift_type,
-        "amount": cost
-    })
-    
-    # Hem yayıncıya hem odaya gönder
+    payload = json.dumps({"type": "gift", "sender": user.username, "gift_type": gift_type, "amount": cost})
     await manager.broadcast_to_room(payload, target_username)
-    await manager.broadcast_to_room(payload, "broadcast") # Yayıncı kendi yayınındaysa görsün
+    await manager.broadcast_to_room(payload, "broadcast")
 
     return JSONResponse({"status": "success", "new_balance": user.diamonds})
 
-
 @router.post("/broadcast/start")
-async def start_broadcast_api(
-    background_tasks: BackgroundTasks, 
-    title: str = Form(...), 
-    category: str = Form(...),  # <--- YENİ EKLENDİ
-    user: User = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
+async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
-    
-    user.is_live = True
-    user.stream_title = title
-    user.stream_category = category  # <--- KATEGORİYİ KAYDET
-    db.commit()
-    
+    user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
     emails = [f.email for f in user.followers]
     background_tasks.add_task(send_broadcast_notifications_task, emails, user.username)
     return {"status": "success"}
@@ -257,12 +227,11 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     stream_dir = f"static/hls/{user.username}"
     shutil.rmtree(stream_dir, ignore_errors=True)
-    
     os.makedirs(f"{stream_dir}/720p", exist_ok=True)
     os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True)
     
-    print(f"🎥 STABİL YAYIN (4-5sn): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
     command = [
         "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
@@ -271,7 +240,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "-map", "[v720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
         "-map", "[v480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
         "-map", "[v360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "700k", "-bufsize:v:2", "800k", "-c:a:2", "aac", "-b:a:2", "64k",
-        "-preset", "veryfast", "-tune", "zerolatency", "-g", "30", "-sc_threshold", "0",
+        "-preset", "veryfast", "-tune", "zerolatency", "-g", "30",
         "-f", "hls", "-hls_time", "1", "-hls_list_size", "5", "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p",
         "-master_pl_name", "master.m3u8", "-hls_segment_filename", f"{stream_dir}/%v/seg_%04d.ts", f"{stream_dir}/%v/stream.m3u8",
@@ -280,13 +249,16 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
+    
+    # Asenkron Döngüyü Al
+    loop = asyncio.get_event_loop()
 
     try:
         while True:
             data = await websocket.receive_bytes()
-            if process.stdin:
-                try: process.stdin.write(data); process.stdin.flush()
-                except: break
+            # ÖNEMLİ: Yazma işlemini (blocking) Thread Pool'a gönderiyoruz
+            # Böylece ana sunucu kilitlenmiyor!
+            await loop.run_in_executor(None, write_to_ffmpeg, process, data)
     except: pass
     finally:
         cleanup_stream(user.username, db)
