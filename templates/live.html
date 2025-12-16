@@ -46,7 +46,8 @@
                         <i class="fa-solid fa-microphone"></i>
                         <select id="audioSource" onchange="restartStream()"></select>
                     </div>
-                    <button class="btn-glass" onclick="resetAuction()"
+
+                    <button class="btn-glass" onclick="openResetModal()"
                         style="background: rgba(255, 193, 7, 0.3);">SIFIRLA 🔄</button>
 
                     <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">MEZAT AÇ 🔨</button>
@@ -54,6 +55,17 @@
                     <button id="btn-stop" onclick="stopBroadcast()" class="btn-stop"
                         style="display:none;">BİTİR</button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="resetModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <h3 style="margin-bottom:10px;">Mezat Sıfırlansın mı?</h3>
+            <p style="color:#aaa; font-size:13px; margin-bottom:20px;">Mevcut fiyat ve teklif veren kişi silinecek.</p>
+            <div class="modal-actions">
+                <button onclick="closeResetModal()" class="btn-cancel">Vazgeç</button>
+                <button onclick="confirmReset()" class="btn-confirm-red">EVET, SIFIRLA</button>
             </div>
         </div>
     </div>
@@ -614,6 +626,60 @@
         gap: 20px;
     }
 
+    /* MODAL STİLLERİ (YENİ) */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.8);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(5px);
+    }
+
+    .modal-box {
+        background: #222;
+        padding: 25px;
+        border-radius: 20px;
+        text-align: center;
+        border: 1px solid #444;
+        width: 85%;
+        max-width: 320px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 10px;
+    }
+
+    .btn-cancel {
+        background: transparent;
+        border: 1px solid #555;
+        color: #ccc;
+        padding: 10px 20px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .btn-confirm-red {
+        background: #e74c3c;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    /* Animations */
     .blink-anim {
         animation: flash 0.3s ease-out;
     }
@@ -761,8 +827,7 @@
                 let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
                 if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
                 rec = new MediaRecorder(window.localStream, opts);
-
-                // 1 saniyelik HLS için 500ms ile buffer'ı beslemek güvenlidir
+                // 1 saniyelik HLS segmentleri için 500ms chunk ideal
                 rec.start(500);
 
                 rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
@@ -779,9 +844,16 @@
             };
         }
 
-        // --- SIFIRLAMA FONKSİYONU ---
-        window.resetAuction = function () {
-            if (!confirm("Mezatı sıfırlamak istediğine emin misin? Fiyat ve kazanan silinecek.")) return;
+        // --- SIFIRLAMA MODAL FONKSİYONLARI ---
+        window.openResetModal = function () {
+            document.getElementById('resetModal').style.display = 'flex';
+        }
+        window.closeResetModal = function () {
+            document.getElementById('resetModal').style.display = 'none';
+        }
+        window.confirmReset = function () {
+            closeResetModal();
+            // Blocking olmayan arka plan isteği
             fetch('/broadcast/reset_auction', { method: 'POST' });
         }
 
@@ -807,7 +879,7 @@
                     };
 
                     if (Hls.isSupported()) {
-                        // 🔥 STABİL AYARLAR (4-5 SN Gecikme)
+                        // STABİL DÜŞÜK GECİKME AYARLARI
                         const hlsConfig = {
                             enableWorker: true,
                             lowLatencyMode: true,
