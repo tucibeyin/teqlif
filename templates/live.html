@@ -46,6 +46,9 @@
                         <i class="fa-solid fa-microphone"></i>
                         <select id="audioSource" onchange="restartStream()"></select>
                     </div>
+                    <button class="btn-glass" onclick="resetAuction()"
+                        style="background: rgba(255, 193, 7, 0.3);">SIFIRLA 🔄</button>
+
                     <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">MEZAT AÇ 🔨</button>
                     <button id="btn-start" onclick="startBroadcast()" class="btn-start">BAŞLAT</button>
                     <button id="btn-stop" onclick="stopBroadcast()" class="btn-stop"
@@ -140,7 +143,7 @@
 </div>
 
 <style>
-    /* STİL DOSYASI */
+    /* STİL KODLARI (CSS) */
     :root {
         --accent: #34C759;
         --gold: #FFD700;
@@ -223,16 +226,15 @@
         pointer-events: auto;
     }
 
-    .header-left {
-        display: flex;
-        align-items: flex-start;
-        gap: 10px;
-    }
-
+    .header-left,
     .header-right {
         display: flex;
         align-items: center;
         gap: 10px;
+    }
+
+    .header-left {
+        align-items: flex-start;
     }
 
     .price-board {
@@ -360,6 +362,8 @@
         justify-content: flex-end;
         padding-left: 15px;
         pointer-events: auto;
+        mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
     }
 
     .chat-scroller {
@@ -368,8 +372,6 @@
         flex-direction: column;
         gap: 6px;
         justify-content: flex-end;
-        mask-image: linear-gradient(to top, black 80%, transparent 100%);
-        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
     }
 
     .msg {
@@ -777,6 +779,12 @@
             };
         }
 
+        // --- SIFIRLAMA FONKSİYONU ---
+        window.resetAuction = function () {
+            if (!confirm("Mezatı sıfırlamak istediğine emin misin? Fiyat ve kazanan silinecek.")) return;
+            fetch('/broadcast/reset_auction', { method: 'POST' });
+        }
+
         window.toggleAuction = function () {
             AUCTION_ACTIVE = !AUCTION_ACTIVE;
             const btn = document.getElementById('btn-auction-toggle');
@@ -847,6 +855,14 @@
                 if (board) board.style.display = d.active ? 'flex' : 'none';
                 return;
             }
+            // SIFIRLAMA SİNYALİ GELDİĞİNDE EKRANI TEMİZLE
+            if (d.type === 'reset_auction') {
+                updatePriceDisplay(0, target, null);
+                const bidFeedId = target === 'broadcast' ? 'bid-feed-broadcast' : `bid-feed-${target}`;
+                const bidFeed = document.getElementById(bidFeedId);
+                if (bidFeed) bidFeed.innerHTML = ''; // Teklif balonlarını temizle
+                return;
+            }
             if (d.type === 'count') { const cId = target === 'broadcast' ? 'live-count-broadcast' : `live-count-${target}`; const cEl = document.getElementById(cId); if (cEl) cEl.innerText = d.val; return; }
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
@@ -880,7 +896,15 @@
         if (el) { el.innerText = amount; el.classList.remove("blink-anim"); void el.offsetWidth; el.classList.add("blink-anim"); }
         const leaderRowId = target === 'broadcast' ? 'leader-display-broadcast' : `leader-display-${target}`;
         const leaderRow = document.getElementById(leaderRowId);
-        if (leaderRow && bidderName) { leaderRow.style.display = 'flex'; leaderRow.querySelector('.name').innerText = bidderName; }
+
+        if (leaderRow) {
+            if (bidderName) {
+                leaderRow.style.display = 'flex';
+                leaderRow.querySelector('.name').innerText = bidderName;
+            } else {
+                leaderRow.style.display = 'none'; // Lider yoksa (sıfırlandıysa) gizle
+            }
+        }
     }
 
     window.sendBid = function (target, amount) {

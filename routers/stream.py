@@ -112,6 +112,23 @@ async def toggle_auction(active: bool = Form(...), user: User = Depends(get_curr
     await manager.broadcast_to_room(msg, "broadcast")
     return {"status": "ok", "active": active}
 
+# --- YENİ EKLENEN SIFIRLAMA ROUTE'U ---
+@router.post("/broadcast/reset_auction")
+async def reset_auction(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user: return {"status": "error"}
+    
+    # Veritabanını sıfırla
+    user.current_price = 0
+    user.highest_bidder = None
+    db.commit()
+    
+    # Tüm izleyicilere 'reset' sinyali gönder
+    msg = json.dumps({"type": "reset_auction", "price": 0, "leader": None})
+    await manager.broadcast_to_room(msg, user.username)
+    await manager.broadcast_to_room(msg, "broadcast")
+    
+    return {"status": "ok"}
+
 @router.post("/broadcast/thumbnail")
 async def upload_thumbnail(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
@@ -211,11 +228,11 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
         "-preset", "veryfast",                
         "-tune", "zerolatency",               
-        "-g", "30",                           # 1 saniyelik GOP (Stabilite)
+        "-g", "30",                           
         "-sc_threshold", "0",                 
         
         "-f", "hls",
-        "-hls_time", "1",                     # 1 saniyelik parçalar
+        "-hls_time", "1",                     
         "-hls_list_size", "5",                
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         
