@@ -156,12 +156,16 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // Bakiyeyi güncelle
-                    const balanceEl = document.getElementById('user-diamonds');
-                    if (balanceEl) balanceEl.innerText = data.new_balance;
+                    // 2 YERİ BİRDEN GÜNCELLE
+                    const screenCount = document.getElementById('screen-diamond-count');
+                    const menuCount = document.getElementById('menu-diamond-count');
+
+                    if (screenCount) screenCount.innerText = data.new_balance;
+                    if (menuCount) menuCount.innerText = data.new_balance;
+
                     closeGiftMenu();
                 } else {
-                    alert(data.msg); // Yetersiz bakiye vs.
+                    alert(data.msg);
                 }
             })
             .catch(err => console.error(err));

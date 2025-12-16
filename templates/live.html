@@ -7,9 +7,9 @@
 
 <div class="teqlif-os">
 
-    <div class="diamond-balance-pill">
-        <i class="fa-solid fa-gem" style="color: #00d2ff;"></i>
-        <span id="user-diamonds">{{ user.diamonds }}</span>
+    <div class="diamond-pill">
+        <i class="fa-solid fa-gem"></i>
+        <span id="screen-diamond-count">{{ user.diamonds }}</span>
     </div>
 
     <div id="gift-animation-layer"></div>
@@ -30,6 +30,7 @@
                     </div>
                 </div>
                 <div class="brand">teqlif <span class="badge">YAYINDA</span></div>
+                <div class="viewer-count"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
             </div>
 
             <div class="mid-section">
@@ -97,6 +98,8 @@
                             'Takip Ediliyor' if is_following else 'Takip Et' }}</button>
                     </div>
                     <div class="header-right">
+                        <div class="viewer-pill"><i class="fa-solid fa-eye"></i> <span
+                                id="live-count-{{ stream.username }}">0</span></div>
                         <a href="/" class="close-btn"><i class="fa-solid fa-xmark"></i></a>
                     </div>
                 </div>
@@ -145,9 +148,16 @@
 
     <div id="giftMenu" class="gift-sheet" style="display:none;">
         <div class="sheet-header">
-            <span>Hediye Gönder</span>
-            <i class="fa-solid fa-xmark" onclick="closeGiftMenu()"></i>
+            <div class="sheet-title">Hediye Gönder</div>
+
+            <div class="sheet-balance">
+                Bakiye: <span id="menu-diamond-count" style="color:#00d2ff; font-weight:bold;">{{ user.diamonds
+                    }}</span> 💎
+            </div>
+
+            <div class="sheet-close" onclick="closeGiftMenu()"><i class="fa-solid fa-xmark"></i></div>
         </div>
+
         <div class="gift-grid">
             <div class="gift-item" onclick="sendGift('rose')">
                 <div class="gift-icon">🌹</div>
@@ -173,6 +183,60 @@
     </div>
 
 </div>
+
+<style>
+    /* Sabit Elmas Hapı (Sağ Üst) */
+    .diamond-pill {
+        position: fixed;
+        top: 60px;
+        /* İzleyici sayısı ve kapat butonunun altına */
+        right: 15px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid rgba(0, 210, 255, 0.4);
+        padding: 5px 12px;
+        border-radius: 20px;
+        color: white;
+        font-size: 13px;
+        font-weight: 800;
+        z-index: 100;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
+    .diamond-pill i {
+        color: #00d2ff;
+    }
+
+    /* Hediye Menüsü Düzenlemeleri */
+    .sheet-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .sheet-title {
+        font-weight: bold;
+        font-size: 14px;
+    }
+
+    .sheet-balance {
+        font-size: 12px;
+        color: #ccc;
+        background: rgba(255, 255, 255, 0.05);
+        padding: 4px 10px;
+        border-radius: 12px;
+    }
+
+    .sheet-close {
+        cursor: pointer;
+        padding: 5px;
+    }
+</style>
 
 <script>
     window.TEQLIF_CONFIG = {
