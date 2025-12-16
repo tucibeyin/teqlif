@@ -33,22 +33,37 @@
         </div>
     </div>
 </div>
+
 <script>
     function togglePass(inputId, icon) {
         const input = document.getElementById(inputId);
-        if (input.type === "password") { input.type = "text"; icon.classList.remove("fa-eye"); icon.classList.add("fa-eye-slash"); }
-        else { input.type = "password"; icon.classList.remove("fa-eye-slash"); icon.classList.add("fa-eye"); }
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.remove("fa-eye");
+            icon.classList.add("fa-eye-slash");
+        } else {
+            input.type = "password";
+            icon.classList.remove("fa-eye-slash");
+            icon.classList.add("fa-eye");
+        }
     }
 </script>
+
 <style>
-    .show-pass {
+    /* .input-group-auth i selector'ı style.css'de tanımlı ve left: 15px veriyor.
+       Bunu ezmek için daha spesifik bir selector (.input-group-auth .show-pass) kullanıyoruz.
+    */
+    .input-group-auth .show-pass {
+        left: auto;
+        /* Sol taraftaki hizalamayı iptal et */
         right: 15px;
+        /* Sağa yasla */
         cursor: pointer;
         z-index: 10;
         color: #aaa;
     }
 
-    .show-pass:hover {
+    .input-group-auth .show-pass:hover {
         color: white;
     }
 </style>
