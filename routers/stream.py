@@ -145,9 +145,20 @@ async def send_gift(
 
 
 @router.post("/broadcast/start")
-async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def start_broadcast_api(
+    background_tasks: BackgroundTasks, 
+    title: str = Form(...), 
+    category: str = Form(...),  # <--- YENİ EKLENDİ
+    user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
     if not user: return {"status": "error"}
-    user.is_live = True; user.stream_title = title; db.commit()
+    
+    user.is_live = True
+    user.stream_title = title
+    user.stream_category = category  # <--- KATEGORİYİ KAYDET
+    db.commit()
+    
     emails = [f.email for f in user.followers]
     background_tasks.add_task(send_broadcast_notifications_task, emails, user.username)
     return {"status": "success"}

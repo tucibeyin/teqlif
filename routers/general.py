@@ -11,12 +11,27 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 @router.get("/", response_class=HTMLResponse)
-async def read_home(request: Request, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
-    active_streams = db.query(User).filter(User.is_live == True).all()
+async def read_home(request: Request, category: Optional[str] = None, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
+    # Sadece canlı olanları çek
+    query = db.query(User).filter(User.is_live == True)
+    
+    # Eğer kategori seçildiyse ve 'Tümü' değilse filtrele
+    if category and category != "Tümü":
+        query = query.filter(User.stream_category == category)
+        
+    active_streams = query.all()
+    
+    # Takip ettiklerini öne al
     if user:
         followed_ids = [u.id for u in user.followed]
         active_streams.sort(key=lambda x: x.id not in followed_ids)
-    return templates.TemplateResponse("index.html", {"request": request, "user": user, "streams": active_streams})
+        
+    return templates.TemplateResponse("index.html", {
+        "request": request, 
+        "user": user, 
+        "streams": active_streams,
+        "current_category": category if category else "Tümü" # Seçili kategoriyi template'e gönder
+    })
 
 @router.get("/settings", response_class=HTMLResponse)
 async def settings_page(request: Request, user: Optional[User] = Depends(get_current_user)):

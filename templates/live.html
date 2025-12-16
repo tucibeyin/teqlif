@@ -42,23 +42,36 @@
                 </div>
             </div>
 
-            <div class="bottom-dock">
-                <div class="chat-input-bar">
-                    <input type="text" id="chat-input-broadcast" placeholder="Mesaj yaz..." autocomplete="off">
-                    <button class="send-icon-btn" onclick="sendMsg('broadcast')"><i
-                            class="fa-solid fa-paper-plane"></i></button>
-                </div>
-                <div class="admin-controls">
-                    <div class="select-wrapper"><i class="fa-solid fa-microphone"></i><select id="audioSource"
-                            onchange="restartStream()"></select></div>
-                    <button class="btn-glass" onclick="openResetModal()"
-                        style="background: rgba(255, 193, 7, 0.3);">🔄</button>
-                    <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">🔨</button>
-                    <button id="btn-start" onclick="startBroadcast()" class="btn-start">BAŞLAT</button>
-                    <button id="btn-stop" onclick="stopBroadcast()" class="btn-stop"
-                        style="display:none;">BİTİR</button>
-                </div>
-            </div>
+    <div class="bottom-dock">
+    <div class="chat-input-bar">
+        <input type="text" id="chat-input-broadcast" placeholder="Mesaj yaz..." autocomplete="off">
+        <button class="send-icon-btn" onclick="sendMsg('broadcast')"><i class="fa-solid fa-paper-plane"></i></button>
+    </div>
+
+    <div class="admin-controls" style="flex-direction: column; gap: 10px; margin-top: 10px;">
+
+        <div id="setup-panel" style="display: flex; gap: 5px; width: 100%;">
+            <input type="text" id="streamTitle" placeholder="Yayın Başlığı" class="glass-input" style="flex: 2;">
+            <select id="streamCategory" class="glass-input" style="flex: 1;">
+                <option value="Genel">Genel</option>
+                <option value="Mezat">Mezat 🔨</option>
+                <option value="Sohbet">Sohbet 💬</option>
+                <option value="Oyun">Oyun 🎮</option>
+                <option value="Müzik">Müzik 🎵</option>
+            </select>
+        </div>
+
+        <div style="display: flex; gap: 8px; width: 100%; justify-content: center;">
+            <div class="select-wrapper"><i class="fa-solid fa-microphone"></i><select id="audioSource"
+                    onchange="restartStream()"></select></div>
+            <button class="btn-glass" onclick="openResetModal()" style="background: rgba(255, 193, 7, 0.3);">🔄</button>
+            <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">🔨</button>
+
+            <button id="btn-start" onclick="startBroadcast()" class="btn-start">YAYINI BAŞLAT</button>
+            <button id="btn-stop" onclick="stopBroadcast()" class="btn-stop" style="display:none;">BİTİR</button>
+        </div>
+    </div>
+</div>
         </div>
     </div>
 
@@ -236,6 +249,18 @@
         cursor: pointer;
         padding: 5px;
     }
+
+    .glass-input {
+    background: rgba(255, 255, 255, 0.15);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 8px;
+    border-radius: 10px;
+    font-size: 12px;
+    outline: none;
+    }
+    .glass-input::placeholder { color: #ccc; }
+    option { background: #333; color: white; }
 </style>
 
 <script>

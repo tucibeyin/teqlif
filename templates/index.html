@@ -1,325 +1,237 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="scrollable-wrapper">
-    <div class="lobby-container">
+<div class="teqlif-os">
 
-        <div class="action-panel">
-            <h1 class="welcome-title">TEQLIF<span style="color:#3498db;">LIVE</span></h1>
-            <p class="subtitle">Kendi sahneni kur, dünyayla paylaş.</p>
-            <div class="action-buttons">
-                {% if user %}
-                <button onclick="openModal()" class="big-btn start-btn">
-                    <div class="icon-circle"><i class="fa-solid fa-video"></i></div><span>Yayın Başlat</span>
-                </button>
-                {% else %}
-                <a href="/login" class="big-btn login-btn">
-                    <div class="icon-circle"><i class="fa-solid fa-right-to-bracket"></i></div><span>Giriş Yap</span>
-                </a>
-                {% endif %}
-            </div>
-        </div>
-
-        <div class="showcase-panel">
-            <h3 class="section-title"><i class="fa-solid fa-signal" style="color:red;"></i> Şu An Yayında</h3>
-            <div class="streams-grid">
-                {% for stream in streams %}
-                <a href="/live?mode=watch&broadcaster={{ stream.username }}" class="stream-card">
-                    <div class="card-thumb">
-                        <img src="{{ stream.thumbnail }}"
-                            onerror="this.src='https://via.placeholder.com/640x360/000000/FFFFFF/?text=YAYIN';"
-                            alt="Yayın">
-                        <div class="live-badge">CANLI</div>
-                        <div class="viewer-pill"><i class="fa-solid fa-play"></i> İZLE</div>
-                    </div>
-                    <div class="card-info">
-                        <div class="avatar-circle">{{ stream.username[0] | upper }}</div>
-                        <div class="text-info">
-                            <div class="stream-title">{{ stream.stream_title }}</div>
-                            <div class="streamer-name">{{ stream.username }}</div>
-                        </div>
-                    </div>
-                </a>
-                {% else %}
-                <div class="empty-state">
-                    <i class="fa-solid fa-satellite-dish" style="font-size:3rem; margin-bottom:20px;"></i>
-                    <p>Aktif yayın yok. İlk sen ol!</p>
-                </div>
-                {% endfor %}
-            </div>
-        </div>
-
-        <div style="height: 100px;"></div>
-
+    <div class="category-bar">
+        <a href="/" class="cat-chip {{ 'active' if current_category == 'Tümü' else '' }}">Tümü</a>
+        <a href="/?category=Mezat" class="cat-chip {{ 'active' if current_category == 'Mezat' else '' }}">Mezat 🔨</a>
+        <a href="/?category=Sohbet" class="cat-chip {{ 'active' if current_category == 'Sohbet' else '' }}">Sohbet
+            💬</a>
+        <a href="/?category=Oyun" class="cat-chip {{ 'active' if current_category == 'Oyun' else '' }}">Oyun 🎮</a>
+        <a href="/?category=Müzik" class="cat-chip {{ 'active' if current_category == 'Müzik' else '' }}">Müzik 🎵</a>
+        <a href="/?category=Genel" class="cat-chip {{ 'active' if current_category == 'Genel' else '' }}">Genel</a>
     </div>
-</div>
 
-<div id="startModal" class="modal-overlay" style="display:none;">
-    <div class="modal-box">
-        <h3>Yayına Başla 🚀</h3>
-        <input type="text" id="streamTitle" placeholder="Yayın Başlığı (Örn: Sohbet...)" maxlength="30">
-        <div class="modal-actions">
-            <button onclick="closeModal()" class="btn-cancel">İptal</button>
-            <button onclick="goToBroadcast()" class="btn-go">BAŞLAT</button>
+    <div class="stream-grid">
+        {% for stream in streams %}
+        <a href="/live?broadcaster={{ stream.username }}" class="stream-card">
+            <div class="thumb-wrapper">
+                <img src="{{ stream.thumbnail }}" onerror="this.src='https://via.placeholder.com/300x500?text=Canli'"
+                    alt="{{ stream.username }}">
+                <div class="live-badge">CANLI</div>
+                <div class="cat-badge">{{ stream.stream_category }}</div>
+                <div class="viewer-count"><i class="fa-solid fa-eye"></i> İzle</div>
+            </div>
+            <div class="stream-info">
+                <div class="avatar">{{ stream.username[0] | upper }}</div>
+                <div class="details">
+                    <div class="title">{{ stream.stream_title if stream.stream_title else "İsimsiz Yayın" }}</div>
+                    <div class="username">{{ stream.username }}</div>
+                </div>
+            </div>
+        </a>
+        {% else %}
+        <div class="empty-state">
+            <div class="brand-logo large">teqlif</div>
+            <p>Şu an "<b>{{ current_category }}</b>" kategorisinde yayın yok.</p>
+            <a href="/live?mode=broadcast" class="btn-start">İlk Yayını Sen Aç!</a>
         </div>
+        {% endfor %}
+    </div>
+
+    <div class="bottom-nav">
+        <a href="/" class="nav-item active"><i class="fa-solid fa-house"></i></a>
+        <a href="/live?mode=broadcast" class="nav-item center-btn"><i class="fa-solid fa-plus"></i></a>
+        <a href="/settings" class="nav-item"><i class="fa-solid fa-gear"></i></a>
     </div>
 </div>
 
 <style>
-    /* --- SCROLL KİLİDİNİ AÇAN KOD --- */
-    .scrollable-wrapper {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        overflow-y: auto;
-        /* DİKEY KAYDIRMAYI AKTİF ET */
-        -webkit-overflow-scrolling: touch;
-        /* Mobilde yumuşak kaydırma */
-        padding-top: 20px;
-    }
-
-    .lobby-container {
-        max-width: 1000px;
-        margin: 0 auto;
-        padding: 0 20px;
-    }
-
-    .action-panel {
-        background: linear-gradient(135deg, #141e30, #243b55);
-        padding: 40px;
-        border-radius: 20px;
-        text-align: center;
-        margin-bottom: 30px;
-        border: 1px solid #333;
-    }
-
-    .welcome-title {
-        margin: 0;
-        font-size: 2.5rem;
-        letter-spacing: 2px;
-    }
-
-    .subtitle {
-        color: #aaa;
-        margin-top: 10px;
-    }
-
-    .action-buttons {
-        margin-top: 30px;
+    /* KATEGORİ BAR */
+    .category-bar {
         display: flex;
-        justify-content: center;
-        gap: 20px;
-    }
-
-    .big-btn {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
         gap: 10px;
-        background: rgba(255, 255, 255, 0.05);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        padding: 20px 40px;
-        border-radius: 15px;
-        cursor: pointer;
-        text-decoration: none;
-        color: white;
-        transition: 0.3s;
+        padding: 15px;
+        overflow-x: auto;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.8), transparent);
+        position: sticky;
+        top: 0;
+        z-index: 50;
+        scrollbar-width: none;
+        /* Scrollbar gizle */
     }
 
-    .big-btn:hover {
+    .category-bar::-webkit-scrollbar {
+        display: none;
+    }
+
+    .cat-chip {
         background: rgba(255, 255, 255, 0.1);
-        transform: translateY(-5px);
-        border-color: #3498db;
-    }
-
-    .icon-circle {
-        width: 60px;
-        height: 60px;
-        background: #3498db;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
+        border: 1px solid rgba(255, 255, 255, 0.2);
         color: white;
+        padding: 6px 15px;
+        border-radius: 20px;
+        font-size: 13px;
+        text-decoration: none;
+        white-space: nowrap;
+        transition: all 0.2s;
     }
 
-    .section-title {
-        border-bottom: 1px solid #333;
-        padding-bottom: 10px;
-        margin-bottom: 20px;
-        color: #ddd;
+    .cat-chip.active {
+        background: #34C759;
+        color: black;
+        border-color: #34C759;
+        font-weight: bold;
     }
 
-    .streams-grid {
+    /* YAYIN KARTLARI */
+    .stream-grid {
         display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-        gap: 20px;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+        padding: 10px;
+        padding-bottom: 80px;
+        /* Footer payı */
     }
 
     .stream-card {
-        background: #1a1a1a;
-        border-radius: 15px;
-        overflow: hidden;
         text-decoration: none;
         color: white;
-        display: block;
-        border: 1px solid #333;
-        transition: 0.3s;
-    }
-
-    .stream-card:hover {
-        transform: translateY(-5px);
-        border-color: #3498db;
-    }
-
-    .card-thumb {
-        height: 150px;
-        background: #000;
         position: relative;
     }
 
-    .card-thumb img {
+    .thumb-wrapper {
+        position: relative;
+        border-radius: 15px;
+        overflow: hidden;
+        aspect-ratio: 9/16;
+        background: #222;
+    }
+
+    .thumb-wrapper img {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        opacity: 0.9;
     }
 
     .live-badge {
         position: absolute;
         top: 10px;
         left: 10px;
-        background: red;
-        padding: 2px 8px;
-        font-size: 0.7rem;
-        font-weight: bold;
+        background: #ff3b30;
+        padding: 2px 6px;
         border-radius: 4px;
-        animation: pulse 2s infinite;
+        font-size: 10px;
+        font-weight: bold;
     }
 
-    .card-info {
-        padding: 15px;
+    .cat-badge {
+        position: absolute;
+        bottom: 10px;
+        left: 10px;
+        background: rgba(0, 0, 0, 0.6);
+        padding: 2px 6px;
+        border-radius: 4px;
+        font-size: 10px;
+        border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    .stream-info {
+        display: flex;
+        gap: 10px;
+        margin-top: 8px;
+        align-items: center;
+    }
+
+    .avatar {
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: #333;
         display: flex;
         align-items: center;
-        gap: 10px;
+        justify-content: center;
+        font-weight: bold;
+        font-size: 12px;
     }
 
-    .avatar-circle {
-        width: 40px;
-        height: 40px;
-        background: #3498db;
+    .details .title {
+        font-size: 13px;
+        font-weight: bold;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
+    }
+
+    .details .username {
+        font-size: 11px;
+        color: #aaa;
+    }
+
+    /* ALT MENÜ */
+    .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        background: #111;
+        border-top: 1px solid #333;
+        display: flex;
+        justify-content: space-around;
+        align-items: center;
+        z-index: 100;
+    }
+
+    .nav-item {
+        color: #666;
+        font-size: 22px;
+        text-decoration: none;
+    }
+
+    .nav-item.active {
+        color: white;
+    }
+
+    .center-btn {
+        background: #34C759;
+        color: black !important;
+        width: 45px;
+        height: 45px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-weight: bold;
-    }
-
-    .stream-title {
-        font-weight: bold;
-        font-size: 0.95rem;
-    }
-
-    .streamer-name {
-        font-size: 0.8rem;
-        color: #888;
+        margin-bottom: 20px;
+        border: 3px solid #000;
     }
 
     .empty-state {
-        grid-column: 1 / -1;
-        text-align: center;
-        padding: 50px;
-        color: #555;
-        background: #111;
-        border-radius: 10px;
-        border: 2px dashed #333;
-    }
-
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-        z-index: 1000;
+        grid-column: span 2;
         display: flex;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        backdrop-filter: blur(5px);
+        height: 300px;
+        color: #666;
     }
 
-    .modal-box {
-        background: #222;
-        padding: 30px;
-        border-radius: 15px;
-        width: 90%;
-        max-width: 400px;
-        text-align: center;
-        border: 1px solid #444;
+    .brand-logo.large {
+        font-size: 40px;
+        font-weight: 900;
+        margin-bottom: 20px;
     }
 
-    .modal-box input {
-        width: 100%;
-        padding: 15px;
-        margin: 20px 0;
-        background: #111;
-        border: 1px solid #333;
-        color: white;
-        border-radius: 10px;
-        outline: none;
-    }
-
-    .modal-actions {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-    }
-
-    .btn-go {
-        background: #2ecc71;
-        color: white;
-        border: none;
-        padding: 10px 25px;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-
-    .btn-cancel {
-        background: transparent;
-        border: 1px solid #555;
-        color: #aaa;
-        padding: 10px 25px;
-        border-radius: 5px;
-        cursor: pointer;
-    }
-
-    @keyframes pulse {
-        0% {
-            opacity: 1
-        }
-
-        50% {
-            opacity: 0.5
-        }
-
-        100% {
-            opacity: 1
-        }
+    .btn-start {
+        background: #34C759;
+        color: black;
+        padding: 10px 20px;
+        border-radius: 20px;
+        text-decoration: none;
+        font-weight: bold;
+        margin-top: 10px;
     }
 </style>
-
-<script>
-    function openModal() { document.getElementById('startModal').style.display = 'flex'; document.getElementById('streamTitle').focus(); }
-    function closeModal() { document.getElementById('startModal').style.display = 'none'; }
-    function goToBroadcast() {
-        const title = document.getElementById('streamTitle').value;
-        if (!title.trim()) { alert("Başlık giriniz!"); return; }
-        const formData = new FormData(); formData.append('title', title);
-        fetch('/broadcast/start', { method: 'POST', body: formData }).then(() => { window.location.href = '/live?mode=broadcast'; });
-    }
-</script>
 {% endblock %}

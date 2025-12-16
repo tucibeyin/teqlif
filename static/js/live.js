@@ -246,26 +246,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.startBroadcast = function () {
+            // Başlık ve Kategori Al
+            const title = document.getElementById('streamTitle').value || "Canlı Yayın";
+            const category = document.getElementById('streamCategory').value;
+
+            // Backend'e Bildir
+            const formData = new FormData();
+            formData.append('title', title);
+            formData.append('category', category);
+
+            fetch('/broadcast/start', { method: 'POST', body: formData });
+
+            // UI Güncelle
             document.getElementById('btn-start').style.display = 'none';
+            document.getElementById('setup-panel').style.display = 'none'; // Ayarları gizle
             document.getElementById('btn-stop').style.display = 'inline-block';
 
             connectChat('broadcast');
-
+            // ... (Websocket ve MediaRecorder kodları aynı kalacak) ...
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-
             ws.onopen = () => {
-                let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
-                if (!MediaRecorder.isTypeSupported(opts.mimeType)) {
-                    opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000, audioBitsPerSecond: 160000 };
-                }
-
+                let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
+                if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
                 rec = new MediaRecorder(window.localStream, opts);
-                rec.start(500); // 1sn segment için 500ms besleme
-
-                rec.ondataavailable = e => {
-                    if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data);
-                };
-
+                rec.start(500);
+                rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
                 sendThumbnailSnapshot();
                 window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
             };
