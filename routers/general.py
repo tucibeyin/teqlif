@@ -32,6 +32,26 @@ async def update_profile(request: Request, username: str = Form(...), user: User
     user.username = username; db.commit()
     return templates.TemplateResponse("settings.html", {"request": request, "user": user, "success": "Güncellendi."})
 
+# 🔥 YENİ: ELMAS SATIN ALMA API 🔥
+@router.post("/settings/buy_diamonds")
+async def buy_diamonds(amount: int = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user: return JSONResponse({"status": "error", "msg": "Giriş yapmalısınız"}, 401)
+    
+    # Geçerli paketleri kontrol et (Güvenlik)
+    valid_packages = [10, 50, 100, 1000, 5000]
+    if amount not in valid_packages:
+        return JSONResponse({"status": "error", "msg": "Geçersiz paket seçimi"}, 400)
+    
+    # ÖDEME SİMÜLASYONU (Burada normalde kredi kartı çekimi olur)
+    # 1 Diamond = 1 TL
+    cost = amount * 1 
+    
+    # Başarılı sayıyoruz ve elması yüklüyoruz
+    user.diamonds += amount
+    db.commit()
+    
+    return JSONResponse({"status": "success", "new_balance": user.diamonds, "msg": f"{amount} Elmas başarıyla yüklendi!"})
+
 @router.post("/user/follow")
 async def follow_user(username: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return JSONResponse({"status": "error"}, 401)

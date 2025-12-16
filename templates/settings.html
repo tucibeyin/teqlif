@@ -1,9 +1,10 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="auth-container">
+<div class="auth-container" style="flex-direction: column; gap: 20px; padding: 20px 0;">
+
     <div class="auth-box" style="width: 400px; text-align: left;">
-        <h2 style="text-align: center; margin-bottom: 30px;">Profil Ayarları ⚙️</h2>
+        <h2 style="text-align: center; margin-bottom: 20px;">Profil Ayarları ⚙️</h2>
 
         {% if error %}
         <div class="error-msg">{{ error }}</div>
@@ -17,8 +18,7 @@
 
         <form action="/settings/update" method="post">
             <div class="form-group" style="margin-bottom: 20px;">
-                <label style="color: #aaa; font-size: 0.9rem; margin-left: 10px;">E-Posta Adresi
-                    (Değiştirilemez)</label>
+                <label style="color: #aaa; font-size: 0.9rem; margin-left: 10px;">E-Posta (Değiştirilemez)</label>
                 <div class="input-group-auth" style="opacity: 0.5;">
                     <i class="fa-solid fa-envelope"></i>
                     <input type="text" value="{{ user.email }}" disabled style="cursor: not-allowed;">
@@ -33,13 +33,42 @@
                     <input type="text" name="username" value="{{ user.username if user.username else '' }}"
                         placeholder="örn: tucibeyin" required>
                 </div>
-                <small style="color: #666; font-size: 0.8rem; margin-left: 10px;">
-                    *Bu isim yayınlarda ve sohbette görünecektir.
-                </small>
             </div>
 
-            <button type="submit" class="auth-btn" style="margin-top: 20px;">Kaydet</button>
+            <button type="submit" class="auth-btn" style="margin-top: 10px;">Kaydet</button>
         </form>
+    </div>
+
+    <div class="auth-box" style="width: 400px; text-align: left; border-color: #00d2ff;">
+        <h2 style="text-align: center; margin-bottom: 10px; color: #00d2ff;">Elmas Mağazası 💎</h2>
+
+        <div style="text-align: center; margin-bottom: 20px; font-size: 1.2rem;">
+            Bakiyeniz: <span id="diamond-balance" style="color: white; font-weight: bold;">{{ user.diamonds }}</span> 💎
+        </div>
+
+        <div class="diamond-grid">
+            <div class="diamond-card" onclick="buyDiamonds(10)">
+                <div class="d-amount">10 💎</div>
+                <div class="d-price">10 TL</div>
+            </div>
+            <div class="diamond-card" onclick="buyDiamonds(50)">
+                <div class="d-amount">50 💎</div>
+                <div class="d-price">50 TL</div>
+            </div>
+            <div class="diamond-card popular" onclick="buyDiamonds(100)">
+                <div class="badge">POPÜLER</div>
+                <div class="d-amount">100 💎</div>
+                <div class="d-price">100 TL</div>
+            </div>
+            <div class="diamond-card" onclick="buyDiamonds(1000)">
+                <div class="d-amount">1.000 💎</div>
+                <div class="d-price">1.000 TL</div>
+            </div>
+            <div class="diamond-card premium" onclick="buyDiamonds(5000)">
+                <div class="d-amount">5.000 💎</div>
+                <div class="d-price">5.000 TL</div>
+            </div>
+        </div>
 
         <div style="text-align: center; margin-top: 20px;">
             <a href="/" style="color: #888; text-decoration: none; font-size: 0.9rem;">
@@ -47,5 +76,102 @@
             </a>
         </div>
     </div>
+
 </div>
+
+<script>
+    function buyDiamonds(amount) {
+        if (!confirm(amount + " Elmas'ı " + amount + " TL karşılığında satın almak istiyor musunuz?")) return;
+
+        const btn = event.currentTarget;
+        btn.style.opacity = "0.5";
+
+        const formData = new FormData();
+        formData.append('amount', amount);
+
+        fetch('/settings/buy_diamonds', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                btn.style.opacity = "1";
+                if (data.status === 'success') {
+                    alert(data.msg);
+                    document.getElementById('diamond-balance').innerText = data.new_balance;
+
+                    // Animasyonlu artış efekti (Basit)
+                    const bal = document.getElementById('diamond-balance');
+                    bal.style.color = "#00ff00";
+                    setTimeout(() => bal.style.color = "white", 1000);
+                } else {
+                    alert("Hata: " + data.msg);
+                }
+            })
+            .catch(err => {
+                btn.style.opacity = "1";
+                alert("Bir hata oluştu.");
+            });
+    }
+</script>
+
+<style>
+    .diamond-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+
+    .diamond-card {
+        background: rgba(255, 255, 255, 0.05);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .diamond-card:hover {
+        background: rgba(0, 210, 255, 0.1);
+        border-color: #00d2ff;
+        transform: translateY(-2px);
+    }
+
+    .d-amount {
+        font-size: 1.1rem;
+        font-weight: bold;
+        color: white;
+    }
+
+    .d-price {
+        font-size: 0.9rem;
+        color: #aaa;
+        margin-top: 5px;
+    }
+
+    .diamond-card.popular {
+        border-color: #f1c40f;
+        background: rgba(241, 196, 15, 0.1);
+        grid-column: span 2;
+        /* Geniş kart */
+    }
+
+    .diamond-card.popular .badge {
+        position: absolute;
+        top: 0;
+        right: 0;
+        background: #f1c40f;
+        color: black;
+        font-size: 0.6rem;
+        padding: 2px 6px;
+        font-weight: bold;
+        border-bottom-left-radius: 5px;
+    }
+
+    .diamond-card.premium {
+        grid-column: span 2;
+        background: linear-gradient(45deg, rgba(155, 89, 182, 0.2), rgba(0, 0, 0, 0));
+        border-color: #9b59b6;
+    }
+</style>
 {% endblock %}
