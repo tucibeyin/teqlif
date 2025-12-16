@@ -5,20 +5,19 @@ import subprocess
 import sys
 import base64
 from typing import Dict, List, Optional
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks, HTTPException
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy import desc
 from sqlalchemy.orm import Session
 from database import get_db
 from models import User, StreamMessage
-from utils import get_current_user, send_broadcast_notifications_task, SECRET_KEY, ALGORITHM
-from jose import jwt
+from utils import get_current_user, send_broadcast_notifications_task
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# Connection Manager
+# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[WebSocket]] = {}
@@ -52,8 +51,8 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
+# --- YARDIMCI FONKSİYONLAR ---
 def cleanup_stream(username: str, db: Session):
-    print(f"🧹 TEMİZLİK: {username}")
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
@@ -70,11 +69,17 @@ def cleanup_stream(username: str, db: Session):
     
     shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
 
+# --- ENDPOINTLER ---
+
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse(url="/login", status_code=303)
     target_user = None
     is_following = False
+    
+    # Kullanıcının güncel elmas bilgisini alalım
+    db.refresh(user)
+    
     if broadcaster:
         target_user = db.query(User).filter(User.username == broadcaster).first()
         if target_user and target_user in user.followed: is_following = True
@@ -88,6 +93,56 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
             "auction_active": target_user.is_auction_active if target_user else False,
             "is_following": is_following, "broadcaster": target_user
         })
+
+# 🔥 HEDİYE GÖNDERME API 🔥
+@router.post("/gift/send")
+async def send_gift(
+    target_username: str = Form(...), 
+    gift_type: str = Form(...), # rose, heart, car, rocket
+    user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    if not user: return JSONResponse({"status": "error", "msg": "Giriş yapın"}, 401)
+    
+    target = db.query(User).filter(User.username == target_username).first()
+    if not target: return JSONResponse({"status": "error", "msg": "Kullanıcı bulunamadı"}, 404)
+
+    # Hediye Fiyatları
+    prices = {"rose": 10, "heart": 50, "car": 500, "rocket": 5000}
+    cost = prices.get(gift_type, 0)
+    
+    if cost == 0: return JSONResponse({"status": "error", "msg": "Geçersiz hediye"}, 400)
+    if user.diamonds < cost: return JSONResponse({"status": "error", "msg": "Yetersiz Elmas!"}, 400)
+
+    # Transfer İşlemi
+    user.diamonds -= cost
+    target.diamonds += cost # Yayincıya elmas ekle
+    
+    # Loglama
+    msg_entry = StreamMessage(
+        room_name=target_username,
+        sender=user.username,
+        message=f"{gift_type} gönderdi!",
+        is_gift=True,
+        gift_type=gift_type
+    )
+    db.add(msg_entry)
+    db.commit()
+
+    # WebSocket ile tüm izleyicilere animasyon sinyali gönder
+    payload = json.dumps({
+        "type": "gift",
+        "sender": user.username,
+        "gift_type": gift_type,
+        "amount": cost
+    })
+    
+    # Hem yayıncıya hem odaya gönder
+    await manager.broadcast_to_room(payload, target_username)
+    await manager.broadcast_to_room(payload, "broadcast") # Yayıncı kendi yayınındaysa görsün
+
+    return JSONResponse({"status": "success", "new_balance": user.diamonds})
+
 
 @router.post("/broadcast/start")
 async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -112,21 +167,13 @@ async def toggle_auction(active: bool = Form(...), user: User = Depends(get_curr
     await manager.broadcast_to_room(msg, "broadcast")
     return {"status": "ok", "active": active}
 
-# --- YENİ EKLENEN SIFIRLAMA ROUTE'U ---
 @router.post("/broadcast/reset_auction")
 async def reset_auction(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
-    
-    # Veritabanını sıfırla
-    user.current_price = 0
-    user.highest_bidder = None
-    db.commit()
-    
-    # Tüm izleyicilere 'reset' sinyali gönder
+    user.current_price = 0; user.highest_bidder = None; db.commit()
     msg = json.dumps({"type": "reset_auction", "price": 0, "leader": None})
     await manager.broadcast_to_room(msg, user.username)
     await manager.broadcast_to_room(msg, "broadcast")
-    
     return {"status": "ok"}
 
 @router.post("/broadcast/thumbnail")
@@ -150,6 +197,8 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
     try:
         token = websocket.cookies.get("access_token")
         if token:
+            from jose import jwt
+            from utils import SECRET_KEY, ALGORITHM
             payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
             u = db.query(User).filter(User.email == payload.get("sub")).first()
             if u: current_username = u.username
@@ -187,6 +236,8 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     try:
         token = websocket.cookies.get("access_token")
         if token:
+            from jose import jwt
+            from utils import SECRET_KEY, ALGORITHM
             payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
             user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: pass
@@ -203,44 +254,16 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     print(f"🎥 STABİL YAYIN (4-5sn): {user.username}")
 
     command = [
-        "ffmpeg", 
-        "-f", "webm", 
-        "-fflags", "+genpts+igndts+nobuffer", 
-        "-i", "pipe:0",
-
+        "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
         "-filter_complex", 
-        "[0:v]split=3[v1][v2][v3];"            
-        "[v1]scale=-2:720[v720];"             
-        "[v2]scale=-2:480[v480];"             
-        "[v3]scale=-2:360[v360]",             
-
-        "-map", "[v720]", "-map", "0:a",
-        "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "3000k",
-        "-c:a:0", "aac", "-b:a:0", "128k",
-
-        "-map", "[v480]", "-map", "0:a",
-        "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "1500k",
-        "-c:a:1", "aac", "-b:a:1", "96k",
-
-        "-map", "[v360]", "-map", "0:a",
-        "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "700k", "-bufsize:v:2", "800k",
-        "-c:a:2", "aac", "-b:a:2", "64k",
-
-        "-preset", "veryfast",                
-        "-tune", "zerolatency",               
-        "-g", "30",                           
-        "-sc_threshold", "0",                 
-        
-        "-f", "hls",
-        "-hls_time", "1",                     
-        "-hls_list_size", "5",                
-        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
-        
+        "[0:v]split=3[v1][v2][v3];[v1]scale=-2:720[v720];[v2]scale=-2:480[v480];[v3]scale=-2:360[v360]",
+        "-map", "[v720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
+        "-map", "[v480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
+        "-map", "[v360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "700k", "-bufsize:v:2", "800k", "-c:a:2", "aac", "-b:a:2", "64k",
+        "-preset", "veryfast", "-tune", "zerolatency", "-g", "30", "-sc_threshold", "0",
+        "-f", "hls", "-hls_time", "1", "-hls_list_size", "5", "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p",
-        "-master_pl_name", "master.m3u8",
-        "-hls_segment_filename", f"{stream_dir}/%v/seg_%04d.ts",
-        f"{stream_dir}/%v/stream.m3u8",
-        
+        "-master_pl_name", "master.m3u8", "-hls_segment_filename", f"{stream_dir}/%v/seg_%04d.ts", f"{stream_dir}/%v/stream.m3u8",
         "-loglevel", "error"
     ]
     

@@ -18,13 +18,18 @@ class User(Base):
     is_verified = Column(Boolean, default=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     
+    # Yayın Durumları
     is_live = Column(Boolean, default=False)       
     is_auction_active = Column(Boolean, default=False)
     stream_title = Column(String, default="")      
     thumbnail = Column(String, default="")
     
+    # Mezat ve Ekonomi
     current_price = Column(Integer, default=0)
     highest_bidder = Column(String, nullable=True)
+    
+    # 🔥 YENİ: Elmas Bakiyesi (Varsayılan 500 hediye olarak verelim)
+    diamonds = Column(Integer, default=500)
 
     followed = relationship(
         "User", 
@@ -41,4 +46,9 @@ class StreamMessage(Base):
     sender = Column(String)
     message = Column(String)
     is_bid = Column(Boolean, default=False)
+    
+    # 🔥 YENİ: Hediye Logları
+    is_gift = Column(Boolean, default=False)
+    gift_type = Column(String, nullable=True) # 'rose', 'car', 'rocket'
+    
     created_at = Column(DateTime, default=datetime.utcnow)

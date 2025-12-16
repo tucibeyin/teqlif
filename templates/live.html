@@ -7,6 +7,13 @@
 
 <div class="teqlif-os">
 
+    <div class="diamond-balance-pill">
+        <i class="fa-solid fa-gem" style="color: #00d2ff;"></i>
+        <span id="user-diamonds">{{ user.diamonds }}</span>
+    </div>
+
+    <div id="gift-animation-layer"></div>
+
     {% if mode == 'broadcast' %}
     <div class="screen">
         <video id="preview" class="cinema-video" autoplay muted playsinline></video>
@@ -22,9 +29,7 @@
                         <i class="fa-solid fa-crown"></i> <span class="name">--</span>
                     </div>
                 </div>
-
                 <div class="brand">teqlif <span class="badge">YAYINDA</span></div>
-                <div class="viewer-count"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
             </div>
 
             <div class="mid-section">
@@ -42,17 +47,12 @@
                     <button class="send-icon-btn" onclick="sendMsg('broadcast')"><i
                             class="fa-solid fa-paper-plane"></i></button>
                 </div>
-
                 <div class="admin-controls">
-                    <div class="select-wrapper">
-                        <i class="fa-solid fa-microphone"></i>
-                        <select id="audioSource" onchange="restartStream()"></select>
-                    </div>
-
+                    <div class="select-wrapper"><i class="fa-solid fa-microphone"></i><select id="audioSource"
+                            onchange="restartStream()"></select></div>
                     <button class="btn-glass" onclick="openResetModal()"
-                        style="background: rgba(255, 193, 7, 0.3);">SIFIRLA 🔄</button>
-
-                    <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">MEZAT AÇ 🔨</button>
+                        style="background: rgba(255, 193, 7, 0.3);">🔄</button>
+                    <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">🔨</button>
                     <button id="btn-start" onclick="startBroadcast()" class="btn-start">BAŞLAT</button>
                     <button id="btn-stop" onclick="stopBroadcast()" class="btn-stop"
                         style="display:none;">BİTİR</button>
@@ -63,11 +63,11 @@
 
     <div id="resetModal" class="modal-overlay" style="display:none;">
         <div class="modal-box">
-            <h3 style="margin-bottom:10px;">Mezat Sıfırlansın mı?</h3>
-            <p style="color:#aaa; font-size:13px; margin-bottom:20px;">Mevcut fiyat ve teklif veren kişi silinecek.</p>
+            <h3>Mezatı Sıfırla?</h3>
+            <p style="color:#aaa;">Teklifler silinecek.</p>
             <div class="modal-actions">
-                <button onclick="closeResetModal()" class="btn-cancel">Vazgeç</button>
-                <button onclick="confirmReset()" class="btn-confirm-red">EVET, SIFIRLA</button>
+                <button onclick="closeResetModal()" class="btn-cancel">İptal</button>
+                <button onclick="confirmReset()" class="btn-confirm-red">Sıfırla</button>
             </div>
         </div>
     </div>
@@ -76,13 +76,10 @@
     <div class="feed-scroll">
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
-
             <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
                 poster="{{ stream.thumbnail }}"></video>
-
-            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;">
-                <i class="fa-solid fa-volume-high"></i> Sesi Aç
-            </div>
+            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;"><i
+                    class="fa-solid fa-volume-high"></i> Sesi Aç</div>
 
             <div class="ui-overlay">
                 <div class="top-bar">
@@ -90,24 +87,16 @@
                         <div class="price-board" id="price-board-{{ stream.username }}"
                             style="display: {{ 'flex' if auction_active else 'none' }}">
                             <span class="label">GÜNCEL</span>
-                            <div class="price-row">
-                                <span class="currency">₺</span><span id="price-{{ stream.username }}"
-                                    class="amount">0</span>
-                            </div>
-                            <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;">
-                                <i class="fa-solid fa-crown"></i> <span class="name">--</span>
-                            </div>
+                            <div class="price-row"><span class="currency">₺</span><span id="price-{{ stream.username }}"
+                                    class="amount">0</span></div>
+                            <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;"><i
+                                    class="fa-solid fa-crown"></i> <span class="name">--</span></div>
                         </div>
-
                         <button class="follow-btn {{ 'following' if is_following else '' }}"
-                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">
-                            {{ 'Takip Ediliyor' if is_following else 'Takip Et' }}
-                        </button>
+                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">{{
+                            'Takip Ediliyor' if is_following else 'Takip Et' }}</button>
                     </div>
-
                     <div class="header-right">
-                        <div class="viewer-pill"><i class="fa-solid fa-eye"></i> <span
-                                id="live-count-{{ stream.username }}">0</span></div>
                         <a href="/" class="close-btn"><i class="fa-solid fa-xmark"></i></a>
                     </div>
                 </div>
@@ -126,7 +115,6 @@
                         style="display: {{ 'flex' if auction_active else 'none' }}">
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 50)">+50₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 100)">+100₺</button>
-                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 200)">+200₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
                         <div class="manual-bid-wrapper">
                             <input type="number" id="manual-bid-{{ stream.username }}" placeholder="Tutar">
@@ -137,33 +125,62 @@
                     <div class="chat-input-bar">
                         <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum yaz..."
                             autocomplete="off">
+
+                        <button class="gift-btn" onclick="openGiftMenu('{{ stream.username }}')">🎁</button>
+
                         <button class="send-icon-btn" onclick="sendMsg('{{ stream.username }}')"><i
                                 class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
-
             </div>
         </div>
         {% else %}
         <div class="empty-state">
             <div class="brand-logo large">teqlif</div>
-            <p>Aktif yayın yok.</p>
-            <a href="/live?mode=broadcast" class="btn-start">Yayın Aç</a>
+            <p>Aktif yayın yok.</p><a href="/live?mode=broadcast" class="btn-start">Yayın Aç</a>
         </div>
         {% endfor %}
     </div>
     {% endif %}
 
+    <div id="giftMenu" class="gift-sheet" style="display:none;">
+        <div class="sheet-header">
+            <span>Hediye Gönder</span>
+            <i class="fa-solid fa-xmark" onclick="closeGiftMenu()"></i>
+        </div>
+        <div class="gift-grid">
+            <div class="gift-item" onclick="sendGift('rose')">
+                <div class="gift-icon">🌹</div>
+                <div class="gift-name">Gül</div>
+                <div class="gift-price"><i class="fa-solid fa-gem"></i> 10</div>
+            </div>
+            <div class="gift-item" onclick="sendGift('heart')">
+                <div class="gift-icon">❤️</div>
+                <div class="gift-name">Kalp</div>
+                <div class="gift-price"><i class="fa-solid fa-gem"></i> 50</div>
+            </div>
+            <div class="gift-item" onclick="sendGift('car')">
+                <div class="gift-icon">🏎️</div>
+                <div class="gift-name">Spor Araba</div>
+                <div class="gift-price"><i class="fa-solid fa-gem"></i> 500</div>
+            </div>
+            <div class="gift-item" onclick="sendGift('rocket')">
+                <div class="gift-icon">🚀</div>
+                <div class="gift-name">Roket</div>
+                <div class="gift-price"><i class="fa-solid fa-gem"></i> 5000</div>
+            </div>
+        </div>
+    </div>
+
 </div>
 
 <script>
-    // Python'dan gelen verileri JS'e güvenli şekilde aktarıyoruz
     window.TEQLIF_CONFIG = {
         mode: "{{ mode }}",
         username: "{{ user.username if user else 'anon' }}",
-        auctionActive: {{ 'true' if auction_active else 'false' }}
+        auctionActive: {{ 'true' if auction_active else 'false' }},
+    broadcaster: "{{ broadcaster.username if broadcaster else '' }}" 
     };
 </script>
 <script src="/static/js/live.js"></script>
-
 {% endblock %}

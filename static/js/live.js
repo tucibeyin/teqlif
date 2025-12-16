@@ -1,13 +1,15 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Global ayarları al
+    // --- 1. AYARLARI AL ---
     const CONFIG = window.TEQLIF_CONFIG || {};
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     window.CURRENT_SOCKET = null;
     let AUCTION_ACTIVE = CONFIG.auctionActive;
+    let activeGiftTarget = null; // Hediye gönderilecek kişi
 
-    // --- ORTAK FONKSİYONLAR ---
+    // --- 2. YARDIMCI FONKSİYONLAR ---
 
+    // Videonun sesini açma
     window.unmuteVideo = function (u) {
         const v = document.getElementById(`video-${u}`);
         if (v) {
@@ -18,13 +20,14 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Fiyat ve Lider tablosunu güncelleme
     function updatePriceDisplay(amount, target, bidderName) {
         const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`;
         const el = document.getElementById(id);
         if (el) {
             el.innerText = amount;
             el.classList.remove("blink-anim");
-            void el.offsetWidth;
+            void el.offsetWidth; // CSS Reflow tetikle
             el.classList.add("blink-anim");
         }
 
@@ -40,9 +43,11 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // WebSocket Bağlantısı ve Mesaj Yönetimi
     function connectChat(target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
 
+        // Broadcast modunda yayıncı kendisidir, izleyici modunda hedef parametredir
         let sName = target === 'broadcast' ? CONFIG.username : target;
 
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${sName}`);
@@ -51,11 +56,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
 
+            // Başlangıç bilgisi (Fiyat, Lider)
             if (d.type === 'init') {
                 updatePriceDisplay(d.price, target, d.leader);
                 return;
             }
 
+            // Mezat durumu (Açık/Kapalı)
             if (d.type === 'auction_state') {
                 const layer = document.getElementById(target === 'broadcast' ? '' : `bid-layer-${target}`);
                 const board = document.getElementById(target === 'broadcast' ? '' : `price-board-${target}`);
@@ -64,14 +71,21 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Mezat Sıfırlama Sinyali
             if (d.type === 'reset_auction') {
                 updatePriceDisplay(0, target, null);
-                const bidFeedId = target === 'broadcast' ? 'bid-feed-broadcast' : `bid-feed-${target}`;
-                const bidFeed = document.getElementById(bidFeedId);
+                const bidFeed = document.getElementById(target === 'broadcast' ? 'bid-feed-broadcast' : `bid-feed-${target}`);
                 if (bidFeed) bidFeed.innerHTML = '';
                 return;
             }
 
+            // Hediye Animasyonu Sinyali
+            if (d.type === 'gift') {
+                showGiftAnimation(d.gift_type, d.sender);
+                return;
+            }
+
+            // İzleyici Sayısı
             if (d.type === 'count') {
                 const cId = target === 'broadcast' ? 'live-count-broadcast' : `live-count-${target}`;
                 const cEl = document.getElementById(cId);
@@ -79,11 +93,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 return;
             }
 
+            // Sohbet ve Teklif Mesajları
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
 
             if (d.type === 'chat') {
                 if (d.msg.startsWith("BID:")) {
+                    // Teklif mesajı
                     const amount = d.msg.split(":")[1];
                     updatePriceDisplay(amount, target, d.user);
 
@@ -101,6 +117,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         }, 10000);
                     }
                 } else {
+                    // Normal mesaj
                     if (feed) {
                         const div = document.createElement('div');
                         div.className = 'msg';
@@ -117,7 +134,63 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- YAYINCI (BROADCASTER) ---
+    // --- 3. HEDİYE SİSTEMİ FONKSİYONLARI ---
+
+    window.openGiftMenu = function (username) {
+        activeGiftTarget = username;
+        document.getElementById('giftMenu').style.display = 'block';
+    }
+
+    window.closeGiftMenu = function () {
+        document.getElementById('giftMenu').style.display = 'none';
+    }
+
+    window.sendGift = function (giftType) {
+        if (!activeGiftTarget) return;
+
+        const formData = new FormData();
+        formData.append('target_username', activeGiftTarget);
+        formData.append('gift_type', giftType);
+
+        fetch('/gift/send', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    // Bakiyeyi güncelle
+                    const balanceEl = document.getElementById('user-diamonds');
+                    if (balanceEl) balanceEl.innerText = data.new_balance;
+                    closeGiftMenu();
+                } else {
+                    alert(data.msg); // Yetersiz bakiye vs.
+                }
+            })
+            .catch(err => console.error(err));
+    }
+
+    function showGiftAnimation(giftType, senderName) {
+        const layer = document.getElementById('gift-animation-layer');
+        if (!layer) return;
+
+        const emojis = { 'rose': '🌹', 'heart': '❤️', 'car': '🏎️', 'rocket': '🚀' };
+        const emoji = emojis[giftType] || '🎁';
+
+        const el = document.createElement('div');
+        el.className = 'flying-gift';
+        el.innerHTML = `${emoji}<div class="gift-sender-label">${senderName}</div>`;
+
+        layer.appendChild(el);
+        setTimeout(() => { el.remove(); }, 3000); // 3 saniye sonra sil
+    }
+
+    // --- 4. MODAL FONKSİYONLARI (SIFIRLAMA) ---
+    window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
+    window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
+    window.confirmReset = function () {
+        closeResetModal();
+        fetch('/broadcast/reset_auction', { method: 'POST' });
+    }
+
+    // --- 5. YAYINCI MANTIĞI ---
 
     if (MODE === 'broadcast') {
         const prev = document.getElementById('preview');
@@ -160,7 +233,6 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Başlangıçta kamerayı aç
         initStream();
 
         window.restartStream = function () {
@@ -184,7 +256,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 }
 
                 rec = new MediaRecorder(window.localStream, opts);
-                rec.start(500); // 1sn segment için 500ms chunk
+                rec.start(500); // 1sn segment için 500ms besleme
 
                 rec.ondataavailable = e => {
                     if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data);
@@ -199,18 +271,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch('/broadcast/stop', { method: 'POST' });
                 window.location.href = '/';
             };
-        }
-
-        // Modal Fonksiyonları
-        window.openResetModal = function () {
-            document.getElementById('resetModal').style.display = 'flex';
-        }
-        window.closeResetModal = function () {
-            document.getElementById('resetModal').style.display = 'none';
-        }
-        window.confirmReset = function () {
-            closeResetModal();
-            fetch('/broadcast/reset_auction', { method: 'POST' });
         }
 
         window.toggleAuction = function () {
@@ -230,7 +290,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
     } else {
-        // --- İZLEYİCİ (WATCHER) ---
+        // --- 6. İZLEYİCİ MANTIĞI ---
 
         let obs = new IntersectionObserver((entries) => {
             entries.forEach(e => {
@@ -242,7 +302,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     const attemptPlay = () => {
                         v.play().catch(error => {
-                            console.log("Sesli engellendi, sessize alınıyor.");
+                            console.log("Sesli otomatik oynatma engellendi.");
                             v.muted = true;
                             v.play();
                             const hint = v.parentElement.querySelector('.tap-hint');
@@ -277,7 +337,7 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
 
-    // --- ETKİLEŞİM ---
+    // --- 7. ORTAK ETKİLEŞİMLER (TAKİP, TEKLİF, MESAJ) ---
 
     window.toggleFollow = function (username) {
         const btn = document.getElementById(`follow-btn-${username}`);
@@ -361,9 +421,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ image: dataUrl, timestamp: Date.now() })
             });
-            console.log("📸 Thumbnail güncellendi.");
-        } catch (err) {
-            console.error("Thumbnail hatası:", err);
-        }
+        } catch (err) { }
     }
 });
