@@ -18,10 +18,15 @@ class User(Base):
     username = Column(String, unique=True, index=True)
     password_hash = Column(String)
     
+    # 🔥 EKSİK OLAN DOĞRULAMA ALANLARI EKLENDİ 🔥
+    verification_code = Column(String, nullable=True)
+    is_verified = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    
     # Yayın Bilgileri
     is_live = Column(Boolean, default=False)
     stream_title = Column(String, nullable=True)
-    stream_category = Column(String, default="Genel")  # <--- YENİ EKLENEN SÜTUN
+    stream_category = Column(String, default="Genel")
     thumbnail = Column(String, nullable=True)
     
     # Elmas ve Mezat Bilgileri
