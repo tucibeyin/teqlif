@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 1. AYARLARI AL ---
+    // 1. AYARLAR
     const CONFIG = window.TEQLIF_CONFIG || {};
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeGiftTarget = null;
 
-    // --- YARDIMCI: Fiyat ve Lider Güncelleme ---
+    // 2. YARDIMCI FONKSİYONLAR
     function updatePriceDisplay(amount, target, bidderName) {
         const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`;
         const el = document.getElementById(id);
@@ -29,7 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- SOCKET BAĞLANTISI ---
+    // 3. SOCKET BAĞLANTISI
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let sName = target === 'broadcast' ? CONFIG.username : target;
@@ -59,8 +59,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (cEl) cEl.innerText = d.val;
                 return;
             }
-
-            // Sohbet ve Teklifler
+            // Mesajlar
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
             if (d.type === 'chat') {
@@ -80,9 +79,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     if (feed) {
                         const div = document.createElement('div');
-                        div.className = 'msg fade-out'; // CSS animasyonu ile silinmesi için
+                        div.className = 'msg fade-out';
                         div.innerHTML = `<b>${d.user}:</b> ${d.msg}`;
-                        div.addEventListener('animationend', () => div.remove()); // Animasyon bitince DOM'dan sil
+                        div.addEventListener('animationend', () => div.remove());
                         feed.appendChild(div);
                         feed.scrollTop = feed.scrollHeight;
                     }
@@ -91,16 +90,14 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- HEDİYE SİSTEMİ ---
+    // 4. HEDİYE SİSTEMİ
     window.openGiftMenu = function (username) { activeGiftTarget = username; document.getElementById('giftMenu').style.display = 'block'; }
     window.closeGiftMenu = function () { document.getElementById('giftMenu').style.display = 'none'; }
-
     window.sendGift = function (giftType) {
         if (!activeGiftTarget) return;
         const formData = new FormData();
         formData.append('target_username', activeGiftTarget);
         formData.append('gift_type', giftType);
-
         fetch('/gift/send', { method: 'POST', body: formData })
             .then(res => res.json())
             .then(data => {
@@ -113,7 +110,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else { alert(data.msg); }
             }).catch(err => console.error(err));
     }
-
     function showGiftAnimation(giftType, senderName) {
         const layer = document.getElementById('gift-animation-layer');
         if (!layer) return;
@@ -126,43 +122,49 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- YAYINCI FONKSİYONLARI ---
+    // 5. YAYINCI KODLARI (BROADCAST MODE)
     if (MODE === 'broadcast') {
         const prev = document.getElementById('preview');
         let rec;
 
-        // Cihazları Listele
+        // Cihaz Seçimi
         async function getDevices() {
             try {
-                await navigator.mediaDevices.getUserMedia({ audio: true });
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                const audioSelect = document.getElementById('audioSource');
-                if (audioSelect) {
-                    audioSelect.innerHTML = '';
-                    devices.filter(d => d.kind === 'audioinput').forEach(d => {
-                        const opt = document.createElement('option');
-                        opt.value = d.deviceId;
-                        opt.text = d.label || `Mikrofon ${audioSelect.length + 1}`;
-                        audioSelect.appendChild(opt);
-                    });
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    await navigator.mediaDevices.getUserMedia({ audio: true });
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const audioSelect = document.getElementById('audioSource');
+                    if (audioSelect) {
+                        audioSelect.innerHTML = '';
+                        devices.filter(d => d.kind === 'audioinput').forEach(d => {
+                            const opt = document.createElement('option');
+                            opt.value = d.deviceId;
+                            opt.text = d.label || `Mikrofon ${audioSelect.length + 1}`;
+                            audioSelect.appendChild(opt);
+                        });
+                    }
                 }
-            } catch (e) { console.error(e); }
+            } catch (e) { console.error("Cihaz listeleme hatası:", e); }
         }
 
-        // Kamerayı Başlat
+        // Önizleme Başlat
         async function initStream(audioDeviceId = null) {
             const constraints = {
                 video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } },
                 audio: audioDeviceId ? { deviceId: { exact: audioDeviceId } } : true
             };
             try {
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                window.localStream = stream;
-                if (prev) { prev.srcObject = stream; prev.volume = 0; }
-                if (!audioDeviceId) getDevices();
-            } catch (err) { console.error(err); alert("Kamera Hatası!"); }
+                if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                    const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                    window.localStream = stream;
+                    if (prev) { prev.srcObject = stream; prev.volume = 0; }
+                    if (!audioDeviceId) getDevices();
+                } else {
+                    console.log("Kamera erişimi (getUserMedia) desteklenmiyor veya HTTPS gerekli.");
+                }
+            } catch (err) { console.error(err); alert("Kamera Hatası! Lütfen izinleri kontrol edin."); }
         }
-        initStream();
+        initStream(); // Sayfa açılınca kamera çalışsın (arka planda)
 
         window.restartStream = function () {
             const audioSelect = document.getElementById('audioSource');
@@ -170,67 +172,48 @@ document.addEventListener('DOMContentLoaded', () => {
             initStream(audioSelect.value);
         }
 
-        // --- YAYINI BAŞLAT (YENİ SETUP EKRANI MANTIĞI) ---
-        window.startBroadcast = function () {
-            const titleEl = document.getElementById('streamTitle');
-            const catEl = document.getElementById('streamCategory');
+        // --- BAŞLAT BUTONUNA TIKLAMA OLAYI ---
+        const startBtn = document.getElementById('btn-start-broadcast');
+        if (startBtn) {
+            startBtn.addEventListener('click', function () {
+                const titleEl = document.getElementById('streamTitle');
+                const catEl = document.getElementById('streamCategory');
 
-            // Doğrulama
-            if (!titleEl || !titleEl.value.trim()) {
-                alert("Lütfen bir yayın başlığı girin!");
-                return;
-            }
-            if (!catEl || catEl.value === "Genel" && catEl.selectedIndex === 0) {
-                // Eğer value 'Genel' ise ama kullanıcı özellikle seçmediyse (placeholder gibi duruyorsa)
-                // Ancak kodda value="Genel" ilk seçenek.
-            }
+                if (!titleEl.value.trim()) { alert("Lütfen başlık girin!"); return; }
 
-            const title = titleEl.value;
-            const category = catEl.value;
+                const title = titleEl.value;
+                const category = catEl.value;
 
-            // Backend'e Bildir
-            const formData = new FormData();
-            formData.append('title', title);
-            formData.append('category', category);
+                // Backend'e Kaydet
+                const formData = new FormData();
+                formData.append('title', title);
+                formData.append('category', category);
 
-            fetch('/broadcast/start', { method: 'POST', body: formData })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.status === 'error') {
-                        alert("Yayın başlatılamadı!");
-                        return;
-                    }
+                fetch('/broadcast/start', { method: 'POST', body: formData })
+                    .then(res => res.json())
+                    .then(data => {
+                        // UI Değişimi
+                        document.getElementById('setup-layer').style.display = 'none';
+                        document.getElementById('live-ui').style.display = 'flex';
+                        const badge = document.getElementById('cat-badge-display');
+                        if (badge) badge.innerText = category;
 
-                    // UI Değişimi
-                    document.getElementById('setup-layer').style.display = 'none';
-                    document.getElementById('live-ui').style.display = 'flex';
-                    const badge = document.getElementById('cat-badge-display');
-                    if (badge) badge.innerText = category;
+                        // Yayını ve Chat'i Başlat
+                        window.connectChat('broadcast');
+                        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
-                    // Yayını Başlat
-                    window.connectChat('broadcast');
-                    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-
-                    ws.onopen = () => {
-                        let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
-                        if (!MediaRecorder.isTypeSupported(opts.mimeType)) {
-                            opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
-                        }
-
-                        rec = new MediaRecorder(window.localStream, opts);
-                        rec.start(500);
-
-                        rec.ondataavailable = e => {
-                            if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data);
+                        ws.onopen = () => {
+                            let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
+                            if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
+                            rec = new MediaRecorder(window.localStream, opts);
+                            rec.start(500);
+                            rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+                            sendThumbnailSnapshot();
+                            window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                         };
-
-                        sendThumbnailSnapshot();
-                        window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
-                    };
-                })
-                .catch(err => {
-                    alert("Hata oluştu: " + err);
-                });
+                    })
+                    .catch(err => { alert("Başlatma hatası: " + err); });
+            });
         }
 
         window.stopBroadcast = function () {
@@ -247,15 +230,12 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch('/broadcast/toggle_auction', { method: 'POST', body: formData });
 
             if (AUCTION_ACTIVE) {
-                btn.innerHTML = "🚫 Kapat";
-                btn.style.background = "rgba(255, 59, 48, 0.4)";
+                btn.innerHTML = "🚫 Kapat"; btn.style.background = "rgba(255, 59, 48, 0.4)";
             } else {
-                btn.innerHTML = "🔨 Mezat";
-                btn.style.background = "rgba(255, 255, 255, 0.2)";
+                btn.innerHTML = "🔨 Mezat"; btn.style.background = "rgba(255, 255, 255, 0.2)";
             }
         }
 
-        // Modallar
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
         window.confirmReset = function () {
@@ -271,15 +251,8 @@ document.addEventListener('DOMContentLoaded', () => {
             const ctx = canvas.getContext('2d');
             ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
             const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
-            try {
-                await fetch('/broadcast/thumbnail', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: dataUrl, timestamp: Date.now() })
-                });
-            } catch (err) { }
+            try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: dataUrl, timestamp: Date.now() }) }); } catch (err) { }
         }
-
     } else {
         // --- İZLEYİCİ MANTIĞI ---
         let obs = new IntersectionObserver((entries) => {
@@ -288,26 +261,17 @@ document.addEventListener('DOMContentLoaded', () => {
                 const v = document.getElementById(`video-${u}`);
                 if (e.isIntersecting) {
                     const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
-                    if (Hls.isSupported()) {
-                        const h = new Hls(); h.loadSource(src); h.attachMedia(v);
-                        h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play(); }));
-                    } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                        v.src = src; v.play().catch(() => { v.muted = true; v.play(); });
-                    }
+                    if (Hls.isSupported()) { const h = new Hls(); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play(); })); }
+                    else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play().catch(() => { v.muted = true; v.play(); }); }
                     window.connectChat(u);
-                } else {
-                    if (v) v.pause();
-                }
+                } else { if (v) v.pause(); }
             });
         }, { threshold: 0.6 });
         document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
 
-    // --- ORTAK ETKİLEŞİMLER ---
-    window.unmuteVideo = function (u) {
-        const v = document.getElementById(`video-${u}`);
-        if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; }
-    }
+    // Ortak Fonksiyonlar
+    window.unmuteVideo = function (u) { const v = document.getElementById(`video-${u}`); if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; } }
 
     window.toggleFollow = function (username) {
         const btn = document.getElementById(`follow-btn-${username}`);
@@ -317,9 +281,9 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'followed') {
-                    btn.classList.add('following'); btn.innerText = 'Takip';
+                    if (btn) { btn.classList.add('following'); btn.innerText = 'Takip'; }
                 } else {
-                    btn.classList.remove('following'); btn.innerText = 'Takip Et';
+                    if (btn) { btn.classList.remove('following'); btn.innerText = 'Takip Et'; }
                 }
             });
     }
