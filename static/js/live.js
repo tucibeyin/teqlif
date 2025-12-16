@@ -2,43 +2,48 @@ document.addEventListener('DOMContentLoaded', () => {
     // 1. AYARLAR
     const CONFIG = window.TEQLIF_CONFIG || {};
     const MODE = CONFIG.mode;
-    // Güvenli bağlantı (wss://) veya normal (ws://) otomatik seçimi
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
     window.CURRENT_SOCKET = null;
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeGiftTarget = null;
 
-    // 2. YARDIMCI FONKSİYONLAR (Fiyat Güncelleme)
+    // 2. FİYAT GÜNCELLEME (Hem yayıncı hem izleyici için)
     function updatePriceDisplay(amount, target, bidderName) {
-        const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`;
-        const el = document.getElementById(id);
+        // Yeni tasarımda yayıncı için 'current-price-display', izleyici için 'price-{username}'
+        const idHost = 'current-price-display';
+        const idViewer = `price-${target}`;
+
+        // Önce yayıncı ekranında mıyız diye bak, yoksa izleyici ID'sini dene
+        let el = document.getElementById(idHost);
+        if (!el) el = document.getElementById(idViewer);
+
         if (el) {
             el.innerText = amount;
-            // Yanıp sönme efekti için sınıfı kaldırıp tekrar ekle
             el.classList.remove("blink-anim");
-            void el.offsetWidth;
+            void el.offsetWidth; // Reflow tetikle
             el.classList.add("blink-anim");
         }
 
-        // Lider tablosunu güncelle
-        const leaderRowId = target === 'broadcast' ? 'leader-display-broadcast' : `leader-display-${target}`;
-        const leaderRow = document.getElementById(leaderRowId);
-        if (leaderRow) {
+        // Lider Tablosu
+        const lHost = 'leader-display-broadcast';
+        const lViewer = `leader-display-${target}`;
+        let lRow = document.getElementById(lHost);
+        if (!lRow) lRow = document.getElementById(lViewer);
+
+        if (lRow) {
             if (bidderName) {
-                leaderRow.style.display = 'flex';
-                leaderRow.querySelector('.name').innerText = bidderName;
+                lRow.style.display = 'flex';
+                lRow.querySelector('.name').innerText = bidderName;
             } else {
-                leaderRow.style.display = 'none';
+                lRow.style.display = 'none';
             }
         }
     }
 
-    // 3. SOCKET BAĞLANTISI (Chat, Sayac, Mezat)
+    // 3. SOCKET BAĞLANTISI
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
-
-        // Oda ismi belirleme: Yayıncıysak kendi ismimiz, izleyiciysek hedef yayıncı
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
 
         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
@@ -47,21 +52,24 @@ document.addEventListener('DOMContentLoaded', () => {
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
 
-            // --- A. İZLEYİCİ SAYISI ---
+            // --- A. İZLEYİCİ SAYISI (DÜZELTİLDİ) ---
             if (d.type === 'count') {
-                const countId = (target === 'broadcast') ? 'live-count-broadcast' : `live-count-${target}`;
-                const el = document.getElementById(countId);
-                if (el) el.innerText = d.val;
+                // Yeni Premium Tasarımda ID'ler sabitlendi:
+                const elBroadcast = document.getElementById('live-count-broadcast'); // Yayıncı ekranı
+                const elViewer = document.getElementById('live-count-display');    // İzleyici ekranı (Sağ üst)
+
+                if (elBroadcast) elBroadcast.innerText = d.val;
+                if (elViewer) elViewer.innerText = d.val;
                 return;
             }
 
-            // --- B. MEZAT DURUMU ---
             if (d.type === 'init') { updatePriceDisplay(d.price, target, d.leader); return; }
 
+            // --- B. MEZAT DURUMU ---
             if (d.type === 'auction_state') {
-                const layer = document.getElementById(target === 'broadcast' ? '' : `bid-layer-${target}`);
-                const board = document.getElementById(target === 'broadcast' ? '' : `price-board-${target}`);
-                // Mezat açıksa göster, kapalıysa gizle
+                const layer = document.getElementById(`bid-layer-${target}`);
+                const board = document.getElementById(`price-board-${target}`);
+
                 if (layer) layer.style.display = d.active ? 'flex' : 'none';
                 if (board) board.style.display = d.active ? 'flex' : 'none';
                 return;
@@ -70,20 +78,19 @@ document.addEventListener('DOMContentLoaded', () => {
             if (d.type === 'reset_auction') {
                 updatePriceDisplay(0, target, null);
                 const bidFeed = document.getElementById(target === 'broadcast' ? 'bid-feed-broadcast' : `bid-feed-${target}`);
-                if (bidFeed) bidFeed.innerHTML = ''; // Teklif geçmişini temizle
+                if (bidFeed) bidFeed.innerHTML = '';
                 return;
             }
 
-            // --- C. HEDİYE ---
             if (d.type === 'gift') { showGiftAnimation(d.gift_type, d.sender); return; }
 
-            // --- D. MESAJLAR VE TEKLİFLER ---
+            // --- C. SOHBET VE TEKLİFLER ---
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
 
             if (d.type === 'chat') {
-                // Eğer mesaj bir teklif ise (BID:100 gibi)
                 if (d.msg.startsWith("BID:")) {
+                    // Teklif Geldi
                     const amount = d.msg.split(":")[1];
                     updatePriceDisplay(amount, target, d.user);
 
@@ -95,23 +102,21 @@ document.addEventListener('DOMContentLoaded', () => {
                         div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`;
                         bidFeed.appendChild(div);
                         bidFeed.scrollTop = bidFeed.scrollHeight;
-                        // Teklif balonunu 10 sn sonra sil
                         setTimeout(() => { div.remove(); }, 10000);
                     }
                 } else {
-                    // Normal Sohbet Mesajı
+                    // Normal Mesaj (DÜZELTİLDİ: Hemen silinmiyor)
                     if (feed) {
                         const div = document.createElement('div');
-                        // DİKKAT: 'fade-out' sınıfını hemen eklemiyoruz!
-                        div.className = 'msg';
+                        div.className = 'msg'; // 'fade-out' sınıfını hemen EKLEME
                         div.innerHTML = `<b>${d.user}:</b> ${d.msg}`;
                         feed.appendChild(div);
                         feed.scrollTop = feed.scrollHeight;
 
-                        // 5 SANİYE BEKLE, SONRA SİL (DÜZELTME BURADA)
+                        // 5 Saniye Bekle, Sonra Sil
                         setTimeout(() => {
-                            div.classList.add('fade-out'); // Animasyonu başlat
-                            div.addEventListener('animationend', () => div.remove()); // Bitince yok et
+                            div.classList.add('fade-out');
+                            div.addEventListener('animationend', () => div.remove());
                         }, 5000);
                     }
                 }
@@ -119,7 +124,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // 4. HEDİYE SİSTEMİ
+    // 4. HEDİYE MENÜSÜ
     window.openGiftMenu = function (username) { activeGiftTarget = username; document.getElementById('giftMenu').style.display = 'block'; }
     window.closeGiftMenu = function () { document.getElementById('giftMenu').style.display = 'none'; }
 
@@ -133,11 +138,10 @@ document.addEventListener('DOMContentLoaded', () => {
             .then(res => res.json())
             .then(data => {
                 if (data.status === 'success') {
-                    // Bakiyeyi güncelle (hem ekrandaki hem menüdeki)
-                    const sc = document.getElementById('screen-diamond-count');
-                    const mc = document.getElementById('menu-diamond-count');
-                    if (sc) sc.innerText = data.new_balance;
-                    if (mc) mc.innerText = data.new_balance;
+                    const el = document.getElementById('screen-diamond-count');
+                    const el2 = document.getElementById('menu-diamond-count');
+                    if (el) el.innerText = data.new_balance;
+                    if (el2) el2.innerText = data.new_balance;
                     closeGiftMenu();
                 } else { alert(data.msg); }
             });
@@ -147,60 +151,49 @@ document.addEventListener('DOMContentLoaded', () => {
         const layer = document.getElementById('gift-animation-layer');
         if (!layer) return;
         const emojis = { 'rose': '🌹', 'heart': '❤️', 'car': '🏎️', 'rocket': '🚀' };
-        const emoji = emojis[giftType] || '🎁';
-
         const el = document.createElement('div');
         el.className = 'flying-gift';
-        el.innerHTML = `${emoji}<div class="gift-sender-label">${senderName}</div>`;
+        el.innerHTML = `${emojis[giftType] || '🎁'}<div class="gift-sender-label">${senderName}</div>`;
         layer.appendChild(el);
-
-        // 3 saniye sonra animasyon elementini sil
         setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // 5. YAYINCI KODLARI (BROADCAST MODE)
+    // 5. YAYINCI KODLARI
     if (MODE === 'broadcast') {
         const prev = document.getElementById('preview');
         let rec;
 
-        // Kamerayı Başlat
         async function initStream() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: true });
                 window.localStream = stream;
                 if (prev) { prev.srcObject = stream; prev.volume = 0; }
 
-                // Mikrofonları listele
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const audioSelect = document.getElementById('audioSource');
                 if (audioSelect) {
                     audioSelect.innerHTML = '';
                     devices.filter(d => d.kind === 'audioinput').forEach(d => {
                         const opt = document.createElement('option');
-                        opt.value = d.deviceId;
-                        opt.text = d.label || `Mikrofon ${audioSelect.length + 1}`;
+                        opt.value = d.deviceId; opt.text = d.label || 'Mikrofon';
                         audioSelect.appendChild(opt);
                     });
                 }
-            } catch (err) { console.error(err); alert("Kamera hatası! İzinleri kontrol edin."); }
+            } catch (err) { console.error(err); alert("Kamera Hatası!"); }
         }
-        initStream(); // Sayfa açılınca kamera önizlemesini başlat
+        initStream();
 
         window.restartStream = function () {
-            const audioSelect = document.getElementById('audioSource');
             if (window.localStream) window.localStream.getTracks().forEach(t => t.stop());
-            // Seçili mikrofon ile yeniden başlat (Basitleştirildi)
             initStream();
         }
 
-        // YAYINI BAŞLAT BUTONU
         const startBtn = document.getElementById('btn-start-broadcast');
         if (startBtn) {
             startBtn.addEventListener('click', function () {
                 const title = document.getElementById('streamTitle').value;
                 const category = document.getElementById('streamCategory').value;
-
-                if (!title) { alert("Lütfen yayın başlığı girin!"); return; }
+                if (!title) { alert("Başlık girin!"); return; }
 
                 const formData = new FormData();
                 formData.append('title', title);
@@ -209,29 +202,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch('/broadcast/start', { method: 'POST', body: formData })
                     .then(res => res.json())
                     .then(data => {
-                        // Setup ekranını gizle, Canlı arayüzü göster
                         document.getElementById('setup-layer').style.display = 'none';
                         document.getElementById('live-ui').style.display = 'flex';
 
-                        // Kategori rozetini güncelle
                         if (document.getElementById('cat-badge-display'))
                             document.getElementById('cat-badge-display').innerText = category;
 
-                        // Chat ve Veri bağlantısını kur
                         window.connectChat('broadcast');
 
-                        // Yayın Socket'ini aç ve veri göndermeye başla
                         const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                         ws.onopen = () => {
                             let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                             if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
 
                             rec = new MediaRecorder(window.localStream, opts);
-                            rec.start(500); // 500ms'de bir veri gönder
+                            rec.start(500);
                             rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
 
                             sendThumbnailSnapshot();
-                            window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000); // 1 dakikada bir küçük resim
+                            window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                         };
                     });
             });
@@ -251,38 +240,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
             fetch('/broadcast/toggle_auction', { method: 'POST', body: formData });
 
-            if (AUCTION_ACTIVE) {
-                btn.innerHTML = "🚫 Kapat";
-                btn.style.background = "rgba(255, 59, 48, 0.4)";
-            } else {
-                btn.innerHTML = "🔨 Mezat";
-                btn.style.background = "rgba(255, 255, 255, 0.2)";
-            }
+            if (AUCTION_ACTIVE) { btn.innerHTML = "🚫 Kapat"; btn.style.background = "rgba(255, 59, 48, 0.4)"; }
+            else { btn.innerHTML = "🔨 Mezat"; btn.style.background = "rgba(255, 255, 255, 0.2)"; }
         }
 
-        // Modallar
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
 
-        // Küçük Resim Gönderimi
         async function sendThumbnailSnapshot() {
             const video = document.getElementById('preview');
-            if (!video) return;
-            const canvas = document.createElement('canvas');
-            canvas.width = 640; canvas.height = 360;
+            const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360;
             canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
-            try {
-                await fetch('/broadcast/thumbnail', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() })
-                });
-            } catch (err) { }
+            try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { }
         }
 
     } else {
-        // --- İZLEYİCİ MANTIĞI ---
+        // --- İZLEYİCİ ---
         let obs = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 const u = e.target.dataset.username;
@@ -302,40 +276,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
 
-    // --- ORTAK İŞLEMLER ---
-    window.unmuteVideo = function (u) {
-        const v = document.getElementById(`video-${u}`);
-        if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; }
-    }
-
-    window.toggleFollow = function (username) {
-        const btn = document.getElementById(`follow-btn-${username}`);
-        const formData = new FormData();
-        formData.append('username', username);
-        fetch('/user/follow', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
-            if (data.status === 'followed') {
-                if (btn) { btn.classList.add('following'); btn.innerText = 'Takip'; }
-            } else {
-                if (btn) { btn.classList.remove('following'); btn.innerText = 'Takip Et'; }
-            }
-        });
-    }
-
-    window.sendBid = function (target, amount) {
-        const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`;
-        const el = document.getElementById(id);
-        const currentVal = parseInt(el ? el.innerText.replace('.', '') : "0") || 0;
-        if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${currentVal + amount}`);
-    }
-
-    window.sendManualBid = function (target) {
-        const inp = document.getElementById(`manual-bid-${target}`);
-        if (inp && inp.value) { window.CURRENT_SOCKET.send(`BID:${inp.value}`); inp.value = ""; }
-    }
-
-    window.sendMsg = function (target) {
-        const inpId = target === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${target}`;
-        const inp = document.getElementById(inpId);
-        if (inp && inp.value.trim()) { window.CURRENT_SOCKET.send(inp.value); inp.value = ""; inp.focus(); }
-    }
+    // Ortak
+    window.unmuteVideo = function (u) { const v = document.getElementById(`video-${u}`); if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; } }
+    window.toggleFollow = function (username) { const btn = document.getElementById(`follow-btn-${username}`); const formData = new FormData(); formData.append('username', username); fetch('/user/follow', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'followed') { if (btn) btn.classList.add('following'); } else { if (btn) btn.classList.remove('following'); } }); }
+    window.sendBid = function (target, amount) { const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`; const el = document.getElementById(id); const currentVal = parseInt(el ? el.innerText.replace('.', '') : "0") || 0; if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${currentVal + amount}`); }
+    window.sendManualBid = function (target) { const inp = document.getElementById(`manual-bid-${target}`); if (inp && inp.value) { window.CURRENT_SOCKET.send(`BID:${inp.value}`); inp.value = ""; } }
+    window.sendMsg = function (target) { const inpId = target === 'broadcast' ? 'chat-input-broadcast' : `chat-input-${target}`; const inp = document.getElementById(inpId); if (inp && inp.value.trim()) { window.CURRENT_SOCKET.send(inp.value); inp.value = ""; inp.focus(); } }
 });

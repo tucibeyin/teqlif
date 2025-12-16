@@ -3,53 +3,51 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<link rel="stylesheet" href="/static/css/live.css?v=101">
+<link rel="stylesheet" href="/static/css/live.css?v=202">
 
 <div class="teqlif-os">
-    <div class="diamond-pill"><i class="fa-solid fa-gem"></i> <span id="screen-diamond-count">{{ user.diamonds }}</span>
-    </div>
+
     <div id="gift-animation-layer"></div>
 
-    {% if mode == 'broadcast' %}
+    <div class="info-stack">
+        <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
 
+        <div class="info-pill">
+            <i class="fa-solid fa-eye"></i>
+            <span id="{{ 'live-count-broadcast' if mode == 'broadcast' else 'live-count-display' }}">0</span>
+        </div>
+
+        <div class="info-pill diamond">
+            <i class="fa-solid fa-gem"></i>
+            <span id="screen-diamond-count">{{ user.diamonds }}</span>
+        </div>
+    </div>
+
+    {% if mode == 'broadcast' %}
     <div class="screen">
         <video id="preview" class="cinema-video" autoplay muted playsinline></video>
 
-        <div id="setup-layer"
-            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 2000; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
-            <div class="setup-box"
-                style="width: 85%; max-width: 350px; background: rgba(30,30,30,0.95); padding: 30px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.1);">
-                <h2 style="margin-bottom: 20px; font-weight: 900; color: white;">Yayını Hazırla 🎥</h2>
-
-                <div class="input-group-glass">
-                    <i class="fa-solid fa-pen"></i>
-                    <input type="text" id="streamTitle" placeholder="Yayın Başlığı (örn: Akşam Keyfi)"
-                        autocomplete="off">
-                </div>
-
-                <div class="input-group-glass">
-                    <i class="fa-solid fa-layer-group"></i>
-                    <select id="streamCategory">
-                        <option value="Genel">Kategori Seçiniz</option>
+        <div id="setup-layer" class="setup-overlay">
+            <div class="setup-box">
+                <h2>Yayını Hazırla 🎥</h2>
+                <div class="input-group-glass"><i class="fa-solid fa-pen"></i><input type="text" id="streamTitle"
+                        placeholder="Yayın Başlığı" autocomplete="off"></div>
+                <div class="input-group-glass"><i class="fa-solid fa-layer-group"></i><select id="streamCategory">
+                        <option value="Genel">Kategori Seç</option>
                         <option value="Mezat">Mezat 🔨</option>
                         <option value="Sohbet">Sohbet 💬</option>
                         <option value="Oyun">Oyun 🎮</option>
                         <option value="Müzik">Müzik 🎵</option>
-                    </select>
-                </div>
-
-                <div class="input-group-glass">
-                    <i class="fa-solid fa-microphone"></i>
-                    <select id="audioSource" onchange="restartStream()"></select>
-                </div>
-
+                    </select></div>
+                <div class="input-group-glass"><i class="fa-solid fa-microphone"></i><select id="audioSource"
+                        onchange="restartStream()"></select></div>
                 <button id="btn-start-broadcast" class="btn-go-live">YAYINI BAŞLAT 🚀</button>
                 <a href="/" class="btn-cancel-live">İptal</a>
             </div>
         </div>
 
         <div id="live-ui" class="ui-overlay" style="display: none;">
-            <div class="top-bar">
+            <div class="top-bar-left">
                 <div class="price-board">
                     <span class="label">GÜNCEL FİYAT</span>
                     <div class="price-row"><span class="currency">₺</span><span id="current-price-display">0</span>
@@ -58,8 +56,7 @@
                         <i class="fa-solid fa-crown"></i> <span class="name">--</span>
                     </div>
                 </div>
-                <div class="brand">CANLI <span class="badge" id="cat-badge-display">Genel</span></div>
-                <div class="viewer-count"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
+                <div class="brand-pill">CANLI <span id="cat-badge-display">Genel</span></div>
             </div>
 
             <div class="mid-section">
@@ -73,13 +70,12 @@
 
             <div class="bottom-dock">
                 <div class="chat-input-bar">
-                    <input type="text" id="chat-input-broadcast" placeholder="Mesaj yaz..." autocomplete="off">
+                    <input type="text" id="chat-input-broadcast" placeholder="Mesaj..." autocomplete="off">
                     <button class="send-icon-btn" onclick="sendMsg('broadcast')"><i
                             class="fa-solid fa-paper-plane"></i></button>
                 </div>
                 <div class="admin-controls">
-                    <button class="btn-glass" onclick="openResetModal()" style="background: rgba(255, 193, 7, 0.3);">🔄
-                        Sıfırla</button>
+                    <button class="btn-glass" onclick="openResetModal()">🔄 Sıfırla</button>
                     <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">🔨 Mezat</button>
                     <button onclick="stopBroadcast()" class="btn-stop">BİTİR ⏹️</button>
                 </div>
@@ -90,10 +86,8 @@
     <div id="resetModal" class="modal-overlay" style="display:none;">
         <div class="modal-box">
             <h3>Sıfırla?</h3>
-            <div class="modal-actions">
-                <button onclick="closeResetModal()" class="btn-cancel">İptal</button>
-                <button onclick="confirmReset()" class="btn-confirm-red">Evet</button>
-            </div>
+            <div class="modal-actions"><button onclick="closeResetModal()" class="btn-cancel">İptal</button><button
+                    onclick="confirmReset()" class="btn-confirm-red">Evet</button></div>
         </div>
     </div>
 
@@ -107,23 +101,22 @@
                     class="fa-solid fa-volume-high"></i> Sesi Aç</div>
 
             <div class="ui-overlay">
-                <div class="top-bar">
-                    <div class="header-left">
-                        <div class="price-board" id="price-board-{{ stream.username }}"
-                            style="display: {{ 'flex' if auction_active else 'none' }}">
-                            <span class="label">GÜNCEL</span>
-                            <div class="price-row"><span class="currency">₺</span><span id="price-{{ stream.username }}"
-                                    class="amount">0</span></div>
-                            <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;"><i
-                                    class="fa-solid fa-crown"></i> <span class="name">--</span></div>
-                        </div>
-                        <button class="follow-btn {{ 'following' if is_following else '' }}"
-                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">{{
-                            'Takip' if is_following else 'Takip Et' }}</button>
+                <div class="top-bar-left">
+                    <div class="price-board" id="price-board-{{ stream.username }}"
+                        style="display: {{ 'flex' if auction_active else 'none' }}">
+                        <span class="label">GÜNCEL</span>
+                        <div class="price-row"><span class="currency">₺</span><span id="price-{{ stream.username }}"
+                                class="amount">0</span></div>
+                        <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;"><i
+                                class="fa-solid fa-crown"></i> <span class="name">--</span></div>
                     </div>
-                    <div class="header-right">
-                        <div class="category-pill">{{ stream.stream_category }}</div>
-                        <a href="/" class="close-btn"><i class="fa-solid fa-xmark"></i></a>
+
+                    <div class="streamer-pill">
+                        <div class="avatar-mini">{{ stream.username[0]|upper }}</div>
+                        <div class="name">{{ stream.username }}</div>
+                        <button class="follow-btn-mini {{ 'following' if is_following else '' }}"
+                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">{{ '+'
+                            if not is_following else '✓' }}</button>
                     </div>
                 </div>
 
@@ -142,9 +135,8 @@
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 50)">+50₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 100)">+100₺</button>
                         <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
-                        <div class="manual-bid-wrapper">
-                            <input type="number" id="manual-bid-{{ stream.username }}" placeholder="Tutar">
-                            <button onclick="sendManualBid('{{ stream.username }}')">OK</button>
+                        <div class="manual-bid-wrapper"><input type="number" id="manual-bid-{{ stream.username }}"
+                                placeholder="Tutar"><button onclick="sendManualBid('{{ stream.username }}')">OK</button>
                         </div>
                     </div>
                     <div class="chat-input-bar">
@@ -171,23 +163,19 @@
         <div class="gift-grid">
             <div class="gift-item" onclick="sendGift('rose')">
                 <div class="gift-icon">🌹</div>
-                <div class="gift-name">Gül</div>
-                <div class="gift-price">10</div>
+                <div class="gift-name">Gül (10)</div>
             </div>
             <div class="gift-item" onclick="sendGift('heart')">
                 <div class="gift-icon">❤️</div>
-                <div class="gift-name">Kalp</div>
-                <div class="gift-price">50</div>
+                <div class="gift-name">Kalp (50)</div>
             </div>
             <div class="gift-item" onclick="sendGift('car')">
                 <div class="gift-icon">🏎️</div>
-                <div class="gift-name">Araba</div>
-                <div class="gift-price">500</div>
+                <div class="gift-name">Araba (500)</div>
             </div>
             <div class="gift-item" onclick="sendGift('rocket')">
                 <div class="gift-icon">🚀</div>
-                <div class="gift-name">Roket</div>
-                <div class="gift-price">5000</div>
+                <div class="gift-name">Roket (5000)</div>
             </div>
         </div>
     </div>
@@ -201,10 +189,212 @@
     broadcaster: "{{ broadcaster.username if broadcaster else '' }}" 
     };
 </script>
-<script src="/static/js/live.js?v=101"></script>
+<script src="/static/js/live.js?v=202"></script>
 
 <style>
-    /* Stil Ayarları */
+    /* --- YENİ YAPI: SAĞ ÜST BİLGİ BLOĞU --- */
+    .info-stack {
+        position: fixed;
+        top: 15px;
+        right: 15px;
+        z-index: 200;
+        /* En üstte */
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        /* Sağa yasla */
+        gap: 8px;
+    }
+
+    .icon-btn-glass {
+        width: 32px;
+        height: 32px;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .info-pill {
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+        padding: 4px 10px;
+        border-radius: 15px;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .info-pill.diamond {
+        background: rgba(0, 40, 80, 0.6);
+        border-color: rgba(0, 210, 255, 0.4);
+    }
+
+    .info-pill.diamond i {
+        color: #00d2ff;
+    }
+
+    /* --- SOL ÜST YAPI --- */
+    .top-bar-left {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+        pointer-events: auto;
+    }
+
+    .price-board {
+        background: rgba(20, 20, 20, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 8px 12px;
+        border-radius: 16px;
+        min-width: 100px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .price-board .label {
+        font-size: 9px;
+        color: #aaa;
+        font-weight: 700;
+        letter-spacing: 1px;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .price-board .price-row {
+        display: flex;
+        align-items: flex-end;
+        line-height: 1;
+    }
+
+    .price-board .currency {
+        font-size: 14px;
+        color: #34C759;
+        font-weight: 700;
+        margin-right: 2px;
+        margin-bottom: 3px;
+    }
+
+    .price-board .amount {
+        font-size: 24px;
+        font-weight: 800;
+        color: white;
+    }
+
+    .leader-row {
+        font-size: 10px;
+        color: #FFD700;
+        margin-top: 4px;
+        padding-top: 4px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .brand-pill {
+        background: #ff3b30;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 10px rgba(255, 59, 48, 0.4);
+    }
+
+    .streamer-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 4px;
+        padding-right: 10px;
+        border-radius: 20px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .avatar-mini {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #34C759, #00d2ff);
+        color: black;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    .streamer-pill .name {
+        font-size: 11px;
+        font-weight: 700;
+        color: white;
+    }
+
+    .follow-btn-mini {
+        background: #34C759;
+        border: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        color: black;
+        font-weight: bold;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .follow-btn-mini.following {
+        background: transparent;
+        border: 1px solid white;
+        color: white;
+        font-size: 10px;
+    }
+
+    /* Setup Ekranı Stili */
+    .setup-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(5px);
+    }
+
+    .setup-box {
+        width: 85%;
+        max-width: 350px;
+        background: rgba(30, 30, 30, 0.95);
+        padding: 30px;
+        border-radius: 20px;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
     .input-group-glass {
         display: flex;
         align-items: center;
@@ -212,13 +402,6 @@
         border-radius: 12px;
         padding: 10px;
         margin-bottom: 15px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    .input-group-glass i {
-        color: #aaa;
-        margin-right: 10px;
-        width: 20px;
     }
 
     .input-group-glass input,
@@ -228,23 +411,16 @@
         color: white;
         flex: 1;
         outline: none;
-        font-size: 14px;
-    }
-
-    .input-group-glass select option {
-        background: #222;
     }
 
     .btn-go-live {
         width: 100%;
         background: #34C759;
         color: black;
-        border: none;
         padding: 12px;
         border-radius: 12px;
         font-weight: 800;
-        font-size: 16px;
-        cursor: pointer;
+        border: none;
         margin-top: 10px;
     }
 
@@ -254,15 +430,6 @@
         color: #888;
         text-decoration: none;
         font-size: 13px;
-    }
-
-    .category-pill {
-        background: rgba(255, 255, 255, 0.2);
-        padding: 4px 10px;
-        border-radius: 10px;
-        font-size: 11px;
-        font-weight: bold;
-        margin-right: 10px;
     }
 </style>
 {% endblock %}
