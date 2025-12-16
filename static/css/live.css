@@ -809,3 +809,23 @@ body {
     align-items: center;
     /* Gönderen ismini ikonun altına ortala */
 }
+
+/* 1. Ana katmanın alt boşluğunu sadece güvenli alan kadar yap (Ekstra 10px'i kaldır) */
+.ui-overlay {
+    padding-bottom: env(safe-area-inset-bottom) !important;
+}
+
+/* 2. Alt iskelenin kendi iç boşluğunu sıfırla */
+.bottom-dock {
+    padding-bottom: 5px !important;
+    /* Hafif bir pay kalsın ki tam sınıra değmesin (İstersen 0 yap) */
+    margin-bottom: 0 !important;
+}
+
+/* 3. Sohbet giriş çubuğunu biraz daha kompakt yapabiliriz */
+.chat-input-bar {
+    margin-bottom: 0 !important;
+    border-bottom-left-radius: 10px;
+    /* Köşeleri biraz daha az yuvarla */
+    border-bottom-right-radius: 10px;
+}
