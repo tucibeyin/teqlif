@@ -13,32 +13,27 @@ from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from models import User, StreamMessage, StreamRestriction # Eklendi
+from models import User, StreamMessage, StreamRestriction
 from utils import get_current_user, send_broadcast_notifications_task
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET YÖNETİCİSİ (GÜNCELLENDİ) ---
+# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
-        # Oda yapısı: { "room_name": [ { "ws": WebSocket, "user": "username" }, ... ] }
         self.rooms: Dict[str, List[dict]] = {}
         
     async def connect(self, websocket: WebSocket, room_name: str, username: str):
         await websocket.accept()
         if room_name not in self.rooms: self.rooms[room_name] = []
-        # Soketi ve kullanıcı adını sakla
         self.rooms[room_name].append({"ws": websocket, "user": username})
-        
         if room_name != "home":
             await self.broadcast_count(room_name)
 
     async def disconnect(self, websocket: WebSocket, room_name: str):
         if room_name in self.rooms:
-            # Listeden doğru objeyi bul ve sil
-            self.rooms[room_name] = [client for client in self.rooms[room_name] if client["ws"] != websocket]
-            
+            self.rooms[room_name] = [c for c in self.rooms[room_name] if c["ws"] != websocket]
             if room_name != "home":
                 await self.broadcast_count(room_name)
             if not self.rooms[room_name]: del self.rooms[room_name]
@@ -47,26 +42,24 @@ class ConnectionManager:
         if room_name in self.rooms:
             count = len(self.rooms[room_name])
             msg = json.dumps({"type": "count", "val": count})
-            for client in self.rooms[room_name]:
-                try: await client["ws"].send_text(msg)
+            for c in self.rooms[room_name]:
+                try: await c["ws"].send_text(msg)
                 except: pass
 
     async def broadcast_to_room(self, message: str, room_name: str):
         if room_name in self.rooms:
-            for client in self.rooms[room_name]:
-                try: await client["ws"].send_text(message)
+            for c in self.rooms[room_name]:
+                try: await c["ws"].send_text(message)
                 except: pass
     
-    # 🔥 YENİ: KULLANICIYI ODADAN AT (KICK) 🔥
     async def kick_user(self, room_name: str, username: str):
         if room_name in self.rooms:
             targets = [c for c in self.rooms[room_name] if c["user"] == username]
-            for target in targets:
+            for t in targets:
                 try:
-                    await target["ws"].send_text(json.dumps({"type": "banned"}))
-                    await target["ws"].close()
+                    await t["ws"].send_text(json.dumps({"type": "banned"}))
+                    await t["ws"].close()
                 except: pass
-            # Listeyi temizle
             self.rooms[room_name] = [c for c in self.rooms[room_name] if c["user"] != username]
             await self.broadcast_count(room_name)
 
@@ -95,43 +88,16 @@ def write_to_ffmpeg(process, data):
 
 # --- MODERASYON API ---
 @router.post("/stream/restrict")
-async def restrict_user(
-    target_username: str = Form(...), 
-    action: str = Form(...), # 'ban', 'mute', 'unban'
-    duration: int = Form(0), # Dakika (0 = sınırsız)
-    user: User = Depends(get_current_user), 
-    db: Session = Depends(get_db)
-):
-    if not user or not user.is_live: return JSONResponse({"status": "error", "msg": "Yetkisiz işlem"}, 403)
-    
-    room_name = user.username # Yayıncı kendi odasını yönetir
-    
-    # Eskileri temizle
-    db.query(StreamRestriction).filter(
-        StreamRestriction.room_name == room_name, 
-        StreamRestriction.user_username == target_username
-    ).delete()
-    
-    if action == "unban":
-        db.commit()
-        return {"status": "success", "msg": "Kısıtlama kaldırıldı."}
-    
+async def restrict_user(target_username: str = Form(...), action: str = Form(...), duration: int = Form(0), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    if not user or not user.is_live: return JSONResponse({"status": "error", "msg": "Yetkisiz"}, 403)
+    room_name = user.username
+    db.query(StreamRestriction).filter(StreamRestriction.room_name == room_name, StreamRestriction.user_username == target_username).delete()
+    if action == "unban": db.commit(); return {"status": "success", "msg": "Kaldırıldı"}
     expires = datetime.utcnow() + timedelta(minutes=duration) if duration > 0 else None
-    
-    new_res = StreamRestriction(
-        room_name=room_name,
-        user_username=target_username,
-        type=action,
-        expires_at=expires
-    )
-    db.add(new_res)
+    db.add(StreamRestriction(room_name=room_name, user_username=target_username, type=action, expires_at=expires))
     db.commit()
-    
-    # Eğer BAN ise, canlı yayından at
-    if action == "ban":
-        await manager.kick_user(room_name, target_username)
-        
-    return {"status": "success", "msg": f"{target_username} işlem: {action}"}
+    if action == "ban": await manager.kick_user(room_name, target_username)
+    return {"status": "success", "msg": f"{target_username} {action}"}
 
 # --- ENDPOINTLER ---
 @router.get("/live", response_class=HTMLResponse)
@@ -141,22 +107,13 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
     if broadcaster:
         target_user = db.query(User).filter(User.username == broadcaster).first()
         if target_user and target_user in user.followed: is_following = True
-        
-        # 🔥 İZLEYİCİ BANLI MI KONTROL ET 🔥
-        ban_check = db.query(StreamRestriction).filter(
-            StreamRestriction.room_name == broadcaster,
-            StreamRestriction.user_username == user.username,
-            StreamRestriction.type == 'ban'
-        ).first()
-        if ban_check:
-             return templates.TemplateResponse("error.html", {"request": request, "msg": "Bu yayından yasaklandınız!"})
-
+        if db.query(StreamRestriction).filter(StreamRestriction.room_name == broadcaster, StreamRestriction.user_username == user.username, StreamRestriction.type == 'ban').first():
+             return templates.TemplateResponse("base.html", {"request": request, "error": "Yasaklandınız!"})
     if mode == "broadcast": return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
         active_streams = db.query(User).filter(User.is_live == True, User.username != None).all()
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "watch", "streams": active_streams, "auction_active": target_user.is_auction_active if target_user else False, "is_following": is_following, "broadcaster": target_user})
 
-# ... (Diğer POST endpointleri: gift, start, stop, toggle, reset, thumbnail aynen kalıyor) ...
 @router.post("/gift/send")
 async def send_gift(target_username: str = Form(...), gift_type: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return JSONResponse({"status": "error", "msg": "Giriş yapın"}, 401)
@@ -216,10 +173,7 @@ async def upload_thumbnail(request: Request, user: User = Depends(get_current_us
 
 @router.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Session = Depends(get_db)):
-    room_name = stream
-    current_username = "Misafir"
-    
-    # Kimlik Doğrulama
+    room_name = stream; current_username = "Misafir"
     try:
         token = websocket.cookies.get("access_token")
         if token:
@@ -230,51 +184,27 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
             if u: current_username = u.username
     except: pass
     
-    # 🔥 BAN KONTROLÜ (GİRİŞTE) 🔥
     if room_name != "home":
-        ban_check = db.query(StreamRestriction).filter(
-            StreamRestriction.room_name == room_name,
-            StreamRestriction.user_username == current_username,
-            StreamRestriction.type == 'ban'
-        ).first()
-        if ban_check:
-            await websocket.accept()
-            await websocket.send_text(json.dumps({"type": "banned"}))
-            await websocket.close()
-            return
+        if db.query(StreamRestriction).filter(StreamRestriction.room_name == room_name, StreamRestriction.user_username == current_username, StreamRestriction.type == 'ban').first():
+            await websocket.accept(); await websocket.send_text(json.dumps({"type": "banned"})); await websocket.close(); return
 
-    await manager.connect(websocket, room_name, current_username) # Username eklendi
-
-    # Anasayfa ise bekle
+    await manager.connect(websocket, room_name, current_username)
     if room_name == "home":
         try:
             while True: await websocket.receive_text()
         except: await manager.disconnect(websocket, room_name); return
 
     broadcaster = db.query(User).filter(User.username == stream).first()
-    if broadcaster:
-        init_msg = json.dumps({"type": "init", "price": broadcaster.current_price, "leader": broadcaster.highest_bidder})
-        await websocket.send_text(init_msg)
+    if broadcaster: await websocket.send_text(json.dumps({"type": "init", "price": broadcaster.current_price, "leader": broadcaster.highest_bidder}))
     
     try:
         while True:
             data = await websocket.receive_text()
             if data.strip():
-                # 🔥 MUTE KONTROLÜ (MESAJ ATARKEN) 🔥
-                restriction = db.query(StreamRestriction).filter(
-                    StreamRestriction.room_name == room_name,
-                    StreamRestriction.user_username == current_username,
-                    StreamRestriction.type == 'mute'
-                ).first()
-                
-                if restriction:
-                    # Süre dolmuş mu?
-                    if restriction.expires_at and restriction.expires_at < datetime.utcnow():
-                        db.delete(restriction); db.commit() # Süre bitmiş, sil
-                    else:
-                        # Muted
-                        await websocket.send_text(json.dumps({"type": "alert", "msg": "🚫 Susturuldunuz!"}))
-                        continue # Mesajı gönderme
+                res = db.query(StreamRestriction).filter(StreamRestriction.room_name == room_name, StreamRestriction.user_username == current_username, StreamRestriction.type == 'mute').first()
+                if res:
+                    if res.expires_at and res.expires_at < datetime.utcnow(): db.delete(res); db.commit()
+                    else: await websocket.send_text(json.dumps({"type": "alert", "msg": "🚫 Susturuldunuz!"})); continue
 
                 is_bid = data.startswith("BID:"); safe_msg = data.replace("<", "&lt;")
                 new_msg = StreamMessage(room_name=stream, sender=current_username, message=safe_msg, is_bid=is_bid); db.add(new_msg)
@@ -283,8 +213,7 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
                         amount = int(data.split(":")[1])
                         if amount > broadcaster.current_price: broadcaster.current_price = amount; broadcaster.highest_bidder = current_username; db.add(broadcaster)
                     except: pass
-                db.commit(); msg_payload = json.dumps({"type": "chat", "user": current_username, "msg": safe_msg})
-                await manager.broadcast_to_room(msg_payload, room_name)
+                db.commit(); await manager.broadcast_to_room(json.dumps({"type": "chat", "user": current_username, "msg": safe_msg}), room_name)
     except: await manager.disconnect(websocket, room_name)
 
 @router.websocket("/ws/broadcast")
@@ -306,20 +235,37 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    print(f"🎥 YAYIN (ULTRA FAST): {user.username}")
 
+    # 🔥 HIZLANDIRILMIŞ FFMPEG AYARLARI 🔥
+    # -r 30: Kare hızını 30 FPS'e sabitle (Stabilite)
+    # -g 30: Keyframe her 1 saniyede bir (Latency için kritik!)
+    # -hls_list_size 3: Listede sadece son 3 saniye kalsın
     command = [
-        "ffmpeg", "-f", "webm", "-analyzeduration", "5000000", "-probesize", "5000000", 
+        "ffmpeg", "-f", "webm", 
+        "-analyzeduration", "2000000", "-probesize", "2000000", # Hızlı analiz
         "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
+        
         "-filter_complex", 
         "[0:v]split=4[v720][v480][v360][v240];[v720]scale=-2:720[out720];[v480]scale=-2:480[out480];[v360]scale=-2:360[out360];[v240]scale=-2:240[out240]",
+        
+        "-r", "30", # 🔥 FPS SABİTLEME
         "-preset", "ultrafast", "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0", "-g", "60", "-pix_fmt", "yuv420p",
+        "-profile:v", "baseline", "-level", "3.0", 
+        "-g", "30", # 🔥 KEYFRAME HER 1 SANİYEDE (Kritik)
+        "-pix_fmt", "yuv420p",
+
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
         "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
         "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
-        "-f", "hls", "-hls_time", "1", "-hls_list_size", "4", "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
+        
+        "-f", "hls", 
+        "-hls_time", "1", # 1 saniyelik parçalar
+        "-hls_list_size", "3", # Sadece son 3 parça
+        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start+program_date_time",
+        "-hls_allow_cache", "0",
+        
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]

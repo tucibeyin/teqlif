@@ -5,37 +5,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.CURRENT_SOCKET = null;
     let AUCTION_ACTIVE = CONFIG.auctionActive;
-    let activeGiftTarget = null;
-    let activeModTarget = null; // Yönetilecek kullanıcı
+    let activeModTarget = null;
 
-    // --- 1. MODERASYON İŞLEVLERİ (YAYINCI İÇİN) ---
+    // --- 1. MODERASYON İŞLEVLERİ ---
     window.openModMenu = function (username) {
-        // Sadece yayıncı, kendi yayınındaysa ve başkasına tıklıyorsa aç
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
             document.getElementById('mod-target-name').innerText = username;
             document.getElementById('modMenu').style.display = 'flex';
         }
     }
-
-    window.closeModMenu = function () {
-        document.getElementById('modMenu').style.display = 'none';
-        activeModTarget = null;
-    }
-
+    window.closeModMenu = function () { document.getElementById('modMenu').style.display = 'none'; activeModTarget = null; }
     window.restrictUser = function (action, duration = 0) {
         if (!activeModTarget) return;
         const formData = new FormData();
-        formData.append('target_username', activeModTarget);
-        formData.append('action', action);
-        formData.append('duration', duration);
-
-        fetch('/stream/restrict', { method: 'POST', body: formData })
-            .then(res => res.json())
-            .then(data => {
-                alert(data.msg);
-                closeModMenu();
-            });
+        formData.append('target_username', activeModTarget); formData.append('action', action); formData.append('duration', duration);
+        fetch('/stream/restrict', { method: 'POST', body: formData }).then(res => res.json()).then(data => { alert(data.msg); closeModMenu(); });
     }
 
     // --- 2. GÖRÜNÜM ---
@@ -56,25 +41,12 @@ document.addEventListener('DOMContentLoaded', () => {
         window.CURRENT_SOCKET = ws;
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
-
-            // BAN KONTROLÜ
-            if (d.type === 'banned') {
-                alert("🔴 Bu yayından yasaklandınız!");
-                window.location.href = "/";
-                return;
-            }
-            if (d.type === 'alert') {
-                alert(d.msg);
-                return;
-            }
-
+            if (d.type === 'banned') { alert("🔴 Yasaklandınız!"); window.location.href = "/"; return; }
+            if (d.type === 'alert') { alert(d.msg); return; }
             if (d.type === 'stream_ended') { showStreamEndedModal(); return; }
             if (d.type === 'count') {
-                const elBroadcast = document.getElementById('live-count-broadcast');
-                const elViewer = document.getElementById(`live-count-${target}`);
-                if (elBroadcast) elBroadcast.innerText = d.val;
-                if (elViewer) elViewer.innerText = d.val;
-                return;
+                const elBroadcast = document.getElementById('live-count-broadcast'); const elViewer = document.getElementById(`live-count-${target}`);
+                if (elBroadcast) elBroadcast.innerText = d.val; if (elViewer) elViewer.innerText = d.val; return;
             }
             if (d.type === 'init') { updatePriceDisplay(d.price, target, d.leader); return; }
             if (d.type === 'auction_state') {
@@ -87,10 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bidFeed) bidFeed.innerHTML = ''; return;
             }
             if (d.type === 'gift') { showGiftAnimation(d.gift_type, d.sender); return; }
-
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
-
             if (d.type === 'chat') {
                 if (d.msg.startsWith("BID:")) {
                     const amount = d.msg.split(":")[1]; updatePriceDisplay(amount, target, d.user);
@@ -98,15 +68,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const bidFeed = document.getElementById(bidFeedId);
                     if (bidFeed) { const div = document.createElement('div'); div.className = 'bid-bubble'; div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`; bidFeed.appendChild(div); bidFeed.scrollTop = bidFeed.scrollHeight; setTimeout(() => { div.remove(); }, 10000); }
                 } else {
-                    if (feed) {
-                        const div = document.createElement('div');
-                        div.className = 'msg';
-                        // İsimlere tıklayınca menü açılması için onclick ekledik
-                        div.innerHTML = `<b onclick="openModMenu('${d.user}')" style="cursor:pointer;">${d.user}:</b> ${d.msg}`;
-                        feed.appendChild(div);
-                        feed.scrollTop = feed.scrollHeight;
-                        setTimeout(() => { div.classList.add('fade-out'); div.addEventListener('animationend', () => div.remove()); }, 5000);
-                    }
+                    if (feed) { const div = document.createElement('div'); div.className = 'msg'; div.innerHTML = `<b onclick="openModMenu('${d.user}')" style="cursor:pointer;">${d.user}:</b> ${d.msg}`; feed.appendChild(div); feed.scrollTop = feed.scrollHeight; setTimeout(() => { div.classList.add('fade-out'); div.addEventListener('animationend', () => div.remove()); }, 5000); }
                 }
             }
         };
@@ -120,10 +82,13 @@ document.addEventListener('DOMContentLoaded', () => {
         document.body.appendChild(modal);
     }
 
-    window.openGiftMenu = function (username) { activeGiftTarget = username; document.getElementById('giftMenu').style.display = 'block'; }
+    window.openGiftMenu = function (username) { document.getElementById('giftMenu').style.display = 'block'; }
     window.closeGiftMenu = function () { document.getElementById('giftMenu').style.display = 'none'; }
     window.sendGift = function (giftType) {
-        if (!activeGiftTarget) return; const formData = new FormData(); formData.append('target_username', activeGiftTarget); formData.append('gift_type', giftType);
+        let target = CONFIG.username === CONFIG.broadcaster ? activeModTarget : CONFIG.broadcaster;
+        if (!target) target = CONFIG.broadcaster; // İzleyici yayıncıya atar
+        if (!target) return;
+        const formData = new FormData(); formData.append('target_username', target); formData.append('gift_type', giftType);
         fetch('/gift/send', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'success') { document.querySelectorAll('.info-pill.diamond span, #menu-diamond-count, #screen-diamond-count').forEach(el => el.innerText = data.new_balance); closeGiftMenu(); } else { alert(data.msg); } });
     }
     function showGiftAnimation(giftType, senderName) {
@@ -133,7 +98,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 4. YAYINCI / İZLEYİCİ MANTIĞI ---
+    // --- 4. YAYINCI / İZLEYİCİ ---
     if (MODE === 'broadcast') {
         const prev = document.getElementById('preview'); let rec;
         async function initStream() {
@@ -177,13 +142,30 @@ document.addEventListener('DOMContentLoaded', () => {
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { const video = document.getElementById('preview'); const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360; canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height); try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        const hlsConfig = { enableWorker: true, lowLatencyMode: true, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4, maxBufferLength: 5, backBufferLength: 5 };
+        // --- 🔥 ULTRA LOW LATENCY CLIENT AYARLARI 🔥 ---
+        const hlsConfig = {
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 0, // Eski segmentleri hemen sil
+            liveSyncDurationCount: 1.5, // Canlının 1.5 sn gerisinden gel (Aşırı Agresif)
+            liveMaxLatencyDurationCount: 3, // Eğer 3 sn geride kalırsa atla
+            maxBufferLength: 2, // Sadece 2 sn tamponla
+            maxMaxBufferLength: 3,
+            enableSoftwareAES: false,
+            fragLoadingTimeOut: 10000,
+        };
+
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
             if (v) {
                 const src = `/static/hls/${u}/master.m3u8`;
-                if (Hls.isSupported()) { const h = new Hls(hlsConfig); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("Blocked:", e))); }
-                else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play().catch(e => console.log("Blocked:", e)); }
+                if (Hls.isSupported()) {
+                    const h = new Hls(hlsConfig);
+                    h.loadSource(src); h.attachMedia(v);
+                    h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("Blocked:", e)));
+                } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                    v.src = src; v.play().catch(e => console.log("Blocked:", e));
+                }
                 window.connectChat(u);
             }
         } else {
@@ -202,7 +184,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // Ortak
     window.unmuteVideo = function (u) { const v = document.getElementById(`video-${u}`); if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; } }
     window.toggleFollow = function (username) { const btn = document.getElementById(`follow-btn-${username}`); const formData = new FormData(); formData.append('username', username); fetch('/user/follow', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'followed') { if (btn) { btn.classList.add('following'); btn.innerText = '✓'; } } else { if (btn) { btn.classList.remove('following'); btn.innerText = '+'; } } }); }
     window.sendBid = function (target, amount) { const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`; const el = document.getElementById(id); const currentVal = parseInt(el ? el.innerText.replace('.', '') : "0") || 0; if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${currentVal + amount}`); }
