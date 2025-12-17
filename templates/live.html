@@ -3,71 +3,151 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<link rel="stylesheet" href="/static/css/live.css?v=308">
+<link rel="stylesheet" href="/static/css/live.css?v=309">
+
+<style>
+    /* KESİNLİKLE UYGULANACAK STİLLER */
+    .cinema-video {
+        object-fit: contain !important;
+        background: #000;
+        width: 100%;
+        height: 100%;
+    }
+
+    /* MODAL STİLLERİ */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(8px);
+    }
+
+    .modal-box {
+        background: #1c1c1e;
+        padding: 25px;
+        border-radius: 20px;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        width: 85%;
+        max-width: 320px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
+    }
+
+    .modal-actions {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 20px;
+    }
+
+    .btn-cancel {
+        background: transparent;
+        border: 1px solid #555;
+        color: #ccc;
+        padding: 10px 20px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
+    }
+
+    .btn-confirm-red {
+        background: #e74c3c;
+        border: none;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+    /* Moderasyon Butonları */
+    .mod-btn {
+        width: 100%;
+        padding: 14px;
+        margin-bottom: 10px;
+        border-radius: 12px;
+        border: none;
+        color: white;
+        font-weight: 700;
+        font-size: 14px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        transition: transform 0.1s;
+    }
+
+    .mod-btn:active {
+        transform: scale(0.98);
+    }
+
+    .btn-mute {
+        background: linear-gradient(135deg, #f39c12, #d35400);
+    }
+
+    .btn-ban {
+        background: linear-gradient(135deg, #e74c3c, #c0392b);
+    }
+
+    .btn-unban {
+        background: linear-gradient(135deg, #2ecc71, #27ae60);
+    }
+
+    .btn-cancel-mod {
+        background: #333;
+        color: #ccc;
+        margin-top: 5px;
+    }
+</style>
 
 <div class="teqlif-os">
     <div id="gift-animation-layer"></div>
 
     {% if mode == 'broadcast' %}
     <div class="screen" style="position: relative; height: 100vh; overflow: hidden;">
-
-        <video id="preview" autoplay muted playsinline
-            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transform: scaleX(-1);">
-        </video>
+        <video id="preview" class="cinema-video" autoplay muted playsinline
+            style="transform: scaleX(-1); object-fit: cover !important;"></video>
 
         <div id="setup-layer"
             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.85); z-index: 9999; display: flex; align-items: center; justify-content: center; backdrop-filter: blur(5px);">
-
             <div class="setup-box"
                 style="width: 85%; max-width: 350px; background: #1c1c1e; padding: 30px; border-radius: 20px; text-align: center; border: 1px solid rgba(255,255,255,0.15); box-shadow: 0 0 30px rgba(0,0,0,0.8);">
                 <h2 style="margin-bottom:20px; color: white;">Yayını Hazırla 🎥</h2>
-
-                <div
-                    style="background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 10px; margin-bottom: 15px; display: flex; align-items: center;">
-                    <i class="fa-solid fa-pen" style="color: #aaa; margin-right: 10px;"></i>
-                    <input type="text" id="streamTitle" placeholder="Yayın Başlığı" autocomplete="off"
-                        style="background: transparent; border: none; color: white; flex: 1; outline: none;">
+                <div class="input-group-glass">
+                    <i class="fa-solid fa-pen"></i>
+                    <input type="text" id="streamTitle" placeholder="Yayın Başlığı" autocomplete="off">
                 </div>
-
-                <div
-                    style="background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 10px; margin-bottom: 15px; display: flex; align-items: center;">
-                    <i class="fa-solid fa-layer-group" style="color: #aaa; margin-right: 10px;"></i>
-                    <select id="streamCategory"
-                        style="background: transparent; border: none; color: white; flex: 1; outline: none;">
-                        <option value="Genel" style="background: #222;">Kategori Seç</option>
-                        <option value="Mezat" style="background: #222;">Mezat 🔨</option>
-                        <option value="Sohbet" style="background: #222;">Sohbet 💬</option>
-                        <option value="Oyun" style="background: #222;">Oyun 🎮</option>
-                        <option value="Müzik" style="background: #222;">Müzik 🎵</option>
+                <div class="input-group-glass">
+                    <i class="fa-solid fa-layer-group"></i>
+                    <select id="streamCategory">
+                        <option value="Genel">Kategori Seç</option>
+                        <option value="Mezat">Mezat 🔨</option>
+                        <option value="Sohbet">Sohbet 💬</option>
+                        <option value="Oyun">Oyun 🎮</option>
+                        <option value="Müzik">Müzik 🎵</option>
                     </select>
                 </div>
-
-                <div
-                    style="background: rgba(255, 255, 255, 0.1); border-radius: 12px; padding: 10px; margin-bottom: 20px; display: flex; align-items: center;">
-                    <i class="fa-solid fa-microphone" style="color: #aaa; margin-right: 10px;"></i>
-                    <select id="audioSource" onchange="restartStream()"
-                        style="background: transparent; border: none; color: white; flex: 1; outline: none;"></select>
+                <div class="input-group-glass">
+                    <i class="fa-solid fa-microphone"></i>
+                    <select id="audioSource" onchange="restartStream()"></select>
                 </div>
-
-                <button id="btn-start-broadcast"
-                    style="width: 100%; background: #34C759; color: black; padding: 15px; border-radius: 12px; font-weight: 800; border: none; font-size: 16px; cursor: pointer;">
-                    YAYINI BAŞLAT 🚀
-                </button>
-
-                <a href="/"
-                    style="display: block; margin-top: 15px; color: #888; text-decoration: none; font-size: 13px;">İptal</a>
+                <button id="btn-start-broadcast" class="btn-go-live">YAYINI BAŞLAT 🚀</button>
+                <a href="/" class="btn-cancel-live">İptal</a>
             </div>
         </div>
 
         <div id="live-ui" class="ui-overlay" style="display: none;">
-            <div class="info-stack">
-                <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
-                <div class="info-pill"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
-                <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span id="screen-diamond-count">{{
-                        user.diamonds }}</span></div>
-            </div>
 
-            <div class="top-bar-left">
+            <div class="header-left">
+                <div class="brand-pill">CANLI</div>
                 <div class="price-board">
                     <span class="label">GÜNCEL FİYAT</span>
                     <div class="price-row"><span class="currency">₺</span><span id="current-price-display">0</span>
@@ -76,7 +156,13 @@
                         <i class="fa-solid fa-crown"></i> <span class="name">--</span>
                     </div>
                 </div>
-                <div class="brand-pill">CANLI</div>
+            </div>
+
+            <div class="header-right">
+                <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span id="screen-diamond-count">{{
+                        user.diamonds }}</span></div>
+                <div class="info-pill"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
+                <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
             </div>
 
             <div class="mid-section">
@@ -105,39 +191,9 @@
 
     <div id="resetModal" class="modal-overlay" style="display:none;">
         <div class="modal-box">
-            <h3>Fiyatı Sıfırla?</h3>
-            <p style="color:#888; font-size:12px; margin-bottom:20px;">Tüm teklifler silinecek.</p>
-            <div class="modal-actions">
-                <button onclick="closeResetModal()" class="btn-cancel">İptal</button>
-                <button onclick="confirmReset()" class="btn-confirm-red">Evet, Sıfırla</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modMenu" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeModMenu()">
-        <div class="modal-box" style="border: 1px solid #ff3b30;">
-            <h3 style="color:#ff3b30; margin-bottom:5px;">Yönetim Paneli</h3>
-            <p style="color:#fff; font-weight:bold; margin-bottom:20px; font-size:16px;">
-                <span id="mod-target-name" style="color:#ff3b30;"></span>
-            </p>
-
-            <div style="display:flex; flex-direction:column; gap: 8px;">
-                <button onclick="restrictUser('mute', 5)" class="mod-btn"
-                    style="background: linear-gradient(135deg, #f39c12, #d35400);">
-                    <i class="fa-solid fa-microphone-slash"></i> 5 Dakika Sustur
-                </button>
-                <button onclick="restrictUser('ban')" class="mod-btn"
-                    style="background: linear-gradient(135deg, #e74c3c, #c0392b);">
-                    <i class="fa-solid fa-ban"></i> Yayından Yasakla (BAN)
-                </button>
-                <button onclick="restrictUser('unban')" class="mod-btn"
-                    style="background: linear-gradient(135deg, #2ecc71, #27ae60);">
-                    <i class="fa-solid fa-check"></i> Yasağı Kaldır
-                </button>
-                <button onclick="closeModMenu()" class="mod-btn" style="background: #333; color: #ccc;">
-                    İptal
-                </button>
-            </div>
+            <h3>Sıfırla?</h3>
+            <div class="modal-actions"><button onclick="closeResetModal()" class="btn-cancel">İptal</button><button
+                    onclick="confirmReset()" class="btn-confirm-red">Evet</button></div>
         </div>
     </div>
 
@@ -146,34 +202,13 @@
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
             <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
-                poster="{{ stream.thumbnail }}"
-                style="width: 100%; height: 100%; object-fit: contain !important; background: #000;">
-            </video>
-
-            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;">
-                <i class="fa-solid fa-volume-high"></i> Sesi Aç
-            </div>
+                poster="{{ stream.thumbnail }}"></video>
+            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;"><i
+                    class="fa-solid fa-volume-high"></i> Sesi Aç</div>
 
             <div class="ui-overlay">
-                <div class="info-stack">
-                    <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
-                    <div class="info-pill"><i class="fa-solid fa-eye"></i> <span
-                            id="live-count-{{ stream.username }}">0</span></div>
-                    <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span>{{ user.diamonds }}</span>
-                    </div>
-                </div>
 
-                <div class="top-bar-left">
-                    <div class="price-board" id="price-board-{{ stream.username }}"
-                        style="display: {{ 'flex' if auction_active else 'none' }}">
-                        <span class="label">GÜNCEL</span>
-                        <div class="price-row"><span class="currency">₺</span><span id="price-{{ stream.username }}"
-                                class="amount">0</span></div>
-                        <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;">
-                            <i class="fa-solid fa-crown"></i> <span class="name">--</span>
-                        </div>
-                    </div>
-
+                <div class="header-left">
                     <div class="streamer-pill">
                         <div class="avatar-mini">{{ stream.username[0]|upper }}</div>
                         <div class="name">{{ stream.username }}</div>
@@ -182,6 +217,26 @@
                             {{ '+' if not is_following else '✓' }}
                         </button>
                     </div>
+
+                    <div class="brand-pill" style="margin-top: 5px; width: fit-content;">CANLI</div>
+
+                    <div class="price-board" id="price-board-{{ stream.username }}"
+                        style="margin-top: 10px; display: {{ 'flex' if auction_active else 'none' }}">
+                        <span class="label">GÜNCEL</span>
+                        <div class="price-row"><span class="currency">₺</span><span id="price-{{ stream.username }}"
+                                class="amount">0</span></div>
+                        <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;">
+                            <i class="fa-solid fa-crown"></i> <span class="name">--</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="header-right">
+                    <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span>{{ user.diamonds }}</span>
+                    </div>
+                    <div class="info-pill"><i class="fa-solid fa-eye"></i> <span
+                            id="live-count-{{ stream.username }}">0</span></div>
+                    <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
                 </div>
 
                 <div class="mid-section">
@@ -219,6 +274,23 @@
     </div>
     {% endif %}
 
+    <div id="modMenu" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeModMenu()">
+        <div class="modal-box" style="border: 1px solid #ff3b30;">
+            <h3 style="color:#ff3b30; margin-bottom:5px;">Yönetim Paneli</h3>
+            <p style="color:#fff; font-weight:bold; margin-bottom:20px; font-size:16px;"><span id="mod-target-name"
+                    style="color:#ff3b30;"></span></p>
+            <div style="display:flex; flex-direction:column; gap:8px;">
+                <button onclick="restrictUser('mute', 5)" class="mod-btn btn-mute"><i
+                        class="fa-solid fa-microphone-slash"></i> 5 Dakika Sustur</button>
+                <button onclick="restrictUser('ban')" class="mod-btn btn-ban"><i class="fa-solid fa-ban"></i> Yayından
+                    Yasakla (BAN)</button>
+                <button onclick="restrictUser('unban')" class="mod-btn btn-unban"><i class="fa-solid fa-check"></i>
+                    Yasağı Kaldır</button>
+                <button onclick="closeModMenu()" class="mod-btn btn-cancel-mod">İptal</button>
+            </div>
+        </div>
+    </div>
+
     <div id="giftMenu" class="gift-sheet" style="display:none;">
         <div class="sheet-header"
             style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
@@ -249,72 +321,7 @@
 </div>
 
 <script>
-    window.TEQLIF_CONFIG = {
-        mode: "{{ mode }}",
-        username: "{{ user.username if user else 'anon' }}",
-        auctionActive: {{ 'true' if auction_active else 'false' }},
-    broadcaster: "{{ broadcaster.username if broadcaster else '' }}" 
-    };
+    window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}", auctionActive: {{ 'true' if auction_active else 'false' }}, broadcaster: "{{ broadcaster.username if broadcaster else '' }}" };
 </script>
-<script src="/static/js/live.js?v=308"></script>
-
-<style>
-    /* MODERASYON BUTONLARI GENEL STİLİ */
-    .mod-btn {
-        width: 100%;
-        padding: 12px;
-        border-radius: 10px;
-        border: none;
-        color: white;
-        font-weight: bold;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        font-size: 14px;
-    }
-
-    /* MODAL STİLLERİ (Yedek) */
-    .modal-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 9999;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        backdrop-filter: blur(5px);
-    }
-
-    .modal-box {
-        background: #222;
-        padding: 25px;
-        border-radius: 20px;
-        text-align: center;
-        border: 1px solid #444;
-        width: 85%;
-        max-width: 320px;
-        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    }
-
-    .btn-cancel {
-        background: transparent;
-        border: 1px solid #555;
-        color: #ccc;
-        padding: 10px 20px;
-        border-radius: 12px;
-    }
-
-    .btn-confirm-red {
-        background: #e74c3c;
-        border: none;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 12px;
-    }
-</style>
+<script src="/static/js/live.js?v=309"></script>
 {% endblock %}
