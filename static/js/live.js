@@ -185,8 +185,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.connectChat('broadcast');
                     const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                     ws.onopen = () => {
-                        let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
-                        if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 2500000 };
+                        let mimeType = 'video/webm;codecs=vp9';
+                        if (!MediaRecorder.isTypeSupported(mimeType)) {
+                            mimeType = 'video/webm;codecs=vp8'; // Android için en güvenli liman
+                            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                                mimeType = 'video/webm'; // Tarayıcı ne istiyorsa o olsun
+                            }
+                        }
+
+                        let opts = { mimeType: mimeType, videoBitsPerSecond: 2500000 };
+                        console.log("Seçilen Format:", mimeType);
                         rec = new MediaRecorder(window.localStream, opts);
                         rec.start(500);
                         rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
