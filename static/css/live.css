@@ -59,7 +59,7 @@ body {
     background: #000;
 }
 
-/* 🔥 GÖRÜNTÜ AYARI: CONTAIN (Sığdır) - Tam Ekran Siyah Arka Plan 🔥 */
+/* 🔥 GÖRÜNTÜ AYARI: CONTAIN (Sığdır - Kesme Yapmaz) 🔥 */
 .cinema-video {
     position: absolute !important;
     top: 0;
@@ -67,6 +67,7 @@ body {
     width: 100% !important;
     height: 100% !important;
     object-fit: contain !important;
+    /* Görüntüyü ekrana sığdırır */
     z-index: 0;
     background: #000;
 }
@@ -96,20 +97,22 @@ body {
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 15%, transparent 85%, rgba(0, 0, 0, 0.8) 100%);
 }
 
-/* --- SOL ÜST KÖŞE (Profil, Canlı, Fiyat) --- */
-.header-left {
+/* --- SOL ÜST KÖŞE (Profil -> Altında Fiyat) --- */
+.top-bar-left {
     position: absolute;
     top: 15px;
     left: 15px;
     z-index: 100;
     display: flex;
     flex-direction: column;
+    /* Alt alta diz */
     align-items: flex-start;
     gap: 8px;
+    /* Öğeler arası boşluk */
     pointer-events: none;
 }
 
-.header-left>* {
+.top-bar-left>* {
     pointer-events: auto;
 }
 
@@ -180,14 +183,18 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* Fiyat Tabelası */
+/* Fiyat Tabelası (Dikey Düzen) */
 .price-board {
     background: rgba(20, 20, 20, 0.85);
     backdrop-filter: blur(10px);
     border: var(--glass-border);
-    padding: 8px 12px;
+    padding: 10px 12px;
     border-radius: 12px;
-    min-width: 90px;
+    min-width: 110px;
+    display: flex;
+    flex-direction: column !important;
+    /* Kesinlikle alt alta */
+    gap: 4px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
 
@@ -196,7 +203,8 @@ body {
     color: #aaa;
     font-weight: 700;
     display: block;
-    margin-bottom: 2px;
+    margin-bottom: 0;
+    text-transform: uppercase;
 }
 
 .price-board .price-row {
@@ -206,7 +214,7 @@ body {
 }
 
 .price-board .currency {
-    font-size: 12px;
+    font-size: 14px;
     color: var(--accent);
     font-weight: 700;
     margin-right: 2px;
@@ -214,20 +222,33 @@ body {
 }
 
 .price-board .amount {
-    font-size: 20px;
+    font-size: 22px;
     font-weight: 800;
     color: white;
 }
 
+/* Lider Satırı - Fiyatın hemen altında */
 .leader-row {
-    font-size: 10px;
+    font-size: 11px;
     color: var(--gold);
-    margin-top: 4px;
-    padding-top: 4px;
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.15);
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 5px;
+    width: 100%;
+}
+
+.leader-row i {
+    font-size: 10px;
+}
+
+.leader-row .name {
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 90px;
 }
 
 /* --- SAĞ ÜST KÖŞE (İzleyici, Elmas, Kapat) --- */
@@ -235,10 +256,12 @@ body {
     position: absolute;
     top: 15px;
     right: 15px;
-    z-index: 100;
+    z-index: 200;
+    /* Solun üstüne çıkmasın ama tıklanabilir olsun */
     display: flex;
-    flex-direction: row;
-    align-items: center;
+    flex-direction: column;
+    /* Mobilde yer kazanmak için dikey olabilir, şimdilik yatay kalsın ya da dikey yapalım */
+    align-items: flex-end;
     gap: 8px;
     pointer-events: none;
 }
@@ -290,7 +313,7 @@ body {
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* --- ORTA VE ALT KISIMLAR --- */
+/* --- ORTA VE ALT KISIMLAR (KORUNDU) --- */
 .mid-section {
     flex: 1;
     display: flex;
@@ -645,7 +668,7 @@ body {
     font-weight: bold;
 }
 
-/* 🔥 MODERASYON BUTONLARI (EKLENDİ) 🔥 */
+/* Moderasyon Butonları */
 .mod-btn {
     width: 100%;
     padding: 14px;
@@ -740,9 +763,7 @@ body {
     margin-top: 2px;
 }
 
-/* =========================================
-   7. ANİMASYONLAR
-   ========================================= */
+/* Animasyonlar */
 @keyframes slideInUp {
     from {
         opacity: 0;
