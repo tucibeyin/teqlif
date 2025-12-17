@@ -77,7 +77,6 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
         if target_user and target_user in user.followed: is_following = True
     if mode == "broadcast": return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
-        # Sadece kullanıcı adı olanları listele
         active_streams = db.query(User).filter(User.is_live == True, User.username != None).all()
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "watch", "streams": active_streams, "auction_active": target_user.is_auction_active if target_user else False, "is_following": is_following, "broadcaster": target_user})
 
@@ -186,34 +185,34 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     shutil.rmtree(stream_dir, ignore_errors=True)
     os.makedirs(stream_dir, exist_ok=True)
     
-    print(f"🎥 YAYIN BAŞLIYOR (CROSS-PLATFORM): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (ATOMIC WRITE FIX): {user.username}")
 
-    # 🔥 KRİTİK İYİLEŞTİRME: iOS & Android Uyumlu FFmpeg 🔥
+    # 🔥 KRİTİK DÜZELTME: Dosyayı direkt 'master.m3u8' olarak yaz (temp kullanma) 🔥
     command = [
         "ffmpeg", 
         "-f", "webm", 
-        "-analyzeduration", "10000000", # Android verisini analiz et
-        "-probesize", "10000000",       # Tamponu artır
+        "-analyzeduration", "5000000", # Biraz azalttık (5MB yeterli)
+        "-probesize", "5000000", 
         "-fflags", "+genpts+igndts+nobuffer", 
         "-i", "pipe:0",
         
         "-c:v", "libx264", 
-        "-preset", "superfast", 
+        "-preset", "ultrafast", # Hızlandırdık
         "-tune", "zerolatency",
         "-pix_fmt", "yuv420p", 
-        
-        # 🔥 BU SATIR ÇOK ÖNEMLİ: iOS için Baseline Profil 🔥
-        "-profile:v", "baseline", 
+        "-profile:v", "baseline",
         "-level", "3.0",
         
         "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "3000k",
-        "-g", "30",
+        "-g", "60", # 2 saniyede bir keyframe (Daha stabil)
         
         "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
         
         "-f", "hls", 
-        "-hls_time", "1", 
-        "-hls_list_size", "5", 
+        "-hls_time", "2", # 2 saniyelik parçalar (Daha az dosya I/O)
+        "-hls_list_size", "4", 
+        
+        # 🔥 ÖNEMLİ: Temp dosyayı iptal et ve listeyi sil/ekle modunda çalıştır
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         
         f"{stream_dir}/master.m3u8"
