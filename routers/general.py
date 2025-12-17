@@ -12,16 +12,14 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, category: Optional[str] = None, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
-    # Sadece canlı olanları çek
-    query = db.query(User).filter(User.is_live == True)
+    # Sadece canlı olan VE kullanıcı adı olanları çek
+    query = db.query(User).filter(User.is_live == True, User.username != None)
     
-    # Eğer kategori seçildiyse ve 'Tümü' değilse filtrele
     if category and category != "Tümü":
         query = query.filter(User.stream_category == category)
         
     active_streams = query.all()
     
-    # Takip ettiklerini öne al
     if user:
         followed_ids = [u.id for u in user.followed]
         active_streams.sort(key=lambda x: x.id not in followed_ids)
@@ -30,7 +28,7 @@ async def read_home(request: Request, category: Optional[str] = None, db: Sessio
         "request": request, 
         "user": user, 
         "streams": active_streams,
-        "current_category": category if category else "Tümü" # Seçili kategoriyi template'e gönder
+        "current_category": category if category else "Tümü"
     })
 
 @router.get("/settings", response_class=HTMLResponse)
@@ -47,32 +45,18 @@ async def update_profile(request: Request, username: str = Form(...), user: User
     user.username = username; db.commit()
     return templates.TemplateResponse("settings.html", {"request": request, "user": user, "success": "Güncellendi."})
 
-# 🔥 YENİ: ELMAS SATIN ALMA API 🔥
 @router.post("/settings/buy_diamonds")
 async def buy_diamonds(amount: int = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return JSONResponse({"status": "error", "msg": "Giriş yapmalısınız"}, 401)
-    
-    # Geçerli paketleri kontrol et (Güvenlik)
-    valid_packages = [10, 50, 100, 1000, 5000]
-    if amount not in valid_packages:
-        return JSONResponse({"status": "error", "msg": "Geçersiz paket seçimi"}, 400)
-    
-    # ÖDEME SİMÜLASYONU (Burada normalde kredi kartı çekimi olur)
-    # 1 Diamond = 1 TL
-    cost = amount * 1 
-    
-    # Başarılı sayıyoruz ve elması yüklüyoruz
-    user.diamonds += amount
-    db.commit()
-    
-    return JSONResponse({"status": "success", "new_balance": user.diamonds, "msg": f"{amount} Elmas başarıyla yüklendi!"})
+    if amount not in [10, 50, 100, 1000, 5000]: return JSONResponse({"status": "error", "msg": "Geçersiz paket"}, 400)
+    user.diamonds += amount; db.commit()
+    return JSONResponse({"status": "success", "new_balance": user.diamonds, "msg": f"{amount} Elmas yüklendi!"})
 
 @router.post("/user/follow")
 async def follow_user(username: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return JSONResponse({"status": "error"}, 401)
     target = db.query(User).filter(User.username == username).first()
     if not target or target.id == user.id: return JSONResponse({"status": "error"}, 400)
-    
     if target not in user.followed:
         user.followed.append(target); db.commit(); return JSONResponse({"status": "followed"})
     else:

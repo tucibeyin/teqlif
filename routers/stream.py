@@ -53,7 +53,6 @@ active_processes: Dict[str, subprocess.Popen] = {}
 
 # --- YARDIMCI FONKSİYONLAR ---
 def cleanup_stream(username: str, db: Session):
-    # Veritabanı ve Dosya Temizliği
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
@@ -70,12 +69,9 @@ def cleanup_stream(username: str, db: Session):
     
     shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
 
-# FFmpeg Yazma (Blocking Önleyici)
 def write_to_ffmpeg(process, data):
     try:
-        if process.stdin:
-            process.stdin.write(data)
-            process.stdin.flush()
+        if process.stdin: process.stdin.write(data); process.stdin.flush()
     except: pass
 
 # --- ENDPOINTLER ---
@@ -95,7 +91,9 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
     if mode == "broadcast":
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
-        active_streams = db.query(User).filter(User.is_live == True).all()
+        # 🔥 DÜZELTME BURADA: Sadece kullanıcı adı OLANLARI (User.username != None) listele 🔥
+        active_streams = db.query(User).filter(User.is_live == True, User.username != None).all()
+        
         return templates.TemplateResponse("live.html", {
             "request": request, "user": user, "mode": "watch", "streams": active_streams,
             "auction_active": target_user.is_auction_active if target_user else False,
@@ -110,19 +108,15 @@ async def send_gift(target_username: str = Form(...), gift_type: str = Form(...)
 
     prices = {"rose": 10, "heart": 50, "car": 500, "rocket": 5000}
     cost = prices.get(gift_type, 0)
-    
     if user.diamonds < cost: return JSONResponse({"status": "error", "msg": "Yetersiz Elmas!"}, 400)
 
-    user.diamonds -= cost
-    target.diamonds += cost
-    
+    user.diamonds -= cost; target.diamonds += cost
     msg_entry = StreamMessage(room_name=target_username, sender=user.username, message=f"{gift_type} gönderdi!", is_gift=True, gift_type=gift_type)
     db.add(msg_entry); db.commit()
 
     payload = json.dumps({"type": "gift", "sender": user.username, "gift_type": gift_type, "amount": cost})
     await manager.broadcast_to_room(payload, target_username)
     await manager.broadcast_to_room(payload, "broadcast")
-
     return JSONResponse({"status": "success", "new_balance": user.diamonds})
 
 @router.post("/broadcast/start")
@@ -137,7 +131,6 @@ async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Fo
 async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
     cleanup_stream(user.username, db)
-    # 🔥 İZLEYİCİLERE YAYIN BİTTİ BİLGİSİ GÖNDER 🔥
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     return {"status": "stopped"}
 
@@ -229,16 +222,13 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     stream_dir = f"static/hls/{user.username}"
     shutil.rmtree(stream_dir, ignore_errors=True)
-    os.makedirs(f"{stream_dir}/720p", exist_ok=True)
-    os.makedirs(f"{stream_dir}/480p", exist_ok=True)
-    os.makedirs(f"{stream_dir}/360p", exist_ok=True)
+    os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True); os.makedirs(f"{stream_dir}/360p", exist_ok=True)
     
     print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
     command = [
         "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
-        "-filter_complex", 
-        "[0:v]split=3[v1][v2][v3];[v1]scale=-2:720[v720];[v2]scale=-2:480[v480];[v3]scale=-2:360[v360]",
+        "-filter_complex", "[0:v]split=3[v1][v2][v3];[v1]scale=-2:720[v720];[v2]scale=-2:480[v480];[v3]scale=-2:360[v360]",
         "-map", "[v720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
         "-map", "[v480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
         "-map", "[v360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "700k", "-bufsize:v:2", "800k", "-c:a:2", "aac", "-b:a:2", "64k",
@@ -251,7 +241,6 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
-    
     loop = asyncio.get_event_loop()
 
     try:
@@ -260,6 +249,5 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
     except: pass
     finally:
-        # 🔥 TARAYICI KAPANDIĞINDA TEMİZLE VE BİLDİRİM GÖNDER 🔥
         cleanup_stream(user.username, db)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)

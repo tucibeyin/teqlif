@@ -7,7 +7,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeGiftTarget = null;
 
-    // --- YARDIMCI GÖRÜNÜMLER ---
+    // --- FİYAT VE LİDER GÜNCELLEME ---
     function updatePriceDisplay(amount, target, bidderName) {
         const idHost = 'current-price-display';
         const idViewer = `price-${target}`;
@@ -24,6 +24,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const lHost = 'leader-display-broadcast';
         const lViewer = `leader-display-${target}`;
         let lRow = document.getElementById(lHost);
+        // 🔥 DÜZELTME BURADA YAPILDI (lIdViewer -> lViewer) 🔥
         if (!lRow) lRow = document.getElementById(lViewer);
 
         if (lRow) {
@@ -34,29 +35,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 lRow.style.display = 'none';
             }
         }
-    }
-
-    // 🔥 YAYIN BİTTİĞİNDE GÖSTERİLECEK MODAL 🔥
-    function showStreamEndedModal() {
-        const modal = document.createElement('div');
-        modal.style.position = 'fixed';
-        modal.style.top = '0'; modal.style.left = '0';
-        modal.style.width = '100%'; modal.style.height = '100%';
-        modal.style.background = 'rgba(0,0,0,0.85)';
-        modal.style.backdropFilter = 'blur(10px)';
-        modal.style.zIndex = '9999';
-        modal.style.display = 'flex';
-        modal.style.flexDirection = 'column';
-        modal.style.alignItems = 'center';
-        modal.style.justifyContent = 'center';
-        modal.style.color = 'white';
-        modal.innerHTML = `
-            <div style="font-size: 60px; margin-bottom: 20px;">🛑</div>
-            <h2 style="margin-bottom: 10px;">Yayın Sona Erdi</h2>
-            <p style="color: #aaa; margin-bottom: 30px;">Yayıncı yayını kapattı.</p>
-            <a href="/" style="background: #34C759; color: black; padding: 12px 30px; border-radius: 20px; text-decoration: none; font-weight: bold;">Ana Sayfaya Dön</a>
-        `;
-        document.body.appendChild(modal);
     }
 
     // --- SOCKET ---
@@ -70,16 +48,13 @@ document.addEventListener('DOMContentLoaded', () => {
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
 
-            // 🔥 YAYIN BİTTİ BİLDİRİMİ GELDİ Mİ? 🔥
-            if (d.type === 'stream_ended') {
-                showStreamEndedModal();
-                return;
-            }
+            // Yayın Bitti mi?
+            if (d.type === 'stream_ended') { showStreamEndedModal(); return; }
 
+            // İzleyici Sayısı
             if (d.type === 'count') {
                 const elBroadcast = document.getElementById('live-count-broadcast');
                 const elViewer = document.getElementById(`live-count-${target}`);
-
                 if (elBroadcast) elBroadcast.innerText = d.val;
                 if (elViewer) elViewer.innerText = d.val;
                 return;
@@ -138,6 +113,18 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
+    function showStreamEndedModal() {
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed'; modal.style.top = '0'; modal.style.left = '0';
+        modal.style.width = '100%'; modal.style.height = '100%';
+        modal.style.background = 'rgba(0,0,0,0.85)'; modal.style.backdropFilter = 'blur(10px)';
+        modal.style.zIndex = '9999'; modal.style.display = 'flex'; modal.style.flexDirection = 'column';
+        modal.style.alignItems = 'center'; modal.style.justifyContent = 'center'; modal.style.color = 'white';
+        modal.innerHTML = `<div style="font-size: 60px; margin-bottom: 20px;">🛑</div><h2 style="margin-bottom: 10px;">Yayın Sona Erdi</h2><a href="/" style="background: #34C759; color: black; padding: 12px 30px; border-radius: 20px; text-decoration: none; font-weight: bold;">Ana Sayfaya Dön</a>`;
+        document.body.appendChild(modal);
+    }
+
+    // Ortak
     window.openGiftMenu = function (username) { activeGiftTarget = username; document.getElementById('giftMenu').style.display = 'block'; }
     window.closeGiftMenu = function () { document.getElementById('giftMenu').style.display = 'none'; }
     window.sendGift = function (giftType) {
@@ -147,9 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
         formData.append('gift_type', giftType);
         fetch('/gift/send', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
             if (data.status === 'success') {
-                document.querySelectorAll('.info-pill.diamond span, #menu-diamond-count, #screen-diamond-count').forEach(el => {
-                    el.innerText = data.new_balance;
-                });
+                document.querySelectorAll('.info-pill.diamond span, #menu-diamond-count, #screen-diamond-count').forEach(el => el.innerText = data.new_balance);
                 closeGiftMenu();
             } else { alert(data.msg); }
         });
@@ -187,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         initStream();
         window.restartStream = function () { if (window.localStream) window.localStream.getTracks().forEach(t => t.stop()); initStream(); }
-
         const startBtn = document.getElementById('btn-start-broadcast');
         if (startBtn) {
             startBtn.addEventListener('click', function () {
@@ -245,7 +229,6 @@ document.addEventListener('DOMContentLoaded', () => {
         }, { threshold: 0.6 });
         document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
-
     window.unmuteVideo = function (u) { const v = document.getElementById(`video-${u}`); if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; } }
     window.toggleFollow = function (username) { const btn = document.getElementById(`follow-btn-${username}`); const formData = new FormData(); formData.append('username', username); fetch('/user/follow', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'followed') { if (btn) { btn.classList.add('following'); btn.innerText = '✓'; } } else { if (btn) { btn.classList.remove('following'); btn.innerText = '+'; } } }); }
     window.sendBid = function (target, amount) { const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`; const el = document.getElementById(id); const currentVal = parseInt(el ? el.innerText.replace('.', '') : "0") || 0; if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${currentVal + amount}`); }
