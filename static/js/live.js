@@ -186,7 +186,24 @@ document.addEventListener('DOMContentLoaded', () => {
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
         // --- İZLEYİCİ MANTIĞI ---
-        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 1.5, liveMaxLatencyDurationCount: 3, maxBufferLength: 2, maxMaxBufferLength: 3, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
+        const hlsConfig = {
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 0, // Eski segmentleri bellekte tutma
+
+            // Canlı yayının sadece 1.5 segment (1.5 saniye) gerisinden gel
+            liveSyncDurationCount: 1.5,
+
+            // Eğer 3 saniye geriye düşerse, videoyu hızlandırıp yakala
+            liveMaxLatencyDurationCount: 3,
+
+            // Sadece 2 saniyelik ileri tampon yap (Daha fazlası gecikme demek)
+            maxBufferLength: 2,
+            maxMaxBufferLength: 2,
+
+            enableSoftwareAES: false,
+            fragLoadingTimeOut: 10000,
+        };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
