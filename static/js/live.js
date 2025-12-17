@@ -59,16 +59,39 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bidFeed) bidFeed.innerHTML = ''; return;
             }
             if (d.type === 'gift') { showGiftAnimation(d.gift_type, d.sender); return; }
+
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
+
             if (d.type === 'chat') {
                 if (d.msg.startsWith("BID:")) {
+                    // PEY MESAJI (Zaten çalışıyor)
                     const amount = d.msg.split(":")[1]; updatePriceDisplay(amount, target, d.user);
                     const bidFeedId = target === 'broadcast' ? 'bid-feed-broadcast' : `bid-feed-${target}`;
                     const bidFeed = document.getElementById(bidFeedId);
-                    if (bidFeed) { const div = document.createElement('div'); div.className = 'bid-bubble'; div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`; bidFeed.appendChild(div); bidFeed.scrollTop = bidFeed.scrollHeight; setTimeout(() => { div.remove(); }, 10000); }
+                    if (bidFeed) {
+                        const div = document.createElement('div');
+                        div.className = 'bid-bubble';
+                        div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`;
+                        bidFeed.appendChild(div);
+                        bidFeed.scrollTop = bidFeed.scrollHeight;
+                        setTimeout(() => { div.remove(); }, 10000);
+                    }
                 } else {
-                    if (feed) { const div = document.createElement('div'); div.className = 'msg'; div.innerHTML = `<b onclick="openModMenu('${d.user}')" style="cursor:pointer;">${d.user}:</b> ${d.msg}`; feed.appendChild(div); feed.scrollTop = feed.scrollHeight; setTimeout(() => { div.classList.add('fade-out'); div.addEventListener('animationend', () => div.remove()); }, 5000); }
+                    // NORMAL MESAJ (DÜZELTİLDİ)
+                    if (feed) {
+                        const div = document.createElement('div');
+                        div.className = 'msg';
+                        div.innerHTML = `<b onclick="openModMenu('${d.user}')" style="cursor:pointer;">${d.user}:</b> ${d.msg}`;
+                        feed.appendChild(div);
+                        feed.scrollTop = feed.scrollHeight;
+
+                        // 🔥 GARANTİ SİLME İŞLEMİ 🔥
+                        setTimeout(() => {
+                            div.classList.add('fade-out'); // 1. Solma efektini başlat
+                            setTimeout(() => { div.remove(); }, 1000); // 2. Efekt süresi (1sn) bitince zorla sil
+                        }, 5000); // 5 saniye ekranda kalır
+                    }
                 }
             }
         };
@@ -86,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.closeGiftMenu = function () { document.getElementById('giftMenu').style.display = 'none'; }
     window.sendGift = function (giftType) {
         let target = CONFIG.username === CONFIG.broadcaster ? activeModTarget : CONFIG.broadcaster;
-        if (!target) target = CONFIG.broadcaster; // İzleyici yayıncıya atar
+        if (!target) target = CONFIG.broadcaster;
         if (!target) return;
         const formData = new FormData(); formData.append('target_username', target); formData.append('gift_type', giftType);
         fetch('/gift/send', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'success') { document.querySelectorAll('.info-pill.diamond span, #menu-diamond-count, #screen-diamond-count').forEach(el => el.innerText = data.new_balance); closeGiftMenu(); } else { alert(data.msg); } });
@@ -142,14 +165,13 @@ document.addEventListener('DOMContentLoaded', () => {
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { const video = document.getElementById('preview'); const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360; canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height); try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- 🔥 ULTRA LOW LATENCY CLIENT AYARLARI 🔥 ---
         const hlsConfig = {
             enableWorker: true,
             lowLatencyMode: true,
-            backBufferLength: 0, // Eski segmentleri hemen sil
-            liveSyncDurationCount: 1.5, // Canlının 1.5 sn gerisinden gel (Aşırı Agresif)
-            liveMaxLatencyDurationCount: 3, // Eğer 3 sn geride kalırsa atla
-            maxBufferLength: 2, // Sadece 2 sn tamponla
+            backBufferLength: 0,
+            liveSyncDurationCount: 1.5,
+            liveMaxLatencyDurationCount: 3,
+            maxBufferLength: 2,
             maxMaxBufferLength: 3,
             enableSoftwareAES: false,
             fragLoadingTimeOut: 10000,
