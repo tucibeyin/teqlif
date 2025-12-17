@@ -1,590 +1,430 @@
-<!DOCTYPE html>
-<html lang="tr">
+{% extends "base.html" %}
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Teqlif Live</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
-    <style>
-        /* --- TEMEL AYARLAR --- */
-        body {
-            margin: 0;
-            padding: 0;
-            background-color: #000;
-            color: #fff;
-            font-family: 'Inter', sans-serif;
-            overflow: hidden;
-            height: 100vh;
-            width: 100vw;
-        }
+{% block content %}
+{% set mode = request.query_params.get('mode') %}
 
-        /* --- VİDEO KONTEYNERİ (TAM EKRAN & ORTALI) --- */
-        #video-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            /* Kenar boşlukları siyah olsun */
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1;
-        }
+<link rel="stylesheet" href="/static/css/live.css?v=305">
 
-        /* --- VİDEO OYNATICI (CROP SORUNUNU ÇÖZEN KOD) --- */
-        video {
-            width: 100%;
-            height: 100%;
-            /* object-fit: contain; -> Görüntüyü kesmez, olduğu gibi sığdırır (YouTube Tarzı) */
-            /* object-fit: cover; -> Ekranı doldurur ama kenarları keser (TikTok Tarzı) */
-            object-fit: contain;
-        }
-
-        /* --- ARAYÜZ KATMANI (UI) --- */
-        .ui-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: 10;
-            pointer-events: none;
-            /* Tıklamalar videoya geçsin */
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 20%, transparent 80%, rgba(0, 0, 0, 0.8) 100%);
-        }
-
-        .ui-element {
-            pointer-events: auto;
-        }
-
-        /* Butonlar tıklanabilsin */
-
-        /* Üst Bar */
-        .top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 15px 20px;
-            padding-top: max(15px, env(safe-area-inset-top));
-        }
-
-        .live-tag {
-            background: #ff3b30;
-            padding: 4px 10px;
-            border-radius: 4px;
-            font-weight: 800;
-            font-size: 12px;
-            box-shadow: 0 2px 10px rgba(255, 0, 0, 0.4);
-        }
-
-        .viewer-count {
-            background: rgba(0, 0, 0, 0.5);
-            padding: 4px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            backdrop-filter: blur(5px);
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .close-btn {
-            color: white;
-            font-size: 24px;
-            text-decoration: none;
-            opacity: 0.8;
-            text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-        }
-
-        /* Sağ Menü (Hediyeler vs) */
-        .right-menu {
-            position: absolute;
-            right: 15px;
-            bottom: 100px;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .action-btn {
-            width: 45px;
-            height: 45px;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.15);
-            backdrop-filter: blur(5px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            color: white;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 20px;
-            transition: transform 0.1s;
-            cursor: pointer;
-        }
-
-        .action-btn:active {
-            transform: scale(0.9);
-        }
-
-        .gift-btn {
-            background: linear-gradient(135deg, #FFD700, #FFA500);
-            color: black;
-            border: none;
-            animation: pulse 2s infinite;
-        }
-
-        /* Alt Alan (Sohbet & Bilgi) */
-        .bottom-area {
-            padding: 15px;
-            padding-bottom: max(20px, env(safe-area-inset-bottom));
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-
-        .stream-info {
-            margin-bottom: 5px;
-        }
-
-        .broadcaster-name {
-            font-weight: 700;
-            font-size: 16px;
-            text-shadow: 0 1px 3px black;
-            margin-bottom: 2px;
-        }
-
-        .stream-desc {
-            font-size: 13px;
-            opacity: 0.9;
-            text-shadow: 0 1px 3px black;
-        }
-
-        /* Chat */
-        .chat-container {
-            height: 150px;
-            overflow-y: auto;
-            margin-bottom: 10px;
-            mask-image: linear-gradient(to bottom, transparent, black 20%);
-            -webkit-mask-image: linear-gradient(to bottom, transparent, black 20%);
-        }
-
-        .chat-msg {
-            font-size: 13px;
-            margin-bottom: 4px;
-            text-shadow: 0 1px 2px black;
-        }
-
-        .chat-msg b {
-            color: #ffd700;
-        }
-
-        .bid-bubble {
-            background: rgba(52, 199, 89, 0.9);
-            color: white;
-            padding: 5px 10px;
-            border-radius: 10px;
-            display: inline-block;
-            margin-top: 5px;
-            font-weight: bold;
-            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        }
-
-        /* Input Alanı */
-        .input-bar {
-            display: flex;
-            gap: 10px;
-            align-items: center;
-        }
-
-        .chat-input {
-            flex: 1;
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            color: white;
-            padding: 10px 15px;
-            border-radius: 20px;
-            outline: none;
-            backdrop-filter: blur(5px);
-        }
-
-        .chat-input::placeholder {
-            color: rgba(255, 255, 255, 0.5);
-        }
-
-        .send-btn {
-            background: #34C759;
-            color: white;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-        }
-
-        /* MEZAT KONTROLLERİ */
-        .auction-overlay {
-            position: absolute;
-            top: 80px;
-            left: 15px;
-            background: rgba(0, 0, 0, 0.6);
-            backdrop-filter: blur(10px);
-            padding: 10px 15px;
-            border-radius: 12px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-
-        .price-tag {
-            font-size: 24px;
-            font-weight: 800;
-            color: #34C759;
-            display: flex;
-            align-items: center;
-            gap: 5px;
-        }
-
-        .leader-tag {
-            font-size: 11px;
-            color: #aaa;
-            margin-top: 2px;
-        }
-
-        /* MODALS */
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.8);
-            z-index: 9999;
-            backdrop-filter: blur(5px);
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-box {
-            background: #1c1c1e;
-            width: 80%;
-            max-width: 300px;
-            padding: 20px;
-            border-radius: 16px;
-            text-align: center;
-            border: 1px solid #333;
-        }
-
-        .modal-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .gift-item {
-            background: #2c2c2e;
-            padding: 10px;
-            border-radius: 10px;
-            cursor: pointer;
-            transition: 0.2s;
-            border: 1px solid transparent;
-        }
-
-        .gift-item:active {
-            border-color: #00d2ff;
-            transform: scale(0.95);
-        }
-
-        .gift-icon {
-            font-size: 24px;
-            display: block;
-            margin-bottom: 5px;
-        }
-
-        .gift-price {
-            font-size: 12px;
-            color: #00d2ff;
-            font-weight: bold;
-        }
-
-        /* Setup Layer (Yayıncı İçin) */
-        #setup-layer {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: #000;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-        }
-
-        /* Animasyonlar */
-        @keyframes pulse {
-            0% {
-                transform: scale(1);
-            }
-
-            50% {
-                transform: scale(1.1);
-            }
-
-            100% {
-                transform: scale(1);
-            }
-        }
-
-        @keyframes popIn {
-            from {
-                transform: scale(0);
-                opacity: 0;
-            }
-
-            to {
-                transform: scale(1);
-                opacity: 1;
-            }
-        }
-
-        .blink-anim {
-            animation: highlight 0.5s ease-out;
-        }
-
-        @keyframes highlight {
-            0% {
-                color: #fff;
-                transform: scale(1.5);
-            }
-
-            100% {
-                color: #34C759;
-                transform: scale(1);
-            }
-        }
-
-        .fade-out {
-            animation: fadeOut 0.5s forwards;
-        }
-
-        @keyframes fadeOut {
-            to {
-                opacity: 0;
-                transform: translateY(-10px);
-            }
-        }
-
-        .flying-gift {
-            position: absolute;
-            bottom: 100px;
-            left: 50%;
-            font-size: 50px;
-            animation: flyUp 3s forwards;
-            pointer-events: none;
-            text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
-            z-index: 50;
-        }
-
-        @keyframes flyUp {
-            0% {
-                transform: translateX(-50%) translateY(0) scale(0.5);
-                opacity: 0;
-            }
-
-            20% {
-                opacity: 1;
-                transform: translateX(-50%) translateY(-50px) scale(1.2);
-            }
-
-            100% {
-                transform: translateX(-50%) translateY(-400px) scale(1);
-                opacity: 0;
-            }
-        }
-
-        .gift-sender-label {
-            font-size: 14px;
-            color: white;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 2px 8px;
-            border-radius: 10px;
-            margin-top: 5px;
-            text-align: center;
-        }
-    </style>
-</head>
-
-<body>
-
-    <script>
-        window.TEQLIF_CONFIG = {
-            mode: "{{ mode }}",
-            username: "{{ user.username }}",
-            broadcaster: "{{ broadcaster.username if broadcaster else '' }}",
-            auctionActive: {{ 'true' if auction_active else 'false' }}
-    };
-    </script>
+<div class="teqlif-os">
+    <div id="gift-animation-layer"></div>
 
     {% if mode == 'broadcast' %}
-    <div id="setup-layer">
-        <video id="preview" autoplay muted playsinline
-            style="width:100%; height:100%; object-fit:cover; opacity:0.6;"></video>
-        <div style="position:absolute; bottom:50px; width:80%; text-align:center;">
-            <h2 style="margin-bottom:20px;">Yayını Başlat</h2>
-            <input type="text" id="streamTitle" placeholder="Yayın Başlığı"
-                style="width:100%; padding:15px; border-radius:12px; border:none; background:#222; color:white; margin-bottom:10px; text-align:center;">
-            <select id="streamCategory"
-                style="width:100%; padding:15px; border-radius:12px; border:none; background:#222; color:white; margin-bottom:20px; -webkit-appearance: none; text-align:center;">
-                <option value="Genel">Kategori Seç</option>
-                <option value="Mezat">Mezat 🔨</option>
-                <option value="Sohbet">Sohbet 💬</option>
-                <option value="Oyun">Oyun 🎮</option>
-                <option value="Müzik">Müzik 🎵</option>
-            </select>
-            <select id="audioSource" style="display:none;"></select>
-            <button id="btn-start-broadcast" class="ui-element"
-                style="background:#34C759; color:white; border:none; padding:15px 40px; border-radius:30px; font-weight:bold; font-size:18px; width:100%;">Canlı
-                Yayına Geç</button>
+    <div class="screen">
+        <video id="preview" class="cinema-video" autoplay muted playsinline></video>
+
+        <div id="setup-layer" class="setup-overlay">
+            <div class="setup-box">
+                <h2>Yayını Hazırla 🎥</h2>
+                <div class="input-group-glass"><i class="fa-solid fa-pen"></i><input type="text" id="streamTitle"
+                        placeholder="Yayın Başlığı" autocomplete="off"></div>
+                <div class="input-group-glass"><i class="fa-solid fa-layer-group"></i><select id="streamCategory">
+                        <option value="Genel">Kategori Seç</option>
+                        <option value="Mezat">Mezat 🔨</option>
+                        <option value="Sohbet">Sohbet 💬</option>
+                        <option value="Oyun">Oyun 🎮</option>
+                        <option value="Müzik">Müzik 🎵</option>
+                    </select></div>
+                <div class="input-group-glass"><i class="fa-solid fa-microphone"></i><select id="audioSource"
+                        onchange="restartStream()"></select></div>
+                <button id="btn-start-broadcast" class="btn-go-live">YAYINI BAŞLAT 🚀</button>
+                <a href="/" class="btn-cancel-live">İptal</a>
+            </div>
         </div>
-        <a href="/"
-            style="position:absolute; top:20px; left:20px; color:white; text-decoration:none; font-size:24px;">✕</a>
-    </div>
-    {% endif %}
 
-    <div id="video-container">
-        {% if mode == 'watch' %}
-        <video id="video-{{ broadcaster.username }}" class="stream-item" data-username="{{ broadcaster.username }}"
-            autoplay playsinline webkit-playsinline style="width: 100%; height: 100%; object-fit: contain;"> </video>
-        <div class="tap-hint" onclick="unmuteVideo('{{ broadcaster.username }}')"
-            style="position:absolute; z-index:5; background:rgba(0,0,0,0.6); padding:10px 20px; border-radius:20px; cursor:pointer;">
-            <i class="fa-solid fa-volume-xmark"></i> Sesi Açmak İçin Dokun
-        </div>
-        {% endif %}
-    </div>
+        <div id="live-ui" class="ui-overlay" style="display: none;">
+            <div class="info-stack">
+                <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
+                <div class="info-pill"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
+                <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span id="screen-diamond-count">{{
+                        user.diamonds }}</span></div>
+            </div>
 
-    <div id="live-ui" class="ui-layer" {% if mode=='broadcast' %}style="display:none;" {% endif %}>
-
-        <div class="top-bar">
-            <div class="ui-element close-btn" onclick="window.location.href='/'">✕</div>
-
-            {% if mode == 'watch' and broadcaster %}
-            <div
-                style="display:flex; align-items:center; gap:10px; background:rgba(0,0,0,0.3); padding:5px 10px; border-radius:20px; backdrop-filter:blur(5px);">
-                <div
-                    style="width:30px; height:30px; background:linear-gradient(45deg, #34C759, #00d2ff); border-radius:50%; display:flex; align-items:center; justify-content:center; font-weight:bold; font-size:12px;">
-                    {{ broadcaster.username[0]|upper }}
+            <div class="top-bar-left">
+                <div class="price-board">
+                    <span class="label">GÜNCEL FİYAT</span>
+                    <div class="price-row"><span class="currency">₺</span><span id="current-price-display">0</span>
+                    </div>
+                    <div class="leader-row" id="leader-display-broadcast" style="display: none;"><i
+                            class="fa-solid fa-crown"></i> <span class="name">--</span></div>
                 </div>
-                <div>
-                    <div style="font-weight:bold; font-size:12px;">{{ broadcaster.username }}</div>
-                    <div class="ui-element" id="follow-btn-{{ broadcaster.username }}"
-                        onclick="toggleFollow('{{ broadcaster.username }}')"
-                        style="font-size:10px; color:#34C759; cursor:pointer;">
-                        {% if is_following %}✓ Takipte{% else %}+ Takip Et{% endif %}
+                <div class="brand-pill">CANLI <span id="cat-badge-display">Genel</span></div>
+            </div>
+
+            <div class="mid-section">
+                <div class="chat-zone">
+                    <div id="chat-feed-broadcast" class="chat-scroller"></div>
+                </div>
+                <div class="bid-zone">
+                    <div id="bid-feed-broadcast" class="bid-scroller"></div>
+                </div>
+            </div>
+
+            <div class="bottom-dock">
+                <div class="chat-input-bar">
+                    <input type="text" id="chat-input-broadcast" placeholder="Mesaj..." autocomplete="off">
+                    <button class="send-icon-btn" onclick="sendMsg('broadcast')"><i
+                            class="fa-solid fa-paper-plane"></i></button>
+                </div>
+                <div class="admin-controls">
+                    <button class="btn-glass" onclick="openResetModal()">🔄 Sıfırla</button>
+                    <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">🔨 Mezat</button>
+                    <button onclick="stopBroadcast()" class="btn-stop">BİTİR ⏹️</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="resetModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <h3>Sıfırla?</h3>
+            <div class="modal-actions"><button onclick="closeResetModal()" class="btn-cancel">İptal</button><button
+                    onclick="confirmReset()" class="btn-confirm-red">Evet</button></div>
+        </div>
+    </div>
+
+    {% else %}
+    <div class="feed-scroll">
+        {% for stream in streams %}
+        <div class="screen stream-item" data-username="{{ stream.username }}">
+            <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
+                poster="{{ stream.thumbnail }}"></video>
+            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;"><i
+                    class="fa-solid fa-volume-high"></i> Sesi Aç</div>
+
+            <div class="ui-overlay">
+                <div class="info-stack">
+                    <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
+                    <div class="info-pill"><i class="fa-solid fa-eye"></i> <span
+                            id="live-count-{{ stream.username }}">0</span></div>
+                    <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span>{{ user.diamonds }}</span>
+                    </div>
+                </div>
+
+                <div class="top-bar-left">
+                    <div class="price-board" id="price-board-{{ stream.username }}"
+                        style="display: {{ 'flex' if auction_active else 'none' }}">
+                        <span class="label">GÜNCEL</span>
+                        <div class="price-row"><span class="currency">₺</span><span id="price-{{ stream.username }}"
+                                class="amount">0</span></div>
+                        <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;"><i
+                                class="fa-solid fa-crown"></i> <span class="name">--</span></div>
+                    </div>
+
+                    <div class="streamer-pill">
+                        <div class="avatar-mini">{{ stream.username[0]|upper }}</div>
+                        <div class="name">{{ stream.username }}</div>
+                        <button class="follow-btn-mini {{ 'following' if is_following else '' }}"
+                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">{{ '+'
+                            if not is_following else '✓' }}</button>
+                    </div>
+                </div>
+
+                <div class="mid-section">
+                    <div class="chat-zone">
+                        <div id="chat-feed-{{ stream.username }}" class="chat-scroller"></div>
+                    </div>
+                    <div class="bid-zone">
+                        <div id="bid-feed-{{ stream.username }}" class="bid-scroller"></div>
+                    </div>
+                </div>
+
+                <div class="bottom-dock">
+                    <div class="bid-layer" id="bid-layer-{{ stream.username }}"
+                        style="display: {{ 'flex' if auction_active else 'none' }}">
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 50)">+50₺</button>
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 100)">+100₺</button>
+                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
+                        <div class="manual-bid-wrapper"><input type="number" id="manual-bid-{{ stream.username }}"
+                                placeholder="Tutar"><button onclick="sendManualBid('{{ stream.username }}')">OK</button>
+                        </div>
+                    </div>
+                    <div class="chat-input-bar">
+                        <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum..."
+                            autocomplete="off">
+                        <button class="gift-btn" onclick="openGiftMenu('{{ stream.username }}')">🎁</button>
+                        <button class="send-icon-btn" onclick="sendMsg('{{ stream.username }}')"><i
+                                class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>
-            {% endif %}
-
-            <div style="display:flex; gap:10px;">
-                <div class="live-tag">CANLI</div>
-                <div class="viewer-count"><i class="fa-solid fa-eye"></i> <span
-                        id="live-count-{{ broadcaster.username if broadcaster else 'broadcast' }}">0</span></div>
-            </div>
         </div>
+        {% else %}
+        {% endfor %}
+    </div>
+    {% endif %}
 
-        <div id="price-board-{{ broadcaster.username if broadcaster else 'broadcast' }}" class="auction-overlay" {% if
-            not auction_active %}style="display:none;" {% endif %}>
-            <div style="font-size:10px; color:#aaa; margin-bottom:2px;">GÜNCEL FİYAT</div>
-            <div class="price-tag">₺<span id="current-price-display">0</span></div>
-            <div id="leader-display-{{ broadcaster.username if broadcaster else 'broadcast' }}" class="leader-tag"
-                style="display:none;">
-                Lider: <span class="name">...</span>
-            </div>
+    <div id="giftMenu" class="gift-sheet" style="display:none;">
+        <div class="sheet-header">
+            <div class="sheet-title">Bakiye: <span id="menu-diamond-count" style="color:#00d2ff;">{{ user.diamonds
+                    }}</span> 💎</div>
+            <div class="sheet-close" onclick="closeGiftMenu()"><i class="fa-solid fa-xmark"></i></div>
         </div>
-
-        <div class="right-menu">
-            {% if mode == 'watch' %}
-            <div class="ui-element action-btn gift-btn" onclick="openGiftMenu('{{ broadcaster.username }}')">🎁</div>
-            <div id="bid-layer-{{ broadcaster.username }}" class="ui-element action-btn"
-                style="background:#34C759; {% if not auction_active %}display:none;{% endif %}"
-                onclick="sendBid('{{ broadcaster.username }}', 100)">+100</div>
-            {% else %}
-            <div class="ui-element action-btn" id="btn-auction-toggle" onclick="toggleAuction()"
-                style="width:auto; padding:0 15px; border-radius:20px; font-size:14px;">
-                {% if auction_active %}🚫 Kapat{% else %}🔨 Mezat{% endif %}
+        <div class="gift-grid">
+            <div class="gift-item" onclick="sendGift('rose')">
+                <div class="gift-icon">🌹</div>
+                <div class="gift-name">Gül (10)</div>
             </div>
-            <div class="ui-element action-btn" onclick="openResetModal()">↺</div>
-            <div class="ui-element action-btn" onclick="stopBroadcast()" style="background:red;">■</div>
-            {% endif %}
-        </div>
-
-        <div class="bottom-area">
-            <div class="chat-container" id="chat-feed-{{ broadcaster.username if broadcaster else 'broadcast' }}"></div>
-
-            <div class="input-bar ui-element">
-                <input type="text" class="chat-input"
-                    id="chat-input-{{ broadcaster.username if broadcaster else 'broadcast' }}"
-                    placeholder="Mesaj yaz...">
-                <button class="send-btn"
-                    onclick="sendMsg('{{ broadcaster.username if broadcaster else 'broadcast' }}')">➤</button>
+            <div class="gift-item" onclick="sendGift('heart')">
+                <div class="gift-icon">❤️</div>
+                <div class="gift-name">Kalp (50)</div>
+            </div>
+            <div class="gift-item" onclick="sendGift('car')">
+                <div class="gift-icon">🏎️</div>
+                <div class="gift-name">Araba (500)</div>
+            </div>
+            <div class="gift-item" onclick="sendGift('rocket')">
+                <div class="gift-icon">🚀</div>
+                <div class="gift-name">Roket (5000)</div>
             </div>
         </div>
     </div>
+</div>
 
-    <div id="giftMenu" class="modal-overlay" onclick="if(event.target===this) closeGiftMenu()">
-        <div class="modal-box">
-            <h3>Hediye Gönder 🎁</h3>
-            <div class="info-pill diamond" style="justify-content:center; margin-bottom:15px; color:#00d2ff;">
-                💎 <span id="menu-diamond-count">{{ user.diamonds }}</span> Elmasın Var
-            </div>
-            <div class="modal-grid">
-                <div class="gift-item" onclick="sendGift('rose')"><span class="gift-icon">🌹</span>
-                    <div class="gift-price">10 💎</div>
-                </div>
-                <div class="gift-item" onclick="sendGift('heart')"><span class="gift-icon">❤️</span>
-                    <div class="gift-price">50 💎</div>
-                </div>
-                <div class="gift-item" onclick="sendGift('car')"><span class="gift-icon">🏎️</span>
-                    <div class="gift-price">500 💎</div>
-                </div>
-                <div class="gift-item" onclick="sendGift('rocket')"><span class="gift-icon">🚀</span>
-                    <div class="gift-price">5000 💎</div>
-                </div>
-            </div>
-        </div>
-    </div>
+<script>
+    window.TEQLIF_CONFIG = {
+        mode: "{{ mode }}",
+        username: "{{ user.username if user else 'anon' }}",
+        auctionActive: {{ 'true' if auction_active else 'false' }},
+    broadcaster: "{{ broadcaster.username if broadcaster else '' }}" 
+    };
+</script>
+<script src="/static/js/live.js?v=305"></script>
 
-    <div id="resetModal" class="modal-overlay">
-        <div class="modal-box">
-            <h3>Fiyatı Sıfırla?</h3>
-            <p style="color:#aaa; font-size:13px; margin-bottom:20px;">Mevcut teklifler silinecek ve fiyat 0 TL olacak.
-            </p>
-            <div style="display:flex; gap:10px;">
-                <button class="ui-element" onclick="confirmReset()"
-                    style="flex:1; padding:10px; background:red; border:none; border-radius:8px; color:white;">Sıfırla</button>
-                <button class="ui-element" onclick="closeResetModal()"
-                    style="flex:1; padding:10px; background:#333; border:none; border-radius:8px; color:white;">İptal</button>
-            </div>
-        </div>
-    </div>
+<style>
+    /* --- BİLGİ BLOĞU (Videonun İçinde) --- */
+    .info-stack {
+        position: absolute;
+        /* Fixed yerine Absolute yaptık! */
+        top: 15px;
+        right: 15px;
+        z-index: 200;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 8px;
+    }
 
-    <div id="gift-animation-layer"
-        style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none; overflow:hidden;"></div>
+    .icon-btn-glass {
+        width: 32px;
+        height: 32px;
+        background: rgba(0, 0, 0, 0.4);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        text-decoration: none;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
 
-    <script src="/static/js/live.js?v=306"></script>
-</body>
+    .info-pill {
+        background: rgba(0, 0, 0, 0.5);
+        backdrop-filter: blur(10px);
+        padding: 4px 10px;
+        border-radius: 15px;
+        color: white;
+        font-size: 11px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
 
-</html>
+    .info-pill.diamond {
+        background: rgba(0, 40, 80, 0.6);
+        border-color: rgba(0, 210, 255, 0.4);
+    }
+
+    .info-pill.diamond i {
+        color: #00d2ff;
+    }
+
+    /* --- SOL ÜST --- */
+    .top-bar-left {
+        position: absolute;
+        top: 15px;
+        left: 15px;
+        z-index: 100;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: flex-start;
+        pointer-events: auto;
+    }
+
+    .price-board {
+        background: rgba(20, 20, 20, 0.9);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        padding: 8px 12px;
+        border-radius: 16px;
+        min-width: 100px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+    }
+
+    .price-board .label {
+        font-size: 9px;
+        color: #aaa;
+        font-weight: 700;
+        display: block;
+        margin-bottom: 2px;
+    }
+
+    .price-board .price-row {
+        display: flex;
+        align-items: flex-end;
+        line-height: 1;
+    }
+
+    .price-board .currency {
+        font-size: 14px;
+        color: #34C759;
+        font-weight: 700;
+        margin-right: 2px;
+        margin-bottom: 3px;
+    }
+
+    .price-board .amount {
+        font-size: 24px;
+        font-weight: 800;
+        color: white;
+    }
+
+    .leader-row {
+        font-size: 10px;
+        color: #FFD700;
+        margin-top: 4px;
+        padding-top: 4px;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .brand-pill {
+        background: #ff3b30;
+        color: white;
+        padding: 4px 8px;
+        border-radius: 8px;
+        font-size: 10px;
+        font-weight: 900;
+    }
+
+    .streamer-pill {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        background: rgba(0, 0, 0, 0.5);
+        padding: 4px;
+        padding-right: 10px;
+        border-radius: 20px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .avatar-mini {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: linear-gradient(45deg, #34C759, #00d2ff);
+        color: black;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 10px;
+        font-weight: bold;
+    }
+
+    .streamer-pill .name {
+        font-size: 11px;
+        font-weight: 700;
+        color: white;
+    }
+
+    .follow-btn-mini {
+        background: #34C759;
+        border: none;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        color: black;
+        font-weight: bold;
+        font-size: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+    }
+
+    .follow-btn-mini.following {
+        background: transparent;
+        border: 1px solid white;
+        color: white;
+        font-size: 10px;
+    }
+
+    /* SETUP EKRANI */
+    .setup-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 2000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        backdrop-filter: blur(5px);
+    }
+
+    .setup-box {
+        width: 85%;
+        max-width: 350px;
+        background: rgba(30, 30, 30, 0.95);
+        padding: 30px;
+        border-radius: 20px;
+        text-align: center;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .input-group-glass {
+        display: flex;
+        align-items: center;
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        padding: 10px;
+        margin-bottom: 15px;
+    }
+
+    .input-group-glass input,
+    .input-group-glass select {
+        background: transparent;
+        border: none;
+        color: white;
+        flex: 1;
+        outline: none;
+    }
+
+    .btn-go-live {
+        width: 100%;
+        background: #34C759;
+        color: black;
+        padding: 12px;
+        border-radius: 12px;
+        font-weight: 800;
+        border: none;
+        margin-top: 10px;
+    }
+
+    .btn-cancel-live {
+        display: block;
+        margin-top: 15px;
+        color: #888;
+        text-decoration: none;
+        font-size: 13px;
+    }
+</style>
+{% endblock %}
