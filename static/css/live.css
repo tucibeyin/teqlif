@@ -59,7 +59,6 @@ body {
     background: #000;
 }
 
-/* 🔥 GÖRÜNTÜ AYARI: CONTAIN (Sığdır - Kesme Yapmaz) 🔥 */
 .cinema-video {
     position: absolute !important;
     top: 0;
@@ -67,7 +66,6 @@ body {
     width: 100% !important;
     height: 100% !important;
     object-fit: contain !important;
-    /* Görüntüyü ekrana sığdırır */
     z-index: 0;
     background: #000;
 }
@@ -97,7 +95,7 @@ body {
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 15%, transparent 85%, rgba(0, 0, 0, 0.8) 100%);
 }
 
-/* --- SOL ÜST KÖŞE (Profil -> Altında Fiyat) --- */
+/* --- SOL ÜST KÖŞE --- */
 .top-bar-left {
     position: absolute;
     top: 15px;
@@ -105,10 +103,8 @@ body {
     z-index: 100;
     display: flex;
     flex-direction: column;
-    /* Alt alta diz */
     align-items: flex-start;
     gap: 8px;
-    /* Öğeler arası boşluk */
     pointer-events: none;
 }
 
@@ -116,7 +112,6 @@ body {
     pointer-events: auto;
 }
 
-/* Yayıncı Profili */
 .streamer-pill {
     display: flex;
     align-items: center;
@@ -171,7 +166,6 @@ body {
     font-size: 10px;
 }
 
-/* Canlı Etiketi */
 .brand-pill {
     background: #ff3b30;
     color: white;
@@ -183,7 +177,6 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* Fiyat Tabelası (Dikey Düzen) */
 .price-board {
     background: rgba(20, 20, 20, 0.85);
     backdrop-filter: blur(10px);
@@ -193,7 +186,6 @@ body {
     min-width: 110px;
     display: flex;
     flex-direction: column !important;
-    /* Kesinlikle alt alta */
     gap: 4px;
     box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
 }
@@ -227,7 +219,6 @@ body {
     color: white;
 }
 
-/* Lider Satırı - Fiyatın hemen altında */
 .leader-row {
     font-size: 11px;
     color: var(--gold);
@@ -251,23 +242,31 @@ body {
     max-width: 90px;
 }
 
-/* --- SAĞ ÜST KÖŞE (İzleyici, Elmas, Kapat) --- */
+/* --- 🔥 SAĞ ÜST KÖŞE (YENİ DÜZEN) 🔥 --- */
 .header-right {
     position: absolute;
     top: 15px;
     right: 15px;
-    z-index: 200;
-    /* Solun üstüne çıkmasın ama tıklanabilir olsun */
+    z-index: 100;
     display: flex;
     flex-direction: column;
-    /* Mobilde yer kazanmak için dikey olabilir, şimdilik yatay kalsın ya da dikey yapalım */
+    /* Dikey Sıralama */
     align-items: flex-end;
+    /* Sağa Yasla */
     gap: 8px;
     pointer-events: none;
 }
 
 .header-right>* {
     pointer-events: auto;
+}
+
+/* İzleyici ve Kapat Butonu (Yan Yana) */
+.header-row-top {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 8px;
 }
 
 .info-pill {
@@ -313,7 +312,7 @@ body {
     background: rgba(255, 255, 255, 0.2);
 }
 
-/* --- ORTA VE ALT KISIMLAR (KORUNDU) --- */
+/* --- ORTA VE ALT KISIMLAR --- */
 .mid-section {
     flex: 1;
     display: flex;

@@ -3,7 +3,7 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<link rel="stylesheet" href="/static/css/live.css?v=311">
+<link rel="stylesheet" href="/static/css/live.css?v=313">
 
 <style>
     .cinema-video {
@@ -13,10 +13,8 @@
         height: 100%;
     }
 
-    /* GİZLİ CANVAS (Yayın motoru burada çalışacak) */
     #broadcast-canvas {
         display: none;
-        /* Kullanıcı görmez, arkada çalışır */
     }
 
     /* MODAL STİLLERİ */
@@ -112,7 +110,6 @@
         margin-top: 5px;
     }
 
-    /* Kamera Değiştir Butonu */
     .btn-switch-cam {
         position: absolute;
         top: 20px;
@@ -139,17 +136,11 @@
     <div class="screen" style="position: relative; height: 100vh; overflow: hidden;">
 
         <video id="preview" autoplay muted playsinline
-            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transform: scaleX(-1);">
-        </video>
-
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transform: scaleX(-1);"></video>
         <canvas id="broadcast-canvas" width="720" height="1280"></canvas>
 
         <div id="setup-layer" class="setup-overlay">
-
-            <div class="btn-switch-cam" onclick="switchCamera()">
-                <i class="fa-solid fa-camera-rotate"></i>
-            </div>
-
+            <div class="btn-switch-cam" onclick="switchCamera()"><i class="fa-solid fa-camera-rotate"></i></div>
             <div class="setup-box">
                 <h2 style="margin-bottom:20px; color: white;">Yayını Hazırla 🎥</h2>
                 <div class="input-group-glass"><i class="fa-solid fa-pen"></i><input type="text" id="streamTitle"
@@ -182,10 +173,13 @@
             </div>
 
             <div class="header-right">
+                <div class="header-row-top">
+                    <div class="info-pill"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span>
+                    </div>
+                    <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
+                </div>
                 <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span id="screen-diamond-count">{{
                         user.diamonds }}</span></div>
-                <div class="info-pill"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
-                <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
             </div>
 
             <div style="position: absolute; right: 15px; top: 120px; z-index: 100;">
@@ -275,11 +269,13 @@
                 </div>
 
                 <div class="header-right">
+                    <div class="header-row-top">
+                        <div class="info-pill"><i class="fa-solid fa-eye"></i> <span
+                                id="live-count-{{ stream.username }}">0</span></div>
+                        <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
+                    </div>
                     <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span>{{ user.diamonds }}</span>
                     </div>
-                    <div class="info-pill"><i class="fa-solid fa-eye"></i> <span
-                            id="live-count-{{ stream.username }}">0</span></div>
-                    <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
                 </div>
 
                 <div class="mid-section">
@@ -348,5 +344,5 @@
 <script>
     window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}", auctionActive: {{ 'true' if auction_active else 'false' }}, broadcaster: "{{ broadcaster.username if broadcaster else '' }}" };
 </script>
-<script src="/static/js/live.js?v=312"></script>
+<script src="/static/js/live.js?v=313"></script>
 {% endblock %}
