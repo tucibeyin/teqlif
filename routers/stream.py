@@ -66,8 +66,9 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- YARDIMCI ---
+# --- YARDIMCI: TEMİZLİK ---
 def cleanup_stream(username: str, db: Session):
+    # 1. Veritabanını Temizle
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
@@ -75,11 +76,18 @@ def cleanup_stream(username: str, db: Session):
             user.current_price = 0; user.highest_bidder = None
             db.commit()
     except: pass
+    
+    # 2. FFmpeg İşlemini Öldür
     if username in active_processes:
         proc = active_processes[username]
         try: proc.terminate(); proc.wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
+
+    # 3. 🔥 DOSYALARI SİL (Anasayfadan ve Diskten Uçur) 🔥
+    try:
+        shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
+    except: pass
 
 def write_to_ffmpeg(process, data):
     try:
@@ -235,24 +243,19 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (ULTRA FAST): {user.username}")
+    print(f"🎥 YAYIN (ULTRA FAST & AUTO-CLEAN): {user.username}")
 
-    # 🔥 HIZLANDIRILMIŞ FFMPEG AYARLARI 🔥
-    # -r 30: Kare hızını 30 FPS'e sabitle (Stabilite)
-    # -g 30: Keyframe her 1 saniyede bir (Latency için kritik!)
-    # -hls_list_size 3: Listede sadece son 3 saniye kalsın
+    # 🔥 FFMPEG AYARLARI (Gecikme 3-4 sn) 🔥
     command = [
-        "ffmpeg", "-f", "webm", 
-        "-analyzeduration", "2000000", "-probesize", "2000000", # Hızlı analiz
+        "ffmpeg", "-f", "webm", "-analyzeduration", "5000000", "-probesize", "5000000", 
         "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
-        
         "-filter_complex", 
         "[0:v]split=4[v720][v480][v360][v240];[v720]scale=-2:720[out720];[v480]scale=-2:480[out480];[v360]scale=-2:360[out360];[v240]scale=-2:240[out240]",
         
-        "-r", "30", # 🔥 FPS SABİTLEME
+        "-r", "30", # 🔥 FPS Sabitleme
         "-preset", "ultrafast", "-tune", "zerolatency", 
         "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "30", # 🔥 KEYFRAME HER 1 SANİYEDE (Kritik)
+        "-g", "30", # 🔥 KEYFRAME 1 Saniye (Kritik)
         "-pix_fmt", "yuv420p",
 
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",

@@ -172,10 +172,10 @@ document.addEventListener('DOMContentLoaded', () => {
         const hlsConfig = {
             enableWorker: true,
             lowLatencyMode: true,
-            backBufferLength: 0,
-            liveSyncDurationCount: 1.5,
-            liveMaxLatencyDurationCount: 3,
-            maxBufferLength: 2,
+            backBufferLength: 0, // Eski segmentleri hemen sil
+            liveSyncDurationCount: 1.5, // Canlının 1.5 sn gerisinden gel (Aşırı Agresif)
+            liveMaxLatencyDurationCount: 3, // Eğer 3 sn geride kalırsa atla
+            maxBufferLength: 2, // Sadece 2 sn tamponla
             maxMaxBufferLength: 3,
             enableSoftwareAES: false,
             fragLoadingTimeOut: 10000,
