@@ -8,6 +8,8 @@
     /* Altın Sarısı */
     --diamond: #00d2ff;
     /* Elmas Mavisi */
+    --danger: #ff3b30;
+    /* Kırmızı (Ban/Stop) */
     --chat-bg: rgba(0, 0, 0, 0.6);
     --glass-border: 1px solid rgba(255, 255, 255, 0.15);
 }
@@ -26,7 +28,6 @@ body {
     font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
     width: 100vw;
     height: 100dvh;
-    /* Mobil tarayıcılar için dinamik yükseklik */
     overflow: hidden;
 }
 
@@ -34,14 +35,13 @@ body {
     width: 100%;
     height: 100%;
     max-width: 500px;
-    /* Tablet/PC'de çok yayılmasın */
     margin: 0 auto;
     position: relative;
     background: #000;
 }
 
 /* =========================================
-   2. EKRAN VE VİDEO YERLEŞİMİ (FIXED)
+   2. EKRAN VE VİDEO YERLEŞİMİ (CROP FIX)
    ========================================= */
 .feed-scroll {
     width: 100%;
@@ -59,25 +59,27 @@ body {
     background: #000;
 }
 
-/* Video arka planda sabit, asla UI'dan etkilenmez */
+/* 🔥 GÖRÜNTÜ AYARI: CONTAIN (Sığdır) 🔥 */
 .cinema-video {
     position: absolute !important;
     top: 0;
     left: 0;
     width: 100% !important;
     height: 100% !important;
-    object-fit: cover !important;
-    /* Ekranı doldur, boşluk bırakma */
+    object-fit: contain !important;
+    /* Görüntüyü kesme, sığdır */
     z-index: 0;
+    background: #000;
 }
 
 #preview {
     transform: scaleX(-1);
-    /* Ayna modu */
+    object-fit: cover !important;
+    /* Önizleme tam ekran olsun */
 }
 
 /* =========================================
-   3. UI KATMANI (ARAYÜZ)
+   3. ARAYÜZ (UI) KATMANLARI
    ========================================= */
 .ui-overlay {
     position: absolute !important;
@@ -89,157 +91,198 @@ body {
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-
-    /* ÖNEMLİ: Katman tıklamayı engeller, ama içindeki butonlar (auto) aktiftir */
     pointer-events: none;
-
-    /* Alt boşluk sadece güvenli alan kadar */
+    /* Tıklamalar videoya geçsin */
     padding-top: max(10px, env(safe-area-inset-top));
     padding-bottom: env(safe-area-inset-bottom);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 15%, transparent 85%, rgba(0, 0, 0, 0.8) 100%);
 }
 
-/* =========================================
-   4. ÜST BAR (TOP BAR)
-   ========================================= */
-.top-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    padding: 10px 15px;
-    pointer-events: auto !important;
-    /* Tıklanabilir */
+/* --- SOL ÜST BİLGİLER (Fiyat, Lider) --- */
+.top-bar-left {
+    position: absolute;
+    top: 15px;
+    left: 15px;
     z-index: 100;
-}
-
-.header-left,
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-}
-
-.header-left {
-    align-items: flex-start;
-}
-
-/* Fiyat Tabelası */
-.price-board {
-    background: rgba(30, 30, 30, 0.85);
-    backdrop-filter: blur(12px);
-    border: var(--glass-border);
-    padding: 6px 12px;
-    border-radius: 14px;
     display: flex;
     flex-direction: column;
-    min-width: 90px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+    gap: 8px;
+    align-items: flex-start;
+    pointer-events: none;
+}
+
+.top-bar-left>* {
+    pointer-events: auto;
+}
+
+.price-board {
+    background: rgba(20, 20, 20, 0.85);
+    backdrop-filter: blur(10px);
+    border: var(--glass-border);
+    padding: 8px 12px;
+    border-radius: 16px;
+    min-width: 100px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
 }
 
 .price-board .label {
     font-size: 9px;
-    opacity: 0.7;
+    color: #aaa;
     font-weight: 700;
-    letter-spacing: 0.5px;
+    display: block;
+    margin-bottom: 2px;
 }
 
 .price-board .price-row {
     display: flex;
-    align-items: baseline;
-}
-
-.price-board .amount {
-    font-size: 20px;
-    font-weight: 800;
-    line-height: 1.1;
+    align-items: flex-end;
+    line-height: 1;
 }
 
 .price-board .currency {
+    font-size: 14px;
     color: var(--accent);
     font-weight: 700;
     margin-right: 2px;
-    font-size: 14px;
+    margin-bottom: 3px;
 }
 
-/* Lider Satırı */
+.price-board .amount {
+    font-size: 24px;
+    font-weight: 800;
+    color: white;
+}
+
 .leader-row {
+    font-size: 10px;
+    color: var(--gold);
     margin-top: 4px;
     padding-top: 4px;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 11px;
-    color: var(--gold);
-    font-weight: 700;
-    animation: slideInUp 0.3s ease-out;
+    gap: 4px;
 }
 
-.leader-row i {
+.brand-pill {
+    background: #ff3b30;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 8px;
+    font-size: 10px;
+    font-weight: 900;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+}
+
+.streamer-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(0, 0, 0, 0.5);
+    padding: 4px;
+    padding-right: 10px;
+    border-radius: 20px;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.avatar-mini {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(45deg, var(--accent), var(--diamond));
+    color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+}
+
+.streamer-pill .name {
+    font-size: 11px;
+    font-weight: 700;
+    color: white;
+}
+
+.follow-btn-mini {
+    background: var(--accent);
+    border: none;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    color: black;
+    font-weight: bold;
+    font-size: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+}
+
+.follow-btn-mini.following {
+    background: transparent;
+    border: 1px solid white;
+    color: white;
     font-size: 10px;
 }
 
-.leader-row .name {
-    color: #fff;
-    max-width: 80px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+/* --- SAĞ ÜST BİLGİLER (Kapat, İzleyici, Elmas) --- */
+.info-stack {
+    position: absolute;
+    top: 15px;
+    right: 15px;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    pointer-events: none;
 }
 
-/* Marka ve İzleyici Hapı */
-.brand {
-    font-weight: 800;
-    font-size: 18px;
-    text-shadow: 0 1px 2px black;
+.info-stack>* {
+    pointer-events: auto;
 }
 
-.badge {
-    font-size: 9px;
-    background: #ff3b30;
-    padding: 2px 5px;
-    border-radius: 4px;
-    vertical-align: middle;
-    margin-left: 5px;
-}
-
-.viewer-pill {
-    background: rgba(0, 0, 0, 0.7) !important;
-    color: white !important;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    z-index: 101;
-    /* En üstte */
-}
-
-.close-btn {
+.icon-btn-glass {
+    width: 32px;
+    height: 32px;
+    background: rgba(0, 0, 0, 0.4);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     color: white;
-    font-size: 22px;
-    text-shadow: 0 1px 2px black;
-    pointer-events: auto;
+    text-decoration: none;
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-/* Takip Butonu */
-.follow-btn {
-    background: var(--accent);
-    color: black;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 20px;
+.info-pill {
+    background: rgba(0, 0, 0, 0.5);
+    backdrop-filter: blur(10px);
+    padding: 4px 10px;
+    border-radius: 15px;
+    color: white;
+    font-size: 11px;
     font-weight: 700;
-    font-size: 12px;
-    cursor: pointer;
-    transition: all 0.3s;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
-.follow-btn.following {
-    background: transparent;
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    color: #ddd;
+.info-pill.diamond {
+    background: rgba(0, 40, 80, 0.6);
+    border-color: rgba(0, 210, 255, 0.4);
+}
+
+.info-pill.diamond i {
+    color: var(--diamond);
 }
 
 /* =========================================
-   5. ORTA ALAN (SOHBET & TEKLİFLER)
+   4. ORTA ALAN (SOHBET & TEKLİFLER)
    ========================================= */
 .mid-section {
     flex: 1;
@@ -248,20 +291,18 @@ body {
     align-items: flex-end;
     justify-content: space-between;
     width: 100%;
-    padding-bottom: 0px;
+    padding-bottom: 5px;
     pointer-events: none;
-    /* Arka plandaki videoya tıklanabilsin */
 }
 
 .chat-zone {
-    width: 65%;
-    max-height: 35vh;
+    width: 70%;
+    max-height: 40vh;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
     padding-left: 15px;
     pointer-events: auto !important;
-    /* Sohbeti kaydırmak için */
     mask-image: linear-gradient(to top, black 80%, transparent 100%);
     -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
 }
@@ -281,41 +322,27 @@ body {
     border-radius: 12px;
     border-bottom-left-radius: 2px;
     font-size: 13px;
-
-    /* Genişlik Ayarları */
     width: fit-content;
-    /* İçerik kadar genişle */
-    max-width: 85%;
-    /* Ama ekranın %85'ini geçme */
-
-    /* Metin Kaydırma (Çok Önemli) */
+    max-width: 90%;
     white-space: normal;
-    /* Alt satıra geçmeye izin ver */
     word-wrap: break-word;
-    /* Uzun kelimeleri kır */
-    word-break: break-word;
-    /* Uzun kelimeleri kır (Alternatif) */
     line-height: 1.4;
-    /* Satır aralığını aç */
-
     text-shadow: 0 1px 1px black;
     border: 1px solid rgba(255, 255, 255, 0.15);
     margin-bottom: 4px;
-
-    /* Giriş Animasyonu */
     animation: slideInUp 0.3s ease-out forwards;
-    transform-origin: bottom left;
 }
 
 .msg b {
-    color: #f1c40f;
+    color: var(--gold);
     margin-right: 4px;
     font-weight: 700;
+    cursor: pointer;
 }
 
 .bid-zone {
-    width: 30%;
-    max-height: 35vh;
+    width: 25%;
+    max-height: 40vh;
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
@@ -345,12 +372,6 @@ body {
     text-align: right;
     border: 1px solid rgba(255, 255, 255, 0.4);
     margin-bottom: 4px;
-
-    /* Genişlik ve Kaydırma */
-    max-width: 85%;
-    white-space: normal;
-    word-wrap: break-word;
-
     animation: slideInRight 0.3s ease-out forwards;
 }
 
@@ -359,7 +380,7 @@ body {
 }
 
 /* =========================================
-   6. ALT KISIM (FOOTER / DOCK)
+   5. ALT KISIM (DOCK & GİRİŞ)
    ========================================= */
 .bottom-dock {
     width: 100%;
@@ -367,18 +388,10 @@ body {
     flex-direction: column;
     gap: 8px;
     pointer-events: auto !important;
-    /* Butonlara basılabilsin */
     padding: 10px 10px 5px 10px;
     z-index: 60;
-
-    /* Yumuşak geçişli arka plan */
-    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 60%, transparent 100%);
-
-    /* Footer'a yapışık */
-    margin-bottom: 0 !important;
 }
 
-/* Teklif Butonları (Kaydırılabilir) */
 .bid-layer {
     display: flex;
     gap: 6px;
@@ -386,7 +399,6 @@ body {
     padding-bottom: 2px;
     align-items: center;
     scrollbar-width: none;
-    pointer-events: auto;
 }
 
 .bid-layer::-webkit-scrollbar {
@@ -405,7 +417,6 @@ body {
     flex-shrink: 0;
 }
 
-/* Manuel Teklif */
 .manual-bid-wrapper {
     display: flex;
     gap: 4px;
@@ -433,7 +444,6 @@ body {
     font-size: 11px;
 }
 
-/* Sohbet Giriş Alanı */
 .chat-input-bar {
     display: flex;
     gap: 8px;
@@ -443,8 +453,6 @@ body {
     border-radius: 20px;
     padding: 6px 6px 6px 12px;
     border: 1px solid rgba(255, 255, 255, 0.15);
-    margin-bottom: 0 !important;
-    pointer-events: auto !important;
 }
 
 .chat-input-bar input {
@@ -466,10 +474,8 @@ body {
     justify-content: center;
     color: black;
     font-size: 13px;
-    pointer-events: auto;
 }
 
-/* Hediye Butonu */
 .gift-btn {
     width: 35px;
     height: 35px;
@@ -483,35 +489,21 @@ body {
     cursor: pointer;
     margin: 0 5px;
     transition: transform 0.2s;
-    pointer-events: auto !important;
 }
 
 .gift-btn:active {
     transform: scale(0.9);
 }
 
-/* Yönetici Kontrolleri */
 .admin-controls {
     display: flex;
     justify-content: center;
     gap: 8px;
     align-items: center;
-    pointer-events: auto !important;
-}
-
-.btn-start {
-    background: white;
-    color: black;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 15px;
-    font-weight: 800;
-    font-size: 11px;
-    cursor: pointer;
 }
 
 .btn-stop {
-    background: red;
+    background: var(--danger);
     color: white;
     border: none;
     padding: 8px 15px;
@@ -532,167 +524,73 @@ body {
     cursor: pointer;
 }
 
-/* Ses Seçimi */
-.select-wrapper {
-    position: relative;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 15px;
-    display: flex;
-    align-items: center;
-    padding: 0 8px;
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    pointer-events: auto;
-    z-index: 101;
-}
-
-.select-wrapper i {
-    color: #aaa;
-    font-size: 10px;
-}
-
-.select-wrapper select {
-    background: transparent;
-    border: none;
-    color: white;
-    padding: 6px 4px;
-    font-size: 10px;
-    outline: none;
-    width: 80px;
-}
-
-.select-wrapper select option {
-    background: #222;
-    color: white;
-}
-
 /* =========================================
-   7. ELMAS VE HEDİYE SİSTEMİ (ÖZEL)
+   6. SETUP EKRANI & MODALLAR
    ========================================= */
-
-/* Sağ Üst Sabit Bakiye */
-.diamond-pill {
-    position: fixed;
-    top: 100px;
-    /* 60px'den 100px'e indirdik (Üst bardan uzaklaştı) */
-    left: 15px;
-    /* Sağdan sola aldık (Kapat butonu ve izleyici sayısından kaçtı) */
-    right: auto;
-    /* Sağ yaslamayı iptal et */
-
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(0, 210, 255, 0.4);
-    padding: 5px 12px;
-    border-radius: 20px;
-    color: white;
-    font-size: 13px;
-    font-weight: 800;
-    z-index: 90;
-    /* Top bar'ın (z-index 100) altında kalsın */
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-}
-
-.diamond-pill i {
-    color: var(--diamond);
-}
-
-/* Hediye Menüsü (Bottom Sheet) */
-.gift-sheet {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: rgba(20, 20, 20, 0.95);
-    backdrop-filter: blur(15px);
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    z-index: 300;
-    padding: 15px;
-    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    animation: slideUp 0.3s ease-out;
-    pointer-events: auto;
-}
-
-.gift-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-}
-
-.gift-item {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    padding: 10px 5px;
-    text-align: center;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.2s;
-}
-
-.gift-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--accent);
-}
-
-.gift-icon {
-    font-size: 30px;
-    margin-bottom: 5px;
-}
-
-.gift-name {
-    font-size: 10px;
-    color: #ccc;
-}
-
-.gift-price {
-    font-size: 11px;
-    color: var(--diamond);
-    font-weight: bold;
-    margin-top: 2px;
-}
-
-/* Animasyon Katmanı */
-#gift-animation-layer {
+.setup-overlay {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
-    pointer-events: none;
-    z-index: 150;
-    overflow: hidden;
-}
-
-/* Uçan Hediye Animasyonu (SOL TARAFA ALINDI) */
-.flying-gift {
-    position: absolute;
-    bottom: 120px;
-    left: 20px;
-    font-size: 60px;
-    animation: flyUp 3s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
-    text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 2000;
     display: flex;
-    flex-direction: column;
     align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(5px);
 }
 
-.gift-sender-label {
-    font-size: 14px;
-    background: rgba(255, 193, 7, 0.9);
+.setup-box {
+    width: 85%;
+    max-width: 350px;
+    background: #1c1c1e;
+    padding: 30px;
+    border-radius: 20px;
+    text-align: center;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+}
+
+.input-group-glass {
+    display: flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 10px;
+    margin-bottom: 15px;
+}
+
+.input-group-glass input,
+.input-group-glass select {
+    background: transparent;
+    border: none;
+    color: white;
+    flex: 1;
+    outline: none;
+}
+
+.btn-go-live {
+    width: 100%;
+    background: var(--accent);
     color: black;
-    padding: 2px 8px;
-    border-radius: 10px;
-    margin-top: 5px;
+    padding: 12px;
+    border-radius: 12px;
     font-weight: 800;
-    white-space: nowrap;
+    border: none;
+    margin-top: 10px;
+    font-size: 16px;
 }
 
-/* =========================================
-   8. MODALLAR VE DİĞERLERİ
-   ========================================= */
+.btn-cancel-live {
+    display: block;
+    margin-top: 15px;
+    color: #888;
+    text-decoration: none;
+    font-size: 13px;
+}
+
+/* --- MODAL (Hediye & Moderasyon) --- */
 .modal-overlay {
     position: fixed;
     top: 0;
@@ -738,7 +636,7 @@ body {
 }
 
 .btn-confirm-red {
-    background: #e74c3c;
+    background: var(--danger);
     border: none;
     color: white;
     padding: 10px 20px;
@@ -747,30 +645,103 @@ body {
     font-weight: bold;
 }
 
-.tap-hint {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.6);
+/* 🔥 MODERASYON BUTONLARI (EKSİK OLAN KISIM) 🔥 */
+.mod-btn {
+    width: 100%;
+    padding: 14px;
+    margin-bottom: 8px;
+    border-radius: 10px;
+    border: none;
     color: white;
-    padding: 12px 24px;
-    border-radius: 30px;
-    pointer-events: auto;
-}
-
-.empty-state {
+    font-weight: bold;
+    font-size: 14px;
+    cursor: pointer;
     display: flex;
-    flex-direction: column;
     align-items: center;
     justify-content: center;
-    height: 100%;
-    color: #888;
-    gap: 20px;
+    gap: 10px;
+    transition: transform 0.1s;
+}
+
+.mod-btn:active {
+    transform: scale(0.98);
+}
+
+.btn-mute {
+    background: linear-gradient(135deg, #f39c12, #d35400);
+}
+
+.btn-ban {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+}
+
+.btn-unban {
+    background: linear-gradient(135deg, #2ecc71, #27ae60);
+}
+
+.btn-cancel-mod {
+    background: #333;
+    color: #ccc;
+    margin-top: 5px;
+}
+
+/* Hediye Menüsü (Bottom Sheet) */
+.gift-sheet {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(15px);
+    border-top-left-radius: 20px;
+    border-top-right-radius: 20px;
+    z-index: 300;
+    padding: 15px;
+    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    animation: slideUp 0.3s ease-out;
+}
+
+.gift-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+}
+
+.gift-item {
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 10px 5px;
+    text-align: center;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.gift-item:hover {
+    background: rgba(255, 255, 255, 0.1);
+    border-color: var(--accent);
+}
+
+.gift-icon {
+    font-size: 30px;
+    margin-bottom: 5px;
+}
+
+.gift-name {
+    font-size: 10px;
+    color: #ccc;
+}
+
+.gift-price {
+    font-size: 11px;
+    color: var(--diamond);
+    font-weight: bold;
+    margin-top: 2px;
 }
 
 /* =========================================
-   9. ANİMASYON KEYFRAMES
+   7. ANİMASYONLAR
    ========================================= */
 @keyframes slideInUp {
     from {
@@ -809,43 +780,11 @@ body {
 @keyframes fadeOut {
     0% {
         opacity: 1;
-        transform: translateY(0);
     }
 
     100% {
         opacity: 0;
         transform: translateY(-10px);
-    }
-}
-
-@keyframes shake {
-
-    0%,
-    100% {
-        transform: translateX(0);
-    }
-
-    25%,
-    75% {
-        transform: translateX(-5px);
-    }
-
-    50% {
-        transform: translateX(5px);
-    }
-}
-
-@keyframes flash {
-
-    0%,
-    100% {
-        transform: scale(1);
-        color: white;
-    }
-
-    50% {
-        transform: scale(1.1);
-        color: var(--accent);
     }
 }
 
@@ -869,4 +808,50 @@ body {
         transform: translate(40px, -350px) scale(0.5);
         opacity: 0;
     }
+}
+
+#gift-animation-layer {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 150;
+    overflow: hidden;
+}
+
+.flying-gift {
+    position: absolute;
+    bottom: 120px;
+    left: 20px;
+    font-size: 60px;
+    animation: flyUp 3s forwards;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.gift-sender-label {
+    font-size: 14px;
+    background: rgba(255, 193, 7, 0.9);
+    color: black;
+    padding: 2px 8px;
+    border-radius: 10px;
+    margin-top: 5px;
+    font-weight: 800;
+    white-space: nowrap;
+}
+
+.tap-hint {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: rgba(0, 0, 0, 0.6);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 30px;
+    pointer-events: auto;
 }
