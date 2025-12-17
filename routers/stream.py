@@ -77,6 +77,7 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
         if target_user and target_user in user.followed: is_following = True
     if mode == "broadcast": return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
+        # Sadece kullanıcı adı olanları listele
         active_streams = db.query(User).filter(User.is_live == True, User.username != None).all()
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "watch", "streams": active_streams, "auction_active": target_user.is_auction_active if target_user else False, "is_following": is_following, "broadcaster": target_user})
 
@@ -182,22 +183,30 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     if not user or not user.username: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
-    # Eski artık dosyaları temizle
     shutil.rmtree(stream_dir, ignore_errors=True)
     os.makedirs(stream_dir, exist_ok=True)
     
-    print(f"🎥 YAYIN BAŞLIYOR (FINAL): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (CROSS-PLATFORM): {user.username}")
 
-    # 🔥 KRİTİK: Dosya ismi 'master.m3u8' ve format 'yuv420p' 🔥
+    # 🔥 KRİTİK İYİLEŞTİRME: iOS & Android Uyumlu FFmpeg 🔥
     command = [
-        "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
+        "ffmpeg", 
+        "-f", "webm", 
+        "-analyzeduration", "10000000", # Android verisini analiz et
+        "-probesize", "10000000",       # Tamponu artır
+        "-fflags", "+genpts+igndts+nobuffer", 
+        "-i", "pipe:0",
         
         "-c:v", "libx264", 
         "-preset", "superfast", 
         "-tune", "zerolatency",
-        "-pix_fmt", "yuv420p", # Android Düzeltmesi
+        "-pix_fmt", "yuv420p", 
         
-        "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "3000k",
+        # 🔥 BU SATIR ÇOK ÖNEMLİ: iOS için Baseline Profil 🔥
+        "-profile:v", "baseline", 
+        "-level", "3.0",
+        
+        "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "3000k",
         "-g", "30",
         
         "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
@@ -207,7 +216,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "-hls_list_size", "5", 
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         
-        f"{stream_dir}/master.m3u8" # İsim Düzeltmesi (stream -> master)
+        f"{stream_dir}/master.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
