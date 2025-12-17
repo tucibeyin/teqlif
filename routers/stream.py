@@ -17,7 +17,7 @@ from utils import get_current_user, send_broadcast_notifications_task
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET YÖNETİCİSİ ---
+# --- SOCKET ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[WebSocket]] = {}
@@ -182,40 +182,75 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     if not user or not user.username: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
+    # Eski dosyaları temizle
     shutil.rmtree(stream_dir, ignore_errors=True)
-    os.makedirs(stream_dir, exist_ok=True)
     
-    print(f"🎥 YAYIN BAŞLIYOR (ATOMIC WRITE FIX): {user.username}")
+    # 4 Farklı kalite için klasörleri oluştur
+    os.makedirs(f"{stream_dir}/720p", exist_ok=True)
+    os.makedirs(f"{stream_dir}/480p", exist_ok=True)
+    os.makedirs(f"{stream_dir}/360p", exist_ok=True)
+    os.makedirs(f"{stream_dir}/240p", exist_ok=True)
+    
+    print(f"🎥 YAYIN BAŞLIYOR (MULTI-BITRATE ABR): {user.username}")
 
-    # 🔥 KRİTİK DÜZELTME: Dosyayı direkt 'master.m3u8' olarak yaz (temp kullanma) 🔥
+    # 🔥 FFmpeg MULTI-BITRATE KOMUTU 🔥
+    # Gelen yayını 4 parçaya böler, yeniden boyutlandırır ve ayrı ayrı kodlar.
     command = [
         "ffmpeg", 
         "-f", "webm", 
-        "-analyzeduration", "5000000", # Biraz azalttık (5MB yeterli)
-        "-probesize", "5000000", 
+        "-analyzeduration", "10000000",
+        "-probesize", "10000000",
         "-fflags", "+genpts+igndts+nobuffer", 
         "-i", "pipe:0",
         
-        "-c:v", "libx264", 
-        "-preset", "ultrafast", # Hızlandırdık
-        "-tune", "zerolatency",
-        "-pix_fmt", "yuv420p", 
-        "-profile:v", "baseline",
-        "-level", "3.0",
+        # Filtre: Görüntüyü 4 kopyaya ayır ve boyutlandır
+        "-filter_complex", 
+        "[0:v]split=4[v720][v480][v360][v240];"
+        "[v720]scale=-2:720[out720];"
+        "[v480]scale=-2:480[out480];"
+        "[v360]scale=-2:360[out360];"
+        "[v240]scale=-2:240[out240]",
+
+        # --- 720p (Yüksek Kalite) ---
+        "-map", "[out720]", "-map", "0:a",
+        "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "3000k", "-bufsize:v:0", "3000k",
+        "-c:a:0", "aac", "-b:a:0", "128k",
         
-        "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "3000k",
-        "-g", "60", # 2 saniyede bir keyframe (Daha stabil)
-        
-        "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
-        
+        # --- 480p (Orta Kalite) ---
+        "-map", "[out480]", "-map", "0:a",
+        "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1500k", "-bufsize:v:1", "1500k",
+        "-c:a:1", "aac", "-b:a:1", "96k",
+
+        # --- 360p (Düşük Kalite) ---
+        "-map", "[out360]", "-map", "0:a",
+        "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "800k",
+        "-c:a:2", "aac", "-b:a:2", "64k",
+
+        # --- 240p (Tasarruf Modu) ---
+        "-map", "[out240]", "-map", "0:a",
+        "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "400k",
+        "-c:a:3", "aac", "-b:a:3", "48k",
+
+        # --- ORTAK AYARLAR ---
+        "-preset", "veryfast", "-tune", "zerolatency", 
+        "-profile:v", "baseline", "-level", "3.0",
+        "-g", "60", # 2 saniye keyframe
+        "-pix_fmt", "yuv420p",
+
+        # --- HLS ÇIKIŞ AYARLARI ---
         "-f", "hls", 
-        "-hls_time", "2", # 2 saniyelik parçalar (Daha az dosya I/O)
-        "-hls_list_size", "4", 
-        
-        # 🔥 ÖNEMLİ: Temp dosyayı iptal et ve listeyi sil/ekle modunda çalıştır
+        "-hls_time", "2", 
+        "-hls_list_size", "5", 
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         
-        f"{stream_dir}/master.m3u8"
+        # Stream Eşleştirme (Video+Ses paketleme)
+        "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
+        
+        # Ana Oynatma Listesi
+        "-master_pl_name", "master.m3u8",
+        
+        # Çıktı Yolları (%v yerine isim gelecek)
+        f"{stream_dir}/%v/stream.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
