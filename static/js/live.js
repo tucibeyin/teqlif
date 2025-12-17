@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- KAMERA YÖNETİMİ ---
     let videoDevices = [];
     let currentDeviceIndex = 0;
-    let canvas, ctx, animationFrameId; // Interval yerine AnimationFrame
+    let canvas, ctx, animationFrameId;
 
     // --- 1. MODERASYON ---
     window.openModMenu = function (username) {
@@ -109,7 +109,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
-        ctx = canvas.getContext('2d', { alpha: false }); // Alpha kapatıldı (Performans)
+        ctx = canvas.getContext('2d', { alpha: false });
         let rec;
 
         async function getDevices() { try { const devices = await navigator.mediaDevices.enumerateDevices(); videoDevices = devices.filter(d => d.kind === 'videoinput'); } catch (e) { console.log(e); } }
@@ -121,7 +121,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 window.localStream = stream; videoElement.srcObject = stream;
-                startCanvasLoop(); // Render'ı başlat
+                startCanvasLoop();
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const audioSelect = document.getElementById('audioSource');
                 if (audioSelect && audioSelect.options.length === 0) { devices.filter(d => d.kind === 'audioinput').forEach(d => { const opt = document.createElement('option'); opt.value = d.deviceId; opt.text = d.label || 'Mikrofon'; audioSelect.appendChild(opt); }); }
@@ -131,10 +131,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.switchCamera = function () { if (videoDevices.length < 2) { alert("Başka kamera bulunamadı."); return; } currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length; initStream(videoDevices[currentDeviceIndex].deviceId); }
 
-        // 🔥 OPTİMİZE EDİLMİŞ CANVAS DÖNGÜSÜ (requestAnimationFrame) 🔥
         function startCanvasLoop() {
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
-
             function draw() {
                 if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
                     const vRatio = videoElement.videoWidth / videoElement.videoHeight;
@@ -164,18 +162,16 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.connectChat('broadcast');
                     const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                     ws.onopen = () => {
-                        // 24 FPS'e düşürdük (Performans)
-                        const canvasStream = canvas.captureStream(24);
+                        // 🔥 30 FPS CANVAS (Stabilite İçin)
+                        const canvasStream = canvas.captureStream(30);
                         const audioTracks = window.localStream.getAudioTracks(); if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // Codec Önceliği: H264 (Donanım) -> VP8 (Yazılım)
-                        let mimeType = 'video/webm;codecs=h264';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+                        // 🔥 VP8 ÖNCELİKLİ (Android Uyumu İçin)
+                        let mimeType = 'video/webm;codecs=vp8';
+                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm'; // Fallback
 
-                        // Bitrate 1.5Mbps'e düşürüldü (RAM şişmesini engeller)
-                        rec = new MediaRecorder(canvasStream, { mimeType: mimeType, videoBitsPerSecond: 1500000 });
-                        rec.start(500);
+                        rec = new MediaRecorder(canvasStream, { mimeType: mimeType, videoBitsPerSecond: 2500000 });
+                        rec.start(500); // 500ms chunk
                         rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
                         sendThumbnailSnapshot(); window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
@@ -221,6 +217,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Ortak
     window.unmuteVideo = function (u) { const v = document.getElementById(`video-${u}`); if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; } }
     window.toggleFollow = function (username) { const btn = document.getElementById(`follow-btn-${username}`); const formData = new FormData(); formData.append('username', username); fetch('/user/follow', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'followed') { if (btn) { btn.classList.add('following'); btn.innerText = '✓'; } } else { if (btn) { btn.classList.remove('following'); btn.innerText = '+'; } } }); }
     window.sendBid = function (target, amount) { const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`; const el = document.getElementById(id); const currentVal = parseInt(el ? el.innerText.replace('.', '') : "0") || 0; if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${currentVal + amount}`); }

@@ -66,7 +66,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- YARDIMCI: TEMİZLİK ---
+# --- YARDIMCI ---
 def cleanup_stream(username: str, db: Session):
     try:
         user = db.query(User).filter(User.username == username).first()
@@ -75,28 +75,20 @@ def cleanup_stream(username: str, db: Session):
             user.current_price = 0; user.highest_bidder = None
             db.commit()
     except: pass
-    
     if username in active_processes:
         proc = active_processes[username]
         try: proc.terminate(); proc.wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
-
     try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
     except: pass
 
-# 🔥 YAZMA FONKSİYONU DÜZELTİLDİ 🔥
 def write_to_ffmpeg(process, data):
     try:
-        if process.stdin:
-            process.stdin.write(data)
-            process.stdin.flush()
-    except Exception as e:
-        # Hata olursa logla ama süreci kırma
-        print(f"FFMPEG Write Error: {e}")
-        pass
+        if process.stdin: process.stdin.write(data); process.stdin.flush()
+    except: pass
 
-# --- MODERASYON API ---
+# --- API ---
 @router.post("/stream/restrict")
 async def restrict_user(target_username: str = Form(...), action: str = Form(...), duration: int = Form(0), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user or not user.is_live: return JSONResponse({"status": "error", "msg": "Yetkisiz"}, 403)
@@ -109,7 +101,6 @@ async def restrict_user(target_username: str = Form(...), action: str = Form(...
     if action == "ban": await manager.kick_user(room_name, target_username)
     return {"status": "success", "msg": f"{target_username} {action}"}
 
-# --- ENDPOINTLER ---
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse(url="/login", status_code=303)
@@ -247,12 +238,13 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (FIXED WRITE): {user.username}")
+    print(f"🎥 YAYIN (FLEXIBLE INPUT): {user.username}")
 
-    # 🔥 FFMPEG: analyzeduration ve probesize artırıldı 🔥
+    # 🔥 FFMPEG: GİRİŞ KISITLAMALARI KALDIRILDI 🔥
+    # -r 30 (Input side) kaldırıldı. Ne gelirse al.
     command = [
         "ffmpeg", "-f", "webm", 
-        "-analyzeduration", "10000000", "-probesize", "10000000", # Daha fazla analiz süresi
+        "-analyzeduration", "5000000", "-probesize", "5000000",
         "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
         
         "-filter_complex", 
