@@ -86,8 +86,12 @@ def cleanup_stream(username: str, db: Session):
     except: pass
 
 def write_to_ffmpeg(process, data):
-    try: if process.stdin: process.stdin.write(data); process.stdin.flush()
-    except: pass
+    try:
+        if process.stdin:
+            process.stdin.write(data)
+            process.stdin.flush()
+    except:
+        pass
 
 # --- MODERASYON API ---
 @router.post("/stream/restrict")
@@ -111,7 +115,7 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
         target_user = db.query(User).filter(User.username == broadcaster).first()
         if target_user and target_user in user.followed: is_following = True
         if db.query(StreamRestriction).filter(StreamRestriction.room_name == broadcaster, StreamRestriction.user_username == user.username, StreamRestriction.type == 'ban').first():
-             return templates.TemplateResponse("base.html", {"request": request, "error": "Yasaklandınız!"})
+             return templates.TemplateResponse("base.html", {"request": request, "user": user, "error": "Yasaklandınız!"}) # Düzeltildi
     if mode == "broadcast": return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
         active_streams = db.query(User).filter(User.is_live == True, User.username != None).all()
@@ -240,9 +244,6 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     
     print(f"🎥 YAYIN (VERTICAL CROP): {user.username}")
 
-    # 🔥 FFMPEG: PC GÖRÜNTÜSÜNÜ ORTADAN KESİP MOBİLE ÇEVİRİR (406x720) 🔥
-    # - scale=-2:720 -> Yüksekliği 720 yap, en boy oranını koru
-    # - crop=406:720:(in_w-406)/2:0 -> Ortadan 406px (9:16) kes
     command = [
         "ffmpeg", "-f", "webm", "-analyzeduration", "2000000", "-probesize", "2000000", 
         "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
