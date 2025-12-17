@@ -7,7 +7,14 @@ document.addEventListener('DOMContentLoaded', () => {
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeModTarget = null;
 
-    // --- 1. MODERASYON İŞLEVLERİ ---
+    // --- KAMERA YÖNETİMİ DEĞİŞKENLERİ ---
+    let videoDevices = [];
+    let currentDeviceIndex = 0;
+    let canvas, ctx, canvasInterval;
+    const TARGET_WIDTH = 720;
+    const TARGET_HEIGHT = 1280;
+
+    // --- 1. MODERASYON ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -59,8 +66,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bidFeed) bidFeed.innerHTML = ''; return;
             }
             if (d.type === 'gift') { showGiftAnimation(d.gift_type, d.sender); return; }
+
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
+
             if (d.type === 'chat') {
                 if (d.msg.startsWith("BID:")) {
                     const amount = d.msg.split(":")[1]; updatePriceDisplay(amount, target, d.user);
@@ -68,17 +77,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const bidFeed = document.getElementById(bidFeedId);
                     if (bidFeed) { const div = document.createElement('div'); div.className = 'bid-bubble'; div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`; bidFeed.appendChild(div); bidFeed.scrollTop = bidFeed.scrollHeight; setTimeout(() => { div.remove(); }, 10000); }
                 } else {
-                    if (feed) {
-                        const div = document.createElement('div');
-                        div.className = 'msg';
-                        div.innerHTML = `<b onclick="openModMenu('${d.user}')" style="cursor:pointer;">${d.user}:</b> ${d.msg}`;
-                        feed.appendChild(div);
-                        feed.scrollTop = feed.scrollHeight;
-                        setTimeout(() => {
-                            div.classList.add('fade-out');
-                            setTimeout(() => { div.remove(); }, 1000);
-                        }, 5000);
-                    }
+                    if (feed) { const div = document.createElement('div'); div.className = 'msg'; div.innerHTML = `<b onclick="openModMenu('${d.user}')" style="cursor:pointer;">${d.user}:</b> ${d.msg}`; feed.appendChild(div); feed.scrollTop = feed.scrollHeight; setTimeout(() => { div.classList.add('fade-out'); setTimeout(() => div.remove(), 1000); }, 5000); }
                 }
             }
         };
@@ -108,20 +107,89 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 4. YAYINCI / İZLEYİCİ ---
+    // --- 4. YAYINCI / İZLEYİCİ MANTIĞI ---
     if (MODE === 'broadcast') {
-        const prev = document.getElementById('preview'); let rec;
-        async function initStream() {
+        const videoElement = document.getElementById('preview');
+        canvas = document.getElementById('broadcast-canvas');
+        ctx = canvas.getContext('2d');
+        let rec;
+
+        // Cihazları Listele
+        async function getDevices() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ video: { width: { ideal: 1280 }, height: { ideal: 720 }, facingMode: "user" }, audio: true });
-                window.localStream = stream; if (prev) { prev.srcObject = stream; prev.volume = 0; }
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                videoDevices = devices.filter(d => d.kind === 'videoinput');
+            } catch (e) { console.log(e); }
+        }
+        getDevices();
+
+        // Kamera Başlatma
+        async function initStream(deviceId = null) {
+            if (window.localStream) {
+                window.localStream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                audio: true,
+                video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                    : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+            };
+
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                window.localStream = stream;
+                videoElement.srcObject = stream;
+
+                // Canvas Çizim Döngüsü Başlat
+                startCanvasLoop();
+
+                // Ses Kaynağı Seçimi Doldur
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const audioSelect = document.getElementById('audioSource');
-                if (audioSelect) { audioSelect.innerHTML = ''; devices.filter(d => d.kind === 'audioinput').forEach(d => { const opt = document.createElement('option'); opt.value = d.deviceId; opt.text = d.label || 'Mikrofon'; audioSelect.appendChild(opt); }); }
+                if (audioSelect && audioSelect.options.length === 0) {
+                    devices.filter(d => d.kind === 'audioinput').forEach(d => {
+                        const opt = document.createElement('option'); opt.value = d.deviceId; opt.text = d.label || 'Mikrofon'; audioSelect.appendChild(opt);
+                    });
+                }
             } catch (err) { console.error(err); alert("Kamera Hatası! İzinleri kontrol edin."); }
         }
         initStream();
-        window.restartStream = function () { if (window.localStream) window.localStream.getTracks().forEach(t => t.stop()); initStream(); }
+
+        // Kamera Değiştir
+        window.switchCamera = function () {
+            if (videoDevices.length < 2) { alert("Başka kamera bulunamadı."); return; }
+            currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
+            initStream(videoDevices[currentDeviceIndex].deviceId);
+        }
+
+        // Canvas'a Çiz (Görüntüyü Standartlaştır)
+        function startCanvasLoop() {
+            if (canvasInterval) clearInterval(canvasInterval);
+            canvasInterval = setInterval(() => {
+                if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
+                    // Center Crop Mantığı (Cover)
+                    const vRatio = videoElement.videoWidth / videoElement.videoHeight;
+                    const cRatio = canvas.width / canvas.height;
+                    let drawWidth, drawHeight, startX, startY;
+
+                    if (vRatio > cRatio) {
+                        drawHeight = canvas.height;
+                        drawWidth = drawHeight * vRatio;
+                        startX = (canvas.width - drawWidth) / 2;
+                        startY = 0;
+                    } else {
+                        drawWidth = canvas.width;
+                        drawHeight = drawWidth / vRatio;
+                        startX = 0;
+                        startY = (canvas.height - drawHeight) / 2;
+                    }
+
+                    ctx.drawImage(videoElement, startX, startY, drawWidth, drawHeight);
+                }
+            }, 1000 / 30); // 30 FPS
+        }
+
+        window.restartStream = function () { initStream(); } // Basitçe yeniden başlat
 
         const startBtn = document.getElementById('btn-start-broadcast');
         if (startBtn) {
@@ -135,28 +203,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 fetch('/broadcast/start', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
                     document.getElementById('setup-layer').style.display = 'none'; document.getElementById('live-ui').style.display = 'flex';
 
-                    // 🔥 KATEGORİ KONTROLÜ (MEZAT TUŞLARINI GİZLE) 🔥
                     if (category !== 'Mezat') {
-                        // Mezat değilse butonları bul ve gizle
                         const resetBtn = document.querySelector('button[onclick="openResetModal()"]');
                         const toggleBtn = document.getElementById('btn-auction-toggle');
                         const priceBoard = document.querySelector('.top-bar-left .price-board');
-
                         if (resetBtn) resetBtn.style.display = 'none';
                         if (toggleBtn) toggleBtn.style.display = 'none';
-                        if (priceBoard) priceBoard.style.display = 'none'; // Fiyat tabelasını da gizle
+                        if (priceBoard) priceBoard.style.display = 'none';
                     }
 
                     window.connectChat('broadcast');
                     const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+
                     ws.onopen = () => {
-                        let mimeType = 'video/webm;codecs=vp8';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp9';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=h264';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
-                        rec = new MediaRecorder(window.localStream, { mimeType: mimeType, videoBitsPerSecond: 2500000 });
+                        // 🔥 CANVAS STREAM'İNİ GÖNDER (Video + Audio) 🔥
+                        const canvasStream = canvas.captureStream(30);
+                        // Sesi de ekle
+                        const audioTracks = window.localStream.getAudioTracks();
+                        if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
+
+                        rec = new MediaRecorder(canvasStream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 });
                         rec.start(500);
                         rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+
                         sendThumbnailSnapshot(); window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
                 });
@@ -167,31 +236,19 @@ document.addEventListener('DOMContentLoaded', () => {
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
-        async function sendThumbnailSnapshot() { const video = document.getElementById('preview'); const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360; canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height); try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
+        async function sendThumbnailSnapshot() {
+            // Thumbnail için de Canvas'ı kullan (Daha temiz görüntü)
+            try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { }
+        }
     } else {
-        const hlsConfig = {
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 0, // Eski segmentleri hemen sil
-            liveSyncDurationCount: 1.5, // Canlının 1.5 sn gerisinden gel (Aşırı Agresif)
-            liveMaxLatencyDurationCount: 3, // Eğer 3 sn geride kalırsa atla
-            maxBufferLength: 2, // Sadece 2 sn tamponla
-            maxMaxBufferLength: 3,
-            enableSoftwareAES: false,
-            fragLoadingTimeOut: 10000,
-        };
-
+        // --- İZLEYİCİ MANTIĞI (Aynı Kaldı) ---
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 1.5, liveMaxLatencyDurationCount: 3, maxBufferLength: 2, maxMaxBufferLength: 3, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
             if (v) {
                 const src = `/static/hls/${u}/master.m3u8`;
-                if (Hls.isSupported()) {
-                    const h = new Hls(hlsConfig);
-                    h.loadSource(src); h.attachMedia(v);
-                    h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("Blocked:", e)));
-                } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                    v.src = src; v.play().catch(e => console.log("Blocked:", e));
-                }
+                if (Hls.isSupported()) { const h = new Hls(hlsConfig); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("Blocked:", e))); }
+                else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play().catch(e => console.log("Blocked:", e)); }
                 window.connectChat(u);
             }
         } else {
@@ -210,6 +267,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
+    // Ortak
     window.unmuteVideo = function (u) { const v = document.getElementById(`video-${u}`); if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; } }
     window.toggleFollow = function (username) { const btn = document.getElementById(`follow-btn-${username}`); const formData = new FormData(); formData.append('username', username); fetch('/user/follow', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'followed') { if (btn) { btn.classList.add('following'); btn.innerText = '✓'; } } else { if (btn) { btn.classList.remove('following'); btn.innerText = '+'; } } }); }
     window.sendBid = function (target, amount) { const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`; const el = document.getElementById(id); const currentVal = parseInt(el ? el.innerText.replace('.', '') : "0") || 0; if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${currentVal + amount}`); }
