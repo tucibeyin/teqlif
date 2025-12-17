@@ -4,15 +4,14 @@ document.addEventListener('DOMContentLoaded', () => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
     window.CURRENT_SOCKET = null;
+    window.activeHlsInstances = {}; // 🔥 AKTİF HLS BAĞLANTILARI BURADA TUTULACAK
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeModTarget = null;
 
-    // --- KAMERA YÖNETİMİ DEĞİŞKENLERİ ---
+    // --- KAMERA YÖNETİMİ ---
     let videoDevices = [];
     let currentDeviceIndex = 0;
     let canvas, ctx, canvasInterval;
-    const TARGET_WIDTH = 720;
-    const TARGET_HEIGHT = 1280;
 
     // --- 1. MODERASYON ---
     window.openModMenu = function (username) {
@@ -69,7 +68,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
-
             if (d.type === 'chat') {
                 if (d.msg.startsWith("BID:")) {
                     const amount = d.msg.split(":")[1]; updatePriceDisplay(amount, target, d.user);
@@ -107,125 +105,63 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 4. YAYINCI / İZLEYİCİ MANTIĞI ---
+    // --- 4. YAYINCI / İZLEYİCİ ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
         ctx = canvas.getContext('2d');
         let rec;
 
-        // Cihazları Listele
-        async function getDevices() {
-            try {
-                const devices = await navigator.mediaDevices.enumerateDevices();
-                videoDevices = devices.filter(d => d.kind === 'videoinput');
-            } catch (e) { console.log(e); }
-        }
+        async function getDevices() { try { const devices = await navigator.mediaDevices.enumerateDevices(); videoDevices = devices.filter(d => d.kind === 'videoinput'); } catch (e) { console.log(e); } }
         getDevices();
 
-        // Kamera Başlatma
         async function initStream(deviceId = null) {
-            if (window.localStream) {
-                window.localStream.getTracks().forEach(track => track.stop());
-            }
-
-            const constraints = {
-                audio: true,
-                video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
-                    : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
-            };
-
+            if (window.localStream) { window.localStream.getTracks().forEach(track => track.stop()); }
+            const constraints = { audio: true, video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } };
             try {
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                window.localStream = stream;
-                videoElement.srcObject = stream;
-
-                // Canvas Çizim Döngüsü Başlat
-                startCanvasLoop();
-
-                // Ses Kaynağı Seçimi Doldur
+                window.localStream = stream; videoElement.srcObject = stream; startCanvasLoop();
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const audioSelect = document.getElementById('audioSource');
-                if (audioSelect && audioSelect.options.length === 0) {
-                    devices.filter(d => d.kind === 'audioinput').forEach(d => {
-                        const opt = document.createElement('option'); opt.value = d.deviceId; opt.text = d.label || 'Mikrofon'; audioSelect.appendChild(opt);
-                    });
-                }
+                if (audioSelect && audioSelect.options.length === 0) { devices.filter(d => d.kind === 'audioinput').forEach(d => { const opt = document.createElement('option'); opt.value = d.deviceId; opt.text = d.label || 'Mikrofon'; audioSelect.appendChild(opt); }); }
             } catch (err) { console.error(err); alert("Kamera Hatası! İzinleri kontrol edin."); }
         }
         initStream();
 
-        // Kamera Değiştir
-        window.switchCamera = function () {
-            if (videoDevices.length < 2) { alert("Başka kamera bulunamadı."); return; }
-            currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length;
-            initStream(videoDevices[currentDeviceIndex].deviceId);
-        }
+        window.switchCamera = function () { if (videoDevices.length < 2) { alert("Başka kamera bulunamadı."); return; } currentDeviceIndex = (currentDeviceIndex + 1) % videoDevices.length; initStream(videoDevices[currentDeviceIndex].deviceId); }
 
-        // Canvas'a Çiz (Görüntüyü Standartlaştır)
         function startCanvasLoop() {
             if (canvasInterval) clearInterval(canvasInterval);
             canvasInterval = setInterval(() => {
                 if (videoElement.readyState === videoElement.HAVE_ENOUGH_DATA) {
-                    // Center Crop Mantığı (Cover)
-                    const vRatio = videoElement.videoWidth / videoElement.videoHeight;
-                    const cRatio = canvas.width / canvas.height;
+                    const vRatio = videoElement.videoWidth / videoElement.videoHeight; const cRatio = canvas.width / canvas.height;
                     let drawWidth, drawHeight, startX, startY;
-
-                    if (vRatio > cRatio) {
-                        drawHeight = canvas.height;
-                        drawWidth = drawHeight * vRatio;
-                        startX = (canvas.width - drawWidth) / 2;
-                        startY = 0;
-                    } else {
-                        drawWidth = canvas.width;
-                        drawHeight = drawWidth / vRatio;
-                        startX = 0;
-                        startY = (canvas.height - drawHeight) / 2;
-                    }
-
+                    if (vRatio > cRatio) { drawHeight = canvas.height; drawWidth = drawHeight * vRatio; startX = (canvas.width - drawWidth) / 2; startY = 0; } else { drawWidth = canvas.width; drawHeight = drawWidth / vRatio; startX = 0; startY = (canvas.height - drawHeight) / 2; }
                     ctx.drawImage(videoElement, startX, startY, drawWidth, drawHeight);
                 }
-            }, 1000 / 30); // 30 FPS
+            }, 1000 / 30);
         }
-
-        window.restartStream = function () { initStream(); } // Basitçe yeniden başlat
+        window.restartStream = function () { initStream(); }
 
         const startBtn = document.getElementById('btn-start-broadcast');
         if (startBtn) {
             startBtn.addEventListener('click', function () {
-                const title = document.getElementById('streamTitle').value;
-                const category = document.getElementById('streamCategory').value;
+                const title = document.getElementById('streamTitle').value; const category = document.getElementById('streamCategory').value;
                 if (!title) { alert("Başlık girin!"); return; }
-
                 const formData = new FormData(); formData.append('title', title); formData.append('category', category);
-
                 fetch('/broadcast/start', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
                     document.getElementById('setup-layer').style.display = 'none'; document.getElementById('live-ui').style.display = 'flex';
-
                     if (category !== 'Mezat') {
-                        const resetBtn = document.querySelector('button[onclick="openResetModal()"]');
-                        const toggleBtn = document.getElementById('btn-auction-toggle');
-                        const priceBoard = document.querySelector('.top-bar-left .price-board');
-                        if (resetBtn) resetBtn.style.display = 'none';
-                        if (toggleBtn) toggleBtn.style.display = 'none';
-                        if (priceBoard) priceBoard.style.display = 'none';
+                        const resetBtn = document.querySelector('button[onclick="openResetModal()"]'); const toggleBtn = document.getElementById('btn-auction-toggle'); const priceBoard = document.querySelector('.top-bar-left .price-board');
+                        if (resetBtn) resetBtn.style.display = 'none'; if (toggleBtn) toggleBtn.style.display = 'none'; if (priceBoard) priceBoard.style.display = 'none';
                     }
-
                     window.connectChat('broadcast');
                     const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-
                     ws.onopen = () => {
-                        // 🔥 CANVAS STREAM'İNİ GÖNDER (Video + Audio) 🔥
-                        const canvasStream = canvas.captureStream(30);
-                        // Sesi de ekle
-                        const audioTracks = window.localStream.getAudioTracks();
-                        if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
-
+                        const canvasStream = canvas.captureStream(30); const audioTracks = window.localStream.getAudioTracks(); if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
                         rec = new MediaRecorder(canvasStream, { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 });
                         rec.start(500);
                         rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
-
                         sendThumbnailSnapshot(); window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
                 });
@@ -236,13 +172,11 @@ document.addEventListener('DOMContentLoaded', () => {
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
-        async function sendThumbnailSnapshot() {
-            // Thumbnail için de Canvas'ı kullan (Daha temiz görüntü)
-            try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { }
-        }
+        async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- İZLEYİCİ MANTIĞI (Aynı Kaldı) ---
+        // --- 🔥 İZLEYİCİ MANTIĞI (DÜZELTİLDİ: ZOMBİ YAYIN ENGELLEME) 🔥 ---
         const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 1.5, liveMaxLatencyDurationCount: 3, maxBufferLength: 2, maxMaxBufferLength: 3, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
+
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
             if (v) {
@@ -252,15 +186,37 @@ document.addEventListener('DOMContentLoaded', () => {
                 window.connectChat(u);
             }
         } else {
+            // Scroll İzleme (Intersection Observer)
             let obs = new IntersectionObserver((entries) => {
                 entries.forEach(e => {
-                    const u = e.target.dataset.username; const v = document.getElementById(`video-${u}`);
+                    const u = e.target.dataset.username;
+                    const v = document.getElementById(`video-${u}`);
+
                     if (e.isIntersecting) {
-                        const src = `/static/hls/${u}/master.m3u8`;
-                        if (Hls.isSupported()) { const h = new Hls(hlsConfig); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() })); }
-                        else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play().catch(() => { v.muted = true; v.play() }); }
+                        // 🟢 GÖRÜŞ ALANINA GİRDİ: BAĞLAN
+                        if (!window.activeHlsInstances[u] && Hls.isSupported()) {
+                            const src = `/static/hls/${u}/master.m3u8`;
+                            const h = new Hls(hlsConfig);
+                            h.loadSource(src);
+                            h.attachMedia(v);
+                            h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
+                            window.activeHlsInstances[u] = h; // Kaydet
+                        } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                            v.src = `/static/hls/${u}/master.m3u8`;
+                            v.play().catch(() => { v.muted = true; v.play() });
+                        }
                         window.connectChat(u);
-                    } else { if (v) v.pause(); }
+                    } else {
+                        // 🔴 GÖRÜŞ ALANINDAN ÇIKTI: BAĞLANTIYI KOPAR (ÖNEMLİ!)
+                        if (v) v.pause();
+                        if (window.activeHlsInstances[u]) {
+                            window.activeHlsInstances[u].destroy(); // HLS'i yok et
+                            delete window.activeHlsInstances[u];    // Listeden sil
+                        }
+                        if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                            v.src = ""; // iOS Safari için kaynağı boşalt
+                        }
+                    }
                 });
             }, { threshold: 0.5 });
             document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
