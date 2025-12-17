@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeGiftTarget = null;
 
-    // --- 2. GÖRÜNÜM ---
+    // --- 2. GÖRÜNÜM GÜNCELLEME ---
     function updatePriceDisplay(amount, target, bidderName) {
         const idHost = 'current-price-display'; const idViewer = `price-${target}`;
         let el = document.getElementById(idHost); if (!el) el = document.getElementById(idViewer);
@@ -126,16 +126,20 @@ document.addEventListener('DOMContentLoaded', () => {
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { const video = document.getElementById('preview'); const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360; canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height); try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- 🔥 İZLEYİCİ LOW LATENCY CONFIG 🔥 ---
-
-        // Bu HLS konfigürasyonu gecikmeyi minimuma indirmek içindir.
+        // --- 🔥 İZLEYİCİ AGRESİF HIZLANDIRMA 🔥 ---
         const hlsConfig = {
             enableWorker: true,
             lowLatencyMode: true,
-            backBufferLength: 90,
-            liveSyncDurationCount: 3, // Canlı yayının 3 segment (3sn) gerisinden gel
-            liveMaxLatencyDurationCount: 5,
+
+            // Canlı yayının 2 segment (2 saniye) gerisinden gel (Çok Agresif)
+            liveSyncDurationCount: 2,
+
+            // Eğer 4 segment (4 saniye) geriye düşerse atla
+            liveMaxLatencyDurationCount: 4,
+
+            // Maksimum 5 saniye tampon tut (Daha fazlası gecikme yapar)
             maxBufferLength: 5,
+            backBufferLength: 5
         };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
@@ -144,7 +148,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (v) {
                 const src = `/static/hls/${u}/master.m3u8`;
                 if (Hls.isSupported()) {
-                    const h = new Hls(hlsConfig); // Config'i buraya verdik
+                    const h = new Hls(hlsConfig);
                     h.loadSource(src); h.attachMedia(v);
                     h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("AutoPlay blocked:", e)));
                 } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
@@ -159,7 +163,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (e.isIntersecting) {
                         const src = `/static/hls/${u}/master.m3u8`;
                         if (Hls.isSupported()) {
-                            const h = new Hls(hlsConfig); // Config buraya da eklendi
+                            const h = new Hls(hlsConfig);
                             h.loadSource(src); h.attachMedia(v);
                             h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
                         }
