@@ -112,7 +112,7 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
         target_user = db.query(User).filter(User.username == broadcaster).first()
         if target_user and target_user in user.followed: is_following = True
         if db.query(StreamRestriction).filter(StreamRestriction.room_name == broadcaster, StreamRestriction.user_username == user.username, StreamRestriction.type == 'ban').first():
-             return templates.TemplateResponse("base.html", {"request": request, "error": "Yasaklandınız!"})
+             return templates.TemplateResponse("base.html", {"request": request, "user": user, "error": "Yasaklandınız!"})
     if mode == "broadcast": return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
         active_streams = db.query(User).filter(User.is_live == True, User.username != None).all()
@@ -186,21 +186,18 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
             payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
             u = db.query(User).filter(User.email == payload.get("sub")).first()
             if u: current_username = u.username
-            # Bağlantıyı güncelle (Username ekle)
             if room_name in manager.rooms:
                 for c in manager.rooms[room_name]:
                     if c["ws"] == websocket: c["user"] = current_username
     except: pass
     
-    # 🔥 BAN KONTROLÜ (GİRİŞTE) 🔥
     if room_name != "home":
         if db.query(StreamRestriction).filter(StreamRestriction.room_name == room_name, StreamRestriction.user_username == current_username, StreamRestriction.type == 'ban').first():
             await websocket.send_text(json.dumps({"type": "banned"})); await websocket.close(); return
 
-    # Anasayfa bağlantısı ise sadece bekle
     if room_name == "home":
         try:
-            while True: await websocket.receive_text() # Kalp atışı
+            while True: await websocket.receive_text()
         except: await manager.disconnect(websocket, room_name); return
 
     broadcaster = db.query(User).filter(User.username == stream).first()
@@ -210,7 +207,6 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
         while True:
             data = await websocket.receive_text()
             if data.strip():
-                # MUTE KONTROL
                 res = db.query(StreamRestriction).filter(StreamRestriction.room_name == room_name, StreamRestriction.user_username == current_username, StreamRestriction.type == 'mute').first()
                 if res:
                     if res.expires_at and res.expires_at < datetime.utcnow(): db.delete(res); db.commit()
@@ -247,6 +243,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     
     print(f"🎥 YAYIN (VERTICAL CROP): {user.username}")
 
+    # 🔥 KRİTİK GÜNCELLEME: Sadece Son 3 Saniye Tut, Eskileri Sil 🔥
     command = [
         "ffmpeg", "-f", "webm", "-analyzeduration", "2000000", "-probesize", "2000000", 
         "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
@@ -266,8 +263,12 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
         "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
         
-        "-f", "hls", "-hls_time", "1", "-hls_list_size", "3", 
-        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start+program_date_time", "-hls_allow_cache", "0",
+        "-f", "hls", 
+        "-hls_time", "1", 
+        "-hls_list_size", "3", # Sadece son 3 parça
+        "-hls_flags", "delete_segments+omit_endlist", # 🔥 APPEND_LIST YOK! Eskiler silinir.
+        "-hls_allow_cache", "0",
+        
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]
@@ -275,7 +276,6 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
     
-    # 🔥 ARKA PLAN BEKÇİSİ (DOSYAYI BEKLER VE DUYURUR) 🔥
     async def wait_for_file_and_go_live(username, title, category, thumbnail):
         master_file = f"static/hls/{username}/master.m3u8"
         start_wait = time.time()
@@ -286,14 +286,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                     u = new_db.query(User).filter(User.username == username).first()
                     if u: 
                         u.is_live = True; new_db.commit()
-                        # 🔥 BURASI KRİTİK: ANASAYFAYA 'CANLI YAYIN BAŞLADI' SİNYALİ AT 🔥
-                        payload = json.dumps({
-                            "type": "stream_added",
-                            "username": username,
-                            "title": title,
-                            "category": category,
-                            "thumbnail": thumbnail
-                        })
+                        payload = json.dumps({"type": "stream_added", "username": username, "title": title, "category": category, "thumbnail": thumbnail})
                         await manager.broadcast_to_room(payload, "home")
                 except: pass
                 finally: new_db.close()
@@ -301,7 +294,6 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             await asyncio.sleep(0.5)
 
     loop = asyncio.get_event_loop()
-    # Task'a başlık ve kategori bilgilerini de gönderiyoruz ki karta yazabilsin
     loop.create_task(wait_for_file_and_go_live(user.username, user.stream_title, user.stream_category, user.thumbnail))
 
     try:
