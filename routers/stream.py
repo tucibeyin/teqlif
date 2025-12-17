@@ -66,7 +66,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- YARDIMCI ---
+# --- YARDIMCI: TEMİZLİK ---
 def cleanup_stream(username: str, db: Session):
     try:
         user = db.query(User).filter(User.username == username).first()
@@ -75,17 +75,21 @@ def cleanup_stream(username: str, db: Session):
             user.current_price = 0; user.highest_bidder = None
             db.commit()
     except: pass
+    
     if username in active_processes:
         proc = active_processes[username]
         try: proc.terminate(); proc.wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
+
     try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
     except: pass
 
 def write_to_ffmpeg(process, data):
     try:
-        if process.stdin: process.stdin.write(data); process.stdin.flush()
+        if process.stdin:
+            process.stdin.write(data)
+            process.stdin.flush()
     except: pass
 
 # --- API ---
@@ -238,14 +242,12 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (FLEXIBLE INPUT): {user.username}")
+    print(f"🎥 YAYIN (RAM SAFE): {user.username}")
 
-    # 🔥 FFMPEG: GİRİŞ KISITLAMALARI KALDIRILDI 🔥
-    # -r 30 (Input side) kaldırıldı. Ne gelirse al.
-# 🔥 ULTRA LOW LATENCY FFMPEG KOMUTU 🔥
+    # 🔥 LATENCY FIX (-g 30) 🔥
     command = [
         "ffmpeg", "-f", "webm", 
-        "-analyzeduration", "10000000", "-probesize", "10000000", # Hızlı analiz
+        "-analyzeduration", "10000000", "-probesize", "10000000",
         "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
         
         "-filter_complex", 
@@ -255,25 +257,18 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=202:-2[out360];"
         "[v240]scale=136:-2[out240]",
         
-        "-r", "30", # Kare hızını 30'a sabitle
-        "-preset", "ultrafast", "-tune", "zerolatency", 
+        "-r", "30", "-preset", "ultrafast", "-tune", "zerolatency", 
         "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "30", # 🔥 ANAHTAR KARE HER 1 SANİYEDE (Kritik!)
-        "-keyint_min", "30", # Minimum anahtar kare aralığı
-        "-sc_threshold", "0", # Sahne değişiminde ekstra keyframe atma (Stabilite için)
+        "-g", "30", # 🔥 ANAHTAR KARE 1 SANİYE (3-4sn Gecikme İçin Şart)
         "-pix_fmt", "yuv420p",
 
-        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2000k", "-bufsize:v:0", "4000k", "-c:a:0", "aac", "-b:a:0", "128k",
-        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "2000k", "-c:a:1", "aac", "-b:a:1", "96k",
-        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "600k", "-bufsize:v:2", "1200k", "-c:a:2", "aac", "-b:a:2", "64k",
-        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "300k", "-bufsize:v:3", "600k", "-c:a:3", "aac", "-b:a:3", "48k",
+        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2000k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
+        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
+        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "600k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
+        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "300k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
         
-        "-f", "hls", 
-        "-hls_time", "1", # Parça süresi 1 saniye
-        "-hls_list_size", "3", # Sadece son 3 parça listede kalsın
-        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
-        "-hls_allow_cache", "0",
-        
+        "-f", "hls", "-hls_time", "1", "-hls_list_size", "3", 
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]

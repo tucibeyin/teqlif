@@ -12,6 +12,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let videoDevices = [];
     let currentDeviceIndex = 0;
     let canvas, ctx, animationFrameId;
+    let localStream = null; // Global stream değişkeni
 
     // --- 1. MODERASYON ---
     window.openModMenu = function (username) {
@@ -116,11 +117,11 @@ document.addEventListener('DOMContentLoaded', () => {
         getDevices();
 
         async function initStream(deviceId = null) {
-            if (window.localStream) { window.localStream.getTracks().forEach(track => track.stop()); }
+            if (localStream) { localStream.getTracks().forEach(track => track.stop()); }
             const constraints = { audio: true, video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } };
             try {
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                window.localStream = stream; videoElement.srcObject = stream;
+                localStream = stream; videoElement.srcObject = stream;
                 startCanvasLoop();
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const audioSelect = document.getElementById('audioSource');
@@ -162,23 +163,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.connectChat('broadcast');
                     const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                     ws.onopen = () => {
-                        // 🔥 30 FPS CANVAS (Stabilite İçin)
                         const canvasStream = canvas.captureStream(30);
-                        const audioTracks = window.localStream.getAudioTracks(); if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
-
-                        // 🔥 VP8 ÖNCELİKLİ (Android Uyumu İçin)
+                        const audioTracks = localStream.getAudioTracks(); if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
                         let mimeType = 'video/webm;codecs=vp8';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm'; // Fallback
+                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
 
-                        rec = new MediaRecorder(canvasStream, { mimeType: mimeType, videoBitsPerSecond: 2500000 });
-                        rec.start(500); // 500ms chunk
-                        rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+                        rec = new MediaRecorder(canvasStream, { mimeType: mimeType, videoBitsPerSecond: 1500000 }); // 1.5 Mbps
+                        rec.start(500);
+                        rec.ondataavailable = e => {
+                            // 🔥 RAM KORUMASI: Buffer dolduysa veri gönderme 🔥
+                            if (ws.bufferedAmount > 200000) { console.warn("Buffer full, dropping frame"); return; }
+                            if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data);
+                        };
                         sendThumbnailSnapshot(); window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
                 });
             });
         }
-        window.stopBroadcast = function () { if (window.thumbInterval) clearInterval(window.thumbInterval); if (animationFrameId) cancelAnimationFrame(animationFrameId); fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
+
+        // 🔥 KAYNAK YÖNETİMİ: Çıkışta her şeyi durdur 🔥
+        window.stopBroadcast = function () {
+            if (window.thumbInterval) clearInterval(window.thumbInterval);
+            if (animationFrameId) cancelAnimationFrame(animationFrameId);
+            if (rec && rec.state !== 'inactive') rec.stop();
+            if (localStream) localStream.getTracks().forEach(t => t.stop());
+
+            fetch('/broadcast/stop', { method: 'POST' });
+            window.location.href = '/';
+        };
+
         window.toggleAuction = function () { AUCTION_ACTIVE = !AUCTION_ACTIVE; const btn = document.getElementById('btn-auction-toggle'); const formData = new FormData(); formData.append('active', AUCTION_ACTIVE); fetch('/broadcast/toggle_auction', { method: 'POST', body: formData }); if (AUCTION_ACTIVE) { btn.innerHTML = "🚫 Kapat"; btn.style.background = "rgba(255, 59, 48, 0.4)"; } else { btn.innerHTML = "🔨 Mezat"; btn.style.background = "rgba(255, 255, 255, 0.2)"; } }
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
@@ -186,24 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
         // --- İZLEYİCİ MANTIĞI ---
-        const hlsConfig = {
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 0, // Eski segmentleri bellekte tutma
-
-            // Canlı yayının sadece 1.5 segment (1.5 saniye) gerisinden gel
-            liveSyncDurationCount: 1.5,
-
-            // Eğer 3 saniye geriye düşerse, videoyu hızlandırıp yakala
-            liveMaxLatencyDurationCount: 3,
-
-            // Sadece 2 saniyelik ileri tampon yap (Daha fazlası gecikme demek)
-            maxBufferLength: 2,
-            maxMaxBufferLength: 2,
-
-            enableSoftwareAES: false,
-            fragLoadingTimeOut: 10000,
-        };
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 1.5, liveMaxLatencyDurationCount: 3, maxBufferLength: 2, maxMaxBufferLength: 3, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
