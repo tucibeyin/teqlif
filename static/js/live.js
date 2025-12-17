@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeGiftTarget = null;
 
-    // --- 2. GÖRÜNÜM GÜNCELLEME ---
+    // --- 2. GÖRÜNÜM ---
     function updatePriceDisplay(amount, target, bidderName) {
         const idHost = 'current-price-display'; const idViewer = `price-${target}`;
         let el = document.getElementById(idHost); if (!el) el = document.getElementById(idViewer);
@@ -106,14 +106,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.connectChat('broadcast');
                     const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                     ws.onopen = () => {
-                        // 🔥 KRİTİK DEĞİŞİKLİK: VP8 ZORUNLU (VP9 YERİNE) 🔥
-                        // VP9 sunucuyu ve FFmpeg'i yoruyor, VP8 çok daha stabil.
                         let mimeType = 'video/webm;codecs=vp8';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp9'; // Desteklemiyorsa VP9 dene
+                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp9';
                         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=h264';
                         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
-
-                        console.log("Seçilen Kararlı Format:", mimeType);
+                        console.log("Seçilen Format:", mimeType);
                         rec = new MediaRecorder(window.localStream, { mimeType: mimeType, videoBitsPerSecond: 2500000 });
                         rec.start(500);
                         rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
@@ -129,14 +126,26 @@ document.addEventListener('DOMContentLoaded', () => {
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { const video = document.getElementById('preview'); const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360; canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height); try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- İZLEYİCİ MANTIĞI ---
+        // --- 🔥 İZLEYİCİ LOW LATENCY CONFIG 🔥 ---
+
+        // Bu HLS konfigürasyonu gecikmeyi minimuma indirmek içindir.
+        const hlsConfig = {
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 90,
+            liveSyncDurationCount: 3, // Canlı yayının 3 segment (3sn) gerisinden gel
+            liveMaxLatencyDurationCount: 5,
+            maxBufferLength: 5,
+        };
+
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster;
             const v = document.getElementById(`video-${u}`);
             if (v) {
                 const src = `/static/hls/${u}/master.m3u8`;
                 if (Hls.isSupported()) {
-                    const h = new Hls(); h.loadSource(src); h.attachMedia(v);
+                    const h = new Hls(hlsConfig); // Config'i buraya verdik
+                    h.loadSource(src); h.attachMedia(v);
                     h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("AutoPlay blocked:", e)));
                 } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
                     v.src = src; v.play().catch(e => console.log("AutoPlay blocked:", e));
@@ -149,7 +158,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     const u = e.target.dataset.username; const v = document.getElementById(`video-${u}`);
                     if (e.isIntersecting) {
                         const src = `/static/hls/${u}/master.m3u8`;
-                        if (Hls.isSupported()) { const h = new Hls(); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() })); }
+                        if (Hls.isSupported()) {
+                            const h = new Hls(hlsConfig); // Config buraya da eklendi
+                            h.loadSource(src); h.attachMedia(v);
+                            h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
+                        }
                         else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play().catch(() => { v.muted = true; v.play() }); }
                         window.connectChat(u);
                     } else { if (v) v.pause(); }

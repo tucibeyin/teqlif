@@ -17,7 +17,7 @@ from utils import get_current_user, send_broadcast_notifications_task
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET ---
+# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[WebSocket]] = {}
@@ -182,28 +182,25 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     if not user or not user.username: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
-    # Eski dosyaları temizle
     shutil.rmtree(stream_dir, ignore_errors=True)
-    
-    # 4 Farklı kalite için klasörleri oluştur
     os.makedirs(f"{stream_dir}/720p", exist_ok=True)
     os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True)
     os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN BAŞLIYOR (MULTI-BITRATE ABR): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (ULTRA LOW LATENCY - ABR): {user.username}")
 
-    # 🔥 FFmpeg MULTI-BITRATE KOMUTU 🔥
-    # Gelen yayını 4 parçaya böler, yeniden boyutlandırır ve ayrı ayrı kodlar.
+    # 🔥 PREMIUM LOW LATENCY ABR AYARLARI 🔥
+    # -hls_time 1: Parçalar 1 saniyelik olsun (En düşük gecikme)
+    # -g 30: Her 1 saniyede bir anahtar kare (Keyframe) atılsın
     command = [
         "ffmpeg", 
         "-f", "webm", 
-        "-analyzeduration", "10000000",
-        "-probesize", "10000000",
+        "-analyzeduration", "5000000",
+        "-probesize", "5000000", 
         "-fflags", "+genpts+igndts+nobuffer", 
         "-i", "pipe:0",
         
-        # Filtre: Görüntüyü 4 kopyaya ayır ve boyutlandır
         "-filter_complex", 
         "[0:v]split=4[v720][v480][v360][v240];"
         "[v720]scale=-2:720[out720];"
@@ -211,45 +208,41 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=-2:360[out360];"
         "[v240]scale=-2:240[out240]",
 
-        # --- 720p (Yüksek Kalite) ---
-        "-map", "[out720]", "-map", "0:a",
-        "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "3000k", "-bufsize:v:0", "3000k",
-        "-c:a:0", "aac", "-b:a:0", "128k",
-        
-        # --- 480p (Orta Kalite) ---
-        "-map", "[out480]", "-map", "0:a",
-        "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1500k", "-bufsize:v:1", "1500k",
-        "-c:a:1", "aac", "-b:a:1", "96k",
-
-        # --- 360p (Düşük Kalite) ---
-        "-map", "[out360]", "-map", "0:a",
-        "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "800k",
-        "-c:a:2", "aac", "-b:a:2", "64k",
-
-        # --- 240p (Tasarruf Modu) ---
-        "-map", "[out240]", "-map", "0:a",
-        "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "400k",
-        "-c:a:3", "aac", "-b:a:3", "48k",
-
-        # --- ORTAK AYARLAR ---
-        "-preset", "veryfast", "-tune", "zerolatency", 
+        # ORTAK AYARLAR (Hız için Ultrafast, iOS için Baseline)
+        "-preset", "ultrafast", "-tune", "zerolatency", 
         "-profile:v", "baseline", "-level", "3.0",
-        "-g", "60", # 2 saniye keyframe
+        "-sc_threshold", "0", # Sahne değişiminde keyframe atma, sabit tut
+        "-g", "30", # 🔥 30 FPS varsayarsak 1 saniyede bir keyframe
         "-pix_fmt", "yuv420p",
 
-        # --- HLS ÇIKIŞ AYARLARI ---
+        # --- 720p ---
+        "-map", "[out720]", "-map", "0:a",
+        "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2200k", "-bufsize:v:0", "3000k",
+        "-c:a:0", "aac", "-b:a:0", "128k",
+        
+        # --- 480p ---
+        "-map", "[out480]", "-map", "0:a",
+        "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "1500k",
+        "-c:a:1", "aac", "-b:a:1", "96k",
+
+        # --- 360p ---
+        "-map", "[out360]", "-map", "0:a",
+        "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k",
+        "-c:a:2", "aac", "-b:a:2", "64k",
+
+        # --- 240p ---
+        "-map", "[out240]", "-map", "0:a",
+        "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k",
+        "-c:a:3", "aac", "-b:a:3", "48k",
+
         "-f", "hls", 
-        "-hls_time", "2", 
-        "-hls_list_size", "5", 
+        "-hls_time", "1", # 🔥 1 Saniyelik Parçalar (Gecikmeyi düşürür)
+        "-hls_list_size", "4", # Listede sadece son 4 saniye kalsın
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         
-        # Stream Eşleştirme (Video+Ses paketleme)
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
-        
-        # Ana Oynatma Listesi
         "-master_pl_name", "master.m3u8",
         
-        # Çıktı Yolları (%v yerine isim gelecek)
         f"{stream_dir}/%v/stream.m3u8"
     ]
     
