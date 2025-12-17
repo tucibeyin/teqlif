@@ -59,38 +59,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bidFeed) bidFeed.innerHTML = ''; return;
             }
             if (d.type === 'gift') { showGiftAnimation(d.gift_type, d.sender); return; }
-
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
-
             if (d.type === 'chat') {
                 if (d.msg.startsWith("BID:")) {
-                    // PEY MESAJI (Zaten çalışıyor)
                     const amount = d.msg.split(":")[1]; updatePriceDisplay(amount, target, d.user);
                     const bidFeedId = target === 'broadcast' ? 'bid-feed-broadcast' : `bid-feed-${target}`;
                     const bidFeed = document.getElementById(bidFeedId);
-                    if (bidFeed) {
-                        const div = document.createElement('div');
-                        div.className = 'bid-bubble';
-                        div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`;
-                        bidFeed.appendChild(div);
-                        bidFeed.scrollTop = bidFeed.scrollHeight;
-                        setTimeout(() => { div.remove(); }, 10000);
-                    }
+                    if (bidFeed) { const div = document.createElement('div'); div.className = 'bid-bubble'; div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`; bidFeed.appendChild(div); bidFeed.scrollTop = bidFeed.scrollHeight; setTimeout(() => { div.remove(); }, 10000); }
                 } else {
-                    // NORMAL MESAJ (DÜZELTİLDİ)
                     if (feed) {
                         const div = document.createElement('div');
                         div.className = 'msg';
                         div.innerHTML = `<b onclick="openModMenu('${d.user}')" style="cursor:pointer;">${d.user}:</b> ${d.msg}`;
                         feed.appendChild(div);
                         feed.scrollTop = feed.scrollHeight;
-
-                        // 🔥 GARANTİ SİLME İŞLEMİ 🔥
                         setTimeout(() => {
-                            div.classList.add('fade-out'); // 1. Solma efektini başlat
-                            setTimeout(() => { div.remove(); }, 1000); // 2. Efekt süresi (1sn) bitince zorla sil
-                        }, 5000); // 5 saniye ekranda kalır
+                            div.classList.add('fade-out');
+                            setTimeout(() => { div.remove(); }, 1000);
+                        }, 5000);
                     }
                 }
             }
@@ -135,14 +122,31 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         initStream();
         window.restartStream = function () { if (window.localStream) window.localStream.getTracks().forEach(t => t.stop()); initStream(); }
+
         const startBtn = document.getElementById('btn-start-broadcast');
         if (startBtn) {
             startBtn.addEventListener('click', function () {
-                const title = document.getElementById('streamTitle').value; const category = document.getElementById('streamCategory').value;
+                const title = document.getElementById('streamTitle').value;
+                const category = document.getElementById('streamCategory').value;
                 if (!title) { alert("Başlık girin!"); return; }
+
                 const formData = new FormData(); formData.append('title', title); formData.append('category', category);
+
                 fetch('/broadcast/start', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
                     document.getElementById('setup-layer').style.display = 'none'; document.getElementById('live-ui').style.display = 'flex';
+
+                    // 🔥 KATEGORİ KONTROLÜ (MEZAT TUŞLARINI GİZLE) 🔥
+                    if (category !== 'Mezat') {
+                        // Mezat değilse butonları bul ve gizle
+                        const resetBtn = document.querySelector('button[onclick="openResetModal()"]');
+                        const toggleBtn = document.getElementById('btn-auction-toggle');
+                        const priceBoard = document.querySelector('.top-bar-left .price-board');
+
+                        if (resetBtn) resetBtn.style.display = 'none';
+                        if (toggleBtn) toggleBtn.style.display = 'none';
+                        if (priceBoard) priceBoard.style.display = 'none'; // Fiyat tabelasını da gizle
+                    }
+
                     window.connectChat('broadcast');
                     const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                     ws.onopen = () => {
