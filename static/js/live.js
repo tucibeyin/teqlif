@@ -106,11 +106,14 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.connectChat('broadcast');
                     const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                     ws.onopen = () => {
-                        let mimeType = 'video/webm;codecs=vp9';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp8';
+                        // 🔥 KRİTİK DEĞİŞİKLİK: VP8 ZORUNLU (VP9 YERİNE) 🔥
+                        // VP9 sunucuyu ve FFmpeg'i yoruyor, VP8 çok daha stabil.
+                        let mimeType = 'video/webm;codecs=vp8';
+                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp9'; // Desteklemiyorsa VP9 dene
                         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=h264';
                         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
-                        console.log("Seçilen Format:", mimeType);
+
+                        console.log("Seçilen Kararlı Format:", mimeType);
                         rec = new MediaRecorder(window.localStream, { mimeType: mimeType, videoBitsPerSecond: 2500000 });
                         rec.start(500);
                         rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
@@ -126,30 +129,21 @@ document.addEventListener('DOMContentLoaded', () => {
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { const video = document.getElementById('preview'); const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360; canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height); try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- 🔥 İZLEYİCİ MANTIĞI (GÜNCELLENDİ: iOS ve Android Düzeltmesi) 🔥 ---
-
-        // 1. Tekil Yayın İzleme Modu (Direkt Oynat)
+        // --- İZLEYİCİ MANTIĞI ---
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster;
             const v = document.getElementById(`video-${u}`);
             if (v) {
-                // Dosya ismi ARTIK 'master.m3u8' (Eskiden stream.m3u8 idi)
                 const src = `/static/hls/${u}/master.m3u8`;
-                console.log("Direct Play:", src);
-
                 if (Hls.isSupported()) {
                     const h = new Hls(); h.loadSource(src); h.attachMedia(v);
                     h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("AutoPlay blocked:", e)));
                 } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                    // iOS Native
-                    v.src = src;
-                    v.play().catch(e => console.log("AutoPlay blocked:", e));
+                    v.src = src; v.play().catch(e => console.log("AutoPlay blocked:", e));
                 }
                 window.connectChat(u);
             }
-        }
-        // 2. Anasayfa Çoklu İzleme Modu (Scroll ile Oynat)
-        else {
+        } else {
             let obs = new IntersectionObserver((entries) => {
                 entries.forEach(e => {
                     const u = e.target.dataset.username; const v = document.getElementById(`video-${u}`);
