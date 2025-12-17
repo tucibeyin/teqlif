@@ -7,10 +7,8 @@ document.addEventListener('DOMContentLoaded', () => {
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeGiftTarget = null;
 
-    // --- FİYAT GÜNCELLEME ---
+    // --- YARDIMCI GÖRÜNÜMLER ---
     function updatePriceDisplay(amount, target, bidderName) {
-        // Yayıncı ekranı: 'current-price-display'
-        // İzleyici ekranı: 'price-{username}'
         const idHost = 'current-price-display';
         const idViewer = `price-${target}`;
 
@@ -23,7 +21,6 @@ document.addEventListener('DOMContentLoaded', () => {
             void el.offsetWidth; el.classList.add("blink-anim");
         }
 
-        // Lider Tablosu
         const lHost = 'leader-display-broadcast';
         const lViewer = `leader-display-${target}`;
         let lRow = document.getElementById(lHost);
@@ -39,7 +36,30 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     }
 
-    // --- SOCKET BAĞLANTISI ---
+    // 🔥 YAYIN BİTTİĞİNDE GÖSTERİLECEK MODAL 🔥
+    function showStreamEndedModal() {
+        const modal = document.createElement('div');
+        modal.style.position = 'fixed';
+        modal.style.top = '0'; modal.style.left = '0';
+        modal.style.width = '100%'; modal.style.height = '100%';
+        modal.style.background = 'rgba(0,0,0,0.85)';
+        modal.style.backdropFilter = 'blur(10px)';
+        modal.style.zIndex = '9999';
+        modal.style.display = 'flex';
+        modal.style.flexDirection = 'column';
+        modal.style.alignItems = 'center';
+        modal.style.justifyContent = 'center';
+        modal.style.color = 'white';
+        modal.innerHTML = `
+            <div style="font-size: 60px; margin-bottom: 20px;">🛑</div>
+            <h2 style="margin-bottom: 10px;">Yayın Sona Erdi</h2>
+            <p style="color: #aaa; margin-bottom: 30px;">Yayıncı yayını kapattı.</p>
+            <a href="/" style="background: #34C759; color: black; padding: 12px 30px; border-radius: 20px; text-decoration: none; font-weight: bold;">Ana Sayfaya Dön</a>
+        `;
+        document.body.appendChild(modal);
+    }
+
+    // --- SOCKET ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -50,13 +70,14 @@ document.addEventListener('DOMContentLoaded', () => {
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
 
-            // --- 1. İZLEYİCİ SAYISI (DÜZELTİLDİ) ---
-            if (d.type === 'count') {
-                // Yayıncı ekranı için ID
-                const elBroadcast = document.getElementById('live-count-broadcast');
+            // 🔥 YAYIN BİTTİ BİLDİRİMİ GELDİ Mİ? 🔥
+            if (d.type === 'stream_ended') {
+                showStreamEndedModal();
+                return;
+            }
 
-                // İzleyici ekranı için DİNAMİK ID (Hata buradaydı)
-                // live-count-display yerine live-count-{target} kullanıyoruz
+            if (d.type === 'count') {
+                const elBroadcast = document.getElementById('live-count-broadcast');
                 const elViewer = document.getElementById(`live-count-${target}`);
 
                 if (elBroadcast) elBroadcast.innerText = d.val;
@@ -69,7 +90,6 @@ document.addEventListener('DOMContentLoaded', () => {
             if (d.type === 'auction_state') {
                 const layer = document.getElementById(`bid-layer-${target}`);
                 const board = document.getElementById(`price-board-${target}`);
-
                 if (layer) layer.style.display = d.active ? 'flex' : 'none';
                 if (board) board.style.display = d.active ? 'flex' : 'none';
                 return;
@@ -84,7 +104,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (d.type === 'gift') { showGiftAnimation(d.gift_type, d.sender); return; }
 
-            // --- SOHBET VE TEKLİFLER ---
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
 
@@ -119,7 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- HEDİYE SİSTEMİ ---
     window.openGiftMenu = function (username) { activeGiftTarget = username; document.getElementById('giftMenu').style.display = 'block'; }
     window.closeGiftMenu = function () { document.getElementById('giftMenu').style.display = 'none'; }
     window.sendGift = function (giftType) {
@@ -147,7 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
         setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- YAYINCI KODLARI ---
     if (MODE === 'broadcast') {
         const prev = document.getElementById('preview');
         let rec;
@@ -214,7 +231,6 @@ document.addEventListener('DOMContentLoaded', () => {
             try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { }
         }
     } else {
-        // --- İZLEYİCİ MANTIĞI ---
         let obs = new IntersectionObserver((entries) => {
             entries.forEach(e => {
                 const u = e.target.dataset.username;
@@ -230,7 +246,6 @@ document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.stream-item').forEach(s => obs.observe(s));
     }
 
-    // --- ORTAK ---
     window.unmuteVideo = function (u) { const v = document.getElementById(`video-${u}`); if (v) { v.muted = false; v.volume = 1.0; v.parentElement.querySelector('.tap-hint').style.display = 'none'; } }
     window.toggleFollow = function (username) { const btn = document.getElementById(`follow-btn-${username}`); const formData = new FormData(); formData.append('username', username); fetch('/user/follow', { method: 'POST', body: formData }).then(res => res.json()).then(data => { if (data.status === 'followed') { if (btn) { btn.classList.add('following'); btn.innerText = '✓'; } } else { if (btn) { btn.classList.remove('following'); btn.innerText = '+'; } } }); }
     window.sendBid = function (target, amount) { const id = target === 'broadcast' ? 'current-price-display' : `price-${target}`; const el = document.getElementById(id); const currentVal = parseInt(el ? el.innerText.replace('.', '') : "0") || 0; if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.send(`BID:${currentVal + amount}`); }

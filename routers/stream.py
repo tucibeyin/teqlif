@@ -38,7 +38,6 @@ class ConnectionManager:
         if room_name in self.rooms:
             count = len(self.rooms[room_name])
             msg = json.dumps({"type": "count", "val": count})
-            # Kopyası üzerinde dönerek hata riskini azalt
             for conn in self.rooms[room_name][:]:
                 try: await conn.send_text(msg)
                 except: pass
@@ -54,6 +53,7 @@ active_processes: Dict[str, subprocess.Popen] = {}
 
 # --- YARDIMCI FONKSİYONLAR ---
 def cleanup_stream(username: str, db: Session):
+    # Veritabanı ve Dosya Temizliği
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
@@ -70,7 +70,7 @@ def cleanup_stream(username: str, db: Session):
     
     shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
 
-# FFMPEG'e yazma işlemi (Bloklayıcı olduğu için ayrı fonksiyonda)
+# FFmpeg Yazma (Blocking Önleyici)
 def write_to_ffmpeg(process, data):
     try:
         if process.stdin:
@@ -137,6 +137,8 @@ async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Fo
 async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
     cleanup_stream(user.username, db)
+    # 🔥 İZLEYİCİLERE YAYIN BİTTİ BİLGİSİ GÖNDER 🔥
+    await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     return {"status": "stopped"}
 
 @router.post("/broadcast/toggle_auction")
@@ -250,15 +252,14 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
     
-    # Asenkron Döngüyü Al
     loop = asyncio.get_event_loop()
 
     try:
         while True:
             data = await websocket.receive_bytes()
-            # ÖNEMLİ: Yazma işlemini (blocking) Thread Pool'a gönderiyoruz
-            # Böylece ana sunucu kilitlenmiyor!
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
     except: pass
     finally:
+        # 🔥 TARAYICI KAPANDIĞINDA TEMİZLE VE BİLDİRİM GÖNDER 🔥
         cleanup_stream(user.username, db)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
