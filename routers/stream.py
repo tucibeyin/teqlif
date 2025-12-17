@@ -91,7 +91,7 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
     if mode == "broadcast":
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
-        # 🔥 DÜZELTME BURADA: Sadece kullanıcı adı OLANLARI (User.username != None) listele 🔥
+        # Sadece kullanıcı adı olanları listele (Hayalet yayınları gizle)
         active_streams = db.query(User).filter(User.is_live == True, User.username != None).all()
         
         return templates.TemplateResponse("live.html", {
@@ -221,22 +221,29 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     if not user or not user.username: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
+    # Eski klasörü temizle ve yenisini oluştur
     shutil.rmtree(stream_dir, ignore_errors=True)
-    os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True); os.makedirs(f"{stream_dir}/360p", exist_ok=True)
+    os.makedirs(stream_dir, exist_ok=True)
     
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (SADELEŞTİRİLMİŞ): {user.username}")
 
+    # 🔥 KRİTİK DEĞİŞİKLİK: BASİT VE SAĞLAM FFmpeg KOMUTU 🔥
     command = [
         "ffmpeg", "-f", "webm", "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
-        "-filter_complex", "[0:v]split=3[v1][v2][v3];[v1]scale=-2:720[v720];[v2]scale=-2:480[v480];[v3]scale=-2:360[v360]",
-        "-map", "[v720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
-        "-map", "[v480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
-        "-map", "[v360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "700k", "-bufsize:v:2", "800k", "-c:a:2", "aac", "-b:a:2", "64k",
-        "-preset", "veryfast", "-tune", "zerolatency", "-g", "30",
-        "-f", "hls", "-hls_time", "1", "-hls_list_size", "5", "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
-        "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p",
-        "-master_pl_name", "master.m3u8", "-hls_segment_filename", f"{stream_dir}/%v/seg_%04d.ts", f"{stream_dir}/%v/stream.m3u8",
-        "-loglevel", "error"
+        
+        "-c:v", "libx264", "-preset", "superfast", "-tune", "zerolatency",
+        "-b:v", "2500k", "-maxrate", "3000k", "-bufsize", "3000k",
+        "-g", "30", # Her 1 saniyede bir keyframe
+        
+        "-c:a", "aac", "-b:a", "128k", "-ar", "44100",
+        
+        "-f", "hls", 
+        "-hls_time", "1", 
+        "-hls_list_size", "5", 
+        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
+        "-master_pl_name", "master.m3u8",
+        
+        f"{stream_dir}/stream.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
