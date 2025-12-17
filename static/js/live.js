@@ -1,5 +1,4 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // --- 1. AYARLAR ---
     const CONFIG = window.TEQLIF_CONFIG || {};
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
@@ -7,8 +6,39 @@ document.addEventListener('DOMContentLoaded', () => {
     window.CURRENT_SOCKET = null;
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeGiftTarget = null;
+    let activeModTarget = null; // Yönetilecek kullanıcı
 
-    // --- 2. GÖRÜNÜM GÜNCELLEME ---
+    // --- 1. MODERASYON İŞLEVLERİ (YAYINCI İÇİN) ---
+    window.openModMenu = function (username) {
+        // Sadece yayıncı, kendi yayınındaysa ve başkasına tıklıyorsa aç
+        if (MODE === 'broadcast' && username !== CONFIG.username) {
+            activeModTarget = username;
+            document.getElementById('mod-target-name').innerText = username;
+            document.getElementById('modMenu').style.display = 'flex';
+        }
+    }
+
+    window.closeModMenu = function () {
+        document.getElementById('modMenu').style.display = 'none';
+        activeModTarget = null;
+    }
+
+    window.restrictUser = function (action, duration = 0) {
+        if (!activeModTarget) return;
+        const formData = new FormData();
+        formData.append('target_username', activeModTarget);
+        formData.append('action', action);
+        formData.append('duration', duration);
+
+        fetch('/stream/restrict', { method: 'POST', body: formData })
+            .then(res => res.json())
+            .then(data => {
+                alert(data.msg);
+                closeModMenu();
+            });
+    }
+
+    // --- 2. GÖRÜNÜM ---
     function updatePriceDisplay(amount, target, bidderName) {
         const idHost = 'current-price-display'; const idViewer = `price-${target}`;
         let el = document.getElementById(idHost); if (!el) el = document.getElementById(idViewer);
@@ -26,6 +56,18 @@ document.addEventListener('DOMContentLoaded', () => {
         window.CURRENT_SOCKET = ws;
         ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
+
+            // BAN KONTROLÜ
+            if (d.type === 'banned') {
+                alert("🔴 Bu yayından yasaklandınız!");
+                window.location.href = "/";
+                return;
+            }
+            if (d.type === 'alert') {
+                alert(d.msg);
+                return;
+            }
+
             if (d.type === 'stream_ended') { showStreamEndedModal(); return; }
             if (d.type === 'count') {
                 const elBroadcast = document.getElementById('live-count-broadcast');
@@ -45,8 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (bidFeed) bidFeed.innerHTML = ''; return;
             }
             if (d.type === 'gift') { showGiftAnimation(d.gift_type, d.sender); return; }
+
             const feedId = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
             const feed = document.getElementById(feedId);
+
             if (d.type === 'chat') {
                 if (d.msg.startsWith("BID:")) {
                     const amount = d.msg.split(":")[1]; updatePriceDisplay(amount, target, d.user);
@@ -54,7 +98,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const bidFeed = document.getElementById(bidFeedId);
                     if (bidFeed) { const div = document.createElement('div'); div.className = 'bid-bubble'; div.innerHTML = `<span class="bidder">${d.user}</span> ₺${amount}`; bidFeed.appendChild(div); bidFeed.scrollTop = bidFeed.scrollHeight; setTimeout(() => { div.remove(); }, 10000); }
                 } else {
-                    if (feed) { const div = document.createElement('div'); div.className = 'msg'; div.innerHTML = `<b>${d.user}:</b> ${d.msg}`; feed.appendChild(div); feed.scrollTop = feed.scrollHeight; setTimeout(() => { div.classList.add('fade-out'); div.addEventListener('animationend', () => div.remove()); }, 5000); }
+                    if (feed) {
+                        const div = document.createElement('div');
+                        div.className = 'msg';
+                        // İsimlere tıklayınca menü açılması için onclick ekledik
+                        div.innerHTML = `<b onclick="openModMenu('${d.user}')" style="cursor:pointer;">${d.user}:</b> ${d.msg}`;
+                        feed.appendChild(div);
+                        feed.scrollTop = feed.scrollHeight;
+                        setTimeout(() => { div.classList.add('fade-out'); div.addEventListener('animationend', () => div.remove()); }, 5000);
+                    }
                 }
             }
         };
@@ -81,7 +133,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 4. YAYINCI ---
+    // --- 4. YAYINCI / İZLEYİCİ MANTIĞI ---
     if (MODE === 'broadcast') {
         const prev = document.getElementById('preview'); let rec;
         async function initStream() {
@@ -110,7 +162,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=vp9';
                         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm;codecs=h264';
                         if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
-                        console.log("Seçilen Format:", mimeType);
                         rec = new MediaRecorder(window.localStream, { mimeType: mimeType, videoBitsPerSecond: 2500000 });
                         rec.start(500);
                         rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
@@ -126,34 +177,13 @@ document.addEventListener('DOMContentLoaded', () => {
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { const video = document.getElementById('preview'); const canvas = document.createElement('canvas'); canvas.width = 640; canvas.height = 360; canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height); try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- 🔥 İZLEYİCİ AGRESİF HIZLANDIRMA 🔥 ---
-        const hlsConfig = {
-            enableWorker: true,
-            lowLatencyMode: true,
-
-            // Canlı yayının 2 segment (2 saniye) gerisinden gel (Çok Agresif)
-            liveSyncDurationCount: 2,
-
-            // Eğer 4 segment (4 saniye) geriye düşerse atla
-            liveMaxLatencyDurationCount: 4,
-
-            // Maksimum 5 saniye tampon tut (Daha fazlası gecikme yapar)
-            maxBufferLength: 5,
-            backBufferLength: 5
-        };
-
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4, maxBufferLength: 5, backBufferLength: 5 };
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
-            const u = CONFIG.broadcaster;
-            const v = document.getElementById(`video-${u}`);
+            const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
             if (v) {
                 const src = `/static/hls/${u}/master.m3u8`;
-                if (Hls.isSupported()) {
-                    const h = new Hls(hlsConfig);
-                    h.loadSource(src); h.attachMedia(v);
-                    h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("AutoPlay blocked:", e)));
-                } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                    v.src = src; v.play().catch(e => console.log("AutoPlay blocked:", e));
-                }
+                if (Hls.isSupported()) { const h = new Hls(hlsConfig); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("Blocked:", e))); }
+                else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play().catch(e => console.log("Blocked:", e)); }
                 window.connectChat(u);
             }
         } else {
@@ -162,11 +192,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const u = e.target.dataset.username; const v = document.getElementById(`video-${u}`);
                     if (e.isIntersecting) {
                         const src = `/static/hls/${u}/master.m3u8`;
-                        if (Hls.isSupported()) {
-                            const h = new Hls(hlsConfig);
-                            h.loadSource(src); h.attachMedia(v);
-                            h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
-                        }
+                        if (Hls.isSupported()) { const h = new Hls(hlsConfig); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() })); }
                         else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play().catch(() => { v.muted = true; v.play() }); }
                         window.connectChat(u);
                     } else { if (v) v.pause(); }

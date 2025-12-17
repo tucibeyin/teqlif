@@ -6,34 +6,39 @@ import sys
 import base64
 import asyncio 
 import time
+from datetime import datetime, timedelta
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from models import User, StreamMessage
+from models import User, StreamMessage, StreamRestriction # Eklendi
 from utils import get_current_user, send_broadcast_notifications_task
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET YÖNETİCİSİ ---
+# --- SOCKET YÖNETİCİSİ (GÜNCELLENDİ) ---
 class ConnectionManager:
     def __init__(self):
-        self.rooms: Dict[str, List[WebSocket]] = {}
+        # Oda yapısı: { "room_name": [ { "ws": WebSocket, "user": "username" }, ... ] }
+        self.rooms: Dict[str, List[dict]] = {}
         
-    async def connect(self, websocket: WebSocket, room_name: str):
+    async def connect(self, websocket: WebSocket, room_name: str, username: str):
         await websocket.accept()
         if room_name not in self.rooms: self.rooms[room_name] = []
-        self.rooms[room_name].append(websocket)
-        # Eğer oda bir yayın odasıysa sayıyı güncelle
+        # Soketi ve kullanıcı adını sakla
+        self.rooms[room_name].append({"ws": websocket, "user": username})
+        
         if room_name != "home":
             await self.broadcast_count(room_name)
 
     async def disconnect(self, websocket: WebSocket, room_name: str):
         if room_name in self.rooms:
-            if websocket in self.rooms[room_name]: self.rooms[room_name].remove(websocket)
+            # Listeden doğru objeyi bul ve sil
+            self.rooms[room_name] = [client for client in self.rooms[room_name] if client["ws"] != websocket]
+            
             if room_name != "home":
                 await self.broadcast_count(room_name)
             if not self.rooms[room_name]: del self.rooms[room_name]
@@ -42,15 +47,28 @@ class ConnectionManager:
         if room_name in self.rooms:
             count = len(self.rooms[room_name])
             msg = json.dumps({"type": "count", "val": count})
-            for conn in self.rooms[room_name][:]:
-                try: await conn.send_text(msg)
+            for client in self.rooms[room_name]:
+                try: await client["ws"].send_text(msg)
                 except: pass
 
     async def broadcast_to_room(self, message: str, room_name: str):
         if room_name in self.rooms:
-            for conn in self.rooms[room_name][:]:
-                try: await conn.send_text(message)
+            for client in self.rooms[room_name]:
+                try: await client["ws"].send_text(message)
                 except: pass
+    
+    # 🔥 YENİ: KULLANICIYI ODADAN AT (KICK) 🔥
+    async def kick_user(self, room_name: str, username: str):
+        if room_name in self.rooms:
+            targets = [c for c in self.rooms[room_name] if c["user"] == username]
+            for target in targets:
+                try:
+                    await target["ws"].send_text(json.dumps({"type": "banned"}))
+                    await target["ws"].close()
+                except: pass
+            # Listeyi temizle
+            self.rooms[room_name] = [c for c in self.rooms[room_name] if c["user"] != username]
+            await self.broadcast_count(room_name)
 
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
@@ -75,6 +93,46 @@ def write_to_ffmpeg(process, data):
         if process.stdin: process.stdin.write(data); process.stdin.flush()
     except: pass
 
+# --- MODERASYON API ---
+@router.post("/stream/restrict")
+async def restrict_user(
+    target_username: str = Form(...), 
+    action: str = Form(...), # 'ban', 'mute', 'unban'
+    duration: int = Form(0), # Dakika (0 = sınırsız)
+    user: User = Depends(get_current_user), 
+    db: Session = Depends(get_db)
+):
+    if not user or not user.is_live: return JSONResponse({"status": "error", "msg": "Yetkisiz işlem"}, 403)
+    
+    room_name = user.username # Yayıncı kendi odasını yönetir
+    
+    # Eskileri temizle
+    db.query(StreamRestriction).filter(
+        StreamRestriction.room_name == room_name, 
+        StreamRestriction.user_username == target_username
+    ).delete()
+    
+    if action == "unban":
+        db.commit()
+        return {"status": "success", "msg": "Kısıtlama kaldırıldı."}
+    
+    expires = datetime.utcnow() + timedelta(minutes=duration) if duration > 0 else None
+    
+    new_res = StreamRestriction(
+        room_name=room_name,
+        user_username=target_username,
+        type=action,
+        expires_at=expires
+    )
+    db.add(new_res)
+    db.commit()
+    
+    # Eğer BAN ise, canlı yayından at
+    if action == "ban":
+        await manager.kick_user(room_name, target_username)
+        
+    return {"status": "success", "msg": f"{target_username} işlem: {action}"}
+
 # --- ENDPOINTLER ---
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -83,11 +141,22 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: Optional
     if broadcaster:
         target_user = db.query(User).filter(User.username == broadcaster).first()
         if target_user and target_user in user.followed: is_following = True
+        
+        # 🔥 İZLEYİCİ BANLI MI KONTROL ET 🔥
+        ban_check = db.query(StreamRestriction).filter(
+            StreamRestriction.room_name == broadcaster,
+            StreamRestriction.user_username == user.username,
+            StreamRestriction.type == 'ban'
+        ).first()
+        if ban_check:
+             return templates.TemplateResponse("error.html", {"request": request, "msg": "Bu yayından yasaklandınız!"})
+
     if mode == "broadcast": return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
         active_streams = db.query(User).filter(User.is_live == True, User.username != None).all()
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "watch", "streams": active_streams, "auction_active": target_user.is_auction_active if target_user else False, "is_following": is_following, "broadcaster": target_user})
 
+# ... (Diğer POST endpointleri: gift, start, stop, toggle, reset, thumbnail aynen kalıyor) ...
 @router.post("/gift/send")
 async def send_gift(target_username: str = Form(...), gift_type: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return JSONResponse({"status": "error", "msg": "Giriş yapın"}, 401)
@@ -114,7 +183,6 @@ async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Fo
 async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
     cleanup_stream(user.username, db)
-    # 🔥 HEM ODAYA HEM ANASAYFAYA BİLDİR 🔥
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
@@ -148,7 +216,10 @@ async def upload_thumbnail(request: Request, user: User = Depends(get_current_us
 
 @router.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Session = Depends(get_db)):
-    room_name = stream; await manager.connect(websocket, room_name); current_username = "Misafir"
+    room_name = stream
+    current_username = "Misafir"
+    
+    # Kimlik Doğrulama
     try:
         token = websocket.cookies.get("access_token")
         if token:
@@ -159,20 +230,52 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
             if u: current_username = u.username
     except: pass
     
-    # Anasayfa bağlantısı ise sadece bekle
+    # 🔥 BAN KONTROLÜ (GİRİŞTE) 🔥
+    if room_name != "home":
+        ban_check = db.query(StreamRestriction).filter(
+            StreamRestriction.room_name == room_name,
+            StreamRestriction.user_username == current_username,
+            StreamRestriction.type == 'ban'
+        ).first()
+        if ban_check:
+            await websocket.accept()
+            await websocket.send_text(json.dumps({"type": "banned"}))
+            await websocket.close()
+            return
+
+    await manager.connect(websocket, room_name, current_username) # Username eklendi
+
+    # Anasayfa ise bekle
     if room_name == "home":
         try:
-            while True: await websocket.receive_text() # Kalp atışı
+            while True: await websocket.receive_text()
         except: await manager.disconnect(websocket, room_name); return
 
     broadcaster = db.query(User).filter(User.username == stream).first()
     if broadcaster:
         init_msg = json.dumps({"type": "init", "price": broadcaster.current_price, "leader": broadcaster.highest_bidder})
         await websocket.send_text(init_msg)
+    
     try:
         while True:
             data = await websocket.receive_text()
             if data.strip():
+                # 🔥 MUTE KONTROLÜ (MESAJ ATARKEN) 🔥
+                restriction = db.query(StreamRestriction).filter(
+                    StreamRestriction.room_name == room_name,
+                    StreamRestriction.user_username == current_username,
+                    StreamRestriction.type == 'mute'
+                ).first()
+                
+                if restriction:
+                    # Süre dolmuş mu?
+                    if restriction.expires_at and restriction.expires_at < datetime.utcnow():
+                        db.delete(restriction); db.commit() # Süre bitmiş, sil
+                    else:
+                        # Muted
+                        await websocket.send_text(json.dumps({"type": "alert", "msg": "🚫 Susturuldunuz!"}))
+                        continue # Mesajı gönderme
+
                 is_bid = data.startswith("BID:"); safe_msg = data.replace("<", "&lt;")
                 new_msg = StreamMessage(room_name=stream, sender=current_username, message=safe_msg, is_bid=is_bid); db.add(new_msg)
                 if is_bid and broadcaster:
@@ -234,7 +337,6 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
                 try:
                     u = new_db.query(User).filter(User.username == username).first()
                     if u: u.is_live = True; new_db.commit(); file_ready = True
-                    # 🔥 BURADA ANASAYFAYA 'YAYIN BAŞLADI' SİNYALİ GÖNDEREBİLİRİZ (OPSİYONEL) 🔥
                 except: pass
                 finally: new_db.close()
                 break
@@ -249,6 +351,5 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     except: pass
     finally:
         cleanup_stream(user.username, db)
-        # 🔥 YAYIN BİTTİĞİNDE ANASAYFADAN DA SİL 🔥
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")

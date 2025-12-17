@@ -58,3 +58,13 @@ class StreamMessage(Base):
     gift_type = Column(String, nullable=True)
     
     created_at = Column(DateTime, default=datetime.utcnow)
+
+class StreamRestriction(Base):
+    __tablename__ = "stream_restrictions"
+
+    id = Column(Integer, primary_key=True, index=True)
+    room_name = Column(String, index=True)      # Hangi yayında yasaklandı?
+    user_username = Column(String, index=True)  # Kim yasaklandı?
+    type = Column(String)                       # 'ban' veya 'mute'
+    expires_at = Column(DateTime, nullable=True)# Ne zaman bitiyor? (None ise sonsuz)
+    created_at = Column(DateTime, default=datetime.utcnow)
