@@ -5,6 +5,7 @@ import subprocess
 import sys
 import base64
 import asyncio 
+import time
 from typing import Dict, List, Optional
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
@@ -60,7 +61,10 @@ def cleanup_stream(username: str, db: Session):
         try: proc.terminate(); proc.wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
-    shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
+    
+    # Dosyaları hemen silme, izleyicilerde tamponda kalanlar izlensin (opsiyonel)
+    # shutil.rmtree(f"static/hls/{username}", ignore_errors=True) 
+    # Not: Restartta zaten temizleniyor.
 
 def write_to_ffmpeg(process, data):
     try:
@@ -98,7 +102,14 @@ async def send_gift(target_username: str = Form(...), gift_type: str = Form(...)
 @router.post("/broadcast/start")
 async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
-    user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
+    
+    # 🔥 DÜZELTME: BURADA ARTIK is_live=True YAPMIYORUZ!
+    # Sadece başlık ve kategori ayarla. is_live'i dosya oluşunca yapacağız.
+    user.stream_title = title
+    user.stream_category = category
+    user.is_live = False  # Henüz canlı değil, dosya bekleniyor
+    db.commit()
+    
     emails = [f.email for f in user.followers]; background_tasks.add_task(send_broadcast_notifications_task, emails, user.username)
     return {"status": "success"}
 
@@ -188,11 +199,8 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True)
     os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN BAŞLIYOR (ULTRA LOW LATENCY - ABR): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (SMART DELAY - ABR): {user.username}")
 
-    # 🔥 PREMIUM LOW LATENCY ABR AYARLARI 🔥
-    # -hls_time 1: Parçalar 1 saniyelik olsun (En düşük gecikme)
-    # -g 30: Her 1 saniyede bir anahtar kare (Keyframe) atılsın
     command = [
         "ffmpeg", 
         "-f", "webm", 
@@ -208,11 +216,11 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=-2:360[out360];"
         "[v240]scale=-2:240[out240]",
 
-        # ORTAK AYARLAR (Hız için Ultrafast, iOS için Baseline)
+        # ORTAK AYARLAR
         "-preset", "ultrafast", "-tune", "zerolatency", 
         "-profile:v", "baseline", "-level", "3.0",
-        "-sc_threshold", "0", # Sahne değişiminde keyframe atma, sabit tut
-        "-g", "30", # 🔥 30 FPS varsayarsak 1 saniyede bir keyframe
+        "-sc_threshold", "0", 
+        "-g", "30", 
         "-pix_fmt", "yuv420p",
 
         # --- 720p ---
@@ -236,8 +244,8 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "-c:a:3", "aac", "-b:a:3", "48k",
 
         "-f", "hls", 
-        "-hls_time", "1", # 🔥 1 Saniyelik Parçalar (Gecikmeyi düşürür)
-        "-hls_list_size", "4", # Listede sadece son 4 saniye kalsın
+        "-hls_time", "1", 
+        "-hls_list_size", "4", 
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
@@ -248,7 +256,30 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
+    
+    # 🔥 ARKA PLANDA DOSYA BEKLEME GÖREVİ 🔥
+    async def wait_for_file_and_go_live():
+        master_file = f"{stream_dir}/master.m3u8"
+        start_wait = time.time()
+        file_ready = False
+        
+        # 10 saniye boyunca dosyanın oluşmasını bekle
+        while time.time() - start_wait < 10:
+            if os.path.exists(master_file):
+                # Dosya oluştu! Şimdi veritabanını güncelle
+                print(f"✅ DOSYA HAZIR: {user.username} artık CANLI.")
+                user.is_live = True
+                db.commit()
+                file_ready = True
+                break
+            await asyncio.sleep(0.5)
+        
+        if not file_ready:
+            print(f"⚠️ ZAMAN AŞIMI: {user.username} yayını başlatılamadı (dosya oluşmadı).")
+
+    # Bu görevi asenkron olarak başlat
     loop = asyncio.get_event_loop()
+    loop.create_task(wait_for_file_and_go_live())
 
     try:
         while True:
