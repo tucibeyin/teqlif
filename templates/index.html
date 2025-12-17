@@ -2,7 +2,6 @@
 
 {% block content %}
 <div class="teqlif-os">
-
     <div class="category-header-wrapper">
         <div class="category-bar">
             <a href="/" class="cat-chip {{ 'active' if current_category == 'Tümü' else '' }}">Tümü</a>
@@ -18,9 +17,9 @@
         </div>
     </div>
 
-    <div class="grid-container">
+    <div class="grid-container" id="stream-grid">
         {% for stream in streams %}
-        <a href="/live?broadcaster={{ stream.username }}" class="grid-card">
+        <a href="/live?broadcaster={{ stream.username }}" class="grid-card" id="card-{{ stream.username }}">
             <div class="card-image">
                 <img src="{{ stream.thumbnail }}"
                     onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#333';"
@@ -28,7 +27,6 @@
                 <div class="live-badge">CANLI</div>
                 <div class="viewer-badge"><i class="fa-solid fa-eye"></i> İzle</div>
             </div>
-
             <div class="card-info">
                 <div class="card-avatar">{{ stream.username[0] | upper }}</div>
                 <div class="card-text">
@@ -38,7 +36,7 @@
             </div>
         </a>
         {% else %}
-        <div class="empty-feed">
+        <div class="empty-feed" id="empty-feed-msg">
             <div class="empty-icon"><i class="fa-solid fa-layer-group"></i></div>
             <p>Şu an canlı yayın yok.</p>
             <a href="/live?mode=broadcast" class="btn-start-now">Yayın Aç</a>
@@ -53,12 +51,54 @@
     </div>
 </div>
 
+<script>
+    // 🔥 ANASAYFA REAL-TIME GÜNCELLEME 🔥
+    document.addEventListener('DOMContentLoaded', () => {
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=home`);
+
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+
+            // YAYIN BİTTİ, KARTI SİL
+            if (data.type === 'stream_removed') {
+                const card = document.getElementById(`card-${data.username}`);
+                if (card) {
+                    card.style.transition = "opacity 0.5s, transform 0.5s";
+                    card.style.opacity = "0";
+                    card.style.transform = "scale(0.8)";
+
+                    setTimeout(() => {
+                        card.remove();
+                        checkEmpty();
+                    }, 500);
+                }
+            }
+        };
+
+        function checkEmpty() {
+            const grid = document.getElementById('stream-grid');
+            const cards = grid.getElementsByClassName('grid-card');
+
+            // Eğer kart kalmadıysa boş mesajını göster (eğer zaten yoksa)
+            if (cards.length === 0 && !document.getElementById('empty-feed-msg')) {
+                grid.innerHTML = `
+                <div class="empty-feed" id="empty-feed-msg">
+                    <div class="empty-icon"><i class="fa-solid fa-layer-group"></i></div>
+                    <p>Şu an canlı yayın yok.</p>
+                    <a href="/live?mode=broadcast" class="btn-start-now">Yayın Aç</a>
+                </div>`;
+            }
+        }
+    });
+</script>
+
 <style>
     footer {
         display: none !important;
     }
 
-    /* Kategori Alanı */
+    /* ... (Diğer stiller aynı) ... */
     .category-header-wrapper {
         position: sticky;
         top: 0;
@@ -94,13 +134,10 @@
         color: #000;
     }
 
-    /* --- INSTAGRAM TARZI KARE IZGARA --- */
     .grid-container {
         display: grid;
-        /* Mobilde yan yana 2 tane */
         grid-template-columns: repeat(2, 1fr);
         gap: 8px;
-        /* Aradaki boşluk */
         padding: 8px;
         padding-bottom: 120px;
     }
@@ -125,7 +162,6 @@
     .card-image {
         position: relative;
         width: 100%;
-        /* KARE FORMAT (1:1) */
         aspect-ratio: 1 / 1;
         background: #000;
     }
@@ -199,7 +235,6 @@
         margin-top: 1px;
     }
 
-    /* Alt Menü */
     .bottom-nav {
         position: fixed;
         bottom: 0;

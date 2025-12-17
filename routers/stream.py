@@ -18,20 +18,26 @@ from utils import get_current_user, send_broadcast_notifications_task
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET ---
+# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[WebSocket]] = {}
+        
     async def connect(self, websocket: WebSocket, room_name: str):
         await websocket.accept()
         if room_name not in self.rooms: self.rooms[room_name] = []
         self.rooms[room_name].append(websocket)
-        await self.broadcast_count(room_name)
+        # Eğer oda bir yayın odasıysa sayıyı güncelle
+        if room_name != "home":
+            await self.broadcast_count(room_name)
+
     async def disconnect(self, websocket: WebSocket, room_name: str):
         if room_name in self.rooms:
             if websocket in self.rooms[room_name]: self.rooms[room_name].remove(websocket)
-            await self.broadcast_count(room_name)
+            if room_name != "home":
+                await self.broadcast_count(room_name)
             if not self.rooms[room_name]: del self.rooms[room_name]
+
     async def broadcast_count(self, room_name: str):
         if room_name in self.rooms:
             count = len(self.rooms[room_name])
@@ -39,11 +45,13 @@ class ConnectionManager:
             for conn in self.rooms[room_name][:]:
                 try: await conn.send_text(msg)
                 except: pass
+
     async def broadcast_to_room(self, message: str, room_name: str):
         if room_name in self.rooms:
             for conn in self.rooms[room_name][:]:
                 try: await conn.send_text(message)
                 except: pass
+
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
@@ -106,7 +114,9 @@ async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Fo
 async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
     cleanup_stream(user.username, db)
+    # 🔥 HEM ODAYA HEM ANASAYFAYA BİLDİR 🔥
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
+    await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
 
 @router.post("/broadcast/toggle_auction")
@@ -148,6 +158,13 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
             u = db.query(User).filter(User.email == payload.get("sub")).first()
             if u: current_username = u.username
     except: pass
+    
+    # Anasayfa bağlantısı ise sadece bekle
+    if room_name == "home":
+        try:
+            while True: await websocket.receive_text() # Kalp atışı
+        except: await manager.disconnect(websocket, room_name); return
+
     broadcaster = db.query(User).filter(User.username == stream).first()
     if broadcaster:
         init_msg = json.dumps({"type": "init", "price": broadcaster.current_price, "leader": broadcaster.highest_bidder})
@@ -186,32 +203,22 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN BAŞLIYOR (1-SEC CHUNKS): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
     command = [
-        "ffmpeg", "-f", "webm", 
-        "-analyzeduration", "2000000", "-probesize", "2000000", # Hızlandırıldı
+        "ffmpeg", "-f", "webm", "-analyzeduration", "5000000", "-probesize", "5000000", 
         "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
-        
         "-filter_complex", 
         "[0:v]split=4[v720][v480][v360][v240];[v720]scale=-2:720[out720];[v480]scale=-2:480[out480];[v360]scale=-2:360[out360];[v240]scale=-2:240[out240]",
-
         "-preset", "ultrafast", "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0", 
-        "-sc_threshold", "0", "-g", "30", "-pix_fmt", "yuv420p",
-
+        "-profile:v", "baseline", "-level", "3.0", "-g", "60", "-pix_fmt", "yuv420p",
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
         "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
         "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
-
-        "-f", "hls", 
-        "-hls_time", "1", # 🔥 1 Saniyelik Parçalar (Kritik Hız)
-        "-hls_list_size", "4", 
-        "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
+        "-f", "hls", "-hls_time", "1", "-hls_list_size", "4", "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
-        "-master_pl_name", "master.m3u8",
-        f"{stream_dir}/%v/stream.m3u8"
+        "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
@@ -223,16 +230,15 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         file_ready = False
         while time.time() - start_wait < 15:
             if os.path.exists(master_file):
-                print(f"✅ DOSYA OLUŞTU: {username} aktif.")
                 new_db = SessionLocal()
                 try:
                     u = new_db.query(User).filter(User.username == username).first()
                     if u: u.is_live = True; new_db.commit(); file_ready = True
+                    # 🔥 BURADA ANASAYFAYA 'YAYIN BAŞLADI' SİNYALİ GÖNDEREBİLİRİZ (OPSİYONEL) 🔥
                 except: pass
                 finally: new_db.close()
                 break
             await asyncio.sleep(0.5)
-        if not file_ready: print(f"⚠️ Dosya oluşmadı.")
 
     loop = asyncio.get_event_loop(); loop.create_task(wait_for_file_and_go_live(user.username))
 
@@ -243,4 +249,6 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     except: pass
     finally:
         cleanup_stream(user.username, db)
+        # 🔥 YAYIN BİTTİĞİNDE ANASAYFADAN DA SİL 🔥
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
