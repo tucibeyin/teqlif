@@ -23,7 +23,8 @@
         {% for stream in streams %}
         <a href="/live?broadcaster={{ stream.username }}" class="grid-card">
             <div class="card-image">
-                <img src="{{ stream.thumbnail }}" onerror="this.src='https://via.placeholder.com/300?text=Yay%C4%B1n'"
+                <img src="{{ stream.thumbnail }}"
+                    onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#333';" alt="Yayın">
                     alt="Yayın">
                 <div class="live-badge">CANLI</div>
                 <div class="viewer-badge"><i class="fa-solid fa-eye"></i> İzle</div>
