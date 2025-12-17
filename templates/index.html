@@ -8,11 +8,9 @@
         height: auto !important;
         min-height: 100% !important;
         display: block !important;
-        /* Flex'i iptal et */
         overflow-x: hidden;
     }
 
-    /* İçerik kapsayıcısı */
     .teqlif-os {
         width: 100%;
         max-width: 100%;
@@ -21,29 +19,21 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-start;
-        /* Tepeye yasla */
     }
 
-    /* Varsayılan Footer'ı Gizle */
     footer {
         display: none !important;
     }
 
-    /* --- PREMIUM KATEGORİ ALANI (ÜSTTE SABİT) --- */
+    /* PREMIUM KATEGORİ ALANI (ÜSTTE SABİT) */
     .category-header-wrapper {
         position: sticky;
         top: 0;
-        /* Sayfanın en tepesine yapış */
         z-index: 9999;
-        /* Her şeyin üstünde olsun */
-
         background: rgba(10, 10, 10, 0.90);
-        /* Hafif transparan siyah */
         backdrop-filter: blur(15px);
         -webkit-backdrop-filter: blur(15px);
-        /* Buzlu cam */
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-
         padding: 10px 0;
         width: 100%;
     }
@@ -51,9 +41,7 @@
     .category-bar {
         display: flex;
         flex-wrap: wrap;
-        /* Sığmayan aşağı insin */
         justify-content: center;
-        /* Ortala */
         gap: 8px;
         max-width: 600px;
         margin: 0 auto;
@@ -67,7 +55,6 @@
         color: #bbb;
         padding: 6px 14px;
         border-radius: 20px;
-        /* Tam yuvarlak kenarlar */
         font-size: 11px;
         font-weight: 600;
         text-decoration: none;
@@ -82,17 +69,14 @@
         transform: scale(1.05);
     }
 
-    /* --- KART IZGARASI (INSTAGRAM TARZI) --- */
+    /* KART IZGARASI (INSTAGRAM TARZI) */
     .grid-container {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        /* Yan yana 2 adet */
         gap: 8px;
         padding: 8px;
         padding-top: 10px;
-        /* Kategori bar ile mesafe */
         padding-bottom: 100px;
-        /* Alt menü payı */
     }
 
     @media (min-width: 768px) {
@@ -109,8 +93,8 @@
         border-radius: 8px;
         overflow: hidden;
         aspect-ratio: 1 / 1;
-        /* Tam Kare */
         border: 1px solid rgba(255, 255, 255, 0.05);
+        animation: fadeInCard 0.5s ease-out;
     }
 
     .card-image {
@@ -187,7 +171,7 @@
         opacity: 0.8;
     }
 
-    /* --- ALT MENÜ --- */
+    /* ALT MENÜ */
     .bottom-nav {
         position: fixed;
         bottom: 0;
@@ -252,10 +236,21 @@
         margin-top: 20px;
         font-weight: bold;
     }
+
+    @keyframes fadeInCard {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 
 <div class="teqlif-os">
-
     <div class="category-header-wrapper">
         <div class="category-bar">
             <a href="/" class="cat-chip {{ 'active' if current_category == 'Tümü' else '' }}">Tümü</a>
@@ -277,7 +272,6 @@
                     onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#222';"
                     alt="Yayın">
                 <div class="live-badge">CANLI</div>
-
                 <div class="card-gradient-overlay">
                     <div class="card-avatar-row">
                         <div class="card-avatar">{{ stream.username[0] | upper }}</div>
@@ -311,13 +305,46 @@
 
         ws.onmessage = (e) => {
             const data = JSON.parse(e.data);
+
+            // --- YENİ YAYIN EKLENDİĞİNDE ---
+            if (data.type === 'stream_added') {
+                const emptyMsg = document.getElementById('empty-feed-msg');
+                if (emptyMsg) emptyMsg.remove(); // Boş mesajı sil
+
+                // Eğer kart zaten varsa ekleme
+                if (document.getElementById(`card-${data.username}`)) return;
+
+                const grid = document.getElementById('stream-grid');
+                const cardHtml = `
+                <a href="/live?broadcaster=${data.username}" class="grid-card" id="card-${data.username}">
+                    <div class="card-image">
+                        <img src="${data.thumbnail}" onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#222';" alt="Yayın">
+                        <div class="live-badge">CANLI</div>
+                        <div class="card-gradient-overlay">
+                            <div class="card-avatar-row">
+                                <div class="card-avatar">${data.username[0].toUpperCase()}</div>
+                                <div class="card-username">${data.title || data.username}</div>
+                            </div>
+                            <div class="card-cat-label">${data.category}</div>
+                        </div>
+                    </div>
+                </a>`;
+
+                // HTML'i ekle (Başa veya Sona)
+                grid.insertAdjacentHTML('afterbegin', cardHtml);
+            }
+
+            // --- YAYIN BİTTİĞİNDE ---
             if (data.type === 'stream_removed') {
                 const card = document.getElementById(`card-${data.username}`);
                 if (card) {
                     card.style.transition = "all 0.5s";
                     card.style.opacity = "0";
                     card.style.transform = "scale(0.8)";
-                    setTimeout(() => { card.remove(); checkEmpty(); }, 500);
+                    setTimeout(() => {
+                        card.remove();
+                        checkEmpty();
+                    }, 500);
                 }
             }
         };
@@ -325,7 +352,7 @@
         function checkEmpty() {
             const grid = document.getElementById('stream-grid');
             if (grid.getElementsByClassName('grid-card').length === 0 && !document.getElementById('empty-feed-msg')) {
-                location.reload(); // Boşsa yenile ki 'Yayın Yok' ekranı gelsin
+                location.reload(); // Boşsa yenile
             }
         }
     });
