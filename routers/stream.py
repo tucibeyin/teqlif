@@ -11,14 +11,14 @@ from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends,
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from database import get_db
+from database import get_db, SessionLocal # SessionLocal eklendi
 from models import User, StreamMessage
 from utils import get_current_user, send_broadcast_notifications_task
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET YÖNETİCİSİ ---
+# --- SOCKET ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[WebSocket]] = {}
@@ -61,10 +61,7 @@ def cleanup_stream(username: str, db: Session):
         try: proc.terminate(); proc.wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
-    
-    # Dosyaları hemen silme, izleyicilerde tamponda kalanlar izlensin (opsiyonel)
-    # shutil.rmtree(f"static/hls/{username}", ignore_errors=True) 
-    # Not: Restartta zaten temizleniyor.
+    # Dosyaları hemen silmiyoruz, izleyiciler tampondan izlesin
 
 def write_to_ffmpeg(process, data):
     try:
@@ -103,11 +100,10 @@ async def send_gift(target_username: str = Form(...), gift_type: str = Form(...)
 async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
     
-    # 🔥 DÜZELTME: BURADA ARTIK is_live=True YAPMIYORUZ!
-    # Sadece başlık ve kategori ayarla. is_live'i dosya oluşunca yapacağız.
+    # Sadece bilgileri güncelle, CANLI YAPMA (Dosya bekleniyor)
     user.stream_title = title
     user.stream_category = category
-    user.is_live = False  # Henüz canlı değil, dosya bekleniyor
+    user.is_live = False
     db.commit()
     
     emails = [f.email for f in user.followers]; background_tasks.add_task(send_broadcast_notifications_task, emails, user.username)
@@ -199,15 +195,13 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True)
     os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN BAŞLIYOR (SMART DELAY - ABR): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (ABR & SMART WAIT): {user.username}")
 
     command = [
         "ffmpeg", 
         "-f", "webm", 
-        "-analyzeduration", "5000000",
-        "-probesize", "5000000", 
-        "-fflags", "+genpts+igndts+nobuffer", 
-        "-i", "pipe:0",
+        "-analyzeduration", "5000000", "-probesize", "5000000", 
+        "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
         
         "-filter_complex", 
         "[0:v]split=4[v720][v480][v360][v240];"
@@ -216,70 +210,55 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=-2:360[out360];"
         "[v240]scale=-2:240[out240]",
 
-        # ORTAK AYARLAR
         "-preset", "ultrafast", "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0",
-        "-sc_threshold", "0", 
-        "-g", "30", 
-        "-pix_fmt", "yuv420p",
+        "-profile:v", "baseline", "-level", "3.0", "-g", "60", "-pix_fmt", "yuv420p",
 
-        # --- 720p ---
-        "-map", "[out720]", "-map", "0:a",
-        "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2200k", "-bufsize:v:0", "3000k",
-        "-c:a:0", "aac", "-b:a:0", "128k",
-        
-        # --- 480p ---
-        "-map", "[out480]", "-map", "0:a",
-        "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "1500k",
-        "-c:a:1", "aac", "-b:a:1", "96k",
+        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
+        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
+        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
+        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
 
-        # --- 360p ---
-        "-map", "[out360]", "-map", "0:a",
-        "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k",
-        "-c:a:2", "aac", "-b:a:2", "64k",
-
-        # --- 240p ---
-        "-map", "[out240]", "-map", "0:a",
-        "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k",
-        "-c:a:3", "aac", "-b:a:3", "48k",
-
-        "-f", "hls", 
-        "-hls_time", "1", 
-        "-hls_list_size", "4", 
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
         "-hls_flags", "delete_segments+append_list+omit_endlist+discont_start",
         
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8",
-        
         f"{stream_dir}/%v/stream.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
     
-    # 🔥 ARKA PLANDA DOSYA BEKLEME GÖREVİ 🔥
-    async def wait_for_file_and_go_live():
-        master_file = f"{stream_dir}/master.m3u8"
+    # 🔥 FIX: DB OTURUMU İÇİN TAZE BAĞLANTI AÇIYORUZ 🔥
+    async def wait_for_file_and_go_live(username):
+        master_file = f"static/hls/{username}/master.m3u8"
         start_wait = time.time()
         file_ready = False
         
-        # 10 saniye boyunca dosyanın oluşmasını bekle
-        while time.time() - start_wait < 10:
+        while time.time() - start_wait < 15: # 15 saniye bekle
             if os.path.exists(master_file):
-                # Dosya oluştu! Şimdi veritabanını güncelle
-                print(f"✅ DOSYA HAZIR: {user.username} artık CANLI.")
-                user.is_live = True
-                db.commit()
-                file_ready = True
+                print(f"✅ DOSYA OLUŞTU: {username} aktif ediliyor...")
+                # TAZE SESSION AÇ
+                new_db = SessionLocal()
+                try:
+                    u = new_db.query(User).filter(User.username == username).first()
+                    if u:
+                        u.is_live = True
+                        new_db.commit()
+                        file_ready = True
+                except Exception as e:
+                    print(f"DB Hatası: {e}")
+                finally:
+                    new_db.close() # İş bitince kapat
                 break
             await asyncio.sleep(0.5)
         
         if not file_ready:
-            print(f"⚠️ ZAMAN AŞIMI: {user.username} yayını başlatılamadı (dosya oluşmadı).")
+            print(f"⚠️ Dosya oluşmadı, yayın açılamadı.")
 
-    # Bu görevi asenkron olarak başlat
     loop = asyncio.get_event_loop()
-    loop.create_task(wait_for_file_and_go_live())
+    # Username string olarak gönderilir, obje değil
+    loop.create_task(wait_for_file_and_go_live(user.username))
 
     try:
         while True:

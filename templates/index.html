@@ -14,7 +14,6 @@
             <a href="/?category=Müzik" class="cat-chip {{ 'active' if current_category == 'Müzik' else '' }}">Müzik
                 🎵</a>
             <a href="/?category=Genel" class="cat-chip {{ 'active' if current_category == 'Genel' else '' }}">Genel</a>
-            <a href="/?category=Dans" class="cat-chip {{ 'active' if current_category == 'Dans' else '' }}">Dans 💃</a>
             <a href="/?category=Spor" class="cat-chip {{ 'active' if current_category == 'Spor' else '' }}">Spor ⚽</a>
         </div>
     </div>
@@ -24,7 +23,7 @@
         <a href="/live?broadcaster={{ stream.username }}" class="grid-card">
             <div class="card-image">
                 <img src="{{ stream.thumbnail }}"
-                    onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#333';" alt="Yayın">
+                    onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#333';"
                     alt="Yayın">
                 <div class="live-badge">CANLI</div>
                 <div class="viewer-badge"><i class="fa-solid fa-eye"></i> İzle</div>
@@ -41,7 +40,7 @@
         {% else %}
         <div class="empty-feed">
             <div class="empty-icon"><i class="fa-solid fa-layer-group"></i></div>
-            <p>Bu kategoride yayın yok.</p>
+            <p>Şu an canlı yayın yok.</p>
             <a href="/live?mode=broadcast" class="btn-start-now">Yayın Aç</a>
         </div>
         {% endfor %}
@@ -55,12 +54,11 @@
 </div>
 
 <style>
-    /* Footer Gizle */
     footer {
         display: none !important;
     }
 
-    /* --- KATEGORİ BAR --- */
+    /* Kategori Alanı */
     .category-header-wrapper {
         position: sticky;
         top: 0;
@@ -68,7 +66,6 @@
         background: rgba(10, 10, 10, 0.95);
         backdrop-filter: blur(15px);
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
-        box-shadow: 0 4px 30px rgba(0, 0, 0, 0.4);
     }
 
     .category-bar {
@@ -76,13 +73,12 @@
         flex-wrap: wrap;
         justify-content: center;
         gap: 8px;
-        padding: 10px 10px;
+        padding: 10px;
         max-width: 600px;
         margin: 0 auto;
     }
 
     .cat-chip {
-        flex: 0 0 auto;
         background: rgba(255, 255, 255, 0.05);
         border: 1px solid rgba(255, 255, 255, 0.1);
         color: #aaa;
@@ -96,43 +92,34 @@
     .cat-chip.active {
         background: #fff;
         color: #000;
-        border-color: #fff;
     }
 
-    /* --- IZGARA YAPISI (KESİN ÇÖZÜM) --- */
+    /* --- INSTAGRAM TARZI KARE IZGARA --- */
     .grid-container {
         display: grid;
-        /* 🔥 BURASI ÇOK ÖNEMLİ: Ekrana %50 %50 bölünen iki sütun zorla */
+        /* Mobilde yan yana 2 tane */
         grid-template-columns: repeat(2, 1fr);
-        gap: 10px;
-        /* Kartlar arası boşluk */
-        padding: 10px;
-
-        padding-bottom: calc(130px + env(safe-area-inset-bottom));
-        min-height: 80vh;
+        gap: 8px;
+        /* Aradaki boşluk */
+        padding: 8px;
+        padding-bottom: 120px;
     }
 
-    /* Tablet ve PC için 4'lü yapalım */
     @media (min-width: 768px) {
         .grid-container {
-            grid-template-columns: repeat(4, 1fr);
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
         }
     }
 
-    /* --- KART TASARIMI --- */
     .grid-card {
+        background: #1a1a1a;
+        border-radius: 10px;
+        overflow: hidden;
         text-decoration: none;
         color: white;
-        background: rgba(30, 30, 30, 0.4);
-        border-radius: 12px;
-        overflow: hidden;
-        border: 1px solid rgba(255, 255, 255, 0.05);
         display: flex;
         flex-direction: column;
-    }
-
-    .grid-card:active {
-        transform: scale(0.97);
+        border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .card-image {
@@ -140,7 +127,7 @@
         width: 100%;
         /* KARE FORMAT (1:1) */
         aspect-ratio: 1 / 1;
-        background: #1a1a1a;
+        background: #000;
     }
 
     .card-image img {
@@ -151,10 +138,9 @@
 
     .live-badge {
         position: absolute;
-        top: 5px;
-        left: 5px;
+        top: 6px;
+        left: 6px;
         background: #ff3b30;
-        color: white;
         font-size: 8px;
         font-weight: 900;
         padding: 2px 5px;
@@ -163,10 +149,9 @@
 
     .viewer-badge {
         position: absolute;
-        bottom: 5px;
-        right: 5px;
+        bottom: 6px;
+        right: 6px;
         background: rgba(0, 0, 0, 0.6);
-        color: white;
         font-size: 9px;
         padding: 2px 5px;
         border-radius: 4px;
@@ -176,18 +161,18 @@
     .card-info {
         padding: 8px;
         display: flex;
-        gap: 6px;
+        gap: 8px;
         align-items: center;
-        background: rgba(255, 255, 255, 0.02);
+        background: #151515;
     }
 
     .card-avatar {
         width: 24px;
         height: 24px;
         border-radius: 50%;
-        background: linear-gradient(135deg, #34C759, #00d2ff);
-        color: black;
-        font-weight: 800;
+        background: linear-gradient(45deg, #34C759, #00d2ff);
+        color: #000;
+        font-weight: bold;
         font-size: 10px;
         display: flex;
         align-items: center;
@@ -196,7 +181,6 @@
     }
 
     .card-text {
-        flex: 1;
         overflow: hidden;
     }
 
@@ -211,11 +195,11 @@
 
     .card-cat {
         font-size: 9px;
-        color: #888;
+        color: #777;
         margin-top: 1px;
     }
 
-    /* ALT MENÜ */
+    /* Alt Menü */
     .bottom-nav {
         position: fixed;
         bottom: 0;
@@ -241,7 +225,6 @@
         align-items: center;
         justify-content: center;
         text-decoration: none;
-        transition: color 0.3s;
     }
 
     .nav-item.active {
@@ -250,7 +233,7 @@
 
     .center-btn {
         background: #00d2ff;
-        color: black !important;
+        color: #000 !important;
         width: 40px;
         height: 40px;
         border-radius: 12px;
@@ -258,7 +241,6 @@
         margin-bottom: 5px;
     }
 
-    /* BOŞ DURUM */
     .empty-feed {
         grid-column: 1 / -1;
         display: flex;
@@ -284,8 +266,6 @@
         margin-top: 15px;
         font-size: 12px;
         font-weight: bold;
-        position: relative;
-        z-index: 10;
     }
 </style>
 {% endblock %}
