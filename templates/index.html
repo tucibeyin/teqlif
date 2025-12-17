@@ -1,145 +1,98 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="teqlif-os">
-    <div class="category-header-wrapper">
-        <div class="category-bar">
-            <a href="/" class="cat-chip {{ 'active' if current_category == 'Tümü' else '' }}">Tümü</a>
-            <a href="/?category=Mezat" class="cat-chip {{ 'active' if current_category == 'Mezat' else '' }}">Mezat
-                🔨</a>
-            <a href="/?category=Sohbet" class="cat-chip {{ 'active' if current_category == 'Sohbet' else '' }}">Sohbet
-                💬</a>
-            <a href="/?category=Oyun" class="cat-chip {{ 'active' if current_category == 'Oyun' else '' }}">Oyun 🎮</a>
-            <a href="/?category=Müzik" class="cat-chip {{ 'active' if current_category == 'Müzik' else '' }}">Müzik
-                🎵</a>
-            <a href="/?category=Genel" class="cat-chip {{ 'active' if current_category == 'Genel' else '' }}">Genel</a>
-            <a href="/?category=Spor" class="cat-chip {{ 'active' if current_category == 'Spor' else '' }}">Spor ⚽</a>
-        </div>
-    </div>
-
-    <div class="grid-container" id="stream-grid">
-        {% for stream in streams %}
-        <a href="/live?broadcaster={{ stream.username }}" class="grid-card" id="card-{{ stream.username }}">
-            <div class="card-image">
-                <img src="{{ stream.thumbnail }}"
-                    onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#333';"
-                    alt="Yayın">
-                <div class="live-badge">CANLI</div>
-                <div class="viewer-badge"><i class="fa-solid fa-eye"></i> İzle</div>
-            </div>
-            <div class="card-info">
-                <div class="card-avatar">{{ stream.username[0] | upper }}</div>
-                <div class="card-text">
-                    <div class="card-title">{{ stream.stream_title if stream.stream_title else stream.username }}</div>
-                    <div class="card-cat">{{ stream.stream_category }}</div>
-                </div>
-            </div>
-        </a>
-        {% else %}
-        <div class="empty-feed" id="empty-feed-msg">
-            <div class="empty-icon"><i class="fa-solid fa-layer-group"></i></div>
-            <p>Şu an canlı yayın yok.</p>
-            <a href="/live?mode=broadcast" class="btn-start-now">Yayın Aç</a>
-        </div>
-        {% endfor %}
-    </div>
-
-    <div class="bottom-nav">
-        <a href="/" class="nav-item active"><i class="fa-solid fa-house"></i></a>
-        <a href="/live?mode=broadcast" class="nav-item center-btn"><i class="fa-solid fa-plus"></i></a>
-        <a href="/settings" class="nav-item"><i class="fa-solid fa-gear"></i></a>
-    </div>
-</div>
-
-<script>
-    // 🔥 ANASAYFA REAL-TIME GÜNCELLEME 🔥
-    document.addEventListener('DOMContentLoaded', () => {
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=home`);
-
-        ws.onmessage = (e) => {
-            const data = JSON.parse(e.data);
-
-            // YAYIN BİTTİ, KARTI SİL
-            if (data.type === 'stream_removed') {
-                const card = document.getElementById(`card-${data.username}`);
-                if (card) {
-                    card.style.transition = "opacity 0.5s, transform 0.5s";
-                    card.style.opacity = "0";
-                    card.style.transform = "scale(0.8)";
-
-                    setTimeout(() => {
-                        card.remove();
-                        checkEmpty();
-                    }, 500);
-                }
-            }
-        };
-
-        function checkEmpty() {
-            const grid = document.getElementById('stream-grid');
-            const cards = grid.getElementsByClassName('grid-card');
-
-            // Eğer kart kalmadıysa boş mesajını göster (eğer zaten yoksa)
-            if (cards.length === 0 && !document.getElementById('empty-feed-msg')) {
-                grid.innerHTML = `
-                <div class="empty-feed" id="empty-feed-msg">
-                    <div class="empty-icon"><i class="fa-solid fa-layer-group"></i></div>
-                    <p>Şu an canlı yayın yok.</p>
-                    <a href="/live?mode=broadcast" class="btn-start-now">Yayın Aç</a>
-                </div>`;
-            }
-        }
-    });
-</script>
-
 <style>
+    /* Sayfanın dikey ortalamasını iptal et, tepeye yasla */
+    body,
+    html {
+        height: auto !important;
+        min-height: 100% !important;
+        display: block !important;
+        /* Flex'i iptal et */
+        overflow-x: hidden;
+    }
+
+    /* İçerik kapsayıcısı */
+    .teqlif-os {
+        width: 100%;
+        max-width: 100%;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-start;
+        /* Tepeye yasla */
+    }
+
+    /* Varsayılan Footer'ı Gizle */
     footer {
         display: none !important;
     }
 
-    /* ... (Diğer stiller aynı) ... */
+    /* --- PREMIUM KATEGORİ ALANI (ÜSTTE SABİT) --- */
     .category-header-wrapper {
         position: sticky;
         top: 0;
-        z-index: 1000;
-        background: rgba(10, 10, 10, 0.95);
+        /* Sayfanın en tepesine yapış */
+        z-index: 9999;
+        /* Her şeyin üstünde olsun */
+
+        background: rgba(10, 10, 10, 0.90);
+        /* Hafif transparan siyah */
         backdrop-filter: blur(15px);
+        -webkit-backdrop-filter: blur(15px);
+        /* Buzlu cam */
         border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+        padding: 10px 0;
+        width: 100%;
     }
 
     .category-bar {
         display: flex;
         flex-wrap: wrap;
+        /* Sığmayan aşağı insin */
         justify-content: center;
+        /* Ortala */
         gap: 8px;
-        padding: 10px;
         max-width: 600px;
         margin: 0 auto;
+        padding: 0 10px;
     }
 
     .cat-chip {
-        background: rgba(255, 255, 255, 0.05);
+        flex: 0 0 auto;
+        background: rgba(255, 255, 255, 0.08);
         border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #aaa;
-        padding: 6px 12px;
-        border-radius: 12px;
+        color: #bbb;
+        padding: 6px 14px;
+        border-radius: 20px;
+        /* Tam yuvarlak kenarlar */
         font-size: 11px;
         font-weight: 600;
         text-decoration: none;
+        transition: all 0.2s ease-out;
     }
 
     .cat-chip.active {
         background: #fff;
         color: #000;
+        border-color: #fff;
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+        transform: scale(1.05);
     }
 
+    /* --- KART IZGARASI (INSTAGRAM TARZI) --- */
     .grid-container {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
+        /* Yan yana 2 adet */
         gap: 8px;
         padding: 8px;
-        padding-bottom: 120px;
+        padding-top: 10px;
+        /* Kategori bar ile mesafe */
+        padding-bottom: 100px;
+        /* Alt menü payı */
     }
 
     @media (min-width: 768px) {
@@ -149,20 +102,20 @@
     }
 
     .grid-card {
-        background: #1a1a1a;
-        border-radius: 10px;
-        overflow: hidden;
+        position: relative;
         text-decoration: none;
         color: white;
-        display: flex;
-        flex-direction: column;
+        background: #111;
+        border-radius: 8px;
+        overflow: hidden;
+        aspect-ratio: 1 / 1;
+        /* Tam Kare */
         border: 1px solid rgba(255, 255, 255, 0.05);
     }
 
     .card-image {
-        position: relative;
         width: 100%;
-        aspect-ratio: 1 / 1;
+        height: 100%;
         background: #000;
     }
 
@@ -172,75 +125,75 @@
         object-fit: cover;
     }
 
+    /* Rozetler */
     .live-badge {
         position: absolute;
-        top: 6px;
-        left: 6px;
+        top: 8px;
+        left: 8px;
         background: #ff3b30;
-        font-size: 8px;
-        font-weight: 900;
-        padding: 2px 5px;
-        border-radius: 4px;
-    }
-
-    .viewer-badge {
-        position: absolute;
-        bottom: 6px;
-        right: 6px;
-        background: rgba(0, 0, 0, 0.6);
+        color: white;
         font-size: 9px;
-        padding: 2px 5px;
+        font-weight: 900;
+        padding: 3px 6px;
         border-radius: 4px;
-        backdrop-filter: blur(4px);
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
     }
 
-    .card-info {
-        padding: 8px;
+    .card-gradient-overlay {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        width: 100%;
+        height: 60%;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
         display: flex;
-        gap: 8px;
+        flex-direction: column;
+        justify-content: flex-end;
+        padding: 10px;
+        box-sizing: border-box;
+    }
+
+    .card-avatar-row {
+        display: flex;
         align-items: center;
-        background: #151515;
+        gap: 6px;
+        margin-bottom: 2px;
     }
 
     .card-avatar {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
         border-radius: 50%;
         background: linear-gradient(45deg, #34C759, #00d2ff);
         color: #000;
+        font-size: 9px;
         font-weight: bold;
-        font-size: 10px;
         display: flex;
         align-items: center;
         justify-content: center;
-        flex-shrink: 0;
     }
 
-    .card-text {
-        overflow: hidden;
-    }
-
-    .card-title {
+    .card-username {
         font-size: 11px;
         font-weight: 700;
-        color: #eee;
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
+        color: #fff;
+        text-shadow: 0 1px 2px black;
     }
 
-    .card-cat {
-        font-size: 9px;
-        color: #777;
-        margin-top: 1px;
+    .card-cat-label {
+        font-size: 10px;
+        color: #ddd;
+        margin-left: 26px;
+        opacity: 0.8;
     }
 
+    /* --- ALT MENÜ --- */
     .bottom-nav {
         position: fixed;
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 60px;
+        height: 65px;
         background: rgba(10, 10, 10, 0.95);
         backdrop-filter: blur(20px);
         border-top: 1px solid rgba(255, 255, 255, 0.08);
@@ -252,14 +205,15 @@
     }
 
     .nav-item {
-        color: #555;
-        font-size: 20px;
+        color: #666;
+        font-size: 22px;
         width: 50px;
         height: 50px;
         display: flex;
         align-items: center;
         justify-content: center;
         text-decoration: none;
+        transition: 0.2s;
     }
 
     .nav-item.active {
@@ -267,15 +221,18 @@
     }
 
     .center-btn {
-        background: #00d2ff;
-        color: #000 !important;
-        width: 40px;
-        height: 40px;
-        border-radius: 12px;
-        font-size: 18px;
-        margin-bottom: 5px;
+        background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+        color: white !important;
+        width: 48px;
+        height: 48px;
+        border-radius: 14px;
+        font-size: 20px;
+        margin-bottom: 15px;
+        box-shadow: 0 5px 20px rgba(0, 210, 255, 0.4);
+        border: 2px solid rgba(255, 255, 255, 0.1);
     }
 
+    /* Boş Durum */
     .empty-feed {
         grid-column: 1 / -1;
         display: flex;
@@ -286,21 +243,91 @@
         color: #555;
     }
 
-    .empty-icon {
-        font-size: 40px;
-        margin-bottom: 15px;
-        opacity: 0.2;
-    }
-
     .btn-start-now {
-        background: #333;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 10px;
+        background: #fff;
+        color: #000;
+        padding: 12px 25px;
+        border-radius: 25px;
         text-decoration: none;
-        margin-top: 15px;
-        font-size: 12px;
+        margin-top: 20px;
         font-weight: bold;
     }
 </style>
+
+<div class="teqlif-os">
+
+    <div class="category-header-wrapper">
+        <div class="category-bar">
+            <a href="/" class="cat-chip {{ 'active' if current_category == 'Tümü' else '' }}">Tümü</a>
+            <a href="/?category=Mezat" class="cat-chip {{ 'active' if current_category == 'Mezat' else '' }}">Mezat</a>
+            <a href="/?category=Sohbet"
+                class="cat-chip {{ 'active' if current_category == 'Sohbet' else '' }}">Sohbet</a>
+            <a href="/?category=Oyun" class="cat-chip {{ 'active' if current_category == 'Oyun' else '' }}">Oyun</a>
+            <a href="/?category=Müzik" class="cat-chip {{ 'active' if current_category == 'Müzik' else '' }}">Müzik</a>
+            <a href="/?category=Dans" class="cat-chip {{ 'active' if current_category == 'Dans' else '' }}">Dans</a>
+            <a href="/?category=Spor" class="cat-chip {{ 'active' if current_category == 'Spor' else '' }}">Spor</a>
+        </div>
+    </div>
+
+    <div class="grid-container" id="stream-grid">
+        {% for stream in streams %}
+        <a href="/live?broadcaster={{ stream.username }}" class="grid-card" id="card-{{ stream.username }}">
+            <div class="card-image">
+                <img src="{{ stream.thumbnail }}"
+                    onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#222';"
+                    alt="Yayın">
+                <div class="live-badge">CANLI</div>
+
+                <div class="card-gradient-overlay">
+                    <div class="card-avatar-row">
+                        <div class="card-avatar">{{ stream.username[0] | upper }}</div>
+                        <div class="card-username">{{ stream.stream_title if stream.stream_title else stream.username }}
+                        </div>
+                    </div>
+                    <div class="card-cat-label">{{ stream.stream_category }}</div>
+                </div>
+            </div>
+        </a>
+        {% else %}
+        <div class="empty-feed" id="empty-feed-msg">
+            <div style="font-size: 50px; opacity: 0.2; margin-bottom: 10px;">📡</div>
+            <p>Şu an canlı yayın yok.</p>
+            <a href="/live?mode=broadcast" class="btn-start-now">Yayın Başlat</a>
+        </div>
+        {% endfor %}
+    </div>
+
+    <div class="bottom-nav">
+        <a href="/" class="nav-item active"><i class="fa-solid fa-house"></i></a>
+        <a href="/live?mode=broadcast" class="nav-item center-btn"><i class="fa-solid fa-plus"></i></a>
+        <a href="/settings" class="nav-item"><i class="fa-solid fa-user"></i></a>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=home`);
+
+        ws.onmessage = (e) => {
+            const data = JSON.parse(e.data);
+            if (data.type === 'stream_removed') {
+                const card = document.getElementById(`card-${data.username}`);
+                if (card) {
+                    card.style.transition = "all 0.5s";
+                    card.style.opacity = "0";
+                    card.style.transform = "scale(0.8)";
+                    setTimeout(() => { card.remove(); checkEmpty(); }, 500);
+                }
+            }
+        };
+
+        function checkEmpty() {
+            const grid = document.getElementById('stream-grid');
+            if (grid.getElementsByClassName('grid-card').length === 0 && !document.getElementById('empty-feed-msg')) {
+                location.reload(); // Boşsa yenile ki 'Yayın Yok' ekranı gelsin
+            }
+        }
+    });
+</script>
 {% endblock %}
