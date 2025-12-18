@@ -7,20 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.activeHlsInstances = {};
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeModTarget = null;
+
+    let videoDevices = [];
+    let currentDeviceIndex = 0;
+    let canvas, ctx, animationFrameId;
     let localStream = null;
     let rec = null;
     let broadcastWs = null;
-    let wakeLock = null; // Ekran kilidi için
-
-    // --- EKRAN KİLİDİNİ ENGELLE (Wake Lock) ---
-    async function requestWakeLock() {
-        try {
-            wakeLock = await navigator.wakeLock.request('screen');
-            console.log('Ekran kilidi aktif.');
-        } catch (err) {
-            console.log(`${err.name}, ${err.message}`);
-        }
-    }
 
     // --- UI/MODERASYON ---
     window.openModMenu = function (username) {
@@ -113,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 3. YAYINCI (WAKE LOCK + ROBUST) ---
+    // --- 3. YAYINCI (SAFE MODE) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -123,14 +116,14 @@ document.addEventListener('DOMContentLoaded', () => {
         getDevices();
 
         async function initStream(deviceId = null) {
-            if (window.localStream) { window.localStream.getTracks().forEach(track => track.stop()); }
+            if (localStream) { localStream.getTracks().forEach(track => track.stop()); }
             const constraints = {
                 audio: { echoCancellation: true, noiseSuppression: true },
                 video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
             };
             try {
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                window.localStream = stream; videoElement.srcObject = stream;
+                localStream = stream; videoElement.srcObject = stream;
                 startCanvasLoop();
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const audioSelect = document.getElementById('audioSource');
@@ -170,28 +163,22 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (resetBtn) resetBtn.style.display = 'none'; if (toggleBtn) toggleBtn.style.display = 'none'; if (priceBoard) priceBoard.style.display = 'none';
                     }
                     window.connectChat('broadcast');
-                    requestWakeLock(); // 🔥 Ekranı açık tut 🔥
 
                     broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                     broadcastWs.onopen = () => {
                         const canvasStream = canvas.captureStream(30);
-                        if (window.localStream) {
-                            const audioTracks = window.localStream.getAudioTracks();
-                            if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
-                        }
+                        const audioTracks = localStream.getAudioTracks();
+                        if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 1.5 Mbps & Fallback 🔥
+                        // 🔥 SADECE WebM/VP8 (Android İçin En Güvenlisi) 🔥
                         let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
                         if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
                             options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
                         }
 
                         try { rec = new MediaRecorder(canvasStream, options); }
-                        catch (e) {
-                            try { rec = new MediaRecorder(canvasStream, { mimeType: 'video/webm' }); }
-                            catch (e2) { rec = new MediaRecorder(canvasStream); }
-                        }
+                        catch (e) { rec = new MediaRecorder(canvasStream); }
 
                         rec.ondataavailable = e => {
                             if (e.data.size > 0 && broadcastWs.readyState === 1) {
@@ -199,6 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
+                        // 1 Saniye Buffer (Daha azı hataya yol açar)
                         setTimeout(() => { if (rec.state === 'inactive') rec.start(1000); }, 1000);
 
                         sendThumbnailSnapshot();
@@ -209,35 +197,25 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         window.stopBroadcast = function () {
-            if (wakeLock) wakeLock.release();
             if (window.thumbInterval) clearInterval(window.thumbInterval);
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             if (rec && rec.state !== 'inactive') rec.stop();
-            if (window.localStream) window.localStream.getTracks().forEach(t => t.stop());
+            if (localStream) localStream.getTracks().forEach(t => t.stop());
             if (broadcastWs) broadcastWs.close();
 
             fetch('/broadcast/stop', { method: 'POST' });
             window.location.href = '/';
         };
 
+        // ... (Diğer fonksiyonlar aynı) ...
         window.toggleAuction = function () { AUCTION_ACTIVE = !AUCTION_ACTIVE; const btn = document.getElementById('btn-auction-toggle'); const formData = new FormData(); formData.append('active', AUCTION_ACTIVE); fetch('/broadcast/toggle_auction', { method: 'POST', body: formData }); if (AUCTION_ACTIVE) { btn.innerHTML = "🚫 Kapat"; btn.style.background = "rgba(255, 59, 48, 0.4)"; } else { btn.innerHTML = "🔨 Mezat"; btn.style.background = "rgba(255, 255, 255, 0.2)"; } }
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- İZLEYİCİ ---
-        const hlsConfig = {
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 0,
-            liveSyncDurationCount: 3,
-            liveMaxLatencyDurationCount: 6,
-            maxBufferLength: 6,
-            maxMaxBufferLength: 10,
-            enableSoftwareAES: false,
-            fragLoadingTimeOut: 10000
-        };
+        // --- İZLEYİCİ (2sn Parçalar İçin Optimize) ---
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 6, maxBufferLength: 6, maxMaxBufferLength: 10, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
