@@ -66,30 +66,37 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- YARDIMCI: TEMİZLİK ---
-def cleanup_stream(username: str, db: Session):
-    try:
-        user = db.query(User).filter(User.username == username).first()
-        if user:
-            user.is_live = False; user.is_auction_active = False
-            user.current_price = 0; user.highest_bidder = None
-            db.commit()
-    except: pass
-    
+# --- 🔥 YENİLENMİŞ TEMİZLİK FONKSİYONU (Kendi DB Session'ını Açar) 🔥 ---
+def cleanup_stream(username: str):
+    # 1. FFmpeg'i Öldür
     if username in active_processes:
         proc = active_processes[username]
         try: proc.terminate(); proc.wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
 
+    # 2. Veritabanını Güncelle (Yeni Session Açarak)
+    db = SessionLocal()
+    try:
+        user = db.query(User).filter(User.username == username).first()
+        if user:
+            user.is_live = False
+            user.is_auction_active = False
+            user.current_price = 0
+            user.highest_bidder = None
+            db.commit()
+    except Exception as e:
+        print(f"Cleanup DB Error: {e}")
+    finally:
+        db.close()
+
+    # 3. Dosyaları Sil
     try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
     except: pass
 
 def write_to_ffmpeg(process, data):
     try:
-        if process.stdin:
-            process.stdin.write(data)
-            process.stdin.flush()
+        if process.stdin: process.stdin.write(data); process.stdin.flush()
     except: pass
 
 # --- API ---
@@ -144,7 +151,8 @@ async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Fo
 @router.post("/broadcast/stop")
 async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
-    cleanup_stream(user.username, db)
+    # 🔥 ARTIK SADECE USERNAME GÖNDERİYORUZ 🔥
+    cleanup_stream(user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
@@ -242,12 +250,11 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (RAM SAFE): {user.username}")
+    print(f"🎥 YAYIN (FLEXIBLE INPUT): {user.username}")
 
-    # 🔥 LATENCY FIX (-g 30) 🔥
     command = [
         "ffmpeg", "-f", "webm", 
-        "-analyzeduration", "10000000", "-probesize", "10000000",
+        "-analyzeduration", "5000000", "-probesize", "5000000",
         "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
         
         "-filter_complex", 
@@ -258,9 +265,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v240]scale=136:-2[out240]",
         
         "-r", "30", "-preset", "ultrafast", "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "30", # 🔥 ANAHTAR KARE 1 SANİYE (3-4sn Gecikme İçin Şart)
-        "-pix_fmt", "yuv420p",
+        "-profile:v", "baseline", "-level", "3.0", "-g", "30", "-pix_fmt", "yuv420p",
 
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2000k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
         "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
@@ -302,6 +307,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
     except: pass
     finally:
-        cleanup_stream(user.username, db)
+        # 🔥 ARTIK SADECE USERNAME GÖNDERİYORUZ 🔥
+        cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
