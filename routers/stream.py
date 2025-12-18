@@ -3,24 +3,34 @@ import json
 import shutil
 import subprocess
 import sys
-import base64
 import asyncio 
 import time
-import signal # 🔥 İşletim sistemi sinyalleri için
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks
+from datetime import datetime
+# 🔥 Request ve diğerleri eklendi
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from models import User, StreamMessage, StreamRestriction
-from utils import get_current_user, send_broadcast_notifications_task
+from models import User, StreamRestriction
+from utils import get_current_user
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET ---
+# --- MÜŞTERİ LOGLARI İÇİN ENDPOINT ---
+@router.post("/log/client")
+async def client_log(request: Request):
+    try:
+        data = await request.json()
+        msg = data.get("msg", "")
+        level = data.get("level", "INFO")
+        # Sunucu konsoluna bas (Renkli ve belirgin)
+        print(f"📱 [CLIENT-{level}] {msg}")
+        return {"status": "ok"}
+    except: return {"status": "err"}
+
+# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -39,49 +49,22 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 active_processes = {}
-active_logs = {} 
-
-def log_to_file(username, message):
-    try:
-        with open(f"static/hls/{username}/stream.log", "a") as f:
-            timestamp = time.strftime("%H:%M:%S")
-            f.write(f"[{timestamp}] {message}\n")
-    except: pass
 
 def cleanup_stream(username):
-    log_to_file(username, "🛑 TEMİZLİK BAŞLATILDI (TERMINATOR MODU)")
-    
-    # 1. FFmpeg İşlemini Yok Et (Sıfır Tolerans)
+    print(f"🛑 SERVER: {username} yayını temizleniyor...")
     if username in active_processes:
-        proc = active_processes[username]
         try:
-            # Önce nazikçe uyar
-            proc.terminate()
-            # İşletim sistemi seviyesinde PID ile öldür (Garanti yöntem)
-            if proc.poll() is None:
-                time.sleep(0.5)
-                if proc.poll() is None:
-                    os.kill(proc.pid, signal.SIGKILL)
-                    log_to_file(username, "💀 FFmpeg ZORLA ÖLDÜRÜLDÜ (SIGKILL)")
-        except Exception as e:
-            log_to_file(username, f"Kill hatası: {e}")
-        finally:
-            del active_processes[username]
+            active_processes[username].terminate()
+            active_processes[username].wait(timeout=2)
+        except: 
+            active_processes[username].kill()
+        if username in active_processes: del active_processes[username]
     
-    # 2. Log Dosyasını Kapat
-    if username in active_logs:
-        try: active_logs[username].close()
-        except: pass
-        del active_logs[username]
-
-    # 3. Veritabanını Güncelle
+    # DB Temizliği
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
-        if u: 
-            u.is_live = False
-            u.is_auction_active = False
-            db.commit()
+        if u: u.is_live = False; u.is_auction_active = False; db.commit()
     except: pass
     finally: db.close()
 
@@ -90,9 +73,9 @@ def write_to_ffmpeg(process, data):
         try:
             process.stdin.write(data)
             process.stdin.flush()
-        except Exception: pass
+        except: pass
 
-# --- API ---
+# --- STANDART API ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return {"status": "ok"} 
@@ -100,15 +83,22 @@ async def restrict(target_username: str = Form(...), action: str = Form(...), us
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login", 303)
+    
     target_user = None
-    if broadcaster: target_user = db.query(User).filter(User.username == broadcaster).first()
+    if broadcaster:
+        target_user = db.query(User).filter(User.username == broadcaster).first()
+    
     active_streams = db.query(User).filter(User.is_live == True).all()
     if mode == "broadcast": target_user = user
-    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user, "auction_active": False})
+
+    return templates.TemplateResponse("live.html", {
+        "request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user, "auction_active": False
+    })
 
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
+    print(f"✅ SERVER: {user.username} yayını başlattı.")
     return {"status": "ok"}
 
 @router.post("/broadcast/stop")
@@ -162,14 +152,13 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
         os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
 
-    log_file = open(f"{stream_dir}/stream.log", "a")
-    active_logs[user.username] = log_file
-    log_to_file(user.username, f"✅ BAĞLANTI: {user.username}")
+    print(f"🎥 SERVER: FFmpeg başlatılıyor: {user.username}")
 
+    # STABİL AYARLAR (WebM Giriş -> H.264 Çıkış)
     command = [
         "ffmpeg", 
         "-f", "webm", 
-        "-analyzeduration", "2000000", "-probesize", "2000000", 
+        "-analyzeduration", "1000000", "-probesize", "1000000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
         "-i", "pipe:0",
         
@@ -197,14 +186,14 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]
     
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=log_file)
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr) # Logları sistem loguna bas
     active_processes[user.username] = process
     
     async def wait_for_stream():
         start_t = time.time()
         while time.time() - start_t < 30:
             if os.path.exists(f"{stream_dir}/master.m3u8"):
-                log_to_file(user.username, "✅ MASTER OLUŞTU")
+                print(f"✅ SERVER: Master m3u8 oluştu! {user.username}")
                 new_db = SessionLocal()
                 u = new_db.query(User).filter(User.username == user.username).first()
                 u.is_live = True; new_db.commit(); new_db.close()
@@ -218,16 +207,16 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
-            # 5 saniye veri gelmezse kapat
+            # 5 Saniye Veri Gelmezse Kapat
             try:
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=5.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             except asyncio.TimeoutError:
-                log_to_file(user.username, "⚠️ TIMEOUT")
+                print(f"⚠️ SERVER: Timeout - Veri gelmedi {user.username}")
                 break 
     except Exception as e:
-        log_to_file(user.username, f"❌ ER: {e}")
+        print(f"❌ SERVER HATASI: {e}")
     finally:
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)

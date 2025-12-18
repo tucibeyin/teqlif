@@ -3,29 +3,9 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<link rel="stylesheet" href="/static/css/live.css?v=317">
+<link rel="stylesheet" href="/static/css/live.css?v=318">
 
 <style>
-    /* 🔥 DEBUG KONSOLU (HERKES GÖRÜR) 🔥 */
-    #debug-console {
-        position: fixed;
-        top: 60px;
-        left: 10px;
-        width: 80%;
-        height: 120px;
-        background: rgba(0, 0, 0, 0.7);
-        border: 1px solid #00ff00;
-        color: #00ff00;
-        font-family: monospace;
-        font-size: 10px;
-        padding: 5px;
-        z-index: 99999;
-        overflow-y: auto;
-        pointer-events: none;
-        /* Tıklamayı engelleme */
-    }
-
-    /* ... Diğer CSS'ler ... */
     .cinema-video {
         object-fit: contain !important;
         background: #000;
@@ -37,8 +17,7 @@
         display: none;
     }
 
-    /* (Mevcut CSS'ler aynı kalsın) */
-
+    /* MODAL VE BUTON STİLLERİ */
     .modal-overlay {
         position: fixed;
         top: 0;
@@ -61,13 +40,7 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         width: 85%;
         max-width: 320px;
-    }
-
-    .modal-actions {
-        display: flex;
-        gap: 10px;
-        justify-content: center;
-        margin-top: 20px;
+        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     }
 
     .btn-cancel {
@@ -76,6 +49,8 @@
         color: #ccc;
         padding: 10px 20px;
         border-radius: 12px;
+        cursor: pointer;
+        font-weight: 600;
     }
 
     .btn-confirm-red {
@@ -84,6 +59,7 @@
         color: white;
         padding: 10px 20px;
         border-radius: 12px;
+        cursor: pointer;
         font-weight: bold;
     }
 
@@ -101,14 +77,13 @@
         align-items: center;
         justify-content: center;
         border: 1px solid rgba(255, 255, 255, 0.3);
+        cursor: pointer;
         backdrop-filter: blur(5px);
     }
 </style>
 
 <div class="teqlif-os">
     <div id="gift-animation-layer"></div>
-
-    <div id="debug-console">Sistem Başlatılıyor...<br></div>
 
     {% if mode == 'broadcast' %}
     <div class="screen" style="position: relative; height: 100vh; overflow: hidden;">
@@ -134,9 +109,26 @@
         </div>
         <div id="live-ui" class="ui-overlay" style="display: none;">
             <div class="top-bar-left">
-                <div class="brand-pill">CANLI</div>
+                <div class="brand-pill" style="margin-bottom: 5px;">CANLI</div>
             </div>
             <div class="bottom-dock"><button onclick="stopBroadcast()" class="btn-stop">BİTİR ⏹️</button></div>
+        </div>
+    </div>
+
+    <div id="resetModal" class="modal-overlay" style="display:none;">
+        <div class="modal-box">
+            <h3>Sıfırla?</h3>
+            <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
+                <button onclick="closeResetModal()" class="btn-cancel">İptal</button>
+                <button onclick="confirmReset()" class="btn-confirm-red">Evet</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modMenu" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeModMenu()">
+        <div class="modal-box">
+            <h3 style="color:#ff3b30;">Yönetim</h3>
+            <p id="mod-target-name"></p><button onclick="closeModMenu()" class="btn-cancel">Kapat</button>
         </div>
     </div>
 
@@ -144,7 +136,7 @@
     <div class="feed-scroll">
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
-            <video id="video-{{ stream.username }}" class="cinema-video" playsinline
+            <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
                 poster="{{ stream.thumbnail }}"></video>
             <div class="ui-overlay">
                 <div class="top-bar-left">
@@ -155,15 +147,18 @@
             </div>
         </div>
         {% else %}
-        <div style="color:white; text-align:center; padding-top:50px;">Şu an canlı yayın yok.</div>
         {% endfor %}
     </div>
     {% endif %}
 
+    <div id="giftMenu" class="gift-sheet" style="display:none;">
+        <div style="padding:20px; text-align:center; color:white;">Hediye Gönder <button
+                onclick="closeGiftMenu()">X</button></div>
+    </div>
 </div>
 
 <script>
     window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}", auctionActive: {{ 'true' if auction_active else 'false' }}, broadcaster: "{{ broadcaster.username if broadcaster else '' }}" };
 </script>
-<script src="/static/js/live.js?v=317"></script>
+<script src="/static/js/live.js?v=318"></script>
 {% endblock %}
