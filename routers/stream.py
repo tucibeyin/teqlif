@@ -3,19 +3,15 @@ import json
 import shutil
 import subprocess
 import sys
-import base64
 import asyncio 
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-# 🔥 DÜZELTME BURADA: 'Request' EKLENDİ 🔥
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from models import User, StreamMessage, StreamRestriction
-from utils import get_current_user, send_broadcast_notifications_task
+from models import User, StreamRestriction
+from utils import get_current_user
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -49,33 +45,46 @@ def log_to_file(username, message):
     except: pass
 
 def cleanup_stream(username):
+    log_to_file(username, "🛑 TEMİZLİK BAŞLATILDI")
+    
+    # FFmpeg işlemini sonlandır
     if username in active_processes:
+        proc = active_processes[username]
         try:
-            active_processes[username].terminate()
-            active_processes[username].wait(timeout=2)
-        except: 
-            active_processes[username].kill()
+            proc.terminate() # Önce kibarca
+            try:
+                proc.wait(timeout=2)
+            except subprocess.TimeoutExpired:
+                proc.kill() # Dinlemezse zorla
+        except Exception as e:
+            log_to_file(username, f"Kill hatası: {e}")
         del active_processes[username]
     
+    # Log dosyasını kapat
     if username in active_logs:
         try: active_logs[username].close()
         except: pass
         del active_logs[username]
 
+    # DB Güncelleme
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
-        if u: u.is_live = False; u.is_auction_active = False; db.commit()
+        if u: 
+            u.is_live = False
+            u.is_auction_active = False
+            db.commit()
     except: pass
     finally: db.close()
 
 def write_to_ffmpeg(process, data):
-    if process.stdin: 
+    if process and process.stdin: 
         try:
             process.stdin.write(data)
             process.stdin.flush()
-        except: pass
+        except Exception: pass
 
+# --- API ENDPOINTS ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     return {"status": "ok"} 
@@ -83,22 +92,12 @@ async def restrict(target_username: str = Form(...), action: str = Form(...), us
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login", 303)
-    
     target_user = None
     if broadcaster:
         target_user = db.query(User).filter(User.username == broadcaster).first()
-
     active_streams = db.query(User).filter(User.is_live == True).all()
     if mode == "broadcast": target_user = user
-
-    return templates.TemplateResponse("live.html", {
-        "request": request, 
-        "user": user, 
-        "mode": mode, 
-        "streams": active_streams, 
-        "broadcaster": target_user, 
-        "auction_active": False
-    })
+    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user, "auction_active": False})
 
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -113,21 +112,20 @@ async def stop(user: User = Depends(get_current_user)):
     return {"status": "stopped"}
 
 @router.post("/broadcast/thumbnail")
-async def thumb(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+async def thumb(request: Request, user: User = Depends(get_current_user)):
     try:
         d = await request.json()
         with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f:
             f.write(base64.b64decode(d['image'].split(",")[1]))
-        user.thumbnail = f"/static/thumbnails/thumb_{user.username}.jpg?t={time.time()}"; db.commit()
-    except: pass
-    return {"status": "ok"}
+        return {"status": "ok"}
+    except: return {"status": "error"}
 
 @router.post("/broadcast/toggle_auction")
-async def toggle_auction(active: bool = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"}
+async def toggle_auction(active: bool = Form(...)): return {"status": "ok"}
 @router.post("/broadcast/reset_auction")
-async def reset_auction(user: User = Depends(get_current_user)): return {"status": "ok"}
+async def reset_auction(): return {"status": "ok"}
 @router.post("/gift/send")
-async def send_gift(target_username: str=Form(...), gift_type: str=Form(...), user: User=Depends(get_current_user)): return {"status": "success", "new_balance": user.diamonds}
+async def send_gift(user: User=Depends(get_current_user)): return {"status": "success", "new_balance": user.diamonds}
 
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket, stream: str = "home"):
@@ -153,15 +151,15 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if not user: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
-    # Loglar kaybolmasın diye silmiyoruz, sadece gerekirse üzerine yazar
+    # Loglar kaybolmasın diye silmiyoruz
     if not os.path.exists(stream_dir):
         os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
         os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
 
-    log_file = open(f"{stream_dir}/stream.log", "a") # Append modunda aç
+    log_file = open(f"{stream_dir}/stream.log", "a")
     active_logs[user.username] = log_file
     
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    log_to_file(user.username, f"✅ BAĞLANTI KABUL EDİLDİ: {user.username}")
 
     command = [
         "ffmpeg", 
@@ -202,7 +200,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         start_wait = time.time()
         while time.time() - start_wait < 30:
             if os.path.exists(master_file):
-                log_to_file(username, "✅ YAYIN AKTİF")
+                log_to_file(username, "✅ HLS MASTER OLUŞTU")
                 new_db = SessionLocal()
                 u = new_db.query(User).filter(User.username == username).first()
                 u.is_live = True; new_db.commit(); new_db.close()
@@ -216,15 +214,21 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
+            # 🔥 WebSocket Hatası ve Veri Kontrolü 🔥
             try:
-                # Timeout'u 10 saniyeye çıkardık, Android biraz gecikirse hemen kesmesin
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=5.0)
+                if not data: 
+                    log_to_file(user.username, "⚠️ BOŞ VERİ PAKETİ")
+                    break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
+                
             except asyncio.TimeoutError:
-                log_to_file(user.username, "⚠️ TIMEOUT - Veri gelmedi")
+                log_to_file(user.username, "⚠️ TIMEOUT - Veri Akışı Durdu")
                 break 
+    except WebSocketDisconnect:
+        log_to_file(user.username, "❌ İSTEMCİ BAĞLANTIYI KESTİ (Disconnect)")
     except Exception as e:
-        log_to_file(user.username, f"❌ ER: {e}")
+        log_to_file(user.username, f"❌ BEKLENMEYEN HATA: {e}")
     finally:
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
