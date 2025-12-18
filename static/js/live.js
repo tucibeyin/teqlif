@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let rec = null;
     let broadcastWs = null;
 
-    // --- 1. UI/MODERASYON ---
+    // --- UI/MODERASYON ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lRow) { if (bidderName) { lRow.style.display = 'flex'; lRow.querySelector('.name').innerText = bidderName; } else { lRow.style.display = 'none'; } }
     }
 
-    // --- 2. SOHBET ---
+    // --- SOHBET ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 3. YAYINCI (ANDROID WARM-UP FIX) ---
+    // --- YAYINCI (ANDROID SAFE) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -167,17 +167,19 @@ document.addEventListener('DOMContentLoaded', () => {
                     broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                     broadcastWs.onopen = () => {
-                        const canvasStream = canvas.captureStream(24);
+                        const canvasStream = canvas.captureStream(24); // 24 FPS
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 ANDROID GÜVENLİ FORMAT & BITRATE 🔥
-                        let options = { mimeType: 'video/webm', videoBitsPerSecond: 1000000 };
-                        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
+                        // 🔥 ANDROID STABIL AYARLAR 🔥
+                        // 1 Mbps Bitrate + VP8 Codec (En stabil kombinasyon)
+                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
+                        if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                            options = { mimeType: 'video/webm', videoBitsPerSecond: 1000000 };
                         }
 
-                        try { rec = new MediaRecorder(canvasStream, options); } catch (e) { rec = new MediaRecorder(canvasStream); }
+                        try { rec = new MediaRecorder(canvasStream, options); }
+                        catch (e) { rec = new MediaRecorder(canvasStream); }
 
                         rec.ondataavailable = e => {
                             if (e.data.size > 0 && broadcastWs.readyState === 1) {
@@ -185,9 +187,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // 🔥 ISINMA SÜRESİ (1 Saniye Bekle - Hata Önleyici) 🔥
+                        // 🔥 1 SANİYE BEKLE (Isınma Süresi) 🔥
+                        // Bu bekleme Android'in kamerayı hazırlaması için şarttır.
+                        console.log("Kamera ısınıyor...");
                         setTimeout(() => {
-                            if (rec.state === 'inactive') rec.start(1000);
+                            if (rec.state === 'inactive') {
+                                rec.start(1000);
+                                console.log("Yayın başladı!");
+                            }
                         }, 1000);
 
                         sendThumbnailSnapshot();
@@ -215,7 +222,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
         // --- İZLEYİCİ ---
-        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4, maxBufferLength: 3, maxMaxBufferLength: 5, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4, maxBufferLength: 4, maxMaxBufferLength: 6, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
