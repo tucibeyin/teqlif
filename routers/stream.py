@@ -19,7 +19,7 @@ from utils import get_current_user, send_broadcast_notifications_task
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET ---
+# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[dict]] = {}
@@ -57,20 +57,34 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
+# --- TEMİZLİK (ZOMBİ SÜREÇLERİ ÖLDÜRÜR) ---
 def cleanup_stream(username: str):
+    # 1. FFmpeg Sürecini Öldür
     if username in active_processes:
         proc = active_processes[username]
-        try: proc.terminate(); proc.wait(timeout=2)
-        except: proc.kill()
-        del active_processes[username]
+        try: 
+            proc.terminate()
+            proc.wait(timeout=2)
+        except: 
+            proc.kill() # Zorla öldür
+        finally:
+            if username in active_processes:
+                del active_processes[username]
+
+    # 2. Veritabanını Temizle
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
-            user.is_live = False; user.is_auction_active = False; user.current_price = 0; user.highest_bidder = None
+            user.is_live = False
+            user.is_auction_active = False
+            user.current_price = 0
+            user.highest_bidder = None
             db.commit()
     except: pass
     finally: db.close()
+
+    # 3. Dosyaları Sil
     try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
     except: pass
 
@@ -81,6 +95,7 @@ def write_to_ffmpeg(process, data):
             process.stdin.flush()
     except: pass
 
+# --- API ---
 @router.post("/stream/restrict")
 async def restrict_user(target_username: str = Form(...), action: str = Form(...), duration: int = Form(0), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user or not user.is_live: return JSONResponse({"status": "error", "msg": "Yetkisiz"}, 403)
@@ -230,19 +245,19 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (STABLE & ROBUST): {user.username}")
+    print(f"🎥 YAYIN (RESTORING GLORY): {user.username}")
 
     command = [
         "ffmpeg", 
-        # GİRİŞ: Android için VP8/WebM Toleranslı Mod
-        "-f", "webm", 
-        "-use_wallclock_as_timestamps", "1",
-        "-analyzeduration", "20000000", "-probesize", "20000000", # Buffer'ı artırdık
+        # --- GİRİŞ (Android İçin Esnek) ---
+        "-f", "matroska", 
+        "-use_wallclock_as_timestamps", "1", # Zaman hatalarını düzelt
+        "-analyzeduration", "20000000", "-probesize", "20000000", # Buffer ver ki Android'i beklesin
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        # FİLTRE
+        # --- FİLTRE (4 Kalite + Crop) ---
         "-filter_complex", 
         "[0:v]scale=-2:720,crop=406:720:(in_w-406)/2:0,split=4[v720][v480][v360][v240];"
         "[v720]copy[out720];"
@@ -250,25 +265,27 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=202:-2[out360];"
         "[v240]scale=136:-2[out240]",
         
-        # PERFORMANS (Veryfast = Stabilite)
-        "-preset", "veryfast", 
+        # --- PERFORMANS & UYUM ---
+        "-preset", "veryfast", # iOS'ta görüntü bozulmasını engeller
         "-tune", "zerolatency", 
         "-threads", "0", 
         "-af", "aresample=async=1", 
         
-        # iOS ve Android Uyumlu Profil (Baseline)
+        # --- iOS UYUMLULUK (Baseline Profile) ---
         "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0", # 2 Saniyelik Sabit GOP
+        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0", # 2 Saniyelik GOP (Stabilite)
         "-pix_fmt", "yuv420p",
 
-        # ÇIKTI (Bitrate Stabilite Ayarı)
-        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1500k", "-maxrate:v:0", "1800k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "96k",
-        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "800k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "64k",
-        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "500k", "-maxrate:v:2", "600k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "48k",
-        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "600k", "-c:a:3", "aac", "-b:a:3", "32k",
+        # --- ÇIKTI (Dengeli Bitrate) ---
+        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "4000k", "-c:a:0", "aac", "-b:a:0", "128k",
+        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "2000k", "-c:a:1", "aac", "-b:a:1", "96k",
+        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1200k", "-c:a:2", "aac", "-b:a:2", "64k",
+        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "600k", "-c:a:3", "aac", "-b:a:3", "48k",
         
-        # HLS (2 Saniyelik Parçalar = iOS ve Android Takılmaz)
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
+        # --- HLS (2 Saniyelik Parçalar - En Kararlı) ---
+        "-f", "hls", 
+        "-hls_time", "2",       # 2 Saniye (Stabil)
+        "-hls_list_size", "4",  
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
         "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
