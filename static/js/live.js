@@ -13,10 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
     let currentDeviceIndex = 0;
     let canvas, ctx, animationFrameId;
     let localStream = null;
-    let rec = null; // Recorder global
-    let broadcastWs = null; // Yayın soketi
+    let rec = null;
+    let broadcastWs = null;
 
-    // --- 1. MODERASYON & GÖRÜNÜM (AYNI) ---
+    // --- 1. MODERASYON & UI (Değişmedi) ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lRow) { if (bidderName) { lRow.style.display = 'flex'; lRow.querySelector('.name').innerText = bidderName; } else { lRow.style.display = 'none'; } }
     }
 
-    // --- 2. SOHBET SOCKET (AYNI) ---
+    // --- 2. SOHBET (Değişmedi) ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -107,7 +107,24 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 🔥 YAYINCI MANTIĞI (ANDROID FIXED) 🔥 ---
+    // --- 🔥 YENİ FORMAT SEÇİCİ FONKSİYON 🔥 ---
+    function getSupportedMimeType() {
+        const types = [
+            'video/webm;codecs=h264',
+            'video/webm;codecs=vp9',
+            'video/webm;codecs=vp8',
+            'video/webm'
+        ];
+        for (const type of types) {
+            if (MediaRecorder.isTypeSupported(type)) {
+                console.log("Seçilen Format:", type);
+                return type;
+            }
+        }
+        return 'video/webm'; // Hiçbiri yoksa varsayılan
+    }
+
+    // --- YAYINCI MANTIĞI ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -118,7 +135,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initStream(deviceId = null) {
             if (localStream) { localStream.getTracks().forEach(track => track.stop()); }
-            const constraints = { audio: true, video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } };
+            // Android için 'exact' yerine 'ideal' kullanmak daha güvenli
+            const constraints = {
+                audio: true,
+                video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
+            };
             try {
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 localStream = stream; videoElement.srcObject = stream;
@@ -163,44 +184,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     window.connectChat('broadcast');
 
                     broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+
                     broadcastWs.onopen = () => {
-                        // 🔥 24 FPS + CODEC SERBEST BIRAKILDI (ANDROID FIX) 🔥
-                        const canvasStream = canvas.captureStream(24);
+                        const canvasStream = canvas.captureStream(24); // 24 FPS (Güvenli)
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // Sadece 'video/webm' diyoruz, Android en iyi codec'i kendi seçsin.
-                        let options = { mimeType: 'video/webm' };
-
-                        // Bitrate 1.5 Mbps (Mobil için ideal)
-                        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
-                        }
+                        // 🔥 OTOMATİK FORMAT SEÇİMİ 🔥
+                        const selectedMimeType = getSupportedMimeType();
+                        const options = { mimeType: selectedMimeType, videoBitsPerSecond: 1500000 };
 
                         try {
                             rec = new MediaRecorder(canvasStream, options);
                         } catch (e) {
-                            // Fallback
+                            // Eğer hata verirse en temeline dön
                             rec = new MediaRecorder(canvasStream);
                         }
 
-                        // 🔥 1 SANİYELİK DİLİMLER (1000ms) - Android için daha kararlı 🔥
-                        rec.start(1000);
                         rec.ondataavailable = e => {
                             if (e.data.size > 0 && broadcastWs.readyState === 1) {
                                 broadcastWs.send(e.data);
                             }
                         };
-
-                        rec.onerror = (e) => {
-                            console.error("Recorder Error:", e);
-                            alert("Yayın aracı hata verdi, sayfa yenileniyor.");
-                            location.reload();
-                        };
+                        rec.start(1000); // 1 Saniyelik parçalar
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
+
+                    broadcastWs.onerror = (e) => { console.log("Socket Error:", e); };
                 });
             });
         }
