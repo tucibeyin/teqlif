@@ -19,7 +19,6 @@ from utils import get_current_user, send_broadcast_notifications_task
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[dict]] = {}
@@ -57,7 +56,6 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- CLEANUP ---
 def cleanup_stream(username: str):
     if username in active_processes:
         proc = active_processes[username]
@@ -68,7 +66,8 @@ def cleanup_stream(username: str):
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
-            user.is_live = False; user.is_auction_active = False; user.current_price = 0; user.highest_bidder = None
+            user.is_live = False; user.is_auction_active = False
+            user.current_price = 0; user.highest_bidder = None
             db.commit()
     except: pass
     finally: db.close()
@@ -77,9 +76,7 @@ def cleanup_stream(username: str):
 
 def write_to_ffmpeg(process, data):
     try:
-        if process.stdin and data: 
-            process.stdin.write(data)
-            process.stdin.flush()
+        if process.stdin: process.stdin.write(data); process.stdin.flush()
     except: pass
 
 @router.post("/stream/restrict")
@@ -231,16 +228,15 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (ANDROID FORCED SYNC): {user.username}")
+    print(f"🎥 YAYIN (ANDROID FULL SYNC): {user.username}")
 
     command = [
         "ffmpeg", 
-        # GİRİŞ: Wallclock Timestamp + Max Interleave 0
+        # GİRİŞ: Wallclock + Auto Format + Hata Yoksay
         "-f", "matroska", 
         "-use_wallclock_as_timestamps", "1",
         "-analyzeduration", "5000000", "-probesize", "5000000",
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
-        "-max_interleave_delta", "0", # 🔥 ÖNEMLİ: Senkronizasyon beklemesini kapat
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
@@ -252,17 +248,15 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=202:-2[out360];"
         "[v240]scale=136:-2[out240]",
         
-        # PERFORMANS & SYNC (Senkronizasyon)
+        # 🔥 KRİTİK DÜZELTME: -fps_mode cfr (Duplicate Frame ile Doldur) 🔥
         "-preset", "ultrafast", 
         "-tune", "zerolatency", 
         "-threads", "0", 
         "-af", "aresample=async=1", 
-        "-vsync", "1", 
+        "-fps_mode", "cfr", # Kareleri sabit hızda zorla (eksikleri doldur)
         
         "-profile:v", "baseline", "-level", "3.0", 
-        # 🔥 ÇIKTI TARAFINDA ZORLA KEYFRAME (no-scenecut) 🔥
-        "-g", "30", "-x264opts", "keyint=30:min-keyint=30:no-scenecut",
-        "-pix_fmt", "yuv420p",
+        "-g", "30", "-pix_fmt", "yuv420p",
 
         # ÇIKTI
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
@@ -270,10 +264,9 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
         "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "300k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
         
-        # HLS - SPLIT BY TIME (Keyframe bekleme, sürede kes)
+        # HLS
         "-f", "hls", "-hls_time", "1", "-hls_list_size", "3", 
-        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time+split_by_time", 
-        "-hls_allow_cache", "0",
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]
@@ -284,7 +277,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     async def wait_for_file_and_go_live(username, title, category, thumbnail):
         master_file = f"static/hls/{username}/master.m3u8"
         start_wait = time.time()
-        while time.time() - start_wait < 60: # 🔥 SÜREYİ 60sn YAPTIK (İlk dosya için tolerans)
+        while time.time() - start_wait < 30: 
             if os.path.exists(master_file):
                 new_db = SessionLocal()
                 try:
