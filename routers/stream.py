@@ -47,16 +47,15 @@ def cleanup_stream(username):
             active_processes[username].kill()
         del active_processes[username]
     
-    try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
-    except: pass
-    
-    # DB Temizliği
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
         if u: u.is_live = False; u.is_auction_active = False; db.commit()
     except: pass
     finally: db.close()
+
+    try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
+    except: pass
 
 def write_to_ffmpeg(process, data):
     if process.stdin: 
@@ -134,39 +133,42 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    print(f"🎥 YAYIN (ANTI-FREEZE): {user.username}")
 
     command = [
         "ffmpeg", 
-        # GİRİŞ: WebM (Tarayıcı standardı)
-        # Analiz süresini DÜŞÜK tutuyoruz ki hemen yazmaya başlasın
+        # GİRİŞ: WebM + Orta seviye analiz (Denge)
         "-f", "webm", 
-        "-analyzeduration", "500000", "-probesize", "500000", 
-        "-fflags", "+genpts+igndts+nobuffer", 
+        "-analyzeduration", "2000000", "-probesize", "2000000", # 2MB/2sn analiz (Dengeli)
+        "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
         "-i", "pipe:0",
         
-        # FİLTRE & SCALE (4 Kalite)
+        # FİLTRE
         "-filter_complex", 
         "[0:v]scale=-2:720,crop=406:720:(in_w-406)/2:0,split=4[v720][v480][v360][v240];"
         "[v720]copy[out720]; [v480]scale=270:-2[out480]; [v360]scale=202:-2[out360]; [v240]scale=136:-2[out240]",
         
-        # PERFORMANS (Veryfast = Dengeli)
+        # PERFORMANS & SENKRONİZASYON
         "-preset", "veryfast", "-tune", "zerolatency", "-threads", "0", 
         "-af", "aresample=async=1",
         
-        # iOS/Android UYUMLULUK (Baseline Profile + 2sn Keyframe)
+        # 🔥 DONMAYI ENGELLEYEN AYARLAR 🔥
+        "-r", "30", # Çıkış karesini 30'a sabitle (Dalgalanmayı önler)
+        "-vsync", "1", # Eksik kareleri doldur (Drop değil, duplicate et)
+        
+        # CODEC & ZORLA KEYFRAME
         "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0", 
-        "-pix_fmt", "yuv420p",
+        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0",
+        "-force_key_frames", "expr:gte(t,n_forced*2)", # 🔥 Her 2 saniyede bir Keyframe BAS!
 
-        # ÇIKTI (Bitrateler)
+        # ÇIKTI
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2200k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
         "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
         "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
         
-        # HLS YAPILANDIRMASI (2 Saniye parça = Stabilite)
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
+        # HLS
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "5", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time+split_by_time", 
         "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
@@ -176,18 +178,15 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
     
-    # İlk dosya oluşana kadar bekleme döngüsü
+    # 20 Saniye Bekle (Hata payı)
     async def wait_for_stream():
         start_t = time.time()
-        while time.time() - start_t < 20: # 20 saniye bekle
+        while time.time() - start_t < 20:
             if os.path.exists(f"{stream_dir}/master.m3u8"):
-                # DB Güncelle
                 new_db = SessionLocal()
                 u = new_db.query(User).filter(User.username == user.username).first()
-                u.is_live = True
-                new_db.commit()
-                new_db.close()
-                # Bildirim
+                u.is_live = True; new_db.commit(); new_db.close()
+                
                 payload = json.dumps({"type": "stream_added", "username": user.username, "title": user.stream_title, "category": user.stream_category, "thumbnail": user.thumbnail})
                 await manager.broadcast_to_room(payload, "home")
                 break
