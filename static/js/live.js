@@ -222,7 +222,21 @@ document.addEventListener('DOMContentLoaded', () => {
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
         // --- İZLEYİCİ ---
-        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 1.5, liveMaxLatencyDurationCount: 3, maxBufferLength: 2, maxMaxBufferLength: 3, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
+
+        const hlsConfig = {
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 0,
+
+            // 2 Saniyelik parçalar için 3 segment (6sn) idealdir
+            liveSyncDurationCount: 3,
+            liveMaxLatencyDurationCount: 6,
+            maxBufferLength: 4,
+            maxMaxBufferLength: 6,
+
+            enableSoftwareAES: false,
+            fragLoadingTimeOut: 10000
+        };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
