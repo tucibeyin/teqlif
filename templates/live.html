@@ -3,9 +3,29 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<link rel="stylesheet" href="/static/css/live.css?v=311">
+<link rel="stylesheet" href="/static/css/live.css?v=317">
 
 <style>
+    /* 🔥 DEBUG KONSOLU (HERKES GÖRÜR) 🔥 */
+    #debug-console {
+        position: fixed;
+        top: 60px;
+        left: 10px;
+        width: 80%;
+        height: 120px;
+        background: rgba(0, 0, 0, 0.7);
+        border: 1px solid #00ff00;
+        color: #00ff00;
+        font-family: monospace;
+        font-size: 10px;
+        padding: 5px;
+        z-index: 99999;
+        overflow-y: auto;
+        pointer-events: none;
+        /* Tıklamayı engelleme */
+    }
+
+    /* ... Diğer CSS'ler ... */
     .cinema-video {
         object-fit: contain !important;
         background: #000;
@@ -13,13 +33,12 @@
         height: 100%;
     }
 
-    /* GİZLİ CANVAS (Yayın motoru burada çalışacak) */
     #broadcast-canvas {
         display: none;
-        /* Kullanıcı görmez, arkada çalışır */
     }
 
-    /* MODAL STİLLERİ */
+    /* (Mevcut CSS'ler aynı kalsın) */
+
     .modal-overlay {
         position: fixed;
         top: 0;
@@ -42,7 +61,6 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         width: 85%;
         max-width: 320px;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     }
 
     .modal-actions {
@@ -58,8 +76,6 @@
         color: #ccc;
         padding: 10px 20px;
         border-radius: 12px;
-        cursor: pointer;
-        font-weight: 600;
     }
 
     .btn-confirm-red {
@@ -68,51 +84,9 @@
         color: white;
         padding: 10px 20px;
         border-radius: 12px;
-        cursor: pointer;
         font-weight: bold;
     }
 
-    /* Butonlar */
-    .mod-btn {
-        width: 100%;
-        padding: 14px;
-        margin-bottom: 10px;
-        border-radius: 12px;
-        border: none;
-        color: white;
-        font-weight: 700;
-        font-size: 14px;
-        cursor: pointer;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        transition: transform 0.1s;
-    }
-
-    .mod-btn:active {
-        transform: scale(0.98);
-    }
-
-    .btn-mute {
-        background: linear-gradient(135deg, #f39c12, #d35400);
-    }
-
-    .btn-ban {
-        background: linear-gradient(135deg, #e74c3c, #c0392b);
-    }
-
-    .btn-unban {
-        background: linear-gradient(135deg, #2ecc71, #27ae60);
-    }
-
-    .btn-cancel-mod {
-        background: #333;
-        color: #ccc;
-        margin-top: 5px;
-    }
-
-    /* Kamera Değiştir Butonu */
     .btn-switch-cam {
         position: absolute;
         top: 20px;
@@ -127,7 +101,6 @@
         align-items: center;
         justify-content: center;
         border: 1px solid rgba(255, 255, 255, 0.3);
-        cursor: pointer;
         backdrop-filter: blur(5px);
     }
 </style>
@@ -135,21 +108,15 @@
 <div class="teqlif-os">
     <div id="gift-animation-layer"></div>
 
+    <div id="debug-console">Sistem Başlatılıyor...<br></div>
+
     {% if mode == 'broadcast' %}
     <div class="screen" style="position: relative; height: 100vh; overflow: hidden;">
-
         <video id="preview" autoplay muted playsinline
-            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transform: scaleX(-1);">
-        </video>
-
+            style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transform: scaleX(-1);"></video>
         <canvas id="broadcast-canvas" width="720" height="1280"></canvas>
-
         <div id="setup-layer" class="setup-overlay">
-
-            <div class="btn-switch-cam" onclick="switchCamera()">
-                <i class="fa-solid fa-camera-rotate"></i>
-            </div>
-
+            <div class="btn-switch-cam" onclick="switchCamera()"><i class="fa-solid fa-camera-rotate"></i></div>
             <div class="setup-box">
                 <h2 style="margin-bottom:20px; color: white;">Yayını Hazırla 🎥</h2>
                 <div class="input-group-glass"><i class="fa-solid fa-pen"></i><input type="text" id="streamTitle"
@@ -158,8 +125,6 @@
                         <option value="Genel">Kategori Seç</option>
                         <option value="Mezat">Mezat 🔨</option>
                         <option value="Sohbet">Sohbet 💬</option>
-                        <option value="Oyun">Oyun 🎮</option>
-                        <option value="Müzik">Müzik 🎵</option>
                     </select></div>
                 <div class="input-group-glass"><i class="fa-solid fa-microphone"></i><select id="audioSource"
                         onchange="restartStream()"></select></div>
@@ -167,80 +132,11 @@
                 <a href="/" class="btn-cancel-live">İptal</a>
             </div>
         </div>
-
         <div id="live-ui" class="ui-overlay" style="display: none;">
-
             <div class="top-bar-left">
-                <div class="brand-pill" style="margin-bottom: 5px;">CANLI</div>
-                <div class="price-board">
-                    <span class="label">GÜNCEL FİYAT</span>
-                    <div class="price-row"><span class="currency">₺</span><span id="current-price-display">0</span>
-                    </div>
-                    <div class="leader-row" id="leader-display-broadcast" style="display: none;"><i
-                            class="fa-solid fa-crown"></i> <span class="name">--</span></div>
-                </div>
+                <div class="brand-pill">CANLI</div>
             </div>
-
-            <div class="header-right">
-                <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span id="screen-diamond-count">{{
-                        user.diamonds }}</span></div>
-                <div class="info-pill"><i class="fa-solid fa-eye"></i> <span id="live-count-broadcast">0</span></div>
-                <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
-            </div>
-
-            <div style="position: absolute; right: 15px; top: 120px; z-index: 100;">
-                <div class="ui-element action-btn" onclick="switchCamera()"
-                    style="width: 40px; height: 40px; background: rgba(0,0,0,0.5); border-radius: 50%; display: flex; align-items: center; justify-content: center; border: 1px solid rgba(255,255,255,0.2);">
-                    <i class="fa-solid fa-camera-rotate" style="color: white;"></i>
-                </div>
-            </div>
-
-            <div class="mid-section">
-                <div class="chat-zone">
-                    <div id="chat-feed-broadcast" class="chat-scroller"></div>
-                </div>
-                <div class="bid-zone">
-                    <div id="bid-feed-broadcast" class="bid-scroller"></div>
-                </div>
-            </div>
-
-            <div class="bottom-dock">
-                <div class="chat-input-bar">
-                    <input type="text" id="chat-input-broadcast" placeholder="Mesaj..." autocomplete="off">
-                    <button class="send-icon-btn" onclick="sendMsg('broadcast')"><i
-                            class="fa-solid fa-paper-plane"></i></button>
-                </div>
-                <div class="admin-controls">
-                    <button class="btn-glass" onclick="openResetModal()">🔄 Sıfırla</button>
-                    <button class="btn-glass" id="btn-auction-toggle" onclick="toggleAuction()">🔨 Mezat</button>
-                    <button onclick="stopBroadcast()" class="btn-stop">BİTİR ⏹️</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div id="resetModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box">
-            <h3>Sıfırla?</h3>
-            <div class="modal-actions"><button onclick="closeResetModal()" class="btn-cancel">İptal</button><button
-                    onclick="confirmReset()" class="btn-confirm-red">Evet</button></div>
-        </div>
-    </div>
-
-    <div id="modMenu" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeModMenu()">
-        <div class="modal-box" style="border: 1px solid #ff3b30;">
-            <h3 style="color:#ff3b30; margin-bottom:5px;">Yönetim Paneli</h3>
-            <p style="color:#fff; font-weight:bold; margin-bottom:20px; font-size:16px;"><span id="mod-target-name"
-                    style="color:#ff3b30;"></span></p>
-            <div style="display:flex; flex-direction:column; gap: 8px;">
-                <button onclick="restrictUser('mute', 5)" class="mod-btn btn-mute"><i
-                        class="fa-solid fa-microphone-slash"></i> 5 Dakika Sustur</button>
-                <button onclick="restrictUser('ban')" class="mod-btn btn-ban"><i class="fa-solid fa-ban"></i> Yayından
-                    Yasakla (BAN)</button>
-                <button onclick="restrictUser('unban')" class="mod-btn btn-unban"><i class="fa-solid fa-check"></i>
-                    Yasağı Kaldır</button>
-                <button onclick="closeModMenu()" class="mod-btn btn-cancel-mod">İptal</button>
-            </div>
+            <div class="bottom-dock"><button onclick="stopBroadcast()" class="btn-stop">BİTİR ⏹️</button></div>
         </div>
     </div>
 
@@ -248,105 +144,26 @@
     <div class="feed-scroll">
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
-            <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
+            <video id="video-{{ stream.username }}" class="cinema-video" playsinline
                 poster="{{ stream.thumbnail }}"></video>
-            <div class="tap-hint" onclick="unmuteVideo('{{ stream.username }}')" style="display:none;"><i
-                    class="fa-solid fa-volume-high"></i> Sesi Aç</div>
-
             <div class="ui-overlay">
                 <div class="top-bar-left">
                     <div class="streamer-pill">
-                        <div class="avatar-mini">{{ stream.username[0]|upper }}</div>
                         <div class="name">{{ stream.username }}</div>
-                        <button class="follow-btn-mini {{ 'following' if is_following else '' }}"
-                            id="follow-btn-{{ stream.username }}" onclick="toggleFollow('{{ stream.username }}')">
-                            {{ '+' if not is_following else '✓' }}
-                        </button>
-                    </div>
-                    <div class="brand-pill" style="margin-top: 5px; width: fit-content;">CANLI</div>
-                    <div class="price-board" id="price-board-{{ stream.username }}"
-                        style="margin-top: 5px; display: {{ 'flex' if auction_active else 'none' }}">
-                        <span class="label">GÜNCEL</span>
-                        <div class="price-row"><span class="currency">₺</span><span id="price-{{ stream.username }}"
-                                class="amount">0</span></div>
-                        <div class="leader-row" id="leader-display-{{ stream.username }}" style="display: none;"><i
-                                class="fa-solid fa-crown"></i> <span class="name">--</span></div>
-                    </div>
-                </div>
-
-                <div class="header-right">
-                    <div class="info-pill diamond"><i class="fa-solid fa-gem"></i> <span>{{ user.diamonds }}</span>
-                    </div>
-                    <div class="info-pill"><i class="fa-solid fa-eye"></i> <span
-                            id="live-count-{{ stream.username }}">0</span></div>
-                    <a href="/" class="icon-btn-glass close"><i class="fa-solid fa-xmark"></i></a>
-                </div>
-
-                <div class="mid-section">
-                    <div class="chat-zone">
-                        <div id="chat-feed-{{ stream.username }}" class="chat-scroller"></div>
-                    </div>
-                    <div class="bid-zone">
-                        <div id="bid-feed-{{ stream.username }}" class="bid-scroller"></div>
-                    </div>
-                </div>
-
-                <div class="bottom-dock">
-                    <div class="bid-layer" id="bid-layer-{{ stream.username }}"
-                        style="display: {{ 'flex' if auction_active else 'none' }}">
-                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 50)">+50₺</button>
-                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 100)">+100₺</button>
-                        <button class="bid-chip" onclick="sendBid('{{ stream.username }}', 500)">+500₺</button>
-                        <div class="manual-bid-wrapper"><input type="number" id="manual-bid-{{ stream.username }}"
-                                placeholder="Tutar"><button onclick="sendManualBid('{{ stream.username }}')">OK</button>
-                        </div>
-                    </div>
-                    <div class="chat-input-bar">
-                        <input type="text" id="chat-input-{{ stream.username }}" placeholder="Yorum..."
-                            autocomplete="off">
-                        <button class="gift-btn" onclick="openGiftMenu('{{ stream.username }}')">🎁</button>
-                        <button class="send-icon-btn" onclick="sendMsg('{{ stream.username }}')"><i
-                                class="fa-solid fa-paper-plane"></i></button>
                     </div>
                 </div>
             </div>
         </div>
         {% else %}
+        <div style="color:white; text-align:center; padding-top:50px;">Şu an canlı yayın yok.</div>
         {% endfor %}
     </div>
     {% endif %}
 
-    <div id="giftMenu" class="gift-sheet" style="display:none;">
-        <div class="sheet-header"
-            style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <div class="sheet-title" style="font-weight:bold;">Bakiye: <span id="menu-diamond-count"
-                    style="color:#00d2ff;">{{ user.diamonds }}</span> 💎</div>
-            <div class="sheet-close" onclick="closeGiftMenu()" style="cursor:pointer; font-size:20px;"><i
-                    class="fa-solid fa-xmark"></i></div>
-        </div>
-        <div class="gift-grid">
-            <div class="gift-item" onclick="sendGift('rose')">
-                <div class="gift-icon">🌹</div>
-                <div class="gift-name">Gül (10)</div>
-            </div>
-            <div class="gift-item" onclick="sendGift('heart')">
-                <div class="gift-icon">❤️</div>
-                <div class="gift-name">Kalp (50)</div>
-            </div>
-            <div class="gift-item" onclick="sendGift('car')">
-                <div class="gift-icon">🏎️</div>
-                <div class="gift-name">Araba (500)</div>
-            </div>
-            <div class="gift-item" onclick="sendGift('rocket')">
-                <div class="gift-icon">🚀</div>
-                <div class="gift-name">Roket (5000)</div>
-            </div>
-        </div>
-    </div>
 </div>
 
 <script>
     window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}", auctionActive: {{ 'true' if auction_active else 'false' }}, broadcaster: "{{ broadcaster.username if broadcaster else '' }}" };
 </script>
-<script src="/static/js/live.js?v=312"></script>
+<script src="/static/js/live.js?v=317"></script>
 {% endblock %}

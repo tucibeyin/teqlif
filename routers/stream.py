@@ -3,17 +3,14 @@ import json
 import shutil
 import subprocess
 import sys
-import base64
 import asyncio 
 import time
-from datetime import datetime, timedelta
-from typing import Dict, List, Optional
-from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks
+from fastapi import APIRouter, WebSocket, Depends, Form, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from models import User, StreamMessage, StreamRestriction
+from models import User, StreamRestriction
 from utils import get_current_user, send_broadcast_notifications_task
 
 router = APIRouter()
@@ -38,6 +35,15 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 active_processes = {}
+active_logs = {} # Log dosyalarını tutmak için
+
+def log_to_file(username, message):
+    """Logları dosyaya yazar"""
+    try:
+        with open(f"static/hls/{username}/stream.log", "a") as f:
+            timestamp = time.strftime("%H:%M:%S")
+            f.write(f"[{timestamp}] {message}\n")
+    except: pass
 
 def cleanup_stream(username):
     if username in active_processes:
@@ -46,8 +52,13 @@ def cleanup_stream(username):
             active_processes[username].wait(timeout=2)
         except: 
             active_processes[username].kill()
-        if username in active_processes: del active_processes[username]
+        del active_processes[username]
     
+    if username in active_logs:
+        try: active_logs[username].close()
+        except: pass
+        del active_logs[username]
+
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
@@ -55,8 +66,9 @@ def cleanup_stream(username):
     except: pass
     finally: db.close()
     
-    try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
-    except: pass
+    # HLS dosyalarını hemen silme, log kalsın
+    # try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
+    # except: pass
 
 def write_to_ffmpeg(process, data):
     if process.stdin: 
@@ -66,27 +78,18 @@ def write_to_ffmpeg(process, data):
         except: pass
 
 @router.post("/stream/restrict")
-async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    return {"status": "ok"} 
+async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login", 303)
-    
     target_user = None
-    if broadcaster:
-        target_user = db.query(User).filter(User.username == broadcaster).first()
-
+    if broadcaster: target_user = db.query(User).filter(User.username == broadcaster).first()
     active_streams = db.query(User).filter(User.is_live == True).all()
     if mode == "broadcast": target_user = user
 
     return templates.TemplateResponse("live.html", {
-        "request": request, 
-        "user": user, 
-        "mode": mode, 
-        "streams": active_streams, 
-        "broadcaster": target_user, 
-        "auction_active": target_user.is_auction_active if target_user else False
+        "request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user, "auction_active": False
     })
 
 @router.post("/broadcast/start")
@@ -139,21 +142,25 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: pass
     
-    if not user: 
-        await websocket.close()
-        return
+    if not user: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
-    shutil.rmtree(stream_dir, ignore_errors=True)
+    # Klasörü sıfırla
+    if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
 
-    print(f"🎥 YAYIN (FINAL STABLE): {user.username}")
+    # 🔥 LOG DOSYASI OLUŞTUR 🔥
+    log_file = open(f"{stream_dir}/stream.log", "w")
+    active_logs[user.username] = log_file
+    
+    msg = f"🎥 YAYIN BAŞLIYOR: {user.username}\n--------------------------------"
+    print(msg); log_file.write(msg + "\n"); log_file.flush()
 
     command = [
         "ffmpeg", 
         "-f", "webm", 
-        "-analyzeduration", "1000000", "-probesize", "1000000", 
+        "-analyzeduration", "5000000", "-probesize", "5000000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
         "-i", "pipe:0",
         
@@ -169,7 +176,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         "-force_key_frames", "expr:gte(t,n_forced*2)", 
         "-pix_fmt", "yuv420p",
 
-        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1500k", "-maxrate:v:0", "2000k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
+        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1500k", "-maxrate:v:0", "1800k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
         "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "800k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "500k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
         "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
@@ -181,37 +188,50 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]
     
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
+    # stderr'i log dosyasına yönlendir
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=log_file)
     active_processes[user.username] = process
     
-    async def wait_for_stream():
-        start_t = time.time()
-        while time.time() - start_t < 30:
-            if os.path.exists(f"{stream_dir}/master.m3u8"):
+    async def wait_for_file_and_go_live(username, title, category, thumbnail):
+        master_file = f"static/hls/{username}/master.m3u8"
+        start_wait = time.time()
+        while time.time() - start_wait < 30:
+            if os.path.exists(master_file):
+                log_to_file(username, "✅ MASTER PLAYLIST OLUŞTU! YAYIN AKTİF.")
                 new_db = SessionLocal()
-                u = new_db.query(User).filter(User.username == user.username).first()
+                u = new_db.query(User).filter(User.username == username).first()
                 u.is_live = True; new_db.commit(); new_db.close()
-                payload = json.dumps({"type": "stream_added", "username": user.username, "title": user.stream_title, "category": user.stream_category, "thumbnail": user.thumbnail})
+                payload = json.dumps({"type": "stream_added", "username": username, "title": title, "category": category, "thumbnail": thumbnail})
                 await manager.broadcast_to_room(payload, "home")
                 break
             await asyncio.sleep(0.5)
 
     loop = asyncio.get_event_loop()
-    loop.create_task(wait_for_stream())
+    loop.create_task(wait_for_file_and_go_live(user.username, user.stream_title, user.stream_category, user.thumbnail))
 
     try:
+        last_log_time = time.time()
+        bytes_count = 0
+        
         while True:
-            # 🔥 KRİTİK DÜZELTME: Veri gelmezse (Timeout) DÖNGÜYÜ KIR! 🔥
             try:
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=5.0)
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
+                
+                # Loglama (Her 2 saniyede bir)
+                bytes_count += len(data)
+                if time.time() - last_log_time > 2:
+                    log_to_file(user.username, f"Veri Alınıyor: {bytes_count} bytes (Son 2sn)")
+                    bytes_count = 0
+                    last_log_time = time.time()
+                    
             except asyncio.TimeoutError:
-                print(f"⚠️ Veri akışı kesildi (Timeout): {user.username}")
-                break # Döngüden çık, zombi olma!
-            except:
-                break
-    except: pass
+                log_to_file(user.username, "⚠️ UYARI: Veri akışı kesildi (Timeout)")
+                break 
+    except Exception as e:
+        log_to_file(user.username, f"❌ HATA: {e}")
     finally:
+        log_to_file(user.username, "🛑 YAYIN KAPATILIYOR")
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
