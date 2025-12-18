@@ -172,20 +172,17 @@ document.addEventListener('DOMContentLoaded', () => {
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 ANDROID SAFE SETTINGS 🔥
-                        // 1. Bitrate'i 1000 Kbps yap (Çok yüksek bitrate çökertir)
-                        // 2. Formatı 'video/webm' olarak bırak, Android codec'i kendi seçsin.
-                        let options = { mimeType: 'video/webm', videoBitsPerSecond: 1000000 };
+                        // 🔥 VP8 ve 1.5 Mbps (Standart ve Güvenli) 🔥
+                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
 
-                        // VP8 varsa onu tercih et (Daha stabil)
-                        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
+                        // Eğer VP8 yoksa düz webm
+                        if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                            options = { mimeType: 'video/webm' };
                         }
 
                         try {
                             rec = new MediaRecorder(canvasStream, options);
                         } catch (e) {
-                            console.log("Fallback Recorder");
                             rec = new MediaRecorder(canvasStream);
                         }
 
@@ -195,15 +192,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // 🔥 KRİTİK NOKTA: ISINMA SÜRESİ (1 Saniye Bekle) 🔥
-                        // Kamera ve Encoder hazır olmadan start() denirse Android çöker.
-                        console.log("Recorder ısınıyor...");
-                        setTimeout(() => {
-                            if (rec.state === 'inactive') {
-                                rec.start(1000); // 1 saniyelik parçalar
-                                console.log("Recorder başladı!");
-                            }
-                        }, 1000);
+                        // Isınma beklemesine gerek yok, direkt başla (Sunucu halledecek)
+                        rec.start(1000);
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
