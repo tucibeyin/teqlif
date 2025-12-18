@@ -19,7 +19,6 @@ from utils import get_current_user, send_broadcast_notifications_task
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[dict]] = {}
@@ -57,7 +56,6 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- CLEANUP ---
 def cleanup_stream(username: str):
     if username in active_processes:
         proc = active_processes[username]
@@ -231,19 +229,19 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (IOS/ANDROID UNIVERSAL FIX): {user.username}")
+    print(f"🎥 YAYIN (STABLE 2s SEGMENTS): {user.username}")
 
     command = [
         "ffmpeg", 
-        # GİRİŞ: Wallclock Timestamp + Buffer
+        # GİRİŞ AYARLARI (Android Uyumlu)
         "-f", "matroska", 
         "-use_wallclock_as_timestamps", "1",
-        "-analyzeduration", "10000000", "-probesize", "10000000", 
+        "-analyzeduration", "10000000", "-probesize", "10000000",
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        # FİLTRE
+        # FİLTRE VE ÖLÇEKLENDİRME
         "-filter_complex", 
         "[0:v]scale=-2:720,crop=406:720:(in_w-406)/2:0,split=4[v720][v480][v360][v240];"
         "[v720]copy[out720];"
@@ -251,26 +249,28 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=202:-2[out360];"
         "[v240]scale=136:-2[out240]",
         
-        # PERFORMANS & UYUMLULUK (iOS için 'veryfast' ve 'baseline')
-        "-preset", "veryfast", # Ultrafast iOS'ta kalite sorunu yapar, veryfast daha iyi
+        # PERFORMANS VE LATENCY (Veryfast: iOS için daha iyi kalite)
+        "-preset", "veryfast", 
         "-tune", "zerolatency", 
         "-threads", "0", 
         "-af", "aresample=async=1", 
         
-        # iOS DONMASINI ENGELLEYEN KRİTİK AYARLAR
-        "-profile:v", "baseline", "-level", "3.0", # Tüm cihazlar için en güvenli profil
-        "-g", "30", "-keyint_min", "30", "-sc_threshold", "0", # Sahne algılamayı kapat
+        # iOS VE ANDROID UYUMLULUK (Baseline Profile)
+        "-profile:v", "baseline", "-level", "3.0", 
+        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0", # 2 Saniyelik Keyframe (Stabil)
         "-pix_fmt", "yuv420p",
 
-        # ÇIKTI (Bitrate biraz daha düşürüldü - Stabilite için)
+        # ÇIKTI (Daha Düşük Bitrate = Daha Az Takılma)
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1500k", "-maxrate:v:0", "1800k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "96k",
         "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "800k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "64k",
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "500k", "-maxrate:v:2", "600k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "48k",
         "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "600k", "-c:a:3", "aac", "-b:a:3", "32k",
         
-        # HLS
-        "-f", "hls", "-hls_time", "1", "-hls_list_size", "4", 
-        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time+split_by_time", 
+        # HLS PAKETLEME (2 Saniyelik Parçalar)
+        "-f", "hls", 
+        "-hls_time", "2",       # 2 Saniyelik Parçalar (Stabilite için)
+        "-hls_list_size", "4",  # Liste kısa tutuluyor
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
         "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
