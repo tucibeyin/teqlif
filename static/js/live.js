@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    // 🔥 DEBUG LOG 🔥
+    // 🔥 LOG 🔥
     function log(msg) {
         console.log(msg);
         const box = document.getElementById('debug-console');
@@ -18,28 +18,38 @@ document.addEventListener('DOMContentLoaded', () => {
     let rec = null;
     let broadcastWs = null;
     let localStream = null;
+    let wakeLock = null;
 
-    // --- UI/MODERASYON ---
-    window.openModMenu = function (u) {/*...*/ };
-    window.closeModMenu = function () {/*...*/ };
+    // --- EKRAN KİLİDİ ---
+    async function requestWakeLock() {
+        try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { }
+    }
+
+    // --- UI FONKSİYONLARI ---
+    window.openModMenu = function (u) { document.getElementById('modMenu').style.display = 'flex'; document.getElementById('mod-target-name').innerText = u; };
+    window.closeModMenu = function () { document.getElementById('modMenu').style.display = 'none'; };
     window.restrictUser = function (a, d) {/*...*/ };
 
     // --- SOHBET ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
-        window.CURRENT_SOCKET = ws;
-        ws.onmessage = (e) => {
-            const d = JSON.parse(e.data);
-            if (d.type === 'chat') {
-                log(`Chat: ${d.user}: ${d.msg}`);
-                // Chat UI güncelleme kodu...
-            }
-        };
+        function initChatWs() {
+            const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
+            window.CURRENT_SOCKET = ws;
+            ws.onmessage = (e) => {
+                const d = JSON.parse(e.data);
+                if (d.type === 'chat') {
+                    const f = document.getElementById(target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`);
+                    if (f) { const el = document.createElement('div'); el.className = 'msg'; el.innerHTML = `<b>${d.user}:</b> ${d.msg}`; f.appendChild(el); f.scrollTop = f.scrollHeight; }
+                }
+            };
+            ws.onclose = () => setTimeout(initChatWs, 3000);
+        }
+        initChatWs();
     };
 
-    // --- 2. YAYINCI (ANTI-CRASH MODE) ---
+    // --- 2. YAYINCI ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
@@ -51,7 +61,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
                 });
                 videoElement.srcObject = localStream;
-                log("Kamera Aktif.");
+                log("Kamera Hazır.");
 
                 function draw() {
                     if (videoElement.readyState === 4) {
@@ -65,103 +75,129 @@ document.addEventListener('DOMContentLoaded', () => {
                     requestAnimationFrame(draw);
                 }
                 draw();
-            } catch (e) { log("Kamera Hatası: " + e); }
+            } catch (e) {
+                log("Kamera Hatası: " + e);
+                alert("Kamera başlatılamadı! HTTPS kullandığınızdan emin olun.");
+            }
         }
         initStream();
 
-        document.getElementById('btn-start-broadcast').addEventListener('click', () => {
-            fetch('/broadcast/start', { method: 'POST', body: new FormData(document.querySelector('.setup-box')) }).then(() => {
-                document.getElementById('setup-layer').style.display = 'none';
-                document.getElementById('live-ui').style.display = 'flex';
-                window.connectChat('broadcast');
+        // 🔥 BUTON DİNLLEYİCİSİ 🔥
+        const startBtn = document.getElementById('btn-start-broadcast');
+        if (startBtn) {
+            startBtn.addEventListener('click', () => {
+                log("Butona basıldı, istek hazırlanıyor...");
 
-                broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-                broadcastWs.onopen = () => {
-                    log("WS Bağlandı.");
-                    const stream = canvas.captureStream(30);
-                    if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
+                const titleVal = document.getElementById('streamTitle').value;
+                const catVal = document.getElementById('streamCategory').value;
 
-                    let opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1200000 }; // 1.2 Mbps (Daha güvenli)
-                    if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm' };
+                if (!titleVal) { alert("Lütfen bir başlık girin!"); return; }
 
-                    try { rec = new MediaRecorder(stream, opts); } catch (e) { rec = new MediaRecorder(stream); }
+                // Butonu kilitle
+                startBtn.disabled = true;
+                startBtn.innerText = "Başlatılıyor...";
 
-                    rec.ondataavailable = e => {
-                        // 🔥 CRASH ÖNLEYİCİ: Backpressure Kontrolü 🔥
-                        if (broadcastWs.readyState === 1) {
-                            if (broadcastWs.bufferedAmount > 1000000) { // 1MB'dan fazla veri kuyrukta ise
-                                log("⚠️ Ağ Yavaş! Veri atlanıyor...");
-                            } else {
-                                broadcastWs.send(e.data);
-                            }
-                        }
-                    };
+                const fd = new FormData();
+                fd.append('title', titleVal);
+                fd.append('category', catVal);
 
-                    rec.start(1000); // 1000ms Chunk
-                    log("Recorder Başladı.");
+                log("Sunucuya POST isteği gönderiliyor...");
 
-                    setInterval(() => {
-                        fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.5) }) });
-                    }, 60000);
-                };
-                broadcastWs.onclose = () => log("WS Kapandı!");
+                fetch('/broadcast/start', { method: 'POST', body: fd })
+                    .then(res => res.json())
+                    .then(data => {
+                        log("Sunucu yanıt verdi: " + data.status);
+                        document.getElementById('setup-layer').style.display = 'none';
+                        document.getElementById('live-ui').style.display = 'flex';
+                        window.connectChat('broadcast');
+
+                        broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+                        broadcastWs.onopen = () => {
+                            log("WebSocket Bağlandı ✅");
+                            const stream = canvas.captureStream(30);
+                            if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
+
+                            let opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
+                            if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm' };
+
+                            try { rec = new MediaRecorder(stream, opts); } catch (e) { rec = new MediaRecorder(stream); }
+
+                            rec.ondataavailable = e => {
+                                if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data);
+                            };
+                            rec.start(1000);
+                            requestWakeLock();
+
+                            setInterval(() => {
+                                fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.5) }) });
+                            }, 60000);
+                        };
+
+                        broadcastWs.onerror = (e) => log("WS Hatası!");
+                        broadcastWs.onclose = () => {
+                            log("WS Kapandı!");
+                            alert("Yayın bağlantısı koptu.");
+                            window.location.reload();
+                        };
+                    })
+                    .catch(err => {
+                        log("Fetch Hatası: " + err);
+                        alert("Sunucuya bağlanılamadı.");
+                        startBtn.disabled = false;
+                        startBtn.innerText = "YAYINI BAŞLAT 🚀";
+                    });
             });
-        });
+        } else {
+            log("HATA: Başlat butonu bulunamadı!");
+        }
 
         window.stopBroadcast = () => {
-            if (rec) rec.stop(); if (broadcastWs) broadcastWs.close();
-            fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/';
+            if (rec) rec.stop();
+            if (broadcastWs) broadcastWs.close();
+            if (wakeLock) wakeLock.release();
+            fetch('/broadcast/stop', { method: 'POST' });
+            window.location.href = '/';
         };
     }
 
-    // --- 3. İZLEYİCİ (DEBUGGER) ---
+    // --- 3. İZLEYİCİ (TOLERANSLI) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
             const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
-            log("Yayın Aranıyor: " + u);
+            log("Yayın aranıyor: " + u);
 
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
                     liveSyncDurationCount: 3,
-                    maxBufferLength: 20,
+                    maxBufferLength: 30,
+                    manifestLoadingTimeOut: 20000,
+                    manifestLoadingMaxRetry: 10,
                 });
-
                 hls.loadSource(src);
                 hls.attachMedia(v);
-
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    log("Manifest Bulundu ✅");
-                    v.play().catch(() => { log("Otomatik oynatma engellendi"); v.muted = true; v.play(); });
+                    log("Manifest bulundu, oynatılıyor.");
+                    v.play().catch(() => { v.muted = true; v.play() });
                 });
 
                 hls.on(Hls.Events.ERROR, function (event, data) {
-                    log("HLS Hatası: " + data.type);
                     if (data.fatal) {
+                        log("Hata: " + data.type + " - Tekrar deneniyor.");
                         switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR:
-                                log("Ağ Hatası - Tekrar deneniyor...");
-                                hls.startLoad();
-                                break;
-                            case Hls.ErrorTypes.MEDIA_ERROR:
-                                log("Medya Hatası - Kurtarılıyor...");
-                                hls.recoverMediaError();
-                                break;
-                            default:
-                                log("Kritik Hata!");
-                                hls.destroy();
-                                break;
+                            case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                            case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                            default: hls.destroy(); break;
                         }
                     }
                 });
             }
             else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                log("Native Player Kullanılıyor.");
                 v.src = src;
-                v.play();
+                v.addEventListener('loadedmetadata', () => v.play().catch(() => { v.muted = true; v.play() }));
             }
             window.connectChat(u);
         }
