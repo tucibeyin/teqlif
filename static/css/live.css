@@ -43,7 +43,17 @@ body {
 /* =========================================
    2. EKRAN VE VİDEO YERLEŞİMİ (CROP FIX)
    ========================================= */
+.feed-scroll::-webkit-scrollbar {
+    display: none;
+}
+
 .feed-scroll {
+    -ms-overflow-style: none;
+    /* IE ve Edge */
+    scrollbar-width: none;
+    /* Firefox */
+
+    /* Mevcut ayarların korunuyor: */
     width: 100%;
     height: 100%;
     overflow-y: scroll;
