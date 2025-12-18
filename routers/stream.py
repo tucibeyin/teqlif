@@ -19,9 +19,7 @@ from utils import get_current_user, send_broadcast_notifications_task
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# ... (ConnectionManager aynı kalabilir) ...
-# (Kısalık için burayı atlıyorum, önceki kodun aynısı)
-
+# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[dict]] = {}
@@ -68,20 +66,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- YARDIMCI: TEMİZLİK (Gecikmeli Kapatma) ---
-async def cleanup_stream_delayed(username: str, delay: int = 5):
-    """Yayın koptuğunda hemen kapatmaz, 5 saniye bekler. Yeniden bağlanırsa iptal eder."""
-    await asyncio.sleep(delay)
-    # Eğer kullanıcı hala aktif yayıncı listesindeyse (yeniden bağlandıysa) kapatma
-    # Ancak şu anki basit yapıda bu kontrolü yapmak zor, o yüzden direkt kapatıyoruz.
-    # İleride Redis gibi bir şeyle durum takibi yapılabilir.
-    
-    if username in active_processes:
-        print(f"🛑 YAYIN KAPATILIYOR: {username}")
-        cleanup_stream(username)
-        await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), username)
-        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": username}), "home")
-
+# --- YARDIMCI: TEMİZLİK ---
 def cleanup_stream(username: str):
     if username in active_processes:
         proc = active_processes[username]
@@ -114,7 +99,7 @@ def write_to_ffmpeg(process, data):
             process.stdin.flush()
     except: pass
 
-# ... (Restrict, Login, Gift API'leri aynı) ...
+# --- API ---
 @router.post("/stream/restrict")
 async def restrict_user(target_username: str = Form(...), action: str = Form(...), duration: int = Form(0), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user or not user.is_live: return JSONResponse({"status": "error", "msg": "Yetkisiz"}, 403)
@@ -267,21 +252,17 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     if not user or not user.username: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
-    # DİKKAT: Eski yayını hemen silmeyelim, belki yeniden bağlanır.
-    # Ancak temiz bir başlangıç için klasör yapısını kontrol etmeliyiz.
-    if not os.path.exists(stream_dir):
-        os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
-        os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
+    shutil.rmtree(stream_dir, ignore_errors=True)
+    os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
+    os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (ROBUST & RESILIENT): {user.username}")
+    print(f"🎥 YAYIN (DIRECT-WRITE): {user.username}")
 
-    # FFmpeg Komutu: Matroska + H.264 Baseline + 2sn HLS
-    # Bu ayarlar hem Android uyumluluğu hem de izleyici stabilitesi için en iyisidir.
     command = [
         "ffmpeg", 
         "-f", "matroska", 
         "-use_wallclock_as_timestamps", "1",
-        "-analyzeduration", "500000", "-probesize", "500000", # Hızlı analiz
+        "-analyzeduration", "500000", "-probesize", "500000",
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
@@ -300,7 +281,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         
         "-profile:v", "baseline", "-level", "3.0", 
         "-g", "60", "-keyint_min", "60", "-sc_threshold", "0", 
-        "-force_key_frames", "expr:gte(t,n_forced*2)", # Senkronizasyon için kritik
+        "-force_key_frames", "expr:gte(t,n_forced*2)",
         "-pix_fmt", "yuv420p",
 
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1800k", "-maxrate:v:0", "2000k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
@@ -308,8 +289,9 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
         "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "500k", "-bufsize:v:3", "600k", "-c:a:3", "aac", "-b:a:3", "48k",
         
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", # Listeyi biraz uzattık (Buffer için)
-        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time+split_by_time", 
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
+        # 🔥 .tmp dosyası kullanmadan direkt yaz (İzleyici hatasını önler)
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
         "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
@@ -321,7 +303,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     async def wait_for_file_and_go_live(username, title, category, thumbnail):
         master_file = f"static/hls/{username}/master.m3u8"
         start_wait = time.time()
-        while time.time() - start_wait < 40: # 40sn tolerans
+        while time.time() - start_wait < 40:
             if os.path.exists(master_file):
                 new_db = SessionLocal()
                 try:
@@ -340,22 +322,11 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
 
     try:
         while True:
-            # WebSocket'ten veri bekle
-            try:
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=5.0) # 5sn timeout kontrolü
-                await loop.run_in_executor(None, write_to_ffmpeg, process, data)
-            except asyncio.TimeoutError:
-                # Veri gelmiyorsa (örn: ağ dalgalanması) döngüye devam et, hemen kapatma
-                continue 
-            except Exception as e:
-                print(f"WS Error: {e}")
-                break # Gerçek bir bağlantı hatasında döngüden çık
-                
-    except Exception as e: 
-        print(f"Broadcast loop error: {e}")
+            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=5.0)
+            await loop.run_in_executor(None, write_to_ffmpeg, process, data)
+    except asyncio.TimeoutError: pass
+    except: pass
     finally:
-        # Hemen kapatma, belki yeniden bağlanır (Graceful Exit)
-        # Ancak burada soket kapandığı için işlem sonlanmalı.
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
