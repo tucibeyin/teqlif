@@ -3,9 +3,30 @@
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
 
-<link rel="stylesheet" href="/static/css/live.css?v=313">
+<link rel="stylesheet" href="/static/css/live.css?v=315">
 
 <style>
+    /* 🔥 DEBUG KONSOLU 🔥 */
+    #debug-console {
+        position: fixed;
+        top: 60px;
+        left: 10px;
+        width: 70%;
+        height: 150px;
+        background: rgba(0, 0, 0, 0.6);
+        border: 1px solid #00ff00;
+        color: #00ff00;
+        font-family: monospace;
+        font-size: 10px;
+        padding: 5px;
+        z-index: 99999;
+        overflow-y: auto;
+        pointer-events: none;
+        /* Tıklamayı engelleme */
+        display: none;
+        /* Varsayılan gizli */
+    }
+
     .cinema-video {
         object-fit: contain !important;
         background: #000;
@@ -131,6 +152,8 @@
 
 <div class="teqlif-os">
     <div id="gift-animation-layer"></div>
+
+    <div id="debug-console">Sistem Başlatılıyor...<br></div>
 
     {% if mode == 'broadcast' %}
     <div class="screen" style="position: relative; height: 100vh; overflow: hidden;">
@@ -344,5 +367,5 @@
 <script>
     window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}", auctionActive: {{ 'true' if auction_active else 'false' }}, broadcaster: "{{ broadcaster.username if broadcaster else '' }}" };
 </script>
-<script src="/static/js/live.js?v=313"></script>
+<script src="/static/js/live.js?v=315"></script>
 {% endblock %}

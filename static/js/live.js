@@ -3,19 +3,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
+    // 🔥 LOG FONKSİYONU 🔥
+    function log(msg) {
+        console.log(msg);
+        const consoleBox = document.getElementById('debug-console');
+        if (consoleBox) {
+            consoleBox.style.display = 'block';
+            consoleBox.innerHTML += `<div>> ${msg}</div>`;
+            consoleBox.scrollTop = consoleBox.scrollHeight;
+        }
+    }
+
     window.CURRENT_SOCKET = null;
     window.activeHlsInstances = {};
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeModTarget = null;
-
-    let videoDevices = [];
-    let currentDeviceIndex = 0;
-    let canvas, ctx, animationFrameId;
     let localStream = null;
     let rec = null;
     let broadcastWs = null;
+    let videoDevices = [];
+    let currentDeviceIndex = 0;
+    let canvas, ctx, animationFrameId;
 
-    // --- 1. UI/MODERASYON ---
+    // --- UI/MODERASYON ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -40,7 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lRow) { if (bidderName) { lRow.style.display = 'flex'; lRow.querySelector('.name').innerText = bidderName; } else { lRow.style.display = 'none'; } }
     }
 
-    // --- 2. SOHBET ---
+    // --- SOHBET ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -106,7 +116,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 3. YAYINCI (OPTIMIZED 1.5MBPS) ---
+    // --- 3. YAYINCI (DEBUG MODU) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -122,13 +132,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
             };
             try {
+                log("Kamera Başlatılıyor...");
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 localStream = stream; videoElement.srcObject = stream;
+                log("Kamera Açıldı ✅");
                 startCanvasLoop();
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const audioSelect = document.getElementById('audioSource');
                 if (audioSelect && audioSelect.options.length === 0) { devices.filter(d => d.kind === 'audioinput').forEach(d => { const opt = document.createElement('option'); opt.value = d.deviceId; opt.text = d.label || 'Mikrofon'; audioSelect.appendChild(opt); }); }
-            } catch (err) { console.error(err); alert("Kamera Hatası! İzinleri kontrol edin."); }
+            } catch (err) {
+                log("Kamera Hatası: " + err.message);
+                console.error(err); alert("Kamera Hatası! İzinleri kontrol edin.");
+            }
         }
         initStream();
 
@@ -155,48 +170,70 @@ document.addEventListener('DOMContentLoaded', () => {
             startBtn.addEventListener('click', function () {
                 const title = document.getElementById('streamTitle').value; const category = document.getElementById('streamCategory').value;
                 if (!title) { alert("Başlık girin!"); return; }
+                log("Yayın Başlatılıyor...");
+
                 const formData = new FormData(); formData.append('title', title); formData.append('category', category);
                 fetch('/broadcast/start', { method: 'POST', body: formData }).then(res => res.json()).then(data => {
                     document.getElementById('setup-layer').style.display = 'none'; document.getElementById('live-ui').style.display = 'flex';
-                    if (category !== 'Mezat') {
-                        const resetBtn = document.querySelector('button[onclick="openResetModal()"]'); const toggleBtn = document.getElementById('btn-auction-toggle'); const priceBoard = document.querySelector('.top-bar-left .price-board');
-                        if (resetBtn) resetBtn.style.display = 'none'; if (toggleBtn) toggleBtn.style.display = 'none'; if (priceBoard) priceBoard.style.display = 'none';
-                    }
                     window.connectChat('broadcast');
 
                     broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                     broadcastWs.onopen = () => {
+                        log("WebSocket Bağlandı ✅");
+
                         const canvasStream = canvas.captureStream(30);
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 1.5 Mbps BITRATE (Android Dostu) 🔥
-                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
-                        if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
+                        // 🔥 GÜVENLİ FORMAT SEÇİMİ (1 Mbps) 🔥
+                        let mimeType = 'video/webm';
+                        let options = { mimeType: 'video/webm', videoBitsPerSecond: 1000000 };
+
+                        if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
+                            mimeType = 'video/webm;codecs=h264';
+                            log("Format: H264 (iOS/Android Dostu)");
+                        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                            mimeType = 'video/webm;codecs=vp8';
+                            log("Format: VP8 (Android Dostu)");
+                        } else {
+                            log("Format: Standart WebM");
                         }
+                        options.mimeType = mimeType;
 
                         try { rec = new MediaRecorder(canvasStream, options); }
-                        catch (e) { rec = new MediaRecorder(canvasStream); }
+                        catch (e) {
+                            log("Recorder Hatası: " + e.message);
+                            rec = new MediaRecorder(canvasStream);
+                        }
+
+                        rec.onstart = () => log("Recorder Başladı! 🔴");
+                        rec.onerror = (e) => log("Recorder Error: " + e.error);
 
                         rec.ondataavailable = e => {
                             if (e.data.size > 0 && broadcastWs.readyState === 1) {
+                                log("Veri: " + e.data.size + " byte");
                                 broadcastWs.send(e.data);
+                            } else {
+                                log("Veri boş veya soket kapalı!");
                             }
                         };
 
-                        // 1 Saniye Warm-up
+                        // 1 Saniye Bekle (Warmup) ve Başlat
                         setTimeout(() => { if (rec.state === 'inactive') rec.start(1000); }, 1000);
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
+
+                    broadcastWs.onclose = () => log("WS Bağlantısı Koptu ❌");
+                    broadcastWs.onerror = (e) => log("WS Hatası!");
                 });
             });
         }
 
         window.stopBroadcast = function () {
+            log("Yayın Durduruluyor...");
             if (window.thumbInterval) clearInterval(window.thumbInterval);
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             if (rec && rec.state !== 'inactive') rec.stop();
@@ -207,14 +244,15 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = '/';
         };
 
+        // ... (Diğer buton fonksiyonları aynı) ...
         window.toggleAuction = function () { AUCTION_ACTIVE = !AUCTION_ACTIVE; const btn = document.getElementById('btn-auction-toggle'); const formData = new FormData(); formData.append('active', AUCTION_ACTIVE); fetch('/broadcast/toggle_auction', { method: 'POST', body: formData }); if (AUCTION_ACTIVE) { btn.innerHTML = "🚫 Kapat"; btn.style.background = "rgba(255, 59, 48, 0.4)"; } else { btn.innerHTML = "🔨 Mezat"; btn.style.background = "rgba(255, 255, 255, 0.2)"; } }
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- İZLEYİCİ ---
-        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 5, maxBufferLength: 6, maxMaxBufferLength: 10, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
+        // --- İZLEYİCİ (Aynı Kalsın) ---
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 6, maxBufferLength: 6, maxMaxBufferLength: 10, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);

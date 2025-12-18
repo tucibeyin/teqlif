@@ -19,25 +19,19 @@ from utils import get_current_user, send_broadcast_notifications_task
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[dict]] = {}
-        
     async def connect(self, websocket: WebSocket, room_name: str, username: str):
         await websocket.accept()
         if room_name not in self.rooms: self.rooms[room_name] = []
         self.rooms[room_name].append({"ws": websocket, "user": username})
-        if room_name != "home":
-            await self.broadcast_count(room_name)
-
+        if room_name != "home": await self.broadcast_count(room_name)
     async def disconnect(self, websocket: WebSocket, room_name: str):
         if room_name in self.rooms:
             self.rooms[room_name] = [c for c in self.rooms[room_name] if c["ws"] != websocket]
-            if room_name != "home":
-                await self.broadcast_count(room_name)
+            if room_name != "home": await self.broadcast_count(room_name)
             if not self.rooms[room_name]: del self.rooms[room_name]
-
     async def broadcast_count(self, room_name: str):
         if room_name in self.rooms:
             count = len(self.rooms[room_name])
@@ -45,20 +39,16 @@ class ConnectionManager:
             for c in self.rooms[room_name]:
                 try: await c["ws"].send_text(msg)
                 except: pass
-
     async def broadcast_to_room(self, message: str, room_name: str):
         if room_name in self.rooms:
             for c in self.rooms[room_name]:
                 try: await c["ws"].send_text(message)
                 except: pass
-    
     async def kick_user(self, room_name: str, username: str):
         if room_name in self.rooms:
             targets = [c for c in self.rooms[room_name] if c["user"] == username]
             for t in targets:
-                try:
-                    await t["ws"].send_text(json.dumps({"type": "banned"}))
-                    await t["ws"].close()
+                try: await t["ws"].send_text(json.dumps({"type": "banned"})); await t["ws"].close()
                 except: pass
             self.rooms[room_name] = [c for c in self.rooms[room_name] if c["user"] != username]
             await self.broadcast_count(room_name)
@@ -66,33 +56,33 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- YARDIMCI: TEMİZLİK ---
 def cleanup_stream(username: str):
     if username in active_processes:
         proc = active_processes[username]
-        try: proc.terminate(); proc.wait(timeout=2)
-        except: proc.kill()
-        del active_processes[username]
-
+        try: 
+            proc.terminate()
+            proc.wait(timeout=2)
+        except: 
+            proc.kill()
+        if username in active_processes: del active_processes[username]
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
-            user.is_live = False; user.is_auction_active = False
-            user.current_price = 0; user.highest_bidder = None
+            user.is_live = False; user.is_auction_active = False; user.current_price = 0; user.highest_bidder = None
             db.commit()
     except: pass
     finally: db.close()
-
     try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
     except: pass
 
 def write_to_ffmpeg(process, data):
     try:
-        if process.stdin: process.stdin.write(data); process.stdin.flush()
+        if process.stdin: 
+            process.stdin.write(data)
+            process.stdin.flush()
     except: pass
 
-# --- API ---
 @router.post("/stream/restrict")
 async def restrict_user(target_username: str = Form(...), action: str = Form(...), duration: int = Form(0), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user or not user.is_live: return JSONResponse({"status": "error", "msg": "Yetkisiz"}, 403)
@@ -242,13 +232,12 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (OPTIMIZED 1.5M): {user.username}")
+    print(f"🎥 YAYIN (DEBUGGER): {user.username}")
 
     command = [
         "ffmpeg", 
-        # GİRİŞ: Wallclock + Buffer (5MB)
-        "-f", "matroska", 
-        "-use_wallclock_as_timestamps", "1",
+        # GİRİŞ: WebM + Buffer
+        "-f", "webm", 
         "-analyzeduration", "5000000", "-probesize", "5000000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
         "-err_detect", "ignore_err",
@@ -262,16 +251,16 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=202:-2[out360];"
         "[v240]scale=136:-2[out240]",
         
-        # PERFORMANS
-        "-preset", "veryfast", "-tune", "zerolatency", "-threads", "0", 
+        # PERFORMANS (Superfast = En Stabil)
+        "-preset", "superfast", "-tune", "zerolatency", "-threads", "0", 
         "-af", "aresample=async=1", 
         
-        # CODEC
+        # iOS/Android Uyumluluğu
         "-profile:v", "baseline", "-level", "3.0", 
         "-g", "60", "-keyint_min", "60", "-sc_threshold", "0",
         "-pix_fmt", "yuv420p",
 
-        # ÇIKTI
+        # ÇIKTI (Dengeli Bitrate)
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1500k", "-maxrate:v:0", "1500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
         "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "800k", "-maxrate:v:1", "800k", "-bufsize:v:1", "1600k", "-c:a:1", "aac", "-b:a:1", "96k",
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "500k", "-maxrate:v:2", "500k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
