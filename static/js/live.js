@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lRow) { if (bidderName) { lRow.style.display = 'flex'; lRow.querySelector('.name').innerText = bidderName; } else { lRow.style.display = 'none'; } }
     }
 
-    // --- 2. SOHBET SOKETİ ---
+    // --- 2. SOHBET ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -107,7 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 3. YAYINCI (ANDROID SAFE MODE) ---
+    // --- 3. YAYINCI (ANDROID STABILITY FIX) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -118,9 +118,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initStream(deviceId = null) {
             if (localStream) { localStream.getTracks().forEach(track => track.stop()); }
-            // Android için 'ideal' çözünürlük
             const constraints = {
-                audio: true,
+                audio: { echoCancellation: true, noiseSuppression: true }, // Ses iyileştirmesi
                 video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
             };
             try {
@@ -169,20 +168,24 @@ document.addEventListener('DOMContentLoaded', () => {
                     broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                     broadcastWs.onopen = () => {
-                        // 🔥 24 FPS Düşük İşlemci Yükü 🔥
                         const canvasStream = canvas.captureStream(24);
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 ANDROID İÇİN KRİTİK: VP8 ve Düşük Bitrate 🔥
-                        let mimeType = 'video/webm;codecs=vp8';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
+                        // 🔥 ANDROID SAFE SETTINGS 🔥
+                        // 1. Bitrate'i 1000 Kbps yap (Çok yüksek bitrate çökertir)
+                        // 2. Formatı 'video/webm' olarak bırak, Android codec'i kendi seçsin.
+                        let options = { mimeType: 'video/webm', videoBitsPerSecond: 1000000 };
+
+                        // VP8 varsa onu tercih et (Daha stabil)
+                        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                            options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
+                        }
 
                         try {
-                            // Bitrate'i 1.0 Mbps'e indirdik (Kopmaları engeller)
-                            rec = new MediaRecorder(canvasStream, { mimeType: mimeType, videoBitsPerSecond: 1000000 });
+                            rec = new MediaRecorder(canvasStream, options);
                         } catch (e) {
-                            console.log("Fallback to default recorder");
+                            console.log("Fallback Recorder");
                             rec = new MediaRecorder(canvasStream);
                         }
 
@@ -191,7 +194,16 @@ document.addEventListener('DOMContentLoaded', () => {
                                 broadcastWs.send(e.data);
                             }
                         };
-                        rec.start(1000); // 1000ms (Stabil)
+
+                        // 🔥 KRİTİK NOKTA: ISINMA SÜRESİ (1 Saniye Bekle) 🔥
+                        // Kamera ve Encoder hazır olmadan start() denirse Android çöker.
+                        console.log("Recorder ısınıyor...");
+                        setTimeout(() => {
+                            if (rec.state === 'inactive') {
+                                rec.start(1000); // 1 saniyelik parçalar
+                                console.log("Recorder başladı!");
+                            }
+                        }, 1000);
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
