@@ -12,9 +12,11 @@ document.addEventListener('DOMContentLoaded', () => {
     let videoDevices = [];
     let currentDeviceIndex = 0;
     let canvas, ctx, animationFrameId;
-    let localStream = null; // Global stream değişkeni
+    let localStream = null;
+    let rec = null; // Recorder global
+    let broadcastWs = null; // Yayın soketi
 
-    // --- 1. MODERASYON ---
+    // --- 1. MODERASYON & GÖRÜNÜM (AYNI) ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -30,7 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/stream/restrict', { method: 'POST', body: formData }).then(res => res.json()).then(data => { alert(data.msg); closeModMenu(); });
     }
 
-    // --- 2. GÖRÜNÜM ---
     function updatePriceDisplay(amount, target, bidderName) {
         const idHost = 'current-price-display'; const idViewer = `price-${target}`;
         let el = document.getElementById(idHost); if (!el) el = document.getElementById(idViewer);
@@ -40,13 +41,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lRow) { if (bidderName) { lRow.style.display = 'flex'; lRow.querySelector('.name').innerText = bidderName; } else { lRow.style.display = 'none'; } }
     }
 
-    // --- 3. SOCKET ---
+    // --- 2. SOHBET SOCKET (AYNI) ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
-        window.CURRENT_SOCKET = ws;
-        ws.onmessage = (e) => {
+        const chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
+        window.CURRENT_SOCKET = chatWs;
+        chatWs.onmessage = (e) => {
             const d = JSON.parse(e.data);
             if (d.type === 'banned') { alert("🔴 Yasaklandınız!"); window.location.href = "/"; return; }
             if (d.type === 'alert') { alert(d.msg); return; }
@@ -106,12 +107,11 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 4. YAYINCI / İZLEYİCİ ---
+    // --- 🔥 YAYINCI MANTIĞI (ANDROID FIXED) 🔥 ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
         ctx = canvas.getContext('2d', { alpha: false });
-        let rec;
 
         async function getDevices() { try { const devices = await navigator.mediaDevices.enumerateDevices(); videoDevices = devices.filter(d => d.kind === 'videoinput'); } catch (e) { console.log(e); } }
         getDevices();
@@ -161,32 +161,56 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (resetBtn) resetBtn.style.display = 'none'; if (toggleBtn) toggleBtn.style.display = 'none'; if (priceBoard) priceBoard.style.display = 'none';
                     }
                     window.connectChat('broadcast');
-                    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-                    ws.onopen = () => {
-                        const canvasStream = canvas.captureStream(30);
-                        const audioTracks = localStream.getAudioTracks(); if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
-                        let mimeType = 'video/webm;codecs=vp8';
-                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
 
-                        rec = new MediaRecorder(canvasStream, { mimeType: mimeType, videoBitsPerSecond: 1500000 }); // 1.5 Mbps
-                        rec.start(500);
+                    broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+                    broadcastWs.onopen = () => {
+                        // 🔥 24 FPS + CODEC SERBEST BIRAKILDI (ANDROID FIX) 🔥
+                        const canvasStream = canvas.captureStream(24);
+                        const audioTracks = localStream.getAudioTracks();
+                        if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
+
+                        // Sadece 'video/webm' diyoruz, Android en iyi codec'i kendi seçsin.
+                        let options = { mimeType: 'video/webm' };
+
+                        // Bitrate 1.5 Mbps (Mobil için ideal)
+                        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                            options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
+                        }
+
+                        try {
+                            rec = new MediaRecorder(canvasStream, options);
+                        } catch (e) {
+                            // Fallback
+                            rec = new MediaRecorder(canvasStream);
+                        }
+
+                        // 🔥 1 SANİYELİK DİLİMLER (1000ms) - Android için daha kararlı 🔥
+                        rec.start(1000);
                         rec.ondataavailable = e => {
-                            // 🔥 RAM KORUMASI: Buffer dolduysa veri gönderme 🔥
-                            if (ws.bufferedAmount > 200000) { console.warn("Buffer full, dropping frame"); return; }
-                            if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data);
+                            if (e.data.size > 0 && broadcastWs.readyState === 1) {
+                                broadcastWs.send(e.data);
+                            }
                         };
-                        sendThumbnailSnapshot(); window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
+
+                        rec.onerror = (e) => {
+                            console.error("Recorder Error:", e);
+                            alert("Yayın aracı hata verdi, sayfa yenileniyor.");
+                            location.reload();
+                        };
+
+                        sendThumbnailSnapshot();
+                        window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
                 });
             });
         }
 
-        // 🔥 KAYNAK YÖNETİMİ: Çıkışta her şeyi durdur 🔥
         window.stopBroadcast = function () {
             if (window.thumbInterval) clearInterval(window.thumbInterval);
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             if (rec && rec.state !== 'inactive') rec.stop();
             if (localStream) localStream.getTracks().forEach(t => t.stop());
+            if (broadcastWs) broadcastWs.close();
 
             fetch('/broadcast/stop', { method: 'POST' });
             window.location.href = '/';
