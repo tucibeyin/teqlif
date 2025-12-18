@@ -66,16 +66,16 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- 🔥 YENİLENMİŞ TEMİZLİK FONKSİYONU (Kendi DB Session'ını Açar) 🔥 ---
+# --- YARDIMCI: TEMİZLİK (Garanti Yöntem) ---
 def cleanup_stream(username: str):
-    # 1. FFmpeg'i Öldür
+    # 1. FFmpeg Sürecini Öldür
     if username in active_processes:
         proc = active_processes[username]
         try: proc.terminate(); proc.wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
 
-    # 2. Veritabanını Güncelle (Yeni Session Açarak)
+    # 2. Veritabanını Temizle (Kendi Session'ını Açar)
     db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
@@ -151,8 +151,7 @@ async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Fo
 @router.post("/broadcast/stop")
 async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
-    # 🔥 ARTIK SADECE USERNAME GÖNDERİYORUZ 🔥
-    cleanup_stream(user.username)
+    cleanup_stream(user.username) # Parametre düzeltildi
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
@@ -250,12 +249,18 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (FLEXIBLE INPUT): {user.username}")
+    print(f"🎥 YAYIN (ANDROID FIXED): {user.username}")
 
+    # 🔥 İŞTE EKSİK OLAN SİHİRLİ KOMUTLAR BURADA 🔥
     command = [
         "ffmpeg", "-f", "webm", 
-        "-analyzeduration", "5000000", "-probesize", "5000000",
-        "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
+        "-analyzeduration", "20000000", "-probesize", "20000000",
+        
+        # 🔥 EKSİK OLAN KISIM: Hata Toleransı 🔥
+        "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
+        "-err_detect", "ignore_err", 
+        
+        "-i", "pipe:0",
         
         "-filter_complex", 
         "[0:v]scale=-2:720,crop=406:720:(in_w-406)/2:0,split=4[v720][v480][v360][v240];"
@@ -265,14 +270,14 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v240]scale=136:-2[out240]",
         
         "-r", "30", "-preset", "ultrafast", "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0", "-g", "30", "-pix_fmt", "yuv420p",
+        "-profile:v", "baseline", "-level", "3.0", "-g", "60", "-pix_fmt", "yuv420p",
 
         "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2000k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
         "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
         "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "600k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
         "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "300k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
         
-        "-f", "hls", "-hls_time", "1", "-hls_list_size", "3", 
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
@@ -284,7 +289,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     async def wait_for_file_and_go_live(username, title, category, thumbnail):
         master_file = f"static/hls/{username}/master.m3u8"
         start_wait = time.time()
-        while time.time() - start_wait < 15:
+        while time.time() - start_wait < 25:
             if os.path.exists(master_file):
                 new_db = SessionLocal()
                 try:
@@ -307,7 +312,6 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
     except: pass
     finally:
-        # 🔥 ARTIK SADECE USERNAME GÖNDERİYORUZ 🔥
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
