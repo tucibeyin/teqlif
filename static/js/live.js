@@ -7,13 +7,22 @@ document.addEventListener('DOMContentLoaded', () => {
     window.activeHlsInstances = {};
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeModTarget = null;
-    let videoDevices = [];
-    let currentDeviceIndex = 0;
-    let canvas, ctx, animationFrameId;
+    let localStream = null;
     let rec = null;
     let broadcastWs = null;
+    let wakeLock = null; // Ekran kilidi için
 
-    // --- 1. UI & MODERASYON ---
+    // --- EKRAN KİLİDİNİ ENGELLE (Wake Lock) ---
+    async function requestWakeLock() {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            console.log('Ekran kilidi aktif.');
+        } catch (err) {
+            console.log(`${err.name}, ${err.message}`);
+        }
+    }
+
+    // --- UI/MODERASYON ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -38,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lRow) { if (bidderName) { lRow.style.display = 'flex'; lRow.querySelector('.name').innerText = bidderName; } else { lRow.style.display = 'none'; } }
     }
 
-    // --- 2. SOHBET ---
+    // --- SOHBET ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -104,7 +113,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 3. YAYINCI (GÜVENLİ MOD) ---
+    // --- 3. YAYINCI (WAKE LOCK + ROBUST) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -161,6 +170,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (resetBtn) resetBtn.style.display = 'none'; if (toggleBtn) toggleBtn.style.display = 'none'; if (priceBoard) priceBoard.style.display = 'none';
                     }
                     window.connectChat('broadcast');
+                    requestWakeLock(); // 🔥 Ekranı açık tut 🔥
 
                     broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
@@ -171,26 +181,16 @@ document.addEventListener('DOMContentLoaded', () => {
                             if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
                         }
 
-                        // 🔥 GÜVENLİ YAPILANDIRMA 🔥
-                        // 1.5 Mbps, Android için çok daha güvenlidir.
+                        // 🔥 1.5 Mbps & Fallback 🔥
                         let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
-
                         if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            // VP8 yoksa varsayılana dön
                             options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
                         }
 
-                        try {
-                            rec = new MediaRecorder(canvasStream, options);
-                        }
+                        try { rec = new MediaRecorder(canvasStream, options); }
                         catch (e) {
-                            // Hata verirse (EncodingError), bitrate'i serbest bırak
-                            console.log("Bitrate hatası, varsayılana dönülüyor:", e);
-                            try {
-                                rec = new MediaRecorder(canvasStream, { mimeType: 'video/webm' });
-                            } catch (e2) {
-                                rec = new MediaRecorder(canvasStream); // Son çare
-                            }
+                            try { rec = new MediaRecorder(canvasStream, { mimeType: 'video/webm' }); }
+                            catch (e2) { rec = new MediaRecorder(canvasStream); }
                         }
 
                         rec.ondataavailable = e => {
@@ -199,19 +199,17 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // 1 Saniye Buffer
                         setTimeout(() => { if (rec.state === 'inactive') rec.start(1000); }, 1000);
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
-
-                    broadcastWs.onerror = (e) => { console.error("WS Hatası:", e); };
                 });
             });
         }
 
         window.stopBroadcast = function () {
+            if (wakeLock) wakeLock.release();
             if (window.thumbInterval) clearInterval(window.thumbInterval);
             if (animationFrameId) cancelAnimationFrame(animationFrameId);
             if (rec && rec.state !== 'inactive') rec.stop();
@@ -222,7 +220,6 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = '/';
         };
 
-        // ... (Toggle Auction, Modallar vb. aynı) ...
         window.toggleAuction = function () { AUCTION_ACTIVE = !AUCTION_ACTIVE; const btn = document.getElementById('btn-auction-toggle'); const formData = new FormData(); formData.append('active', AUCTION_ACTIVE); fetch('/broadcast/toggle_auction', { method: 'POST', body: formData }); if (AUCTION_ACTIVE) { btn.innerHTML = "🚫 Kapat"; btn.style.background = "rgba(255, 59, 48, 0.4)"; } else { btn.innerHTML = "🔨 Mezat"; btn.style.background = "rgba(255, 255, 255, 0.2)"; } }
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
