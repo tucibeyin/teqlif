@@ -89,7 +89,9 @@ def cleanup_stream(username: str):
 
 def write_to_ffmpeg(process, data):
     try:
-        if process.stdin: process.stdin.write(data); process.stdin.flush()
+        if process.stdin and data: 
+            process.stdin.write(data)
+            process.stdin.flush()
     except: pass
 
 # --- API ---
@@ -242,13 +244,13 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (ANDROID STABLE): {user.username}")
+    print(f"🎥 YAYIN (BUFFERED + ANDROID STABLE): {user.username}")
 
     command = [
         "ffmpeg", 
         "-f", "matroska", 
         "-use_wallclock_as_timestamps", "1",
-        "-analyzeduration", "5000000", "-probesize", "5000000",
+        "-analyzeduration", "10000000", "-probesize", "10000000", # 🔥 Buffer Arttırıldı (Stabilite)
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
@@ -260,24 +262,27 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=202:-2[out360];"
         "[v240]scale=136:-2[out240]",
         
-        "-preset", "ultrafast", "-tune", "zerolatency", "-threads", "0", 
+        # PERFORMANS (Superfast'e döndük, Ultrafast bazen buffer boşaltıyor)
+        "-preset", "superfast", 
+        "-tune", "zerolatency", 
+        "-threads", "0", 
         "-af", "aresample=async=1", 
-        
-        # 🔥 ÖNEMLİ: Duplicate Frame oluşturma (vsync 0) 🔥
         "-vsync", "0", 
+        "-max_interleave_delta", "0",
         
         "-profile:v", "baseline", "-level", "3.0", 
-        
-        # 🔥 ÖNEMLİ: Keyframe aralığını 2 saniye (60 kare) yap 🔥
         "-g", "60", "-pix_fmt", "yuv420p",
 
-        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
-        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
-        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
-        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "300k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
+        # ÇIKTI (Bitrate biraz daha rahatlatıldı)
+        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "4000k", "-c:a:0", "aac", "-b:a:0", "128k",
+        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "2000k", "-c:a:1", "aac", "-b:a:1", "96k",
+        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1200k", "-c:a:2", "aac", "-b:a:2", "64k",
+        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "600k", "-c:a:3", "aac", "-b:a:3", "48k",
         
+        # HLS
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
-        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", "-hls_allow_cache", "0",
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time+split_by_time", 
+        "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]
@@ -288,7 +293,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     async def wait_for_file_and_go_live(username, title, category, thumbnail):
         master_file = f"static/hls/{username}/master.m3u8"
         start_wait = time.time()
-        while time.time() - start_wait < 30: 
+        while time.time() - start_wait < 60: 
             if os.path.exists(master_file):
                 new_db = SessionLocal()
                 try:
