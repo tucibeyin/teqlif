@@ -8,7 +8,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeModTarget = null;
 
-    // --- KAMERA YÖNETİMİ ---
+    // --- DEĞİŞKENLER ---
     let videoDevices = [];
     let currentDeviceIndex = 0;
     let canvas, ctx, animationFrameId;
@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let rec = null;
     let broadcastWs = null;
 
-    // --- 1. MODERASYON & UI (Değişmedi) ---
+    // --- 1. UI & MODERASYON ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -41,7 +41,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lRow) { if (bidderName) { lRow.style.display = 'flex'; lRow.querySelector('.name').innerText = bidderName; } else { lRow.style.display = 'none'; } }
     }
 
-    // --- 2. SOHBET (Değişmedi) ---
+    // --- 2. SOHBET SOKETİ ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -107,24 +107,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 🔥 YENİ FORMAT SEÇİCİ FONKSİYON 🔥 ---
-    function getSupportedMimeType() {
-        const types = [
-            'video/webm;codecs=h264',
-            'video/webm;codecs=vp9',
-            'video/webm;codecs=vp8',
-            'video/webm'
-        ];
-        for (const type of types) {
-            if (MediaRecorder.isTypeSupported(type)) {
-                console.log("Seçilen Format:", type);
-                return type;
-            }
-        }
-        return 'video/webm'; // Hiçbiri yoksa varsayılan
-    }
-
-    // --- YAYINCI MANTIĞI ---
+    // --- 3. YAYINCI (ANDROID SAFE MODE) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -135,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initStream(deviceId = null) {
             if (localStream) { localStream.getTracks().forEach(track => track.stop()); }
-            // Android için 'exact' yerine 'ideal' kullanmak daha güvenli
+            // Android için 'ideal' çözünürlük
             const constraints = {
                 audio: true,
                 video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
@@ -186,18 +169,20 @@ document.addEventListener('DOMContentLoaded', () => {
                     broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                     broadcastWs.onopen = () => {
-                        const canvasStream = canvas.captureStream(24); // 24 FPS (Güvenli)
+                        // 🔥 24 FPS Düşük İşlemci Yükü 🔥
+                        const canvasStream = canvas.captureStream(24);
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 OTOMATİK FORMAT SEÇİMİ 🔥
-                        const selectedMimeType = getSupportedMimeType();
-                        const options = { mimeType: selectedMimeType, videoBitsPerSecond: 1500000 };
+                        // 🔥 ANDROID İÇİN KRİTİK: VP8 ve Düşük Bitrate 🔥
+                        let mimeType = 'video/webm;codecs=vp8';
+                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm';
 
                         try {
-                            rec = new MediaRecorder(canvasStream, options);
+                            // Bitrate'i 1.0 Mbps'e indirdik (Kopmaları engeller)
+                            rec = new MediaRecorder(canvasStream, { mimeType: mimeType, videoBitsPerSecond: 1000000 });
                         } catch (e) {
-                            // Eğer hata verirse en temeline dön
+                            console.log("Fallback to default recorder");
                             rec = new MediaRecorder(canvasStream);
                         }
 
@@ -206,7 +191,7 @@ document.addEventListener('DOMContentLoaded', () => {
                                 broadcastWs.send(e.data);
                             }
                         };
-                        rec.start(1000); // 1 Saniyelik parçalar
+                        rec.start(1000); // 1000ms (Stabil)
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
@@ -234,7 +219,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- İZLEYİCİ MANTIĞI ---
+        // --- İZLEYİCİ ---
         const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 1.5, liveMaxLatencyDurationCount: 3, maxBufferLength: 2, maxMaxBufferLength: 3, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
