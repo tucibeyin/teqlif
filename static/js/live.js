@@ -8,59 +8,42 @@ document.addEventListener('DOMContentLoaded', () => {
     let rec = null;
     let broadcastWs = null;
     let localStream = null;
-    let wakeLock = null;
-    let reconnectInterval = null;
 
-    // --- Ekranı Açık Tut (Wake Lock) ---
-    async function requestWakeLock() {
-        try {
-            if ('wakeLock' in navigator) {
-                wakeLock = await navigator.wakeLock.request('screen');
-                wakeLock.addEventListener('release', () => console.log('Wake Lock released'));
-                console.log('Wake Lock active');
-            }
-        } catch (err) { console.error(`${err.name}, ${err.message}`); }
-    }
-
-    // --- Yeniden Görünür Olduğunda Kilit İste ---
-    document.addEventListener('visibilitychange', async () => {
-        if (wakeLock !== null && document.visibilityState === 'visible') {
-            requestWakeLock();
-        }
-    });
-
-    // --- UI/MODERASYON ---
+    // --- UI/MODERASYON (Eski kodlar aynı kalabilir) ---
     window.openModMenu = function (u) { document.getElementById('modMenu').style.display = 'flex'; document.getElementById('mod-target-name').innerText = u; };
     window.closeModMenu = function () { document.getElementById('modMenu').style.display = 'none'; };
     window.restrictUser = function (a, d) {/*...*/ };
+    window.updatePriceDisplay = function (a, t, n) {/*...*/ };
+    window.toggleAuction = function () {/*...*/ };
+    window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; };
+    window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; };
+    window.confirmReset = function () {/*...*/ };
+    window.sendBid = function (t, a) {/*...*/ };
+    window.sendManualBid = function (t) {/*...*/ };
+    window.sendMsg = function (t) { const i = document.getElementById('chat-input-' + (t == 'broadcast' ? 'broadcast' : t)); if (i && i.value.trim()) { window.CURRENT_SOCKET.send(i.value); i.value = ''; i.focus(); } };
+    window.openGiftMenu = function (u) { document.getElementById('giftMenu').style.display = 'block'; };
+    window.closeGiftMenu = function () { document.getElementById('giftMenu').style.display = 'none'; };
+    window.sendGift = function (t) {/*...*/ };
+    window.toggleFollow = function (u) {/*...*/ };
+    window.unmuteVideo = function (u) { const v = document.getElementById('video-' + u); if (v) { v.muted = false; } };
 
-    // --- SOHBET ---
+    // --- CHAT BAĞLANTISI ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
-
-        function initChatWs() {
-            const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
-            window.CURRENT_SOCKET = ws;
-
-            ws.onmessage = (e) => {
-                const d = JSON.parse(e.data);
-                if (d.type === 'chat') {
-                    const fid = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
-                    const f = document.getElementById(fid);
-                    if (f) { const el = document.createElement('div'); el.className = 'msg'; el.innerHTML = `<b>${d.user}:</b> ${d.msg}`; f.appendChild(el); f.scrollTop = f.scrollHeight; }
-                }
-            };
-
-            ws.onclose = () => {
-                // Chat bağlantısı koptuğunda 3sn sonra tekrar dene
-                setTimeout(initChatWs, 3000);
-            };
-        }
-        initChatWs();
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
+        window.CURRENT_SOCKET = ws;
+        ws.onmessage = (e) => {
+            const d = JSON.parse(e.data);
+            if (d.type === 'chat') {
+                const fid = target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`;
+                const f = document.getElementById(fid);
+                if (f) { const el = document.createElement('div'); el.className = 'msg'; el.innerHTML = `<b>${d.user}:</b> ${d.msg}`; f.appendChild(el); f.scrollTop = f.scrollHeight; }
+            }
+        };
     };
 
-    // --- 2. YAYINCI ---
+    // --- 2. YAYINCI (ANDROID SAFE MODE) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
@@ -68,7 +51,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async function initStream() {
             try {
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true, noiseSuppression: true },
+                    audio: { echoCancellation: true },
                     video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
                 });
                 localStream = stream; videoElement.srcObject = stream;
@@ -85,46 +68,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     requestAnimationFrame(draw);
                 }
                 draw();
-            } catch (e) { alert("Kamera Hatası! Lütfen izinleri kontrol edin."); }
+            } catch (e) { alert("Kamera Hatası!"); }
         }
         initStream();
-
-        function startBroadcastSession() {
-            // Zaten açıksa kapat
-            if (broadcastWs) broadcastWs.close();
-            if (rec && rec.state !== 'inactive') rec.stop();
-
-            broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-
-            broadcastWs.onopen = () => {
-                console.log("Yayın Soketi Bağlandı");
-                const stream = canvas.captureStream(30);
-                if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
-
-                // VP8 + 1.5 Mbps (Android Dostu)
-                let opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
-                if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
-
-                try { rec = new MediaRecorder(stream, opts); } catch (e) { rec = new MediaRecorder(stream); }
-
-                rec.ondataavailable = e => {
-                    if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data);
-                };
-
-                // Kaydı başlat (1000ms chunk)
-                rec.start(1000);
-
-                // Wake Lock İste
-                requestWakeLock();
-            };
-
-            broadcastWs.onclose = () => {
-                console.log("Yayın Soketi Koptu! Yeniden bağlanılıyor...");
-                if (rec) rec.stop();
-                // Otomatik yeniden bağlanma (5sn sonra)
-                reconnectInterval = setTimeout(startBroadcastSession, 5000);
-            };
-        }
 
         document.getElementById('btn-start-broadcast').addEventListener('click', () => {
             const fd = new FormData();
@@ -136,67 +82,83 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('live-ui').style.display = 'flex';
                 window.connectChat('broadcast');
 
-                // Yayını Başlat
-                startBroadcastSession();
+                broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+                broadcastWs.onopen = () => {
+                    const stream = canvas.captureStream(30);
+                    if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
 
-                // Thumbnail Gönderimi
-                setInterval(() => {
-                    fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.5) }) });
-                }, 60000);
+                    // VP8 / 1.5 Mbps
+                    let opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
+                    if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
+
+                    try { rec = new MediaRecorder(stream, opts); } catch (e) { rec = new MediaRecorder(stream); }
+
+                    rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
+
+                    rec.start(1000); // 1000ms Chunk
+
+                    setInterval(() => {
+                        fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.5) }) });
+                    }, 60000);
+                };
             });
         });
 
         window.stopBroadcast = () => {
-            if (reconnectInterval) clearTimeout(reconnectInterval);
-            if (rec) rec.stop();
-            if (broadcastWs) {
-                broadcastWs.onclose = null; // Otomatik yeniden bağlanmayı iptal et
-                broadcastWs.close();
-            }
-            if (wakeLock) wakeLock.release();
-            fetch('/broadcast/stop', { method: 'POST' });
-            window.location.href = '/';
+            if (rec) rec.stop(); if (broadcastWs) broadcastWs.close();
+            fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/';
         };
     }
 
-    // --- 3. İZLEYİCİ (TOLERANSLI) ---
+    // --- 3. İZLEYİCİ (ULTRA TOLERANSLI) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
-            const src = `/static/hls/${u}/master.m3u8`;
+            // Cache-Busting ekledik
+            const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
+
             if (Hls.isSupported()) {
-                const h = new Hls({
+                const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    liveSyncDurationCount: 3,
-                    maxBufferLength: 10,
+                    // 🔥 DAHA GÜVENLİ AYARLAR 🔥
+                    liveSyncDurationCount: 4, // 8 saniye geriden gel (Donmaz)
+                    maxBufferLength: 60, // Bol bol buffer yap
+                    manifestLoadingTimeOut: 20000,
+                    manifestLoadingMaxRetry: 10,
                 });
-                h.loadSource(src);
-                h.attachMedia(v);
-                h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("Auto-play blocked", e)));
+
+                hls.loadSource(src);
+                hls.attachMedia(v);
+
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    v.play().catch(() => { v.muted = true; v.play(); });
+                });
 
                 // Hata Kurtarma
-                h.on(Hls.Events.ERROR, function (event, data) {
+                hls.on(Hls.Events.ERROR, function (event, data) {
                     if (data.fatal) {
                         switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR:
-                                console.log("Ağ hatası, kurtarılıyor...");
-                                h.startLoad();
+                                console.log("Ağ hatası, yeniden deneniyor...");
+                                hls.startLoad();
                                 break;
                             case Hls.ErrorTypes.MEDIA_ERROR:
                                 console.log("Medya hatası, kurtarılıyor...");
-                                h.recoverMediaError();
+                                hls.recoverMediaError();
                                 break;
                             default:
-                                h.destroy();
+                                hls.destroy();
                                 break;
                         }
                     }
                 });
-            }
-            else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                v.src = src; v.play().catch(e => console.log("Auto-play blocked", e));
+
+            } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                // iOS Native
+                v.src = src;
+                v.addEventListener('loadedmetadata', () => { v.play().catch(() => { v.muted = true; v.play(); }); });
             }
             window.connectChat(u);
         }
