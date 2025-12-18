@@ -3,8 +3,12 @@ import json
 import shutil
 import subprocess
 import sys
+import base64
 import asyncio 
 import time
+from datetime import datetime, timedelta
+from typing import Dict, List, Optional
+# 🔥 DÜZELTME BURADA: 'Request' EKLENDİ 🔥
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
@@ -149,11 +153,12 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if not user: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
-    if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
-    os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
-    os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
+    # Loglar kaybolmasın diye silmiyoruz, sadece gerekirse üzerine yazar
+    if not os.path.exists(stream_dir):
+        os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
+        os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
 
-    log_file = open(f"{stream_dir}/stream.log", "w")
+    log_file = open(f"{stream_dir}/stream.log", "a") # Append modunda aç
     active_logs[user.username] = log_file
     
     print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
@@ -212,10 +217,11 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=5.0)
+                # Timeout'u 10 saniyeye çıkardık, Android biraz gecikirse hemen kesmesin
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             except asyncio.TimeoutError:
-                log_to_file(user.username, "⚠️ TIMEOUT")
+                log_to_file(user.username, "⚠️ TIMEOUT - Veri gelmedi")
                 break 
     except Exception as e:
         log_to_file(user.username, f"❌ ER: {e}")
