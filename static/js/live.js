@@ -115,18 +115,21 @@ document.addEventListener('DOMContentLoaded', () => {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
-            // Cache-Busting ekledik
-            const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
+            // 🔥 CACHE ÖNLEYİCİ URL 🔥
+            const src = `/static/hls/${u}/master.m3u8?t=${Math.floor(Date.now() / 1000)}`;
 
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    // 🔥 DAHA GÜVENLİ AYARLAR 🔥
-                    liveSyncDurationCount: 4, // 8 saniye geriden gel (Donmaz)
-                    maxBufferLength: 60, // Bol bol buffer yap
+                    liveSyncDurationCount: 3,
+                    maxBufferLength: 30, // 30sn buffer
                     manifestLoadingTimeOut: 20000,
-                    manifestLoadingMaxRetry: 10,
+                    manifestLoadingMaxRetry: 5,
+                    levelLoadingTimeOut: 20000,
+                    levelLoadingMaxRetry: 5,
+                    fragLoadingTimeOut: 20000,
+                    fragLoadingMaxRetry: 5
                 });
 
                 hls.loadSource(src);
@@ -149,7 +152,12 @@ document.addEventListener('DOMContentLoaded', () => {
                                 hls.recoverMediaError();
                                 break;
                             default:
+                                console.log("Kritik hata, HLS yeniden başlatılıyor...");
                                 hls.destroy();
+                                setTimeout(() => {
+                                    // Sayfayı yenilemek yerine HLS'i yeniden başlatmayı dene (Opsiyonel)
+                                    window.location.reload();
+                                }, 3000);
                                 break;
                         }
                     }
