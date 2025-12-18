@@ -7,11 +7,13 @@ document.addEventListener('DOMContentLoaded', () => {
     window.activeHlsInstances = {};
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeModTarget = null;
-    let localStream = null;
-    let rec = null;
-    let broadcastWs = null;
 
-    // --- UI/MODERASYON ---
+    // --- KAMERA YÖNETİMİ ---
+    let videoDevices = [];
+    let currentDeviceIndex = 0;
+    let canvas, ctx, animationFrameId;
+
+    // --- 1. MODERASYON ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -27,6 +29,7 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/stream/restrict', { method: 'POST', body: formData }).then(res => res.json()).then(data => { alert(data.msg); closeModMenu(); });
     }
 
+    // --- 2. GÖRÜNÜM ---
     function updatePriceDisplay(amount, target, bidderName) {
         const idHost = 'current-price-display'; const idViewer = `price-${target}`;
         let el = document.getElementById(idHost); if (!el) el = document.getElementById(idViewer);
@@ -36,13 +39,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lRow) { if (bidderName) { lRow.style.display = 'flex'; lRow.querySelector('.name').innerText = bidderName; } else { lRow.style.display = 'none'; } }
     }
 
-    // --- SOHBET ---
+    // --- 3. SOCKET ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
-        const chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
-        window.CURRENT_SOCKET = chatWs;
-        chatWs.onmessage = (e) => {
+        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
+        window.CURRENT_SOCKET = ws;
+        ws.onmessage = (e) => {
             const d = JSON.parse(e.data);
             if (d.type === 'banned') { alert("🔴 Yasaklandınız!"); window.location.href = "/"; return; }
             if (d.type === 'alert') { alert(d.msg); return; }
@@ -102,24 +105,22 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 3. YAYINCI (GÜVENLİ FORMAT) ---
+    // --- 4. YAYINCI / İZLEYİCİ ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
         ctx = canvas.getContext('2d', { alpha: false });
+        let rec;
 
         async function getDevices() { try { const devices = await navigator.mediaDevices.enumerateDevices(); videoDevices = devices.filter(d => d.kind === 'videoinput'); } catch (e) { console.log(e); } }
         getDevices();
 
         async function initStream(deviceId = null) {
-            if (localStream) { localStream.getTracks().forEach(track => track.stop()); }
-            const constraints = {
-                audio: { echoCancellation: true, noiseSuppression: true },
-                video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
-            };
+            if (window.localStream) { window.localStream.getTracks().forEach(track => track.stop()); }
+            const constraints = { audio: true, video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } };
             try {
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
-                localStream = stream; videoElement.srcObject = stream;
+                window.localStream = stream; videoElement.srcObject = stream;
                 startCanvasLoop();
                 const devices = await navigator.mediaDevices.enumerateDevices();
                 const audioSelect = document.getElementById('audioSource');
@@ -159,86 +160,66 @@ document.addEventListener('DOMContentLoaded', () => {
                         if (resetBtn) resetBtn.style.display = 'none'; if (toggleBtn) toggleBtn.style.display = 'none'; if (priceBoard) priceBoard.style.display = 'none';
                     }
                     window.connectChat('broadcast');
-
-                    broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-
-                    broadcastWs.onopen = () => {
+                    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
+                    ws.onopen = () => {
+                        // 🔥 30 FPS CANVAS (Stabilite İçin)
                         const canvasStream = canvas.captureStream(30);
-                        const audioTracks = localStream.getAudioTracks();
-                        if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
+                        const audioTracks = window.localStream.getAudioTracks(); if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 WebM/VP8 (Güvenli Liman) 🔥
-                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
-                        if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
-                        }
+                        // 🔥 VP8 ÖNCELİKLİ (Android Uyumu İçin)
+                        let mimeType = 'video/webm;codecs=vp8';
+                        if (!MediaRecorder.isTypeSupported(mimeType)) mimeType = 'video/webm'; // Fallback
 
-                        try { rec = new MediaRecorder(canvasStream, options); }
-                        catch (e) { rec = new MediaRecorder(canvasStream); }
-
-                        rec.ondataavailable = e => {
-                            if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                                broadcastWs.send(e.data);
-                            }
-                        };
-
-                        rec.start(1000);
-
-                        sendThumbnailSnapshot();
-                        window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
+                        rec = new MediaRecorder(canvasStream, { mimeType: mimeType, videoBitsPerSecond: 2500000 });
+                        rec.start(500); // 500ms chunk
+                        rec.ondataavailable = e => { if (e.data.size > 0 && ws.readyState === 1) ws.send(e.data); };
+                        sendThumbnailSnapshot(); window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
                 });
             });
         }
-
-        window.stopBroadcast = function () {
-            if (window.thumbInterval) clearInterval(window.thumbInterval);
-            if (animationFrameId) cancelAnimationFrame(animationFrameId);
-            if (rec && rec.state !== 'inactive') rec.stop();
-            if (localStream) localStream.getTracks().forEach(t => t.stop());
-            if (broadcastWs) broadcastWs.close();
-
-            fetch('/broadcast/stop', { method: 'POST' });
-            window.location.href = '/';
-        };
-
-        // ... (Diğer fonksiyonlar)
+        window.stopBroadcast = function () { if (window.thumbInterval) clearInterval(window.thumbInterval); if (animationFrameId) cancelAnimationFrame(animationFrameId); fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
         window.toggleAuction = function () { AUCTION_ACTIVE = !AUCTION_ACTIVE; const btn = document.getElementById('btn-auction-toggle'); const formData = new FormData(); formData.append('active', AUCTION_ACTIVE); fetch('/broadcast/toggle_auction', { method: 'POST', body: formData }); if (AUCTION_ACTIVE) { btn.innerHTML = "🚫 Kapat"; btn.style.background = "rgba(255, 59, 48, 0.4)"; } else { btn.innerHTML = "🔨 Mezat"; btn.style.background = "rgba(255, 255, 255, 0.2)"; } }
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- 4. İZLEYİCİ (TOLERANSLI AYARLAR) ---
+        // --- İZLEYİCİ MANTIĞI ---
+        const hlsConfig = {
+            enableWorker: true,
+            lowLatencyMode: true,
+            backBufferLength: 0, // Eski segmentleri bellekte tutma
+
+            // Canlı yayının sadece 1.5 segment (1.5 saniye) gerisinden gel
+            liveSyncDurationCount: 1.5,
+
+            // Eğer 3 saniye geriye düşerse, videoyu hızlandırıp yakala
+            liveMaxLatencyDurationCount: 3,
+
+            // Sadece 2 saniyelik ileri tampon yap (Daha fazlası gecikme demek)
+            maxBufferLength: 2,
+            maxMaxBufferLength: 2,
+
+            enableSoftwareAES: false,
+            fragLoadingTimeOut: 10000,
+        };
+
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
             if (v) {
                 const src = `/static/hls/${u}/master.m3u8`;
-                if (Hls.isSupported()) {
-                    const h = new Hls({
-                        enableWorker: true,
-                        lowLatencyMode: true,
-                        // 2 saniyelik parçalar için güvenli tampon
-                        liveSyncDurationCount: 3,
-                        maxBufferLength: 10,
-                    });
-                    h.loadSource(src);
-                    h.attachMedia(v);
-                    h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("Auto-play blocked", e)));
-                }
-                else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                    v.src = src; v.play().catch(e => console.log("Auto-play blocked", e));
-                }
+                if (Hls.isSupported()) { const h = new Hls(hlsConfig); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(e => console.log("Blocked:", e))); }
+                else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = src; v.play().catch(e => console.log("Blocked:", e)); }
                 window.connectChat(u);
             }
         } else {
-            // Liste Sayfası (Intersection Observer)
             let obs = new IntersectionObserver((entries) => {
                 entries.forEach(e => {
                     const u = e.target.dataset.username; const v = document.getElementById(`video-${u}`);
                     if (e.isIntersecting) {
                         if (!window.activeHlsInstances[u] && Hls.isSupported()) {
-                            const src = `/static/hls/${u}/master.m3u8`; const h = new Hls(); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
+                            const src = `/static/hls/${u}/master.m3u8`; const h = new Hls(hlsConfig); h.loadSource(src); h.attachMedia(v); h.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
                             window.activeHlsInstances[u] = h;
                         } else if (v.canPlayType('application/vnd.apple.mpegurl')) { v.src = `/static/hls/${u}/master.m3u8`; v.play().catch(() => { v.muted = true; v.play() }); }
                         window.connectChat(u);
