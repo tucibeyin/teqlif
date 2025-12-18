@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- YAYINCI (ANDROID SAFE) ---
+    // --- YAYINCI (UNIVERSAL SAFE) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -167,15 +167,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                     broadcastWs.onopen = () => {
-                        const canvasStream = canvas.captureStream(24); // 24 FPS
+                        const canvasStream = canvas.captureStream(30); // 30 FPS
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 ANDROID STABIL AYARLAR 🔥
-                        // 1 Mbps Bitrate + VP8 Codec (En stabil kombinasyon)
-                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
-                        if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            options = { mimeType: 'video/webm', videoBitsPerSecond: 1000000 };
+                        // 🔥 OTOMATİK FORMAT - ZORLAMA YOK 🔥
+                        let options = { mimeType: 'video/webm', videoBitsPerSecond: 1200000 };
+
+                        // Eğer H264 varsa onu dene (iOS için daha iyidir ama Android de destekler)
+                        if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
+                            options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1200000 };
+                        } else if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                            options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1200000 };
                         }
 
                         try { rec = new MediaRecorder(canvasStream, options); }
@@ -187,15 +190,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // 🔥 1 SANİYE BEKLE (Isınma Süresi) 🔥
-                        // Bu bekleme Android'in kamerayı hazırlaması için şarttır.
-                        console.log("Kamera ısınıyor...");
-                        setTimeout(() => {
-                            if (rec.state === 'inactive') {
-                                rec.start(1000);
-                                console.log("Yayın başladı!");
-                            }
-                        }, 1000);
+                        // 1 Saniye Warm-up
+                        setTimeout(() => { if (rec.state === 'inactive') rec.start(1000); }, 1000);
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
@@ -222,7 +218,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
         // --- İZLEYİCİ ---
-        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4, maxBufferLength: 4, maxMaxBufferLength: 6, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4, maxBufferLength: 3, maxMaxBufferLength: 5, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
