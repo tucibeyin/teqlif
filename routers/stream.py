@@ -5,12 +5,12 @@ import subprocess
 import sys
 import asyncio 
 import time
-from fastapi import APIRouter, WebSocket, Depends, Form, BackgroundTasks
+from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form, BackgroundTasks
 from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
-from models import User, StreamRestriction
+from models import User, StreamMessage, StreamRestriction
 from utils import get_current_user, send_broadcast_notifications_task
 
 router = APIRouter()
@@ -35,10 +35,9 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 active_processes = {}
-active_logs = {} # Log dosyalarını tutmak için
+active_logs = {} 
 
 def log_to_file(username, message):
-    """Logları dosyaya yazar"""
     try:
         with open(f"static/hls/{username}/stream.log", "a") as f:
             timestamp = time.strftime("%H:%M:%S")
@@ -65,10 +64,6 @@ def cleanup_stream(username):
         if u: u.is_live = False; u.is_auction_active = False; db.commit()
     except: pass
     finally: db.close()
-    
-    # HLS dosyalarını hemen silme, log kalsın
-    # try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
-    # except: pass
 
 def write_to_ffmpeg(process, data):
     if process.stdin: 
@@ -78,18 +73,27 @@ def write_to_ffmpeg(process, data):
         except: pass
 
 @router.post("/stream/restrict")
-async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
+async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    return {"status": "ok"} 
 
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login", 303)
+    
     target_user = None
-    if broadcaster: target_user = db.query(User).filter(User.username == broadcaster).first()
+    if broadcaster:
+        target_user = db.query(User).filter(User.username == broadcaster).first()
+
     active_streams = db.query(User).filter(User.is_live == True).all()
     if mode == "broadcast": target_user = user
 
     return templates.TemplateResponse("live.html", {
-        "request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user, "auction_active": False
+        "request": request, 
+        "user": user, 
+        "mode": mode, 
+        "streams": active_streams, 
+        "broadcaster": target_user, 
+        "auction_active": False
     })
 
 @router.post("/broadcast/start")
@@ -145,17 +149,14 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if not user: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
-    # Klasörü sıfırla
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
 
-    # 🔥 LOG DOSYASI OLUŞTUR 🔥
     log_file = open(f"{stream_dir}/stream.log", "w")
     active_logs[user.username] = log_file
     
-    msg = f"🎥 YAYIN BAŞLIYOR: {user.username}\n--------------------------------"
-    print(msg); log_file.write(msg + "\n"); log_file.flush()
+    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
     command = [
         "ffmpeg", 
@@ -188,7 +189,6 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]
     
-    # stderr'i log dosyasına yönlendir
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=log_file)
     active_processes[user.username] = process
     
@@ -197,7 +197,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         start_wait = time.time()
         while time.time() - start_wait < 30:
             if os.path.exists(master_file):
-                log_to_file(username, "✅ MASTER PLAYLIST OLUŞTU! YAYIN AKTİF.")
+                log_to_file(username, "✅ YAYIN AKTİF")
                 new_db = SessionLocal()
                 u = new_db.query(User).filter(User.username == username).first()
                 u.is_live = True; new_db.commit(); new_db.close()
@@ -210,28 +210,16 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     loop.create_task(wait_for_file_and_go_live(user.username, user.stream_title, user.stream_category, user.thumbnail))
 
     try:
-        last_log_time = time.time()
-        bytes_count = 0
-        
         while True:
             try:
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=5.0)
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
-                
-                # Loglama (Her 2 saniyede bir)
-                bytes_count += len(data)
-                if time.time() - last_log_time > 2:
-                    log_to_file(user.username, f"Veri Alınıyor: {bytes_count} bytes (Son 2sn)")
-                    bytes_count = 0
-                    last_log_time = time.time()
-                    
             except asyncio.TimeoutError:
-                log_to_file(user.username, "⚠️ UYARI: Veri akışı kesildi (Timeout)")
+                log_to_file(user.username, "⚠️ TIMEOUT")
                 break 
     except Exception as e:
-        log_to_file(user.username, f"❌ HATA: {e}")
+        log_to_file(user.username, f"❌ ER: {e}")
     finally:
-        log_to_file(user.username, "🛑 YAYIN KAPATILIYOR")
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
