@@ -7,6 +7,9 @@ document.addEventListener('DOMContentLoaded', () => {
     window.activeHlsInstances = {};
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeModTarget = null;
+    let videoDevices = [];
+    let currentDeviceIndex = 0;
+    let canvas, ctx, animationFrameId;
     let localStream = null;
     let rec = null;
     let broadcastWs = null;
@@ -102,7 +105,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 3. YAYINCI (OPTİMİZE EDİLMİŞ) ---
+    // --- 3. YAYINCI (VP8 ZORUNLU) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -167,9 +170,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 1.5 Mbps BITRATE & WEBM/VP8 🔥
+                        // 🔥 BURASI KRİTİK: VP8 ve 1.5 Mbps 🔥
                         let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
                         if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                            // VP8 yoksa sadece video/webm (Tarayıcı ne verirse)
                             options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
                         }
 
@@ -182,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // 1 Saniye Buffer
+                        // 1 Saniye Buffer (Zorunlu)
                         setTimeout(() => { if (rec.state === 'inactive') rec.start(1000); }, 1000);
 
                         sendThumbnailSnapshot();
@@ -203,26 +207,15 @@ document.addEventListener('DOMContentLoaded', () => {
             window.location.href = '/';
         };
 
-        // ... (toggleAuction, openResetModal, confirmReset, sendThumbnailSnapshot aynı kalacak) ...
+        // ... (Diğer fonksiyonlar) ...
         window.toggleAuction = function () { AUCTION_ACTIVE = !AUCTION_ACTIVE; const btn = document.getElementById('btn-auction-toggle'); const formData = new FormData(); formData.append('active', AUCTION_ACTIVE); fetch('/broadcast/toggle_auction', { method: 'POST', body: formData }); if (AUCTION_ACTIVE) { btn.innerHTML = "🚫 Kapat"; btn.style.background = "rgba(255, 59, 48, 0.4)"; } else { btn.innerHTML = "🔨 Mezat"; btn.style.background = "rgba(255, 255, 255, 0.2)"; } }
         window.openResetModal = function () { document.getElementById('resetModal').style.display = 'flex'; }
         window.closeResetModal = function () { document.getElementById('resetModal').style.display = 'none'; }
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- İZLEYİCİ (GÜVENLİ TAMPON) ---
-        // 2 Saniyelik parçalar için 3 segment (6sn) geriden gelmek donmayı önler.
-        const hlsConfig = {
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 0,
-            liveSyncDurationCount: 3,
-            liveMaxLatencyDurationCount: 6,
-            maxBufferLength: 10, // Biraz daha fazla veri tut
-            maxMaxBufferLength: 20,
-            enableSoftwareAES: false,
-            fragLoadingTimeOut: 10000
-        };
+        // --- İZLEYİCİ ---
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 5, maxBufferLength: 10, maxMaxBufferLength: 20, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
