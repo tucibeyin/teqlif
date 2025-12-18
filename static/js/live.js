@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let rec = null;
     let broadcastWs = null;
 
-    // --- 1. UI ---
+    // --- 1. UI/MODERASYON ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 3. YAYINCI (SAFE MODE) ---
+    // --- 3. YAYINCI (OPTIMIZED 1.5MBPS) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -171,10 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 VP8 ÖNCELİKLİ (Android İçin En Güvenlisi) 🔥
-                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1200000 };
+                        // 🔥 1.5 Mbps BITRATE (Android Dostu) 🔥
+                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
                         if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            options = { mimeType: 'video/webm', videoBitsPerSecond: 1200000 };
+                            options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
                         }
 
                         try { rec = new MediaRecorder(canvasStream, options); }
@@ -186,12 +186,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // 🔥 1 SANİYE BEKLE (Isınma Süresi) 🔥
-                        setTimeout(() => {
-                            if (rec.state === 'inactive') {
-                                rec.start(1000);
-                            }
-                        }, 1000);
+                        // 1 Saniye Warm-up
+                        setTimeout(() => { if (rec.state === 'inactive') rec.start(1000); }, 1000);
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
@@ -217,18 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- İZLEYİCİ (2sn Parçalar İçin Optimize) ---
-        const hlsConfig = {
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 0,
-            liveSyncDurationCount: 3,
-            liveMaxLatencyDurationCount: 6,
-            maxBufferLength: 6,
-            maxMaxBufferLength: 10,
-            enableSoftwareAES: false,
-            fragLoadingTimeOut: 10000
-        };
+        // --- İZLEYİCİ ---
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 5, maxBufferLength: 6, maxMaxBufferLength: 10, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);
