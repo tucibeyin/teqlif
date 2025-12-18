@@ -8,7 +8,6 @@ document.addEventListener('DOMContentLoaded', () => {
     let AUCTION_ACTIVE = CONFIG.auctionActive;
     let activeModTarget = null;
 
-    // --- DEĞİŞKENLER ---
     let videoDevices = [];
     let currentDeviceIndex = 0;
     let canvas, ctx, animationFrameId;
@@ -16,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let rec = null;
     let broadcastWs = null;
 
-    // --- 1. UI & MODERASYON ---
+    // --- 1. UI/MODERASYON ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -107,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- 3. YAYINCI (ANDROID STABILITY FIX) ---
+    // --- 3. YAYINCI (ANDROID WARM-UP FIX) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -119,7 +118,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async function initStream(deviceId = null) {
             if (localStream) { localStream.getTracks().forEach(track => track.stop()); }
             const constraints = {
-                audio: { echoCancellation: true, noiseSuppression: true }, // Ses iyileştirmesi
+                audio: { echoCancellation: true, noiseSuppression: true },
                 video: deviceId ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } } : { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
             };
             try {
@@ -172,19 +171,13 @@ document.addEventListener('DOMContentLoaded', () => {
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 VP8 ve 1.5 Mbps (Standart ve Güvenli) 🔥
-                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
-
-                        // Eğer VP8 yoksa düz webm
-                        if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            options = { mimeType: 'video/webm' };
+                        // 🔥 ANDROID GÜVENLİ FORMAT & BITRATE 🔥
+                        let options = { mimeType: 'video/webm', videoBitsPerSecond: 1000000 };
+                        if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                            options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
                         }
 
-                        try {
-                            rec = new MediaRecorder(canvasStream, options);
-                        } catch (e) {
-                            rec = new MediaRecorder(canvasStream);
-                        }
+                        try { rec = new MediaRecorder(canvasStream, options); } catch (e) { rec = new MediaRecorder(canvasStream); }
 
                         rec.ondataavailable = e => {
                             if (e.data.size > 0 && broadcastWs.readyState === 1) {
@@ -192,14 +185,14 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // Isınma beklemesine gerek yok, direkt başla (Sunucu halledecek)
-                        rec.start(1000);
+                        // 🔥 ISINMA SÜRESİ (1 Saniye Bekle - Hata Önleyici) 🔥
+                        setTimeout(() => {
+                            if (rec.state === 'inactive') rec.start(1000);
+                        }, 1000);
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
                     };
-
-                    broadcastWs.onerror = (e) => { console.log("Socket Error:", e); };
                 });
             });
         }
@@ -222,21 +215,7 @@ document.addEventListener('DOMContentLoaded', () => {
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
         // --- İZLEYİCİ ---
-
-        const hlsConfig = {
-            enableWorker: true,
-            lowLatencyMode: true,
-            backBufferLength: 0,
-
-            // 2 Saniyelik parçalar için 3 segment (6sn) idealdir
-            liveSyncDurationCount: 3,
-            liveMaxLatencyDurationCount: 6,
-            maxBufferLength: 4,
-            maxMaxBufferLength: 6,
-
-            enableSoftwareAES: false,
-            fragLoadingTimeOut: 10000
-        };
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4, maxBufferLength: 3, maxMaxBufferLength: 5, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);

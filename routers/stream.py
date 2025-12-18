@@ -78,11 +78,15 @@ def cleanup_stream(username: str):
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
-            user.is_live = False; user.is_auction_active = False
-            user.current_price = 0; user.highest_bidder = None
+            user.is_live = False
+            user.is_auction_active = False
+            user.current_price = 0
+            user.highest_bidder = None
             db.commit()
-    except: pass
-    finally: db.close()
+    except Exception as e:
+        print(f"Cleanup Error: {e}")
+    finally:
+        db.close()
 
     try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
     except: pass
@@ -244,17 +248,19 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (BUFFERED + ANDROID STABLE): {user.username}")
+    print(f"🎥 YAYIN (ANDROID STABLE V2): {user.username}")
 
     command = [
         "ffmpeg", 
+        # GİRİŞ: Matroska + Wallclock Timestamp (Bu ikili Android'i kurtarır)
         "-f", "matroska", 
         "-use_wallclock_as_timestamps", "1",
-        "-analyzeduration", "10000000", "-probesize", "10000000", # 🔥 Buffer Arttırıldı (Stabilite)
+        "-analyzeduration", "5000000", "-probesize", "5000000",
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
+        # FİLTRE
         "-filter_complex", 
         "[0:v]scale=-2:720,crop=406:720:(in_w-406)/2:0,split=4[v720][v480][v360][v240];"
         "[v720]copy[out720];"
@@ -262,26 +268,30 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=202:-2[out360];"
         "[v240]scale=136:-2[out240]",
         
-        # PERFORMANS (Superfast'e döndük, Ultrafast bazen buffer boşaltıyor)
-        "-preset", "superfast", 
+        # PERFORMANS (Ultrafast = Düşük CPU = Düşük Latency)
+        "-preset", "ultrafast", 
         "-tune", "zerolatency", 
         "-threads", "0", 
+        
+        # SENKRONİZASYON (Video ve Ses)
         "-af", "aresample=async=1", 
-        "-vsync", "0", 
-        "-max_interleave_delta", "0",
+        "-vsync", "1", 
         
+        # CODEC & KEYFRAME
         "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "60", "-pix_fmt", "yuv420p",
+        "-g", "30", "-pix_fmt", "yuv420p", # 1 saniye keyframe (Latency için ideal)
 
-        # ÇIKTI (Bitrate biraz daha rahatlatıldı)
-        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "4000k", "-c:a:0", "aac", "-b:a:0", "128k",
-        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "2000k", "-c:a:1", "aac", "-b:a:1", "96k",
-        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1200k", "-c:a:2", "aac", "-b:a:2", "64k",
-        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "600k", "-c:a:3", "aac", "-b:a:3", "48k",
+        # ÇIKTI (4 Kalite)
+        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
+        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
+        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
+        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
         
-        # HLS
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
-        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time+split_by_time", 
+        # HLS YAPILANDIRMASI (Latency 4-5sn)
+        "-f", "hls", 
+        "-hls_time", "1",       # 1 saniyelik parçalar
+        "-hls_list_size", "4",  # Liste kısa tutuluyor
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
         "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
@@ -293,7 +303,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     async def wait_for_file_and_go_live(username, title, category, thumbnail):
         master_file = f"static/hls/{username}/master.m3u8"
         start_wait = time.time()
-        while time.time() - start_wait < 60: 
+        while time.time() - start_wait < 60: # Bekleme süresi 60sn yapıldı
             if os.path.exists(master_file):
                 new_db = SessionLocal()
                 try:
