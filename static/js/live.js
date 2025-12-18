@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let rec = null;
     let broadcastWs = null;
 
-    // --- 1. UI/MODERASYON ---
+    // --- 1. UI ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- YAYINCI (BASİT VE GÜÇLÜ) ---
+    // --- 3. YAYINCI (CLEAN START) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -167,29 +167,18 @@ document.addEventListener('DOMContentLoaded', () => {
                     broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                     broadcastWs.onopen = () => {
-                        const canvasStream = canvas.captureStream(30);
+                        const canvasStream = canvas.captureStream(24);
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 ÖNCELİK H264 (Android Donanım Hızlandırma) 🔥
-                        let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1500000 };
-
-                        if (!MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
-                            console.log("H264 desteklenmiyor, VP8 deneniyor...");
-                            if (MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                                options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
-                            } else {
-                                console.log("VP8 desteklenmiyor, varsayılan deneniyor...");
-                                options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
-                            }
+                        // 🔥 VP8 ÖNCELİKLİ (En Uyumlu) 🔥
+                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1200000 };
+                        if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                            options = { mimeType: 'video/webm', videoBitsPerSecond: 1200000 };
                         }
 
-                        try {
-                            rec = new MediaRecorder(canvasStream, options);
-                        } catch (e) {
-                            console.error("Recorder hatası:", e);
-                            rec = new MediaRecorder(canvasStream);
-                        }
+                        try { rec = new MediaRecorder(canvasStream, options); }
+                        catch (e) { rec = new MediaRecorder(canvasStream); }
 
                         rec.ondataavailable = e => {
                             if (e.data.size > 0 && broadcastWs.readyState === 1) {
@@ -197,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // 1000ms idealdir, daha aşağısı Android'i yorar
+                        // Gecikme YOK, direkt başla
                         rec.start(1000);
 
                         sendThumbnailSnapshot();
@@ -224,8 +213,8 @@ document.addEventListener('DOMContentLoaded', () => {
         window.confirmReset = function () { closeResetModal(); fetch('/broadcast/reset_auction', { method: 'POST' }); }
         async function sendThumbnailSnapshot() { try { await fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.6), timestamp: Date.now() }) }); } catch (err) { } }
     } else {
-        // --- İZLEYİCİ ---
-        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 5, maxBufferLength: 5, maxMaxBufferLength: 10, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
+        // --- İZLEYİCİ (BUFFER) ---
+        const hlsConfig = { enableWorker: true, lowLatencyMode: true, backBufferLength: 0, liveSyncDurationCount: 2, liveMaxLatencyDurationCount: 4, maxBufferLength: 4, maxMaxBufferLength: 6, enableSoftwareAES: false, fragLoadingTimeOut: 10000 };
 
         if (CONFIG.broadcaster && CONFIG.mode === 'watch') {
             const u = CONFIG.broadcaster; const v = document.getElementById(`video-${u}`);

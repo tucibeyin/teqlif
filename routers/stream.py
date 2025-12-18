@@ -75,7 +75,7 @@ def cleanup_stream(username: str):
 
 def write_to_ffmpeg(process, data):
     try:
-        if process.stdin and data: 
+        if process.stdin: 
             process.stdin.write(data)
             process.stdin.flush()
     except: pass
@@ -163,6 +163,103 @@ async def upload_thumbnail(request: Request, user: User = Depends(get_current_us
         return {"status": "ok"}
     except: return {"status": "error"}
 
+@router.websocket("/ws/broadcast")
+async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
+    await websocket.accept()
+    user = None
+    try:
+        token = websocket.cookies.get("access_token")
+        if token:
+            from jose import jwt
+            from utils import SECRET_KEY, ALGORITHM
+            payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
+            user = db.query(User).filter(User.email == payload.get("sub")).first()
+    except: pass
+    if not user or not user.username: await websocket.close(); return
+
+    stream_dir = f"static/hls/{user.username}"
+    shutil.rmtree(stream_dir, ignore_errors=True)
+    os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
+    os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
+    
+    print(f"🎥 YAYIN (INSTANT START FIX): {user.username}")
+
+    command = [
+        "ffmpeg", 
+        # GİRİŞ: Formatı WebM'e sabitle (Matroska değil), Hızlı Başlat
+        "-f", "webm", 
+        "-analyzeduration", "500000", # 🔥 0.5 Saniye analiz (Hemen başlar)
+        "-probesize", "500000",       # 🔥 0.5 MB veri gelince başla (Beklemez)
+        "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
+        "-err_detect", "ignore_err",
+        "-i", "pipe:0",
+        
+        # FİLTRE
+        "-filter_complex", 
+        "[0:v]scale=-2:720,crop=406:720:(in_w-406)/2:0,split=4[v720][v480][v360][v240];"
+        "[v720]copy[out720];"
+        "[v480]scale=270:-2[out480];"
+        "[v360]scale=202:-2[out360];"
+        "[v240]scale=136:-2[out240]",
+        
+        # PERFORMANS (Veryfast = iOS/Android Ortak Dostu)
+        "-preset", "veryfast", 
+        "-tune", "zerolatency", 
+        "-threads", "0", 
+        "-af", "aresample=async=1", 
+        
+        # iOS ve Android Uyumlu Profil (Keyframe 2sn)
+        "-profile:v", "baseline", "-level", "3.0", 
+        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0",
+        "-pix_fmt", "yuv420p",
+
+        # ÇIKTI (Bitrate 1.5 Mbps)
+        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1500k", "-maxrate:v:0", "1500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
+        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "800k", "-maxrate:v:1", "800k", "-bufsize:v:1", "1600k", "-c:a:1", "aac", "-b:a:1", "96k",
+        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "500k", "-maxrate:v:2", "500k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
+        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "300k", "-bufsize:v:3", "600k", "-c:a:3", "aac", "-b:a:3", "48k",
+        
+        # HLS
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
+        "-hls_allow_cache", "0",
+        "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
+        "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
+    ]
+    
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
+    active_processes[user.username] = process
+    
+    async def wait_for_file_and_go_live(username, title, category, thumbnail):
+        master_file = f"static/hls/{username}/master.m3u8"
+        start_wait = time.time()
+        while time.time() - start_wait < 60: 
+            if os.path.exists(master_file):
+                new_db = SessionLocal()
+                try:
+                    u = new_db.query(User).filter(User.username == username).first()
+                    if u: 
+                        u.is_live = True; new_db.commit()
+                        payload = json.dumps({"type": "stream_added", "username": username, "title": title, "category": category, "thumbnail": thumbnail})
+                        await manager.broadcast_to_room(payload, "home")
+                except: pass
+                finally: new_db.close()
+                break
+            await asyncio.sleep(0.5)
+
+    loop = asyncio.get_event_loop()
+    loop.create_task(wait_for_file_and_go_live(user.username, user.stream_title, user.stream_category, user.thumbnail))
+
+    try:
+        while True:
+            data = await websocket.receive_bytes()
+            await loop.run_in_executor(None, write_to_ffmpeg, process, data)
+    except: pass
+    finally:
+        cleanup_stream(user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
+
 @router.websocket("/ws/chat")
 async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Session = Depends(get_db)):
     room_name = stream; await manager.connect(websocket, room_name, "Misafir"); current_username = "Misafir"
@@ -209,102 +306,3 @@ async def chat_endpoint(websocket: WebSocket, stream: str = "general", db: Sessi
                     except: pass
                 db.commit(); await manager.broadcast_to_room(json.dumps({"type": "chat", "user": current_username, "msg": safe_msg}), room_name)
     except: await manager.disconnect(websocket, room_name)
-
-@router.websocket("/ws/broadcast")
-async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
-    await websocket.accept()
-    user = None
-    try:
-        token = websocket.cookies.get("access_token")
-        if token:
-            from jose import jwt
-            from utils import SECRET_KEY, ALGORITHM
-            payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
-            user = db.query(User).filter(User.email == payload.get("sub")).first()
-    except: pass
-    if not user or not user.username: await websocket.close(); return
-
-    stream_dir = f"static/hls/{user.username}"
-    shutil.rmtree(stream_dir, ignore_errors=True)
-    os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
-    os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
-    
-    print(f"🎥 YAYIN (STABLE 2s SEGMENTS): {user.username}")
-
-    command = [
-        "ffmpeg", 
-        # GİRİŞ AYARLARI (Android Uyumlu)
-        "-f", "matroska", 
-        "-use_wallclock_as_timestamps", "1",
-        "-analyzeduration", "10000000", "-probesize", "10000000",
-        "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
-        "-err_detect", "ignore_err",
-        "-i", "pipe:0",
-        
-        # FİLTRE VE ÖLÇEKLENDİRME
-        "-filter_complex", 
-        "[0:v]scale=-2:720,crop=406:720:(in_w-406)/2:0,split=4[v720][v480][v360][v240];"
-        "[v720]copy[out720];"
-        "[v480]scale=270:-2[out480];"
-        "[v360]scale=202:-2[out360];"
-        "[v240]scale=136:-2[out240]",
-        
-        # PERFORMANS VE LATENCY (Veryfast: iOS için daha iyi kalite)
-        "-preset", "veryfast", 
-        "-tune", "zerolatency", 
-        "-threads", "0", 
-        "-af", "aresample=async=1", 
-        
-        # iOS VE ANDROID UYUMLULUK (Baseline Profile)
-        "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0", # 2 Saniyelik Keyframe (Stabil)
-        "-pix_fmt", "yuv420p",
-
-        # ÇIKTI (Daha Düşük Bitrate = Daha Az Takılma)
-        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1500k", "-maxrate:v:0", "1800k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "96k",
-        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "800k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "64k",
-        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "500k", "-maxrate:v:2", "600k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "48k",
-        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "600k", "-c:a:3", "aac", "-b:a:3", "32k",
-        
-        # HLS PAKETLEME (2 Saniyelik Parçalar)
-        "-f", "hls", 
-        "-hls_time", "2",       # 2 Saniyelik Parçalar (Stabilite için)
-        "-hls_list_size", "4",  # Liste kısa tutuluyor
-        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
-        "-hls_allow_cache", "0",
-        "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
-        "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
-    ]
-    
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
-    active_processes[user.username] = process
-    
-    async def wait_for_file_and_go_live(username, title, category, thumbnail):
-        master_file = f"static/hls/{username}/master.m3u8"
-        start_wait = time.time()
-        while time.time() - start_wait < 60: 
-            if os.path.exists(master_file):
-                new_db = SessionLocal()
-                try:
-                    u = new_db.query(User).filter(User.username == username).first()
-                    if u: 
-                        u.is_live = True; new_db.commit()
-                        payload = json.dumps({"type": "stream_added", "username": username, "title": title, "category": category, "thumbnail": thumbnail})
-                        await manager.broadcast_to_room(payload, "home")
-                except: pass
-                finally: new_db.close()
-                break
-            await asyncio.sleep(0.5)
-
-    loop = asyncio.get_event_loop()
-    loop.create_task(wait_for_file_and_go_live(user.username, user.stream_title, user.stream_category, user.thumbnail))
-
-    try:
-        while True:
-            data = await websocket.receive_bytes()
-            await loop.run_in_executor(None, write_to_ffmpeg, process, data)
-    except: pass
-    finally:
-        cleanup_stream(user.username)
-        await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
-        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
