@@ -19,7 +19,9 @@ from utils import get_current_user, send_broadcast_notifications_task
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- SOCKET YÖNETİCİSİ ---
+# ... (ConnectionManager ve diğer yardımcı sınıflar aynı kalabilir) ...
+# (Kısalık olması için ConnectionManager kodunu buraya tekrar yazmıyorum, mevcut kodunuzdaki haliyle kalabilir)
+
 class ConnectionManager:
     def __init__(self):
         self.rooms: Dict[str, List[dict]] = {}
@@ -66,29 +68,40 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes: Dict[str, subprocess.Popen] = {}
 
-# --- YARDIMCI ---
-def cleanup_stream(username: str, db: Session):
+# --- YARDIMCI: TEMİZLİK ---
+def cleanup_stream(username: str):
+    if username in active_processes:
+        proc = active_processes[username]
+        try: 
+            proc.terminate()
+            proc.wait(timeout=2)
+        except: 
+            proc.kill()
+        if username in active_processes: del active_processes[username]
+
+    db = SessionLocal()
     try:
         user = db.query(User).filter(User.username == username).first()
         if user:
-            user.is_live = False; user.is_auction_active = False
-            user.current_price = 0; user.highest_bidder = None
+            user.is_live = False
+            user.is_auction_active = False
+            user.current_price = 0
+            user.highest_bidder = None
             db.commit()
     except: pass
-    if username in active_processes:
-        proc = active_processes[username]
-        try: proc.terminate(); proc.wait(timeout=2)
-        except: proc.kill()
-        del active_processes[username]
+    finally: db.close()
+
     try: shutil.rmtree(f"static/hls/{username}", ignore_errors=True)
     except: pass
 
 def write_to_ffmpeg(process, data):
     try:
-        if process.stdin: process.stdin.write(data); process.stdin.flush()
+        if process.stdin: 
+            process.stdin.write(data)
+            process.stdin.flush()
     except: pass
 
-# --- API ---
+# ... (API Rotaları: restrict, login vb. aynı kalabilir) ...
 @router.post("/stream/restrict")
 async def restrict_user(target_username: str = Form(...), action: str = Form(...), duration: int = Form(0), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user or not user.is_live: return JSONResponse({"status": "error", "msg": "Yetkisiz"}, 403)
@@ -104,13 +117,20 @@ async def restrict_user(target_username: str = Form(...), action: str = Form(...
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: Optional[str] = None, user: Optional[User] = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse(url="/login", status_code=303)
-    target_user = None; is_following = False; db.refresh(user)
+    
+    target_user = None
+    is_following = False
+    
     if broadcaster:
         target_user = db.query(User).filter(User.username == broadcaster).first()
-        if target_user and target_user in user.followed: is_following = True
-        if db.query(StreamRestriction).filter(StreamRestriction.room_name == broadcaster, StreamRestriction.user_username == user.username, StreamRestriction.type == 'ban').first():
-             return templates.TemplateResponse("base.html", {"request": request, "user": user, "error": "Yasaklandınız!"})
-    if mode == "broadcast": return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
+        if target_user:
+             if user in target_user.followers: is_following = True
+             if db.query(StreamRestriction).filter(StreamRestriction.room_name == broadcaster, StreamRestriction.user_username == user.username, StreamRestriction.type == 'ban').first():
+                 return templates.TemplateResponse("base.html", {"request": request, "user": user, "error": "Yasaklandınız!"})
+
+    if mode == "broadcast": 
+        target_user = user # Yayıncı modunda hedef kendisidir
+        return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "broadcast", "streams": [], "auction_active": user.is_auction_active})
     else:
         active_streams = db.query(User).filter(User.is_live == True, User.username != None).all()
         return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": "watch", "streams": active_streams, "auction_active": target_user.is_auction_active if target_user else False, "is_following": is_following, "broadcaster": target_user})
@@ -140,7 +160,7 @@ async def start_broadcast_api(background_tasks: BackgroundTasks, title: str = Fo
 @router.post("/broadcast/stop")
 async def stop_broadcast_api(user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return {"status": "error"}
-    cleanup_stream(user.username, db)
+    cleanup_stream(user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
@@ -238,15 +258,19 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
     os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
     
-    print(f"🎥 YAYIN (FLEXIBLE INPUT): {user.username}")
+    print(f"🎥 YAYIN (OPTIMIZED): {user.username}")
 
-    # 🔥 FFMPEG: GİRİŞ KISITLAMALARI KALDIRILDI 🔥
-    # -r 30 (Input side) kaldırıldı. Ne gelirse al.
     command = [
-        "ffmpeg", "-f", "webm", 
-        "-analyzeduration", "5000000", "-probesize", "5000000",
-        "-fflags", "+genpts+igndts+nobuffer", "-i", "pipe:0",
+        "ffmpeg", 
+        # GİRİŞ: Matroska/WebM (Hatalara karşı daha toleranslı)
+        "-f", "matroska", 
+        "-use_wallclock_as_timestamps", "1",
+        "-analyzeduration", "1000000", "-probesize", "1000000", # 🔥 Hızlı Başlangıç için Düşürüldü (1MB)
+        "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
+        "-err_detect", "ignore_err",
+        "-i", "pipe:0",
         
+        # FİLTRE
         "-filter_complex", 
         "[0:v]scale=-2:720,crop=406:720:(in_w-406)/2:0,split=4[v720][v480][v360][v240];"
         "[v720]copy[out720];"
@@ -254,16 +278,30 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
         "[v360]scale=202:-2[out360];"
         "[v240]scale=136:-2[out240]",
         
-        "-r", "30", "-preset", "ultrafast", "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0", "-g", "30", "-pix_fmt", "yuv420p",
-
-        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "2000k", "-maxrate:v:0", "2500k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
-        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "1000k", "-maxrate:v:1", "1200k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
-        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "600k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
-        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
+        # PERFORMANS (Superfast yerine Veryfast tercih edilebilir ama Superfast en düşük gecikme için iyidir)
+        "-preset", "superfast", 
+        "-tune", "zerolatency", 
+        "-threads", "0", 
+        "-af", "aresample=async=1", 
         
-        "-f", "hls", "-hls_time", "1", "-hls_list_size", "3", 
-        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", "-hls_allow_cache", "0",
+        # iOS ve Android Uyumluluğu
+        "-profile:v", "baseline", "-level", "3.0", 
+        "-r", "30", # 🔥 Sabit 30 FPS Çıkış
+        "-g", "60", # 🔥 2 Saniyelik GOP (30fps * 2sn)
+        "-keyint_min", "60", # Minimum keyframe aralığı
+        "-sc_threshold", "0", # Sahne değişimlerinde ekstra keyframe atma (Stabilite için kritik)
+        "-pix_fmt", "yuv420p",
+
+        # ÇIKTI (Dengeli Bitrate)
+        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1800k", "-maxrate:v:0", "2000k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
+        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "800k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
+        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "500k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1200k", "-c:a:2", "aac", "-b:a:2", "64k",
+        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "500k", "-bufsize:v:3", "800k", "-c:a:3", "aac", "-b:a:3", "48k",
+        
+        # HLS
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "5", 
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
+        "-hls_allow_cache", "0",
         "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]
@@ -274,7 +312,7 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     async def wait_for_file_and_go_live(username, title, category, thumbnail):
         master_file = f"static/hls/{username}/master.m3u8"
         start_wait = time.time()
-        while time.time() - start_wait < 15:
+        while time.time() - start_wait < 30: # Bekleme süresini biraz artırdık (güvenli)
             if os.path.exists(master_file):
                 new_db = SessionLocal()
                 try:
@@ -297,6 +335,6 @@ async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
     except: pass
     finally:
-        cleanup_stream(user.username, db)
+        cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
