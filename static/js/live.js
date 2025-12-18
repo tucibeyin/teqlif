@@ -15,7 +15,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let rec = null;
     let broadcastWs = null;
 
-    // --- UI/MODERASYON ---
+    // --- 1. UI ---
     window.openModMenu = function (username) {
         if (MODE === 'broadcast' && username !== CONFIG.username) {
             activeModTarget = username;
@@ -40,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (lRow) { if (bidderName) { lRow.style.display = 'flex'; lRow.querySelector('.name').innerText = bidderName; } else { lRow.style.display = 'none'; } }
     }
 
-    // --- SOHBET ---
+    // --- 2. SOHBET ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -106,7 +106,7 @@ document.addEventListener('DOMContentLoaded', () => {
         layer.appendChild(el); setTimeout(() => { el.remove(); }, 3000);
     }
 
-    // --- YAYINCI ---
+    // --- 3. YAYINCI (SAFE MODE) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         canvas = document.getElementById('broadcast-canvas');
@@ -171,11 +171,10 @@ document.addEventListener('DOMContentLoaded', () => {
                         const audioTracks = localStream.getAudioTracks();
                         if (audioTracks.length > 0) canvasStream.addTrack(audioTracks[0]);
 
-                        // 🔥 ANDROID UYUMU İÇİN OTO-SEÇİM 🔥
-                        // VP8 genelde en güvenlisidir ama H264 de denenebilir.
-                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
+                        // 🔥 VP8 ÖNCELİKLİ (Android İçin En Güvenlisi) 🔥
+                        let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1200000 };
                         if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
-                            options = { mimeType: 'video/webm', videoBitsPerSecond: 1500000 };
+                            options = { mimeType: 'video/webm', videoBitsPerSecond: 1200000 };
                         }
 
                         try { rec = new MediaRecorder(canvasStream, options); }
@@ -187,8 +186,12 @@ document.addEventListener('DOMContentLoaded', () => {
                             }
                         };
 
-                        // 🔥 BURASI ÇOK ÖNEMLİ: 1000ms CHUNK 🔥
-                        rec.start(1000);
+                        // 🔥 1 SANİYE BEKLE (Isınma Süresi) 🔥
+                        setTimeout(() => {
+                            if (rec.state === 'inactive') {
+                                rec.start(1000);
+                            }
+                        }, 1000);
 
                         sendThumbnailSnapshot();
                         window.thumbInterval = setInterval(sendThumbnailSnapshot, 60000);
