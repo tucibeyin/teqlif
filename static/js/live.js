@@ -5,8 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function remoteLog(msg, level = 'INFO') {
         fetch('/log/client', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ msg: msg, level: level })
         }).catch(() => { });
     }
@@ -21,7 +20,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { }
     }
 
-    // --- UI Helpers ---
+    // --- UI ---
     window.openModMenu = function (u) {/*...*/ }; window.closeModMenu = function () {/*...*/ };
     window.restrictUser = function (a, d) {/*...*/ }; window.updatePriceDisplay = function (a, t, n) {/*...*/ };
     window.toggleAuction = function () {/*...*/ }; window.openResetModal = function () {/*...*/ };
@@ -48,7 +47,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    // --- 2. YAYINCI (GÜVENLİ MOD) ---
+    // --- 2. YAYINCI ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
@@ -57,12 +56,7 @@ document.addEventListener('DOMContentLoaded', () => {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
                     audio: { echoCancellation: true },
-                    video: {
-                        facingMode: 'user',
-                        width: { ideal: 640 },
-                        height: { ideal: 360 },
-                        frameRate: { ideal: 24 }
-                    }
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 360 } }
                 });
                 videoElement.srcObject = localStream;
                 function draw() {
@@ -93,11 +87,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    remoteLog("Yayın Başladı (Emniyet Sübabı Aktif)");
+                    remoteLog("Yayın Başladı (Streamer Mode)");
                     const stream = canvas.captureStream(24);
                     if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
 
-                    // Çok hafif ayar: 600 kbps
                     let opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 600000 };
                     if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm' };
 
@@ -105,18 +98,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            // 🔥 HAYAT KURTARAN KONTROL: Emniyet Sübabı 🔥
-                            // Eğer buffer 100KB'ı geçerse, veri gönderme (Browser çökmesini engeller)
                             if (broadcastWs.bufferedAmount > 100000) {
-                                remoteLog("Ağ Yavaş: Paket atlandı ⚠️", 'WARN');
+                                remoteLog("Paket atlandı", 'WARN');
                             } else {
                                 broadcastWs.send(e.data);
                             }
                         }
                     };
 
-                    // 500ms'lik küçük paketler gönder (Daha az yük)
-                    rec.start(500);
+                    rec.start(1000);
                     requestWakeLock();
 
                     setInterval(() => {
@@ -129,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs.onclose = () => {
                     remoteLog("WS Kapandı", 'WARN');
                     if (rec) rec.stop();
-                    alert("Yayın bağlantısı koptu. İnternet hızınızı kontrol edin.");
+                    alert("Yayın bağlantısı koptu.");
                     window.location.href = '/';
                 };
             });
@@ -143,32 +133,26 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- 3. İZLEYİCİ (RAW WEBM) ---
+    // --- 3. İZLEYİCİ (STREAMING RESPONSE) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
-            remoteLog("İzleyici Modu: " + u);
-            v.src = `/static/hls/${u}/stream.webm`;
+            remoteLog("İzleyici: " + u);
+            // 🔥 AKILLI YOL: Streaming Endpoint 🔥
+            v.src = `/stream/${u}`;
             v.type = "video/webm";
-
-            // Hata olursa (Dosya henüz oluşmadıysa veya bittiyse) yeniden dene
-            v.addEventListener('error', (e) => {
-                setTimeout(() => {
-                    v.src = `/static/hls/${u}/stream.webm?t=${Date.now()}`;
-                    v.play();
-                }, 2000);
-            });
-
-            // Eğer video biterse (buffer sonuna gelirse), 1sn sonra tekrar kontrol et
-            v.addEventListener('ended', () => {
-                setTimeout(() => {
-                    v.currentTime = v.duration; // Sona sar
-                    v.play();
-                }, 1000);
-            });
-
             v.play().catch(() => { v.muted = true; v.play(); });
+
+            v.onerror = () => {
+                remoteLog("Stream Hatası, bekleniyor...");
+                setTimeout(() => {
+                    v.src = `/stream/${u}?t=${Date.now()}`;
+                    v.load();
+                    v.play();
+                }, 3000);
+            };
+
             window.connectChat(u);
         }
     }
