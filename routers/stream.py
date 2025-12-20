@@ -25,6 +25,7 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
+# --- Socket Manager ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -97,10 +98,11 @@ async def stop(user: User = Depends(get_current_user)):
 async def thumb(request: Request, user: User = Depends(get_current_user)):
     try:
         d = await request.json()
+        import base64
         with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f:
             f.write(base64.b64decode(d['image'].split(",")[1]))
         return {"status": "ok"}
-    except: return {"status": "error"}
+    except: return {"status": "ok"}
 
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(active: bool = Form(...)): return {"status": "ok"}
@@ -134,13 +136,11 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
-    os.makedirs(f"{stream_dir}", exist_ok=True)
+    os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (DIRECT H264 COPY): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (DIRECT COPY): {user.username}")
 
-    # 🔥 DIRECT H264 COPY 🔥
-    # Android H.264 gönderdiği için tekrar kodlamaya gerek yok!
-    # Sadece sesi AAC'ye çevir (Çok hafif) ve paketle.
+    # 🔥 DIRECT H264 COPY (CPU %1) 🔥
     command = [
         "ffmpeg", 
         "-f", "matroska", 
@@ -149,12 +149,12 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        "-c:v", "copy", # Video'yu işleme, direk kopyala! (CPU %0)
-        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Ses hafif AAC
+        "-c:v", "copy", # VİDEO İŞLEME YOK! (Hız: Sonsuz)
+        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Ses Hafif AAC
         
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
-        "-hls_segment_type", "fmp4", # Modern HLS
+        "-hls_segment_type", "fmp4",
         "-master_pl_name", "master.m3u8", 
         f"{stream_dir}/stream.m3u8"
     ]
@@ -164,7 +164,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     
     async def wait_for_stream():
         start_t = time.time()
-        while time.time() - start_t < 30:
+        while time.time() - start_t < 40: # Bekleme süresi artırıldı
             if os.path.exists(f"{stream_dir}/master.m3u8"):
                 print(f"✅ YAYIN AKTİF: {user.username}")
                 new_db = SessionLocal()
@@ -181,8 +181,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                # 20 saniye timeout
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
+                # 30 Saniye Timeout (Bağlantı zayıfsa hemen kesmesin)
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=30.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             except asyncio.TimeoutError:

@@ -21,18 +21,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // --- UI ---
-    window.openModMenu = function (u) {/*...*/ }; window.closeModMenu = function () {/*...*/ };
-    window.restrictUser = function (a, d) {/*...*/ }; window.updatePriceDisplay = function (a, t, n) {/*...*/ };
-    window.toggleAuction = function () {/*...*/ }; window.openResetModal = function () {/*...*/ };
-    window.closeResetModal = function () {/*...*/ }; window.confirmReset = function () {/*...*/ };
-    window.sendBid = function (t, a) {/*...*/ }; window.sendManualBid = function (t) {/*...*/ };
-    window.sendMsg = function (t) { const i = document.getElementById('chat-input-' + (t == 'broadcast' ? 'broadcast' : t)); if (i && i.value.trim()) { window.CURRENT_SOCKET.send(i.value); i.value = ''; i.focus(); } };
-    window.openGiftMenu = function (u) { document.getElementById('giftMenu').style.display = 'block'; };
-    window.closeGiftMenu = function () { document.getElementById('giftMenu').style.display = 'none'; };
-    window.sendGift = function (t) {/*...*/ }; window.toggleFollow = function (u) {/*...*/ };
-    window.unmuteVideo = function (u) { const v = document.getElementById('video-' + u); if (v) { v.muted = false; } };
-
-    // --- CHAT ---
+    window.openModMenu = function (u) { document.getElementById('modMenu').style.display = 'flex'; document.getElementById('mod-target-name').innerText = u; };
+    window.closeModMenu = function () { document.getElementById('modMenu').style.display = 'none'; };
+    window.restrictUser = function (a, d) {/*...*/ };
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -47,7 +38,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    // --- 2. YAYINCI (SAFE MODE) ---
+    // --- 2. YAYINCI (HAFİF MOD - 480p) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
@@ -55,12 +46,16 @@ document.addEventListener('DOMContentLoaded', () => {
         async function initStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true },
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    },
                     video: {
                         facingMode: 'user',
+                        // 🔥 480p ÇÖZÜNÜRLÜK (RAM DOSTU) 🔥
                         width: { ideal: 640 },
-                        height: { ideal: 360 },
-                        frameRate: { ideal: 24 }
+                        height: { ideal: 480 },
+                        frameRate: { ideal: 24, max: 30 }
                     }
                 });
                 videoElement.srcObject = localStream;
@@ -92,16 +87,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    remoteLog("Yayın Başladı (H264 + Safe Mode)");
+                    remoteLog("Yayın Başlatılıyor (H.264 Lite)...");
                     const stream = canvas.captureStream(24);
                     if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
 
-                    // H.264 ZORLAMA
+                    // 🔥 H.264 ve DÜŞÜK BITRATE (800kbps) 🔥
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 800000 };
 
-                    // Fallback
+                    // Cihaz H.264 desteklemiyorsa mecburen VP8
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                        remoteLog("H264 yok, VP8 kullanılıyor (iOS sorunu olabilir)", 'WARN');
+                        remoteLog("H264 yok, VP8 (Fallback)", 'WARN');
                         options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 800000 };
                     }
 
@@ -109,16 +104,16 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            // 🔥 AGRESİF RAM KORUMASI: Buffer 100KB'ı geçerse paketi AT! 🔥
-                            if (broadcastWs.bufferedAmount > 100000) {
-                                console.warn("RAM Koruma: Paket atlandı");
+                            // Buffer 150KB'ı geçerse gönderme (Hafif koruma)
+                            if (broadcastWs.bufferedAmount > 150000) {
+                                console.warn("Ağ darşişti, paket atlandı.");
                             } else {
                                 broadcastWs.send(e.data);
                             }
                         }
                     };
 
-                    rec.start(1000);
+                    rec.start(1000); // 1 saniyelik paketler
                     requestWakeLock();
 
                     setInterval(() => {
@@ -131,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs.onclose = () => {
                     remoteLog("WS Kapandı", 'WARN');
                     if (rec) rec.stop();
-                    alert("Yayın bağlantısı koptu.");
+                    alert("Bağlantı koptu.");
                     window.location.href = '/';
                 };
             });
@@ -150,22 +145,24 @@ document.addEventListener('DOMContentLoaded', () => {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
-            const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
+            const src = `/static/hls/${u}/master.m3u8`;
+            remoteLog("İzleyici: " + u);
+
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    liveSyncDurationCount: 3,
-                    maxBufferLength: 30,
-                    manifestLoadingTimeOut: 15000,
+                    // Hata toleransını artır
+                    manifestLoadingTimeOut: 20000,
                     manifestLoadingMaxRetry: 10
                 });
                 hls.loadSource(src);
                 hls.attachMedia(v);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
-                hls.on(Hls.Events.ERROR, (e, d) => {
-                    if (d.fatal) {
-                        switch (d.type) {
+
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch (data.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
                             case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
                             default: hls.destroy(); break;
@@ -174,7 +171,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                v.src = src; v.addEventListener('loadedmetadata', () => v.play().catch(() => { v.muted = true; v.play() }));
+                v.src = src;
+                v.addEventListener('loadedmetadata', () => v.play().catch(() => { v.muted = true; v.play() }));
             }
             window.connectChat(u);
         }
