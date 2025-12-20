@@ -50,7 +50,6 @@ def cleanup_stream(username):
     except: pass
     finally: db.close()
 
-# --- Routes ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -107,7 +106,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         token = websocket.cookies.get("access_token")
         from jose import jwt
-        from utils import SECRET_KEY, ALGORITHM
+        from utils import SECRET_KEY, algorithms=[ALGORITHM]
         payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
         user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: pass
@@ -120,7 +119,6 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     print(f"🎥 YAYIN BAŞLIYOR (RAW MODE): {user.username}")
     
-    # 🔥 DOSYA YAZMA İŞLEMİ (FFMPEG YOK) 🔥
     video_path = f"{stream_dir}/stream.webm"
     file_handle = open(video_path, "wb")
 
@@ -139,7 +137,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
+                # 15 saniye veri gelmezse kapat
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
                 if not data: break
                 file_handle.write(data)
                 file_handle.flush()
