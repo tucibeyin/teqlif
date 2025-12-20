@@ -51,10 +51,9 @@ def cleanup_stream(username):
         try:
             active_processes[username].terminate()
             active_processes[username].wait(timeout=2)
-        except: 
-            active_processes[username].kill()
+        except: proc.kill()
         del active_processes[username]
-
+    
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
@@ -69,7 +68,6 @@ def write_to_ffmpeg(process, data):
             process.stdin.flush()
         except: pass
 
-# --- Routes ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -137,30 +135,23 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (EMERGENCY MODE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (AUDIO ONLY MODE): {user.username}")
 
-    # 🔥 EMERGENCY MODE: 240p @ 15fps, 250k Bitrate 🔥
+    # 🔥 SADECE SES (CPU %0.1 Kullanır) 🔥
+    # Eğer bu çalışırsa, sorun %100 Video Kodlama gücüdür.
     command = [
         "ffmpeg", 
-        "-f", "matroska", 
+        "-f", "webm", 
         "-analyzeduration", "500000", "-probesize", "500000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        "-vf", "scale=-2:240", # Sadece 240p
-        "-r", "15", # 15 FPS (Çok düşük CPU)
+        "-vn", # Video YOK (Sadece Ses)
         
-        "-c:v", "libx264", 
-        "-preset", "ultrafast", 
-        "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "30", "-keyint_min", "30",
+        "-c:a", "aac", "-b:a", "64k", "-ac", "1",
         
-        "-b:v", "250k", "-maxrate", "300k", "-bufsize", "500k", # 250kbps (Çok hafif)
-        "-c:a", "aac", "-b:a", "32k", "-ac", "1", "-ar", "22050", # Mono, 22kHz ses
-        
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
         "-master_pl_name", "master.m3u8", 
         f"{stream_dir}/stream.m3u8"
