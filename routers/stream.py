@@ -15,7 +15,6 @@ from utils import get_current_user, SECRET_KEY, ALGORITHM
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- RENKLİ LOGLAMA ---
 def log_server(msg):
     t = datetime.now().strftime("%H:%M:%S")
     print(f"[{t}] 🖥️ SERVER: {msg}")
@@ -24,19 +23,23 @@ def log_server(msg):
 async def client_log(request: Request):
     try:
         data = await request.json()
-        t = datetime.now().strftime("%H:%M:%S")
-        # Client loglarını log dosyasına bas
-        print(f"[{t}] 📱 CLIENT: {data.get('msg')}")
+        print(f"[{datetime.now().strftime('%H:%M:%S')}] 📱 CLIENT: {data.get('msg')}")
         return {"status": "ok"}
     except: return {"status": "err"}
 
-# --- SOCKET MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
         await ws.accept()
-    async def disconnect(self, ws, room): pass
-    async def broadcast_to_room(self, msg, room): pass 
+        if room not in self.rooms: self.rooms[room] = []
+        self.rooms[room].append({"ws": ws, "user": user})
+    async def disconnect(self, ws, room): pass # Basitleştirildi
+    async def broadcast_to_room(self, msg, room):
+        if room in self.rooms:
+            for c in self.rooms[room]:
+                try: await c["ws"].send_text(msg)
+                except: pass
+    async def kick_user(self, room, user): pass 
 
 manager = ConnectionManager()
 
@@ -48,17 +51,18 @@ def cleanup_stream(username):
         if u: u.is_live = False; db.commit()
     finally: db.close()
 
-# --- VİDEO OKUYUCU ---
-def video_generator(filepath, viewer_ip):
-    log_server(f"İzleyici ({viewer_ip}) dosya istiyor: {filepath}")
+# --- STREAM GENERATOR ---
+def video_generator(filepath, ip):
+    log_server(f"👀 İZLEYİCİ ({ip}) bağlandı, dosya bekleniyor...")
     tries = 0
     while not os.path.exists(filepath):
         time.sleep(0.5)
         tries += 1
         if tries > 20: 
-            log_server(f"❌ Dosya bulunamadı! ({filepath})")
+            log_server(f"❌ Dosya bulunamadı! İptal ediliyor.")
             return 
 
+    log_server(f"✅ Dosya bulundu, akış başlatılıyor -> {ip}")
     with open(filepath, "rb") as f:
         while True:
             data = f.read(1024 * 64)
@@ -69,28 +73,30 @@ def video_generator(filepath, viewer_ip):
 
 @router.get("/stream/{username}")
 async def stream_video(username: str, request: Request):
-    return StreamingResponse(video_generator(f"static/hls/{username}/stream.webm", request.client.host), media_type="video/webm")
+    file_path = f"static/hls/{username}/stream.webm"
+    return StreamingResponse(video_generator(file_path, request.client.host), media_type="video/webm")
 
-# --- ROUTERLAR ---
+# --- STANDART ENDPOINTS ---
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login", 303)
-    streams = db.query(User).filter(User.is_live == True).all()
-    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": streams, "broadcaster": None})
-
+    target_user = None
+    if broadcaster: target_user = db.query(User).filter(User.username == broadcaster).first()
+    active_streams = db.query(User).filter(User.is_live == True).all()
+    if mode == "broadcast": target_user = user
+    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user, "auction_active": False})
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
-    log_server(f"Yayın kaydı DB'de açıldı: {user.username}")
     return {"status": "ok"}
-
 @router.post("/broadcast/stop")
 async def stop(user: User = Depends(get_current_user)):
     cleanup_stream(user.username)
+    await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
+    await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
-
 @router.post("/broadcast/thumbnail")
 async def thumb(): return {"status": "ok"}
 @router.post("/broadcast/toggle_auction")
@@ -102,69 +108,63 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# --- 🔥 GÖBEK (YAYINCI) SOCKETİ 🔥 ---
+# --- YAYINCI SOCKET ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
-    log_server("Socket bağlantısı kabul edildi.")
+    log_server("WS Bağlantısı Kabul Edildi")
     
-    # Kimlik
     user = None
     try:
         token = websocket.cookies.get("access_token")
         from jose import jwt
         payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
         user = db.query(User).filter(User.email == payload.get("sub")).first()
-        username = user.username
-        log_server(f"Kullanıcı: {username}")
     except: 
-        log_server("❌ Kimlik doğrulama hatası!")
         await websocket.close()
         return
 
-    # Klasör
-    stream_dir = f"static/hls/{username}"
+    stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
     
     video_path = f"{stream_dir}/stream.webm"
     file_handle = open(video_path, "wb")
-    log_server(f"Dosya açıldı: {video_path}")
+    log_server(f"Kayıt Başladı: {video_path}")
 
-    packet_count = 0
-    total_bytes = 0
+    # Bildirim
+    async def notify():
+        await asyncio.sleep(1)
+        new_db = SessionLocal()
+        u = new_db.query(User).filter(User.username == user.username).first()
+        u.is_live = True; new_db.commit(); new_db.close()
+        await manager.broadcast_to_room(json.dumps({"type": "stream_added", "username": user.username, "title": "Canlı", "category": "Genel", "thumbnail": ""}), "home")
+    
+    loop = asyncio.get_event_loop()
+    loop.create_task(notify())
 
+    pkt = 0
+    total = 0
     try:
         while True:
-            try:
-                # Veri Bekleme
-                # log_server(f"⏳ Veri bekleniyor...") 
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
+            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
+            if not data: break
+            
+            file_handle.write(data)
+            file_handle.flush()
+            os.fsync(file_handle.fileno())
+            
+            pkt += 1
+            total += len(data)
+            if pkt % 20 == 0:
+                log_server(f"📥 ALINDI: {len(data)} B | TOPLAM: {total/1024:.1f} KB | 💾 DİSK OK")
                 
-                if not data: 
-                    log_server("⚠️ Boş veri geldi (Connection Closed?)")
-                    break
-                
-                size = len(data)
-                packet_count += 1
-                total_bytes += size
-                
-                # Yazma
-                file_handle.write(data)
-                file_handle.flush()
-                os.fsync(file_handle.fileno()) # Zorla diske yaz
-                
-                # DETAYLI LOG
-                # Her 5 pakette bir diskteki boyutunu kontrol edip basıyoruz
-                if packet_count % 5 == 0:
-                    disk_size = os.path.getsize(video_path)
-                    log_server(f"📥 ALINDI: {size} B | TOPLAM: {total_bytes/1024:.1f} KB | 💾 DİSK: {disk_size/1024:.1f} KB")
-
-            except asyncio.TimeoutError:
-                log_server(f"💀 TIMEOUT! {username} veri göndermeyi kesti.")
-                break 
+    except asyncio.TimeoutError:
+        log_server(f"⚠️ TIMEOUT: {user.username}")
     except Exception as e:
         log_server(f"❌ HATA: {e}")
     finally:
         file_handle.close()
-        cleanup_stream(username)
+        cleanup_stream(user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
