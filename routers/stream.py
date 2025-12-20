@@ -1,5 +1,10 @@
-import asyncio
+import os
 import json
+import shutil
+import subprocess
+import sys
+import asyncio 
+import time
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -11,11 +16,6 @@ from utils import get_current_user
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- GLOBAL RELAY HAFIZASI ---
-# Canlı yayın verilerini burada tutacağız (Disk yerine RAM)
-# Format: { "username": { "header": bytearray, "viewers": set() } }
-active_relays = {}
-
 # --- Loglama ---
 @router.post("/log/client")
 async def client_log(request: Request):
@@ -25,7 +25,7 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
-# --- Socket Manager (Chat İçin) ---
+# --- Socket Manager ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -40,10 +40,37 @@ class ConnectionManager:
             for c in self.rooms[room]:
                 try: await c["ws"].send_text(msg)
                 except: pass
+    async def kick_user(self, room, user): pass 
 
 manager = ConnectionManager()
+active_processes = {}
 
-# --- STANDART API ---
+def cleanup_stream(username):
+    print(f"🛑 SERVER: {username} temizleniyor...")
+    if username in active_processes:
+        proc = active_processes[username]
+        try:
+            proc.terminate()
+            proc.wait(timeout=2)
+        except: 
+            try: proc.kill()
+            except: pass
+        del active_processes[username]
+    
+    db = SessionLocal()
+    try:
+        u = db.query(User).filter(User.username == username).first()
+        if u: u.is_live = False; u.is_auction_active = False; db.commit()
+    except: pass
+    finally: db.close()
+
+def write_to_ffmpeg(process, data):
+    if process and process.stdin:
+        try:
+            process.stdin.write(data)
+            process.stdin.flush()
+        except: pass
+
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -59,37 +86,23 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: str = No
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
-    # Relay odasını hazırla
-    if user.username not in active_relays:
-        active_relays[user.username] = {"header": None, "viewers": set()}
     return {"status": "ok"}
 
 @router.post("/broadcast/stop")
 async def stop(user: User = Depends(get_current_user)):
-    # Temizlik
-    if user.username in active_relays:
-        del active_relays[user.username]
-        
-    db = SessionLocal()
-    try:
-        u = db.query(User).filter(User.username == user.username).first()
-        if u: u.is_live = False; db.commit()
-    finally: db.close()
-    
+    cleanup_stream(user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
 
 @router.post("/broadcast/thumbnail")
 async def thumb(request: Request, user: User = Depends(get_current_user)):
-    # Thumbnail opsiyonel, hata verirse sistemi durdurmasın
     try:
         d = await request.json()
-        import base64
         with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f:
             f.write(base64.b64decode(d['image'].split(",")[1]))
         return {"status": "ok"}
-    except: return {"status": "ok"}
+    except: return {"status": "error"}
 
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(active: bool = Form(...)): return {"status": "ok"}
@@ -97,8 +110,6 @@ async def toggle_auction(active: bool = Form(...)): return {"status": "ok"}
 async def reset_auction(): return {"status": "ok"}
 @router.post("/gift/send")
 async def send_gift(user: User=Depends(get_current_user)): return {"status": "success", "new_balance": user.diamonds}
-
-# --- WEBSOCKETS ---
 
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket, stream: str = "home"):
@@ -109,83 +120,83 @@ async def chat(ws: WebSocket, stream: str = "home"):
             await manager.broadcast_to_room(json.dumps({"type": "chat", "user": "Guest", "msg": d}), stream)
     except: await manager.disconnect(ws, stream)
 
-# 🔥 YAYINCI SOCKETİ (FFMPEG YOK, SADECE AKTARIM) 🔥
 @router.websocket("/ws/broadcast")
-async def broadcast_endpoint(websocket: WebSocket, db: Session = Depends(get_db)):
+async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
-    
-    # Basit Kimlik Doğrulama
+    user = None
     try:
         token = websocket.cookies.get("access_token")
         from jose import jwt
         from utils import SECRET_KEY, ALGORITHM
         payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
         user = db.query(User).filter(User.email == payload.get("sub")).first()
-    except: 
-        await websocket.close()
-        return
-
-    username = user.username
-    print(f"🎥 RELAY BAŞLADI: {username}")
+    except: pass
     
-    # Hafıza alanını oluştur
-    if username not in active_relays:
-        active_relays[username] = {"header": None, "viewers": set()}
+    if not user: await websocket.close(); return
 
-    # Yayını Aktif İşaretle
-    user.is_live = True; db.commit()
-    await manager.broadcast_to_room(json.dumps({"type": "stream_added", "username": username, "title": "Canlı", "category": "Genel", "thumbnail": ""}), "home")
+    stream_dir = f"static/hls/{user.username}"
+    if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
+    os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    try:
-        while True:
-            # Veriyi al
-            data = await websocket.receive_bytes()
-            
-            # İlk paket genellikle başlık (header) bilgisidir, bunu sakla
-            # İzleyiciler sonradan gelirse bu başlığa ihtiyaç duyarlar
-            if active_relays[username]["header"] is None:
-                active_relays[username]["header"] = data
-                print(f"✅ HEADER ALINDI ({len(data)} bytes)")
-            
-            # Bağlı olan tüm izleyicilere gönder
-            viewers = list(active_relays[username]["viewers"])
-            for viewer_ws in viewers:
-                try:
-                    await viewer_ws.send_bytes(data)
-                except:
-                    # İzleyici kopmuşsa listeden sil
-                    active_relays[username]["viewers"].discard(viewer_ws)
-                    
-    except WebSocketDisconnect:
-        print(f"🛑 RELAY DURDU: {username}")
-    finally:
-        if username in active_relays:
-            del active_relays[username]
-        # DB Kapat
-        u = db.query(User).filter(User.username == username).first()
-        if u: u.is_live = False; db.commit()
+    print(f"🎥 YAYIN BAŞLIYOR (UNIVERSAL COPY MODE): {user.username}")
 
-# 🔥 İZLEYİCİ SOCKETİ (YENİ) 🔥
-@router.websocket("/ws/watch/{username}")
-async def watch_endpoint(websocket: WebSocket, username: str):
-    await websocket.accept()
-    
-    if username not in active_relays:
-        await websocket.close()
-        return
-
-    # İzleyiciyi listeye ekle
-    active_relays[username]["viewers"].add(websocket)
-    print(f"👀 YENİ İZLEYİCİ: {username}")
-
-    try:
-        # Eğer yayıncının header'ı varsa, önce onu gönder (Başlatmak için şart)
-        if active_relays[username]["header"]:
-            await websocket.send_bytes(active_relays[username]["header"])
+    # 🔥 EVRENSEL HLS AYARI (CPU DOSTU) 🔥
+    # -c:v copy: Videoyu kodlamadan geçir (CPU %1)
+    # -c:a aac: Sesi AAC yap (HLS uyumu için şart, hafif işlem)
+    # -hls_segment_type fmp4: Hem H.264 hem VP8 taşıyabilir (WebM gelirse de çalışır)
+    command = [
+        "ffmpeg", 
+        "-f", "webm", 
+        "-analyzeduration", "500000", "-probesize", "500000", 
+        "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
+        "-err_detect", "ignore_err",
+        "-i", "pipe:0",
         
-        # Sonsuz döngüde bekle (Veri yayıncıdan gelecek)
+        "-c:v", "copy",
+        "-c:a", "aac", "-b:a", "64k", "-ac", "2",
+        
+        "-f", "hls", 
+        "-hls_time", "2", 
+        "-hls_list_size", "6", 
+        "-hls_segment_type", "fmp4", # Modern HLS (iOS + Android)
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
+        "-master_pl_name", "master.m3u8", 
+        f"{stream_dir}/stream.m3u8"
+    ]
+    
+    # Logları sistem loguna bas
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
+    active_processes[user.username] = process
+    
+    async def wait_for_stream():
+        start_t = time.time()
+        while time.time() - start_t < 30:
+            if os.path.exists(f"{stream_dir}/master.m3u8"):
+                print(f"✅ YAYIN AKTİF: {user.username}")
+                new_db = SessionLocal()
+                u = new_db.query(User).filter(User.username == user.username).first()
+                u.is_live = True; new_db.commit(); new_db.close()
+                payload = json.dumps({"type": "stream_added", "username": user.username, "title": "Canlı", "category": "Genel", "thumbnail": ""})
+                await manager.broadcast_to_room(payload, "home")
+                break
+            await asyncio.sleep(0.5)
+
+    loop = asyncio.get_event_loop()
+    loop.create_task(wait_for_stream())
+
+    try:
         while True:
-            await websocket.receive_text() # Kalp atışı için beklenebilir
-    except:
-        if username in active_relays:
-            active_relays[username]["viewers"].discard(websocket)
+            try:
+                # 15 saniye veri gelmezse kapat
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
+                if not data: break
+                await loop.run_in_executor(None, write_to_ffmpeg, process, data)
+            except asyncio.TimeoutError:
+                print(f"⚠️ SERVER: Timeout {user.username}")
+                break 
+    except Exception as e:
+        print(f"❌ SERVER HATASI: {e}")
+    finally:
+        cleanup_stream(user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")

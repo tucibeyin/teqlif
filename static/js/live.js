@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.CURRENT_SOCKET = null;
     let rec = null;
     let broadcastWs = null;
-    let watchWs = null;
     let localStream = null;
     let wakeLock = null;
 
@@ -33,6 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.sendGift = function (t) {/*...*/ }; window.toggleFollow = function (u) {/*...*/ };
     window.unmuteVideo = function (u) { const v = document.getElementById('video-' + u); if (v) { v.muted = false; } };
 
+    // --- CHAT ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -47,18 +47,40 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    // --- 2. YAYINCI (RELAY MODE) ---
+    // --- 2. YAYINCI ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
+        const canvas = document.getElementById('broadcast-canvas');
 
         async function initStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true },
-                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 360 } }
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true
+                    },
+                    video: {
+                        facingMode: 'user',
+                        width: { ideal: 1280 },
+                        height: { ideal: 720 },
+                        frameRate: { ideal: 30 }
+                    }
                 });
                 videoElement.srcObject = localStream;
-            } catch (e) { remoteLog("Kamera Hatası: " + e, 'ERROR'); alert("Kamera Hatası!"); }
+                // Önizlemeyi çiz
+                function draw() {
+                    if (videoElement.readyState === 4) {
+                        const vRatio = videoElement.videoWidth / videoElement.videoHeight;
+                        const cRatio = canvas.width / canvas.height;
+                        let dw, dh, sx, sy;
+                        if (vRatio > cRatio) { dh = canvas.height; dw = dh * vRatio; sx = (canvas.width - dw) / 2; sy = 0; }
+                        else { dw = canvas.width; dh = dw / vRatio; sx = 0; sy = (canvas.height - dh) / 2; }
+                        canvas.getContext('2d').drawImage(videoElement, sx, sy, dw, dh);
+                    }
+                    requestAnimationFrame(draw);
+                }
+                draw();
+            } catch (e) { remoteLog("Kamera Hatası: " + e, 'ERROR'); alert("Kamera başlatılamadı!"); }
         }
         initStream();
 
@@ -74,35 +96,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    remoteLog("Relay Başladı");
+                    remoteLog("Yayın Başlatılıyor (H.264 Öncelikli)...");
+                    const stream = canvas.captureStream(30);
+                    if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
 
-                    // WebM/VP8 Codec (Standart)
-                    let options = { mimeType: 'video/webm; codecs=vp8,opus' };
+                    // 🔥 KRİTİK: H.264 ZORLAMA 🔥
+                    // Bu sıralama evrensel uyumluluk için çok önemlidir.
+                    let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1500000 };
+
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                        options = { mimeType: 'video/webm' };
+                        remoteLog("H.264 desteklenmiyor, VP8'e geçiliyor (iOS'ta çalışmayabilir).", 'WARN');
+                        options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
+                    }
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { mimeType: 'video/webm' }; // Varsayılan
                     }
 
-                    try { rec = new MediaRecorder(localStream, options); } catch (e) { rec = new MediaRecorder(localStream); }
+                    remoteLog("Seçilen Codec: " + options.mimeType);
+
+                    try { rec = new MediaRecorder(stream, options); } catch (e) { rec = new MediaRecorder(stream); }
 
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            // Emniyet Sübabı: Buffer dolarsa gönderme
-                            if (broadcastWs.bufferedAmount > 200000) {
-                                console.warn("Drop frame");
+                            // Emniyet Sübabı: İnternet çok kötüyse gönderme
+                            if (broadcastWs.bufferedAmount > 250000) {
+                                console.warn("Buffer dolu, paket atlandı.");
                             } else {
                                 broadcastWs.send(e.data);
                             }
                         }
                     };
 
-                    // 100ms gecikme ile gönder (Canlı akış için ideal)
-                    rec.start(100);
+                    // Veriyi 1 saniyelik parçalar halinde gönder
+                    rec.start(1000);
                     requestWakeLock();
+
+                    setInterval(() => {
+                        if (broadcastWs.readyState === 1 && broadcastWs.bufferedAmount === 0) {
+                            fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.4) }) });
+                        }
+                    }, 60000);
                 };
 
                 broadcastWs.onclose = () => {
+                    remoteLog("WS Kapandı", 'WARN');
                     if (rec) rec.stop();
-                    alert("Yayın koptu.");
+                    alert("Bağlantı kesildi.");
                     window.location.href = '/';
                 };
             });
@@ -110,51 +149,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.stopBroadcast = () => {
             if (rec) rec.stop(); if (broadcastWs) broadcastWs.close();
+            if (wakeLock) wakeLock.release();
             fetch('/broadcast/stop', { method: 'POST' });
             window.location.href = '/';
         };
     }
 
-    // --- 3. İZLEYİCİ (MSE PLAYER) ---
+    // --- 3. İZLEYİCİ (HLS) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
-            remoteLog("İzleyici Bağlanıyor: " + u);
+            const src = `/static/hls/${u}/stream.m3u8`;
+            remoteLog("İzleyici: " + u);
 
-            const mediaSource = new MediaSource();
-            v.src = URL.createObjectURL(mediaSource);
+            if (Hls.isSupported()) {
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                });
+                hls.loadSource(src);
+                hls.attachMedia(v);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
 
-            mediaSource.addEventListener('sourceopen', () => {
-                // Codec eşleşmesi önemli. Genelde vp8,opus çalışır.
-                let mimeCodec = 'video/webm; codecs="vp8,opus"';
-                if (!MediaSource.isTypeSupported(mimeCodec)) {
-                    mimeCodec = 'video/webm; codecs="vp9,opus"'; // Fallback
-                }
-
-                try {
-                    const sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
-                    sourceBuffer.mode = 'sequence';
-
-                    watchWs = new WebSocket(`${protocol}://${window.location.host}/ws/watch/${u}`);
-                    watchWs.binaryType = "arraybuffer";
-
-                    watchWs.onmessage = (e) => {
-                        if (sourceBuffer.updating || mediaSource.readyState !== 'open') return;
-                        try {
-                            sourceBuffer.appendBuffer(e.data);
-                        } catch (err) { console.log(err); }
-                    };
-
-                    watchWs.onclose = () => remoteLog("Yayın bitti veya koptu.");
-
-                } catch (e) {
-                    remoteLog("MSE Hatası: " + e, 'ERROR');
-                    v.innerHTML = "Tarayıcınız bu yayını desteklemiyor.";
-                }
-            });
-
-            v.play().catch(() => { v.muted = true; v.play(); });
+                // Hata Yönetimi
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                hls.destroy();
+                                break;
+                        }
+                    }
+                });
+            }
+            else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                // iOS / Safari
+                v.src = src;
+                v.addEventListener('loadedmetadata', () => v.play().catch(() => { v.muted = true; v.play() }));
+            }
             window.connectChat(u);
         }
     }
