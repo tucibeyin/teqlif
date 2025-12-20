@@ -3,13 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    window.forcePlay = function (username) {
-        const v = document.getElementById(`video-${username}`);
-        const overlay = document.getElementById(`play-overlay-${username}`);
-        if (overlay) overlay.style.display = 'none';
-        if (v) { v.muted = false; v.play().catch(() => { v.muted = true; v.play() }); }
-    };
+    function remoteLog(msg) { console.log(msg); }
 
+    // --- YAYINCI (PREMIUM KALİTE) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
@@ -18,9 +14,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user', width: 480, height: 854, frameRate: 24 } });
+                // Kaynak kalitesini artırdık: 720p @ 30fps
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true },
+                    video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: 30 }
+                });
                 videoElement.srcObject = stream;
-            } catch (e) { alert("Kamera Hatası!"); }
+            } catch (e) { alert("Kamera Hatası: " + e); }
         }
         initCamera();
 
@@ -35,15 +35,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    const stream = canvas.captureStream(24);
+                    const stream = canvas.captureStream(30);
                     stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
 
-                    let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
-                    if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8' };
+                    // 🔥 ULTRA YÜKSEK BITRATE (4 Mbps) 🔥
+                    // Sunucuya ne kadar kaliteli veri giderse, çıktı o kadar iyi olur.
+                    let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 4000000 };
+
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        console.log("H.264 desteklenmiyor, VP8'e düşülüyor (Kalite düşebilir).");
+                        options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 4000000 };
+                    }
 
                     rec = new MediaRecorder(stream, options);
-                    rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
-                    rec.start(1000);
+                    rec.ondataavailable = e => {
+                        if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data);
+                    };
+                    rec.start(1000); // 1 saniyelik paketler
 
                     const ctx = canvas.getContext('2d');
                     function draw() {
@@ -52,7 +60,10 @@ document.addEventListener('DOMContentLoaded', () => {
                     }
                     draw();
 
-                    setInterval(() => { if (broadcastWs.readyState === 1) fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.3) }) }); }, 60000);
+                    // Thumbnail
+                    setInterval(() => {
+                        if (broadcastWs.readyState === 1) fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.4) }) });
+                    }, 60000);
                 };
                 broadcastWs.onclose = () => { if (rec) rec.stop(); alert("Yayın Bitti"); location.href = '/'; };
             });
@@ -60,6 +71,7 @@ document.addEventListener('DOMContentLoaded', () => {
         window.stopBroadcast = () => { if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); fetch('/broadcast/stop', { method: 'POST' }); location.href = '/'; };
     }
 
+    // --- İZLEYİCİ (ADAPTIVE HLS) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
@@ -67,22 +79,32 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (v) {
             if (Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+                    backBufferLength: 90
+                });
                 hls.loadSource(src);
                 hls.attachMedia(v);
+
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    v.muted = true; v.play().then(() => {
+                    v.muted = true;
+                    v.play().then(() => {
                         const ov = document.getElementById(`play-overlay-${u}`);
                         if (ov) ov.style.display = 'none';
                     }).catch(() => { });
                 });
+
+                // Kalite değişimlerini logla (Merak edersen konsoldan bak)
+                hls.on(Hls.Events.LEVEL_SWITCHED, (event, data) => {
+                    console.log(`🎚️ Kalite Değişti: Seviye ${data.level}`);
+                });
+
             } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                // iOS Native Player
                 v.src = src;
                 v.addEventListener('loadedmetadata', () => {
-                    v.muted = true; v.play().then(() => {
-                        const ov = document.getElementById(`play-overlay-${u}`);
-                        if (ov) ov.style.display = 'none';
-                    }).catch(() => { });
+                    v.muted = true; v.play().catch(() => { });
                 });
             }
         }
