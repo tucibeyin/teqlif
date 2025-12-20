@@ -20,13 +20,7 @@ def log_server(msg):
     print(f"[{t}] 🖥️ SERVER: {msg}")
 
 @router.post("/log/client")
-async def client_log(request: Request):
-    try:
-        data = await request.json()
-        # Client loglarını sunucu konsolunda kirlilik yapmaması için kapattım
-        # print(f"[{datetime.now().strftime('%H:%M:%S')}] 📱 CLIENT: {data.get('msg')}")
-        return {"status": "ok"}
-    except: return {"status": "err"}
+async def client_log(request: Request): return {"status": "ok"}
 
 class ConnectionManager:
     def __init__(self): self.rooms = {}
@@ -52,53 +46,60 @@ def cleanup_stream(username):
         if u: u.is_live = False; db.commit()
     finally: db.close()
 
-# --- 🔥 GÜVENLİ AKIŞ MOTORU (BUFFER FIX) 🔥 ---
+# --- 🔥 GARANTİLİ AKIŞ MOTORU 🔥 ---
 def video_generator(filepath, ip):
     log_server(f"👀 İZLEYİCİ ({ip}) bağlandı.")
     
-    tries = 0
-    while not os.path.exists(filepath):
+    # Dosyanın oluşmasını bekle (Max 10sn)
+    for _ in range(20):
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 4096:
+            break
         time.sleep(0.5)
-        tries += 1
-        if tries > 20: return 
+    else:
+        log_server(f"❌ Dosya bulunamadı veya boş: {filepath}")
+        return
 
     with open(filepath, "rb") as f:
-        # 1. ADIM: GENİŞ HEADER GÖNDER (32 KB)
-        # WebM dosya yapısının (Tracks, Codec Info) kesinlikle gitmesi lazım.
-        header_chunk = f.read(32 * 1024) 
-        yield header_chunk
+        # 1. HEADER (İlk 4KB - Dosya Kimliği)
+        header = f.read(4096)
+        if header: yield header
         
-        # 2. ADIM: DOSYA BOYUTUNU KONTROL ET
-        current_pos = f.tell()
+        # 2. KONUM BELİRLEME
         f.seek(0, 2) # Sona git
-        file_size = f.tell()
+        total_size = f.tell()
         
-        # 3. ADIM: AKILLI ATLAMA (SMART SEEK)
-        # Son 1MB (1024KB) veriyi al. Bu yaklaşık 5-8 saniyelik görüntü demek.
-        # Bu kadar geriye gitmek, "Keyframe" yakalama şansımızı %99 yapar.
-        safe_buffer = 1024 * 1024 
+        # Eğer dosya 2MB'dan büyükse, son 1MB'a atla (Canlı Yayın Modu)
+        # Değilse, baştan başla (Header'dan hemen sonrası)
+        seek_pos = 4096
+        if total_size > (2 * 1024 * 1024):
+            seek_pos = total_size - (1024 * 1024) # Son 1MB
+            log_server(f"⏩ {ip} -> Canlıya atlandı (Son 1MB)")
         
-        if file_size > (current_pos + safe_buffer):
-            f.seek(file_size - safe_buffer)
-            log_server(f"⏩ {ip} için senkronizasyon (Son 1MB).")
-        else:
-            # Dosya zaten küçükse veya yeni başlamışsa atlama yapma
-            f.seek(current_pos)
+        f.seek(seek_pos)
 
-        # 4. ADIM: AKIŞ
+        # 3. KESİNTİSİZ AKIŞ DÖNGÜSÜ
+        no_data_count = 0
         while True:
-            data = f.read(64 * 1024)
-            if not data:
-                time.sleep(0.05)
-                continue
-            yield data
+            chunk = f.read(64 * 1024) # 64KB Oku
+            if chunk:
+                yield chunk
+                no_data_count = 0 # Veri gelirse sayacı sıfırla
+            else:
+                # Veri yoksa bekle (Yayın devam ediyor olabilir)
+                time.sleep(0.1)
+                no_data_count += 1
+                
+                # 10 saniye boyunca hiç veri gelmezse kapat (Yayın bitmiş olabilir)
+                if no_data_count > 100:
+                    log_server(f"👋 {ip} -> Veri akışı bitti.")
+                    break
 
 @router.get("/stream/{username}")
 async def stream_video(username: str, request: Request):
     file_path = f"static/hls/{username}/stream.webm"
     return StreamingResponse(video_generator(file_path, request.client.host), media_type="video/webm")
 
-# --- STANDART ENDPOINTS ---
+# --- DİĞER ROTALAR ---
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
 @router.get("/live", response_class=HTMLResponse)
