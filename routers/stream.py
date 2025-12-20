@@ -11,7 +11,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
 from models import User
-from utils import get_current_user
+from utils import get_current_user, SECRET_KEY, ALGORITHM
 
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
@@ -25,7 +25,7 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
-# --- Socket ---
+# --- Socket Manager ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -40,13 +40,13 @@ class ConnectionManager:
             for c in self.rooms[room]:
                 try: await c["ws"].send_text(msg)
                 except: pass
+    async def kick_user(self, room, user): pass 
 
 manager = ConnectionManager()
 active_processes = {}
 
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
-    # 🔥 DÜZELTME: proc değişkeni burada tanımlanmalı 🔥
     if username in active_processes:
         proc = active_processes[username]
         try:
@@ -72,6 +72,7 @@ def write_to_ffmpeg(process, data):
             process.stdin.flush()
         except: pass
 
+# --- Routes ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -129,7 +130,6 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         token = websocket.cookies.get("access_token")
         from jose import jwt
-        from utils import SECRET_KEY, ALGORITHM
         payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
         user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: pass
@@ -140,30 +140,26 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (240p ULTRAFAST): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (DIRECT COPY MODE): {user.username}")
 
-    # 🔥 240p @ 15fps (CPU DOSTU) 🔥
-    # Amaç: VP8'i H264'e çevirirken CPU'yu öldürmemek.
+    # 🔥 DIRECT COPY MODE (CPU %1) 🔥
+    # Video işlenmez, direk kopyalanır.
+    # Ses AAC yapılır (HLS uyumu için).
     command = [
         "ffmpeg", 
         "-f", "webm", 
-        "-analyzeduration", "500000", "-probesize", "500000", 
+        "-analyzeduration", "2000000", "-probesize", "2000000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        "-vf", "scale=-2:240,fps=15", # Çözünürlüğü ve kare hızını düşür
+        "-c:v", "copy", # VİDEOYU İŞLEME!
+        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Sesi işle (Hafif)
         
-        "-c:v", "libx264", 
-        "-preset", "ultrafast", # En hızlı kodlama
-        "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "30", "-keyint_min", "30", 
-        
-        "-b:v", "350k", "-maxrate", "400k", "-bufsize", "800k", # Düşük bitrate
-        "-c:a", "aac", "-b:a", "48k", "-ac", "1", # Mono ses
-        
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
+        "-f", "hls", 
+        "-hls_time", "4", # 4 saniyelik parçalar (Daha az dosya işlemi)
+        "-hls_list_size", "6", 
+        "-hls_segment_type", "fmp4", # Modern HLS (WebM ile uyumlu olabilir)
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
         "-master_pl_name", "master.m3u8", 
         f"{stream_dir}/stream.m3u8"
@@ -174,7 +170,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     
     async def wait_for_stream():
         start_t = time.time()
-        while time.time() - start_t < 30:
+        while time.time() - start_t < 40:
             if os.path.exists(f"{stream_dir}/master.m3u8"):
                 print(f"✅ YAYIN AKTİF: {user.username}")
                 new_db = SessionLocal()
@@ -191,7 +187,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                # 30 saniye timeout (Android gecikmelerine tolerans)
+                # 30 saniye veri gelmezse kapat
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=30.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
