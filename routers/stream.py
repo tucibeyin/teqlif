@@ -193,4 +193,4 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     finally:
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
-        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")""
+        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
