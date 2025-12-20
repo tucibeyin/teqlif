@@ -20,8 +20,10 @@ def log_server(msg):
     print(f"[{t}] 🖥️ SERVER: {msg}")
 
 @router.post("/log/client")
-async def client_log(request: Request): return {"status": "ok"}
+async def client_log(request: Request):
+    return {"status": "ok"}
 
+# --- SOCKET MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -46,60 +48,43 @@ def cleanup_stream(username):
         if u: u.is_live = False; db.commit()
     finally: db.close()
 
-# --- 🔥 GARANTİLİ AKIŞ MOTORU 🔥 ---
+# --- 🔥 GÜVENİLİR VİDEO OKUYUCU 🔥 ---
 def video_generator(filepath, ip):
-    log_server(f"👀 İZLEYİCİ ({ip}) bağlandı.")
+    log_server(f"👀 İZLEYİCİ ({ip}) bağlandı. Dosya baştan gönderiliyor.")
     
-    # Dosyanın oluşmasını bekle (Max 10sn)
-    for _ in range(20):
-        if os.path.exists(filepath) and os.path.getsize(filepath) > 4096:
+    # 1. Dosyayı Bekle
+    for _ in range(30): # 15 saniye bekle
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
             break
         time.sleep(0.5)
     else:
-        log_server(f"❌ Dosya bulunamadı veya boş: {filepath}")
+        log_server(f"❌ Dosya bulunamadı: {filepath}")
         return
 
+    # 2. Dosyayı Aç ve Oku
     with open(filepath, "rb") as f:
-        # 1. HEADER (İlk 4KB - Dosya Kimliği)
-        header = f.read(4096)
-        if header: yield header
-        
-        # 2. KONUM BELİRLEME
-        f.seek(0, 2) # Sona git
-        total_size = f.tell()
-        
-        # Eğer dosya 2MB'dan büyükse, son 1MB'a atla (Canlı Yayın Modu)
-        # Değilse, baştan başla (Header'dan hemen sonrası)
-        seek_pos = 4096
-        if total_size > (2 * 1024 * 1024):
-            seek_pos = total_size - (1024 * 1024) # Son 1MB
-            log_server(f"⏩ {ip} -> Canlıya atlandı (Son 1MB)")
-        
-        f.seek(seek_pos)
-
-        # 3. KESİNTİSİZ AKIŞ DÖNGÜSÜ
-        no_data_count = 0
         while True:
-            chunk = f.read(64 * 1024) # 64KB Oku
-            if chunk:
-                yield chunk
-                no_data_count = 0 # Veri gelirse sayacı sıfırla
+            # Büyük parçalar halinde oku (Hız için)
+            data = f.read(128 * 1024) 
+            
+            if data:
+                yield data
             else:
-                # Veri yoksa bekle (Yayın devam ediyor olabilir)
+                # Veri bittiyse (canlı yayının ucuna geldik demektir)
+                # Biraz bekle ve tekrar dene
                 time.sleep(0.1)
-                no_data_count += 1
                 
-                # 10 saniye boyunca hiç veri gelmezse kapat (Yayın bitmiş olabilir)
-                if no_data_count > 100:
-                    log_server(f"👋 {ip} -> Veri akışı bitti.")
+                # Dosya hala yerinde mi kontrol et
+                if not os.path.exists(filepath):
                     break
 
 @router.get("/stream/{username}")
 async def stream_video(username: str, request: Request):
     file_path = f"static/hls/{username}/stream.webm"
+    # StreamingResponse ile dosya gibi davranır ama kopmaz
     return StreamingResponse(video_generator(file_path, request.client.host), media_type="video/webm")
 
-# --- DİĞER ROTALAR ---
+# --- STANDART ENDPOINTS ---
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
 @router.get("/live", response_class=HTMLResponse)
@@ -131,9 +116,11 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
+# --- YAYINCI SOCKET ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
+    log_server("Yayıncı Bağlandı")
     
     user = None
     try:
@@ -152,6 +139,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     video_path = f"{stream_dir}/stream.webm"
     file_handle = open(video_path, "wb")
     
+    # Bildirim
     async def notify():
         await asyncio.sleep(1)
         new_db = SessionLocal()
@@ -164,6 +152,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
+            # 20 saniye timeout
             data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
             if not data: break
             
