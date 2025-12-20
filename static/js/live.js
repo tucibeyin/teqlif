@@ -13,6 +13,7 @@ document.addEventListener('DOMContentLoaded', () => {
     window.CURRENT_SOCKET = null;
     let rec = null;
     let broadcastWs = null;
+    let watchWs = null;
     let localStream = null;
     let wakeLock = null;
 
@@ -20,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { }
     }
 
-    // --- UI ---
+    // --- UI Helpers ---
     window.openModMenu = function (u) {/*...*/ }; window.closeModMenu = function () {/*...*/ };
     window.restrictUser = function (a, d) {/*...*/ }; window.updatePriceDisplay = function (a, t, n) {/*...*/ };
     window.toggleAuction = function () {/*...*/ }; window.openResetModal = function () {/*...*/ };
@@ -32,7 +33,6 @@ document.addEventListener('DOMContentLoaded', () => {
     window.sendGift = function (t) {/*...*/ }; window.toggleFollow = function (u) {/*...*/ };
     window.unmuteVideo = function (u) { const v = document.getElementById('video-' + u); if (v) { v.muted = false; } };
 
-    // --- CHAT ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -47,10 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    // --- 2. YAYINCI ---
+    // --- 2. YAYINCI (RELAY MODE) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
-        const canvas = document.getElementById('broadcast-canvas');
 
         async function initStream() {
             try {
@@ -59,18 +58,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 360 } }
                 });
                 videoElement.srcObject = localStream;
-                function draw() {
-                    if (videoElement.readyState === 4) {
-                        const vRatio = videoElement.videoWidth / videoElement.videoHeight;
-                        const cRatio = canvas.width / canvas.height;
-                        let dw, dh, sx, sy;
-                        if (vRatio > cRatio) { dh = canvas.height; dw = dh * vRatio; sx = (canvas.width - dw) / 2; sy = 0; }
-                        else { dw = canvas.width; dh = dw / vRatio; sx = 0; sy = (canvas.height - dh) / 2; }
-                        canvas.getContext('2d').drawImage(videoElement, sx, sy, dw, dh);
-                    }
-                    requestAnimationFrame(draw);
-                }
-                draw();
             } catch (e) { remoteLog("Kamera Hatası: " + e, 'ERROR'); alert("Kamera Hatası!"); }
         }
         initStream();
@@ -87,39 +74,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    remoteLog("Yayın Başladı (Streamer Mode)");
-                    const stream = canvas.captureStream(24);
-                    if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
+                    remoteLog("Relay Başladı");
 
-                    let opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 600000 };
-                    if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm' };
+                    // WebM/VP8 Codec (Standart)
+                    let options = { mimeType: 'video/webm; codecs=vp8,opus' };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { mimeType: 'video/webm' };
+                    }
 
-                    try { rec = new MediaRecorder(stream, opts); } catch (e) { rec = new MediaRecorder(stream); }
+                    try { rec = new MediaRecorder(localStream, options); } catch (e) { rec = new MediaRecorder(localStream); }
 
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            if (broadcastWs.bufferedAmount > 100000) {
-                                remoteLog("Paket atlandı", 'WARN');
+                            // Emniyet Sübabı: Buffer dolarsa gönderme
+                            if (broadcastWs.bufferedAmount > 200000) {
+                                console.warn("Drop frame");
                             } else {
                                 broadcastWs.send(e.data);
                             }
                         }
                     };
 
-                    rec.start(1000);
+                    // 100ms gecikme ile gönder (Canlı akış için ideal)
+                    rec.start(100);
                     requestWakeLock();
-
-                    setInterval(() => {
-                        if (broadcastWs.readyState === 1 && broadcastWs.bufferedAmount === 0) {
-                            fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.3) }) });
-                        }
-                    }, 60000);
                 };
 
                 broadcastWs.onclose = () => {
-                    remoteLog("WS Kapandı", 'WARN');
                     if (rec) rec.stop();
-                    alert("Yayın bağlantısı koptu.");
+                    alert("Yayın koptu.");
                     window.location.href = '/';
                 };
             });
@@ -127,32 +110,51 @@ document.addEventListener('DOMContentLoaded', () => {
 
         window.stopBroadcast = () => {
             if (rec) rec.stop(); if (broadcastWs) broadcastWs.close();
-            if (wakeLock) wakeLock.release();
             fetch('/broadcast/stop', { method: 'POST' });
             window.location.href = '/';
         };
     }
 
-    // --- 3. İZLEYİCİ (STREAMING RESPONSE) ---
+    // --- 3. İZLEYİCİ (MSE PLAYER) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
-            remoteLog("İzleyici: " + u);
-            // 🔥 AKILLI YOL: Streaming Endpoint 🔥
-            v.src = `/stream/${u}`;
-            v.type = "video/webm";
+            remoteLog("İzleyici Bağlanıyor: " + u);
+
+            const mediaSource = new MediaSource();
+            v.src = URL.createObjectURL(mediaSource);
+
+            mediaSource.addEventListener('sourceopen', () => {
+                // Codec eşleşmesi önemli. Genelde vp8,opus çalışır.
+                let mimeCodec = 'video/webm; codecs="vp8,opus"';
+                if (!MediaSource.isTypeSupported(mimeCodec)) {
+                    mimeCodec = 'video/webm; codecs="vp9,opus"'; // Fallback
+                }
+
+                try {
+                    const sourceBuffer = mediaSource.addSourceBuffer(mimeCodec);
+                    sourceBuffer.mode = 'sequence';
+
+                    watchWs = new WebSocket(`${protocol}://${window.location.host}/ws/watch/${u}`);
+                    watchWs.binaryType = "arraybuffer";
+
+                    watchWs.onmessage = (e) => {
+                        if (sourceBuffer.updating || mediaSource.readyState !== 'open') return;
+                        try {
+                            sourceBuffer.appendBuffer(e.data);
+                        } catch (err) { console.log(err); }
+                    };
+
+                    watchWs.onclose = () => remoteLog("Yayın bitti veya koptu.");
+
+                } catch (e) {
+                    remoteLog("MSE Hatası: " + e, 'ERROR');
+                    v.innerHTML = "Tarayıcınız bu yayını desteklemiyor.";
+                }
+            });
+
             v.play().catch(() => { v.muted = true; v.play(); });
-
-            v.onerror = () => {
-                remoteLog("Stream Hatası, bekleniyor...");
-                setTimeout(() => {
-                    v.src = `/stream/${u}?t=${Date.now()}`;
-                    v.load();
-                    v.play();
-                }, 3000);
-            };
-
             window.connectChat(u);
         }
     }
