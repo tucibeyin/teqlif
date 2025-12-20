@@ -1,24 +1,25 @@
 {% extends "base.html" %}
 
 {% block content %}
-{% set mode = request.query_params.get('mode') %}
-{% set timestamp = 123456789 %} {# Rastgele sayı şimdilik #}
-
 <link rel="stylesheet" href="/static/css/live.css?v={{ range(1, 10000) | random }}">
 
 <style>
+    /* Temel Video Stilleri */
     .cinema-video {
         object-fit: contain !important;
         background: #000;
         width: 100%;
         height: 100%;
+        position: absolute;
+        top: 0;
+        left: 0;
     }
 
     #broadcast-canvas {
         display: none;
     }
 
-    /* MODAL STYLES */
+    /* MODAL VE BUTONLAR */
     .modal-overlay {
         position: fixed;
         top: 0;
@@ -52,25 +53,15 @@
         cursor: pointer;
     }
 
-    .btn-confirm-red {
-        background: #e74c3c;
-        border: none;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 12px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-
-    /* PLAY BUTTON OVERLAY */
-    #play-overlay {
+    /* OYNATMA KATMANI (Kırmızı Buton) */
+    .play-layer {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.6);
-        z-index: 5000;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 500;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -86,6 +77,9 @@
         font-weight: bold;
         box-shadow: 0 0 30px rgba(231, 76, 60, 0.6);
         animation: pulse 1.5s infinite;
+        display: flex;
+        align-items: center;
+        gap: 10px;
     }
 
     @keyframes pulse {
@@ -104,7 +98,6 @@
 </style>
 
 <div class="teqlif-os">
-    <div id="gift-animation-layer"></div>
 
     {% if mode == 'broadcast' %}
     <div class="screen" style="position: relative; height: 100vh; overflow: hidden;">
@@ -138,12 +131,7 @@
     <div class="feed-scroll">
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
-            <div style="position: relative; width: 100%; height: 100%;">
-
-                <div id="play-btn-{{ stream.username }}" class="play-overlay"
-                    onclick="forcePlay('{{ stream.username }}')">
-                    <div class="big-play-btn">▶️ İZLE</div>
-                </div>
+            <div style="position: relative; width: 100%; height: 100%; background: #000;">
 
                 <video id="video-{{ stream.username }}" class="cinema-video" playsinline webkit-playsinline></video>
 
@@ -174,29 +162,13 @@
 </div>
 
 <script>
-    window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}", broadcaster: "{{ broadcaster.username if broadcaster else '' }}" };
+    // Python'dan gelen verileri JS'e aktar
+    window.TEQLIF_CONFIG = {
+        mode: "{{ mode }}",
+        username: "{{ user.username if user else 'anon' }}",
+        broadcaster: "{{ broadcaster.username if broadcaster else '' }}"
+    };
 </script>
 
 <script src="/static/js/live.js?v={{ range(1, 10000) | random }}"></script>
-
-<script>
-    // HTML içinden Global Fonksiyon
-    function forcePlay(username) {
-        console.log("Force Play Tetiklendi: " + username);
-        const btn = document.getElementById('play-btn-' + username);
-        const vid = document.getElementById('video-' + username);
-
-        if (btn) btn.style.display = 'none';
-
-        if (vid) {
-            vid.muted = false; // Sesi açmayı dene
-            vid.src = '/stream/' + username;
-            vid.play().catch(e => {
-                console.log("Sesli oynatma hatası, sessiz deneniyor...");
-                vid.muted = true;
-                vid.play();
-            });
-        }
-    }
-</script>
 {% endblock %}
