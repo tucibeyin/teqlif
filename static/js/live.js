@@ -56,7 +56,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initStream() {
             try {
-                localStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true }, video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } });
+                localStream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true },
+                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
+                });
                 videoElement.srcObject = localStream;
                 function draw() {
                     if (videoElement.readyState === 4) {
@@ -90,7 +93,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const stream = canvas.captureStream(30);
                     if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
 
-                    // 1 Mbps Bitrate Limiti
+                    // 1 Mbps Bitrate
                     let opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
                     if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm' };
 
@@ -98,9 +101,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            // 🔥 CRASH KORUMASI: Buffer 500KB'ı geçerse paketi at!
-                            if (broadcastWs.bufferedAmount > 500000) {
-                                console.warn("Ağ yavaş! Paket atlanıyor...");
+                            // 🔥 CRASH KORUMASI: Buffer 256KB'ı geçerse paketi at! 🔥
+                            if (broadcastWs.bufferedAmount > 256000) {
+                                console.log("⚠️ Veri Atlandı (Buffer Dolu)");
                             } else {
                                 broadcastWs.send(e.data);
                             }
@@ -111,7 +114,9 @@ document.addEventListener('DOMContentLoaded', () => {
                     requestWakeLock();
 
                     setInterval(() => {
-                        fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.4) }) });
+                        if (broadcastWs.readyState === 1 && broadcastWs.bufferedAmount === 0) {
+                            fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.4) }) });
+                        }
                     }, 60000);
                 };
 
@@ -137,14 +142,16 @@ document.addEventListener('DOMContentLoaded', () => {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
+            // Cache Buster
             const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
+
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
                     liveSyncDurationCount: 3,
                     maxBufferLength: 30,
-                    manifestLoadingTimeOut: 15000,
+                    manifestLoadingTimeOut: 20000,
                     manifestLoadingMaxRetry: 10
                 });
                 hls.loadSource(src);
