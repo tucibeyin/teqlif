@@ -3,15 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    function remoteLog(msg, level = 'INFO') {
-        console.log(`[${level}] ${msg}`);
-        fetch('/log/client', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ msg: msg, level: level })
-        }).catch(() => { });
-    }
+    function remoteLog(msg) { console.log(msg); }
 
-    // --- YAYINCI ---
+    // --- YAYINCI (H.264 ZORUNLU) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
@@ -20,40 +14,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true, noiseSuppression: true },
-                    video: { facingMode: 'user', width: 640, height: 480, frameRate: 24 }
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user', width: 640, height: 480, frameRate: 24 } });
                 videoElement.srcObject = stream;
-                remoteLog("✅ KAMERA AÇIK");
             } catch (e) { alert("Kamera Hatası!"); }
         }
         initCamera();
 
         document.getElementById('btn-start-broadcast').addEventListener('click', () => {
-            const fd = new FormData();
-            fd.append('title', document.getElementById('streamTitle').value);
-            fd.append('category', document.getElementById('streamCategory').value);
-
-            fetch('/broadcast/start', { method: 'POST', body: fd }).then(() => {
+            fetch('/broadcast/start', { method: 'POST', body: new FormData() }).then(() => {
                 document.getElementById('setup-layer').style.display = 'none';
                 document.getElementById('live-ui').style.display = 'flex';
+
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
                     const stream = canvas.captureStream(24);
                     stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
 
-                    // iOS uyumluluğu için H.264 dene, olmazsa VP8
-                    let options;
-                    if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
-                        options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1000000 };
-                    } else {
-                        options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
+                    // 🔥 H.264 ZORUNLU (iOS ve HLS UYUMU İÇİN) 🔥
+                    let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 1500000 };
+
+                    // Eğer tarayıcı H.264 desteklemiyorsa bu sistem çalışmaz (FFmpeg copy için H264 şart)
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        alert("Cihazınız H.264 Yayınını Desteklemiyor! Yayın açılamaz.");
+                        window.location.href = '/';
+                        return;
                     }
 
-                    try { rec = new MediaRecorder(stream, options); }
-                    catch (e) { rec = new MediaRecorder(stream); }
-
+                    rec = new MediaRecorder(stream, options);
                     rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
                     rec.start(1000);
 
@@ -63,8 +50,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         requestAnimationFrame(draw);
                     }
                     draw();
-
-                    setInterval(() => { if (broadcastWs.readyState === 1) fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.3) }) }); }, 60000);
                 };
                 broadcastWs.onclose = () => { if (rec) rec.stop(); alert("Yayın Bitti"); location.href = '/'; };
             });
@@ -72,55 +57,44 @@ document.addEventListener('DOMContentLoaded', () => {
         window.stopBroadcast = () => { if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); fetch('/broadcast/stop', { method: 'POST' }); location.href = '/'; };
     }
 
-    // --- İZLEYİCİ ---
+    // --- İZLEYİCİ (HLS PLAYER) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
+        const src = `/static/hls/${u}/master.m3u8`;
+
         if (v) {
-            remoteLog(`👀 İZLEYİCİ: ${u}`);
+            // 1. HLS.js Desteği (PC/Android)
+            if (Hls.isSupported()) {
+                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+                hls.loadSource(src);
+                hls.attachMedia(v);
+                hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play(); }));
 
-            // Kaynak Ata
-            v.src = `/stream/${u}`;
-            v.type = "video/webm";
-
-            // Oynat Butonu
-            const playBtn = document.createElement("div");
-            playBtn.className = "play-overlay";
-            playBtn.innerHTML = `<div class="play-circle"><i class="fa-solid fa-play" style="color:white; font-size:30px; margin-left:5px;"></i></div>`;
-            playBtn.onclick = () => {
-                v.muted = false;
-                v.play().then(() => playBtn.style.display = 'none').catch(() => {
-                    v.muted = true; v.play(); playBtn.style.display = 'none';
-                });
-            };
-            v.parentElement.appendChild(playBtn);
-
-            // Otomatik Dene
-            v.muted = true;
-            v.play().then(() => playBtn.style.display = 'none').catch(() => { });
-
-            // 🔥 AGRESİF HIZLANDIRICI (JUMP START) 🔥
-            // Video ilk veriyi aldığında (loadeddata) hemen sona atla
-            v.addEventListener('loadeddata', () => {
-                if (v.duration === Infinity && v.buffered.length > 0) {
-                    v.currentTime = v.buffered.end(v.buffered.length - 1) - 0.1;
-                    remoteLog("🚀 BAŞLANGIÇ ZIPLAMASI YAPILDI");
-                }
-            });
-
-            // Sürekli Kontrol
-            setInterval(() => {
-                if (v.buffered.length > 0) {
-                    const end = v.buffered.end(v.buffered.length - 1);
-                    // 2 saniyeden fazla gerideyse atla
-                    if (end - v.currentTime > 2) {
-                        console.log("⏩ Hızlandırılıyor...");
-                        v.currentTime = end - 0.1;
+                // Hata Yönetimi
+                hls.on(Hls.Events.ERROR, function (event, data) {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR:
+                                console.log("Ağ hatası, toparlanıyor...");
+                                hls.startLoad();
+                                break;
+                            case Hls.ErrorTypes.MEDIA_ERROR:
+                                console.log("Medya hatası, toparlanıyor...");
+                                hls.recoverMediaError();
+                                break;
+                            default:
+                                hls.destroy();
+                                break;
+                        }
                     }
-                }
-            }, 3000);
-
-            v.onerror = () => { setTimeout(() => { v.src = `/stream/${u}?t=${Date.now()}`; v.load(); v.play().catch(() => { }); }, 2000); };
+                });
+            }
+            // 2. Native HLS Desteği (iOS Safari)
+            else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                v.src = src;
+                v.addEventListener('loadedmetadata', () => v.play().catch(() => { v.muted = true; v.play(); }));
+            }
         }
     }
 });
