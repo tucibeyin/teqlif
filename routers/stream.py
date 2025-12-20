@@ -25,7 +25,6 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
-# --- Socket Manager ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -48,14 +47,13 @@ active_processes = {}
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
-        proc = active_processes[username]
         try:
-            proc.terminate()
-            proc.wait(timeout=2)
+            active_processes[username].terminate()
+            active_processes[username].wait(timeout=2)
         except: 
-            try: proc.kill()
+            try: active_processes[username].kill()
             except: pass
-        del active_processes[username]
+        if username in active_processes: del active_processes[username]
     
     db = SessionLocal()
     try:
@@ -138,33 +136,29 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (UNIVERSAL COPY MODE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (DIRECT H264 COPY): {user.username}")
 
-    # 🔥 EVRENSEL HLS AYARI (CPU DOSTU) 🔥
-    # -c:v copy: Videoyu kodlamadan geçir (CPU %1)
-    # -c:a aac: Sesi AAC yap (HLS uyumu için şart, hafif işlem)
-    # -hls_segment_type fmp4: Hem H.264 hem VP8 taşıyabilir (WebM gelirse de çalışır)
+    # 🔥 DIRECT H264 COPY 🔥
+    # Android H.264 gönderdiği için tekrar kodlamaya gerek yok!
+    # Sadece sesi AAC'ye çevir (Çok hafif) ve paketle.
     command = [
         "ffmpeg", 
-        "-f", "webm", 
+        "-f", "matroska", 
         "-analyzeduration", "500000", "-probesize", "500000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        "-c:v", "copy",
-        "-c:a", "aac", "-b:a", "64k", "-ac", "2",
+        "-c:v", "copy", # Video'yu işleme, direk kopyala! (CPU %0)
+        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Ses hafif AAC
         
-        "-f", "hls", 
-        "-hls_time", "2", 
-        "-hls_list_size", "6", 
-        "-hls_segment_type", "fmp4", # Modern HLS (iOS + Android)
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
+        "-hls_segment_type", "fmp4", # Modern HLS
         "-master_pl_name", "master.m3u8", 
         f"{stream_dir}/stream.m3u8"
     ]
     
-    # Logları sistem loguna bas
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
     
@@ -187,8 +181,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                # 15 saniye veri gelmezse kapat
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
+                # 20 saniye timeout
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             except asyncio.TimeoutError:
@@ -199,4 +193,4 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     finally:
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
-        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
+        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")""
