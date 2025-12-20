@@ -11,7 +11,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }).catch(() => { });
     }
 
-    // --- 2. YAYINCI (BU KISIM ZATEN SAĞLAM) ---
+    // --- 2. YAYINCI (AYNI KALIYOR) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
@@ -23,10 +23,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initStream() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: 24 } });
+                // Mobilde dikey yayın için height > width istenir ama PC desteği için 480p güvenlidir
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true },
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: 24 }
+                });
                 videoElement.srcObject = stream;
                 remoteLog("✅ KAMERA: Açıldı");
-            } catch (e) { remoteLog("❌ KAMERA HATA: " + e); alert("Kamera Hatası!"); }
+            } catch (e) { remoteLog("❌ KAMERA HATA: " + e, 'ERROR'); alert("Kamera Hatası!"); }
         }
         initStream();
 
@@ -40,19 +44,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs.onopen = () => {
                     remoteLog("✅ WS BAĞLANDI. Kayıt başlıyor...");
                     const stream = canvas.captureStream(24);
-                    if (videoElement.srcObject && videoElement.srcObject.getAudioTracks().length > 0) stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
+                    if (videoElement.srcObject.getAudioTracks().length > 0) stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
 
                     let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm' };
 
                     rec = new MediaRecorder(stream, options);
-                    let pkt = 0;
                     rec.ondataavailable = e => {
-                        if (e.data.size > 0 && broadcastWs.readyState === WebSocket.OPEN) {
-                            broadcastWs.send(e.data);
-                            pkt++;
-                            if (pkt % 20 === 0) remoteLog(`📤 Pkt #${pkt} (${e.data.size}b)`);
-                        }
+                        if (e.data.size > 0 && broadcastWs.readyState === WebSocket.OPEN) broadcastWs.send(e.data);
                     };
                     rec.start(1000);
                     requestWakeLock();
@@ -72,33 +71,42 @@ document.addEventListener('DOMContentLoaded', () => {
         window.stopBroadcast = () => { if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); fetch('/broadcast/stop', { method: 'POST' }); window.location.href = '/'; };
     }
 
-    // --- 3. İZLEYİCİ (FIXED: SOURCE ASSIGNMENT) ---
+    // --- 3. İZLEYİCİ (LATENCY KILLER EKLENDİ) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
 
         if (v) {
-            remoteLog(`👀 İZLEYİCİ: Başlatılıyor -> ${u}`);
-
-            // 🔥 ADIM 1: KAYNAĞI HEMEN ATA 🔥
+            remoteLog(`👀 İZLEYİCİ: Hazır -> ${u}`);
             v.src = `/stream/${u}`;
             v.type = "video/webm";
 
-            // --- OYNAT BUTONU ---
+            // --- 1. LATENCY KILLER (GECİKME YOK EDİCİ) ---
+            setInterval(() => {
+                if (v.buffered.length > 0) {
+                    const end = v.buffered.end(v.buffered.length - 1);
+                    const latency = end - v.currentTime;
+
+                    // Eğer gecikme 2 saniyeden fazlaysa, canlıya atla
+                    if (latency > 2) {
+                        console.log(`⏩ Gecikme (${latency.toFixed(1)}s) düzeltiliyor...`);
+                        v.currentTime = end - 0.1; // Sonun 0.1sn gerisine atla
+                    }
+                }
+            }, 2000); // 2 saniyede bir kontrol et
+
+            // --- 2. OYNAT BUTONU ---
             const overlay = document.createElement("div");
-            overlay.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5); display:flex; justify-content:center; align-items:center; z-index:9999; cursor:pointer;";
-            overlay.innerHTML = `<div style="background:#e74c3c; color:white; padding:20px 40px; font-size:24px; border-radius:50px;">▶️ OYNAT</div>`;
+            overlay.style.cssText = "position:absolute; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.4); display:flex; justify-content:center; align-items:center; z-index:9999; cursor:pointer;";
+            overlay.innerHTML = `<div class="big-play-btn">▶️ CANLI YAYINI İZLE</div>`;
             v.parentElement.appendChild(overlay);
 
-            // Buton Tıklama
             overlay.onclick = () => {
-                remoteLog("🖱️ Butona basıldı");
-                v.muted = false; // Sesli dene
+                v.muted = false;
                 v.play().then(() => {
                     overlay.style.display = 'none';
                     remoteLog("✅ Oynatma Başladı (Sesli)");
-                }).catch(err => {
-                    remoteLog("⚠️ Sesli hata, sessiz deneniyor: " + err);
+                }).catch(() => {
                     v.muted = true;
                     v.play().then(() => {
                         overlay.style.display = 'none';
@@ -107,27 +115,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             };
 
-            // Otomatik Deneme
+            // Otomatik Dene
             v.muted = true;
-            v.play().then(() => {
-                overlay.style.display = 'none';
-                remoteLog("✅ Otomatik Başladı");
-            }).catch(e => remoteLog("ℹ️ Otomatik engellendi, buton bekleniyor."));
+            v.play().then(() => overlay.style.display = 'none').catch(() => { });
 
-            // Event Logları
-            v.addEventListener('loadstart', () => remoteLog("Yükleniyor..."));
-            v.addEventListener('playing', () => remoteLog("Akıyor!"));
-            v.addEventListener('error', () => {
-                remoteLog("Hata oluştu, 2sn sonra tekrar deneniyor...");
+            v.onerror = () => {
                 setTimeout(() => {
                     v.src = `/stream/${u}?t=${Date.now()}`;
-                    v.load();
-                    v.play().catch(() => { });
+                    v.load(); v.play().catch(() => { });
                 }, 2000);
-            });
-
-            // Chat
-            const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${CONFIG.broadcaster}`);
+            };
         }
     }
 });
