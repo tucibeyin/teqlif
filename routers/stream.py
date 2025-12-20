@@ -25,7 +25,6 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
-# --- Socket Manager ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -68,7 +67,6 @@ def write_to_ffmpeg(process, data):
             process.stdin.flush()
         except: pass
 
-# --- Routes ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -136,10 +134,9 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (ZERO-COPY MODE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (RESCUE MODE): {user.username}")
 
-    # 🔥 ZERO-COPY FFmpeg (CPU %1 Kullanır) 🔥
-    # WebM (VP8) -> fMP4 HLS (Sadece konteyner değiştirir, kodlama yapmaz)
+    # 🔥 RESCUE MODE: 360p @ 24fps (Düşük CPU) 🔥
     command = [
         "ffmpeg", 
         "-f", "webm", 
@@ -148,17 +145,23 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        # Kodlama YOK (Copy)
-        "-c:v", "copy",
-        "-c:a", "copy", 
+        "-vf", "scale=-2:360,fps=24", # 360p ve 24 kare (Çok hafif)
         
-        # HLS Ayarları (fMP4 Zorunlu)
-        "-f", "hls", 
-        "-hls_time", "2", 
-        "-hls_list_size", "6", 
-        "-hls_segment_type", "fmp4", # 🔥 ÖNEMLİ: VP8 için fMP4 şart
-        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
-        f"{stream_dir}/master.m3u8"
+        "-c:v", "libx264", 
+        "-preset", "ultrafast", # Hız > Kalite
+        "-tune", "zerolatency", 
+        "-profile:v", "baseline", "-level", "3.0", 
+        "-g", "48", "-keyint_min", "48", # 2 saniyelik GOP (24fps * 2)
+        "-sc_threshold", "0",
+        "-pix_fmt", "yuv420p",
+        
+        "-b:v", "600k", "-maxrate", "800k", "-bufsize", "1200k", # Düşük Bitrate
+        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Mono ses
+        
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
+        "-master_pl_name", "master.m3u8", 
+        f"{stream_dir}/stream.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
@@ -183,8 +186,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                # 15 saniye timeout (Android gecikmelerine tolerans)
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
+                # 10 saniye veri gelmezse kapat
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             except asyncio.TimeoutError:
@@ -194,5 +197,3 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         print(f"❌ SERVER HATASI: {e}")
     finally:
         cleanup_stream(user.username)
-        await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
-        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
