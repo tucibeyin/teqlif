@@ -25,7 +25,6 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
-# --- Socket Manager ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -72,7 +71,6 @@ def write_to_ffmpeg(process, data):
             process.stdin.flush()
         except: pass
 
-# --- Routes ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -140,27 +138,24 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (DIRECT COPY MODE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (ROBUST H264): {user.username}")
 
-    # 🔥 DIRECT COPY MODE (CPU %1) 🔥
-    # Video işlenmez, direk kopyalanır.
-    # Ses AAC yapılır (HLS uyumu için).
+    # 🔥 ROBUST COPY MODE (CPU %1) 🔥
+    # -analyzeduration ve -probesize artırıldı ki başlangıcı kaçırmasın
     command = [
         "ffmpeg", 
-        "-f", "webm", 
-        "-analyzeduration", "2000000", "-probesize", "2000000", 
+        "-f", "matroska", 
+        "-analyzeduration", "10000000", "-probesize", "10000000", # Daha büyük analiz tamponu
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        "-c:v", "copy", # VİDEOYU İŞLEME!
-        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Sesi işle (Hafif)
+        "-c:v", "copy", # Video'yu işleme
+        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Ses Hafif AAC
         
-        "-f", "hls", 
-        "-hls_time", "4", # 4 saniyelik parçalar (Daha az dosya işlemi)
-        "-hls_list_size", "6", 
-        "-hls_segment_type", "fmp4", # Modern HLS (WebM ile uyumlu olabilir)
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
+        "-hls_segment_type", "fmp4",
         "-master_pl_name", "master.m3u8", 
         f"{stream_dir}/stream.m3u8"
     ]
@@ -187,7 +182,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                # 30 saniye veri gelmezse kapat
+                # 30 Saniye Timeout
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=30.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
