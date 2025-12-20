@@ -6,7 +6,7 @@ import sys
 import asyncio 
 import time
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
@@ -48,12 +48,14 @@ active_processes = {}
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
+        proc = active_processes[username]
         try:
-            active_processes[username].terminate()
-            active_processes[username].wait(timeout=2)
+            proc.terminate()
+            proc.wait(timeout=2)
         except: 
-            active_processes[username].kill()
-        del active_processes[username]
+            try: proc.kill()
+            except: pass
+        if username in active_processes: del active_processes[username]
 
     db = SessionLocal()
     try:
@@ -126,7 +128,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         token = websocket.cookies.get("access_token")
         from jose import jwt
-        # 🔥 DÜZELTME BURADA: ALGORITHM direk import edildi 🔥
+        # 🔥 DÜZELTME BURADA: Syntax hatası giderildi 🔥
         from utils import SECRET_KEY, ALGORITHM
         payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
         user = db.query(User).filter(User.email == payload.get("sub")).first()
@@ -136,11 +138,11 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
-    os.makedirs(stream_dir, exist_ok=True)
+    os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (EMERGENCY AUDIO): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (360p LITE): {user.username}")
 
-    # 🔥 SADECE SES (Hafif) 🔥
+    # 🔥 360p @ 15fps (En Hafif HLS Modu) 🔥
     command = [
         "ffmpeg", 
         "-f", "webm", 
@@ -149,9 +151,16 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        "-vn", # Video YOK
+        "-vf", "scale=-2:360,fps=15", # Çözünürlük ve FPS düşür
         
-        "-c:a", "aac", "-b:a", "64k", "-ac", "1", 
+        "-c:v", "libx264", 
+        "-preset", "ultrafast", 
+        "-tune", "zerolatency", 
+        "-profile:v", "baseline", "-level", "3.0", 
+        "-g", "30", "-keyint_min", "30",
+        
+        "-b:v", "400k", "-maxrate", "500k", "-bufsize", "1000k",
+        "-c:a", "aac", "-b:a", "48k", "-ac", "1", "-ar", "22050",
         
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
@@ -181,6 +190,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
+                # 20 sn timeout
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
