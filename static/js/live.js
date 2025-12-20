@@ -4,8 +4,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
     function remoteLog(msg, level = 'INFO') {
-        // Konsolu kirletmemek için remote logu kapattım, gerekirse açabilirsin
-        // console.log(`[${level}] ${msg}`);
+        console.log(`[${level}] ${msg}`);
+        fetch('/log/client', {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ msg: msg, level: level })
+        }).catch(() => { });
     }
 
     // Global Oynat Fonksiyonu
@@ -14,8 +17,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const v = document.getElementById(`video-${username}`);
         if (overlay) overlay.style.display = 'none';
         if (v) {
-            v.src = `/stream/${username}`;
-            v.type = "video/webm";
+            // iOS Cache Kırmak için timestamp
+            v.src = `/stream/${username}?t=${Date.now()}`;
+            v.type = "video/webm"; // iOS için teknik olarak mp4 olması gerekebilir ama tarayıcılar bazen bunu yutar
             v.muted = false;
             v.play().catch(() => { v.muted = true; v.play(); });
         }
@@ -30,9 +34,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: { facingMode: 'user', width: 640, height: 480, frameRate: 24 } });
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true },
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: 24 }
+                });
                 videoElement.srcObject = stream;
-            } catch (e) { alert("Kamera Hatası!"); }
+                remoteLog("✅ KAMERA AÇIK");
+            } catch (e) { remoteLog("❌ KAMERA HATASI: " + e); alert("Kamera Hatası!"); }
         }
         initCamera();
 
@@ -48,15 +56,33 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
                     const stream = canvas.captureStream(24);
-                    stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
+                    if (videoElement.srcObject.getAudioTracks().length > 0)
+                        stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
 
-                    let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
-                    if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm' };
+                    // 🔥 KRİTİK: İLK ÖNCE H.264 DENE (iOS DOSTU) 🔥
+                    let mimeType = 'video/webm;codecs=vp8'; // Varsayılan (Android/PC)
 
-                    rec = new MediaRecorder(stream, options);
+                    if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
+                        mimeType = 'video/webm;codecs=h264';
+                        remoteLog("✅ Codec: H.264 (iOS Uyumlu)");
+                    } else if (MediaRecorder.isTypeSupported('video/x-matroska;codecs=h264')) {
+                        mimeType = 'video/x-matroska;codecs=h264';
+                        remoteLog("✅ Codec: MKV H.264");
+                    } else {
+                        remoteLog("⚠️ H.264 Yok, VP8 kullanılıyor (iOS sorun çıkarabilir)");
+                    }
+
+                    try {
+                        rec = new MediaRecorder(stream, { mimeType: mimeType, videoBitsPerSecond: 1000000 });
+                    } catch (e) {
+                        remoteLog("Codec hatası, fallback yapılıyor...");
+                        rec = new MediaRecorder(stream); // En ilkel moda dön
+                    }
+
                     rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
-                    rec.start(1000); // 1 sn gecikme payı
+                    rec.start(1000);
 
+                    // Canvas Loop
                     const ctx = canvas.getContext('2d');
                     function draw() {
                         if (videoElement.readyState === 4) ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
@@ -70,11 +96,13 @@ document.addEventListener('DOMContentLoaded', () => {
         window.stopBroadcast = () => { if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); fetch('/broadcast/stop', { method: 'POST' }); location.href = '/'; };
     }
 
-    // --- İZLEYİCİ (GECİKME ÖNLEYİCİ) ---
+    // --- İZLEYİCİ ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
+            remoteLog(`👀 İZLEYİCİ: ${u}`);
+
             // Otomatik Başlat
             v.src = `/stream/${u}`;
             v.muted = true;
@@ -83,20 +111,15 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (overlay) overlay.style.display = 'none';
             }).catch(() => { });
 
-            // 🔥 LATENCY KILLER (GECİKME YOK EDİCİ) 🔥
-            // İzleyicinin geride kalmasını engeller.
+            // Gecikme Kontrolü (1.5s Tolerans)
             setInterval(() => {
                 if (v.buffered.length > 0) {
                     const end = v.buffered.end(v.buffered.length - 1);
-                    // Eğer canlı ucun 1.5 saniye gerisindeysek...
-                    if (end - v.currentTime > 1.5) {
-                        console.log("⏩ Senkronizasyon: İleri sarılıyor...");
-                        v.currentTime = end - 0.1; // En uca atla
-                    }
+                    if (end - v.currentTime > 1.5) v.currentTime = end - 0.1;
                 }
             }, 2000);
 
-            // Kopma Yönetimi
+            // Hata Yönetimi
             v.onerror = () => { setTimeout(() => { v.src = `/stream/${u}?t=${Date.now()}`; v.load(); v.play().catch(() => { }); }, 1500); };
         }
     }
