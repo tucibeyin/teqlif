@@ -1,176 +1,204 @@
-document.addEventListener('DOMContentLoaded', () => {
-    const CONFIG = window.TEQLIF_CONFIG || {};
-    const MODE = CONFIG.mode;
-    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+import os
+import json
+import shutil
+import subprocess
+import sys
+import asyncio 
+import time
+    from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
+from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
+    from sqlalchemy.orm import Session
+    from database import get_db, SessionLocal
+from models import User
+    from utils import get_current_user
 
-    function remoteLog(msg, level = 'INFO') {
-        console.log(`[${level}] ${msg}`);
-        fetch('/log/client', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ msg: msg, level: level })
-        }).catch(() => { });
-    }
+router = APIRouter()
+templates = Jinja2Templates(directory = "templates")
 
-    window.CURRENT_SOCKET = null;
-    let rec = null;
-    let broadcastWs = null;
-    let localStream = null;
-    let wakeLock = null;
+# -- - Loglama-- -
+    @router.post("/log/client")
+    async def client_log(request: Request):
+try:
+data = await request.json()
+print(f"📱 [CLIENT] {data.get('msg')}")
+return { "status": "ok" }
+except: return { "status": "err" }
 
-    async function requestWakeLock() {
-        try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { }
-    }
+# -- - Socket-- -
+    class ConnectionManager:
+    def __init__(self): self.rooms = {}
+    async def connect(self, ws, room, user):
+await ws.accept()
+if room not in self.rooms: self.rooms[room] = []
+self.rooms[room].append({ "ws": ws, "user": user })
+    async def disconnect(self, ws, room):
+if room in self.rooms:
+    self.rooms[room] = [c for c in self.rooms[room] if c["ws"] != ws]
+    async def broadcast_to_room(self, msg, room):
+if room in self.rooms:
+    for c in self.rooms[room]:
+        try: await c["ws"].send_text(msg)
+except: pass
+    async def kick_user(self, room, user): pass
 
-    // --- UI Helpers ---
-    window.openModMenu = function (u) {/*...*/ }; window.closeModMenu = function () {/*...*/ };
-    window.restrictUser = function (a, d) {/*...*/ }; window.updatePriceDisplay = function (a, t, n) {/*...*/ };
-    window.toggleAuction = function () {/*...*/ }; window.openResetModal = function () {/*...*/ };
-    window.closeResetModal = function () {/*...*/ }; window.confirmReset = function () {/*...*/ };
-    window.sendBid = function (t, a) {/*...*/ }; window.sendManualBid = function (t) {/*...*/ };
-    window.sendMsg = function (t) { const i = document.getElementById('chat-input-' + (t == 'broadcast' ? 'broadcast' : t)); if (i && i.value.trim()) { window.CURRENT_SOCKET.send(i.value); i.value = ''; i.focus(); } };
-    window.openGiftMenu = function (u) { document.getElementById('giftMenu').style.display = 'block'; };
-    window.closeGiftMenu = function () { document.getElementById('giftMenu').style.display = 'none'; };
-    window.sendGift = function (t) {/*...*/ }; window.toggleFollow = function (u) {/*...*/ };
-    window.unmuteVideo = function (u) { const v = document.getElementById('video-' + u); if (v) { v.muted = false; } };
+manager = ConnectionManager()
+active_processes = {}
 
-    // --- CHAT ---
-    window.connectChat = function (target) {
-        if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
-        let streamName = (target === 'broadcast') ? CONFIG.username : target;
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${streamName}`);
-        window.CURRENT_SOCKET = ws;
-        ws.onmessage = (e) => {
-            const d = JSON.parse(e.data);
-            if (d.type === 'chat') {
-                const f = document.getElementById(target === 'broadcast' ? 'chat-feed-broadcast' : `chat-feed-${target}`);
-                if (f) { const el = document.createElement('div'); el.className = 'msg'; el.innerHTML = `<b>${d.user}:</b> ${d.msg}`; f.appendChild(el); f.scrollTop = f.scrollHeight; }
-            }
-        };
-    };
+def cleanup_stream(username):
+print(f"🛑 SERVER: {username} temizleniyor...")
+if username in active_processes:
+    try:
+active_processes[username].terminate()
+active_processes[username].wait(timeout = 2)
+except: proc.kill()
+        del active_processes[username]
 
-    // --- 2. YAYINCI (ANTI-CRASH) ---
-    if (MODE === 'broadcast') {
-        const videoElement = document.getElementById('preview');
-        const canvas = document.getElementById('broadcast-canvas');
+db = SessionLocal()
+try:
+u = db.query(User).filter(User.username == username).first()
+if u: u.is_live = False; u.is_auction_active = False; db.commit()
+except: pass
+    finally: db.close()
 
-        async function initStream() {
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true },
-                    video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
-                });
-                videoElement.srcObject = localStream;
-                function draw() {
-                    if (videoElement.readyState === 4) {
-                        const vRatio = videoElement.videoWidth / videoElement.videoHeight;
-                        const cRatio = canvas.width / canvas.height;
-                        let dw, dh, sx, sy;
-                        if (vRatio > cRatio) { dh = canvas.height; dw = dh * vRatio; sx = (canvas.width - dw) / 2; sy = 0; }
-                        else { dw = canvas.width; dh = dw / vRatio; sx = 0; sy = (canvas.height - dh) / 2; }
-                        canvas.getContext('2d').drawImage(videoElement, sx, sy, dw, dh);
-                    }
-                    requestAnimationFrame(draw);
-                }
-                draw();
-            } catch (e) { remoteLog("Kamera Hatası: " + e, 'ERROR'); alert("Kamera Hatası!"); }
-        }
-        initStream();
+def write_to_ffmpeg(process, data):
+if process and process.stdin:
+try:
+process.stdin.write(data)
+process.stdin.flush()
+except: pass
 
-        document.getElementById('btn-start-broadcast').addEventListener('click', () => {
-            const fd = new FormData();
-            fd.append('title', document.getElementById('streamTitle').value || 'Canlı');
-            fd.append('category', document.getElementById('streamCategory').value || 'Genel');
+@router.post("/stream/restrict")
+async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return { "status": "ok" }
 
-            fetch('/broadcast/start', { method: 'POST', body: fd }).then(() => {
-                document.getElementById('setup-layer').style.display = 'none';
-                document.getElementById('live-ui').style.display = 'flex';
-                window.connectChat('broadcast');
+@router.get("/live", response_class = HTMLResponse)
+async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+if not user: return RedirectResponse("/login", 303)
+target_user = None
+if broadcaster: target_user = db.query(User).filter(User.username == broadcaster).first()
+active_streams = db.query(User).filter(User.is_live == True).all()
+if mode == "broadcast": target_user = user
+return templates.TemplateResponse("live.html", { "request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user, "auction_active": False })
 
-                broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
-                broadcastWs.onopen = () => {
-                    remoteLog("Yayın Başladı");
-                    const stream = canvas.captureStream(30);
-                    if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
+@router.post("/broadcast/start")
+async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
+return { "status": "ok" }
 
-                    // 1 Mbps Bitrate
-                    let opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
-                    if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm' };
+@router.post("/broadcast/stop")
+async def stop(user: User = Depends(get_current_user)):
+cleanup_stream(user.username)
+await manager.broadcast_to_room(json.dumps({ "type": "stream_ended" }), user.username)
+await manager.broadcast_to_room(json.dumps({ "type": "stream_removed", "username": user.username }), "home")
+return { "status": "stopped" }
 
-                    try { rec = new MediaRecorder(stream, opts); } catch (e) { rec = new MediaRecorder(stream); }
+@router.post("/broadcast/thumbnail")
+async def thumb(request: Request, user: User = Depends(get_current_user)):
+try:
+d = await request.json()
+with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f:
+f.write(base64.b64decode(d['image'].split(",")[1]))
+return { "status": "ok" }
+except: return { "status": "error" }
 
-                    rec.ondataavailable = e => {
-                        if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            // 🔥 CRASH KORUMASI: Buffer 256KB'ı geçerse paketi at! 🔥
-                            if (broadcastWs.bufferedAmount > 256000) {
-                                console.log("⚠️ Veri Atlandı (Buffer Dolu)");
-                            } else {
-                                broadcastWs.send(e.data);
-                            }
-                        }
-                    };
+@router.post("/broadcast/toggle_auction")
+async def toggle_auction(active: bool = Form(...)): return { "status": "ok" }
+@router.post("/broadcast/reset_auction")
+async def reset_auction(): return { "status": "ok" }
+@router.post("/gift/send")
+async def send_gift(user: User = Depends(get_current_user)): return { "status": "success", "new_balance": user.diamonds }
 
-                    rec.start(1000);
-                    requestWakeLock();
+@router.websocket("/ws/chat")
+async def chat(ws: WebSocket, stream: str = "home"):
+await manager.connect(ws, stream, "Guest")
+try:
+while True:
+    d = await ws.receive_text()
+await manager.broadcast_to_room(json.dumps({ "type": "chat", "user": "Guest", "msg": d }), stream)
+except: await manager.disconnect(ws, stream)
 
-                    setInterval(() => {
-                        if (broadcastWs.readyState === 1 && broadcastWs.bufferedAmount === 0) {
-                            fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.4) }) });
-                        }
-                    }, 60000);
-                };
+@router.websocket("/ws/broadcast")
+async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
+await websocket.accept()
+user = None
+try:
+token = websocket.cookies.get("access_token")
+        from jose import jwt
+    from utils import SECRET_KEY, ALGORITHM
+payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms = [ALGORITHM])
+user = db.query(User).filter(User.email == payload.get("sub")).first()
+except: pass
 
-                broadcastWs.onclose = () => {
-                    remoteLog("WS Kapandı", 'WARN');
-                    if (rec) rec.stop();
-                    alert("Yayın bağlantısı koptu.");
-                    window.location.reload();
-                };
-            });
-        });
+if not user: await websocket.close(); return
 
-        window.stopBroadcast = () => {
-            if (rec) rec.stop(); if (broadcastWs) broadcastWs.close();
-            if (wakeLock) wakeLock.release();
-            fetch('/broadcast/stop', { method: 'POST' });
-            window.location.href = '/';
-        };
-    }
+stream_dir = f"static/hls/{user.username}"
+if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
+os.makedirs(f"{stream_dir}/source", exist_ok = True)
 
-    // --- 3. İZLEYİCİ ---
-    else if (MODE === 'watch' && CONFIG.broadcaster) {
-        const u = CONFIG.broadcaster;
-        const v = document.getElementById(`video-${u}`);
-        if (v) {
-            // Cache Buster
-            const src = `/static/hls/${u}/master.m3u8?t=${Date.now()}`;
+print(f"🎥 YAYIN BAŞLATILIYOR (DIRECT COPY): {user.username}")
 
-            if (Hls.isSupported()) {
-                const hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: true,
-                    liveSyncDurationCount: 3,
-                    maxBufferLength: 30,
-                    manifestLoadingTimeOut: 20000,
-                    manifestLoadingMaxRetry: 10
-                });
-                hls.loadSource(src);
-                hls.attachMedia(v);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
-                hls.on(Hls.Events.ERROR, (e, d) => {
-                    if (d.fatal) {
-                        switch (d.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-                            case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                            default: hls.destroy(); break;
-                        }
-                    }
-                });
-            }
-            else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                v.src = src; v.addEventListener('loadedmetadata', () => v.play().catch(() => { v.muted = true; v.play() }));
-            }
-            window.connectChat(u);
-        }
-    }
-});
+    # 🔥 DIRECT COPY MODU(CPU % 1 Kullanır) 🔥
+    # - c:v libx264 -> -c:v copy(Yeniden kodlama YOK)
+    # Ses AAC'ye çevrilmek zorunda (HLS standardı için)
+command = [
+    "ffmpeg",
+    "-f", "webm",
+    "-analyzeduration", "2000000", "-probesize", "2000000",
+    "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
+    "-err_detect", "ignore_err",
+    "-i", "pipe:0",
+        
+        # Video: Kopyala(Hız: Sonsuz)
+        # Ses: AAC'ye çevir (Çok hafif işlem)
+        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", "-b:v", "1000k", # Mecburen re - encode çünkü WebM VP8 geliyor, HLS H264 ister.
+        # VP8 -> H264 dönüşümü en hızlı ayarlarla:
+    "-profile:v", "baseline", "-level", "3.0",
+    "-g", "60", "-keyint_min", "60", "-sc_threshold", "0",
+    "-pix_fmt", "yuv420p",
+
+    "-c:a", "aac", "-b:a", "64k", "-ac", "1",
+
+    "-f", "hls", "-hls_time", "2", "-hls_list_size", "6",
+    "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
+    "-master_pl_name", "master.m3u8", f"{stream_dir}/source/stream.m3u8"
+]
+    
+    # Not: VP8'i (WebM) doğrudan HLS (MPEG-TS) içine koyamayız (Standart dışı). 
+    # O yüzden mecburen H.264 yapmalıyız ama ULTRAFAST ile.
+    # Eğer Android H.264 gönderseydi(Chrome desteklemiyor) direkt kopyalardık.
+
+    process = subprocess.Popen(command, stdin = subprocess.PIPE, stderr = sys.stderr)
+active_processes[user.username] = process
+    
+    async def wait_for_stream():
+start_t = time.time()
+while time.time() - start_t < 30:
+    if os.path.exists(f"{stream_dir}/master.m3u8"):
+        print(f"✅ YAYIN AKTİF: {user.username}")
+new_db = SessionLocal()
+u = new_db.query(User).filter(User.username == user.username).first()
+u.is_live = True; new_db.commit(); new_db.close()
+payload = json.dumps({ "type": "stream_added", "username": user.username, "title": "Canlı", "category": "Genel", "thumbnail": "" })
+await manager.broadcast_to_room(payload, "home")
+break
+await asyncio.sleep(0.5)
+
+loop = asyncio.get_event_loop()
+loop.create_task(wait_for_stream())
+
+try:
+while True:
+    try:
+                # Timeout'u 15 saniyeye çıkardık
+data = await asyncio.wait_for(websocket.receive_bytes(), timeout = 15.0)
+if not data: break
+await loop.run_in_executor(None, write_to_ffmpeg, process, data)
+            except asyncio.TimeoutError:
+print(f"⚠️ SERVER: Timeout {user.username}")
+break 
+    except Exception as e:
+print(f"❌ SERVER HATASI: {e}")
+    finally:
+cleanup_stream(user.username)
+await manager.broadcast_to_room(json.dumps({ "type": "stream_ended" }), user.username)
+await manager.broadcast_to_room(json.dumps({ "type": "stream_removed", "username": user.username }), "home")
