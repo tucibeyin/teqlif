@@ -17,7 +17,6 @@ templates = Jinja2Templates(directory="templates")
 @router.post("/log/client")
 async def client_log(request: Request): return {"status": "ok"}
 
-# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -75,14 +74,7 @@ async def stop(user: User = Depends(get_current_user)):
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
 @router.post("/broadcast/thumbnail")
-async def thumb(request: Request, user: User = Depends(get_current_user)):
-    try:
-        d = await request.json()
-        import base64
-        with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f:
-            f.write(base64.b64decode(d['image'].split(",")[1]))
-    except: pass
-    return {"status": "ok"}
+async def thumb(): return {"status": "ok"}
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(): return {"status": "ok"}
 @router.post("/broadcast/reset_auction")
@@ -92,7 +84,7 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# --- YAYINCI ---
+# --- YAYINCI SOCKETİ ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
@@ -109,46 +101,53 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 MULTI-BITRATE HLS BAŞLIYOR: {user.username}")
+    print(f"🎥 3 KALİTELİ YAYIN BAŞLIYOR: {user.username}")
 
-    # 🔥 FFmpeg MULTI-BITRATE (720p & 360p) 🔥
-    # Tek giriş -> İki çıkış (High/Low)
-    # CPU tasarrufu için 'ultrafast' ve 'zerolatency' kullanıyoruz.
+    # 🔥 FFmpeg 3-WAY SPLIT (720p, 480p, 240p) 🔥
     command = [
         "ffmpeg", 
         "-f", "webm", 
         "-i", "pipe:0",
         
-        # Filtre: Videoyu 2'ye böl, biri 720p (v1), biri 360p (v2) olsun
-        "-filter_complex", "[0:v]split=2[v1][v2]; [v1]scale=-2:720[v720]; [v2]scale=-2:360[v360]",
+        # VİDEOYU 3'E BÖL VE BOYUTLANDIR
+        "-filter_complex", 
+        "[0:v]split=3[v1][v2][v3];"
+        "[v1]scale=-2:720[v720];"
+        "[v2]scale=-2:480[v480];"
+        "[v3]scale=-2:240[v240]",
         
-        # Stream 1: 720p (High Quality)
-        "-map", "[v720]", "-c:v:0", "libx264", "-b:v:0", "2000k", "-preset", "ultrafast", "-tune", "zerolatency", "-g", "48",
+        # --- 1. YAYIN: 720p (HD) ---
+        "-map", "[v720]", "-c:v:0", "libx264", "-b:v:0", "2500k", 
+        "-preset", "ultrafast", "-tune", "zerolatency", "-g", "48", "-profile:v:0", "baseline",
         
-        # Stream 2: 360p (Low Quality / Mobile Saver)
-        "-map", "[v360]", "-c:v:1", "libx264", "-b:v:1", "600k", "-preset", "ultrafast", "-tune", "zerolatency", "-g", "48",
+        # --- 2. YAYIN: 480p (SD) ---
+        "-map", "[v480]", "-c:v:1", "libx264", "-b:v:1", "800k", 
+        "-preset", "ultrafast", "-tune", "zerolatency", "-g", "48", "-profile:v:1", "baseline",
         
-        # Audio (Her ikisi için ortak)
-        "-map", "a:0", "-map", "a:0", "-c:a", "aac", "-b:a", "64k", "-ac", "2",
+        # --- 3. YAYIN: 240p (Low) ---
+        "-map", "[v240]", "-c:v:2", "libx264", "-b:v:2", "300k", 
+        "-preset", "ultrafast", "-tune", "zerolatency", "-g", "48", "-profile:v:2", "baseline",
         
-        # HLS Ayarları
+        # --- SES (Her kaliteye kopyala) ---
+        "-map", "a:0", "-map", "a:0", "-map", "a:0", 
+        "-c:a", "aac", "-b:a", "64k", "-ac", "2",
+        
+        # --- HLS MASTER PLAYLIST ---
         "-f", "hls", 
         "-hls_time", "2", 
         "-hls_list_size", "4",
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
-        
-        # Master Playlist Oluştur (Otomatik Geçiş İçin)
         "-master_pl_name", "master.m3u8",
-        "-var_stream_map", "v:0,a:0 v:1,a:1",
+        "-var_stream_map", "v:0,a:0 v:1,a:1 v:2,a:2",
         f"{stream_dir}/stream_%v.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
     active_processes[user.username] = process
     
-    # DB Bildirim
+    # Bekleme süresini artır (3 yayın oluşması zaman alır)
     async def notify():
-        await asyncio.sleep(6) # HLS oluşması için biraz daha zaman ver
+        await asyncio.sleep(8) 
         new_db = SessionLocal()
         u = new_db.query(User).filter(User.username == user.username).first()
         u.is_live = True; new_db.commit(); new_db.close()
