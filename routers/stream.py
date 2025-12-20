@@ -48,14 +48,13 @@ active_processes = {}
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
-        # 🔥 DÜZELTME: proc değişkeni burada tanımlı 🔥
-        proc = active_processes[username]
         try:
-            proc.terminate()
-            proc.wait(timeout=2)
-        except: proc.kill()
+            active_processes[username].terminate()
+            active_processes[username].wait(timeout=2)
+        except: 
+            active_processes[username].kill()
         del active_processes[username]
-    
+
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
@@ -70,6 +69,7 @@ def write_to_ffmpeg(process, data):
             process.stdin.flush()
         except: pass
 
+# --- Routes ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -137,33 +137,30 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (SUPER LITE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (EMERGENCY MODE): {user.username}")
 
-    # 🔥 SUPER LITE MODE (240p @ 15fps) 🔥
-    # Amaç: CPU'yu rahatlatıp hızı 1.0x üzerine çıkarmak
+    # 🔥 EMERGENCY MODE: 240p @ 15fps, 250k Bitrate 🔥
     command = [
         "ffmpeg", 
-        "-f", "webm", 
+        "-f", "matroska", 
         "-analyzeduration", "500000", "-probesize", "500000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        # Sadece 240p ve 15 FPS (Çok hafif)
-        "-vf", "scale=-2:240,fps=15", 
+        "-vf", "scale=-2:240", # Sadece 240p
+        "-r", "15", # 15 FPS (Çok düşük CPU)
         
         "-c:v", "libx264", 
         "-preset", "ultrafast", 
         "-tune", "zerolatency", 
         "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "30", "-keyint_min", "30", # 2 saniyelik GOP (15fps * 2)
-        "-sc_threshold", "0",
-        "-pix_fmt", "yuv420p",
+        "-g", "30", "-keyint_min", "30",
         
-        "-b:v", "300k", "-maxrate", "400k", "-bufsize", "600k", # Çok düşük bitrate
-        "-c:a", "aac", "-b:a", "32k", "-ac", "1", "-ar", "22050", # Düşük ses kalitesi
+        "-b:v", "250k", "-maxrate", "300k", "-bufsize", "500k", # 250kbps (Çok hafif)
+        "-c:a", "aac", "-b:a", "32k", "-ac", "1", "-ar", "22050", # Mono, 22kHz ses
         
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
         "-master_pl_name", "master.m3u8", 
         f"{stream_dir}/stream.m3u8"
@@ -191,7 +188,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                # 20 saniye timeout (Android gecikmelerine tolerans)
+                # 20 sn timeout
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
