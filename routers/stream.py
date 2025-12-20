@@ -1,6 +1,8 @@
 import os
 import json
 import shutil
+import subprocess
+import sys
 import asyncio 
 import time
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
@@ -23,6 +25,7 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
+# --- Socket Manager ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -40,9 +43,18 @@ class ConnectionManager:
     async def kick_user(self, room, user): pass 
 
 manager = ConnectionManager()
+active_processes = {}
 
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
+    if username in active_processes:
+        try:
+            active_processes[username].terminate()
+            active_processes[username].wait(timeout=2)
+        except: 
+            active_processes[username].kill()
+        del active_processes[username]
+
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
@@ -50,6 +62,14 @@ def cleanup_stream(username):
     except: pass
     finally: db.close()
 
+def write_to_ffmpeg(process, data):
+    if process and process.stdin:
+        try:
+            process.stdin.write(data)
+            process.stdin.flush()
+        except: pass
+
+# --- Routes ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -106,7 +126,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         token = websocket.cookies.get("access_token")
         from jose import jwt
-        from utils import SECRET_KEY, algorithms=[ALGORITHM]
+        # 🔥 DÜZELTME BURADA: ALGORITHM direk import edildi 🔥
+        from utils import SECRET_KEY, ALGORITHM
         payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
         user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: pass
@@ -117,38 +138,58 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (RAW MODE): {user.username}")
-    
-    video_path = f"{stream_dir}/stream.webm"
-    file_handle = open(video_path, "wb")
+    print(f"🎥 YAYIN BAŞLIYOR (EMERGENCY AUDIO): {user.username}")
 
-    async def notify_live():
-        await asyncio.sleep(2)
-        print(f"✅ YAYIN AKTİF: {user.username}")
-        new_db = SessionLocal()
-        u = new_db.query(User).filter(User.username == user.username).first()
-        u.is_live = True; new_db.commit(); new_db.close()
-        payload = json.dumps({"type": "stream_added", "username": user.username, "title": "Canlı", "category": "Genel", "thumbnail": ""})
-        await manager.broadcast_to_room(payload, "home")
+    # 🔥 SADECE SES (Hafif) 🔥
+    command = [
+        "ffmpeg", 
+        "-f", "webm", 
+        "-analyzeduration", "500000", "-probesize", "500000", 
+        "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
+        "-err_detect", "ignore_err",
+        "-i", "pipe:0",
+        
+        "-vn", # Video YOK
+        
+        "-c:a", "aac", "-b:a", "64k", "-ac", "1", 
+        
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
+        "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
+        "-master_pl_name", "master.m3u8", 
+        f"{stream_dir}/stream.m3u8"
+    ]
+    
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
+    active_processes[user.username] = process
+    
+    async def wait_for_stream():
+        start_t = time.time()
+        while time.time() - start_t < 30:
+            if os.path.exists(f"{stream_dir}/master.m3u8"):
+                print(f"✅ YAYIN AKTİF: {user.username}")
+                new_db = SessionLocal()
+                u = new_db.query(User).filter(User.username == user.username).first()
+                u.is_live = True; new_db.commit(); new_db.close()
+                payload = json.dumps({"type": "stream_added", "username": user.username, "title": "Canlı", "category": "Genel", "thumbnail": ""})
+                await manager.broadcast_to_room(payload, "home")
+                break
+            await asyncio.sleep(0.5)
 
     loop = asyncio.get_event_loop()
-    loop.create_task(notify_live())
+    loop.create_task(wait_for_stream())
 
     try:
         while True:
             try:
-                # 15 saniye veri gelmezse kapat
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
                 if not data: break
-                file_handle.write(data)
-                file_handle.flush()
+                await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             except asyncio.TimeoutError:
                 print(f"⚠️ SERVER: Timeout {user.username}")
                 break 
     except Exception as e:
         print(f"❌ SERVER HATASI: {e}")
     finally:
-        file_handle.close()
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
