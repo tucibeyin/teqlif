@@ -20,10 +20,12 @@ document.addEventListener('DOMContentLoaded', () => {
         try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { }
     }
 
-    // --- UI ---
+    // --- UI Helpers ---
     window.openModMenu = function (u) { document.getElementById('modMenu').style.display = 'flex'; document.getElementById('mod-target-name').innerText = u; };
     window.closeModMenu = function () { document.getElementById('modMenu').style.display = 'none'; };
     window.restrictUser = function (a, d) {/*...*/ };
+
+    // --- CHAT ---
     window.connectChat = function (target) {
         if (window.CURRENT_SOCKET) window.CURRENT_SOCKET.close();
         let streamName = (target === 'broadcast') ? CONFIG.username : target;
@@ -38,7 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    // --- 2. YAYINCI (HAFİF MOD - 480p) ---
+    // --- 2. YAYINCI (LOW RES MODE) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
@@ -48,29 +50,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 localStream = await navigator.mediaDevices.getUserMedia({
                     audio: {
                         echoCancellation: true,
-                        noiseSuppression: true
+                        noiseSuppression: true,
+                        channelCount: 1 // Mono ses (daha hafif)
                     },
                     video: {
                         facingMode: 'user',
-                        // 🔥 480p ÇÖZÜNÜRLÜK (RAM DOSTU) 🔥
-                        width: { ideal: 640 },
-                        height: { ideal: 480 },
-                        frameRate: { ideal: 24, max: 30 }
+                        // 🔥 EN ÖNEMLİ AYAR: 240p GÖNDER 🔥
+                        width: { ideal: 320, max: 480 },
+                        height: { ideal: 240, max: 360 },
+                        frameRate: { ideal: 15, max: 20 } // 15 FPS
                     }
                 });
                 videoElement.srcObject = localStream;
-                function draw() {
-                    if (videoElement.readyState === 4) {
-                        const vRatio = videoElement.videoWidth / videoElement.videoHeight;
-                        const cRatio = canvas.width / canvas.height;
-                        let dw, dh, sx, sy;
-                        if (vRatio > cRatio) { dh = canvas.height; dw = dh * vRatio; sx = (canvas.width - dw) / 2; sy = 0; }
-                        else { dw = canvas.width; dh = dw / vRatio; sx = 0; sy = (canvas.height - dh) / 2; }
-                        canvas.getContext('2d').drawImage(videoElement, sx, sy, dw, dh);
-                    }
-                    requestAnimationFrame(draw);
-                }
-                draw();
             } catch (e) { remoteLog("Kamera Hatası: " + e, 'ERROR'); alert("Kamera Hatası!"); }
         }
         initStream();
@@ -87,38 +78,46 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    remoteLog("Yayın Başlatılıyor (H.264 Lite)...");
-                    const stream = canvas.captureStream(24);
+                    remoteLog("Yayın Başladı (240p Mode)");
+                    const stream = canvas.captureStream(15); // 15 FPS
                     if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
 
-                    // 🔥 H.264 ve DÜŞÜK BITRATE (800kbps) 🔥
-                    let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 800000 };
+                    // 250 kbps (Çok düşük veri)
+                    let opts = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 250000 };
 
-                    // Cihaz H.264 desteklemiyorsa mecburen VP8
-                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                        remoteLog("H264 yok, VP8 (Fallback)", 'WARN');
-                        options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 800000 };
+                    // Codec kontrolü (Fallback VP8)
+                    if (!MediaRecorder.isTypeSupported(opts.mimeType)) {
+                        opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 250000 };
+                    }
+                    if (!MediaRecorder.isTypeSupported(opts.mimeType)) {
+                        opts = { mimeType: 'video/webm', videoBitsPerSecond: 250000 };
                     }
 
-                    try { rec = new MediaRecorder(stream, options); } catch (e) { rec = new MediaRecorder(stream); }
+                    try { rec = new MediaRecorder(stream, opts); } catch (e) { rec = new MediaRecorder(stream); }
 
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            // Buffer 150KB'ı geçerse gönderme (Hafif koruma)
-                            if (broadcastWs.bufferedAmount > 150000) {
-                                console.warn("Ağ darşişti, paket atlandı.");
+                            // Emniyet Sübabı: 100KB üzeri birikirse atla
+                            if (broadcastWs.bufferedAmount > 100000) {
+                                console.warn("Drop frame");
                             } else {
                                 broadcastWs.send(e.data);
                             }
                         }
                     };
 
-                    rec.start(1000); // 1 saniyelik paketler
+                    rec.start(1000);
                     requestWakeLock();
 
+                    // Thumbnail gönderimi
                     setInterval(() => {
                         if (broadcastWs.readyState === 1 && broadcastWs.bufferedAmount === 0) {
-                            fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.3) }) });
+                            // Canvas'a çiz ve gönder
+                            const ctx = canvas.getContext('2d');
+                            if (videoElement.readyState === 4) {
+                                ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                                fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.3) }) });
+                            }
                         }
                     }, 60000);
                 };
@@ -126,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs.onclose = () => {
                     remoteLog("WS Kapandı", 'WARN');
                     if (rec) rec.stop();
-                    alert("Bağlantı koptu.");
+                    alert("Yayın koptu.");
                     window.location.href = '/';
                 };
             });
@@ -146,23 +145,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const v = document.getElementById(`video-${u}`);
         if (v) {
             const src = `/static/hls/${u}/master.m3u8`;
-            remoteLog("İzleyici: " + u);
-
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    // Hata toleransını artır
-                    manifestLoadingTimeOut: 20000,
-                    manifestLoadingMaxRetry: 10
                 });
                 hls.loadSource(src);
                 hls.attachMedia(v);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => v.play().catch(() => { v.muted = true; v.play() }));
-
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) {
-                        switch (data.type) {
+                hls.on(Hls.Events.ERROR, (e, d) => {
+                    if (d.fatal) {
+                        switch (d.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
                             case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
                             default: hls.destroy(); break;
@@ -171,8 +164,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
             }
             else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                v.src = src;
-                v.addEventListener('loadedmetadata', () => v.play().catch(() => { v.muted = true; v.play() }));
+                v.src = src; v.addEventListener('loadedmetadata', () => v.play().catch(() => { v.muted = true; v.play() }));
             }
             window.connectChat(u);
         }

@@ -25,7 +25,7 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
-# --- Socket Manager ---
+# --- Socket ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -40,21 +40,23 @@ class ConnectionManager:
             for c in self.rooms[room]:
                 try: await c["ws"].send_text(msg)
                 except: pass
-    async def kick_user(self, room, user): pass 
 
 manager = ConnectionManager()
 active_processes = {}
 
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
+    # 🔥 DÜZELTME: proc değişkeni burada tanımlanmalı 🔥
     if username in active_processes:
+        proc = active_processes[username]
         try:
-            active_processes[username].terminate()
-            active_processes[username].wait(timeout=2)
+            proc.terminate()
+            proc.wait(timeout=2)
         except: 
-            try: active_processes[username].kill()
+            try: proc.kill()
             except: pass
-        if username in active_processes: del active_processes[username]
+        if username in active_processes:
+            del active_processes[username]
     
     db = SessionLocal()
     try:
@@ -136,25 +138,33 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
-    os.makedirs(stream_dir, exist_ok=True)
+    os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (DIRECT COPY): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (240p ULTRAFAST): {user.username}")
 
-    # 🔥 DIRECT H264 COPY (CPU %1) 🔥
+    # 🔥 240p @ 15fps (CPU DOSTU) 🔥
+    # Amaç: VP8'i H264'e çevirirken CPU'yu öldürmemek.
     command = [
         "ffmpeg", 
-        "-f", "matroska", 
+        "-f", "webm", 
         "-analyzeduration", "500000", "-probesize", "500000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        "-c:v", "copy", # VİDEO İŞLEME YOK! (Hız: Sonsuz)
-        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Ses Hafif AAC
+        "-vf", "scale=-2:240,fps=15", # Çözünürlüğü ve kare hızını düşür
         
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
+        "-c:v", "libx264", 
+        "-preset", "ultrafast", # En hızlı kodlama
+        "-tune", "zerolatency", 
+        "-profile:v", "baseline", "-level", "3.0", 
+        "-g", "30", "-keyint_min", "30", 
+        
+        "-b:v", "350k", "-maxrate", "400k", "-bufsize", "800k", # Düşük bitrate
+        "-c:a", "aac", "-b:a", "48k", "-ac", "1", # Mono ses
+        
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
-        "-hls_segment_type", "fmp4",
         "-master_pl_name", "master.m3u8", 
         f"{stream_dir}/stream.m3u8"
     ]
@@ -164,7 +174,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     
     async def wait_for_stream():
         start_t = time.time()
-        while time.time() - start_t < 40: # Bekleme süresi artırıldı
+        while time.time() - start_t < 30:
             if os.path.exists(f"{stream_dir}/master.m3u8"):
                 print(f"✅ YAYIN AKTİF: {user.username}")
                 new_db = SessionLocal()
@@ -181,7 +191,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                # 30 Saniye Timeout (Bağlantı zayıfsa hemen kesmesin)
+                # 30 saniye timeout (Android gecikmelerine tolerans)
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=30.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
