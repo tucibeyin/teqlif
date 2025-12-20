@@ -21,7 +21,7 @@ document.addEventListener('DOMContentLoaded', () => {
         try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (err) { }
     }
 
-    // --- UI Helpers ---
+    // --- UI ---
     window.openModMenu = function (u) {/*...*/ }; window.closeModMenu = function () {/*...*/ };
     window.restrictUser = function (a, d) {/*...*/ }; window.updatePriceDisplay = function (a, t, n) {/*...*/ };
     window.toggleAuction = function () {/*...*/ }; window.openResetModal = function () {/*...*/ };
@@ -88,11 +88,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    remoteLog("Yayın Başladı (RAW Mode)");
+                    remoteLog("Yayın Başladı (Raw WebM)");
                     const stream = canvas.captureStream(24);
                     if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
 
-                    let opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 800000 };
+                    // En iyi formatı seç
+                    let opts = { mimeType: 'video/webm;codecs=vp9', videoBitsPerSecond: 800000 };
+                    if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 800000 };
                     if (!MediaRecorder.isTypeSupported(opts.mimeType)) opts = { mimeType: 'video/webm' };
 
                     try { rec = new MediaRecorder(stream, opts); } catch (e) { rec = new MediaRecorder(stream); }
@@ -134,29 +136,34 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- 3. İZLEYİCİ (RAW WEBM PLAYER) ---
+    // --- 3. İZLEYİCİ (PROGRESSIVE PLAYER) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
-            // 🔥 RAW WEBM OYNATICI 🔥
-            v.src = `/static/hls/${u}/stream.webm?t=${Date.now()}`;
+            remoteLog("İzleyici: " + u);
+            v.src = `/static/hls/${u}/stream.webm`;
             v.type = "video/webm";
+            v.loop = false; // Döngü yok, canlı yayın
 
-            v.addEventListener('error', (e) => {
-                remoteLog("Video Hatası, tekrar deneniyor...");
+            // Eğer durursa tekrar yükle (Canlı yayın mantığı)
+            v.onended = () => {
                 setTimeout(() => {
                     v.src = `/static/hls/${u}/stream.webm?t=${Date.now()}`;
                     v.play();
+                }, 1000);
+            };
+
+            v.onerror = () => {
+                remoteLog("Video Hatası, bekleniyor...");
+                setTimeout(() => {
+                    v.src = `/static/hls/${u}/stream.webm?t=${Date.now()}`;
+                    v.load();
+                    v.play();
                 }, 2000);
-            });
+            };
 
-            // Otomatik oynat
-            v.play().catch(() => {
-                v.muted = true;
-                v.play();
-            });
-
+            v.play().catch(() => { v.muted = true; v.play(); });
             window.connectChat(u);
         }
     }
