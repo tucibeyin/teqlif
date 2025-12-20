@@ -23,7 +23,8 @@ def log_server(msg):
 async def client_log(request: Request):
     try:
         data = await request.json()
-        print(f"[{datetime.now().strftime('%H:%M:%S')}] 📱 CLIENT: {data.get('msg')}")
+        # Client loglarını sunucu konsolunda kirlilik yapmaması için kapattım
+        # print(f"[{datetime.now().strftime('%H:%M:%S')}] 📱 CLIENT: {data.get('msg')}")
         return {"status": "ok"}
     except: return {"status": "err"}
 
@@ -31,7 +32,9 @@ class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
         await ws.accept()
-    async def disconnect(self, ws, room): pass 
+        if room not in self.rooms: self.rooms[room] = []
+        self.rooms[room].append({"ws": ws, "user": user})
+    async def disconnect(self, ws, room): pass
     async def broadcast_to_room(self, msg, room):
         if room in self.rooms:
             for c in self.rooms[room]:
@@ -49,11 +52,10 @@ def cleanup_stream(username):
         if u: u.is_live = False; db.commit()
     finally: db.close()
 
-# --- 🔥 SENKRONİZE AKIŞ MOTORU 🔥 ---
+# --- 🔥 GÜVENLİ AKIŞ MOTORU (BUFFER FIX) 🔥 ---
 def video_generator(filepath, ip):
-    log_server(f"👀 İZLEYİCİ ({ip}) bağlandı. Senkronizasyon yapılıyor...")
+    log_server(f"👀 İZLEYİCİ ({ip}) bağlandı.")
     
-    # Dosyayı bekle
     tries = 0
     while not os.path.exists(filepath):
         time.sleep(0.5)
@@ -61,32 +63,33 @@ def video_generator(filepath, ip):
         if tries > 20: return 
 
     with open(filepath, "rb") as f:
-        # 1. HEADER GÖNDER (İlk 4KB)
-        # WebM dosyasının kimliği buradadır, bunu almazsa oynatmaz.
-        header = f.read(4096)
-        yield header
+        # 1. ADIM: GENİŞ HEADER GÖNDER (32 KB)
+        # WebM dosya yapısının (Tracks, Codec Info) kesinlikle gitmesi lazım.
+        header_chunk = f.read(32 * 1024) 
+        yield header_chunk
         
-        # 2. CANLI UCA ATLA (JUMP TO LIVE)
-        # Dosyanın sonuna git
-        f.seek(0, 2)
+        # 2. ADIM: DOSYA BOYUTUNU KONTROL ET
+        current_pos = f.tell()
+        f.seek(0, 2) # Sona git
         file_size = f.tell()
         
-        # Eğer dosya büyükse (yayın ilerlemişse), son 150KB'a geri sar.
-        # Bu yaklaşık 1-2 saniyelik bir tampon sağlar, böylece keyframe yakalarız.
-        buffer_size = 150 * 1024 
+        # 3. ADIM: AKILLI ATLAMA (SMART SEEK)
+        # Son 1MB (1024KB) veriyi al. Bu yaklaşık 5-8 saniyelik görüntü demek.
+        # Bu kadar geriye gitmek, "Keyframe" yakalama şansımızı %99 yapar.
+        safe_buffer = 1024 * 1024 
         
-        if file_size > (4096 + buffer_size):
-            f.seek(file_size - buffer_size)
-            log_server(f"⏩ {ip} için canlı uca atlandı (Son 150KB).")
+        if file_size > (current_pos + safe_buffer):
+            f.seek(file_size - safe_buffer)
+            log_server(f"⏩ {ip} için senkronizasyon (Son 1MB).")
         else:
-            # Yayın yeni başlamışsa kaldığı yerden devam et
-            f.seek(4096)
+            # Dosya zaten küçükse veya yeni başlamışsa atlama yapma
+            f.seek(current_pos)
 
-        # 3. AKIŞ DÖNGÜSÜ
+        # 4. ADIM: AKIŞ
         while True:
-            data = f.read(1024 * 64)
+            data = f.read(64 * 1024)
             if not data:
-                time.sleep(0.05) # Veri yoksa bekle (Ultra düşük gecikme için süre kısaltıldı)
+                time.sleep(0.05)
                 continue
             yield data
 
@@ -95,7 +98,7 @@ async def stream_video(username: str, request: Request):
     file_path = f"static/hls/{username}/stream.webm"
     return StreamingResponse(video_generator(file_path, request.client.host), media_type="video/webm")
 
-# --- STANDART ENDPOINTS (Aynı) ---
+# --- STANDART ENDPOINTS ---
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
 @router.get("/live", response_class=HTMLResponse)
@@ -105,7 +108,7 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: str = No
     if broadcaster: target_user = db.query(User).filter(User.username == broadcaster).first()
     active_streams = db.query(User).filter(User.is_live == True).all()
     if mode == "broadcast": target_user = user
-    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user}) # auction_active removed temp
+    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user})
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
@@ -127,7 +130,6 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# --- YAYINCI SOCKET ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
@@ -149,7 +151,6 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     video_path = f"{stream_dir}/stream.webm"
     file_handle = open(video_path, "wb")
     
-    # DB Güncelleme
     async def notify():
         await asyncio.sleep(1)
         new_db = SessionLocal()
@@ -162,13 +163,12 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
-            # Veri bekleme süresini optimize ettik
             data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
             if not data: break
             
             file_handle.write(data)
             file_handle.flush()
-            os.fsync(file_handle.fileno()) # Hızlı yazma için önemli
+            os.fsync(file_handle.fileno())
             
     except Exception as e:
         log_server(f"❌ HATA: {e}")
