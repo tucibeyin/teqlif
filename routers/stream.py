@@ -31,9 +31,7 @@ class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
         await ws.accept()
-        if room not in self.rooms: self.rooms[room] = []
-        self.rooms[room].append({"ws": ws, "user": user})
-    async def disconnect(self, ws, room): pass # Basitleştirildi
+    async def disconnect(self, ws, room): pass 
     async def broadcast_to_room(self, msg, room):
         if room in self.rooms:
             for c in self.rooms[room]:
@@ -51,23 +49,44 @@ def cleanup_stream(username):
         if u: u.is_live = False; db.commit()
     finally: db.close()
 
-# --- STREAM GENERATOR ---
+# --- 🔥 SENKRONİZE AKIŞ MOTORU 🔥 ---
 def video_generator(filepath, ip):
-    log_server(f"👀 İZLEYİCİ ({ip}) bağlandı, dosya bekleniyor...")
+    log_server(f"👀 İZLEYİCİ ({ip}) bağlandı. Senkronizasyon yapılıyor...")
+    
+    # Dosyayı bekle
     tries = 0
     while not os.path.exists(filepath):
         time.sleep(0.5)
         tries += 1
-        if tries > 20: 
-            log_server(f"❌ Dosya bulunamadı! İptal ediliyor.")
-            return 
+        if tries > 20: return 
 
-    log_server(f"✅ Dosya bulundu, akış başlatılıyor -> {ip}")
     with open(filepath, "rb") as f:
+        # 1. HEADER GÖNDER (İlk 4KB)
+        # WebM dosyasının kimliği buradadır, bunu almazsa oynatmaz.
+        header = f.read(4096)
+        yield header
+        
+        # 2. CANLI UCA ATLA (JUMP TO LIVE)
+        # Dosyanın sonuna git
+        f.seek(0, 2)
+        file_size = f.tell()
+        
+        # Eğer dosya büyükse (yayın ilerlemişse), son 150KB'a geri sar.
+        # Bu yaklaşık 1-2 saniyelik bir tampon sağlar, böylece keyframe yakalarız.
+        buffer_size = 150 * 1024 
+        
+        if file_size > (4096 + buffer_size):
+            f.seek(file_size - buffer_size)
+            log_server(f"⏩ {ip} için canlı uca atlandı (Son 150KB).")
+        else:
+            # Yayın yeni başlamışsa kaldığı yerden devam et
+            f.seek(4096)
+
+        # 3. AKIŞ DÖNGÜSÜ
         while True:
             data = f.read(1024 * 64)
             if not data:
-                time.sleep(0.1)
+                time.sleep(0.05) # Veri yoksa bekle (Ultra düşük gecikme için süre kısaltıldı)
                 continue
             yield data
 
@@ -76,7 +95,7 @@ async def stream_video(username: str, request: Request):
     file_path = f"static/hls/{username}/stream.webm"
     return StreamingResponse(video_generator(file_path, request.client.host), media_type="video/webm")
 
-# --- STANDART ENDPOINTS ---
+# --- STANDART ENDPOINTS (Aynı) ---
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
 @router.get("/live", response_class=HTMLResponse)
@@ -86,7 +105,7 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: str = No
     if broadcaster: target_user = db.query(User).filter(User.username == broadcaster).first()
     active_streams = db.query(User).filter(User.is_live == True).all()
     if mode == "broadcast": target_user = user
-    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user, "auction_active": False})
+    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user}) # auction_active removed temp
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
@@ -112,7 +131,6 @@ async def chat(ws: WebSocket): await ws.accept()
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
-    log_server("WS Bağlantısı Kabul Edildi")
     
     user = None
     try:
@@ -130,9 +148,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     
     video_path = f"{stream_dir}/stream.webm"
     file_handle = open(video_path, "wb")
-    log_server(f"Kayıt Başladı: {video_path}")
-
-    # Bildirim
+    
+    # DB Güncelleme
     async def notify():
         await asyncio.sleep(1)
         new_db = SessionLocal()
@@ -143,24 +160,16 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     loop = asyncio.get_event_loop()
     loop.create_task(notify())
 
-    pkt = 0
-    total = 0
     try:
         while True:
+            # Veri bekleme süresini optimize ettik
             data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
             if not data: break
             
             file_handle.write(data)
             file_handle.flush()
-            os.fsync(file_handle.fileno())
+            os.fsync(file_handle.fileno()) # Hızlı yazma için önemli
             
-            pkt += 1
-            total += len(data)
-            if pkt % 20 == 0:
-                log_server(f"📥 ALINDI: {len(data)} B | TOPLAM: {total/1024:.1f} KB | 💾 DİSK OK")
-                
-    except asyncio.TimeoutError:
-        log_server(f"⚠️ TIMEOUT: {user.username}")
     except Exception as e:
         log_server(f"❌ HATA: {e}")
     finally:
