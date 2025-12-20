@@ -48,10 +48,9 @@ active_processes = {}
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
-        proc = active_processes[username]
         try:
-            proc.terminate()
-            proc.wait(timeout=2)
+            active_processes[username].terminate()
+            active_processes[username].wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
     
@@ -134,38 +133,34 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if not user: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
-    shutil.rmtree(stream_dir, ignore_errors=True)
-    os.makedirs(f"{stream_dir}/480p", exist_ok=True) # Sadece 480p (En hafif)
+    if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
+    os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLATILIYOR: {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (ZERO-COPY MODE): {user.username}")
 
-    # 🔥 SADECE 480p (CPU RAHATLASIN DİYE) 🔥
+    # 🔥 ZERO-COPY FFmpeg (CPU %1 Kullanır) 🔥
+    # WebM (VP8) -> fMP4 HLS (Sadece konteyner değiştirir, kodlama yapmaz)
     command = [
         "ffmpeg", 
         "-f", "webm", 
-        "-analyzeduration", "2000000", "-probesize", "2000000", 
+        "-analyzeduration", "500000", "-probesize", "500000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        "-vf", "scale=-2:480", # Sadece 480p'ye küçült
-        "-preset", "ultrafast", 
-        "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "60", "-keyint_min", "60", "-sc_threshold", "0", 
-        "-pix_fmt", "yuv420p",
-
-        # Tek Çıkış: 480p
-        "-c:v", "libx264", "-b:v", "1200k", "-maxrate", "1500k", "-bufsize", "3000k", 
-        "-c:a", "aac", "-b:a", "96k",
+        # Kodlama YOK (Copy)
+        "-c:v", "copy",
+        "-c:a", "copy", 
         
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
+        # HLS Ayarları (fMP4 Zorunlu)
+        "-f", "hls", 
+        "-hls_time", "2", 
+        "-hls_list_size", "6", 
+        "-hls_segment_type", "fmp4", # 🔥 ÖNEMLİ: VP8 için fMP4 şart
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
-        "-hls_segment_filename", f"{stream_dir}/480p/stream%d.ts",
-        f"{stream_dir}/master.m3u8" # Tek dosya, master direkt 480p olsun
+        f"{stream_dir}/master.m3u8"
     ]
     
-    # 🔥 Logları tekrar SYSTEM loguna veriyoruz (görebilmen için) 🔥
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
     active_processes[user.username] = process
     
@@ -188,11 +183,12 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
+                # 15 saniye timeout (Android gecikmelerine tolerans)
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             except asyncio.TimeoutError:
-                print(f"⚠️ SERVER: Veri Gelmedi (Timeout) - {user.username}")
+                print(f"⚠️ SERVER: Timeout {user.username}")
                 break 
     except Exception as e:
         print(f"❌ SERVER HATASI: {e}")
