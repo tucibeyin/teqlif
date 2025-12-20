@@ -14,11 +14,10 @@ from utils import get_current_user, SECRET_KEY, ALGORITHM
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# Log
 @router.post("/log/client")
 async def client_log(request: Request): return {"status": "ok"}
 
-# Manager
+# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -39,7 +38,7 @@ def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
         proc = active_processes[username]
-        try: proc.terminate()
+        try: proc.terminate(); proc.wait()
         except: pass
         del active_processes[username]
     
@@ -76,7 +75,14 @@ async def stop(user: User = Depends(get_current_user)):
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
 @router.post("/broadcast/thumbnail")
-async def thumb(): return {"status": "ok"}
+async def thumb(request: Request, user: User = Depends(get_current_user)):
+    try:
+        d = await request.json()
+        import base64
+        with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f:
+            f.write(base64.b64decode(d['image'].split(",")[1]))
+    except: pass
+    return {"status": "ok"}
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(): return {"status": "ok"}
 @router.post("/broadcast/reset_auction")
@@ -103,21 +109,38 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 HLS BAŞLIYOR (COPY MODE): {user.username}")
+    print(f"🎥 MULTI-BITRATE HLS BAŞLIYOR: {user.username}")
 
-    # 🔥 FFmpeg COPY (CPU %1) 🔥
-    # H.264 gelen veriyi direk HLS yap. Transcode YOK.
+    # 🔥 FFmpeg MULTI-BITRATE (720p & 360p) 🔥
+    # Tek giriş -> İki çıkış (High/Low)
+    # CPU tasarrufu için 'ultrafast' ve 'zerolatency' kullanıyoruz.
     command = [
         "ffmpeg", 
         "-f", "webm", 
         "-i", "pipe:0",
-        "-c:v", "copy", # VİDEOYU KOPYALA (HIZLI)
-        "-c:a", "aac", "-b:a", "128k", "-ac", "2", # SESİ AAC YAP (ZORUNLU)
+        
+        # Filtre: Videoyu 2'ye böl, biri 720p (v1), biri 360p (v2) olsun
+        "-filter_complex", "[0:v]split=2[v1][v2]; [v1]scale=-2:720[v720]; [v2]scale=-2:360[v360]",
+        
+        # Stream 1: 720p (High Quality)
+        "-map", "[v720]", "-c:v:0", "libx264", "-b:v:0", "2000k", "-preset", "ultrafast", "-tune", "zerolatency", "-g", "48",
+        
+        # Stream 2: 360p (Low Quality / Mobile Saver)
+        "-map", "[v360]", "-c:v:1", "libx264", "-b:v:1", "600k", "-preset", "ultrafast", "-tune", "zerolatency", "-g", "48",
+        
+        # Audio (Her ikisi için ortak)
+        "-map", "a:0", "-map", "a:0", "-c:a", "aac", "-b:a", "64k", "-ac", "2",
+        
+        # HLS Ayarları
         "-f", "hls", 
         "-hls_time", "2", 
         "-hls_list_size", "4",
-        "-hls_flags", "delete_segments+omit_endlist",
-        f"{stream_dir}/master.m3u8"
+        "-hls_flags", "delete_segments+omit_endlist+split_by_time",
+        
+        # Master Playlist Oluştur (Otomatik Geçiş İçin)
+        "-master_pl_name", "master.m3u8",
+        "-var_stream_map", "v:0,a:0 v:1,a:1",
+        f"{stream_dir}/stream_%v.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
@@ -125,7 +148,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     
     # DB Bildirim
     async def notify():
-        await asyncio.sleep(4) # HLS oluşsun diye bekle
+        await asyncio.sleep(6) # HLS oluşması için biraz daha zaman ver
         new_db = SessionLocal()
         u = new_db.query(User).filter(User.username == user.username).first()
         u.is_live = True; new_db.commit(); new_db.close()
