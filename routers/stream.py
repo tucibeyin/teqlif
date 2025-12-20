@@ -16,7 +16,6 @@ from utils import get_current_user, SECRET_KEY, ALGORITHM
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- Loglama ---
 @router.post("/log/client")
 async def client_log(request: Request):
     try:
@@ -49,13 +48,13 @@ def cleanup_stream(username):
     if username in active_processes:
         proc = active_processes[username]
         try:
-            proc.terminate()
-            proc.wait(timeout=2)
+            if proc.poll() is None:
+                proc.terminate()
+                proc.wait(timeout=2)
         except: 
             try: proc.kill()
             except: pass
-        if username in active_processes:
-            del active_processes[username]
+        if username in active_processes: del active_processes[username]
     
     db = SessionLocal()
     try:
@@ -69,7 +68,8 @@ def write_to_ffmpeg(process, data):
         try:
             process.stdin.write(data)
             process.stdin.flush()
-        except: pass
+        except Exception as e:
+            print(f"❌ FFmpeg Yazma Hatası: {e}")
 
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
@@ -138,36 +138,36 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (ROBUST H264): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (LOGGING MODE): {user.username}")
 
-    # 🔥 ROBUST COPY MODE (CPU %1) 🔥
-    # -analyzeduration ve -probesize artırıldı ki başlangıcı kaçırmasın
+    # FFmpeg log dosyası
+    log_file = open(f"{stream_dir}/ffmpeg.log", "w")
+
+    # 🔥 ROBUST COPY MODE 🔥
     command = [
         "ffmpeg", 
         "-f", "matroska", 
-        "-analyzeduration", "10000000", "-probesize", "10000000", # Daha büyük analiz tamponu
+        "-analyzeduration", "20000000", "-probesize", "20000000", 
         "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
-        
-        "-c:v", "copy", # Video'yu işleme
-        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Ses Hafif AAC
-        
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
+        "-c:v", "copy",
+        "-c:a", "aac", "-b:a", "64k", "-ac", "1",
+        "-f", "hls", "-hls_time", "4", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
-        "-hls_segment_type", "fmp4",
         "-master_pl_name", "master.m3u8", 
         f"{stream_dir}/stream.m3u8"
     ]
     
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
+    # Stderr'i dosyaya yönlendiriyoruz ki sunucu loglarını kirletmesin ama inceleyebilelim
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=log_file)
     active_processes[user.username] = process
     
     async def wait_for_stream():
         start_t = time.time()
         while time.time() - start_t < 40:
             if os.path.exists(f"{stream_dir}/master.m3u8"):
-                print(f"✅ YAYIN AKTİF: {user.username}")
+                print(f"✅ YAYIN AKTİF (Dosya Oluştu): {user.username}")
                 new_db = SessionLocal()
                 u = new_db.query(User).filter(User.username == user.username).first()
                 u.is_live = True; new_db.commit(); new_db.close()
@@ -179,19 +179,39 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     loop = asyncio.get_event_loop()
     loop.create_task(wait_for_stream())
 
+    packet_count = 0
+    total_bytes = 0
+
     try:
         while True:
             try:
-                # 30 Saniye Timeout
+                # 30 sn timeout
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=30.0)
-                if not data: break
+                if not data: 
+                    print("⚠️ Veri Boş Geldi")
+                    break
+                
+                # İstatistik
+                packet_count += 1
+                total_bytes += len(data)
+                
+                if packet_count % 20 == 0:
+                    print(f"📊 {user.username} | Paket: {packet_count} | Toplam: {total_bytes/1024:.1f} KB | Son: {len(data)} B")
+
+                # FFmpeg yaşıyor mu?
+                if process.poll() is not None:
+                    print(f"❌ FFmpeg Çöktü! Kodu: {process.returncode}")
+                    break
+
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
+
             except asyncio.TimeoutError:
-                print(f"⚠️ SERVER: Timeout {user.username}")
+                print(f"⚠️ SERVER: Veri Gelmedi (Timeout) - {user.username}")
                 break 
     except Exception as e:
-        print(f"❌ SERVER HATASI: {e}")
+        print(f"❌ SERVER SOCKET HATASI: {e}")
     finally:
+        log_file.close()
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
