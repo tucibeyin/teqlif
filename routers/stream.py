@@ -16,7 +16,7 @@ from utils import get_current_user
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- Müşteri Logları ---
+# --- Loglama ---
 @router.post("/log/client")
 async def client_log(request: Request):
     try:
@@ -25,6 +25,7 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
+# --- Socket Manager ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -43,16 +44,28 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 active_processes = {}
+active_logs = {}
+
+def log_to_file(username, message):
+    try:
+        with open(f"static/hls/{username}/stream.log", "a") as f:
+            f.write(f"[{time.strftime('%H:%M:%S')}] {message}\n")
+    except: pass
 
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
+        proc = active_processes[username]
         try:
-            active_processes[username].terminate()
-            active_processes[username].wait(timeout=2)
-        except: 
-            active_processes[username].kill()
+            proc.terminate()
+            proc.wait(timeout=2)
+        except: proc.kill()
         del active_processes[username]
+    
+    if username in active_logs:
+        try: active_logs[username].close()
+        except: pass
+        del active_logs[username]
 
     db = SessionLocal()
     try:
@@ -62,12 +75,13 @@ def cleanup_stream(username):
     finally: db.close()
 
 def write_to_ffmpeg(process, data):
-    if process and process.stdin: 
+    if process and process.stdin:
         try:
             process.stdin.write(data)
             process.stdin.flush()
         except: pass
 
+# --- Routes ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -132,54 +146,61 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if not user: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
-    if not os.path.exists(stream_dir):
-        os.makedirs(f"{stream_dir}/720p", exist_ok=True); os.makedirs(f"{stream_dir}/480p", exist_ok=True)
-        os.makedirs(f"{stream_dir}/360p", exist_ok=True); os.makedirs(f"{stream_dir}/240p", exist_ok=True)
+    if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
+    os.makedirs(f"{stream_dir}/480p", exist_ok=True)
+    os.makedirs(f"{stream_dir}/240p", exist_ok=True) # Sadece 2 kalite
 
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    log_file = open(f"{stream_dir}/stream.log", "w")
+    active_logs[user.username] = log_file
+    print(f"🎥 YAYIN BAŞLIYOR (PERFORMANCE MODE): {user.username}")
 
-    # 🔥 KRİTİK AYARLAR (MATROSKA + NO TEMP FILE) 🔥
+    # 🔥 CPU DOSTU FFmpeg AYARLARI 🔥
+    # -preset ultrafast: CPU kullanımını minimize eder (Speed > 1.0x garanti olsun diye)
+    # Sadece 2 stream (480p ve 240p)
     command = [
         "ffmpeg", 
-        "-f", "matroska", # WebM yerine Matroska (Daha güvenli)
-        "-analyzeduration", "1000000", "-probesize", "1000000", 
-        "-fflags", "+genpts+igndts+nobuffer+discardcorrupt", 
+        "-f", "matroska", 
+        "-analyzeduration", "500000", "-probesize", "500000", # Hızlı analiz
+        "-fflags", "+genpts+igndts+nobuffer+discardcorrupt",
+        "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
         "-filter_complex", 
-        "[0:v]scale=-2:720,crop=406:720:(in_w-406)/2:0,split=4[v720][v480][v360][v240];"
-        "[v720]copy[out720]; [v480]scale=270:-2[out480]; [v360]scale=202:-2[out360]; [v240]scale=136:-2[out240]",
+        "[0:v]scale=-2:480,split=2[v480][v240];" # Girişi direk 480p yap ve böl
+        "[v480]copy[out480];" # 480p'yi kopyala (zaten scale edildi)
+        "[v240]scale=-2:240[out240]", # 240p üret
         
-        "-preset", "veryfast", "-tune", "zerolatency", "-threads", "0", 
-        "-af", "aresample=async=1",
+        "-preset", "ultrafast", # 🔥 EN ÖNEMLİ AYAR: Hız > Sıkıştırma
+        "-tune", "zerolatency", 
         
         "-profile:v", "baseline", "-level", "3.0", 
         "-g", "60", "-keyint_min", "60", "-sc_threshold", "0", 
-        "-force_key_frames", "expr:gte(t,n_forced*2)", 
         "-pix_fmt", "yuv420p",
 
-        "-map", "[out720]", "-map", "0:a", "-c:v:0", "libx264", "-b:v:0", "1500k", "-maxrate:v:0", "1800k", "-bufsize:v:0", "3000k", "-c:a:0", "aac", "-b:a:0", "128k",
-        "-map", "[out480]", "-map", "0:a", "-c:v:1", "libx264", "-b:v:1", "800k", "-maxrate:v:1", "1000k", "-bufsize:v:1", "1500k", "-c:a:1", "aac", "-b:a:1", "96k",
-        "-map", "[out360]", "-map", "0:a", "-c:v:2", "libx264", "-b:v:2", "500k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1000k", "-c:a:2", "aac", "-b:a:2", "64k",
-        "-map", "[out240]", "-map", "0:a", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "500k", "-c:a:3", "aac", "-b:a:3", "48k",
+        # 480p (Ana Kalite)
+        "-map", "[out480]", "-map", "0:a", 
+        "-c:v:0", "libx264", "-b:v:0", "1000k", "-maxrate:v:0", "1200k", "-bufsize:v:0", "1500k", 
+        "-c:a:0", "aac", "-b:a:0", "128k",
+
+        # 240p (Düşük Kalite)
+        "-map", "[out240]", "-map", "0:a", 
+        "-c:v:1", "libx264", "-b:v:1", "400k", "-maxrate:v:1", "500k", "-bufsize:v:1", "600k", 
+        "-c:a:1", "aac", "-b:a:1", "64k",
         
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
-        # 🔥 ÖNEMLİ: temp_file YOK! Direkt yazar.
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time", 
-        "-hls_allow_cache", "0",
-        "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
+        "-var_stream_map", "v:0,a:0,name:480p v:1,a:1,name:240p",
         "-master_pl_name", "master.m3u8", f"{stream_dir}/%v/stream.m3u8"
     ]
     
-    # Logları sistem loguna (journalctl) bas
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr)
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=log_file)
     active_processes[user.username] = process
     
     async def wait_for_stream():
         start_t = time.time()
         while time.time() - start_t < 30:
             if os.path.exists(f"{stream_dir}/master.m3u8"):
-                print(f"✅ MASTER OLUŞTU: {user.username}")
+                log_to_file(user.username, "✅ YAYIN AKTİF")
                 new_db = SessionLocal()
                 u = new_db.query(User).filter(User.username == user.username).first()
                 u.is_live = True; new_db.commit(); new_db.close()
@@ -199,10 +220,10 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             except asyncio.TimeoutError:
-                print(f"⚠️ SERVER: Timeout {user.username}")
+                log_to_file(user.username, "⚠️ TIMEOUT")
                 break 
     except Exception as e:
-        print(f"❌ SERVER: {e}")
+        log_to_file(user.username, f"❌ HATA: {e}")
     finally:
         cleanup_stream(user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
