@@ -2,8 +2,9 @@
 
 {% block content %}
 {% set mode = request.query_params.get('mode') %}
+{% set timestamp = 123456789 %} {# Rastgele sayı şimdilik #}
 
-<link rel="stylesheet" href="/static/css/live.css?v=318">
+<link rel="stylesheet" href="/static/css/live.css?v={{ range(1, 10000) | random }}">
 
 <style>
     .cinema-video {
@@ -17,7 +18,7 @@
         display: none;
     }
 
-    /* MODAL VE BUTON STİLLERİ */
+    /* MODAL STYLES */
     .modal-overlay {
         position: fixed;
         top: 0;
@@ -40,7 +41,6 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
         width: 85%;
         max-width: 320px;
-        box-shadow: 0 20px 50px rgba(0, 0, 0, 0.6);
     }
 
     .btn-cancel {
@@ -50,7 +50,6 @@
         padding: 10px 20px;
         border-radius: 12px;
         cursor: pointer;
-        font-weight: 600;
     }
 
     .btn-confirm-red {
@@ -63,22 +62,44 @@
         font-weight: bold;
     }
 
-    .btn-switch-cam {
+    /* PLAY BUTTON OVERLAY */
+    #play-overlay {
         position: absolute;
-        top: 20px;
-        right: 20px;
-        z-index: 200;
-        background: rgba(255, 255, 255, 0.2);
-        color: white;
-        width: 40px;
-        height: 40px;
-        border-radius: 50%;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.6);
+        z-index: 5000;
         display: flex;
-        align-items: center;
         justify-content: center;
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        align-items: center;
         cursor: pointer;
-        backdrop-filter: blur(5px);
+    }
+
+    .big-play-btn {
+        background: #e74c3c;
+        color: white;
+        padding: 20px 40px;
+        font-size: 24px;
+        border-radius: 50px;
+        font-weight: bold;
+        box-shadow: 0 0 30px rgba(231, 76, 60, 0.6);
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.05);
+        }
+
+        100% {
+            transform: scale(1);
+        }
     }
 </style>
 
@@ -89,46 +110,27 @@
     <div class="screen" style="position: relative; height: 100vh; overflow: hidden;">
         <video id="preview" autoplay muted playsinline
             style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover; z-index: 0; transform: scaleX(-1);"></video>
-        <canvas id="broadcast-canvas" width="720" height="1280"></canvas>
+        <canvas id="broadcast-canvas" width="640" height="480"></canvas>
+
         <div id="setup-layer" class="setup-overlay">
-            <div class="btn-switch-cam" onclick="switchCamera()"><i class="fa-solid fa-camera-rotate"></i></div>
             <div class="setup-box">
                 <h2 style="margin-bottom:20px; color: white;">Yayını Hazırla 🎥</h2>
                 <div class="input-group-glass"><i class="fa-solid fa-pen"></i><input type="text" id="streamTitle"
-                        placeholder="Yayın Başlığı" autocomplete="off"></div>
+                        placeholder="Başlık" value="Canlı Yayın"></div>
                 <div class="input-group-glass"><i class="fa-solid fa-layer-group"></i><select id="streamCategory">
-                        <option value="Genel">Kategori Seç</option>
-                        <option value="Mezat">Mezat 🔨</option>
-                        <option value="Sohbet">Sohbet 💬</option>
+                        <option value="Genel">Genel</option>
+                        <option value="Sohbet">Sohbet</option>
                     </select></div>
-                <div class="input-group-glass"><i class="fa-solid fa-microphone"></i><select id="audioSource"
-                        onchange="restartStream()"></select></div>
                 <button id="btn-start-broadcast" class="btn-go-live">YAYINI BAŞLAT 🚀</button>
                 <a href="/" class="btn-cancel-live">İptal</a>
             </div>
         </div>
+
         <div id="live-ui" class="ui-overlay" style="display: none;">
             <div class="top-bar-left">
-                <div class="brand-pill" style="margin-bottom: 5px;">CANLI</div>
+                <div class="brand-pill">CANLI</div>
             </div>
             <div class="bottom-dock"><button onclick="stopBroadcast()" class="btn-stop">BİTİR ⏹️</button></div>
-        </div>
-    </div>
-
-    <div id="resetModal" class="modal-overlay" style="display:none;">
-        <div class="modal-box">
-            <h3>Sıfırla?</h3>
-            <div style="display:flex; gap:10px; justify-content:center; margin-top:20px;">
-                <button onclick="closeResetModal()" class="btn-cancel">İptal</button>
-                <button onclick="confirmReset()" class="btn-confirm-red">Evet</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="modMenu" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeModMenu()">
-        <div class="modal-box">
-            <h3 style="color:#ff3b30;">Yönetim</h3>
-            <p id="mod-target-name"></p><button onclick="closeModMenu()" class="btn-cancel">Kapat</button>
         </div>
     </div>
 
@@ -136,29 +138,65 @@
     <div class="feed-scroll">
         {% for stream in streams %}
         <div class="screen stream-item" data-username="{{ stream.username }}">
-            <video id="video-{{ stream.username }}" class="cinema-video" loop playsinline
-                poster="{{ stream.thumbnail }}"></video>
-            <div class="ui-overlay">
-                <div class="top-bar-left">
-                    <div class="streamer-pill">
-                        <div class="name">{{ stream.username }}</div>
+            <div style="position: relative; width: 100%; height: 100%;">
+
+                <div id="play-btn-{{ stream.username }}" class="play-overlay"
+                    onclick="forcePlay('{{ stream.username }}')">
+                    <div class="big-play-btn">▶️ İZLE</div>
+                </div>
+
+                <video id="video-{{ stream.username }}" class="cinema-video" playsinline webkit-playsinline></video>
+
+                <div class="ui-overlay">
+                    <div class="top-bar-left">
+                        <div class="streamer-pill">
+                            <div class="name">{{ stream.username }}</div>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         {% else %}
+        <div style="color:white; text-align:center; padding-top:50%;">
+            <h3>Aktif yayın yok :(</h3>
+            <a href="/" style="color:#e74c3c;">Anasayfaya Dön</a>
+        </div>
         {% endfor %}
     </div>
     {% endif %}
 
-    <div id="giftMenu" class="gift-sheet" style="display:none;">
-        <div style="padding:20px; text-align:center; color:white;">Hediye Gönder <button
-                onclick="closeGiftMenu()">X</button></div>
+    <div id="modMenu" class="modal-overlay" style="display:none;" onclick="if(event.target===this) closeModMenu()">
+        <div class="modal-box">
+            <h3 style="color:#ff3b30;">Yönetim</h3>
+            <p id="mod-target-name"></p><button onclick="closeModMenu()" class="btn-cancel">Kapat</button>
+        </div>
     </div>
 </div>
 
 <script>
-    window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}", auctionActive: {{ 'true' if auction_active else 'false' }}, broadcaster: "{{ broadcaster.username if broadcaster else '' }}" };
+    window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}", broadcaster: "{{ broadcaster.username if broadcaster else '' }}" };
 </script>
-<script src="/static/js/live.js?v=318"></script>
+
+<script src="/static/js/live.js?v={{ range(1, 10000) | random }}"></script>
+
+<script>
+    // HTML içinden Global Fonksiyon
+    function forcePlay(username) {
+        console.log("Force Play Tetiklendi: " + username);
+        const btn = document.getElementById('play-btn-' + username);
+        const vid = document.getElementById('video-' + username);
+
+        if (btn) btn.style.display = 'none';
+
+        if (vid) {
+            vid.muted = false; // Sesi açmayı dene
+            vid.src = '/stream/' + username;
+            vid.play().catch(e => {
+                console.log("Sesli oynatma hatası, sessiz deneniyor...");
+                vid.muted = true;
+                vid.play();
+            });
+        }
+    }
+</script>
 {% endblock %}
