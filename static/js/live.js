@@ -38,15 +38,14 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     };
 
-    // --- 2. YAYINCI (ANDROID NATIVE MODE) ---
+    // --- 2. YAYINCI (DEBUG MODE + VP8) ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
-        const canvas = document.getElementById('broadcast-canvas');
 
         async function initStream() {
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true, noiseSuppression: true },
+                    audio: { echoCancellation: true },
                     video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } }
                 });
                 videoElement.srcObject = localStream;
@@ -67,17 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                 broadcastWs.onopen = () => {
-                    remoteLog("Yayın Başlıyor (VP8 Native)...");
+                    remoteLog("Yayın Başlıyor (VP8 Safe)...");
                     const stream = canvas.captureStream(24);
                     if (localStream) stream.addTrack(localStream.getAudioTracks()[0]);
 
-                    // 🔥 ANDROID İÇİN EN GÜVENLİ AYAR: VP8 🔥
-                    // H.264 zorlamıyoruz, VP8 Android'in doğal formatıdır.
+                    // Güvenli VP8 (Her cihazda çalışır)
                     let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1000000 };
-
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
-                        remoteLog("VP8 desteklenmiyor, varsayılan deneniyor.", 'WARN');
-                        options = { mimeType: 'video/webm', videoBitsPerSecond: 1000000 };
+                        options = { mimeType: 'video/webm' }; // En son çare
                     }
 
                     try { rec = new MediaRecorder(stream, options); } catch (e) {
@@ -85,13 +81,20 @@ document.addEventListener('DOMContentLoaded', () => {
                         return;
                     }
 
+                    rec.onstart = () => remoteLog("Kaydedici Başladı ✅");
+
+                    let packetCount = 0;
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            // Buffer koruması (5MB)
-                            if (broadcastWs.bufferedAmount > 5000000) {
-                                console.warn("Ağ yavaş, paket atlandı.");
+                            // Buffer korumasını biraz gevşettik (3MB) test için
+                            if (broadcastWs.bufferedAmount > 3000000) {
+                                remoteLog("⚠️ Buffer Şişti! Paket Gönderilemedi.");
                             } else {
                                 broadcastWs.send(e.data);
+                                packetCount++;
+                                if (packetCount % 5 === 0) {
+                                    remoteLog(`📤 GÖNDERİLDİ: ${e.data.size} byte`);
+                                }
                             }
                         }
                     };
@@ -99,6 +102,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     rec.start(1000);
                     requestWakeLock();
 
+                    // Thumbnail
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
                             fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.3) }) });
@@ -107,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
 
                 broadcastWs.onclose = () => {
+                    remoteLog("WS Bağlantısı Koptu!", 'WARN');
                     if (rec) rec.stop();
                     alert("Yayın koptu.");
                     window.location.href = '/';
@@ -121,26 +126,22 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- 3. İZLEYİCİ (WEBM PLAYER) ---
+    // --- 3. İZLEYİCİ (WEBM STREAM) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         if (v) {
             remoteLog("İzleyici: " + u);
-            // Sunucu raw WebM yazıyor, biz de onu okuyoruz
             v.src = `/stream/${u}`;
             v.type = "video/webm";
-
             v.play().catch(() => { v.muted = true; v.play(); });
 
-            // Koparsa tekrar bağlan
             v.onerror = () => {
                 setTimeout(() => {
                     v.src = `/stream/${u}?t=${Date.now()}`;
                     v.load(); v.play();
                 }, 2000);
             };
-
             window.connectChat(u);
         }
     }

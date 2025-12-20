@@ -49,9 +49,8 @@ def cleanup_stream(username):
     except: pass
     finally: db.close()
 
-# --- VİDEO AKIŞI ---
+# --- VİDEO OKUYUCU ---
 def video_generator(filepath):
-    """Dosyayı canlı olarak okuyan jeneratör"""
     # Dosya oluşana kadar bekle
     tries = 0
     while not os.path.exists(filepath):
@@ -61,7 +60,6 @@ def video_generator(filepath):
 
     with open(filepath, "rb") as f:
         while True:
-            # Dosyanın sonuna gelince bekle (yeni veri yazılıyor olabilir)
             data = f.read(1024 * 64)
             if not data:
                 time.sleep(0.1)
@@ -71,10 +69,9 @@ def video_generator(filepath):
 @router.get("/stream/{username}")
 async def stream_video(username: str):
     file_path = f"static/hls/{username}/stream.webm"
-    # WebM formatında stream et
     return StreamingResponse(video_generator(file_path), media_type="video/webm")
 
-# --- Diğer Rotalar ---
+# --- STANDART ROTALAR ---
 @router.post("/stream/restrict")
 async def restrict(target_username: str = Form(...), action: str = Form(...), user: User = Depends(get_current_user)): return {"status": "ok"} 
 
@@ -142,9 +139,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (RAW FILE MODE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (DEBUG MODE): {user.username}")
     
-    # Doğrudan WebM dosyasına yaz (CPU %0)
     video_path = f"{stream_dir}/stream.webm"
     file_handle = open(video_path, "wb")
 
@@ -160,16 +156,36 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     loop = asyncio.get_event_loop()
     loop.create_task(notify_live())
 
+    total_bytes = 0
+    packet_count = 0
+
     try:
         while True:
             try:
-                # 20 sn timeout
+                # Veri bekleme günlüğü
+                # print(f"⏳ Veri bekleniyor... ({user.username})") 
+                
+                # 20 saniye timeout
                 data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
-                if not data: break
+                
+                if not data: 
+                    print(f"⚠️ Boş veri alındı! ({user.username})")
+                    break
+                
+                # Veri yazma
                 file_handle.write(data)
                 file_handle.flush()
+                
+                # İstatistik
+                total_bytes += len(data)
+                packet_count += 1
+                
+                # Her 5 pakette bir log bas (Sistemi yormadan takibi sağlar)
+                if packet_count % 5 == 0:
+                    print(f"📥 ALINDI: {len(data)} byte | Toplam: {total_bytes/1024:.1f} KB | Dosya Yazıldı: Evet")
+
             except asyncio.TimeoutError:
-                print(f"⚠️ SERVER: Timeout {user.username}")
+                print(f"⚠️ SERVER: Timeout (Veri Akışı Kesildi) - {user.username}")
                 break 
     except Exception as e:
         print(f"❌ SERVER HATASI: {e}")
