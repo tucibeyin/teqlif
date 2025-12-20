@@ -6,7 +6,7 @@ import sys
 import asyncio 
 import time
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
-from fastapi.responses import RedirectResponse, HTMLResponse
+from fastapi.responses import RedirectResponse, HTMLResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 from database import get_db, SessionLocal
@@ -25,6 +25,7 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
+# --- Socket Manager ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -47,9 +48,11 @@ active_processes = {}
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
+        # 🔥 DÜZELTME: proc değişkeni burada tanımlı 🔥
+        proc = active_processes[username]
         try:
-            active_processes[username].terminate()
-            active_processes[username].wait(timeout=2)
+            proc.terminate()
+            proc.wait(timeout=2)
         except: proc.kill()
         del active_processes[username]
     
@@ -134,9 +137,10 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(f"{stream_dir}", exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (RESCUE MODE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (SUPER LITE): {user.username}")
 
-    # 🔥 RESCUE MODE: 360p @ 24fps (Düşük CPU) 🔥
+    # 🔥 SUPER LITE MODE (240p @ 15fps) 🔥
+    # Amaç: CPU'yu rahatlatıp hızı 1.0x üzerine çıkarmak
     command = [
         "ffmpeg", 
         "-f", "webm", 
@@ -145,18 +149,19 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         "-err_detect", "ignore_err",
         "-i", "pipe:0",
         
-        "-vf", "scale=-2:360,fps=24", # 360p ve 24 kare (Çok hafif)
+        # Sadece 240p ve 15 FPS (Çok hafif)
+        "-vf", "scale=-2:240,fps=15", 
         
         "-c:v", "libx264", 
-        "-preset", "ultrafast", # Hız > Kalite
+        "-preset", "ultrafast", 
         "-tune", "zerolatency", 
         "-profile:v", "baseline", "-level", "3.0", 
-        "-g", "48", "-keyint_min", "48", # 2 saniyelik GOP (24fps * 2)
+        "-g", "30", "-keyint_min", "30", # 2 saniyelik GOP (15fps * 2)
         "-sc_threshold", "0",
         "-pix_fmt", "yuv420p",
         
-        "-b:v", "600k", "-maxrate", "800k", "-bufsize", "1200k", # Düşük Bitrate
-        "-c:a", "aac", "-b:a", "64k", "-ac", "1", # Mono ses
+        "-b:v", "300k", "-maxrate", "400k", "-bufsize", "600k", # Çok düşük bitrate
+        "-c:a", "aac", "-b:a", "32k", "-ac", "1", "-ar", "22050", # Düşük ses kalitesi
         
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+discont_start+program_date_time",
@@ -186,8 +191,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     try:
         while True:
             try:
-                # 10 saniye veri gelmezse kapat
-                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
+                # 20 saniye timeout (Android gecikmelerine tolerans)
+                data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
                 if not data: break
                 await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             except asyncio.TimeoutError:
@@ -197,3 +202,5 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         print(f"❌ SERVER HATASI: {e}")
     finally:
         cleanup_stream(user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
