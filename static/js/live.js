@@ -22,34 +22,33 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                // DOĞAL SENSÖR MODU (EN GENİŞ AÇI)
+                // DOĞAL SENSÖR MODU
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: { echoCancellation: true, noiseSuppression: true },
                     video: { facingMode: 'user' }
                 });
                 videoElement.srcObject = stream;
-                remoteLog("✅ Kamera Hazır (Geniş Açı)");
+                remoteLog("✅ Kamera Hazır (Native)");
             } catch (e) { alert("Kamera Hatası: " + e); }
         }
         initCamera();
 
         document.getElementById('btn-start-broadcast').addEventListener('click', () => {
             const fd = new FormData();
-            fd.append('title', document.getElementById('streamTitle').value || 'Canlı Yayın');
+            fd.append('title', document.getElementById('streamTitle').value || 'Live');
             fd.append('category', document.getElementById('streamCategory').value || 'Genel');
 
             fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
-                if (!res.ok) { alert("Sunucu Hatası"); return; }
+                if (!res.ok) { alert("Hata!"); return; }
                 document.getElementById('setup-layer').style.display = 'none';
                 document.getElementById('live-ui').style.display = 'flex';
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    // DİREKT AKIŞ
                     const cameraStream = videoElement.srcObject;
-
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { videoBitsPerSecond: 2500000 };
 
                     try { rec = new MediaRecorder(cameraStream, options); } catch (e) { rec = new MediaRecorder(cameraStream); }
 
@@ -60,9 +59,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     };
                     rec.start(1000);
-                    remoteLog("🚀 Yayın Başladı");
+                    remoteLog(`🚀 Yayın Başladı: ${rec.mimeType}`);
 
-                    // Thumbnail (15sn)
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
                             const ctx = canvas.getContext('2d');
@@ -89,16 +87,15 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- İZLEYİCİ (SENKRONİZE MOD) ---
+    // --- İZLEYİCİ (GEVŞEK & STABIL MOD) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
-        const src = `/static/hls/${u}/master.m3u8`;
+        const src = `/static/hls/${u}/index.m3u8`;
         const endScreen = document.getElementById(`end-screen-${u}`);
 
-        remoteLog(`👀 İzleyici: ${u} (Sync Mode)`);
+        remoteLog(`👀 İzleyici: ${u} (Relaxed)`);
 
-        // WebSocket (Kapanış Takibi)
         const chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${u}`);
         chatWs.onmessage = (e) => {
             const data = JSON.parse(e.data);
@@ -118,23 +115,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function initPlayer() {
             if (Hls.isSupported()) {
-                // 🔥 SENKRONİZASYON AYARLARI 🔥
-                // Bu ayarlar herkesin aynı kareye kilitlenmesini sağlar.
+                // 🔥 GEVŞEK AYARLAR (Donmayı Engeller) 🔥
                 const hls = new Hls({
                     enableWorker: true,
-                    lowLatencyMode: true,
-
-                    // Canlı yayının ucundan kaç segment geride durayım? (2 x 2sn = 4sn gecikme hedefi)
-                    liveSyncDurationCount: 2,
-
-                    // Eğer 3 segmentten (6 saniyeden) fazla geriye düşersem...
-                    liveMaxLatencyDurationCount: 3,
-
-                    // ... Videoyu 1.2x hızlandırıp diğerlerine yetişeyim.
-                    maxLiveSyncPlaybackRate: 1.2,
-
-                    // Kalite değişimi için buffer boyutu
-                    maxBufferLength: 30
+                    // Canlıdan 3 parça (3x2 = 6sn) geride kal
+                    liveSyncDurationCount: 3,
+                    // 10 parçaya kadar (20sn) gecikmeye izin ver (Seek yapma)
+                    liveMaxLatencyDurationCount: 10,
+                    // Pes etme, bekle
+                    manifestLoadingTimeOut: 20000,
                 });
 
                 window.hlsInstance = hls;
@@ -150,18 +139,11 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (d.fatal && d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
                 });
 
-                // Ekstra Güvenlik: Eğer 10 saniye geride kalırsa, direkt ileri atla.
-                setInterval(() => {
-                    if (v && !v.paused && hls.latency > 10) {
-                        console.log("⚠️ Çok geride kaldı, senkronize ediliyor...");
-                        v.currentTime = v.duration - 2; // Canlı uca 2sn kala zıpla
-                    }
-                }, 5000);
-
             } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                // iOS Native (Apple kendi senkronizasyonunu yapar)
+                // iOS Native (Apple işini bilir)
                 v.src = src;
                 v.addEventListener('loadedmetadata', () => { v.muted = true; v.play().catch(() => { }); });
+                v.addEventListener('error', () => setTimeout(() => { v.src = src; v.load(); }, 2000));
             }
         }
 

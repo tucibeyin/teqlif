@@ -24,31 +24,23 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
-# --- MANAGER (ODA YÖNETİMİ) ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
-    
     async def connect(self, ws, room):
         await ws.accept()
         if room not in self.rooms: self.rooms[room] = []
         self.rooms[room].append(ws)
-        
     def disconnect(self, ws, room):
-        if room in self.rooms and ws in self.rooms[room]:
-            self.rooms[room].remove(ws)
-            
+        if room in self.rooms and ws in self.rooms[room]: self.rooms[room].remove(ws)
     async def broadcast_to_room(self, msg, room):
         if room in self.rooms:
-            # Kopmuş bağlantıları temizleyerek gönder
             for ws in self.rooms[room][:]:
                 try: await ws.send_text(msg)
-                except: 
-                    self.rooms[room].remove(ws)
+                except: self.rooms[room].remove(ws)
 
 manager = ConnectionManager()
 active_processes = {}
 
-# --- CLEANUP ---
 def cleanup_stream_sync(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
@@ -56,7 +48,6 @@ def cleanup_stream_sync(username):
         try: proc.kill(); proc.wait(timeout=0.1)
         except: pass
         del active_processes[username]
-    
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
@@ -72,7 +63,6 @@ def write_to_ffmpeg(process, data):
         try: process.stdin.write(data); process.stdin.flush()
         except: pass
 
-# --- ROUTES ---
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
 @router.get("/live", response_class=HTMLResponse)
@@ -92,7 +82,6 @@ async def start(title: str = Form(...), category: str = Form(...), user: User = 
 @router.post("/broadcast/stop")
 async def stop(user: User = Depends(get_current_user)):
     asyncio.create_task(cleanup_stream_async(user.username))
-    # 🔥 YAYIN BİTTİ BİLGİSİNİ HERKESE GÖNDER 🔥
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
@@ -102,10 +91,9 @@ async def thumb(request: Request, user: User = Depends(get_current_user), db: Se
     try:
         d = await request.json()
         import base64
-        with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f:
-            f.write(base64.b64decode(d['image'].split(",")[1]))
-        user.thumbnail = f"/static/thumbnails/thumb_{user.username}.jpg"
-        db.commit()
+        file_path = f"static/thumbnails/thumb_{user.username}.jpg"
+        with open(file_path, "wb") as f: f.write(base64.b64decode(d['image'].split(",")[1]))
+        user.thumbnail = f"/{file_path}"; db.commit()
     except: pass
     return {"status": "ok"}
 @router.post("/broadcast/toggle_auction")
@@ -115,23 +103,16 @@ async def reset_auction(): return {"status": "ok"}
 @router.post("/gift/send")
 async def send_gift(): return {"status": "success"}
 
-# 🔥 İZLEYİCİ SOHBET/DURUM SOKETİ 🔥
 @router.websocket("/ws/chat")
 async def chat(websocket: WebSocket, stream: str = "home"):
-    # İzleyiciyi odaya bağla
     await manager.connect(websocket, stream)
     try:
-        while True:
-            # Sohbet mesajlarını dinle (Şimdilik boş, ilerde chat eklenir)
-            await websocket.receive_text()
-    except:
-        manager.disconnect(websocket, stream)
+        while True: await websocket.receive_text()
+    except: manager.disconnect(websocket, stream)
 
-# --- YAYINCI SOCKETİ ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
-    
     user = None
     try:
         token = websocket.cookies.get("access_token")
@@ -140,23 +121,26 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: await websocket.close(); return
 
-    user.is_live = True
-    db.commit()
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    user.is_live = True; db.commit()
+    print(f"🎥 YAYIN BAŞLIYOR (STABLE MODE): {user.username}")
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # FFmpeg (480p/720p Adaptive Hazırlık - Şimdilik Universal Tekli)
+    # 🔥 FFmpeg (STABIL & GÜVENLİ) 🔥
+    # -hls_time 2: 2 saniyelik parçalar (Daha az dosya, daha az 404 hatası)
+    # -g 48: 2 saniyede bir keyframe (Tam senkron)
+    # -hls_list_size 6: 12 saniyelik geriye dönük buffer tutar
     command = [
         "ffmpeg", "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
-        "-level", "3.1", "-pix_fmt", "yuv420p", "-r", "24", "-g", "48", "-keyint_min", "48",
-        "-sc_threshold", "0", "-b:v", "2000k", "-vf", "scale=-2:540",
-        "-c:a", "aac", "-b:a", "64k", "-ac", "2", "-af", "aresample=async=1",
+        "-level", "3.1", "-pix_fmt", "yuv420p", "-r", "24", 
+        "-g", "48", "-keyint_min", "48", "-sc_threshold", "0", 
+        "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "4000k", "-vf", "scale=-2:540",
+        "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
-        "-hls_flags", "delete_segments+omit_endlist+split_by_time+independent_segments",
+        "-hls_flags", "delete_segments+omit_endlist+split_by_time",
         f"{stream_dir}/index.m3u8"
     ]
     
@@ -164,7 +148,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     active_processes[user.username] = process
     
     async def notify():
-        await asyncio.sleep(3) 
+        await asyncio.sleep(4) 
         await manager.broadcast_to_room(json.dumps({
             "type": "stream_added", "username": user.username, 
             "title": user.stream_title, "category": user.stream_category, 
