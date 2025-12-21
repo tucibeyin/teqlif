@@ -78,7 +78,7 @@
         transform: scaleX(-1);
     }
 
-    /* --- UI KATMANI --- */
+    /* --- UI KATMANI (Overlay) --- */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -89,13 +89,13 @@
         pointer-events: none;
         display: flex;
         flex-direction: column;
-        /* Justify content space-between yerine, alt wrapper'ı aşağı iteceğiz */
+        /* Elemanları yayma, sadece yukarıdan aşağı diz */
         justify-content: flex-start;
         padding-top: max(15px, env(safe-area-inset-top));
         padding-bottom: 65px;
         /* Footer payı */
         box-sizing: border-box;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 20%, transparent 60%, rgba(0, 0, 0, 0.95) 100%);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 20%, transparent 60%, rgba(0, 0, 0, 0.95) 100%);
     }
 
     .top-bar {
@@ -153,25 +153,27 @@
         font-size: 14px;
     }
 
-    /* 🔥 BOTTOM WRAPPER (HER ŞEYİ TOPLAYAN KUTU) 🔥 */
-    .bottom-wrapper {
+    /* 🔥 BOTTOM STACK (SİHİRLİ KUTU) 🔥 */
+    /* Bu kutu ekranın en altına yapışır ve içindekileri alt alta dizer */
+    .bottom-stack {
         margin-top: auto;
-        /* En alta it */
+        /* Yukarıdaki boşluğu doldurarak en alta in */
+        width: 100%;
         display: flex;
         flex-direction: column;
-        width: 100%;
-        padding: 0 10px;
-        /* Kenar boşlukları */
-        box-sizing: border-box;
+        /* Alt alta diz */
         gap: 8px;
-        /* Elemanlar arası boşluk */
+        /* Elemanlar arası 8px boşluk */
+        padding: 0 10px;
+        /* Kenar boşluğu */
+        box-sizing: border-box;
         pointer-events: auto;
     }
 
-    /* 🔥 MEZAT BARI (LEGO MANTIĞI) 🔥 */
+    /* 🔥 MEZAT BARI (AKAN DÜZEN) 🔥 */
     .auction-bar {
-        /* Position absolute YOK! Akışın içinde. */
         position: relative;
+        /* Normal akışta dur */
         height: 55px;
         width: 100%;
         background: rgba(20, 20, 20, 0.95);
@@ -195,7 +197,6 @@
         flex: 1;
     }
 
-    /* YENİ DURUM YAZISI */
     .auc-status {
         font-size: 9px;
         color: #ff0050;
@@ -234,7 +235,6 @@
         gap: 5px;
     }
 
-    /* Butonlar */
     .auc-btn-sm {
         width: 36px;
         height: 36px;
@@ -264,7 +264,6 @@
         color: #ccc;
     }
 
-    /* İzleyici Pey Alanı */
     .bid-presets {
         display: flex;
         gap: 5px;
@@ -341,6 +340,8 @@
 
     /* --- CHAT --- */
     .chat-container {
+        position: relative;
+        /* Akışın içinde */
         height: 150px;
         width: 100%;
         overflow-y: auto;
@@ -383,6 +384,8 @@
 
     /* --- INPUT --- */
     .bottom-controls {
+        position: relative;
+        /* Akışın içinde */
         display: flex;
         align-items: center;
         gap: 10px;
@@ -437,6 +440,7 @@
         font-size: 18px;
     }
 
+    /* Animasyonlar */
     @keyframes slideIn {
         from {
             opacity: 0;
@@ -615,7 +619,7 @@
             </div>
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
 
-            <div class="bottom-wrapper">
+            <div class="bottom-stack">
                 <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
                     <div class="auc-info">
                         <div class="auc-status" id="auc-status-{{ user.username }}">MEZAT AKTİF</div>
@@ -661,7 +665,7 @@
             </div>
             <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
 
-            <div class="bottom-wrapper">
+            <div class="bottom-stack">
                 <div id="auction-bar-{{ stream.username }}" class="auction-bar">
                     <div class="auc-info">
                         <div class="auc-status">MEZAT BAŞLADI</div>
