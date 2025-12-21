@@ -12,22 +12,25 @@ templates = Jinja2Templates(directory="templates")
 
 @router.get("/", response_class=HTMLResponse)
 async def read_home(request: Request, category: Optional[str] = None, db: Session = Depends(get_db), user: Optional[User] = Depends(get_current_user)):
-    # Sadece canlı olan VE kullanıcı adı olanları çek
-    query = db.query(User).filter(User.is_live == True, User.username != None)
+    # 1. Sadece CANLI (is_live=True) olanları çek
+    query = db.query(User).filter(User.is_live == True)
     
+    # 2. Kategori seçildiyse filtrele
     if category and category != "Tümü":
         query = query.filter(User.stream_category == category)
         
     active_streams = query.all()
     
+    # 3. Eğer kullanıcı giriş yapmışsa, takip ettiklerini öne çıkar (Opsiyonel Sıralama)
     if user:
         followed_ids = [u.id for u in user.followed]
-        active_streams.sort(key=lambda x: x.id not in followed_ids)
+        # Takip edilenler (True) önce gelir (False=0, True=1 oldugu icin ters siralama)
+        active_streams.sort(key=lambda x: x.id in followed_ids, reverse=True)
         
     return templates.TemplateResponse("index.html", {
         "request": request, 
         "user": user, 
-        "streams": active_streams,
+        "streams": active_streams, # Bu liste HTML'e gider
         "current_category": category if category else "Tümü"
     })
 

@@ -2,13 +2,14 @@
 
 {% block content %}
 <style>
-    /* Sayfanın dikey ortalamasını iptal et, tepeye yasla */
+    /* RESET */
     body,
     html {
         height: auto !important;
         min-height: 100% !important;
         display: block !important;
         overflow-x: hidden;
+        background: #000;
     }
 
     .teqlif-os {
@@ -25,150 +26,131 @@
         display: none !important;
     }
 
-    /* PREMIUM KATEGORİ ALANI (ÜSTTE SABİT) */
+    /* KATEGORİ ÇUBUĞU */
     .category-header-wrapper {
         position: sticky;
         top: 0;
-        z-index: 9999;
-        background: rgba(10, 10, 10, 0.90);
-        backdrop-filter: blur(15px);
-        -webkit-backdrop-filter: blur(15px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        z-index: 999;
+        background: rgba(10, 10, 10, 0.95);
+        backdrop-filter: blur(10px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         padding: 10px 0;
-        width: 100%;
     }
 
     .category-bar {
         display: flex;
-        flex-wrap: wrap;
-        justify-content: center;
+        overflow-x: auto;
         gap: 8px;
-        max-width: 600px;
-        margin: 0 auto;
-        padding: 0 10px;
+        padding: 0 15px;
+        scrollbar-width: none;
+    }
+
+    .category-bar::-webkit-scrollbar {
+        display: none;
     }
 
     .cat-chip {
         flex: 0 0 auto;
-        background: rgba(255, 255, 255, 0.08);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        color: #bbb;
+        background: rgba(255, 255, 255, 0.1);
+        color: #ccc;
         padding: 6px 14px;
         border-radius: 20px;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 600;
         text-decoration: none;
-        transition: all 0.2s ease-out;
+        border: 1px solid transparent;
+        transition: all 0.2s;
     }
 
     .cat-chip.active {
         background: #fff;
         color: #000;
         border-color: #fff;
-        box-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
-        transform: scale(1.05);
     }
 
-    /* KART IZGARASI (INSTAGRAM TARZI) */
+    /* YAYIN IZGARASI */
     .grid-container {
         display: grid;
         grid-template-columns: repeat(2, 1fr);
-        gap: 8px;
-        padding: 8px;
-        padding-top: 10px;
-        padding-bottom: 100px;
+        gap: 10px;
+        padding: 15px;
+        padding-bottom: 80px;
     }
 
-    @media (min-width: 768px) {
+    @media(min-width: 768px) {
         .grid-container {
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
         }
     }
 
     .grid-card {
         position: relative;
-        text-decoration: none;
-        color: white;
-        background: #111;
-        border-radius: 8px;
+        aspect-ratio: 9/16;
+        border-radius: 12px;
         overflow: hidden;
-        aspect-ratio: 1 / 1;
-        border: 1px solid rgba(255, 255, 255, 0.05);
-        animation: fadeInCard 0.5s ease-out;
+        background: #111;
+        text-decoration: none;
+        transition: transform 0.2s;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
 
-    .card-image {
-        width: 100%;
-        height: 100%;
-        background: #000;
+    .grid-card:active {
+        transform: scale(0.98);
     }
 
-    .card-image img {
+    .card-thumb {
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
 
-    /* Rozetler */
     .live-badge {
         position: absolute;
         top: 8px;
         left: 8px;
-        background: #ff3b30;
+        background: #ff0050;
         color: white;
-        font-size: 9px;
-        font-weight: 900;
         padding: 3px 6px;
         border-radius: 4px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+        font-size: 10px;
+        font-weight: 800;
+        animation: pulse 1.5s infinite;
     }
 
-    .card-gradient-overlay {
+    .card-overlay {
         position: absolute;
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 60%;
         background: linear-gradient(to top, rgba(0, 0, 0, 0.9), transparent);
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
         padding: 10px;
         box-sizing: border-box;
-    }
-
-    .card-avatar-row {
         display: flex;
-        align-items: center;
-        gap: 6px;
-        margin-bottom: 2px;
+        flex-direction: column;
     }
 
-    .card-avatar {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: linear-gradient(45deg, #34C759, #00d2ff);
-        color: #000;
-        font-size: 9px;
-        font-weight: bold;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-    }
-
-    .card-username {
-        font-size: 11px;
+    .card-title {
+        color: white;
+        font-size: 13px;
         font-weight: 700;
-        color: #fff;
+        margin: 0;
         text-shadow: 0 1px 2px black;
     }
 
-    .card-cat-label {
-        font-size: 10px;
+    .card-user {
         color: #ddd;
-        margin-left: 26px;
-        opacity: 0.8;
+        font-size: 11px;
+        margin-top: 2px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .card-avatar {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        background: #555;
     }
 
     /* ALT MENÜ */
@@ -177,15 +159,14 @@
         bottom: 0;
         left: 0;
         width: 100%;
-        height: 65px;
-        background: rgba(10, 10, 10, 0.95);
-        backdrop-filter: blur(20px);
-        border-top: 1px solid rgba(255, 255, 255, 0.08);
+        height: 60px;
+        background: rgba(15, 15, 15, 0.95);
+        backdrop-filter: blur(10px);
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
         display: flex;
         justify-content: space-around;
         align-items: center;
-        z-index: 2000;
-        padding-bottom: env(safe-area-inset-bottom);
+        z-index: 1000;
     }
 
     .nav-item {
@@ -197,7 +178,6 @@
         align-items: center;
         justify-content: center;
         text-decoration: none;
-        transition: 0.2s;
     }
 
     .nav-item.active {
@@ -205,47 +185,44 @@
     }
 
     .center-btn {
-        background: linear-gradient(135deg, #00d2ff, #3a7bd5);
+        background: linear-gradient(45deg, #ff0050, #d60044);
         color: white !important;
-        width: 48px;
-        height: 48px;
-        border-radius: 14px;
-        font-size: 20px;
-        margin-bottom: 15px;
-        box-shadow: 0 5px 20px rgba(0, 210, 255, 0.4);
-        border: 2px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
+        width: 45px;
+        height: 45px;
+        box-shadow: 0 5px 15px rgba(255, 0, 80, 0.3);
     }
 
-    /* Boş Durum */
-    .empty-feed {
+    /* BOŞ DURUM */
+    .empty-state {
         grid-column: 1 / -1;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 300px;
+        text-align: center;
+        padding: 50px 20px;
         color: #555;
     }
 
-    .btn-start-now {
-        background: #fff;
-        color: #000;
-        padding: 12px 25px;
-        border-radius: 25px;
+    .btn-start {
+        background: white;
+        color: black;
+        padding: 10px 20px;
+        border-radius: 20px;
         text-decoration: none;
-        margin-top: 20px;
         font-weight: bold;
+        margin-top: 10px;
+        display: inline-block;
     }
 
-    @keyframes fadeInCard {
-        from {
-            opacity: 0;
-            transform: translateY(10px);
+    @keyframes pulse {
+        0% {
+            opacity: 1;
         }
 
-        to {
+        50% {
+            opacity: 0.5;
+        }
+
+        100% {
             opacity: 1;
-            transform: translateY(0);
         }
     }
 </style>
@@ -259,34 +236,29 @@
                 class="cat-chip {{ 'active' if current_category == 'Sohbet' else '' }}">Sohbet</a>
             <a href="/?category=Oyun" class="cat-chip {{ 'active' if current_category == 'Oyun' else '' }}">Oyun</a>
             <a href="/?category=Müzik" class="cat-chip {{ 'active' if current_category == 'Müzik' else '' }}">Müzik</a>
-            <a href="/?category=Dans" class="cat-chip {{ 'active' if current_category == 'Dans' else '' }}">Dans</a>
-            <a href="/?category=Spor" class="cat-chip {{ 'active' if current_category == 'Spor' else '' }}">Spor</a>
         </div>
     </div>
 
-    <div class="grid-container" id="stream-grid">
+    <div class="grid-container" id="stream-feed">
         {% for stream in streams %}
         <a href="/live?broadcaster={{ stream.username }}" class="grid-card" id="card-{{ stream.username }}">
-            <div class="card-image">
-                <img src="{{ stream.thumbnail }}"
-                    onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#222';"
-                    alt="Yayın">
-                <div class="live-badge">CANLI</div>
-                <div class="card-gradient-overlay">
-                    <div class="card-avatar-row">
-                        <div class="card-avatar">{{ stream.username[0] | upper }}</div>
-                        <div class="card-username">{{ stream.stream_title if stream.stream_title else stream.username }}
-                        </div>
-                    </div>
-                    <div class="card-cat-label">{{ stream.stream_category }}</div>
+            <img src="{{ stream.thumbnail }}" class="card-thumb"
+                onerror="this.src='https://via.placeholder.com/300x533/222/555?text=LIVE'">
+            <div class="live-badge">CANLI</div>
+            <div class="card-overlay">
+                <h3 class="card-title">{{ stream.stream_title or 'Canlı Yayın' }}</h3>
+                <div class="card-user">
+                    <img src="/static/thumbnails/thumb_{{ stream.username }}.jpg" class="card-avatar"
+                        onerror="this.style.display='none'">
+                    {{ stream.username }}
                 </div>
             </div>
         </a>
         {% else %}
-        <div class="empty-feed" id="empty-feed-msg">
-            <div style="font-size: 50px; opacity: 0.2; margin-bottom: 10px;">📡</div>
-            <p>Şu an canlı yayın yok.</p>
-            <a href="/live?mode=broadcast" class="btn-start-now">Yayın Başlat</a>
+        <div class="empty-state" id="empty-msg">
+            <h2>Henüz yayın yok 😔</h2>
+            <p>Sahne senin! İlk yayını başlat.</p>
+            <a href="/live?mode=broadcast" class="btn-start">Yayın Başlat</a>
         </div>
         {% endfor %}
     </div>
@@ -299,62 +271,43 @@
 </div>
 
 <script>
-    document.addEventListener('DOMContentLoaded', () => {
-        const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-        const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=home`);
+    const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=home`);
 
-        ws.onmessage = (e) => {
-            const data = JSON.parse(e.data);
+    ws.onmessage = function (event) {
+        const data = JSON.parse(event.data);
+        const feed = document.getElementById('stream-feed');
+        const emptyMsg = document.getElementById('empty-msg');
 
-            // --- YENİ YAYIN EKLENDİĞİNDE ---
-            if (data.type === 'stream_added') {
-                const emptyMsg = document.getElementById('empty-feed-msg');
-                if (emptyMsg) emptyMsg.remove(); // Boş mesajı sil
+        if (data.type === 'stream_added') {
+            if (emptyMsg) emptyMsg.style.display = 'none';
+            if (document.getElementById(`card-${data.username}`)) return;
 
-                // Eğer kart zaten varsa ekleme
-                if (document.getElementById(`card-${data.username}`)) return;
-
-                const grid = document.getElementById('stream-grid');
-                const cardHtml = `
-                <a href="/live?broadcaster=${data.username}" class="grid-card" id="card-${data.username}">
-                    <div class="card-image">
-                        <img src="${data.thumbnail}" onerror="this.onerror=null; this.src='/static/img/no-image.png'; this.style.backgroundColor='#222';" alt="Yayın">
-                        <div class="live-badge">CANLI</div>
-                        <div class="card-gradient-overlay">
-                            <div class="card-avatar-row">
-                                <div class="card-avatar">${data.username[0].toUpperCase()}</div>
-                                <div class="card-username">${data.title || data.username}</div>
-                            </div>
-                            <div class="card-cat-label">${data.category}</div>
-                        </div>
+            const card = document.createElement('a');
+            card.href = `/live?broadcaster=${data.username}`;
+            card.className = 'grid-card';
+            card.id = `card-${data.username}`;
+            card.innerHTML = `
+                <img src="${data.thumbnail}?t=${Date.now()}" class="card-thumb">
+                <div class="live-badge">CANLI</div>
+                <div class="card-overlay">
+                    <h3 class="card-title">${data.title}</h3>
+                    <div class="card-user">
+                        <img src="/static/thumbnails/thumb_${data.username}.jpg" class="card-avatar" onerror="this.style.display='none'">
+                        ${data.username}
                     </div>
-                </a>`;
+                </div>
+            `;
+            feed.prepend(card);
+        }
 
-                // HTML'i ekle (Başa veya Sona)
-                grid.insertAdjacentHTML('afterbegin', cardHtml);
-            }
-
-            // --- YAYIN BİTTİĞİNDE ---
-            if (data.type === 'stream_removed') {
-                const card = document.getElementById(`card-${data.username}`);
-                if (card) {
-                    card.style.transition = "all 0.5s";
-                    card.style.opacity = "0";
-                    card.style.transform = "scale(0.8)";
-                    setTimeout(() => {
-                        card.remove();
-                        checkEmpty();
-                    }, 500);
-                }
-            }
-        };
-
-        function checkEmpty() {
-            const grid = document.getElementById('stream-grid');
-            if (grid.getElementsByClassName('grid-card').length === 0 && !document.getElementById('empty-feed-msg')) {
-                location.reload(); // Boşsa yenile
+        if (data.type === 'stream_removed') {
+            const card = document.getElementById(`card-${data.username}`);
+            if (card) {
+                card.style.transform = "scale(0)";
+                setTimeout(() => card.remove(), 200);
             }
         }
-    });
+    };
 </script>
 {% endblock %}
