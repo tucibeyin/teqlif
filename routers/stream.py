@@ -17,7 +17,6 @@ templates = Jinja2Templates(directory="templates")
 @router.post("/log/client")
 async def client_log(request: Request): return {"status": "ok"}
 
-# MANAGER
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -34,7 +33,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
-# CLEANUP (Non-Blocking)
+# --- TEMİZLİK (KİLİTLENMEYEN) ---
 def cleanup_stream_sync(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
@@ -58,7 +57,7 @@ def write_to_ffmpeg(process, data):
         try: process.stdin.write(data); process.stdin.flush()
         except: pass
 
-# ROUTES
+# --- ROUTES ---
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
 @router.get("/live", response_class=HTMLResponse)
@@ -100,7 +99,7 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# SOCKET & FFMPEG
+# --- SOCKET & FFMPEG ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
@@ -117,29 +116,36 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (TRANSCODING VP8->H264): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (BASELINE COMPATIBILITY MODE): {user.username}")
 
-    # 🔥 FFmpeg TRANSCODING (Android -> Universal) 🔥
-    # -c:v libx264: VP8'den H.264'e çevirir (iOS için şart)
-    # -preset veryfast: CPU dostu çeviri
-    # -b:v 1500k: Kaliteyi sabitler
+    # 🔥 FFmpeg "BASELINE" (En Uyumlu Mod) 🔥
+    # -profile:v baseline: Eski/Yeni tüm cihazlarda çalışır.
+    # -pix_fmt yuv420p: Renk formatı uyumsuzluğunu çözer (Siyah ekran ilacı).
+    # -g 48: Tam 2 saniyede bir keyframe atar (HLS süresiyle eşleşir, donmayı çözer).
     command = [
         "ffmpeg", 
-        "-f", "webm", 
-        "-i", "pipe:0",
+        "-f", "webm", "-i", "pipe:0",
         
+        # VİDEO
         "-c:v", "libx264", 
         "-preset", "veryfast", 
-        "-tune", "zerolatency",
+        "-profile:v", "baseline", # EN ÖNEMLİ AYAR
+        "-level", "3.0",
+        "-pix_fmt", "yuv420p",    # SİYAH EKRAN ÇÖZÜMÜ
         "-r", "24", 
+        "-g", "48",               # 24fps * 2sn = 48 kare (Kritik!)
+        "-keyint_min", "48",      # Ara keyframe yok, sadece tam saniyede
+        "-sc_threshold", "0",     # Sahne değişimini bekleme
         "-b:v", "1500k", 
         "-vf", "scale=-2:540",
         
-        "-c:a", "aac", "-b:a", "64k", "-ac", "2", 
+        # SES
+        "-c:a", "aac", "-b:a", "64k", "-ac", "2", "-af", "aresample=async=1",
         
+        # HLS
         "-f", "hls", 
         "-hls_time", "2", 
-        "-hls_list_size", "5", 
+        "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
         f"{stream_dir}/index.m3u8"
     ]
@@ -147,8 +153,9 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
     active_processes[user.username] = process
     
+    # 6 saniye bekle (İlk 3 parçanın oluşması garanti olsun)
     async def notify():
-        await asyncio.sleep(5) 
+        await asyncio.sleep(6)
         new_db = SessionLocal()
         u = new_db.query(User).filter(User.username == user.username).first()
         u.is_live = True; new_db.commit(); new_db.close()
