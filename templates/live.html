@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* TEMEL AYARLAR */
+    /* --- TEMEL --- */
     header {
         display: none !important;
     }
@@ -78,7 +78,7 @@
         transform: scaleX(-1);
     }
 
-    /* UI KATMANI */
+    /* --- UI KATMANI --- */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -147,6 +147,7 @@
         cursor: pointer;
         backdrop-filter: blur(5px);
         font-size: 14px;
+        transition: 0.2s;
     }
 
     .btn-close:hover {
@@ -154,70 +155,87 @@
         border-color: #ff3b30;
     }
 
-    /* 🔥 PREMIUM MEZAT BARI (YENİ TASARIM) 🔥 */
+    /* 🔥 COMPACT MEZAT BARI (YENİ) 🔥 */
     .auction-bar {
-        /* Konum: Chat'in hemen üstü */
+        /* Sohbetin hemen üstüne yerleşir */
         position: absolute;
-        bottom: 300px;
+        bottom: 230px;
         left: 15px;
         right: 15px;
-        height: 50px;
+        height: 45px;
 
-        /* Görünüm: Glassmorphism */
-        background: rgba(20, 20, 20, 0.85);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 12px;
+        background: rgba(25, 25, 25, 0.9);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 25px;
+        /* Daha yuvarlak */
 
         display: none;
         /* Varsayılan gizli */
         align-items: center;
-        justify-content: space-between;
-        padding: 0 15px;
+        padding: 0 5px 0 15px;
+        /* Sol boşluk, sağ butonlara yer */
         pointer-events: auto;
         animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.4);
     }
 
-    /* Sol Taraf: Fiyat ve Bilgi */
+    /* Sol Taraf: Bilgi (Esnek) */
     .auc-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        overflow: hidden;
+        /* Taşmayı engelle */
+    }
+
+    .auc-icon {
+        color: #ff0050;
+        font-size: 16px;
+        animation: pulse 2s infinite;
+    }
+
+    .auc-details {
         display: flex;
         flex-direction: column;
         justify-content: center;
-    }
-
-    .auc-label {
-        font-size: 10px;
-        color: #aaa;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
+        overflow: hidden;
     }
 
     .auc-price {
-        font-size: 20px;
+        font-size: 16px;
         font-weight: 900;
         color: #fff;
-        line-height: 1.1;
+        white-space: nowrap;
+        /* Asla alt satıra inme */
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
     }
 
     .auc-price span {
-        color: #00ff00;
+        font-size: 12px;
+        color: #aaa;
+        font-weight: 600;
     }
 
-    /* TL simgesi yeşil */
+    .auc-bidder {
+        font-size: 10px;
+        color: #888;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        overflow: hidden;
+        max-width: 150px;
+    }
 
     /* Sağ Taraf: Kontroller */
     .auc-actions {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 5px;
     }
 
-    /* Küçük Yuvarlak Butonlar */
     .auc-btn-sm {
         width: 36px;
         height: 36px;
@@ -230,41 +248,47 @@
         transition: transform 0.1s;
         font-size: 14px;
         color: white;
+        flex-shrink: 0;
+        /* Küçülme */
     }
 
     .auc-btn-sm:active {
         transform: scale(0.9);
     }
 
+    /* Play/Stop Toggle Renkleri */
     .btn-auc-start {
-        background: linear-gradient(135deg, #00b09b, #96c93d);
-        box-shadow: 0 0 10px rgba(150, 201, 61, 0.4);
+        background: #00e676;
+        color: #000;
     }
 
+    /* Yeşil */
     .btn-auc-stop {
-        background: linear-gradient(135deg, #ff5f6d, #ffc371);
-        box-shadow: 0 0 10px rgba(255, 95, 109, 0.4);
+        background: #ff3b30;
+        color: #fff;
     }
 
+    /* Kırmızı */
     .btn-auc-reset {
-        background: rgba(255, 255, 255, 0.15);
-        border: 1px solid rgba(255, 255, 255, 0.2);
+        background: rgba(255, 255, 255, 0.1);
+        color: #ccc;
     }
 
-    /* İzleyici için Pey Butonu */
+    /* İzleyici Pey Butonu */
     .btn-bid-pill {
-        background: linear-gradient(90deg, #ff0050, #d60044);
+        background: #ff0050;
         color: white;
         border: none;
-        padding: 8px 16px;
-        border-radius: 20px;
+        height: 34px;
+        padding: 0 16px;
+        border-radius: 17px;
         font-weight: 800;
         font-size: 12px;
         cursor: pointer;
-        box-shadow: 0 4px 10px rgba(214, 0, 68, 0.3);
+        white-space: nowrap;
     }
 
-    /* CHAT ALANI */
+    /* --- CHAT ALANI --- */
     .chat-area {
         display: flex;
         flex-direction: column;
@@ -273,8 +297,9 @@
         pointer-events: auto;
     }
 
+    /* Mesaj Kutusu: Yüksekliği biraz azalttık ki bar'a yer kalsın */
     .chat-container {
-        height: 200px;
+        height: 150px;
         width: 85%;
         overflow-y: auto;
         display: flex;
@@ -370,7 +395,6 @@
         font-size: 18px;
     }
 
-    /* ANİMASYONLAR */
     @keyframes slideIn {
         from {
             opacity: 0;
@@ -392,6 +416,20 @@
         to {
             opacity: 1;
             transform: translateY(0);
+        }
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 0.6;
+        }
+
+        50% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0.6;
         }
     }
 
@@ -542,8 +580,11 @@
 
             <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
                 <div class="auc-info">
-                    <div class="auc-label">MEZAT DURUMU</div>
-                    <div class="auc-price" id="auc-price-{{ user.username }}">0 <span>₺</span></div>
+                    <i class="fa-solid fa-gavel auc-icon"></i>
+                    <div class="auc-details">
+                        <div class="auc-price" id="auc-price-{{ user.username }}">0 <span>₺</span></div>
+                        <div class="auc-bidder" id="auc-bidder-{{ user.username }}">Başlamadı</div>
+                    </div>
                 </div>
 
                 <div class="auc-actions">
@@ -594,14 +635,15 @@
 
             <div id="auction-bar-{{ stream.username }}" class="auction-bar">
                 <div class="auc-info">
-                    <div class="auc-label">SON TEKLİF: <span id="auc-bidder-{{ stream.username }}"
-                            style="color:#fff;">-</span></div>
-                    <div class="auc-price" id="auc-price-{{ stream.username }}">0 <span>₺</span></div>
+                    <i class="fa-solid fa-gavel auc-icon"></i>
+                    <div class="auc-details">
+                        <div class="auc-price" id="auc-price-{{ stream.username }}">0 <span>₺</span></div>
+                        <div class="auc-bidder" id="auc-bidder-{{ stream.username }}">-</div>
+                    </div>
                 </div>
 
                 <div class="auc-actions">
-                    <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 100)">PEY VER
-                        (+100₺)</button>
+                    <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 100)">+100 ₺</button>
                 </div>
             </div>
 

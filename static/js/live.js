@@ -3,9 +3,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     let isIntentionalStop = false;
-    let auctionState = "stopped"; // Mezat durumu
+    let auctionState = "stopped";
 
-    // --- GLOBAL İŞLEVLER ---
+    // --- GLOBAL ---
     window.sendChat = function (streamUsername) {
         const input = document.getElementById(`chat-input-${streamUsername}`);
         const video = document.getElementById(`video-${streamUsername}`);
@@ -26,7 +26,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // 🔥 GELİŞMİŞ MEZAT YÖNETİMİ 🔥
+    // 🔥 TEK TUŞLU MEZAT MANTIĞI 🔥
     window.toggleAuction = function (username) {
         const btn = document.getElementById('btn-auc-toggle');
         const action = (auctionState === "stopped") ? "start" : "stop";
@@ -36,24 +36,29 @@ document.addEventListener('DOMContentLoaded', () => {
             body: JSON.stringify({ action: action })
         });
 
-        // UI Güncelle (Yayıncı için)
         if (MODE === 'broadcast') {
             if (action === 'start') {
                 auctionState = "started";
-                btn.innerText = "DURDUR";
-                btn.classList.remove('btn-start');
-                btn.classList.add('btn-stop');
+                // İkonu Stop yap, rengi kırmızı yap
+                btn.innerHTML = '<i class="fa-solid fa-stop"></i>';
+                btn.classList.remove('btn-auc-start');
+                btn.classList.add('btn-auc-stop');
+
+                document.getElementById(`auc-bidder-${username}`).innerText = "Aktif";
             } else {
                 auctionState = "stopped";
-                btn.innerText = "BAŞLAT";
-                btn.classList.remove('btn-stop');
-                btn.classList.add('btn-start');
+                // İkonu Play yap, rengi yeşil yap
+                btn.innerHTML = '<i class="fa-solid fa-play"></i>';
+                btn.classList.remove('btn-auc-stop');
+                btn.classList.add('btn-auc-start');
+
+                document.getElementById(`auc-bidder-${username}`).innerText = "Durduruldu";
             }
         }
     };
 
     window.resetAuction = function (username) {
-        if (confirm("Mezatı sıfırlamak istiyor musunuz?")) {
+        if (confirm("Fiyatı sıfırlamak istiyor musunuz?")) {
             fetch('/broadcast/reset_auction', { method: 'POST' });
         }
     };
@@ -66,21 +71,32 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     function updateAuctionUI(username, data) {
-        const panel = document.getElementById(`auction-panel-${username}`);
+        const bar = document.getElementById(`auction-bar-${username}`);
         const priceEl = document.getElementById(`auc-price-${username}`);
         const bidderEl = document.getElementById(`auc-bidder-${username}`);
 
-        // İzleyici için Panel Görünürlüğü
+        // İzleyici Görünürlüğü
         if (MODE !== 'broadcast') {
-            if (data.type === 'auction_started') panel.style.display = 'flex';
-            else if (data.type === 'auction_ended') panel.style.display = 'none';
+            if (data.type === 'auction_started') {
+                bar.style.display = 'flex';
+                priceEl.innerHTML = `${data.price} <span>₺</span>`;
+                bidderEl.innerText = "Teklif Bekleniyor";
+            } else if (data.type === 'auction_ended') {
+                bar.style.display = 'none';
+            }
         }
 
+        // Fiyat Güncelleme
         if (data.type === 'auction_started' || data.type === 'auction_update') {
-            priceEl.innerText = `${data.price} ₺`;
+            priceEl.innerHTML = `${data.price} <span>₺</span>`;
+
+            // Fiyat değişince parlama efekti
             priceEl.style.color = '#00ff00';
-            setTimeout(() => priceEl.style.color = '#333', 300);
-            bidderEl.innerText = `Son Teklif: ${data.bidder}`;
+            setTimeout(() => priceEl.style.color = '#fff', 300);
+
+            if (data.bidder && data.bidder !== '-') {
+                bidderEl.innerText = `Son: ${data.bidder}`;
+            }
         }
     }
 
