@@ -15,7 +15,6 @@ from utils import get_current_user, SECRET_KEY, ALGORITHM
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# 🔥 LOG AJANI 🔥
 @router.post("/log/client")
 async def client_log(request: Request):
     try:
@@ -40,6 +39,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
+# --- CLEANUP ---
 def cleanup_stream_sync(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
@@ -77,8 +77,6 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: str = No
 
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Burada DB güncellemesi yapmıyoruz, socket açılınca yapacağız.
-    # Sadece bilgileri kaydediyoruz.
     user.stream_title = title
     user.stream_category = category
     db.commit()
@@ -109,7 +107,7 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# --- YAYINCI SOCKETİ ---
+# --- SOCKET & FFMPEG ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
@@ -122,38 +120,24 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: await websocket.close(); return
 
-    # 🔥 KRİTİK DÜZELTME: BAĞLANIR BAĞLANMAZ DB GÜNCELLE 🔥
-    # Artık "Yayın Yok" hatası almayacaksın.
+    # ANINDA DB GÜNCELLE
     user.is_live = True
     db.commit()
-    print(f"🎥 YAYIN BAŞLIYOR (IS_LIVE=TRUE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (DB GÜNCELLENDİ): {user.username}")
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # FFmpeg (VP8 -> H.264 Baseline Universal)
+    # FFmpeg (Sağlam Ayarlar)
     command = [
         "ffmpeg", 
         "-f", "webm", "-i", "pipe:0",
-        
-        # GÖRÜNTÜ
-        "-c:v", "libx264", 
-        "-preset", "veryfast", 
-        "-profile:v", "baseline", # En uyumlu profil
-        "-level", "3.0",
-        "-pix_fmt", "yuv420p",    # Siyah ekran çözümü
-        "-r", "24", 
-        "-b:v", "1500k", 
-        "-vf", "scale=-2:540",
-        
-        # SES
-        "-c:a", "aac", "-b:a", "64k", "-ac", "2", 
-        
-        # HLS
-        "-f", "hls", 
-        "-hls_time", "2", 
-        "-hls_list_size", "6", 
+        "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
+        "-level", "3.0", "-pix_fmt", "yuv420p", "-r", "24", 
+        "-b:v", "1500k", "-vf", "scale=-2:540",
+        "-c:a", "aac", "-b:a", "64k", "-ac", "2", "-af", "aresample=async=1",
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
         f"{stream_dir}/index.m3u8"
     ]
@@ -161,7 +145,6 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
     active_processes[user.username] = process
     
-    # Ana Sayfa Bildirimi (Dosyalar oluşsun diye 4sn sonra haber ver)
     async def notify():
         await asyncio.sleep(4) 
         await manager.broadcast_to_room(json.dumps({"type": "stream_added", "username": user.username, "title": "Canlı", "category": "Genel", "thumbnail": ""}), "home")
@@ -171,10 +154,14 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
-            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
+            # 🔥 SÜREYİ ARTIRDIK (30 Saniye) 🔥
+            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=30.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
-    except: pass
+    except asyncio.TimeoutError:
+        print(f"⚠️ SERVER: {user.username} bağlantısı ZAMAN AŞIMI (Timeout) ile kesildi.")
+    except Exception as e:
+        print(f"❌ SERVER SOCKET HATASI: {e}")
     finally:
         asyncio.create_task(cleanup_stream_async(user.username))
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
