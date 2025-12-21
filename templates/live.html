@@ -90,11 +90,11 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        /* İçeriği en alta bas */
+        /* En alta yasla */
         padding-top: max(15px, env(safe-area-inset-top));
 
-        /* 🔥 TAM FOOTER HİZASI (60px) 🔥 */
-        padding-bottom: 60px !important;
+        /* 🔥 DÜZELTME: UI Katmanını en dibe kadar indiriyoruz (0px) 🔥 */
+        padding-bottom: 0 !important;
 
         box-sizing: border-box;
         background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, transparent 40%, rgba(0, 0, 0, 0.6) 80%, rgba(0, 0, 0, 0.95) 100%);
@@ -156,22 +156,21 @@
         font-size: 14px;
     }
 
-    /* 🔥 SIKIŞTIRILMIŞ BOTTOM STACK (SIFIR BOŞLUK) 🔥 */
+    /* 🔥 BOTTOM STACK (SIFIR TOLERANS) 🔥 */
     .bottom-stack {
         display: flex;
         flex-direction: column;
         width: 100%;
-        padding: 0 8px 0 8px;
-        /* Alt padding 0 yapıldı */
-        margin-bottom: 0 !important;
-        /* Alt margin 0 yapıldı */
+        /* Alt boşluğu tam Footer boyu (60px) kadar veriyoruz ki üzerine binmesin */
+        padding: 0 10px 60px 10px !important;
+        margin: 0 !important;
         box-sizing: border-box;
-        gap: 2px;
-        /* Elemanlar arası sadece 2px */
+        gap: 0;
+        /* Elemanlar arası boşluk YOK */
         pointer-events: auto;
     }
 
-    /* MEZAT BARI (İki Katlı) */
+    /* MEZAT BARI */
     .auction-bar {
         position: relative;
         width: 100%;
@@ -183,15 +182,14 @@
         display: none;
         flex-direction: column;
         padding: 6px 8px;
-        /* İç boşluk azaltıldı */
         box-sizing: border-box;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         animation: slideUp 0.3s ease;
         gap: 4px;
-        margin-bottom: 2px;
+        margin-bottom: 4px;
+        /* Input ile arasında minik boşluk */
     }
 
-    /* ÜST KAT: Fiyat ve İsim */
     .auc-header {
         display: flex;
         justify-content: space-between;
@@ -255,7 +253,6 @@
         text-overflow: ellipsis;
     }
 
-    /* ALT KAT: Butonlar */
     .auc-body {
         width: 100%;
         display: flex;
@@ -386,7 +383,6 @@
     .chat-container {
         position: relative;
         height: 110px;
-        /* Biraz daha kısalttık */
         width: 100%;
         overflow-y: auto;
         display: flex;
@@ -434,8 +430,8 @@
         align-items: center;
         gap: 6px;
         width: 100%;
-        /* Alttan boşluk bırakma, direkt yapış */
         margin-bottom: 0 !important;
+        /* Alt boşluk yok */
     }
 
     .chat-input-wrapper {
@@ -502,7 +498,7 @@
     @keyframes slideUp {
         from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(10px);
         }
 
         to {
