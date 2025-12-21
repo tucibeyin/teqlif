@@ -6,7 +6,6 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* GLOBAL */
     html,
     body {
         margin: 0;
@@ -15,7 +14,7 @@
         height: 100%;
         background: #000;
         overflow: hidden;
-        font-family: -apple-system, sans-serif;
+        font-family: sans-serif;
     }
 
     .teqlif-stage {
@@ -28,7 +27,6 @@
         background: #000;
     }
 
-    /* VİDEO ALANI */
     .video-wrapper {
         position: relative;
         width: 100%;
@@ -44,10 +42,15 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        /* INSTAGRAM MODU: EKRANI DOLDURUR */
+        /* Instagram Full Ekran Modu */
     }
 
-    /* PC İÇİN ORTALAMA */
+    /* 🔥 SELFIE AYNA MODU (Sadece Yayıncı İçin) 🔥 */
+    #preview {
+        transform: scaleX(-1);
+        /* Görüntüyü yatay çevir (Ayna) */
+    }
+
     @media (min-width: 768px) {
         .video-wrapper {
             width: 450px;
@@ -63,12 +66,11 @@
             width: 100%;
             height: 100%;
             background-size: cover;
-            filter: blur(40px) brightness(0.4);
+            filter: blur(40px) opacity(0.5);
             z-index: 0;
         }
     }
 
-    /* ARAYÜZ KATMANI */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -81,22 +83,16 @@
         flex-direction: column;
         justify-content: space-between;
         padding: 20px;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent, rgba(0, 0, 0, 0.6));
-    }
-
-    .header {
-        display: flex;
-        align-items: center;
-        gap: 10px;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3), transparent, rgba(0, 0, 0, 0.8));
     }
 
     .badge {
-        background: #e91e63;
+        background: #ff0050;
         color: white;
-        padding: 4px 8px;
-        border-radius: 4px;
-        font-weight: 800;
-        font-size: 11px;
+        padding: 5px 10px;
+        border-radius: 5px;
+        font-weight: bold;
+        font-size: 12px;
     }
 
     .username {
@@ -104,12 +100,11 @@
         color: white;
         padding: 5px 15px;
         border-radius: 20px;
-        font-weight: 600;
-        font-size: 13px;
+        font-weight: bold;
         backdrop-filter: blur(5px);
+        margin-left: 10px;
     }
 
-    /* SETUP EKRANI */
     .setup-layer {
         position: absolute;
         width: 100%;
@@ -140,7 +135,7 @@
     }
 
     .btn {
-        background: #e91e63;
+        background: linear-gradient(45deg, #ff0050, #d60044);
         color: white;
         border: none;
         padding: 15px;
@@ -151,7 +146,6 @@
         font-size: 16px;
     }
 
-    /* PLAY BUTONU */
     .play-btn {
         position: absolute;
         z-index: 20;
@@ -167,7 +161,7 @@
     {% if mode == 'broadcast' %}
     <div class="video-wrapper">
         <video id="preview" autoplay muted playsinline></video>
-        <canvas id="broadcast-canvas" width="540" height="960" style="display:none;"></canvas>
+        <canvas id="broadcast-canvas" width="720" height="1280" style="display:none;"></canvas>
 
         <div id="setup-layer" class="setup-layer">
             <div class="setup-box">
@@ -181,11 +175,12 @@
         </div>
 
         <div id="live-ui" class="ui-layer" style="display:none;">
-            <div class="header">
+            <div style="display:flex; align-items:center;">
                 <div class="badge">CANLI</div>
+                <div class="username"><i class="fa-solid fa-eye"></i> 0</div>
             </div>
             <button onclick="stopBroadcast()" class="btn"
-                style="width:auto; align-self:center; pointer-events:auto;">BİTİR</button>
+                style="width:auto; align-self:center; pointer-events:auto; background:#333;">BİTİR</button>
         </div>
     </div>
 
@@ -197,7 +192,7 @@
         <i id="play-overlay-{{ stream.username }}" class="fa-solid fa-play play-btn"
             onclick="forcePlay('{{ stream.username }}')"></i>
         <div class="ui-layer">
-            <div class="header">
+            <div style="display:flex; align-items:center;">
                 <div class="badge">CANLI</div>
                 <div class="username">{{ stream.username }}</div>
             </div>
