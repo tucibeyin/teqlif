@@ -25,30 +25,31 @@ document.addEventListener('DOMContentLoaded', () => {
                 // DOĞAL SENSÖR MODU (EN GENİŞ AÇI)
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: { echoCancellation: true, noiseSuppression: true },
-                    video: { facingMode: 'user', frameRate: { ideal: 24, max: 30 } }
+                    video: { facingMode: 'user' }
                 });
                 videoElement.srcObject = stream;
-                remoteLog("✅ Kamera Hazır (Native)");
+                remoteLog("✅ Kamera Hazır (Geniş Açı)");
             } catch (e) { alert("Kamera Hatası: " + e); }
         }
         initCamera();
 
         document.getElementById('btn-start-broadcast').addEventListener('click', () => {
             const fd = new FormData();
-            fd.append('title', document.getElementById('streamTitle').value || 'Live');
+            fd.append('title', document.getElementById('streamTitle').value || 'Canlı Yayın');
             fd.append('category', document.getElementById('streamCategory').value || 'Genel');
 
             fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
-                if (!res.ok) { alert("Hata!"); return; }
+                if (!res.ok) { alert("Sunucu Hatası"); return; }
                 document.getElementById('setup-layer').style.display = 'none';
                 document.getElementById('live-ui').style.display = 'flex';
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
+                    // DİREKT AKIŞ
                     const cameraStream = videoElement.srcObject;
+
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
-                    if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { videoBitsPerSecond: 2500000 };
 
                     try { rec = new MediaRecorder(cameraStream, options); } catch (e) { rec = new MediaRecorder(cameraStream); }
 
@@ -59,8 +60,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     };
                     rec.start(1000);
-                    remoteLog(`🚀 Yayın Başladı: ${rec.mimeType}`);
+                    remoteLog("🚀 Yayın Başladı");
 
+                    // Thumbnail (15sn)
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
                             const ctx = canvas.getContext('2d');
@@ -87,24 +89,22 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- İZLEYİCİ ---
+    // --- İZLEYİCİ (SENKRONİZE MOD) ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
-        const src = `/static/hls/${u}/index.m3u8`;
+        const src = `/static/hls/${u}/master.m3u8`;
         const endScreen = document.getElementById(`end-screen-${u}`);
 
-        remoteLog(`👀 İzleyici: ${u}`);
+        remoteLog(`👀 İzleyici: ${u} (Sync Mode)`);
 
-        // 🔥 DURUM TAKİBİ İÇİN SOCKET (Yayın Bitti mi?) 🔥
+        // WebSocket (Kapanış Takibi)
         const chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${u}`);
         chatWs.onmessage = (e) => {
             const data = JSON.parse(e.data);
             if (data.type === 'stream_ended') {
-                remoteLog("🏁 Yayın Bitti Sinyali Alındı");
                 if (v) v.pause();
                 if (endScreen) endScreen.style.display = 'flex';
-                // HLS varsa yok et
                 if (window.hlsInstance) window.hlsInstance.destroy();
             }
         };
@@ -118,19 +118,48 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function initPlayer() {
             if (Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
-                window.hlsInstance = hls; // Global referans (kapatmak için)
+                // 🔥 SENKRONİZASYON AYARLARI 🔥
+                // Bu ayarlar herkesin aynı kareye kilitlenmesini sağlar.
+                const hls = new Hls({
+                    enableWorker: true,
+                    lowLatencyMode: true,
+
+                    // Canlı yayının ucundan kaç segment geride durayım? (2 x 2sn = 4sn gecikme hedefi)
+                    liveSyncDurationCount: 2,
+
+                    // Eğer 3 segmentten (6 saniyeden) fazla geriye düşersem...
+                    liveMaxLatencyDurationCount: 3,
+
+                    // ... Videoyu 1.2x hızlandırıp diğerlerine yetişeyim.
+                    maxLiveSyncPlaybackRate: 1.2,
+
+                    // Kalite değişimi için buffer boyutu
+                    maxBufferLength: 30
+                });
+
+                window.hlsInstance = hls;
                 hls.loadSource(src);
                 hls.attachMedia(v);
+
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    // 🔥 ZORLA OYNAT (SESSİZ) 🔥
                     v.muted = true;
                     v.play().catch(e => console.log("Otoplay engellendi:", e));
                 });
+
                 hls.on(Hls.Events.ERROR, (e, d) => {
                     if (d.fatal && d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
                 });
+
+                // Ekstra Güvenlik: Eğer 10 saniye geride kalırsa, direkt ileri atla.
+                setInterval(() => {
+                    if (v && !v.paused && hls.latency > 10) {
+                        console.log("⚠️ Çok geride kaldı, senkronize ediliyor...");
+                        v.currentTime = v.duration - 2; // Canlı uca 2sn kala zıpla
+                    }
+                }, 5000);
+
             } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+                // iOS Native (Apple kendi senkronizasyonunu yapar)
                 v.src = src;
                 v.addEventListener('loadedmetadata', () => { v.muted = true; v.play().catch(() => { }); });
             }
