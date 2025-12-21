@@ -71,8 +71,8 @@
         .video-container {
             width: auto;
             aspect-ratio: 9/16;
-            height: 90vh;
-            border-radius: 20px;
+            height: 92vh;
+            border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 0 50px rgba(0, 0, 0, 0.8);
         }
@@ -145,7 +145,7 @@
         animation: pulse 2s infinite;
     }
 
-    /* YAYINCI SETUP */
+    /* SETUP */
     .setup-overlay {
         position: absolute;
         width: 100%;
@@ -220,10 +220,11 @@
 </style>
 
 <div class="teqlif-stage">
+
     {% if mode == 'broadcast' %}
     <div class="video-container">
         <video id="preview" autoplay muted playsinline></video>
-        <canvas id="broadcast-canvas" width="720" height="1280" style="display:none;"></canvas>
+        <canvas id="broadcast-canvas" width="540" height="960" style="display:none;"></canvas>
 
         <div id="setup-layer" class="setup-overlay">
             <div class="setup-box">
@@ -231,6 +232,7 @@
                 <input type="text" id="streamTitle" class="input-glass" placeholder="Başlık">
                 <select id="streamCategory" class="input-glass">
                     <option>Genel</option>
+                    <option>Sohbet</option>
                 </select>
                 <button id="btn-start-broadcast" class="btn-main">BAŞLAT 🚀</button>
             </div>

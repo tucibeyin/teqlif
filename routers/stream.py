@@ -109,60 +109,43 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 ULTRA PREMIUM YAYIN (4 KALİTE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (540p UNIVERSAL): {user.username}")
 
-    # 🔥 FFmpeg 4-WAY ADAPTIVE STREAMING 🔥
-    # Tek giriş -> 4 Çıkış (720p, 480p, 360p, 240p)
-    # CPU'yu kullanır ama kaliteyi garanti eder.
+    # 🔥 FFmpeg "ALTIN ORAN" AYARLARI 🔥
+    # - scale=-2:540: Videoyu 540p'ye boyutlandır (Çok net ama hafif)
+    # - b:v 1200k: 1.2 Mbps Bitrate (Donma yapmaz)
+    # - r 24: Sabit 24 FPS
+    # - c:a aac: iOS için ses şartı
     command = [
         "ffmpeg", 
         "-f", "webm", 
         "-i", "pipe:0",
         
-        # Karmaşık Filtre: Videoyu 4'e böl ve her birini yeniden boyutlandır
-        "-filter_complex", 
-        "[0:v]split=4[v1][v2][v3][v4];"
-        "[v1]scale=-2:720[v720];"
-        "[v2]scale=-2:480[v480];"
-        "[v3]scale=-2:360[v360];"
-        "[v4]scale=-2:240[v240]",
+        # VİDEO (H.264 Universal)
+        "-c:v", "libx264", 
+        "-preset", "veryfast", # CPU dostu
+        "-tune", "zerolatency", # Düşük gecikme
+        "-r", "24",
+        "-b:v", "1200k", 
+        "-vf", "scale=-2:540", 
         
-        # --- 1. Stream: 720p (High) ---
-        "-map", "[v720]", "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "5000k",
-        "-preset", "veryfast", "-g", "48", "-sc_threshold", "0", "-keyint_min", "48",
+        # SES (AAC)
+        "-c:a", "aac", "-b:a", "64k", "-ac", "2",
         
-        # --- 2. Stream: 480p (Medium) ---
-        "-map", "[v480]", "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "2400k",
-        "-preset", "veryfast", "-g", "48", "-sc_threshold", "0", "-keyint_min", "48",
-        
-        # --- 3. Stream: 360p (Low) ---
-        "-map", "[v360]", "-c:v:2", "libx264", "-b:v:2", "700k", "-maxrate:v:2", "800k", "-bufsize:v:2", "1400k",
-        "-preset", "veryfast", "-g", "48", "-sc_threshold", "0", "-keyint_min", "48",
-
-        # --- 4. Stream: 240p (Mobile Saver) ---
-        "-map", "[v240]", "-c:v:3", "libx264", "-b:v:3", "300k", "-maxrate:v:3", "400k", "-bufsize:v:3", "600k",
-        "-preset", "veryfast", "-g", "48", "-sc_threshold", "0", "-keyint_min", "48",
-        
-        # --- SES (Her birine kopyala) ---
-        "-map", "a:0", "-map", "a:0", "-map", "a:0", "-map", "a:0",
-        "-c:a", "aac", "-b:a", "128k", "-ac", "2",
-        
-        # --- HLS MASTER ---
+        # HLS
         "-f", "hls", 
         "-hls_time", "2", 
         "-hls_list_size", "5",
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
-        "-master_pl_name", "master.m3u8",
-        "-var_stream_map", "v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3",
-        f"{stream_dir}/stream_%v.m3u8"
+        f"{stream_dir}/index.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
     active_processes[user.username] = process
     
-    # DB Bildirim (Multi-bitrate başlaması 8-10 saniye sürebilir)
+    # DB Bildirim
     async def notify():
-        await asyncio.sleep(8) 
+        await asyncio.sleep(5) 
         new_db = SessionLocal()
         u = new_db.query(User).filter(User.username == user.username).first()
         u.is_live = True; new_db.commit(); new_db.close()
