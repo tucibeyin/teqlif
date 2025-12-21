@@ -15,19 +15,15 @@ from utils import get_current_user, SECRET_KEY, ALGORITHM
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# 🔥 LOG TOPLAYICI (BURASI ÇOK ÖNEMLİ) 🔥
+# 🔥 LOG AJANI 🔥
 @router.post("/log/client")
 async def client_log(request: Request):
     try:
         data = await request.json()
-        msg = data.get('msg', '')
-        # Saat bilgisi ekle ve terminale yaz
-        t = datetime.now().strftime("%H:%M:%S")
-        print(f"📱 [CLIENT] {t} | {msg}")
+        print(f"📱 [CLIENT] {datetime.now().strftime('%H:%M:%S')} | {data.get('msg', '')}")
         return {"status": "ok"}
     except: return {"status": "err"}
 
-# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -44,7 +40,6 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
-# --- CLEANUP ---
 def cleanup_stream_sync(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
@@ -82,7 +77,11 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: str = No
 
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
+    # Burada DB güncellemesi yapmıyoruz, socket açılınca yapacağız.
+    # Sadece bilgileri kaydediyoruz.
+    user.stream_title = title
+    user.stream_category = category
+    db.commit()
     return {"status": "ok"}
 
 @router.post("/broadcast/stop")
@@ -110,7 +109,7 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# --- SOCKET & FFMPEG ---
+# --- YAYINCI SOCKETİ ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
@@ -123,35 +122,33 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: await websocket.close(); return
 
+    # 🔥 KRİTİK DÜZELTME: BAĞLANIR BAĞLANMAZ DB GÜNCELLE 🔥
+    # Artık "Yayın Yok" hatası almayacaksın.
+    user.is_live = True
+    db.commit()
+    print(f"🎥 YAYIN BAŞLIYOR (IS_LIVE=TRUE): {user.username}")
+
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (BASELINE H.264 - 540p): {user.username}")
-
-    # 🔥 FFmpeg "BASELINE" (En Uyumlu Mod) 🔥
-    # -profile:v baseline: Eski/Yeni tüm cihazlarda çalışır.
-    # -pix_fmt yuv420p: Renk formatı uyumsuzluğunu çözer (Siyah ekran ilacı).
-    # -g 48: Tam 2 saniyede bir keyframe atar (HLS süresiyle eşleşir, donmayı çözer).
+    # FFmpeg (VP8 -> H.264 Baseline Universal)
     command = [
         "ffmpeg", 
         "-f", "webm", "-i", "pipe:0",
         
-        # VİDEO
+        # GÖRÜNTÜ
         "-c:v", "libx264", 
         "-preset", "veryfast", 
-        "-profile:v", "baseline", # EN ÖNEMLİ AYAR
+        "-profile:v", "baseline", # En uyumlu profil
         "-level", "3.0",
-        "-pix_fmt", "yuv420p",    # SİYAH EKRAN ÇÖZÜMÜ
+        "-pix_fmt", "yuv420p",    # Siyah ekran çözümü
         "-r", "24", 
-        "-g", "48",               # 24fps * 2sn = 48 kare (Kritik!)
-        "-keyint_min", "48",      # Ara keyframe yok, sadece tam saniyede
-        "-sc_threshold", "0",     # Sahne değişimini bekleme
         "-b:v", "1500k", 
         "-vf", "scale=-2:540",
         
         # SES
-        "-c:a", "aac", "-b:a", "64k", "-ac", "2", "-af", "aresample=async=1",
+        "-c:a", "aac", "-b:a", "64k", "-ac", "2", 
         
         # HLS
         "-f", "hls", 
@@ -164,12 +161,9 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
     active_processes[user.username] = process
     
-    # 6 saniye bekle (İlk 3 parçanın oluşması garanti olsun)
+    # Ana Sayfa Bildirimi (Dosyalar oluşsun diye 4sn sonra haber ver)
     async def notify():
-        await asyncio.sleep(6)
-        new_db = SessionLocal()
-        u = new_db.query(User).filter(User.username == user.username).first()
-        u.is_live = True; new_db.commit(); new_db.close()
+        await asyncio.sleep(4) 
         await manager.broadcast_to_room(json.dumps({"type": "stream_added", "username": user.username, "title": "Canlı", "category": "Genel", "thumbnail": ""}), "home")
     
     loop = asyncio.get_event_loop()
