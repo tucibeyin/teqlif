@@ -5,41 +5,25 @@ document.addEventListener('DOMContentLoaded', () => {
     let isIntentionalStop = false;
     let auctionState = "stopped";
 
-    // --- PARA FORMATLAMA ---
+    // --- PARA FORMAT ---
     const moneyFormatter = new Intl.NumberFormat('tr-TR');
-
-    // Input alanına yazıldıkça 1.000 şeklinde formatlar
     window.formatBidInput = function (el) {
-        let val = el.value.replace(/\D/g, ''); // Sadece rakamları al
-        if (val) {
-            el.value = moneyFormatter.format(parseInt(val));
-        } else {
-            el.value = "";
-        }
+        let val = el.value.replace(/\D/g, '');
+        if (val) el.value = moneyFormatter.format(parseInt(val));
+        else el.value = "";
     };
 
     window.toggleManualBid = function (username, show) {
         const presets = document.getElementById(`bid-presets-${username}`);
         const manual = document.getElementById(`bid-manual-${username}`);
-        if (show) {
-            presets.style.display = 'none';
-            manual.style.display = 'flex';
-            document.getElementById(`inp-manual-${username}`).focus();
-        } else {
-            manual.style.display = 'none';
-            presets.style.display = 'flex';
-        }
+        if (show) { presets.style.display = 'none'; manual.style.display = 'flex'; document.getElementById(`inp-manual-${username}`).focus(); }
+        else { manual.style.display = 'none'; presets.style.display = 'flex'; }
     };
 
     window.sendManualBid = function (username) {
         const inp = document.getElementById(`inp-manual-${username}`);
-        let val = inp.value.replace(/\./g, ''); // Noktaları sil
-        let amount = parseInt(val);
-        if (amount > 0) {
-            placeBid(username, amount);
-            toggleManualBid(username, false);
-            inp.value = "";
-        }
+        let amount = parseInt(inp.value.replace(/\./g, ''));
+        if (amount > 0) { placeBid(username, amount); toggleManualBid(username, false); inp.value = ""; }
     };
 
     // --- GLOBAL ---
@@ -57,57 +41,43 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.sendGift = function (targetUser) {
-        fetch('/gift/send', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ to_user: targetUser, gift_type: 'diamond' })
-        });
+        fetch('/gift/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to_user: targetUser, gift_type: 'diamond' }) });
     };
 
-    // --- MEZAT ---
+    // --- MEZAT YÖNETİMİ ---
     window.toggleAuction = function (username) {
         const btn = document.getElementById('btn-auc-toggle');
+        const statusEl = document.getElementById(`auc-status-${username}`);
         const action = (auctionState === "stopped") ? "start" : "stop";
 
-        fetch('/broadcast/toggle_auction', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: action })
-        });
+        fetch('/broadcast/toggle_auction', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action }) });
 
         if (MODE === 'broadcast') {
             if (action === 'start') {
                 auctionState = "started";
                 btn.innerHTML = '<i class="fa-solid fa-stop"></i>';
-                btn.classList.remove('btn-auc-start');
-                btn.classList.add('btn-auc-stop');
-                document.getElementById(`auc-bidder-${username}`).innerText = "Aktif";
+                btn.classList.remove('btn-auc-start'); btn.classList.add('btn-auc-stop');
+                statusEl.innerText = "MEZAT BAŞLADI";
             } else {
                 auctionState = "stopped";
                 btn.innerHTML = '<i class="fa-solid fa-play"></i>';
-                btn.classList.remove('btn-auc-stop');
-                btn.classList.add('btn-auc-start');
-                document.getElementById(`auc-bidder-${username}`).innerText = "Durduruldu";
+                btn.classList.remove('btn-auc-stop'); btn.classList.add('btn-auc-start');
+                statusEl.innerText = "MEZAT DURDURULDU";
             }
         }
     };
 
-    window.resetAuction = function (username) {
-        if (confirm("Sıfırlansın mı?")) fetch('/broadcast/reset_auction', { method: 'POST' });
-    };
-
-    window.placeBid = function (broadcaster, amount) {
-        fetch('/broadcast/bid', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ broadcaster: broadcaster, amount: amount })
-        });
-    };
+    window.resetAuction = function (username) { if (confirm("Sıfırlansın mı?")) fetch('/broadcast/reset_auction', { method: 'POST' }); };
+    window.placeBid = function (broadcaster, amount) { fetch('/broadcast/bid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ broadcaster: broadcaster, amount: amount }) }); };
 
     function updateAuctionUI(username, data) {
         const bar = document.getElementById(`auction-bar-${username}`);
         const priceEl = document.getElementById(`auc-price-${username}`);
         const bidderEl = document.getElementById(`auc-bidder-${username}`);
 
+        // İzleyici için Panel
         if (MODE !== 'broadcast') {
-            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`; bidderEl.innerText = "Teklif Bekleniyor"; }
+            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`; bidderEl.innerText = ""; }
             else if (data.type === 'auction_ended') bar.style.display = 'none';
         }
 
@@ -130,8 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function addChatMessage(username, user, text, isSystem = false) {
         const box = document.getElementById(`chat-box-${username}`);
         if (!box) return;
-        const p = document.createElement('div');
-        p.className = isSystem ? 'chat-msg sys-msg' : 'chat-msg';
+        const p = document.createElement('div'); p.className = isSystem ? 'chat-msg sys-msg' : 'chat-msg';
         p.innerHTML = `<span class="chat-user">${user}:</span><span class="chat-text">${text}</span>`;
         box.appendChild(p); box.scrollTop = box.scrollHeight;
         setTimeout(() => { p.style.opacity = '0'; setTimeout(() => p.remove(), 500); }, 5000);
@@ -141,43 +110,30 @@ document.addEventListener('DOMContentLoaded', () => {
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         let broadcastWs = null; let rec = null;
-
-        async function initCamera() {
-            try {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true }, video: { facingMode: 'user' } });
-                videoElement.srcObject = stream;
-            } catch (e) { alert("Kamera Hatası: " + e); }
-        }
+        async function initCamera() { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true }, video: { facingMode: 'user' } }); videoElement.srcObject = stream; } catch (e) { alert(e); } }
         initCamera();
 
         document.getElementById('btn-start-broadcast').addEventListener('click', () => {
-            const fd = new FormData();
-            fd.append('title', document.getElementById('streamTitle').value || 'Live');
-            fd.append('category', document.getElementById('streamCategory').value || 'Genel');
-
+            const fd = new FormData(); fd.append('title', document.getElementById('streamTitle').value); fd.append('category', document.getElementById('streamCategory').value);
             fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
-                if (!res.ok) { alert("Hata!"); return; }
+                if (!res.ok) return;
                 document.getElementById('setup-layer').style.display = 'none';
                 document.getElementById('live-ui').style.display = 'flex';
-
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    const cameraStream = videoElement.srcObject;
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
-                    try { rec = new MediaRecorder(cameraStream, options); } catch (e) { rec = new MediaRecorder(cameraStream); }
+                    try { rec = new MediaRecorder(videoElement.srcObject, options); } catch (e) { rec = new MediaRecorder(videoElement.srcObject); }
                     rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
                     rec.start(250);
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
-                            const ctx = document.getElementById('broadcast-canvas').getContext('2d');
-                            ctx.drawImage(videoElement, 0, 0, 720, 1280);
+                            const ctx = document.getElementById('broadcast-canvas').getContext('2d'); ctx.drawImage(videoElement, 0, 0, 720, 1280);
                             fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: document.getElementById('broadcast-canvas').toDataURL('image/jpeg', 0.4) }) });
                         }
                     }, 15000);
                 };
                 broadcastWs.onclose = () => { if (!isIntentionalStop) { if (rec) rec.stop(); alert("Kesildi!"); location.href = '/'; } };
-
                 window.broadcastChatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${CONFIG.username}`);
                 window.broadcastChatWs.onmessage = (e) => {
                     const d = JSON.parse(e.data);
@@ -187,40 +143,25 @@ document.addEventListener('DOMContentLoaded', () => {
                 };
             });
         });
-
-        window.stopBroadcast = () => {
-            isIntentionalStop = true;
-            if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); if (window.broadcastChatWs) window.broadcastChatWs.close();
-            fetch('/broadcast/stop', { method: 'POST' }).finally(() => location.href = '/');
-        };
+        window.stopBroadcast = () => { isIntentionalStop = true; if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); if (window.broadcastChatWs) window.broadcastChatWs.close(); fetch('/broadcast/stop', { method: 'POST' }).finally(() => location.href = '/'); };
     }
 
     // --- İZLEYİCİ ---
     else if (MODE === 'watch') {
         const activePlayers = {};
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) playStream(entry.target.dataset.username, entry.target.querySelector('video'));
-                else stopStream(entry.target.dataset.username, entry.target.querySelector('video'));
-            });
-        }, { threshold: 0.6 });
+        const observer = new IntersectionObserver((entries) => { entries.forEach(entry => { if (entry.isIntersecting) playStream(entry.target.dataset.username, entry.target.querySelector('video')); else stopStream(entry.target.dataset.username, entry.target.querySelector('video')); }); }, { threshold: 0.6 });
         document.querySelectorAll('.feed-item').forEach(item => observer.observe(item));
 
         function playStream(username, video) {
             const src = `/static/hls/${username}/index.m3u8`;
             if (activePlayers[username]) return;
             video.onclick = () => { video.muted = !video.muted; };
-
             if (Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: true, lowLatencyMode: true, liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 5, maxLiveSyncPlaybackRate: 1.5 });
-                activePlayers[username] = hls;
-                hls.loadSource(src); hls.attachMedia(video);
+                const hls = new Hls({ enableWorker: true, lowLatencyMode: true, liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 5 });
+                activePlayers[username] = hls; hls.loadSource(src); hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => { video.muted = true; video.play().catch(() => { }); });
                 hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal && d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad(); });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-                video.src = src; video.addEventListener('loadedmetadata', () => { video.muted = true; video.play().catch(() => { }); });
-            }
-
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = src; video.addEventListener('loadedmetadata', () => { video.muted = true; video.play().catch(() => { }); }); }
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${username}`);
             ws.onmessage = (e) => {
                 const d = JSON.parse(e.data);
@@ -231,11 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
             };
             video.wsConnection = ws;
         }
-
-        function stopStream(username, video) {
-            if (activePlayers[username]) { activePlayers[username].destroy(); delete activePlayers[username]; }
-            video.pause(); video.src = "";
-            if (video.wsConnection) { video.wsConnection.close(); delete video.wsConnection; }
-        }
+        function stopStream(username, video) { if (activePlayers[username]) { activePlayers[username].destroy(); delete activePlayers[username]; } video.pause(); video.src = ""; if (video.wsConnection) { video.wsConnection.close(); delete video.wsConnection; } }
     }
 });
