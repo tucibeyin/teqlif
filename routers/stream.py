@@ -3,6 +3,7 @@ import json
 import shutil
 import subprocess
 import asyncio 
+import signal
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -17,6 +18,7 @@ templates = Jinja2Templates(directory="templates")
 @router.post("/log/client")
 async def client_log(request: Request): return {"status": "ok"}
 
+# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -33,26 +35,48 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
-def cleanup_stream(username):
-    print(f"🛑 SERVER: {username} temizleniyor...")
-    # FFmpeg'i öldür
+# 🔥 ASENKRON VE ACIMASIZ TEMİZLİK 🔥
+def cleanup_stream_sync(username):
+    """
+    Bu fonksiyon arka planda çalışır, sunucuyu kilitlemez.
+    FFmpeg işlemini anında öldürür.
+    """
+    print(f"🛑 SERVER: {username} temizleniyor (NON-BLOCKING)...")
+    
+    # 1. FFmpeg'i Öldür (Beklemek yok!)
     if username in active_processes:
         proc = active_processes[username]
-        try: proc.terminate(); proc.wait()
+        try:
+            proc.kill() # Terminate değil, KILL (Zorla kapat)
+            proc.wait(timeout=0.1) # Sadece 0.1sn bekle, ölüsünü kaldır
         except: pass
         del active_processes[username]
     
-    # Klasörü hemen silme (izleyiciler son kısımları izleyebilsin), ama DB'den düşür
+    # 2. Veritabanını Güncelle
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
-        if u: u.is_live = False; db.commit()
-    finally: db.close()
+        if u: 
+            u.is_live = False
+            db.commit()
+    except Exception as e:
+        print(f"DB Temizlik Hatası: {e}")
+    finally:
+        db.close()
+
+async def cleanup_stream_async(username):
+    """Cleanup işlemini ana thread'i bloklamadan çalıştırır"""
+    loop = asyncio.get_event_loop()
+    await loop.run_in_executor(None, cleanup_stream_sync, username)
 
 def write_to_ffmpeg(process, data):
+    """Veriyi FFmpeg'e yazar, hata verirse sessizce geçer"""
     if process and process.stdin:
-        try: process.stdin.write(data); process.stdin.flush()
-        except: pass
+        try:
+            process.stdin.write(data)
+            process.stdin.flush()
+        except (BrokenPipeError, OSError):
+            pass # İşlem ölmüşse zorlama
 
 # --- ROUTES ---
 @router.post("/stream/restrict")
@@ -69,12 +93,15 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: str = No
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
     return {"status": "ok"}
+
 @router.post("/broadcast/stop")
 async def stop(user: User = Depends(get_current_user)):
-    cleanup_stream(user.username)
+    # Stop isteği geldiğinde arka planda temizle, hemen cevap dön
+    asyncio.create_task(cleanup_stream_async(user.username))
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
     return {"status": "stopped"}
+
 @router.post("/broadcast/thumbnail")
 async def thumb(request: Request, user: User = Depends(get_current_user)):
     try:
@@ -110,50 +137,39 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 TURBO YAYIN (Low Latency): {user.username}")
+    print(f"🎥 TURBO YAYIN (Low Latency + Quick Kill): {user.username}")
 
-    # 🔥 FFmpeg TURBO AYARLARI 🔥
+    # 🔥 FFmpeg AYARLARI (TURBO MODE) 🔥
     command = [
         "ffmpeg", 
-        "-f", "webm",       # Girdi formatı
-        "-i", "pipe:0",     # Girdi kaynağı (WebSocket)
+        "-f", "webm", 
+        "-i", "pipe:0",
         
-        # --- PERFORMANS AYARLARI ---
-        "-fflags", "nobuffer",          # Girdi tamponunu kapat
-        "-flags", "low_delay",          # Düşük gecikme bayrağı
-        "-strict", "experimental",
-        
-        # --- VİDEO ÇIKIŞI (H.264) ---
         "-c:v", "libx264", 
-        "-preset", "ultrafast",         # En yüksek kodlama hızı
-        "-tune", "zerolatency",         # Canlı yayın için sıfır gecikme modu
-        "-r", "24",                     # FPS Sabitle (Donmayı önler)
-        "-b:v", "1500k",                # 1.5 Mbps (Kaliteli ve hızlı)
-        "-vf", "scale=-2:540",          # 540p (qHD) - Mobil için ideal, işlemci dostu
-        "-g", "48",                     # Keyframe aralığı (2 saniye)
-        "-sc_threshold", "0",           # Sahne değişiminde keyframe atma
+        "-preset", "ultrafast", 
+        "-tune", "zerolatency", 
+        "-r", "24", 
+        "-b:v", "1500k", 
+        "-vf", "scale=-2:540", 
         
-        # --- SES ÇIKIŞI (AAC) ---
         "-c:a", "aac", 
-        "-b:a", "128k", 
+        "-b:a", "64k", 
         "-ac", "2", 
-        "-ar", "44100",
         
-        # --- HLS AYARLARI (HIZLI PARÇALAR) ---
         "-f", "hls", 
-        "-hls_time", "1",               # 1 Saniyelik parçalar (Çok hızlı güncellenir)
-        "-hls_list_size", "5",          # Listede 5 parça tut
+        "-hls_time", "1", # 1 saniyelik segmentler
+        "-hls_list_size", "5", 
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
-        "-hls_segment_type", "mpegts",  # iOS için en uyumlu format
         f"{stream_dir}/index.m3u8"
     ]
     
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
+    # start_new_session=True: FFmpeg'i ayrı bir işlem grubunda başlatır (Daha kolay öldürülür)
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
     active_processes[user.username] = process
     
-    # DB Bildirim (Hemen 2. saniyede başlat)
+    # Bildirim
     async def notify():
-        await asyncio.sleep(2) # 1 saniyelik parça oluşması için 2sn yeter
+        await asyncio.sleep(2) 
         new_db = SessionLocal()
         u = new_db.query(User).filter(User.username == user.username).first()
         u.is_live = True; new_db.commit(); new_db.close()
@@ -164,12 +180,15 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
-            # Veri bekleme süresi
-            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
+            # 10 saniye veri gelmezse döngüyü kır
+            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
-    except: pass
+    except Exception as e:
+        print(f"Yayın Kesildi: {e}")
     finally:
-        cleanup_stream(user.username)
+        # 🔥 KRİTİK: BURASI KİLİTLEMEYECEK 🔥
+        # Temizliği asenkron görev olarak başlat ve hemen çık
+        asyncio.create_task(cleanup_stream_async(user.username))
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
