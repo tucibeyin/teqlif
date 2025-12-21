@@ -97,30 +97,18 @@ async def thumb(request: Request, user: User = Depends(get_current_user), db: Se
     except: pass
     return {"status": "ok"}
 
-# 🔥 HEDİYE SİSTEMİ 🔥
+# 🔥 HEDİYE 🔥
 @router.post("/gift/send")
 async def send_gift(request: Request, user: User = Depends(get_current_user)):
     try:
         data = await request.json()
         target_user = data.get("to_user")
         gift_type = data.get("gift_type", "diamond")
-        
-        # Buraya veritabanı bakiye düşme işlemleri gelecek
-        # Şimdilik sadece animasyon tetikliyoruz
-        
-        # Odaya "Hediye Geldi" sinyali gönder
-        await manager.broadcast_to_room(json.dumps({
-            "type": "gift_received",
-            "sender": user.username,
-            "gift": gift_type
-        }), target_user)
-        
+        await manager.broadcast_to_room(json.dumps({"type": "gift_received", "sender": user.username, "gift": gift_type}), target_user)
         return {"status": "success"}
-    except Exception as e:
-        print(f"Gift Error: {e}")
-        return {"status": "error"}
+    except: return {"status": "error"}
 
-# 🔥 SOHBET SOKETİ 🔥
+# 🔥 SOHBET 🔥
 @router.websocket("/ws/chat")
 async def chat(websocket: WebSocket, stream: str = "home"):
     await manager.connect(websocket, stream)
@@ -129,11 +117,7 @@ async def chat(websocket: WebSocket, stream: str = "home"):
             data = await websocket.receive_text()
             msg_obj = json.loads(data)
             if msg_obj.get("type") == "chat_message":
-                await manager.broadcast_to_room(json.dumps({
-                    "type": "chat_message",
-                    "user": msg_obj.get("user"),
-                    "text": msg_obj.get("text")
-                }), stream)
+                await manager.broadcast_to_room(json.dumps({"type": "chat_message", "user": msg_obj.get("user"), "text": msg_obj.get("text")}), stream)
     except: manager.disconnect(websocket, stream)
 
 @router.websocket("/ws/broadcast")
@@ -148,20 +132,25 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     except: await websocket.close(); return
 
     user.is_live = True; db.commit()
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (TURBO 1s): {user.username}")
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
+    # 🔥 FFmpeg TURBO MOD (1 Saniye Gecikme Hedefi) 🔥
+    # -hls_time 1: 1 saniyelik parçalar
+    # -g 24: 1 saniyede bir keyframe (Mecburi)
+    # -hls_list_size 5: Liste kısa tutulur
     command = [
         "ffmpeg", "-f", "webm", "-i", "pipe:0",
-        "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
-        "-level", "3.0", "-pix_fmt", "yuv420p", "-r", "24", 
-        "-g", "96", "-keyint_min", "96", "-sc_threshold", "0", 
-        "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "4000k", "-vf", "scale=-2:540",
+        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", "-profile:v", "baseline",
+        "-level", "3.0", "-pix_fmt", "yuv420p", 
+        "-r", "24", "-g", "24", "-keyint_min", "24", "-sc_threshold", "0", 
+        "-vsync", "1",
+        "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "3000k", "-vf", "scale=-2:540",
         "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
-        "-f", "hls", "-hls_time", "4", "-hls_list_size", "6", 
+        "-f", "hls", "-hls_time", "1", "-hls_list_size", "5", 
         "-hls_flags", "delete_segments+omit_endlist",
         f"{stream_dir}/index.m3u8"
     ]
@@ -170,7 +159,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     active_processes[user.username] = process
     
     async def notify():
-        await asyncio.sleep(5) 
+        await asyncio.sleep(2) # Daha hızlı bildirim
         await manager.broadcast_to_room(json.dumps({
             "type": "stream_added", "username": user.username, 
             "title": user.stream_title, "category": user.stream_category, 
