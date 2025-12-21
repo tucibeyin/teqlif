@@ -127,6 +127,8 @@
         width: 100%;
         display: flex;
         justify-content: center;
+        align-items: center;
+        gap: 15px;
         pointer-events: auto;
         padding-bottom: 85px !important;
     }
@@ -147,7 +149,7 @@
         border: none;
     }
 
-    /* 🔥 CHAT SİSTEMİ 🔥 */
+    /* SOHBET SİSTEMİ */
     .chat-container {
         position: absolute;
         bottom: 140px;
@@ -172,6 +174,7 @@
         font-size: 13px;
         color: white;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        animation: fadeIn 0.3s ease;
     }
 
     .chat-user {
@@ -183,6 +186,13 @@
     .chat-text {
         font-weight: 400;
         color: #fff;
+    }
+
+    /* SİSTEM MESAJLARI (HEDİYE VS) */
+    .sys-msg {
+        color: #00ffea;
+        font-weight: bold;
+        font-style: italic;
     }
 
     .chat-input-wrapper {
@@ -222,7 +232,93 @@
         cursor: pointer;
     }
 
-    /* YAYIN BİTTİ EKRANI */
+    /* 🔥 HEDİYE BUTONU 🔥 */
+    .gift-btn {
+        background: linear-gradient(45deg, #FFD700, #FFA500);
+        color: white;
+        width: 45px;
+        height: 45px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid white;
+        box-shadow: 0 0 15px rgba(255, 215, 0, 0.6);
+        cursor: pointer;
+        animation: pulse 2s infinite;
+        position: absolute;
+        right: 15px;
+        bottom: 75px;
+        pointer-events: auto;
+        font-size: 20px;
+    }
+
+    /* ANİMASYONLAR */
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+        }
+
+        50% {
+            transform: scale(1.1);
+        }
+
+        100% {
+            transform: scale(1);
+        }
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(10px);
+        }
+
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    @keyframes giftPop {
+        0% {
+            transform: scale(0) rotate(-180deg);
+            opacity: 0;
+        }
+
+        50% {
+            transform: scale(1.5) rotate(0deg);
+            opacity: 1;
+        }
+
+        100% {
+            transform: scale(2) translateY(-100px);
+            opacity: 0;
+        }
+    }
+
+    /* HEDİYE ANİMASYON KATMANI */
+    .gift-animation-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: none;
+        z-index: 50;
+    }
+
+    .gift-pop {
+        font-size: 100px;
+        color: #00e5ff;
+        text-shadow: 0 0 20px rgba(0, 229, 255, 0.8);
+        animation: giftPop 1.5s forwards;
+    }
+
+    /* YAYIN BİTTİ */
     .end-screen {
         position: absolute;
         top: 0;
@@ -270,6 +366,11 @@
 
         .chat-container {
             bottom: 80px;
+        }
+
+        .gift-btn {
+            bottom: 20px;
+            right: 70px;
         }
     }
 
@@ -338,7 +439,15 @@
                 <div class="username-pill"><i class="fa-solid fa-user"></i> {{ user.username }}</div>
             </div>
 
+            <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
             <div class="chat-container" id="chat-box-{{ user.username }}"></div>
+
+            <div class="chat-input-wrapper" style="bottom: 90px; right: 20px; left: 20px; width: auto;">
+                <input type="text" class="chat-input" id="chat-input-{{ user.username }}"
+                    placeholder="Yayıncı olarak yaz..." autocomplete="off">
+                <button class="chat-send" onclick="sendChat('{{ user.username }}')"><i
+                        class="fa-solid fa-paper-plane"></i></button>
+            </div>
 
             <div class="bottom-bar">
                 <button onclick="stopBroadcast()" class="action-btn btn-red">BİTİR</button>
@@ -363,15 +472,16 @@
                 <div class="username-pill">{{ stream.username }}</div>
             </div>
 
-            <div class="chat-container" id="chat-box-{{ stream.username }}">
-            </div>
+            <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
+            <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
 
-            <div class="chat-input-wrapper">
-                <input type="text" class="chat-input" id="chat-input-{{ stream.username }}" placeholder="Yorum yap..."
-                    autocomplete="off">
+            <div class="chat-input-wrapper" style="right: 70px;"> <input type="text" class="chat-input"
+                    id="chat-input-{{ stream.username }}" placeholder="Yorum yap..." autocomplete="off">
                 <button class="chat-send" onclick="sendChat('{{ stream.username }}')"><i
                         class="fa-solid fa-paper-plane"></i></button>
             </div>
+
+            <button class="gift-btn" onclick="sendGift('{{ stream.username }}')">💎</button>
         </div>
     </div>
     {% else %}

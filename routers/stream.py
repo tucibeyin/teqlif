@@ -97,24 +97,43 @@ async def thumb(request: Request, user: User = Depends(get_current_user), db: Se
     except: pass
     return {"status": "ok"}
 
-# 🔥 CHAT VE SİNYAL SOKETİ 🔥
+# 🔥 HEDİYE SİSTEMİ 🔥
+@router.post("/gift/send")
+async def send_gift(request: Request, user: User = Depends(get_current_user)):
+    try:
+        data = await request.json()
+        target_user = data.get("to_user")
+        gift_type = data.get("gift_type", "diamond")
+        
+        # Buraya veritabanı bakiye düşme işlemleri gelecek
+        # Şimdilik sadece animasyon tetikliyoruz
+        
+        # Odaya "Hediye Geldi" sinyali gönder
+        await manager.broadcast_to_room(json.dumps({
+            "type": "gift_received",
+            "sender": user.username,
+            "gift": gift_type
+        }), target_user)
+        
+        return {"status": "success"}
+    except Exception as e:
+        print(f"Gift Error: {e}")
+        return {"status": "error"}
+
+# 🔥 SOHBET SOKETİ 🔥
 @router.websocket("/ws/chat")
 async def chat(websocket: WebSocket, stream: str = "home"):
     await manager.connect(websocket, stream)
     try:
         while True:
-            # Mesajı al
             data = await websocket.receive_text()
             msg_obj = json.loads(data)
-            
-            # Eğer sohbet mesajıysa herkese yay
             if msg_obj.get("type") == "chat_message":
                 await manager.broadcast_to_room(json.dumps({
                     "type": "chat_message",
                     "user": msg_obj.get("user"),
                     "text": msg_obj.get("text")
                 }), stream)
-                
     except: manager.disconnect(websocket, stream)
 
 @router.websocket("/ws/broadcast")
