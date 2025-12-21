@@ -14,36 +14,28 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                // 🔥 KRİTİK AYAR: ASPECT RATIO 9:16 🔥
-                // Bu ayar kameranın "Zoom" yapmasını engeller, dikey görüntü alır.
-                const constraints = {
+                // 9:16 Aspect Ratio (Selfie Modu)
+                const stream = await navigator.mediaDevices.getUserMedia({
                     audio: { echoCancellation: true, noiseSuppression: true },
                     video: {
                         facingMode: 'user',
-                        // 9/16 = 0.5625 (Tam telefon ekranı oranı)
-                        aspectRatio: { ideal: 0.5625 },
-                        width: { ideal: 720 },  // 720p Kalite
-                        height: { ideal: 1280 },
-                        frameRate: { ideal: 24 }
+                        width: { ideal: 720 }, height: { ideal: 1280 }, // 720p HD
+                        frameRate: { ideal: 24 },
+                        aspectRatio: { ideal: 0.5625 } // 9:16
                     }
-                };
-
-                const stream = await navigator.mediaDevices.getUserMedia(constraints);
+                });
                 videoElement.srcObject = stream;
-
-                // Yayıncının kendini "Ayna" gibi görmesi için (Video zaten CSS ile döndürüldü)
-                // Ama stream'in ham halini bozmamalıyız.
             } catch (e) { alert("Kamera Hatası: " + e); }
         }
         initCamera();
 
         document.getElementById('btn-start-broadcast').addEventListener('click', () => {
             const fd = new FormData();
-            fd.append('title', document.getElementById('streamTitle').value || 'Canlı');
+            fd.append('title', document.getElementById('streamTitle').value || 'Live');
             fd.append('category', document.getElementById('streamCategory').value || 'Genel');
 
             fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
-                if (!res.ok) { alert("Hata!"); return; }
+                if (!res.ok) { alert("Sunucu Hatası!"); return; }
                 document.getElementById('setup-layer').style.display = 'none';
                 document.getElementById('live-ui').style.display = 'flex';
 
@@ -52,42 +44,49 @@ document.addEventListener('DOMContentLoaded', () => {
                     const stream = canvas.captureStream(24);
                     stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
 
-                    // Android için VP8 (Güvenli), iOS izlesin diye sunucu çevirecek
-                    let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2000000 };
+                    // Codec: VP8 (Android dostu), Bitrate: 1.5Mbps (Stabil)
+                    let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
 
-                    try {
-                        rec = new MediaRecorder(stream, options);
-                    } catch (e) {
-                        rec = new MediaRecorder(stream);
+                    // Fallback
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { videoBitsPerSecond: 1500000 };
                     }
 
-                    rec.ondataavailable = e => {
-                        if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data);
-                    };
-                    rec.start(1000);
+                    rec = new MediaRecorder(stream, options);
 
-                    // Canvas Döngüsü (Görüntüyü düzeltir)
+                    rec.ondataavailable = e => {
+                        if (e.data.size > 0 && broadcastWs.readyState === 1) {
+                            // 🔥 KRİTİK RAM KORUMASI (BACKPRESSURE) 🔥
+                            // Eğer gönderilmeyi bekleyen veri 250KB'dan fazlaysa,
+                            // yeni paketi gönderme. Bu, tarayıcının çökmesini engeller.
+                            if (broadcastWs.bufferedAmount > 250 * 1024) {
+                                console.warn("⚠️ Ağ yavaş, paket atlandı (RAM Koruması)");
+                                return;
+                            }
+                            broadcastWs.send(e.data);
+                        }
+                    };
+                    rec.start(1000); // 1 saniyelik paketler
+
+                    // Ayna Modu Çizimi
                     const ctx = canvas.getContext('2d');
                     function draw() {
                         if (videoElement.readyState === 4) {
-                            // Videoyu canvas'a çizerken aspect ratio koru
-                            const vWidth = videoElement.videoWidth;
-                            const vHeight = videoElement.videoHeight;
+                            const vW = videoElement.videoWidth;
+                            const vH = videoElement.videoHeight;
+                            // Aspect Ratio koruyarak çiz
+                            const sH = vH;
+                            const sW = (vH * 9) / 16;
+                            const sX = (vW - sW) / 2;
 
-                            // Merkeze oturt (Center Crop)
-                            const sHeight = vHeight;
-                            const sWidth = (vHeight * 9) / 16;
-                            const sX = (vWidth - sWidth) / 2;
-
-                            // Eğer kamera 4:3 veriyorsa, kenarları kırpıp 9:16 yapıyoruz (Zoom değil, Crop)
                             ctx.drawImage(videoElement, sX, 0, sWidth, sHeight, 0, 0, canvas.width, canvas.height);
                         }
                         requestAnimationFrame(draw);
                     }
-                    draw();
-
-                    setInterval(() => { if (broadcastWs.readyState === 1) fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.3) }) }); }, 30000);
+                    // draw(); // Canvas işlemini kapattım, direkt stream'i alalım (Performans için)
+                    // Not: Aynalama CSS ile yapıldığı için canvas'a gerek yok, direkt stream gitsin.
                 };
+
                 broadcastWs.onclose = () => { if (rec) rec.stop(); alert("Yayın Bitti"); location.href = '/'; };
             });
         });
@@ -109,7 +108,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (v) {
             if (Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+                const hls = new Hls({ enableWorker: true });
                 hls.loadSource(src);
                 hls.attachMedia(v);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
@@ -117,6 +116,15 @@ document.addEventListener('DOMContentLoaded', () => {
                         const ov = document.getElementById(`play-overlay-${u}`);
                         if (ov) ov.style.display = 'none';
                     }).catch(() => { });
+                });
+                hls.on(Hls.Events.ERROR, (event, data) => {
+                    if (data.fatal) {
+                        switch (data.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                            case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                            default: hls.destroy(); break;
+                        }
+                    }
                 });
             } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
                 v.src = src;
