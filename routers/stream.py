@@ -20,7 +20,6 @@ templates = Jinja2Templates(directory="templates")
 async def client_log(request: Request):
     return {"status": "ok"}
 
-# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room):
@@ -60,10 +59,8 @@ def write_to_ffmpeg(process, data):
         try: process.stdin.write(data); process.stdin.flush()
         except: pass
 
-# --- ROUTES ---
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
-
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login", 303)
@@ -130,18 +127,19 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # 🔥 FFmpeg SAĞLAM AYARLAR (4sn Segment, H.264 Baseline, Fixed FPS) 🔥
+    # 🔥 FFmpeg (BASİT VE GÜVENLİ) 🔥
+    # Karmaşık bayraklar kaldırıldı. 
+    # -hls_time 4: 4 saniyelik parçalar (En güvenli)
+    # -level 3.0: 540p için en uygunu (3.1 bazen sorun çıkarabilir)
     command = [
         "ffmpeg", "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
-        "-level", "3.1", "-pix_fmt", "yuv420p", 
-        "-r", "24", "-g", "96", "-keyint_min", "96", # 96 Kare = 4 Saniye (Sabit)
-        "-sc_threshold", "0", 
-        "-vsync", "1", # FPS Sabitleme (Çok Önemli)
+        "-level", "3.0", "-pix_fmt", "yuv420p", "-r", "24", 
+        "-g", "96", "-keyint_min", "96", "-sc_threshold", "0", 
         "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "4000k", "-vf", "scale=-2:540",
         "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
-        "-f", "hls", "-hls_time", "4", "-hls_list_size", "5", 
-        "-hls_flags", "delete_segments+omit_endlist+split_by_time",
+        "-f", "hls", "-hls_time", "4", "-hls_list_size", "6", 
+        "-hls_flags", "delete_segments+omit_endlist", # split_by_time ve independent_segments kaldırıldı (Çakışma önlendi)
         f"{stream_dir}/index.m3u8"
     ]
     
