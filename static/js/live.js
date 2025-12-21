@@ -49,7 +49,6 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('btn-auc-toggle');
         const statusEl = document.getElementById(`auc-status-${username}`);
         const action = (auctionState === "stopped") ? "start" : "stop";
-
         fetch('/broadcast/toggle_auction', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action }) });
 
         if (MODE === 'broadcast') {
@@ -57,12 +56,12 @@ document.addEventListener('DOMContentLoaded', () => {
                 auctionState = "started";
                 btn.innerHTML = '<i class="fa-solid fa-stop"></i>';
                 btn.classList.remove('btn-auc-start'); btn.classList.add('btn-auc-stop');
-                statusEl.innerText = "MEZAT BAŞLADI";
+                statusEl.innerText = "MEZAT AKTİF";
             } else {
                 auctionState = "stopped";
                 btn.innerHTML = '<i class="fa-solid fa-play"></i>';
                 btn.classList.remove('btn-auc-stop'); btn.classList.add('btn-auc-start');
-                statusEl.innerText = "MEZAT DURDURULDU";
+                statusEl.innerText = "DURDURULDU";
             }
         }
     };
@@ -75,16 +74,22 @@ document.addEventListener('DOMContentLoaded', () => {
         const priceEl = document.getElementById(`auc-price-${username}`);
         const bidderEl = document.getElementById(`auc-bidder-${username}`);
 
-        // İzleyici için Panel
         if (MODE !== 'broadcast') {
-            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`; bidderEl.innerText = ""; }
+            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`; bidderEl.innerText = "Teklif Bekleniyor"; }
             else if (data.type === 'auction_ended') bar.style.display = 'none';
         }
 
         if (data.type === 'auction_started' || data.type === 'auction_update') {
             priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`;
             priceEl.style.color = '#00ff00'; setTimeout(() => priceEl.style.color = '#fff', 300);
-            if (data.bidder && data.bidder !== '-') bidderEl.innerText = `Son: ${data.bidder}`;
+
+            // 🔥 KAZANANI GÖSTER 🔥
+            if (data.bidder && data.bidder !== '-') {
+                bidderEl.innerHTML = `<i class="fa-solid fa-crown"></i> ${data.bidder}`;
+                bidderEl.style.display = "flex";
+            } else {
+                bidderEl.innerText = "Teklif Yok";
+            }
         }
     }
 
