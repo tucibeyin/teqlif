@@ -19,7 +19,6 @@ templates = Jinja2Templates(directory="templates")
 @router.post("/log/client")
 async def client_log(request: Request): return {"status": "ok"}
 
-# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room):
@@ -36,6 +35,8 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 active_processes = {}
+# Basit Mezat Hafızası (RAM'de tutulur)
+active_auctions = {} 
 
 def cleanup_stream_sync(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
@@ -44,6 +45,7 @@ def cleanup_stream_sync(username):
         try: proc.kill(); proc.wait(timeout=0.1)
         except: pass
         del active_processes[username]
+    if username in active_auctions: del active_auctions[username]
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
@@ -97,7 +99,6 @@ async def thumb(request: Request, user: User = Depends(get_current_user), db: Se
     except: pass
     return {"status": "ok"}
 
-# 🔥 HEDİYE 🔥
 @router.post("/gift/send")
 async def send_gift(request: Request, user: User = Depends(get_current_user)):
     try:
@@ -108,7 +109,40 @@ async def send_gift(request: Request, user: User = Depends(get_current_user)):
         return {"status": "success"}
     except: return {"status": "error"}
 
-# 🔥 SOHBET 🔥
+# 🔥 MEZAT (AUCTION) ENDPOINTLERİ 🔥
+@router.post("/broadcast/toggle_auction")
+async def toggle_auction(request: Request, user: User = Depends(get_current_user)):
+    data = await request.json()
+    action = data.get("action") # start / stop
+    
+    if action == "start":
+        active_auctions[user.username] = {"price": 0, "last_bidder": "-"}
+        await manager.broadcast_to_room(json.dumps({"type": "auction_started", "price": 0}), user.username)
+    else:
+        if user.username in active_auctions: del active_auctions[user.username]
+        await manager.broadcast_to_room(json.dumps({"type": "auction_ended"}), user.username)
+    return {"status": "ok"}
+
+@router.post("/broadcast/bid")
+async def bid(request: Request, user: User = Depends(get_current_user)):
+    data = await request.json()
+    target_user = data.get("broadcaster")
+    amount = int(data.get("amount", 10)) # Varsayılan artış 10
+    
+    if target_user in active_auctions:
+        auction = active_auctions[target_user]
+        auction["price"] += amount
+        auction["last_bidder"] = user.username
+        
+        # Herkese yeni fiyatı duyur
+        await manager.broadcast_to_room(json.dumps({
+            "type": "auction_update", 
+            "price": auction["price"], 
+            "bidder": user.username
+        }), target_user)
+        
+    return {"status": "ok"}
+
 @router.websocket("/ws/chat")
 async def chat(websocket: WebSocket, stream: str = "home"):
     await manager.connect(websocket, stream)
@@ -132,22 +166,17 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     except: await websocket.close(); return
 
     user.is_live = True; db.commit()
-    print(f"🎥 YAYIN BAŞLIYOR (TURBO 1s): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # 🔥 FFmpeg TURBO MOD (1 Saniye Gecikme Hedefi) 🔥
-    # -hls_time 1: 1 saniyelik parçalar
-    # -g 24: 1 saniyede bir keyframe (Mecburi)
-    # -hls_list_size 5: Liste kısa tutulur
     command = [
         "ffmpeg", "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", "-profile:v", "baseline",
         "-level", "3.0", "-pix_fmt", "yuv420p", 
-        "-r", "24", "-g", "24", "-keyint_min", "24", "-sc_threshold", "0", 
-        "-vsync", "1",
+        "-r", "24", "-g", "24", "-keyint_min", "24", "-sc_threshold", "0", "-vsync", "1",
         "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "3000k", "-vf", "scale=-2:540",
         "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
         "-f", "hls", "-hls_time", "1", "-hls_list_size", "5", 
@@ -159,7 +188,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     active_processes[user.username] = process
     
     async def notify():
-        await asyncio.sleep(2) # Daha hızlı bildirim
+        await asyncio.sleep(2) 
         await manager.broadcast_to_room(json.dumps({
             "type": "stream_added", "username": user.username, 
             "title": user.stream_title, "category": user.stream_category, 
