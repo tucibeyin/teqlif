@@ -92,7 +92,7 @@
         justify-content: flex-end;
         padding-top: max(15px, env(safe-area-inset-top));
         padding-bottom: 60px;
-        /* Tam Footer hizası */
+        /* Footer hizası */
         box-sizing: border-box;
         background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, transparent 40%, rgba(0, 0, 0, 0.6) 80%, rgba(0, 0, 0, 0.95) 100%);
     }
@@ -153,60 +153,64 @@
         font-size: 14px;
     }
 
-    /* 🔥 SIKIŞTIRILMIŞ BOTTOM STACK 🔥 */
+    /* --- BOTTOM STACK --- */
     .bottom-stack {
         display: flex;
         flex-direction: column;
         width: 100%;
-        padding: 0 8px 0 8px;
-        /* Kenar boşlukları daraltıldı */
+        padding: 0 10px 0 10px;
         box-sizing: border-box;
-        gap: 2px;
-        /* Elemanlar birbirine yapışık */
+        gap: 6px;
         pointer-events: auto;
+        margin-bottom: 5px;
     }
 
-    /* MEZAT BARI */
+    /* 🔥 İKİ KATLI MEZAT BARI 🔥 */
     .auction-bar {
         position: relative;
-        height: 45px;
         width: 100%;
-        background: rgba(20, 20, 20, 0.95);
-        backdrop-filter: blur(10px);
-        border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 8px;
+        height: auto;
+        /* Esnek yükseklik */
+        background: rgba(25, 25, 25, 0.95);
+        backdrop-filter: blur(15px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 12px;
         display: none;
-        align-items: center;
-        padding: 0 8px;
+        flex-direction: column;
+        /* Alt alta diz */
+        padding: 8px 10px;
         box-sizing: border-box;
-        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
         animation: slideUp 0.3s ease;
+        gap: 6px;
     }
 
-    .auc-info {
+    /* ÜST KAT: Fiyat ve İsim */
+    .auc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        width: 100%;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        padding-bottom: 4px;
+    }
+
+    .auc-price-group {
         display: flex;
         flex-direction: column;
-        justify-content: center;
-        flex: 1;
     }
 
-    .auc-status {
+    .auc-label {
         font-size: 8px;
-        color: #aaa;
-        font-weight: 700;
+        color: #ff0050;
+        font-weight: 800;
         text-transform: uppercase;
-        margin-bottom: 0;
-    }
-
-    /* Fiyat ve Kazanan */
-    .auc-row {
-        display: flex;
-        align-items: center;
-        gap: 8px;
+        letter-spacing: 1px;
+        animation: blink 2s infinite;
     }
 
     .auc-price {
-        font-size: 16px;
+        font-size: 20px;
         font-weight: 900;
         color: #fff;
         line-height: 1;
@@ -216,64 +220,89 @@
     }
 
     .auc-price span {
-        font-size: 11px;
+        font-size: 14px;
         color: #00ff00;
     }
 
-    /* 🔥 KAZANAN GÖSTERGESİ 🔥 */
-    .auc-bidder {
-        font-size: 11px;
-        color: #ffeb3b;
-        font-weight: 800;
-        background: rgba(255, 235, 59, 0.15);
-        padding: 2px 6px;
-        border-radius: 4px;
-        display: flex;
-        align-items: center;
-        gap: 4px;
+    .auc-bidder-box {
+        background: rgba(255, 235, 59, 0.1);
         border: 1px solid rgba(255, 235, 59, 0.3);
-    }
-
-    .auc-actions {
+        padding: 4px 8px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
+        max-width: 50%;
+        /* İsmin çok uzamasını engelle */
     }
 
-    .auc-btn-sm {
-        width: 32px;
-        height: 32px;
-        border-radius: 50%;
+    .auc-crown {
+        color: #ffd700;
+        font-size: 12px;
+    }
+
+    .auc-bidder-name {
+        font-size: 12px;
+        color: #ffeb3b;
+        font-weight: 700;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* ALT KAT: Butonlar */
+    .auc-body {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: flex-end;
+    }
+
+    /* Yayıncı Kontrolleri */
+    .auc-controls-host {
+        display: flex;
+        gap: 10px;
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .btn-host {
+        flex: 1;
+        padding: 8px;
+        border-radius: 8px;
         border: none;
+        font-weight: bold;
+        cursor: pointer;
+        color: white;
         display: flex;
         align-items: center;
         justify-content: center;
-        cursor: pointer;
-        color: white;
+        gap: 5px;
         font-size: 12px;
-        flex-shrink: 0;
     }
 
-    .btn-auc-start {
+    .btn-host-reset {
+        background: rgba(255, 255, 255, 0.15);
+        color: #ccc;
+        max-width: 40px;
+    }
+
+    .btn-host-toggle {
         background: #00e676;
         color: #000;
     }
 
-    .btn-auc-stop {
+    .btn-stop-mode {
         background: #ff3b30;
-        color: #fff;
+        color: white;
     }
 
-    .btn-auc-reset {
-        background: rgba(255, 255, 255, 0.15);
-        color: #ccc;
-    }
-
+    /* İzleyici Pey Butonları */
     .bid-presets {
         display: flex;
-        gap: 4px;
+        gap: 6px;
         overflow-x: auto;
-        padding-right: 2px;
+        width: 100%;
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
@@ -283,44 +312,51 @@
     }
 
     .btn-bid-pill {
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.1);
         color: white;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        height: 30px;
-        padding: 0 10px;
-        border-radius: 15px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        height: 32px;
+        padding: 0 14px;
+        border-radius: 16px;
         font-weight: 700;
-        font-size: 10px;
+        font-size: 12px;
         cursor: pointer;
         white-space: nowrap;
         flex-shrink: 0;
-    }
-
-    .btn-manual-toggle {
-        background: #444;
-        color: #fff;
-        width: 30px;
         display: flex;
         align-items: center;
         justify-content: center;
     }
 
+    .btn-bid-pill:active {
+        background: #ff0050;
+        border-color: #ff0050;
+        transform: scale(0.95);
+    }
+
+    .btn-manual-toggle {
+        background: #333;
+        width: 32px;
+        color: #aaa;
+    }
+
     .bid-manual {
         display: none;
         align-items: center;
-        gap: 4px;
+        gap: 5px;
         flex: 1;
+        width: 100%;
     }
 
     .inp-manual {
-        width: 100%;
+        flex: 1;
         background: transparent;
         border: none;
         border-bottom: 2px solid #ff0050;
         color: white;
-        font-size: 14px;
+        font-size: 16px;
         font-weight: bold;
-        padding: 4px;
+        padding: 5px;
         text-align: center;
         outline: none;
     }
@@ -329,8 +365,8 @@
         background: #ff0050;
         color: white;
         border: none;
-        width: 30px;
-        height: 30px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         cursor: pointer;
     }
@@ -339,14 +375,14 @@
         background: transparent;
         color: #aaa;
         border: none;
-        font-size: 16px;
+        font-size: 18px;
         cursor: pointer;
     }
 
-    /* CHAT KUTUSU */
+    /* CHAT */
     .chat-container {
         position: relative;
-        height: 120px;
+        height: 130px;
         width: 100%;
         overflow-y: auto;
         display: flex;
@@ -355,7 +391,6 @@
         mask-image: linear-gradient(to top, black 85%, transparent 100%);
         -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
         margin-bottom: 2px;
-        /* Çok az boşluk */
     }
 
     .chat-container::-webkit-scrollbar {
@@ -388,7 +423,7 @@
         border-left: 3px solid gold;
     }
 
-    /* INPUT ALANI */
+    /* INPUT */
     .bottom-controls {
         position: relative;
         display: flex;
@@ -401,13 +436,13 @@
         flex: 1;
         position: relative;
         background: rgba(255, 255, 255, 0.15);
-        border-radius: 18px;
-        padding: 0 10px;
+        border-radius: 20px;
+        padding: 2px 2px 2px 10px;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.15);
         display: flex;
         align-items: center;
-        height: 38px;
+        height: 40px;
     }
 
     .chat-input {
@@ -435,8 +470,8 @@
 
     .gift-trigger {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        width: 38px;
-        height: 38px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -461,12 +496,26 @@
     @keyframes slideUp {
         from {
             opacity: 0;
-            transform: translateY(10px);
+            transform: translateY(20px);
         }
 
         to {
             opacity: 1;
             transform: translateY(0);
+        }
+    }
+
+    @keyframes blink {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.5;
+        }
+
+        100% {
+            opacity: 1;
         }
     }
 
@@ -624,18 +673,24 @@
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
 
                 <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
-                    <div class="auc-info">
-                        <div class="auc-status" id="auc-status-{{ user.username }}">MEZAT AKTİF</div>
-                        <div class="auc-row">
+                    <div class="auc-header">
+                        <div class="auc-price-group">
+                            <div class="auc-label" id="auc-status-{{ user.username }}">MEZAT AKTİF</div>
                             <div class="auc-price" id="auc-price-{{ user.username }}">0 <span>₺</span></div>
-                            <div class="auc-bidder" id="auc-bidder-{{ user.username }}">Kimse Yok</div>
+                        </div>
+                        <div class="auc-bidder-box">
+                            <i class="fa-solid fa-crown auc-crown"></i>
+                            <div class="auc-bidder-name" id="auc-bidder-{{ user.username }}">Bekleniyor</div>
                         </div>
                     </div>
-                    <div class="auc-actions">
-                        <button class="auc-btn-sm btn-auc-reset" onclick="resetAuction('{{ user.username }}')"><i
-                                class="fa-solid fa-rotate-right"></i></button>
-                        <button id="btn-auc-toggle" class="auc-btn-sm btn-auc-start"
-                            onclick="toggleAuction('{{ user.username }}')"><i class="fa-solid fa-play"></i></button>
+                    <div class="auc-body">
+                        <div class="auc-controls-host">
+                            <button class="btn-host btn-host-reset" onclick="resetAuction('{{ user.username }}')"><i
+                                    class="fa-solid fa-rotate-right"></i></button>
+                            <button id="btn-auc-toggle" class="btn-host btn-host-toggle"
+                                onclick="toggleAuction('{{ user.username }}')"><i class="fa-solid fa-stop"></i>
+                                BİTİR</button>
+                        </div>
                     </div>
                 </div>
 
@@ -674,14 +729,18 @@
                 <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
 
                 <div id="auction-bar-{{ stream.username }}" class="auction-bar">
-                    <div class="auc-info">
-                        <div class="auc-status">MEZAT BAŞLADI</div>
-                        <div class="auc-row">
+                    <div class="auc-header">
+                        <div class="auc-price-group">
+                            <div class="auc-label">MEZAT BAŞLADI 🔥</div>
                             <div class="auc-price" id="auc-price-{{ stream.username }}">0 <span>₺</span></div>
-                            <div class="auc-bidder" id="auc-bidder-{{ stream.username }}">Teklif Yok</div>
+                        </div>
+                        <div class="auc-bidder-box" id="auc-bidder-box-{{ stream.username }}" style="display:none;">
+                            <i class="fa-solid fa-crown auc-crown"></i>
+                            <div class="auc-bidder-name" id="auc-bidder-{{ stream.username }}"></div>
                         </div>
                     </div>
-                    <div class="auc-actions">
+
+                    <div class="auc-body">
                         <div class="bid-presets" id="bid-presets-{{ stream.username }}">
                             <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 50)">+50</button>
                             <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 100)">+100</button>

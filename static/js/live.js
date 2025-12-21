@@ -49,33 +49,36 @@ document.addEventListener('DOMContentLoaded', () => {
         const btn = document.getElementById('btn-auc-toggle');
         const statusEl = document.getElementById(`auc-status-${username}`);
         const action = (auctionState === "stopped") ? "start" : "stop";
+
         fetch('/broadcast/toggle_auction', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action }) });
 
         if (MODE === 'broadcast') {
             if (action === 'start') {
                 auctionState = "started";
-                btn.innerHTML = '<i class="fa-solid fa-stop"></i>';
-                btn.classList.remove('btn-auc-start'); btn.classList.add('btn-auc-stop');
+                btn.innerHTML = '<i class="fa-solid fa-stop"></i> BİTİR';
+                btn.classList.remove('btn-host-toggle'); btn.classList.add('btn-stop-mode');
                 statusEl.innerText = "MEZAT AKTİF";
             } else {
                 auctionState = "stopped";
-                btn.innerHTML = '<i class="fa-solid fa-play"></i>';
-                btn.classList.remove('btn-auc-stop'); btn.classList.add('btn-auc-start');
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> BAŞLAT';
+                btn.classList.remove('btn-stop-mode'); btn.classList.add('btn-host-toggle');
                 statusEl.innerText = "DURDURULDU";
             }
         }
     };
 
-    window.resetAuction = function (username) { if (confirm("Sıfırlansın mı?")) fetch('/broadcast/reset_auction', { method: 'POST' }); };
+    window.resetAuction = function (username) { if (confirm("Fiyat sıfırlansın mı?")) fetch('/broadcast/reset_auction', { method: 'POST' }); };
     window.placeBid = function (broadcaster, amount) { fetch('/broadcast/bid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ broadcaster: broadcaster, amount: amount }) }); };
 
     function updateAuctionUI(username, data) {
         const bar = document.getElementById(`auction-bar-${username}`);
         const priceEl = document.getElementById(`auc-price-${username}`);
-        const bidderEl = document.getElementById(`auc-bidder-${username}`);
+        const bidderNameEl = document.getElementById(`auc-bidder-${username}`);
+        const bidderBox = document.getElementById(`auc-bidder-box-${username}`);
 
+        // İzleyici için Panel Görünürlüğü
         if (MODE !== 'broadcast') {
-            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`; bidderEl.innerText = "Teklif Bekleniyor"; }
+            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`; if (bidderBox) bidderBox.style.display = 'none'; }
             else if (data.type === 'auction_ended') bar.style.display = 'none';
         }
 
@@ -83,12 +86,14 @@ document.addEventListener('DOMContentLoaded', () => {
             priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`;
             priceEl.style.color = '#00ff00'; setTimeout(() => priceEl.style.color = '#fff', 300);
 
-            // 🔥 KAZANANI GÖSTER 🔥
+            // Kazananı Güncelle
             if (data.bidder && data.bidder !== '-') {
-                bidderEl.innerHTML = `<i class="fa-solid fa-crown"></i> ${data.bidder}`;
-                bidderEl.style.display = "flex";
+                bidderNameEl.innerText = data.bidder;
+                if (bidderBox) bidderBox.style.display = 'flex'; // İzleyicide kutuyu göster
+                // Yayıncıda zaten visible
             } else {
-                bidderEl.innerText = "Teklif Yok";
+                bidderNameEl.innerText = (MODE === 'broadcast') ? 'Bekleniyor' : '';
+                if (bidderBox) bidderBox.style.display = 'none';
             }
         }
     }
