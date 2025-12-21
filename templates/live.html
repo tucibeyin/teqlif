@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* GLOBAL RESET */
+    /* GLOBAL */
     html,
     body {
         margin: 0;
@@ -15,26 +15,42 @@
         height: 100%;
         background: #000;
         overflow: hidden;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: -apple-system, sans-serif;
     }
 
+    /* REELS SCROLL CONTAINER */
     .teqlif-stage {
         position: relative;
         width: 100%;
         height: 100dvh;
-        display: flex;
-        justify-content: center;
-        align-items: center;
         background: #000;
+
+        /* 🔥 INSTAGRAM SCROLL MANTIĞI 🔥 */
+        overflow-y: scroll;
+        scroll-snap-type: y mandatory;
+        /* Dikeyde kilitlen */
+        scroll-behavior: smooth;
     }
 
-    /* VİDEO ALANI */
+    /* Kaydırma çubuğunu gizle */
+    .teqlif-stage::-webkit-scrollbar {
+        display: none;
+    }
+
+    .teqlif-stage {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    /* TEK VİDEO KUTUSU */
     .video-wrapper {
         position: relative;
         width: 100%;
         height: 100%;
-        z-index: 1;
         overflow: hidden;
+
+        /* EKRANA KİLİTLE */
+        scroll-snap-align: start;
         display: flex;
         justify-content: center;
         align-items: center;
@@ -45,14 +61,13 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
-        /* Ekranı doldur */
     }
 
     #preview {
         transform: scaleX(-1);
     }
 
-    /* UI KATMANI (ARAYÜZ) */
+    /* UI & DİĞERLERİ */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -61,30 +76,17 @@
         height: 100%;
         z-index: 10;
         pointer-events: none;
-
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-
-        /* 🔥 KRİTİK DÜZELTME: TAŞMAYI ENGELLE 🔥 */
-        box-sizing: border-box;
-
-        /* Çentik ve Alt Çubuk Koruması */
-        padding-top: max(20px, env(safe-area-inset-top));
-        padding-bottom: max(20px, env(safe-area-inset-bottom));
-        padding-left: 20px;
-        padding-right: 20px;
-
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 15%, transparent 85%, rgba(0, 0, 0, 0.6) 100%);
+        padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)) 20px;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent, rgba(0, 0, 0, 0.8));
     }
 
-    /* ÜST BİLGİ ÇUBUĞU */
     .top-bar {
         display: flex;
         align-items: center;
         gap: 10px;
-        align-self: flex-start;
-        /* Sola yasla */
     }
 
     .badge {
@@ -94,7 +96,6 @@
         border-radius: 4px;
         font-weight: 800;
         font-size: 11px;
-        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     }
 
     .username-pill {
@@ -105,20 +106,14 @@
         font-weight: 600;
         font-size: 13px;
         backdrop-filter: blur(10px);
-        display: flex;
-        align-items: center;
-        gap: 6px;
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* ALT BUTON ALANI */
     .bottom-bar {
         width: 100%;
         display: flex;
         justify-content: center;
         pointer-events: auto;
-        /* Tıklanabilir yap */
-        margin-bottom: 10px;
     }
 
     .action-btn {
@@ -129,20 +124,12 @@
         border-radius: 30px;
         font-weight: bold;
         cursor: pointer;
-        font-size: 14px;
         backdrop-filter: blur(5px);
-        transition: transform 0.1s;
-    }
-
-    .action-btn:active {
-        transform: scale(0.95);
-        background: rgba(255, 255, 255, 0.3);
     }
 
     .btn-red {
         background: #ff3b30;
         border: none;
-        box-shadow: 0 4px 15px rgba(255, 59, 48, 0.4);
     }
 
     /* YAYIN BİTTİ EKRANI */
@@ -153,26 +140,12 @@
         width: 100%;
         height: 100%;
         background: rgba(0, 0, 0, 0.9);
-        backdrop-filter: blur(20px);
         z-index: 100;
         display: none;
         flex-direction: column;
         align-items: center;
         justify-content: center;
         color: white;
-        text-align: center;
-    }
-
-    .end-title {
-        font-size: 22px;
-        font-weight: 800;
-        margin-bottom: 10px;
-    }
-
-    .end-desc {
-        font-size: 14px;
-        color: #aaa;
-        margin-bottom: 30px;
     }
 
     .home-btn {
@@ -182,31 +155,23 @@
         border-radius: 30px;
         text-decoration: none;
         font-weight: 800;
-        font-size: 14px;
-        display: inline-block;
+        margin-top: 20px;
         pointer-events: auto;
     }
 
     /* PC DÜZENİ */
     @media (min-width: 768px) {
         .video-wrapper {
-            width: 400px;
-            height: 90vh;
+            width: 100%;
+            max-width: 450px;
+            height: 95vh;
+            margin: 2.5vh auto;
             border-radius: 20px;
             box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
         }
-
-        .blur-bg {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            background-size: cover;
-            filter: blur(60px) brightness(0.4);
-            z-index: 0;
-        }
     }
 
-    /* SETUP MODU */
+    /* SETUP (YAYINCI) */
     .setup-layer {
         position: absolute;
         width: 100%;
@@ -234,12 +199,7 @@
         border-radius: 12px;
         margin-bottom: 10px;
         box-sizing: border-box;
-        font-size: 14px;
         outline: none;
-    }
-
-    .inp:focus {
-        border-color: #555;
     }
 
     .start-btn {
@@ -251,12 +211,10 @@
         border-radius: 30px;
         font-weight: 800;
         cursor: pointer;
-        font-size: 16px;
-        margin-top: 10px;
     }
 </style>
 
-<div class="teqlif-stage">
+<div class="teqlif-stage" id="scroll-container">
     {% if mode == 'broadcast' %}
     <div class="video-wrapper">
         <video id="preview" autoplay muted playsinline></video>
@@ -265,12 +223,9 @@
         <div id="setup-layer" class="setup-layer">
             <div class="setup-box">
                 <h2 style="color:white; margin-bottom:20px;">Yayın Başlat</h2>
-                <input type="text" id="streamTitle" class="inp" placeholder="Yayın Başlığı">
+                <input type="text" id="streamTitle" class="inp" placeholder="Başlık">
                 <select id="streamCategory" class="inp">
-                    <option>Sohbet</option>
-                    <option>Oyun</option>
-                    <option>Müzik</option>
-                    <option>Diğer</option>
+                    <option>Genel</option>
                 </select>
                 <button id="btn-start-broadcast" class="start-btn">CANLI YAYIN 📡</button>
             </div>
@@ -281,22 +236,20 @@
                 <div class="badge">CANLI</div>
                 <div class="username-pill"><i class="fa-solid fa-user"></i> {{ user.username }}</div>
             </div>
-
             <div class="bottom-bar">
-                <button onclick="stopBroadcast()" class="action-btn btn-red">YAYINI BİTİR</button>
+                <button onclick="stopBroadcast()" class="action-btn btn-red">BİTİR</button>
             </div>
         </div>
     </div>
 
     {% else %}
     {% for stream in streams %}
-    <div class="blur-bg" style="background-image: url('/static/thumbnails/thumb_{{ stream.username }}.jpg');"></div>
-    <div class="video-wrapper">
-        <video id="video-{{ stream.username }}" playsinline webkit-playsinline loop></video>
+    <div class="video-wrapper feed-item" data-username="{{ stream.username }}">
+        <video id="video-{{ stream.username }}" playsinline webkit-playsinline loop
+            poster="{{ stream.thumbnail }}"></video>
 
         <div id="end-screen-{{ stream.username }}" class="end-screen">
-            <div class="end-title">Yayın Sona Erdi</div>
-            <div class="end-desc">@{{ stream.username }} yayını sonlandırdı.</div>
+            <h2>Yayın Sona Erdi</h2>
             <a href="/" class="home-btn">Ana Sayfa</a>
         </div>
 
@@ -309,16 +262,18 @@
         </div>
     </div>
     {% else %}
-    <div style="color:white; text-align:center;">
-        <h2>Aktif Yayın Yok</h2>
-        <a href="/" style="color:#aaa;">Geri Dön</a>
+    <div class="video-wrapper" style="background:#111;">
+        <div style="color:white; text-align:center;">
+            <h2>Şu an canlı yayın yok 😔</h2>
+            <a href="/" style="color:#aaa; margin-top:20px; display:block;">Yenile</a>
+        </div>
     </div>
     {% endfor %}
     {% endif %}
 </div>
 
 <script>
-    window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}", broadcaster: "{{ broadcaster.username if broadcaster else '' }}" };
+    window.TEQLIF_CONFIG = { mode: "{{ mode }}", username: "{{ user.username if user else 'anon' }}" };
 </script>
 <script src="/static/js/live.js?v={{ range(1, 10000) | random }}"></script>
 {% endblock %}

@@ -24,6 +24,7 @@ async def client_log(request: Request):
         return {"status": "ok"}
     except: return {"status": "err"}
 
+# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room):
@@ -63,16 +64,35 @@ def write_to_ffmpeg(process, data):
         try: process.stdin.write(data); process.stdin.flush()
         except: pass
 
+# --- ROUTES ---
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
+
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login", 303)
+    
     target_user = None
-    if broadcaster: target_user = db.query(User).filter(User.username == broadcaster).first()
     active_streams = db.query(User).filter(User.is_live == True).all()
-    if mode == "broadcast": target_user = user
-    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user})
+    
+    # EĞER BELİRLİ BİR YAYINCI SEÇİLDİYSE, ONU LİSTENİN BAŞINA AL
+    if broadcaster:
+        target_user = db.query(User).filter(User.username == broadcaster).first()
+        if target_user in active_streams:
+            active_streams.remove(target_user)
+            active_streams.insert(0, target_user) # En başa ekle
+    
+    # Yayıncı modundaysa hedef kendisidir
+    if mode == "broadcast": 
+        target_user = user
+
+    return templates.TemplateResponse("live.html", {
+        "request": request, 
+        "user": user, 
+        "mode": mode, 
+        "streams": active_streams, 
+        "broadcaster": target_user
+    })
 
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -122,16 +142,13 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     except: await websocket.close(); return
 
     user.is_live = True; db.commit()
-    print(f"🎥 YAYIN BAŞLIYOR (STABLE MODE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # 🔥 FFmpeg (STABIL & GÜVENLİ) 🔥
-    # -hls_time 2: 2 saniyelik parçalar (Daha az dosya, daha az 404 hatası)
-    # -g 48: 2 saniyede bir keyframe (Tam senkron)
-    # -hls_list_size 6: 12 saniyelik geriye dönük buffer tutar
+    # FFmpeg (Universal 3.1)
     command = [
         "ffmpeg", "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
@@ -140,7 +157,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "4000k", "-vf", "scale=-2:540",
         "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
-        "-hls_flags", "delete_segments+omit_endlist+split_by_time",
+        "-hls_flags", "delete_segments+omit_endlist+split_by_time+independent_segments",
         f"{stream_dir}/index.m3u8"
     ]
     
