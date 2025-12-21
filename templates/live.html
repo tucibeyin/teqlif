@@ -78,7 +78,7 @@
         transform: scaleX(-1);
     }
 
-    /* --- UI KATMANI (Overlay) --- */
+    /* --- UI KATMANI --- */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -89,8 +89,8 @@
         pointer-events: none;
         display: flex;
         flex-direction: column;
-        /* Elemanları yayma, sadece yukarıdan aşağı diz */
-        justify-content: flex-start;
+        /* Her şeyi en alta it */
+        justify-content: flex-end;
         padding-top: max(15px, env(safe-area-inset-top));
         padding-bottom: 65px;
         /* Footer payı */
@@ -98,6 +98,7 @@
         background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 20%, transparent 60%, rgba(0, 0, 0, 0.95) 100%);
     }
 
+    /* Üst Bar (En tepeye gitmesi için margin-bottom auto veriyoruz) */
     .top-bar {
         display: flex;
         align-items: center;
@@ -106,6 +107,8 @@
         padding: 0 15px;
         width: 100%;
         box-sizing: border-box;
+        margin-bottom: auto;
+        /* Kendini en üste it */
     }
 
     .user-info {
@@ -153,28 +156,24 @@
         font-size: 14px;
     }
 
-    /* 🔥 BOTTOM STACK (SİHİRLİ KUTU) 🔥 */
-    /* Bu kutu ekranın en altına yapışır ve içindekileri alt alta dizer */
+    /* 🔥 BOTTOM STACK (DİZİLİM KUTUSU) 🔥 */
     .bottom-stack {
-        margin-top: auto;
-        /* Yukarıdaki boşluğu doldurarak en alta in */
-        width: 100%;
         display: flex;
         flex-direction: column;
         /* Alt alta diz */
-        gap: 8px;
-        /* Elemanlar arası 8px boşluk */
+        width: 100%;
         padding: 0 10px;
-        /* Kenar boşluğu */
         box-sizing: border-box;
+        gap: 8px;
+        /* Elemanlar arası boşluk */
         pointer-events: auto;
     }
 
-    /* 🔥 MEZAT BARI (AKAN DÜZEN) 🔥 */
+    /* 🔥 MEZAT BARI (AKAN DÜZEN - Absolute İPTAL) 🔥 */
     .auction-bar {
         position: relative;
-        /* Normal akışta dur */
-        height: 55px;
+        /* Akışın içinde yer kapla */
+        height: 50px;
         width: 100%;
         background: rgba(20, 20, 20, 0.95);
         backdrop-filter: blur(10px);
@@ -338,10 +337,9 @@
         cursor: pointer;
     }
 
-    /* --- CHAT --- */
+    /* --- CHAT (ARTIK MEZATIN ÜSTÜNDE) --- */
     .chat-container {
         position: relative;
-        /* Akışın içinde */
         height: 150px;
         width: 100%;
         overflow-y: auto;
@@ -382,10 +380,9 @@
         border-left: 3px solid gold;
     }
 
-    /* --- INPUT --- */
+    /* --- INPUT (EN ALTA) --- */
     .bottom-controls {
         position: relative;
-        /* Akışın içinde */
         display: flex;
         align-items: center;
         gap: 10px;
@@ -440,7 +437,6 @@
         font-size: 18px;
     }
 
-    /* Animasyonlar */
     @keyframes slideIn {
         from {
             opacity: 0;
@@ -617,9 +613,12 @@
                 </div>
                 <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
             </div>
+
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
 
             <div class="bottom-stack">
+                <div class="chat-container" id="chat-box-{{ user.username }}"></div>
+
                 <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
                     <div class="auc-info">
                         <div class="auc-status" id="auc-status-{{ user.username }}">MEZAT AKTİF</div>
@@ -633,7 +632,7 @@
                             onclick="toggleAuction('{{ user.username }}')"><i class="fa-solid fa-play"></i></button>
                     </div>
                 </div>
-                <div class="chat-container" id="chat-box-{{ user.username }}"></div>
+
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper">
                         <input type="text" class="chat-input" id="chat-input-{{ user.username }}"
@@ -666,6 +665,8 @@
             <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
 
             <div class="bottom-stack">
+                <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
+
                 <div id="auction-bar-{{ stream.username }}" class="auction-bar">
                     <div class="auc-info">
                         <div class="auc-status">MEZAT BAŞLADI</div>
@@ -693,7 +694,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
+
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper">
                         <input type="text" class="chat-input" id="chat-input-{{ stream.username }}"
