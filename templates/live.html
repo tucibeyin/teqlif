@@ -11,6 +11,7 @@
         display: none !important;
     }
 
+    /* Footer Sabit ve En Altta */
     footer {
         position: fixed !important;
         bottom: 0 !important;
@@ -19,8 +20,10 @@
         background: #000 !important;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         height: 60px;
+        /* Footer yüksekliği */
     }
 
+    /* Ana Kapsayıcı */
     main {
         height: 100dvh !important;
         width: 100vw !important;
@@ -41,6 +44,7 @@
         font-family: -apple-system, sans-serif;
     }
 
+    /* Scroll Yapısı */
     .teqlif-stage {
         position: relative;
         width: 100%;
@@ -50,12 +54,14 @@
         scroll-snap-type: y mandatory;
         scroll-behavior: smooth;
         padding-bottom: 60px;
+        /* Footer arkasında kalan kısım */
     }
 
     .teqlif-stage::-webkit-scrollbar {
         display: none;
     }
 
+    /* Video Kutusu */
     .video-wrapper {
         position: relative;
         width: 100%;
@@ -78,7 +84,7 @@
         transform: scaleX(-1);
     }
 
-    /* --- UI KATMANI --- */
+    /* --- UI KATMANI (Overlay) --- */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -90,15 +96,19 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        /* Çentik ve Footer koruması */
+
+        /* Çentik Koruması */
         padding-top: max(15px, env(safe-area-inset-top));
-        padding-bottom: 70px;
-        /* Footer (60px) + 10px boşluk */
+
+        /* 🔥 BURAYI DÜZELTTİK: Sohbeti Footer'ın hemen üstüne indir 🔥 */
+        /* Footer (60px) + 5px boşluk = 65px */
+        padding-bottom: 65px;
+
         box-sizing: border-box;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 20%, transparent 70%, rgba(0, 0, 0, 0.8) 100%);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 20%, transparent 60%, rgba(0, 0, 0, 0.9) 100%);
     }
 
-    /* ÜST BAR (Sol: Bilgi, Sağ: Kapat) */
+    /* ÜST BAR */
     .top-bar {
         display: flex;
         align-items: center;
@@ -137,7 +147,7 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* Yayıncı BİTİR Butonu (Sağ Üst) */
+    /* Kapat Butonu */
     .btn-close {
         background: rgba(0, 0, 0, 0.5);
         color: white;
@@ -159,7 +169,7 @@
         border-color: #ff3b30;
     }
 
-    /* --- CHAT SİSTEMİ (EN ALTTA) --- */
+    /* --- CHAT ALANI (EN ALT) --- */
     .chat-area {
         display: flex;
         flex-direction: column;
@@ -169,15 +179,16 @@
     }
 
     .chat-container {
-        height: 200px;
-        width: 80%;
+        height: 220px;
+        width: 85%;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        mask-image: linear-gradient(to top, black 85%, transparent 100%);
-        -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
-        margin-bottom: 10px;
+        mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        /* Input ile mesajlar arasındaki boşluğu azalttık */
+        margin-bottom: 8px;
     }
 
     .chat-container::-webkit-scrollbar {
@@ -185,29 +196,31 @@
     }
 
     .chat-msg {
-        margin-bottom: 6px;
+        margin-bottom: 5px;
         font-size: 13px;
         color: white;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
         animation: slideIn 0.3s ease;
-        background: rgba(0, 0, 0, 0.2);
-        padding: 4px 8px;
-        border-radius: 8px;
+        background: rgba(0, 0, 0, 0.25);
+        padding: 5px 10px;
+        border-radius: 10px;
         align-self: flex-start;
         display: inline-block;
+        max-width: 100%;
+        word-wrap: break-word;
     }
 
     .chat-user {
         font-weight: 700;
         color: #ffeb3b;
         margin-right: 5px;
-        opacity: 0.9;
+        opacity: 1;
     }
 
     .chat-text {
         font-weight: 400;
         color: #fff;
-        opacity: 0.95;
+        opacity: 1;
     }
 
     .sys-msg {
@@ -216,7 +229,7 @@
         padding-left: 8px;
     }
 
-    /* INPUT BAR (Mesaj ve Hediye) */
+    /* INPUT BAR */
     .bottom-controls {
         display: flex;
         align-items: center;
@@ -229,9 +242,9 @@
         position: relative;
         background: rgba(255, 255, 255, 0.15);
         border-radius: 25px;
-        padding: 2px;
-        backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
+        padding: 3px;
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
         display: flex;
         align-items: center;
     }
@@ -247,31 +260,34 @@
     }
 
     .chat-input::placeholder {
-        color: rgba(255, 255, 255, 0.6);
+        color: rgba(255, 255, 255, 0.7);
     }
 
     .chat-send {
         background: transparent;
         border: none;
         color: white;
-        width: 35px;
-        height: 35px;
+        width: 36px;
+        height: 36px;
         cursor: pointer;
-        opacity: 0.8;
+        opacity: 0.9;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    /* ELMAS BUTONU (Kibar Versiyon) */
+    /* ELMAS BUTONU */
     .gift-trigger {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        width: 42px;
-        height: 42px;
+        width: 44px;
+        height: 44px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
-        border: 2px solid rgba(255, 255, 255, 0.3);
+        border: 2px solid rgba(255, 255, 255, 0.4);
         cursor: pointer;
-        box-shadow: 0 4px 10px rgba(0, 242, 254, 0.3);
+        box-shadow: 0 4px 15px rgba(0, 242, 254, 0.4);
         transition: transform 0.1s;
         font-size: 18px;
     }
@@ -491,7 +507,6 @@
                         <button class="chat-send" onclick="sendChat('{{ stream.username }}')"><i
                                 class="fa-solid fa-paper-plane"></i></button>
                     </div>
-
                     <div class="gift-trigger" onclick="sendGift('{{ stream.username }}')">💎</div>
                 </div>
             </div>
