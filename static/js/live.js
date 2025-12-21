@@ -3,13 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
 
-    function remoteLog(msg) {
-        console.log(msg);
-        fetch('/log/client', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ msg: `[${MODE.toUpperCase()}] ${msg}` })
-        }).catch(() => { });
-    }
+    function remoteLog(msg) { console.log(msg); }
 
     // --- YAYINCI ---
     if (MODE === 'broadcast') {
@@ -20,10 +14,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                // 540p @ 24fps (Standart)
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true }, video: { facingMode: 'user', width: { ideal: 540 }, height: { ideal: 960 }, frameRate: 24 } });
+                // 540p Dikey İstiyoruz
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true },
+                    video: { facingMode: 'user', width: { ideal: 540 }, height: { ideal: 960 }, frameRate: 24 }
+                });
                 videoElement.srcObject = stream;
-            } catch (e) { alert("Kamera Hatası!"); }
+            } catch (e) { alert("Kamera Hatası: " + e); }
         }
         initCamera();
 
@@ -41,14 +38,15 @@ document.addEventListener('DOMContentLoaded', () => {
                     const stream = canvas.captureStream(24);
                     stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
 
-                    // Codec Seçimi
                     let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2000000 };
                     if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
                         options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2000000 };
                     }
 
                     rec = new MediaRecorder(stream, options);
-                    rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
+                    rec.ondataavailable = e => {
+                        if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data);
+                    };
                     rec.start(500);
 
                     const ctx = canvas.getContext('2d');
@@ -73,41 +71,19 @@ document.addEventListener('DOMContentLoaded', () => {
         const src = `/static/hls/${u}/index.m3u8`;
 
         if (v) {
-            // HLS.js
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
-                    lowLatencyMode: true,
-                    backBufferLength: 90,
-                    // 🔥 HIZLI BAŞLANGIÇ AYARLARI 🔥
-                    startLevel: -1, // Otomatik seviye
-                    liveSyncDurationCount: 2, // Canlıdan 2 parça geriden gel (Daha güvenli)
-                    liveMaxLatencyDurationCount: 5, // Maksimum gecikme
-                    maxBufferLength: 30
+                    lowLatencyMode: true
                 });
                 hls.loadSource(src);
                 hls.attachMedia(v);
-
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    remoteLog("✅ Oynatma başlıyor...");
-                    v.muted = true;
-                    v.play().catch(e => remoteLog("Otoplay engellendi: " + e));
+                    v.muted = true; v.play().catch(() => { });
                     const ov = document.getElementById(`play-overlay-${u}`);
                     if (ov) ov.style.display = 'none';
                 });
-
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) {
-                        switch (data.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-                            case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                            default: hls.destroy(); break;
-                        }
-                    }
-                });
-            }
-            // iOS Native
-            else if (v.canPlayType('application/vnd.apple.mpegurl')) {
+            } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
                 v.src = src;
                 v.addEventListener('loadedmetadata', () => {
                     v.muted = true; v.play().catch(() => { });
