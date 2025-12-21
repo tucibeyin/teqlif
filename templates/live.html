@@ -89,16 +89,17 @@
         pointer-events: none;
         display: flex;
         flex-direction: column;
-        /* Her şeyi en alta it */
         justify-content: flex-end;
+        /* En alta yasla */
         padding-top: max(15px, env(safe-area-inset-top));
-        padding-bottom: 65px;
-        /* Footer payı */
+
+        /* 🔥 BURASI ÖNEMLİ: Tam Footer'ın üstüne oturtuyoruz 🔥 */
+        padding-bottom: 60px;
+
         box-sizing: border-box;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 20%, transparent 60%, rgba(0, 0, 0, 0.95) 100%);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, transparent 30%, transparent 60%, rgba(0, 0, 0, 0.8) 100%);
     }
 
-    /* Üst Bar (En tepeye gitmesi için margin-bottom auto veriyoruz) */
     .top-bar {
         display: flex;
         align-items: center;
@@ -156,36 +157,80 @@
         font-size: 14px;
     }
 
-    /* 🔥 BOTTOM STACK (DİZİLİM KUTUSU) 🔥 */
+    /* 🔥 SIKI DÜZEN KUTUSU (Compact Stack) 🔥 */
     .bottom-stack {
         display: flex;
         flex-direction: column;
-        /* Alt alta diz */
         width: 100%;
-        padding: 0 10px;
+        padding: 0 10px 5px 10px;
+        /* Alt boşluk minimal */
         box-sizing: border-box;
-        gap: 8px;
-        /* Elemanlar arası boşluk */
+        gap: 4px;
+        /* Elemanlar birbirine çok yakın */
         pointer-events: auto;
     }
 
-    /* 🔥 MEZAT BARI (AKAN DÜZEN - Absolute İPTAL) 🔥 */
+    /* --- CHAT KUTUSU (En Üstte) --- */
+    .chat-container {
+        position: relative;
+        /* Yüksekliği azalttık, daha az yer kaplasın */
+        height: 120px;
+        width: 100%;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
+    }
+
+    .chat-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Mesaj arası boşluğu azalttık */
+    .chat-msg {
+        margin-bottom: 3px;
+        font-size: 13px;
+        color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+        animation: slideIn 0.2s ease;
+        background: rgba(0, 0, 0, 0.2);
+        padding: 4px 8px;
+        border-radius: 8px;
+        align-self: flex-start;
+        display: inline-block;
+        max-width: 100%;
+        word-wrap: break-word;
+    }
+
+    .chat-user {
+        font-weight: 700;
+        color: #ffeb3b;
+        margin-right: 5px;
+    }
+
+    .sys-msg {
+        background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), transparent);
+        border-left: 3px solid gold;
+    }
+
+    /* --- MEZAT BARI (Chat'in Altında, Input'un Üstünde) --- */
     .auction-bar {
         position: relative;
-        /* Akışın içinde yer kapla */
-        height: 50px;
+        height: 45px;
         width: 100%;
+        /* Daha ince */
         background: rgba(20, 20, 20, 0.95);
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.15);
-        border-radius: 12px;
+        border-radius: 10px;
 
         display: none;
-        /* JS ile flex yapılacak */
         align-items: center;
-        padding: 0 10px;
+        padding: 0 8px;
         box-sizing: border-box;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         animation: slideUp 0.3s ease;
     }
 
@@ -197,32 +242,31 @@
     }
 
     .auc-status {
-        font-size: 9px;
+        font-size: 8px;
         color: #ff0050;
         font-weight: 800;
         text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 2px;
+        margin-bottom: 0;
         animation: blink 2s infinite;
     }
 
     .auc-price {
-        font-size: 18px;
+        font-size: 15px;
         font-weight: 900;
         color: #fff;
         line-height: 1;
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
     }
 
     .auc-price span {
-        font-size: 12px;
+        font-size: 11px;
         color: #00ff00;
     }
 
     .auc-bidder {
-        font-size: 10px;
+        font-size: 9px;
         color: #aaa;
         margin-left: 5px;
         font-weight: normal;
@@ -231,12 +275,12 @@
     .auc-actions {
         display: flex;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
     }
 
     .auc-btn-sm {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
         border-radius: 50%;
         border: none;
         display: flex;
@@ -244,7 +288,7 @@
         justify-content: center;
         cursor: pointer;
         color: white;
-        font-size: 14px;
+        font-size: 12px;
         flex-shrink: 0;
     }
 
@@ -265,9 +309,9 @@
 
     .bid-presets {
         display: flex;
-        gap: 5px;
+        gap: 4px;
         overflow-x: auto;
-        padding-right: 5px;
+        padding-right: 2px;
         -ms-overflow-style: none;
         scrollbar-width: none;
     }
@@ -280,11 +324,11 @@
         background: rgba(255, 255, 255, 0.15);
         color: white;
         border: 1px solid rgba(255, 255, 255, 0.1);
-        height: 34px;
-        padding: 0 12px;
-        border-radius: 17px;
+        height: 30px;
+        padding: 0 10px;
+        border-radius: 15px;
         font-weight: 700;
-        font-size: 11px;
+        font-size: 10px;
         cursor: pointer;
         white-space: nowrap;
         flex-shrink: 0;
@@ -293,7 +337,7 @@
     .btn-manual-toggle {
         background: #444;
         color: #fff;
-        width: 34px;
+        width: 30px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -302,7 +346,7 @@
     .bid-manual {
         display: none;
         align-items: center;
-        gap: 5px;
+        gap: 4px;
         flex: 1;
     }
 
@@ -312,9 +356,9 @@
         border: none;
         border-bottom: 2px solid #ff0050;
         color: white;
-        font-size: 16px;
+        font-size: 14px;
         font-weight: bold;
-        padding: 5px;
+        padding: 4px;
         text-align: center;
         outline: none;
     }
@@ -323,8 +367,8 @@
         background: #ff0050;
         color: white;
         border: none;
-        width: 34px;
-        height: 34px;
+        width: 30px;
+        height: 30px;
         border-radius: 50%;
         cursor: pointer;
     }
@@ -333,59 +377,16 @@
         background: transparent;
         color: #aaa;
         border: none;
-        font-size: 18px;
+        font-size: 16px;
         cursor: pointer;
     }
 
-    /* --- CHAT (ARTIK MEZATIN ÜSTÜNDE) --- */
-    .chat-container {
-        position: relative;
-        height: 150px;
-        width: 100%;
-        overflow-y: auto;
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        mask-image: linear-gradient(to top, black 80%, transparent 100%);
-        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
-    }
-
-    .chat-container::-webkit-scrollbar {
-        display: none;
-    }
-
-    .chat-msg {
-        margin-bottom: 5px;
-        font-size: 13px;
-        color: white;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
-        animation: slideIn 0.3s ease;
-        background: rgba(0, 0, 0, 0.3);
-        padding: 5px 10px;
-        border-radius: 10px;
-        align-self: flex-start;
-        display: inline-block;
-        max-width: 100%;
-        word-wrap: break-word;
-    }
-
-    .chat-user {
-        font-weight: 700;
-        color: #ffeb3b;
-        margin-right: 5px;
-    }
-
-    .sys-msg {
-        background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), transparent);
-        border-left: 3px solid gold;
-    }
-
-    /* --- INPUT (EN ALTA) --- */
+    /* --- INPUT ALANI (En Altta) --- */
     .bottom-controls {
         position: relative;
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 8px;
         width: 100%;
     }
 
@@ -393,12 +394,13 @@
         flex: 1;
         position: relative;
         background: rgba(255, 255, 255, 0.15);
-        border-radius: 25px;
-        padding: 3px;
+        border-radius: 20px;
+        padding: 2px 2px 2px 10px;
         backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.15);
         display: flex;
         align-items: center;
+        height: 40px;
     }
 
     .chat-input {
@@ -406,17 +408,17 @@
         background: transparent;
         border: none;
         color: white;
-        padding: 10px 15px;
+        padding: 0;
         outline: none;
-        font-size: 14px;
+        font-size: 13px;
     }
 
     .chat-send {
         background: transparent;
         border: none;
         color: white;
-        width: 36px;
-        height: 36px;
+        width: 34px;
+        height: 34px;
         cursor: pointer;
         opacity: 0.9;
         display: flex;
@@ -426,15 +428,15 @@
 
     .gift-trigger {
         background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         border: 2px solid rgba(255, 255, 255, 0.4);
         cursor: pointer;
-        font-size: 18px;
+        font-size: 16px;
     }
 
     @keyframes slideIn {
@@ -452,12 +454,22 @@
     @keyframes slideUp {
         from {
             opacity: 0;
-            transform: translateY(20px);
+            transform: translateY(10px);
         }
 
         to {
             opacity: 1;
             transform: translateY(0);
+        }
+    }
+
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+        }
+
+        to {
+            opacity: 1;
         }
     }
 
@@ -613,7 +625,6 @@
                 </div>
                 <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
             </div>
-
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
 
             <div class="bottom-stack">
