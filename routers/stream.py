@@ -121,25 +121,26 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     except: await websocket.close(); return
 
     user.is_live = True; db.commit()
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (LOW LATENCY): {user.username}")
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # 🔥 FFmpeg (BASİT VE GÜVENLİ) 🔥
-    # Karmaşık bayraklar kaldırıldı. 
-    # -hls_time 4: 4 saniyelik parçalar (En güvenli)
-    # -level 3.0: 540p için en uygunu (3.1 bazen sorun çıkarabilir)
+    # 🔥 FFmpeg (2 Saniyelik Parçalar) 🔥
+    # -hls_time 2: Gecikmeyi düşüren ana faktör
+    # -g 48: 24fps * 2sn = 48 kare. Keyframe'i tam parça başına denk getirir.
+    # -hls_list_size 4: Listede az dosya tut, oynatıcıyı canlıya zorla.
     command = [
         "ffmpeg", "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
-        "-level", "3.0", "-pix_fmt", "yuv420p", "-r", "24", 
-        "-g", "96", "-keyint_min", "96", "-sc_threshold", "0", 
+        "-level", "3.0", "-pix_fmt", "yuv420p", 
+        "-r", "24", "-g", "48", "-keyint_min", "48", 
+        "-sc_threshold", "0", 
         "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "4000k", "-vf", "scale=-2:540",
         "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
-        "-f", "hls", "-hls_time", "4", "-hls_list_size", "6", 
-        "-hls_flags", "delete_segments+omit_endlist", # split_by_time ve independent_segments kaldırıldı (Çakışma önlendi)
+        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
+        "-hls_flags", "delete_segments+omit_endlist",
         f"{stream_dir}/index.m3u8"
     ]
     
@@ -147,7 +148,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     active_processes[user.username] = process
     
     async def notify():
-        await asyncio.sleep(5) 
+        await asyncio.sleep(4) 
         await manager.broadcast_to_room(json.dumps({
             "type": "stream_added", "username": user.username, 
             "title": user.stream_title, "category": user.stream_category, 

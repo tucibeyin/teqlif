@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                // DOĞAL SENSÖR MODU
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: { echoCancellation: true, noiseSuppression: true },
                     video: { facingMode: 'user' }
@@ -36,6 +35,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
                     const cameraStream = videoElement.srcObject;
+                    // Android uyumluluğu için VP8/H264 kontrolü
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
 
@@ -46,7 +46,9 @@ document.addEventListener('DOMContentLoaded', () => {
                             broadcastWs.send(e.data);
                         }
                     };
-                    rec.start(1000);
+
+                    // Daha sık veri gönder (500ms) - Server daha hızlı işler
+                    rec.start(500);
 
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
@@ -71,7 +73,7 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- İZLEYİCİ ---
+    // --- İZLEYİCİ (LOW LATENCY) ---
     else if (MODE === 'watch') {
         const activePlayers = {};
 
@@ -98,11 +100,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
-                    // HATA TOLERANSI (Çok Önemli)
-                    manifestLoadingTimeOut: 20000,
-                    manifestLoadingMaxRetry: 20, // 20 kere dene
-                    levelLoadingTimeOut: 20000,
-                    fragLoadingTimeOut: 20000,
+                    lowLatencyMode: true,
+
+                    // 🔥 GECİKME AYARLARI (6sn Hedef) 🔥
+                    liveSyncDurationCount: 2, // Canlıdan 2 parça (2x2=4sn) geride dur
+                    liveMaxLatencyDurationCount: 4, // 8 saniyeyi geçerse yakalamaya çalış
+                    maxLiveSyncPlaybackRate: 1.2, // Yakalamak için 1.2x hızlan
+
+                    manifestLoadingTimeOut: 10000,
                 });
                 activePlayers[username] = hls;
                 hls.loadSource(src);
@@ -113,20 +118,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 hls.on(Hls.Events.ERROR, (e, d) => {
                     if (d.fatal) {
-                        if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                            console.log("Ağ hatası, tekrar deneniyor...");
-                            hls.startLoad();
-                        } else {
-                            hls.destroy();
-                        }
+                        if (d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
+                        else hls.destroy();
                     }
                 });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = src;
                 video.addEventListener('loadedmetadata', () => { video.muted = true; video.play().catch(() => { }); });
-                video.addEventListener('error', () => {
-                    setTimeout(() => { video.src = src; video.load(); }, 2000);
-                });
             }
 
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${username}`);
