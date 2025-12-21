@@ -4,7 +4,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     let isIntentionalStop = false;
 
-    // --- YAYINCI KODLARI (Aynı Kaldı) ---
+    // --- YAYINCI ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
@@ -13,8 +13,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
+                // DOĞAL SENSÖR (EN GENİŞ AÇI)
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true }, video: { facingMode: 'user' }
+                    audio: { echoCancellation: true, noiseSuppression: true },
+                    video: { facingMode: 'user' }
                 });
                 videoElement.srcObject = stream;
             } catch (e) { alert("Kamera Hatası: " + e); }
@@ -27,30 +29,36 @@ document.addEventListener('DOMContentLoaded', () => {
             fd.append('category', document.getElementById('streamCategory').value || 'Genel');
 
             fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
-                if (!res.ok) { alert("Hata"); return; }
+                if (!res.ok) { alert("Sunucu Hatası"); return; }
                 document.getElementById('setup-layer').style.display = 'none';
                 document.getElementById('live-ui').style.display = 'flex';
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
+                    // DİREKT AKIŞ
                     const cameraStream = videoElement.srcObject;
+
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
 
                     try { rec = new MediaRecorder(cameraStream, options); } catch (e) { rec = new MediaRecorder(cameraStream); }
+
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            if (broadcastWs.bufferedAmount > 500 * 1024) return;
+                            // 🔥 KRİTİK DÜZELTME: Veri düşürme (Drop) KALDIRILDI 🔥
+                            // Veri bozulursa FFmpeg kilitlenir. Artık her şeyi gönderiyoruz.
                             broadcastWs.send(e.data);
                         }
                     };
-                    rec.start(1000);
+                    rec.start(1000); // 1 saniyelik paketler
 
+                    // Thumbnail (15sn)
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
                             const ctx = canvas.getContext('2d');
                             const vW = videoElement.videoWidth; const vH = videoElement.videoHeight;
-                            const targetRatio = 9 / 16; let sW, sH, sX, sY;
+                            const targetRatio = 9 / 16;
+                            let sW, sH, sX, sY;
                             if (vW / vH > targetRatio) { sH = vH; sW = vH * targetRatio; sX = (vW - sW) / 2; sY = 0; }
                             else { sW = vW; sH = vW / targetRatio; sX = 0; sY = (vH - sH) / 2; }
                             ctx.drawImage(videoElement, sX, sY, sW, sH, 0, 0, canvas.width, canvas.height);
@@ -58,7 +66,9 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     }, 15000);
                 };
-                broadcastWs.onclose = () => { if (!isIntentionalStop) { if (rec) rec.stop(); alert("Kesildi!"); location.href = '/'; } };
+                broadcastWs.onclose = () => {
+                    if (!isIntentionalStop) { if (rec) rec.stop(); alert("Yayın Kesildi!"); location.href = '/'; }
+                };
             });
         });
 
@@ -69,11 +79,11 @@ document.addEventListener('DOMContentLoaded', () => {
         };
     }
 
-    // --- İZLEYİCİ (REELS MODU) ---
+    // --- İZLEYİCİ (REELS MODU + AUTO PLAY) ---
     else if (MODE === 'watch') {
-        const activePlayers = {}; // HLS instance'larını tutar
+        const activePlayers = {};
 
-        // GÖZLEMCİ: Hangi video ekrana girdi?
+        // GÖZLEMCİ
         const observer = new IntersectionObserver((entries) => {
             entries.forEach(entry => {
                 const container = entry.target;
@@ -81,50 +91,50 @@ document.addEventListener('DOMContentLoaded', () => {
                 const video = container.querySelector('video');
 
                 if (entry.isIntersecting) {
-                    // EKRANA GİRDİ: Oynat
-                    console.log(`▶️ Oynatılıyor: ${username}`);
                     playStream(username, video);
                 } else {
-                    // EKRANDAN ÇIKTI: Durdur
-                    console.log(`⏸️ Durduruldu: ${username}`);
                     stopStream(username, video);
                 }
             });
-        }, { threshold: 0.6 }); // %60'ı görünüyorsa aktif say
+        }, { threshold: 0.6 });
 
-        // Tüm yayın kutularını gözlemle
         document.querySelectorAll('.feed-item').forEach(item => observer.observe(item));
 
         function playStream(username, video) {
-            const src = `/static/hls/${username}/master.m3u8`;
-
-            // Zaten oynuyorsa dokunma
+            const src = `/static/hls/${username}/index.m3u8`; // Tekrar index'e döndük (Stabilite için)
             if (activePlayers[username]) return;
 
             if (Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
+                const hls = new Hls({
+                    enableWorker: true,
+                    // Daha toleranslı ayarlar (Donmayı engeller)
+                    manifestLoadingTimeOut: 20000,
+                    levelLoadingTimeOut: 20000,
+                    fragLoadingTimeOut: 20000,
+                });
                 activePlayers[username] = hls;
                 hls.loadSource(src);
                 hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.muted = true; // Otoplay için sessiz
+                    video.muted = true;
                     video.play().catch(() => { });
                 });
-
-                // Hata toleransı
+                // Hata Yönetimi: Dosya yoksa veya ağ hatasıysa tekrar dene
                 hls.on(Hls.Events.ERROR, (e, d) => {
-                    if (d.fatal && d.type === Hls.ErrorTypes.NETWORK_ERROR) {
-                        // Dosya henüz oluşmamış olabilir, bekle ve yeniden dene
-                        setTimeout(() => hls.startLoad(), 2000);
+                    if (d.fatal) {
+                        if (d.type === Hls.ErrorTypes.NETWORK_ERROR) {
+                            setTimeout(() => hls.startLoad(), 2000);
+                        } else {
+                            hls.destroy();
+                        }
                     }
                 });
-
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = src;
                 video.addEventListener('loadedmetadata', () => { video.muted = true; video.play().catch(() => { }); });
             }
 
-            // Kapanış sinyalini dinle
+            // Kapanış Sinyali
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${username}`);
             ws.onmessage = (e) => {
                 const d = JSON.parse(e.data);
@@ -133,7 +143,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     stopStream(username, video);
                 }
             };
-            // Soketi de sakla ki çıkınca kapatabilelim
             video.dataset.ws = ws;
         }
 
@@ -143,9 +152,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 delete activePlayers[username];
             }
             video.pause();
-            video.src = ""; // Kaynağı boşalt (RAM temizliği)
-
-            // Soketi kapat
+            video.src = "";
             if (video.dataset.ws) {
                 video.dataset.ws.close();
                 delete video.dataset.ws;

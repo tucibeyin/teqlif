@@ -18,11 +18,7 @@ templates = Jinja2Templates(directory="templates")
 
 @router.post("/log/client")
 async def client_log(request: Request):
-    try:
-        data = await request.json()
-        print(f"📱 [CLIENT] {datetime.now().strftime('%H:%M:%S')} | {data.get('msg', '')}")
-        return {"status": "ok"}
-    except: return {"status": "err"}
+    return {"status": "ok"}
 
 # --- MANAGER ---
 class ConnectionManager:
@@ -71,28 +67,15 @@ async def restrict(): return {"status": "ok"}
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login", 303)
-    
     target_user = None
     active_streams = db.query(User).filter(User.is_live == True).all()
-    
-    # EĞER BELİRLİ BİR YAYINCI SEÇİLDİYSE, ONU LİSTENİN BAŞINA AL
     if broadcaster:
         target_user = db.query(User).filter(User.username == broadcaster).first()
         if target_user in active_streams:
             active_streams.remove(target_user)
-            active_streams.insert(0, target_user) # En başa ekle
-    
-    # Yayıncı modundaysa hedef kendisidir
-    if mode == "broadcast": 
-        target_user = user
-
-    return templates.TemplateResponse("live.html", {
-        "request": request, 
-        "user": user, 
-        "mode": mode, 
-        "streams": active_streams, 
-        "broadcaster": target_user
-    })
+            active_streams.insert(0, target_user)
+    if mode == "broadcast": target_user = user
+    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user})
 
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -111,9 +94,8 @@ async def thumb(request: Request, user: User = Depends(get_current_user), db: Se
     try:
         d = await request.json()
         import base64
-        file_path = f"static/thumbnails/thumb_{user.username}.jpg"
-        with open(file_path, "wb") as f: f.write(base64.b64decode(d['image'].split(",")[1]))
-        user.thumbnail = f"/{file_path}"; db.commit()
+        with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f: f.write(base64.b64decode(d['image'].split(",")[1]))
+        user.thumbnail = f"/static/thumbnails/thumb_{user.username}.jpg"; db.commit()
     except: pass
     return {"status": "ok"}
 @router.post("/broadcast/toggle_auction")
@@ -148,16 +130,18 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # FFmpeg (Universal 3.1)
+    # 🔥 FFmpeg SAĞLAM AYARLAR (4sn Segment, H.264 Baseline, Fixed FPS) 🔥
     command = [
         "ffmpeg", "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
-        "-level", "3.1", "-pix_fmt", "yuv420p", "-r", "24", 
-        "-g", "48", "-keyint_min", "48", "-sc_threshold", "0", 
+        "-level", "3.1", "-pix_fmt", "yuv420p", 
+        "-r", "24", "-g", "96", "-keyint_min", "96", # 96 Kare = 4 Saniye (Sabit)
+        "-sc_threshold", "0", 
+        "-vsync", "1", # FPS Sabitleme (Çok Önemli)
         "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "4000k", "-vf", "scale=-2:540",
         "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
-        "-hls_flags", "delete_segments+omit_endlist+split_by_time+independent_segments",
+        "-f", "hls", "-hls_time", "4", "-hls_list_size", "5", 
+        "-hls_flags", "delete_segments+omit_endlist+split_by_time",
         f"{stream_dir}/index.m3u8"
     ]
     
@@ -165,7 +149,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     active_processes[user.username] = process
     
     async def notify():
-        await asyncio.sleep(4) 
+        await asyncio.sleep(5) 
         await manager.broadcast_to_room(json.dumps({
             "type": "stream_added", "username": user.username, 
             "title": user.stream_title, "category": user.stream_category, 
