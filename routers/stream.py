@@ -3,6 +3,7 @@ import json
 import shutil
 import subprocess
 import asyncio 
+from datetime import datetime
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -14,9 +15,19 @@ from utils import get_current_user, SECRET_KEY, ALGORITHM
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+# 🔥 LOG TOPLAYICI (BURASI ÇOK ÖNEMLİ) 🔥
 @router.post("/log/client")
-async def client_log(request: Request): return {"status": "ok"}
+async def client_log(request: Request):
+    try:
+        data = await request.json()
+        msg = data.get('msg', '')
+        # Saat bilgisi ekle ve terminale yaz
+        t = datetime.now().strftime("%H:%M:%S")
+        print(f"📱 [CLIENT] {t} | {msg}")
+        return {"status": "ok"}
+    except: return {"status": "err"}
 
+# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -33,7 +44,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
-# --- TEMİZLİK (KİLİTLENMEYEN) ---
+# --- CLEANUP ---
 def cleanup_stream_sync(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
@@ -116,7 +127,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (BASELINE COMPATIBILITY MODE): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (BASELINE H.264 - 540p): {user.username}")
 
     # 🔥 FFmpeg "BASELINE" (En Uyumlu Mod) 🔥
     # -profile:v baseline: Eski/Yeni tüm cihazlarda çalışır.
