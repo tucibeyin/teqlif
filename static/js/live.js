@@ -5,6 +5,43 @@ document.addEventListener('DOMContentLoaded', () => {
     let isIntentionalStop = false;
     let auctionState = "stopped";
 
+    // --- PARA FORMATLAMA ---
+    const moneyFormatter = new Intl.NumberFormat('tr-TR');
+
+    // Input alanına yazıldıkça 1.000 şeklinde formatlar
+    window.formatBidInput = function (el) {
+        let val = el.value.replace(/\D/g, ''); // Sadece rakamları al
+        if (val) {
+            el.value = moneyFormatter.format(parseInt(val));
+        } else {
+            el.value = "";
+        }
+    };
+
+    window.toggleManualBid = function (username, show) {
+        const presets = document.getElementById(`bid-presets-${username}`);
+        const manual = document.getElementById(`bid-manual-${username}`);
+        if (show) {
+            presets.style.display = 'none';
+            manual.style.display = 'flex';
+            document.getElementById(`inp-manual-${username}`).focus();
+        } else {
+            manual.style.display = 'none';
+            presets.style.display = 'flex';
+        }
+    };
+
+    window.sendManualBid = function (username) {
+        const inp = document.getElementById(`inp-manual-${username}`);
+        let val = inp.value.replace(/\./g, ''); // Noktaları sil
+        let amount = parseInt(val);
+        if (amount > 0) {
+            placeBid(username, amount);
+            toggleManualBid(username, false);
+            inp.value = "";
+        }
+    };
+
     // --- GLOBAL ---
     window.sendChat = function (streamUsername) {
         const input = document.getElementById(`chat-input-${streamUsername}`);
@@ -26,7 +63,7 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // 🔥 TEK TUŞLU MEZAT MANTIĞI 🔥
+    // --- MEZAT ---
     window.toggleAuction = function (username) {
         const btn = document.getElementById('btn-auc-toggle');
         const action = (auctionState === "stopped") ? "start" : "stop";
@@ -39,28 +76,22 @@ document.addEventListener('DOMContentLoaded', () => {
         if (MODE === 'broadcast') {
             if (action === 'start') {
                 auctionState = "started";
-                // İkonu Stop yap, rengi kırmızı yap
                 btn.innerHTML = '<i class="fa-solid fa-stop"></i>';
                 btn.classList.remove('btn-auc-start');
                 btn.classList.add('btn-auc-stop');
-
                 document.getElementById(`auc-bidder-${username}`).innerText = "Aktif";
             } else {
                 auctionState = "stopped";
-                // İkonu Play yap, rengi yeşil yap
                 btn.innerHTML = '<i class="fa-solid fa-play"></i>';
                 btn.classList.remove('btn-auc-stop');
                 btn.classList.add('btn-auc-start');
-
                 document.getElementById(`auc-bidder-${username}`).innerText = "Durduruldu";
             }
         }
     };
 
     window.resetAuction = function (username) {
-        if (confirm("Fiyatı sıfırlamak istiyor musunuz?")) {
-            fetch('/broadcast/reset_auction', { method: 'POST' });
-        }
+        if (confirm("Sıfırlansın mı?")) fetch('/broadcast/reset_auction', { method: 'POST' });
     };
 
     window.placeBid = function (broadcaster, amount) {
@@ -75,28 +106,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const priceEl = document.getElementById(`auc-price-${username}`);
         const bidderEl = document.getElementById(`auc-bidder-${username}`);
 
-        // İzleyici Görünürlüğü
         if (MODE !== 'broadcast') {
-            if (data.type === 'auction_started') {
-                bar.style.display = 'flex';
-                priceEl.innerHTML = `${data.price} <span>₺</span>`;
-                bidderEl.innerText = "Teklif Bekleniyor";
-            } else if (data.type === 'auction_ended') {
-                bar.style.display = 'none';
-            }
+            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`; bidderEl.innerText = "Teklif Bekleniyor"; }
+            else if (data.type === 'auction_ended') bar.style.display = 'none';
         }
 
-        // Fiyat Güncelleme
         if (data.type === 'auction_started' || data.type === 'auction_update') {
-            priceEl.innerHTML = `${data.price} <span>₺</span>`;
-
-            // Fiyat değişince parlama efekti
-            priceEl.style.color = '#00ff00';
-            setTimeout(() => priceEl.style.color = '#fff', 300);
-
-            if (data.bidder && data.bidder !== '-') {
-                bidderEl.innerText = `Son: ${data.bidder}`;
-            }
+            priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`;
+            priceEl.style.color = '#00ff00'; setTimeout(() => priceEl.style.color = '#fff', 300);
+            if (data.bidder && data.bidder !== '-') bidderEl.innerText = `Son: ${data.bidder}`;
         }
     }
 
@@ -126,9 +144,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true, noiseSuppression: true }, video: { facingMode: 'user' }
-                });
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true }, video: { facingMode: 'user' } });
                 videoElement.srcObject = stream;
             } catch (e) { alert("Kamera Hatası: " + e); }
         }
@@ -155,11 +171,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
                             const ctx = document.getElementById('broadcast-canvas').getContext('2d');
-                            const vW = videoElement.videoWidth; const vH = videoElement.videoHeight;
-                            const targetRatio = 9 / 16; let sW, sH, sX, sY;
-                            if (vW / vH > targetRatio) { sH = vH; sW = vH * targetRatio; sX = (vW - sW) / 2; sY = 0; }
-                            else { sW = vW; sH = vW / targetRatio; sX = 0; sY = (vH - sH) / 2; }
-                            ctx.drawImage(videoElement, sX, sY, sW, sH, 0, 0, 720, 1280);
+                            ctx.drawImage(videoElement, 0, 0, 720, 1280);
                             fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: document.getElementById('broadcast-canvas').toDataURL('image/jpeg', 0.4) }) });
                         }
                     }, 15000);
