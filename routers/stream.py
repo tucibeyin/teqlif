@@ -125,45 +125,62 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     user.is_live = True
     db.commit()
-    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (MULTI-QUALITY): {user.username}")
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # 🔥 FFmpeg (LEVEL 3.1 FIX) 🔥
-    # -level 3.1: 720p HD yayını destekler (Level 3.0 yetmiyordu)
-    # -hls_flags independent_segments: Her parça tek başına oynatılabilir (Takılmayı önler)
+    # 🔥 FFmpeg 4 KALİTE (Adaptive Bitrate) 🔥
+    # Gelen yayını alır, 4 parçaya böler ve her birini ayrı işler.
+    # Level 3.1 ve Baseline profilini KORUDUK (Stil bozulmasın diye).
     command = [
         "ffmpeg", 
         "-f", "webm", "-i", "pipe:0",
         
-        "-c:v", "libx264", 
-        "-preset", "veryfast", 
-        "-profile:v", "baseline",
-        "-level", "3.1",          # <-- KRİTİK DEĞİŞİKLİK
-        "-pix_fmt", "yuv420p",
-        "-r", "24", 
-        "-g", "48",               # 2 Saniye Keyframe (Stabilite için)
-        "-keyint_min", "48",
-        "-sc_threshold", "0",
-        "-b:v", "2000k", 
-        "-vf", "scale=-2:540",
+        # Filtre: Videoyu 4 kopyaya ayır ve boyutlandır
+        "-filter_complex", 
+        "[0:v]split=4[v720][v480][v360][v240];"
+        "[v720]scale=-2:720[vo720];"
+        "[v480]scale=-2:480[vo480];"
+        "[v360]scale=-2:360[vo360];"
+        "[v240]scale=-2:240[vo240]",
         
-        "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
+        # --- 1. Stream: 720p (High) ---
+        "-map", "[vo720]", "-c:v:0", "libx264", "-b:v:0", "2500k", "-maxrate:v:0", "2800k", "-bufsize:v:0", "5000k",
+        "-preset", "ultrafast", "-profile:v:0", "baseline", "-level", "3.1", "-pix_fmt", "yuv420p", "-g", "48", "-keyint_min", "48", "-sc_threshold", "0",
         
+        # --- 2. Stream: 480p (Medium) ---
+        "-map", "[vo480]", "-c:v:1", "libx264", "-b:v:1", "1200k", "-maxrate:v:1", "1400k", "-bufsize:v:1", "2500k",
+        "-preset", "ultrafast", "-profile:v:1", "baseline", "-level", "3.1", "-pix_fmt", "yuv420p", "-g", "48", "-keyint_min", "48", "-sc_threshold", "0",
+        
+        # --- 3. Stream: 360p (Low) ---
+        "-map", "[vo360]", "-c:v:2", "libx264", "-b:v:2", "800k", "-maxrate:v:2", "900k", "-bufsize:v:2", "1800k",
+        "-preset", "ultrafast", "-profile:v:2", "baseline", "-level", "3.1", "-pix_fmt", "yuv420p", "-g", "48", "-keyint_min", "48", "-sc_threshold", "0",
+
+        # --- 4. Stream: 240p (Very Low) ---
+        "-map", "[vo240]", "-c:v:3", "libx264", "-b:v:3", "400k", "-maxrate:v:3", "450k", "-bufsize:v:3", "900k",
+        "-preset", "ultrafast", "-profile:v:3", "baseline", "-level", "3.1", "-pix_fmt", "yuv420p", "-g", "48", "-keyint_min", "48", "-sc_threshold", "0",
+        
+        # --- SES (Her kaliteye kopyala) ---
+        "-map", "a:0", "-map", "a:0", "-map", "a:0", "-map", "a:0",
+        "-c:a", "aac", "-b:a", "64k", "-ac", "2", "-af", "aresample=async=1",
+        
+        # --- HLS MASTER PLAYLIST ---
         "-f", "hls", 
-        "-hls_time", "2",         # 2 Saniyelik parçalar (Daha güvenli)
+        "-hls_time", "2", 
         "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+split_by_time+independent_segments",
-        f"{stream_dir}/index.m3u8"
+        "-master_pl_name", "master.m3u8", # Ana dosya
+        "-var_stream_map", "v:0,a:0,name:720p v:1,a:1,name:480p v:2,a:2,name:360p v:3,a:3,name:240p",
+        f"{stream_dir}/stream_%v.m3u8" # Alt dosyalar
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr, start_new_session=True)
     active_processes[user.username] = process
     
     async def notify():
-        await asyncio.sleep(3) 
+        await asyncio.sleep(4) # 4 yayın oluşması biraz sürebilir
         await manager.broadcast_to_room(json.dumps({
             "type": "stream_added", 
             "username": user.username, 
