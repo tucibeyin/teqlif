@@ -95,19 +95,12 @@ async def thumb(request: Request, user: User = Depends(get_current_user), db: Se
         d = await request.json()
         import base64
         file_path = f"static/thumbnails/thumb_{user.username}.jpg"
-        
-        # Dosyayı Kaydet
         with open(file_path, "wb") as f:
             f.write(base64.b64decode(d['image'].split(",")[1]))
-            
-        # 🔥 DB GÜNCELLEME (Thumbnail Sorununu Çözer) 🔥
         user.thumbnail = f"/{file_path}"
         db.commit()
-        
-    except Exception as e:
-        print(f"Thumbnail Hatası: {e}")
+    except Exception: pass
     return {"status": "ok"}
-
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(): return {"status": "ok"}
 @router.post("/broadcast/reset_auction")
@@ -138,25 +131,39 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # FFmpeg (Loglu Mod)
+    # 🔥 FFmpeg (LEVEL 3.1 FIX) 🔥
+    # -level 3.1: 720p HD yayını destekler (Level 3.0 yetmiyordu)
+    # -hls_flags independent_segments: Her parça tek başına oynatılabilir (Takılmayı önler)
     command = [
         "ffmpeg", 
         "-f", "webm", "-i", "pipe:0",
-        "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
-        "-level", "3.0", "-pix_fmt", "yuv420p", "-r", "24", 
-        "-b:v", "1500k", "-vf", "scale=-2:540",
-        "-c:a", "aac", "-b:a", "64k", "-ac", "2", "-af", "aresample=async=1",
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
-        "-hls_flags", "delete_segments+omit_endlist+split_by_time",
+        
+        "-c:v", "libx264", 
+        "-preset", "veryfast", 
+        "-profile:v", "baseline",
+        "-level", "3.1",          # <-- KRİTİK DEĞİŞİKLİK
+        "-pix_fmt", "yuv420p",
+        "-r", "24", 
+        "-g", "48",               # 2 Saniye Keyframe (Stabilite için)
+        "-keyint_min", "48",
+        "-sc_threshold", "0",
+        "-b:v", "2000k", 
+        "-vf", "scale=-2:540",
+        
+        "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
+        
+        "-f", "hls", 
+        "-hls_time", "2",         # 2 Saniyelik parçalar (Daha güvenli)
+        "-hls_list_size", "6", 
+        "-hls_flags", "delete_segments+omit_endlist+split_by_time+independent_segments",
         f"{stream_dir}/index.m3u8"
     ]
     
-    # 🔥 HATA AYIKLAMA İÇİN stderr AKTİF 🔥
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr, start_new_session=True)
     active_processes[user.username] = process
     
     async def notify():
-        await asyncio.sleep(4) 
+        await asyncio.sleep(3) 
         await manager.broadcast_to_room(json.dumps({
             "type": "stream_added", 
             "username": user.username, 
@@ -171,20 +178,16 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     packet_count = 0
     try:
         while True:
-            # 60 Saniye Timeout
             data = await asyncio.wait_for(websocket.receive_bytes(), timeout=60.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
             
-            # Veri Akış Kontrolü (Her 50 pakette bir yaz)
             packet_count += 1
             if packet_count % 50 == 0:
-                print(f"📥 SERVER VERİ ALDI ({packet_count} pkt) -> FFmpeg")
+                print(f"📥 VERİ: {packet_count} pkt")
                 
-    except asyncio.TimeoutError:
-        print(f"⚠️ SERVER: {user.username} bağlantısı ZAMAN AŞIMI (Timeout) - Veri gelmedi!")
     except Exception as e:
-        print(f"❌ SOCKET HATASI: {e}")
+        print(f"❌ SOCKET HATA: {e}")
     finally:
         asyncio.create_task(cleanup_stream_async(user.username))
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
