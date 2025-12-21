@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* --- TEMEL --- */
+    /* --- GLOBAL AYARLAR --- */
     header {
         display: none !important;
     }
@@ -91,9 +91,10 @@
         flex-direction: column;
         justify-content: space-between;
         padding-top: max(15px, env(safe-area-inset-top));
-        padding-bottom: 65px;
+        /* Alt boşluğu kaldırdık, çünkü bottom-wrapper yönetecek */
+        padding-bottom: 0;
         box-sizing: border-box;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 20%, transparent 60%, rgba(0, 0, 0, 0.95) 100%);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 20%, transparent 60%, rgba(0, 0, 0, 0.9) 100%);
     }
 
     .top-bar {
@@ -155,43 +156,68 @@
         border-color: #ff3b30;
     }
 
-    /* 🔥 MEZAT BARI (YAPIŞIK MOD) 🔥 */
-    .auction-bar {
-        position: absolute;
-        /* Hesaplama: Footer(65) + Input(45) + Chat(105) = ~215px */
-        bottom: 215px;
-        left: 10px;
-        right: 10px;
-        height: 50px;
+    /* 🔥 BOTTOM WRAPPER (YENİ KAPSAYICI) 🔥 */
+    /* Sohbet, Mezat ve Input'u içinde tutar ve ekranın altına yaslar */
+    .bottom-wrapper {
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        width: 100%;
+        padding: 0 15px 70px 15px;
+        /* Sağ/Sol: 15px, Alt: 70px (Footer payı) */
+        gap: 10px;
+        /* Elemanlar arası boşluk */
+        pointer-events: auto;
+    }
 
-        background: rgba(30, 30, 30, 0.95);
+    /* 🔥 MEZAT BARI (STATIC POZİSYON) 🔥 */
+    .auction-bar {
+        position: relative;
+        /* Artık absolute değil, akışın içinde */
+        height: 50px;
+        width: 100%;
+        background: rgba(20, 20, 20, 0.95);
+        backdrop-filter: blur(10px);
         border: 1px solid rgba(255, 255, 255, 0.15);
         border-radius: 12px;
 
         display: none;
+        /* Varsayılan gizli */
         align-items: center;
         padding: 0 5px 0 15px;
-        pointer-events: auto;
-        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.6);
-        animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-        z-index: 20;
-        /* Chat'in önünde olsun */
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+        animation: slideUp 0.3s ease;
+        margin-bottom: 5px;
+        /* Chat ile arasına mesafe koyma, wrapper gap hallediyor */
     }
 
     .auc-info {
         display: flex;
+        align-items: center;
+        gap: 10px;
+        flex: 1;
+        overflow: hidden;
+    }
+
+    .auc-icon {
+        color: #ff0050;
+        font-size: 16px;
+        animation: pulse 2s infinite;
+    }
+
+    .auc-details {
+        display: flex;
         flex-direction: column;
         justify-content: center;
-        margin-right: 10px;
-        min-width: 80px;
+        overflow: hidden;
     }
 
     .auc-price {
-        font-size: 18px;
+        font-size: 16px;
         font-weight: 900;
         color: #fff;
         white-space: nowrap;
-        line-height: 1;
+        line-height: 1.1;
     }
 
     .auc-price span {
@@ -205,16 +231,13 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 80px;
+        max-width: 150px;
     }
 
     .auc-actions {
         display: flex;
         align-items: center;
         gap: 5px;
-        flex: 1;
-        overflow: hidden;
-        justify-content: flex-end;
     }
 
     .bid-presets {
@@ -231,7 +254,7 @@
     }
 
     .btn-bid-pill {
-        background: rgba(255, 255, 255, 0.15);
+        background: rgba(255, 255, 255, 0.1);
         color: white;
         border: 1px solid rgba(255, 255, 255, 0.1);
         height: 34px;
@@ -242,22 +265,18 @@
         cursor: pointer;
         white-space: nowrap;
         flex-shrink: 0;
-        transition: 0.1s;
     }
 
     .btn-bid-pill:active {
-        transform: scale(0.95);
-        background: rgba(255, 255, 255, 0.25);
+        background: #ff0050;
     }
 
     .btn-manual-toggle {
-        background: #444;
-        color: #fff;
+        background: #333;
         width: 34px;
-        padding: 0;
         display: flex;
-        align-items: center;
         justify-content: center;
+        align-items: center;
     }
 
     .bid-manual {
@@ -310,6 +329,7 @@
         cursor: pointer;
         color: white;
         font-size: 14px;
+        flex-shrink: 0;
     }
 
     .btn-auc-start {
@@ -327,27 +347,17 @@
         color: #ccc;
     }
 
-    /* --- CHAT ALANI (Barın hemen altında) --- */
-    .chat-area {
-        display: flex;
-        flex-direction: column;
-        justify-content: flex-end;
-        padding: 0 15px;
-        pointer-events: auto;
-    }
-
+    /* --- CHAT ALANI --- */
+    /* Absolute değil, wrapper içinde akışta */
     .chat-container {
-        /* Yüksekliği bar'a değecek şekilde ayarladık */
-        height: 145px;
-        width: 90%;
+        height: 150px;
+        width: 100%;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        mask-image: linear-gradient(to top, black 85%, transparent 100%);
-        -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
-        margin-bottom: 8px;
-        /* Input ile arası */
+        mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
     }
 
     .chat-container::-webkit-scrollbar {
@@ -360,7 +370,7 @@
         color: white;
         text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
         animation: slideIn 0.3s ease;
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(0, 0, 0, 0.25);
         padding: 5px 10px;
         border-radius: 10px;
         align-self: flex-start;
@@ -380,6 +390,7 @@
         border-left: 3px solid gold;
     }
 
+    /* --- INPUT ALANI --- */
     .bottom-controls {
         display: flex;
         align-items: center;
@@ -469,6 +480,20 @@
         }
     }
 
+    @keyframes pulse {
+        0% {
+            opacity: 0.6;
+        }
+
+        50% {
+            opacity: 1;
+        }
+
+        100% {
+            opacity: 0.6;
+        }
+    }
+
     .gift-animation-layer {
         position: absolute;
         top: 0;
@@ -540,10 +565,6 @@
             border-radius: 20px;
             box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
         }
-
-        .ui-layer {
-            padding-bottom: 20px;
-        }
     }
 
     .setup-layer {
@@ -612,22 +633,28 @@
                 <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
             </div>
 
-            <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
-                <div class="auc-info">
-                    <div class="auc-price" id="auc-price-{{ user.username }}">0 <span>₺</span></div>
-                    <div class="auc-bidder" id="auc-bidder-{{ user.username }}">Hazır</div>
-                </div>
-                <div class="auc-actions">
-                    <button class="auc-btn-sm btn-auc-reset" onclick="resetAuction('{{ user.username }}')"><i
-                            class="fa-solid fa-rotate-right"></i></button>
-                    <button id="btn-auc-toggle" class="auc-btn-sm btn-auc-start"
-                        onclick="toggleAuction('{{ user.username }}')"><i class="fa-solid fa-play"></i></button>
-                </div>
-            </div>
-
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
-            <div class="chat-area">
+
+            <div class="bottom-wrapper">
+
+                <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
+                    <div class="auc-info">
+                        <i class="fa-solid fa-gavel auc-icon"></i>
+                        <div class="auc-details">
+                            <div class="auc-price" id="auc-price-{{ user.username }}">0 <span>₺</span></div>
+                            <div class="auc-bidder" id="auc-bidder-{{ user.username }}">Hazır</div>
+                        </div>
+                    </div>
+                    <div class="auc-actions">
+                        <button class="auc-btn-sm btn-auc-reset" onclick="resetAuction('{{ user.username }}')"><i
+                                class="fa-solid fa-rotate-right"></i></button>
+                        <button id="btn-auc-toggle" class="auc-btn-sm btn-auc-start"
+                            onclick="toggleAuction('{{ user.username }}')"><i class="fa-solid fa-play"></i></button>
+                    </div>
+                </div>
+
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
+
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper">
                         <input type="text" class="chat-input" id="chat-input-{{ user.username }}"
@@ -658,35 +685,42 @@
                 <a href="/" class="btn-close" style="text-decoration:none;"><i class="fa-solid fa-xmark"></i></a>
             </div>
 
-            <div id="auction-bar-{{ stream.username }}" class="auction-bar">
-                <div class="auc-info">
-                    <div class="auc-price" id="auc-price-{{ stream.username }}">0 <span>₺</span></div>
-                    <div class="auc-bidder" id="auc-bidder-{{ stream.username }}">-</div>
-                </div>
-                <div class="auc-actions">
-                    <div class="bid-presets" id="bid-presets-{{ stream.username }}">
-                        <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 50)">+50</button>
-                        <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 100)">+100</button>
-                        <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 500)">+500</button>
-                        <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 1000)">+1k</button>
-                        <button class="btn-bid-pill btn-manual-toggle"
-                            onclick="toggleManualBid('{{ stream.username }}', true)"><i
-                                class="fa-solid fa-pen"></i></button>
-                    </div>
-                    <div class="bid-manual" id="bid-manual-{{ stream.username }}">
-                        <button class="btn-manual-cancel" onclick="toggleManualBid('{{ stream.username }}', false)"><i
-                                class="fa-solid fa-xmark"></i></button>
-                        <input type="tel" class="inp-manual" id="inp-manual-{{ stream.username }}" placeholder="0 ₺"
-                            oninput="formatBidInput(this)">
-                        <button class="btn-manual-send" onclick="sendManualBid('{{ stream.username }}')"><i
-                                class="fa-solid fa-check"></i></button>
-                    </div>
-                </div>
-            </div>
-
             <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
-            <div class="chat-area">
+
+            <div class="bottom-wrapper">
+
+                <div id="auction-bar-{{ stream.username }}" class="auction-bar">
+                    <div class="auc-info">
+                        <i class="fa-solid fa-gavel auc-icon"></i>
+                        <div class="auc-details">
+                            <div class="auc-price" id="auc-price-{{ stream.username }}">0 <span>₺</span></div>
+                            <div class="auc-bidder" id="auc-bidder-{{ stream.username }}">-</div>
+                        </div>
+                    </div>
+                    <div class="auc-actions">
+                        <div class="bid-presets" id="bid-presets-{{ stream.username }}">
+                            <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 50)">+50</button>
+                            <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 100)">+100</button>
+                            <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 500)">+500</button>
+                            <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 1000)">+1k</button>
+                            <button class="btn-bid-pill btn-manual-toggle"
+                                onclick="toggleManualBid('{{ stream.username }}', true)"><i
+                                    class="fa-solid fa-pen"></i></button>
+                        </div>
+                        <div class="bid-manual" id="bid-manual-{{ stream.username }}">
+                            <button class="btn-manual-cancel"
+                                onclick="toggleManualBid('{{ stream.username }}', false)"><i
+                                    class="fa-solid fa-xmark"></i></button>
+                            <input type="tel" class="inp-manual" id="inp-manual-{{ stream.username }}" placeholder="0 ₺"
+                                oninput="formatBidInput(this)">
+                            <button class="btn-manual-send" onclick="sendManualBid('{{ stream.username }}')"><i
+                                    class="fa-solid fa-check"></i></button>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
+
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper">
                         <input type="text" class="chat-input" id="chat-input-{{ stream.username }}"
