@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* TEMEL YAPI */
+    /* TEMEL AYARLAR */
     header {
         display: none !important;
     }
@@ -91,9 +91,9 @@
         flex-direction: column;
         justify-content: space-between;
         padding-top: max(15px, env(safe-area-inset-top));
-        padding-bottom: 70px;
+        padding-bottom: 65px;
         box-sizing: border-box;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 20%, transparent 70%, rgba(0, 0, 0, 0.8) 100%);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 20%, transparent 60%, rgba(0, 0, 0, 0.9) 100%);
     }
 
     .top-bar {
@@ -154,61 +154,100 @@
         border-color: #ff3b30;
     }
 
-    /* 🔥 MEZAT PANELI 🔥 */
+    /* 🔥 MEZAT PANELI (CHAT ÜSTÜNDE) 🔥 */
     .auction-panel {
-        background: rgba(255, 255, 255, 0.9);
-        color: black;
-        width: 200px;
-        padding: 10px;
-        border-radius: 12px;
+        background: rgba(255, 255, 255, 0.95);
+        color: #000;
+        width: 220px;
+        padding: 12px;
+        border-radius: 16px;
         position: absolute;
-        top: 70px;
+        bottom: 350px;
         left: 15px;
+        /* Chat'in üstü */
         display: none;
         flex-direction: column;
-        gap: 5px;
+        gap: 8px;
         pointer-events: auto;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-        animation: slideDown 0.3s ease;
+        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
+        animation: slideInLeft 0.3s ease;
+        border: 1px solid rgba(0, 0, 0, 0.1);
     }
 
     .auc-title {
-        font-size: 12px;
-        font-weight: 800;
+        font-size: 11px;
+        font-weight: 900;
         text-transform: uppercase;
         color: #ff0050;
+        letter-spacing: 1px;
     }
 
     .auc-price {
-        font-size: 24px;
-        font-weight: 800;
-        text-align: center;
-        margin: 5px 0;
+        font-size: 28px;
+        font-weight: 900;
+        text-align: left;
+        margin: 0;
+        color: #333;
+        line-height: 1;
     }
 
     .auc-bidder {
-        font-size: 11px;
-        text-align: center;
-        color: #555;
+        font-size: 12px;
+        color: #666;
+        font-weight: 600;
+    }
+
+    /* Mezat Buton Grubu */
+    .auc-controls {
+        display: flex;
+        gap: 8px;
+        margin-top: 5px;
     }
 
     .auc-btn {
-        background: #000;
-        color: white;
+        flex: 1;
         border: none;
-        padding: 8px;
-        border-radius: 8px;
-        font-weight: bold;
+        padding: 10px;
+        border-radius: 10px;
+        font-weight: 800;
         cursor: pointer;
-        width: 100%;
         font-size: 12px;
+        text-transform: uppercase;
+        transition: transform 0.1s;
     }
 
     .auc-btn:active {
         transform: scale(0.95);
     }
 
-    /* CHAT ALANI */
+    .btn-start {
+        background: #000;
+        color: white;
+    }
+
+    .btn-stop {
+        background: #ff3b30;
+        color: white;
+    }
+
+    .btn-reset {
+        background: #e0e0e0;
+        color: #333;
+        max-width: 40px;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-size: 14px;
+    }
+
+    .btn-bid {
+        background: #ff0050;
+        color: white;
+        width: 100%;
+        font-size: 14px;
+    }
+
+    /* CHAT VE INPUT */
     .chat-area {
         display: flex;
         flex-direction: column;
@@ -218,14 +257,14 @@
     }
 
     .chat-container {
-        height: 200px;
+        height: 220px;
         width: 85%;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        mask-image: linear-gradient(to top, black 85%, transparent 100%);
-        -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
+        mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
         margin-bottom: 8px;
     }
 
@@ -234,10 +273,10 @@
     }
 
     .chat-msg {
-        margin-bottom: 6px;
+        margin-bottom: 5px;
         font-size: 13px;
         color: white;
-        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
         animation: slideIn 0.3s ease;
         background: rgba(0, 0, 0, 0.25);
         padding: 5px 10px;
@@ -257,9 +296,9 @@
     .sys-msg {
         background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), transparent);
         border-left: 3px solid gold;
+        padding-left: 8px;
     }
 
-    /* INPUT BAR */
     .bottom-controls {
         display: flex;
         align-items: center;
@@ -328,15 +367,15 @@
         }
     }
 
-    @keyframes slideDown {
+    @keyframes slideInLeft {
         from {
             opacity: 0;
-            transform: translateY(-20px);
+            transform: translateX(-20px);
         }
 
         to {
             opacity: 1;
-            transform: translateY(0);
+            transform: translateX(0);
         }
     }
 
@@ -376,7 +415,6 @@
         }
     }
 
-    /* YAYIN BİTTİ */
     .end-screen {
         position: absolute;
         top: 0;
@@ -486,15 +524,18 @@
                 <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
             </div>
 
-            <div id="auction-panel-{{ user.username }}" class="auction-panel">
+            <div id="auction-controls-{{ user.username }}" class="auction-panel" style="display:flex;">
                 <div class="auc-title">MEZAT YÖNETİMİ</div>
                 <div class="auc-price" id="auc-price-{{ user.username }}">0 ₺</div>
                 <div class="auc-bidder" id="auc-bidder-{{ user.username }}">Son Teklif: -</div>
-                <button class="auc-btn" onclick="toggleAuction('{{ user.username }}')">MEZATI DURDUR</button>
+
+                <div class="auc-controls">
+                    <button id="btn-auc-toggle" class="auc-btn btn-start"
+                        onclick="toggleAuction('{{ user.username }}')">BAŞLAT</button>
+                    <button class="auc-btn btn-reset" onclick="resetAuction('{{ user.username }}')"><i
+                            class="fa-solid fa-rotate-right"></i></button>
+                </div>
             </div>
-            <button id="btn-start-auction" class="auc-btn"
-                style="position:absolute; top:70px; left:15px; width:120px; z-index:20; pointer-events:auto;"
-                onclick="toggleAuction('{{ user.username }}', 'start')">MEZAT BAŞLAT 🔨</button>
 
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
             <div class="chat-area">
@@ -535,8 +576,8 @@
                 <div class="auc-title">CANLI MEZAT</div>
                 <div class="auc-price" id="auc-price-{{ stream.username }}">0 ₺</div>
                 <div class="auc-bidder" id="auc-bidder-{{ stream.username }}">Son Teklif: -</div>
-                <button class="auc-btn" style="background:#ff0050;" onclick="placeBid('{{ stream.username }}', 100)">PEY
-                    VER (+100₺)</button>
+                <button class="auc-btn btn-bid" onclick="placeBid('{{ stream.username }}', 100)">PEY VER
+                    (+100₺)</button>
             </div>
 
             <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>

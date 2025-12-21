@@ -3,6 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     let isIntentionalStop = false;
+    let auctionState = "stopped"; // Mezat durumu
 
     // --- GLOBAL İŞLEVLER ---
     window.sendChat = function (streamUsername) {
@@ -12,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
         let ws = null;
         if (MODE === 'broadcast') ws = window.broadcastChatWs;
         else if (video && video.wsConnection) ws = video.wsConnection;
-
         if (text && ws && ws.readyState === 1) {
             ws.send(JSON.stringify({ type: "chat_message", user: CONFIG.username, text: text }));
             input.value = "";
@@ -26,25 +26,35 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     };
 
-    // 🔥 MEZAT İŞLEVLERİ 🔥
-    window.toggleAuction = function (username, action) {
-        // Eğer action verilmezse, açık olanı kapat (Stop)
-        const act = action || "stop";
+    // 🔥 GELİŞMİŞ MEZAT YÖNETİMİ 🔥
+    window.toggleAuction = function (username) {
+        const btn = document.getElementById('btn-auc-toggle');
+        const action = (auctionState === "stopped") ? "start" : "stop";
+
         fetch('/broadcast/toggle_auction', {
             method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: act })
+            body: JSON.stringify({ action: action })
         });
 
+        // UI Güncelle (Yayıncı için)
         if (MODE === 'broadcast') {
-            const startBtn = document.getElementById('btn-start-auction');
-            const panel = document.getElementById(`auction-panel-${username}`);
-            if (act === 'start') {
-                startBtn.style.display = 'none';
-                panel.style.display = 'flex';
+            if (action === 'start') {
+                auctionState = "started";
+                btn.innerText = "DURDUR";
+                btn.classList.remove('btn-start');
+                btn.classList.add('btn-stop');
             } else {
-                startBtn.style.display = 'block';
-                panel.style.display = 'none';
+                auctionState = "stopped";
+                btn.innerText = "BAŞLAT";
+                btn.classList.remove('btn-stop');
+                btn.classList.add('btn-start');
             }
+        }
+    };
+
+    window.resetAuction = function (username) {
+        if (confirm("Mezatı sıfırlamak istiyor musunuz?")) {
+            fetch('/broadcast/reset_auction', { method: 'POST' });
         }
     };
 
@@ -60,19 +70,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const priceEl = document.getElementById(`auc-price-${username}`);
         const bidderEl = document.getElementById(`auc-bidder-${username}`);
 
-        if (data.type === 'auction_started') {
-            panel.style.display = 'flex';
+        // İzleyici için Panel Görünürlüğü
+        if (MODE !== 'broadcast') {
+            if (data.type === 'auction_started') panel.style.display = 'flex';
+            else if (data.type === 'auction_ended') panel.style.display = 'none';
+        }
+
+        if (data.type === 'auction_started' || data.type === 'auction_update') {
             priceEl.innerText = `${data.price} ₺`;
-            bidderEl.innerText = "Son Teklif: -";
-        } else if (data.type === 'auction_update') {
-            panel.style.display = 'flex';
-            priceEl.innerText = `${data.price} ₺`;
-            // Yanıp sönme efekti
             priceEl.style.color = '#00ff00';
-            setTimeout(() => priceEl.style.color = 'black', 300);
+            setTimeout(() => priceEl.style.color = '#333', 300);
             bidderEl.innerText = `Son Teklif: ${data.bidder}`;
-        } else if (data.type === 'auction_ended') {
-            panel.style.display = 'none';
         }
     }
 
@@ -81,7 +89,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!layer) return;
         const el = document.createElement('div'); el.className = 'gift-pop'; el.innerHTML = '💎';
         layer.appendChild(el);
-        // Chat'e ekle
         addChatMessage(username, 'SİSTEM', `💎 ${sender} elmas gönderdi!`, true);
         setTimeout(() => el.remove(), 1500);
     }
@@ -89,17 +96,11 @@ document.addEventListener('DOMContentLoaded', () => {
     function addChatMessage(username, user, text, isSystem = false) {
         const box = document.getElementById(`chat-box-${username}`);
         if (!box) return;
-
         const p = document.createElement('div');
         p.className = isSystem ? 'chat-msg sys-msg' : 'chat-msg';
         p.innerHTML = `<span class="chat-user">${user}:</span><span class="chat-text">${text}</span>`;
         box.appendChild(p); box.scrollTop = box.scrollHeight;
-
-        // 🔥 5 SANİYE KURALI (Mesaj Silme) 🔥
-        setTimeout(() => {
-            p.style.opacity = '0'; // Önce soldur
-            setTimeout(() => p.remove(), 500); // Sonra sil
-        }, 5000);
+        setTimeout(() => { p.style.opacity = '0'; setTimeout(() => p.remove(), 500); }, 5000);
     }
 
     // --- YAYINCI ---
@@ -154,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     const d = JSON.parse(e.data);
                     if (d.type === "chat_message") addChatMessage(CONFIG.username, d.user, d.text);
                     else if (d.type === "gift_received") showGiftAnimation(CONFIG.username, d.sender);
-                    else if (d.type.startsWith("auction_")) updateAuctionUI(CONFIG.username, d); // Mezat
+                    else if (d.type.startsWith("auction_")) updateAuctionUI(CONFIG.username, d);
                 };
             });
         });
@@ -198,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (d.type === 'stream_ended') { document.getElementById(`end-screen-${username}`).style.display = 'flex'; stopStream(username, video); }
                 else if (d.type === 'chat_message') addChatMessage(username, d.user, d.text);
                 else if (d.type === 'gift_received') showGiftAnimation(username, d.sender);
-                else if (d.type.startsWith("auction_")) updateAuctionUI(username, d); // Mezat
+                else if (d.type.startsWith("auction_")) updateAuctionUI(username, d);
             };
             video.wsConnection = ws;
         }

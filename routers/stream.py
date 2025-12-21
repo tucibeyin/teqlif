@@ -35,7 +35,6 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 active_processes = {}
-# Basit Mezat Hafızası (RAM'de tutulur)
 active_auctions = {} 
 
 def cleanup_stream_sync(username):
@@ -109,7 +108,7 @@ async def send_gift(request: Request, user: User = Depends(get_current_user)):
         return {"status": "success"}
     except: return {"status": "error"}
 
-# 🔥 MEZAT (AUCTION) ENDPOINTLERİ 🔥
+# 🔥 MEZAT (AUCTION) SİSTEMİ 🔥
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(request: Request, user: User = Depends(get_current_user)):
     data = await request.json()
@@ -123,18 +122,29 @@ async def toggle_auction(request: Request, user: User = Depends(get_current_user
         await manager.broadcast_to_room(json.dumps({"type": "auction_ended"}), user.username)
     return {"status": "ok"}
 
+@router.post("/broadcast/reset_auction")
+async def reset_auction(request: Request, user: User = Depends(get_current_user)):
+    if user.username in active_auctions:
+        active_auctions[user.username]["price"] = 0
+        active_auctions[user.username]["last_bidder"] = "-"
+        # Sıfırlama bilgisini yay
+        await manager.broadcast_to_room(json.dumps({
+            "type": "auction_update", 
+            "price": 0, 
+            "bidder": "-"
+        }), user.username)
+    return {"status": "ok"}
+
 @router.post("/broadcast/bid")
 async def bid(request: Request, user: User = Depends(get_current_user)):
     data = await request.json()
     target_user = data.get("broadcaster")
-    amount = int(data.get("amount", 10)) # Varsayılan artış 10
+    amount = int(data.get("amount", 10)) 
     
     if target_user in active_auctions:
         auction = active_auctions[target_user]
         auction["price"] += amount
         auction["last_bidder"] = user.username
-        
-        # Herkese yeni fiyatı duyur
         await manager.broadcast_to_room(json.dumps({
             "type": "auction_update", 
             "price": auction["price"], 
