@@ -2,14 +2,18 @@ document.addEventListener('DOMContentLoaded', () => {
     const CONFIG = window.TEQLIF_CONFIG || {};
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
+    let isIntentionalStop = false; // Kasıtlı durdurma kontrolü
 
     function remoteLog(msg) {
-        // Hata ayıklama için konsola ve sunucuya log bas
+        // Konsol temizliği için gereksiz logları sunucuya atma
         console.log(msg);
-        fetch('/log/client', {
-            method: 'POST', headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ msg: `[${MODE}] ${msg}` })
-        }).catch(() => { });
+        // Sadece önemli olayları sunucuya bildir
+        if (msg.includes("✅") || msg.includes("❌") || msg.includes("🚀") || msg.includes("👀")) {
+            fetch('/log/client', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ msg: `[${MODE}] ${msg}` })
+            }).catch(() => { });
+        }
     }
 
     // --- YAYINCI ---
@@ -21,18 +25,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                // 9:16 Formatı (720p Dikey)
+                // 9:16 (720p)
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: { echoCancellation: true, noiseSuppression: true },
-                    video: {
-                        facingMode: 'user',
-                        width: { ideal: 720 }, height: { ideal: 1280 },
-                        aspectRatio: { ideal: 0.5625 }
-                    }
+                    video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 }, aspectRatio: { ideal: 0.5625 } }
                 });
                 videoElement.srcObject = stream;
-                remoteLog("✅ Kamera Bağlandı (Direct Stream)");
-            } catch (e) { alert("Kamera Hatası: " + e); remoteLog("❌ Kamera Hatası: " + e); }
+                remoteLog("✅ Kamera Hazır (9:16 Direct)");
+            } catch (e) { alert("Kamera Hatası: " + e); }
         }
         initCamera();
 
@@ -49,67 +49,63 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                 broadcastWs.onopen = () => {
-                    // 🔥 DÜZELTME BURADA: CANVAS YERİNE DİREKT KAMERA 🔥
-                    const cameraStream = videoElement.srcObject; // Direkt kamera akışı
+                    const cameraStream = videoElement.srcObject;
 
-                    // Codec Seçimi (PC için H.264, Android için VP8)
+                    // Codec Seçimi (PC: H264, Android: VP8)
                     let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2000000 };
                     if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
                         options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2000000 };
                     }
 
-                    try {
-                        rec = new MediaRecorder(cameraStream, options);
-                    } catch (e) {
-                        remoteLog("❌ Codec Hatası, Varsayılan deneniyor: " + e);
-                        rec = new MediaRecorder(cameraStream);
-                    }
+                    try { rec = new MediaRecorder(cameraStream, options); }
+                    catch (e) { rec = new MediaRecorder(cameraStream); }
 
                     let pktCount = 0;
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            // RAM Koruması (Buffer şişerse atla)
-                            if (broadcastWs.bufferedAmount > 500 * 1024) return;
-
+                            if (broadcastWs.bufferedAmount > 500 * 1024) return; // RAM Koruması
                             broadcastWs.send(e.data);
-
                             pktCount++;
-                            if (pktCount % 20 === 0) remoteLog(`📤 Veri Gönderiliyor: Pkt #${pktCount}`);
-                        } else {
-                            remoteLog("⚠️ Boş Veri Paketi (Ignored)");
+                            // Log kirliliği yapmasın diye sadece konsola yaz
+                            if (pktCount % 50 === 0) console.log(`Veri Pkt: ${pktCount}`);
                         }
                     };
-
-                    // Veri akışını başlat (500ms aralıklarla)
                     rec.start(500);
-                    remoteLog(`ℹ️ Kayıt Başladı. Codec: ${rec.mimeType}`);
+                    remoteLog("🚀 Yayın Başladı");
 
-                    // Thumbnail için Canvas'ı manuel güncelle (Sadece 10 saniyede bir)
-                    // Yayın akışını etkilemez, sadece resim çeker.
+                    // Thumbnail (15sn)
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
                             const ctx = canvas.getContext('2d');
-                            // Videoyu canvas'a anlık çiz
                             ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
-                            // Resmi gönder
-                            fetch('/broadcast/thumbnail', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.4) })
-                            });
+                            fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.4) }) });
                         }
-                    }, 10000);
+                    }, 15000);
                 };
 
-                broadcastWs.onclose = () => { if (rec) rec.stop(); alert("Yayın Bitti"); location.href = '/'; };
+                // Kapanış Yönetimi
+                broadcastWs.onclose = () => {
+                    if (!isIntentionalStop) {
+                        if (rec) rec.stop();
+                        alert("Yayın Bağlantısı Kesildi!");
+                        location.href = '/';
+                    }
+                };
             });
         });
 
+        // Temiz Durdurma Fonksiyonu
         window.stopBroadcast = () => {
-            if (rec) rec.stop();
+            isIntentionalStop = true; // Kasıtlı durdurma bayrağını çek
+            remoteLog("🛑 Yayıncı durdurdu.");
+
+            if (rec && rec.state !== 'inactive') rec.stop();
             if (broadcastWs) broadcastWs.close();
-            fetch('/broadcast/stop', { method: 'POST' });
-            location.href = '/';
+
+            // Sunucuya bildir ve git
+            fetch('/broadcast/stop', { method: 'POST' }).finally(() => {
+                location.href = '/';
+            });
         };
     }
 
@@ -120,29 +116,29 @@ document.addEventListener('DOMContentLoaded', () => {
         const src = `/static/hls/${u}/index.m3u8`;
         const playBtn = document.getElementById(`play-overlay-${u}`);
 
-        remoteLog(`👀 İzleyici Modu: ${u}`);
+        remoteLog(`👀 İzleyici: ${u}`);
 
-        // Dosya var mı diye sürekli kontrol et
         function checkFile() {
-            fetch(src, { method: 'HEAD' })
-                .then(res => {
-                    if (res.ok) {
-                        remoteLog("✅ Yayın dosyası yakalandı! Oynatıcı başlatılıyor...");
-                        initPlayer();
-                    } else {
-                        remoteLog("⏳ Yayın dosyası bekleniyor...");
-                        setTimeout(checkFile, 1500); // 1.5 saniye sonra tekrar bak
-                    }
-                })
-                .catch(() => setTimeout(checkFile, 1500));
+            fetch(src, { method: 'HEAD' }).then(r => {
+                if (r.ok) {
+                    remoteLog("✅ Yayın Bulundu!");
+                    initPlayer();
+                } else {
+                    console.log("Dosya bekleniyor...");
+                    setTimeout(checkFile, 1000);
+                }
+            }).catch(() => setTimeout(checkFile, 1000));
         }
 
         function initPlayer() {
             if (Hls.isSupported()) {
                 const hls = new Hls({
                     enableWorker: true,
-                    manifestLoadingTimeOut: 20000,
-                    manifestLoadingMaxRetry: 100, // Pes etme
+                    lowLatencyMode: true,
+                    backBufferLength: 30,
+                    // Hata durumunda hemen pes etme
+                    manifestLoadingTimeOut: 15000,
+                    manifestLoadingMaxRetry: 10,
                 });
                 hls.loadSource(src);
                 hls.attachMedia(v);
@@ -151,8 +147,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     v.muted = true;
                     v.play().then(() => {
                         if (playBtn) playBtn.style.display = 'none';
-                    }).catch(e => {
-                        // Otoplay engellenirse butonu göster
+                    }).catch(() => {
                         if (playBtn) {
                             playBtn.style.display = 'flex';
                             playBtn.onclick = () => { v.muted = false; v.play(); playBtn.style.display = 'none'; };
@@ -160,28 +155,25 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
 
-                hls.on(Hls.Events.ERROR, (event, data) => {
-                    if (data.fatal) {
-                        switch (data.type) {
+                // Hata Yönetimi
+                hls.on(Hls.Events.ERROR, (e, d) => {
+                    if (d.fatal) {
+                        switch (d.type) {
                             case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
                             case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
                             default: hls.destroy(); break;
                         }
                     }
                 });
+
             } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                // iOS
+                // iOS Native
                 v.src = src;
-                v.addEventListener('loadedmetadata', () => {
-                    v.muted = true; v.play().catch(() => { });
-                    if (playBtn) playBtn.style.display = 'none';
-                });
-                v.addEventListener('error', () => {
-                    setTimeout(() => { v.src = src; v.load(); }, 2000);
-                });
+                v.addEventListener('loadedmetadata', () => { v.muted = true; v.play().catch(() => { }); });
+                v.addEventListener('error', () => setTimeout(() => { v.src = src; v.load(); }, 2000));
             }
         }
 
-        checkFile(); // Kontrolü başlat
+        checkFile();
     }
 });
