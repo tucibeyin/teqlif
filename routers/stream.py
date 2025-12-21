@@ -3,6 +3,7 @@ import json
 import shutil
 import subprocess
 import asyncio 
+import sys
 from datetime import datetime
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
@@ -39,7 +40,6 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
-# --- CLEANUP ---
 def cleanup_stream_sync(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
@@ -90,14 +90,24 @@ async def stop(user: User = Depends(get_current_user)):
     return {"status": "stopped"}
 
 @router.post("/broadcast/thumbnail")
-async def thumb(request: Request, user: User = Depends(get_current_user)):
+async def thumb(request: Request, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     try:
         d = await request.json()
         import base64
-        with open(f"static/thumbnails/thumb_{user.username}.jpg", "wb") as f:
+        file_path = f"static/thumbnails/thumb_{user.username}.jpg"
+        
+        # Dosyayı Kaydet
+        with open(file_path, "wb") as f:
             f.write(base64.b64decode(d['image'].split(",")[1]))
-    except: pass
+            
+        # 🔥 DB GÜNCELLEME (Thumbnail Sorununu Çözer) 🔥
+        user.thumbnail = f"/{file_path}"
+        db.commit()
+        
+    except Exception as e:
+        print(f"Thumbnail Hatası: {e}")
     return {"status": "ok"}
+
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(): return {"status": "ok"}
 @router.post("/broadcast/reset_auction")
@@ -107,7 +117,7 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# --- SOCKET & FFMPEG ---
+# --- SOCKET ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
@@ -128,35 +138,51 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # FFmpeg (Universal H.264)
+    # FFmpeg (Loglu Mod)
     command = [
         "ffmpeg", 
         "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
         "-level", "3.0", "-pix_fmt", "yuv420p", "-r", "24", 
-        "-b:v", "2000k", "-vf", "scale=-2:720",
+        "-b:v", "1500k", "-vf", "scale=-2:540",
         "-c:a", "aac", "-b:a", "64k", "-ac", "2", "-af", "aresample=async=1",
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
         f"{stream_dir}/index.m3u8"
     ]
     
-    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
+    # 🔥 HATA AYIKLAMA İÇİN stderr AKTİF 🔥
+    process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=sys.stderr, start_new_session=True)
     active_processes[user.username] = process
     
     async def notify():
         await asyncio.sleep(4) 
-        await manager.broadcast_to_room(json.dumps({"type": "stream_added", "username": user.username, "title": "Canlı", "category": "Genel", "thumbnail": ""}), "home")
+        await manager.broadcast_to_room(json.dumps({
+            "type": "stream_added", 
+            "username": user.username, 
+            "title": user.stream_title or "Canlı", 
+            "category": user.stream_category or "Genel", 
+            "thumbnail": f"/static/thumbnails/thumb_{user.username}.jpg"
+        }), "home")
     
     loop = asyncio.get_event_loop()
     loop.create_task(notify())
 
+    packet_count = 0
     try:
         while True:
-            # 🔥 60 SANİYE TIMEOUT 🔥
+            # 60 Saniye Timeout
             data = await asyncio.wait_for(websocket.receive_bytes(), timeout=60.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
+            
+            # Veri Akış Kontrolü (Her 50 pakette bir yaz)
+            packet_count += 1
+            if packet_count % 50 == 0:
+                print(f"📥 SERVER VERİ ALDI ({packet_count} pkt) -> FFmpeg")
+                
+    except asyncio.TimeoutError:
+        print(f"⚠️ SERVER: {user.username} bağlantısı ZAMAN AŞIMI (Timeout) - Veri gelmedi!")
     except Exception as e:
         print(f"❌ SOCKET HATASI: {e}")
     finally:

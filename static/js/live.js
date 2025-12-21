@@ -20,13 +20,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                // 9:16 (720p)
                 const stream = await navigator.mediaDevices.getUserMedia({
                     audio: { echoCancellation: true },
                     video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 }, aspectRatio: { ideal: 0.5625 } }
                 });
                 videoElement.srcObject = stream;
-            } catch (e) { alert("Kamera Hatası: " + e); }
+                remoteLog("✅ Kamera Hazır");
+            } catch (e) { alert("Kamera Hatası: " + e); remoteLog("❌ Kamera Hatası: " + e); }
         }
         initCamera();
 
@@ -45,23 +45,44 @@ document.addEventListener('DOMContentLoaded', () => {
                     const stream = canvas.captureStream(24);
                     stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
 
-                    let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
-                    // iOS için H.264 (Destekliyorsa)
+                    let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2000000 };
+                    // PC Chrome için H264 (Daha iyi)
                     if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
-                        options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
+                        options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2000000 };
                     }
 
-                    rec = new MediaRecorder(stream, options);
+                    try {
+                        rec = new MediaRecorder(stream, options);
+                    } catch (e) {
+                        remoteLog("❌ Codec Hatası, Varsayılan deneniyor: " + e);
+                        rec = new MediaRecorder(stream);
+                    }
+
+                    let pkt = 0;
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            if (broadcastWs.bufferedAmount > 500 * 1024) return; // RAM Koruması
                             broadcastWs.send(e.data);
+                            pkt++;
+                            if (pkt % 20 === 0) remoteLog(`📤 Veri Gönderiliyor: Paket #${pkt} (${e.data.size} byte)`);
+                        } else {
+                            remoteLog("⚠️ Boş veri paketi üretildi!");
                         }
                     };
-                    rec.start(1000); // 1 saniyelik paketler (Denge)
-                    remoteLog("🚀 Yayın Başladı");
+                    // Recorder Start
+                    rec.start(500); // 500ms
+                    remoteLog(`ℹ️ Recorder Başladı. Codec: ${rec.mimeType}`);
 
-                    setInterval(() => { if (broadcastWs.readyState === 1) fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.3) }) }); }, 30000);
+                    // Ayna Modu (Sadece gösterim için, yayına etki etmez)
+                    // CSS ile hallediliyor.
+
+                    // Thumbnail
+                    setInterval(() => {
+                        if (broadcastWs.readyState === 1) {
+                            const ctx = canvas.getContext('2d');
+                            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height); // Anlık çiz
+                            fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.3) }) });
+                        }
+                    }, 10000); // 10 saniyede bir güncelle
                 };
                 broadcastWs.onclose = () => { if (rec) rec.stop(); alert("Yayın Bitti"); location.href = '/'; };
             });
@@ -69,75 +90,50 @@ document.addEventListener('DOMContentLoaded', () => {
         window.stopBroadcast = () => { if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); fetch('/broadcast/stop', { method: 'POST' }); location.href = '/'; };
     }
 
-    // --- İZLEYİCİ (AKILLI BEKÇİ) ---
+    // --- İZLEYİCİ ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         const src = `/static/hls/${u}/index.m3u8`;
         const playBtn = document.getElementById(`play-overlay-${u}`);
 
-        remoteLog(`👀 Bekçi Modu Başladı: ${u}`);
+        remoteLog(`👀 İzleyici: ${u}`);
 
-        // 1. DOSYAYI BEKLEME FONKSİYONU
-        function waitForStream() {
-            fetch(src, { method: 'HEAD' })
-                .then(res => {
-                    if (res.ok) {
-                        remoteLog("✅ Yayın dosyası bulundu! Başlatılıyor...");
-                        initPlayer(); // Dosya varsa player'ı başlat
-                    } else {
-                        remoteLog("⏳ Yayın hazırlanıyor...");
-                        setTimeout(waitForStream, 1500); // 1.5 saniye sonra tekrar dene
-                    }
-                })
-                .catch(() => setTimeout(waitForStream, 1500));
+        function checkFile() {
+            fetch(src, { method: 'HEAD' }).then(r => {
+                if (r.ok) {
+                    remoteLog("✅ Yayın dosyası bulundu!");
+                    initPlayer();
+                } else {
+                    remoteLog("⏳ Dosya bekleniyor...");
+                    setTimeout(checkFile, 1500);
+                }
+            });
         }
 
-        // 2. PLAYER BAŞLATMA
         function initPlayer() {
             if (Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: true });
+                const hls = new Hls();
                 hls.loadSource(src);
                 hls.attachMedia(v);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    // Otomatik başlatmayı dene
-                    v.muted = true;
-                    v.play().then(() => {
-                        if (playBtn) playBtn.style.display = 'none';
-                    }).catch(() => {
-                        // Otoplay engellendiyse butonu göster, tıklayınca aç
-                        if (playBtn) {
-                            playBtn.style.display = 'flex';
-                            playBtn.onclick = () => {
-                                v.muted = false;
-                                v.play();
-                                playBtn.style.display = 'none';
-                            };
+                    v.muted = true; v.play().then(() => { if (playBtn) playBtn.style.display = 'none'; }).catch(() => { });
+                });
+                hls.on(Hls.Events.ERROR, (e, d) => {
+                    if (d.fatal) {
+                        switch (d.type) {
+                            case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
+                            case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
+                            default: hls.destroy(); break;
                         }
-                    });
+                    }
                 });
             } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                // iOS Native
                 v.src = src;
-                v.addEventListener('loadedmetadata', () => {
-                    v.muted = true;
-                    v.play().then(() => {
-                        if (playBtn) playBtn.style.display = 'none';
-                    }).catch(() => {
-                        if (playBtn) {
-                            playBtn.style.display = 'flex';
-                            playBtn.onclick = () => {
-                                v.muted = false;
-                                v.play();
-                                playBtn.style.display = 'none';
-                            };
-                        }
-                    });
-                });
+                v.addEventListener('loadedmetadata', () => { v.muted = true; v.play(); });
             }
         }
 
-        // Başlat
-        waitForStream();
+        checkFile(); // Başla
     }
 });
