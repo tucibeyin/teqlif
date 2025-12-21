@@ -120,22 +120,21 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == payload.get("sub")).first()
     except: await websocket.close(); return
 
-    # ANINDA DB GÜNCELLE
     user.is_live = True
     db.commit()
-    print(f"🎥 YAYIN BAŞLIYOR (DB GÜNCELLENDİ): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # FFmpeg (Sağlam Ayarlar)
+    # FFmpeg (Universal H.264)
     command = [
         "ffmpeg", 
         "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
         "-level", "3.0", "-pix_fmt", "yuv420p", "-r", "24", 
-        "-b:v", "1500k", "-vf", "scale=-2:540",
+        "-b:v", "2000k", "-vf", "scale=-2:720",
         "-c:a", "aac", "-b:a", "64k", "-ac", "2", "-af", "aresample=async=1",
         "-f", "hls", "-hls_time", "2", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
@@ -154,14 +153,12 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
-            # 🔥 SÜREYİ ARTIRDIK (30 Saniye) 🔥
-            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=30.0)
+            # 🔥 60 SANİYE TIMEOUT 🔥
+            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=60.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
-    except asyncio.TimeoutError:
-        print(f"⚠️ SERVER: {user.username} bağlantısı ZAMAN AŞIMI (Timeout) ile kesildi.")
     except Exception as e:
-        print(f"❌ SERVER SOCKET HATASI: {e}")
+        print(f"❌ SOCKET HATASI: {e}")
     finally:
         asyncio.create_task(cleanup_stream_async(user.username))
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
