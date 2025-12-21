@@ -4,12 +4,33 @@ document.addEventListener('DOMContentLoaded', () => {
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
     let isIntentionalStop = false;
 
+    // CHAT GÖNDERME FONKSİYONU (Global erişim için window'a atadık)
+    window.sendChat = function (streamUsername) {
+        const input = document.getElementById(`chat-input-${streamUsername}`);
+        const video = document.getElementById(`video-${streamUsername}`);
+        const text = input.value.trim();
+
+        if (text && video && video.dataset.ws) {
+            const ws = video.dataset.ws; // O videonun soketini bul
+            // Eğer soket nesnesi WebSocket değilse (nesne olarak saklanmışsa) .send metodunu çağır
+            if (ws.send) {
+                ws.send(JSON.stringify({
+                    type: "chat_message",
+                    user: CONFIG.username,
+                    text: text
+                }));
+            }
+            input.value = ""; // Kutuyu temizle
+        }
+    };
+
     // --- YAYINCI ---
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         const canvas = document.getElementById('broadcast-canvas');
         let broadcastWs = null;
         let rec = null;
+        let chatWs = null; // Yayıncının kendi chat'ini dinlemesi için
 
         async function initCamera() {
             try {
@@ -32,23 +53,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('setup-layer').style.display = 'none';
                 document.getElementById('live-ui').style.display = 'flex';
 
+                // 1. YAYIN SOCKETİ
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
                     const cameraStream = videoElement.srcObject;
-                    // Android uyumluluğu için VP8/H264 kontrolü
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
 
                     try { rec = new MediaRecorder(cameraStream, options); } catch (e) { rec = new MediaRecorder(cameraStream); }
-
-                    rec.ondataavailable = e => {
-                        if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            broadcastWs.send(e.data);
-                        }
-                    };
-
-                    // Daha sık veri gönder (500ms) - Server daha hızlı işler
-                    rec.start(500);
+                    rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
+                    rec.start(1000);
 
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
@@ -63,17 +77,32 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 15000);
                 };
                 broadcastWs.onclose = () => { if (!isIntentionalStop) { if (rec) rec.stop(); alert("Kesildi!"); location.href = '/'; } };
+
+                // 2. CHAT SOCKETİ (Yayıncı da mesajları görmeli)
+                chatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${CONFIG.username}`);
+                chatWs.onmessage = (e) => {
+                    const d = JSON.parse(e.data);
+                    if (d.type === "chat_message") {
+                        const box = document.getElementById(`chat-box-${CONFIG.username}`);
+                        const p = document.createElement('div');
+                        p.className = 'chat-msg';
+                        p.innerHTML = `<span class="chat-user">${d.user}:</span><span class="chat-text">${d.text}</span>`;
+                        box.appendChild(p);
+                        box.scrollTop = box.scrollHeight;
+                    }
+                };
+
             });
         });
 
         window.stopBroadcast = () => {
             isIntentionalStop = true;
-            if (rec) rec.stop(); if (broadcastWs) broadcastWs.close();
+            if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); if (chatWs) chatWs.close();
             fetch('/broadcast/stop', { method: 'POST' }).finally(() => location.href = '/');
         };
     }
 
-    // --- İZLEYİCİ (LOW LATENCY) ---
+    // --- İZLEYİCİ ---
     else if (MODE === 'watch') {
         const activePlayers = {};
 
@@ -95,38 +124,23 @@ document.addEventListener('DOMContentLoaded', () => {
 
         function playStream(username, video) {
             const src = `/static/hls/${username}/index.m3u8`;
-            if (activePlayers[username]) return;
+            if (activePlayers[username]) return; // Zaten açıksa elleme
 
+            // HLS Başlat
             if (Hls.isSupported()) {
-                const hls = new Hls({
-                    enableWorker: true,
-                    lowLatencyMode: true,
-
-                    // 🔥 GECİKME AYARLARI (6sn Hedef) 🔥
-                    liveSyncDurationCount: 2, // Canlıdan 2 parça (2x2=4sn) geride dur
-                    liveMaxLatencyDurationCount: 4, // 8 saniyeyi geçerse yakalamaya çalış
-                    maxLiveSyncPlaybackRate: 1.2, // Yakalamak için 1.2x hızlan
-
-                    manifestLoadingTimeOut: 10000,
-                });
+                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
                 activePlayers[username] = hls;
                 hls.loadSource(src);
                 hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    video.muted = true; video.play().catch(() => { });
-                });
-
-                hls.on(Hls.Events.ERROR, (e, d) => {
-                    if (d.fatal) {
-                        if (d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad();
-                        else hls.destroy();
-                    }
-                });
+                hls.on(Hls.Events.MANIFEST_PARSED, () => { video.muted = true; video.play().catch(() => { }); });
+                hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal && d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad(); else if (d.fatal) hls.destroy(); });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
                 video.src = src;
                 video.addEventListener('loadedmetadata', () => { video.muted = true; video.play().catch(() => { }); });
+                video.addEventListener('error', () => setTimeout(() => { video.src = src; video.load(); }, 2000));
             }
 
+            // Chat Socket Bağlantısı
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${username}`);
             ws.onmessage = (e) => {
                 const d = JSON.parse(e.data);
@@ -134,9 +148,38 @@ document.addEventListener('DOMContentLoaded', () => {
                     document.getElementById(`end-screen-${username}`).style.display = 'flex';
                     stopStream(username, video);
                 }
+                else if (d.type === 'chat_message') {
+                    const box = document.getElementById(`chat-box-${username}`);
+                    const p = document.createElement('div');
+                    p.className = 'chat-msg';
+                    p.innerHTML = `<span class="chat-user">${d.user}:</span><span class="chat-text">${d.text}</span>`;
+                    box.appendChild(p);
+                    box.scrollTop = box.scrollHeight; // Auto scroll
+                }
             };
-            video.dataset.ws = ws;
+            video.dataset.ws = ws; // WS nesnesini sakla (mesaj atmak için)
+            // WS nesnesinin send metodunu doğrudan dataset'e atayamayız, nesneyi JS memory'de tutuyoruz
+            // Send fonksiyonu yukarıda video.dataset.ws üzerinden WS'ye erişecek.
+            // Not: dataset string tutar, bu yüzden activePlayers gibi bir obje kullanalım veya element property
+            video.dataset.ws = "connected"; // Flag
+            video.wsConnection = ws; // Direct property assignment
         }
+
+        // Global sendChat fonksiyonunu düzelt (Dataset değil property kullan)
+        window.sendChat = function (streamUsername) {
+            const input = document.getElementById(`chat-input-${streamUsername}`);
+            const video = document.getElementById(`video-${streamUsername}`);
+            const text = input.value.trim();
+
+            if (text && video && video.wsConnection && video.wsConnection.readyState === 1) {
+                video.wsConnection.send(JSON.stringify({
+                    type: "chat_message",
+                    user: CONFIG.username,
+                    text: text
+                }));
+                input.value = "";
+            }
+        };
 
         function stopStream(username, video) {
             if (activePlayers[username]) {
@@ -145,9 +188,9 @@ document.addEventListener('DOMContentLoaded', () => {
             }
             video.pause();
             video.src = "";
-            if (video.dataset.ws) {
-                video.dataset.ws.close();
-                delete video.dataset.ws;
+            if (video.wsConnection) {
+                video.wsConnection.close();
+                delete video.wsConnection;
             }
         }
     }

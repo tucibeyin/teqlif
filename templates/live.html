@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* HEADER GİZLİ, FOOTER GÖRÜNÜR */
+    /* TEMEL YAPI */
     header {
         display: none !important;
     }
@@ -19,13 +19,10 @@
         background: #000 !important;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
         height: 60px;
-        /* Footer boyunu sabitleyelim */
     }
 
-    /* Ana kapsayıcı */
     main {
         height: 100dvh !important;
-        /* Tam ekran */
         width: 100vw !important;
         margin: 0 !important;
         padding: 0 !important;
@@ -33,7 +30,6 @@
         display: block !important;
     }
 
-    /* GLOBAL RESET */
     html,
     body {
         margin: 0;
@@ -45,7 +41,6 @@
         font-family: -apple-system, sans-serif;
     }
 
-    /* SCROLL CONTAINER */
     .teqlif-stage {
         position: relative;
         width: 100%;
@@ -55,14 +50,12 @@
         scroll-snap-type: y mandatory;
         scroll-behavior: smooth;
         padding-bottom: 60px;
-        /* Footer payı */
     }
 
     .teqlif-stage::-webkit-scrollbar {
         display: none;
     }
 
-    /* VİDEO KUTUSU */
     .video-wrapper {
         position: relative;
         width: 100%;
@@ -97,13 +90,9 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-
         padding-top: max(20px, env(safe-area-inset-top));
-        padding-left: 20px;
-        padding-right: 20px;
-
         box-sizing: border-box;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 20%, transparent 80%, rgba(0, 0, 0, 0.6) 100%);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 20%, transparent 70%, rgba(0, 0, 0, 0.8) 100%);
     }
 
     .top-bar {
@@ -111,6 +100,7 @@
         align-items: center;
         gap: 10px;
         pointer-events: auto;
+        padding: 0 20px;
     }
 
     .badge {
@@ -133,14 +123,11 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
-    /* 🔥 ALT BAR DÜZELTMESİ 🔥 */
     .bottom-bar {
         width: 100%;
         display: flex;
         justify-content: center;
         pointer-events: auto;
-
-        /* Butonu Footer'ın üzerine çıkarmak için yukarı itiyoruz */
         padding-bottom: 85px !important;
     }
 
@@ -153,14 +140,86 @@
         font-weight: bold;
         cursor: pointer;
         backdrop-filter: blur(10px);
-        font-size: 14px;
-        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
     }
 
     .btn-red {
         background: #ff3b30;
         border: none;
+    }
+
+    /* 🔥 CHAT SİSTEMİ 🔥 */
+    .chat-container {
+        position: absolute;
+        bottom: 140px;
+        left: 15px;
+        width: 70%;
+        height: 200px;
+        overflow-y: auto;
+        pointer-events: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        mask-image: linear-gradient(to top, black 80%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
+    }
+
+    .chat-container::-webkit-scrollbar {
+        display: none;
+    }
+
+    .chat-msg {
+        margin-bottom: 8px;
+        font-size: 13px;
         color: white;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
+    }
+
+    .chat-user {
+        font-weight: 800;
+        color: #ffeb3b;
+        margin-right: 5px;
+    }
+
+    .chat-text {
+        font-weight: 400;
+        color: #fff;
+    }
+
+    .chat-input-wrapper {
+        position: absolute;
+        bottom: 75px;
+        left: 0;
+        width: 100%;
+        display: flex;
+        gap: 10px;
+        padding: 0 15px;
+        box-sizing: border-box;
+        pointer-events: auto;
+    }
+
+    .chat-input {
+        flex: 1;
+        background: rgba(0, 0, 0, 0.5);
+        border: 1px solid rgba(255, 255, 255, 0.3);
+        color: white;
+        padding: 10px 15px;
+        border-radius: 20px;
+        outline: none;
+        backdrop-filter: blur(5px);
+        font-size: 14px;
+    }
+
+    .chat-send {
+        background: #ff0050;
+        border: none;
+        color: white;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
     }
 
     /* YAYIN BİTTİ EKRANI */
@@ -205,10 +264,15 @@
             padding-bottom: 20px !important;
         }
 
-        /* PC'de footer sorunu yoksa normal bırak */
+        .chat-input-wrapper {
+            bottom: 20px;
+        }
+
+        .chat-container {
+            bottom: 80px;
+        }
     }
 
-    /* SETUP MODU */
     .setup-layer {
         position: absolute;
         width: 100%;
@@ -273,6 +337,9 @@
                 <div class="badge">CANLI</div>
                 <div class="username-pill"><i class="fa-solid fa-user"></i> {{ user.username }}</div>
             </div>
+
+            <div class="chat-container" id="chat-box-{{ user.username }}"></div>
+
             <div class="bottom-bar">
                 <button onclick="stopBroadcast()" class="action-btn btn-red">BİTİR</button>
             </div>
@@ -295,7 +362,16 @@
                 <div class="badge">CANLI</div>
                 <div class="username-pill">{{ stream.username }}</div>
             </div>
-            <div class="bottom-bar"></div>
+
+            <div class="chat-container" id="chat-box-{{ stream.username }}">
+            </div>
+
+            <div class="chat-input-wrapper">
+                <input type="text" class="chat-input" id="chat-input-{{ stream.username }}" placeholder="Yorum yap..."
+                    autocomplete="off">
+                <button class="chat-send" onclick="sendChat('{{ stream.username }}')"><i
+                        class="fa-solid fa-paper-plane"></i></button>
+            </div>
         </div>
     </div>
     {% else %}

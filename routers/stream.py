@@ -17,9 +17,9 @@ router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
 @router.post("/log/client")
-async def client_log(request: Request):
-    return {"status": "ok"}
+async def client_log(request: Request): return {"status": "ok"}
 
+# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room):
@@ -61,6 +61,7 @@ def write_to_ffmpeg(process, data):
 
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
+
 @router.get("/live", response_class=HTMLResponse)
 async def read_live(request: Request, mode: str = "watch", broadcaster: str = None, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     if not user: return RedirectResponse("/login", 303)
@@ -95,18 +96,25 @@ async def thumb(request: Request, user: User = Depends(get_current_user), db: Se
         user.thumbnail = f"/static/thumbnails/thumb_{user.username}.jpg"; db.commit()
     except: pass
     return {"status": "ok"}
-@router.post("/broadcast/toggle_auction")
-async def toggle_auction(): return {"status": "ok"}
-@router.post("/broadcast/reset_auction")
-async def reset_auction(): return {"status": "ok"}
-@router.post("/gift/send")
-async def send_gift(): return {"status": "success"}
 
+# 🔥 CHAT VE SİNYAL SOKETİ 🔥
 @router.websocket("/ws/chat")
 async def chat(websocket: WebSocket, stream: str = "home"):
     await manager.connect(websocket, stream)
     try:
-        while True: await websocket.receive_text()
+        while True:
+            # Mesajı al
+            data = await websocket.receive_text()
+            msg_obj = json.loads(data)
+            
+            # Eğer sohbet mesajıysa herkese yay
+            if msg_obj.get("type") == "chat_message":
+                await manager.broadcast_to_room(json.dumps({
+                    "type": "chat_message",
+                    "user": msg_obj.get("user"),
+                    "text": msg_obj.get("text")
+                }), stream)
+                
     except: manager.disconnect(websocket, stream)
 
 @router.websocket("/ws/broadcast")
@@ -121,25 +129,20 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     except: await websocket.close(); return
 
     user.is_live = True; db.commit()
-    print(f"🎥 YAYIN BAŞLIYOR (LOW LATENCY): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR: {user.username}")
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    # 🔥 FFmpeg (2 Saniyelik Parçalar) 🔥
-    # -hls_time 2: Gecikmeyi düşüren ana faktör
-    # -g 48: 24fps * 2sn = 48 kare. Keyframe'i tam parça başına denk getirir.
-    # -hls_list_size 4: Listede az dosya tut, oynatıcıyı canlıya zorla.
     command = [
         "ffmpeg", "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "veryfast", "-profile:v", "baseline",
-        "-level", "3.0", "-pix_fmt", "yuv420p", 
-        "-r", "24", "-g", "48", "-keyint_min", "48", 
-        "-sc_threshold", "0", 
+        "-level", "3.0", "-pix_fmt", "yuv420p", "-r", "24", 
+        "-g", "96", "-keyint_min", "96", "-sc_threshold", "0", 
         "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "4000k", "-vf", "scale=-2:540",
         "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1",
-        "-f", "hls", "-hls_time", "2", "-hls_list_size", "4", 
+        "-f", "hls", "-hls_time", "4", "-hls_list_size", "6", 
         "-hls_flags", "delete_segments+omit_endlist",
         f"{stream_dir}/index.m3u8"
     ]
@@ -148,7 +151,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     active_processes[user.username] = process
     
     async def notify():
-        await asyncio.sleep(4) 
+        await asyncio.sleep(5) 
         await manager.broadcast_to_room(json.dumps({
             "type": "stream_added", "username": user.username, 
             "title": user.stream_title, "category": user.stream_category, 
