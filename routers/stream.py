@@ -35,6 +35,7 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 active_processes = {}
+# MEZAT HAFIZASI (GLOBAL STATE)
 active_auctions = {} 
 
 def cleanup_stream_sync(username):
@@ -44,6 +45,7 @@ def cleanup_stream_sync(username):
         try: proc.kill(); proc.wait(timeout=0.1)
         except: pass
         del active_processes[username]
+    # Yayın biterse mezatı da silme opsiyonu (İstersen burayı yoruma alıp mezatı tutabilirsin)
     if username in active_auctions: del active_auctions[username]
     db = SessionLocal()
     try:
@@ -74,7 +76,16 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: str = No
             active_streams.remove(target_user)
             active_streams.insert(0, target_user)
     if mode == "broadcast": target_user = user
-    return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user})
+    
+    # 🔥 MEZAT BİLGİSİNİ ŞABLONA GÖNDERİYORUZ 🔥
+    return templates.TemplateResponse("live.html", {
+        "request": request, 
+        "user": user, 
+        "mode": mode, 
+        "streams": active_streams, 
+        "broadcaster": target_user,
+        "active_auctions": active_auctions # <-- BU EKLENDİ
+    })
 
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
@@ -108,15 +119,21 @@ async def send_gift(request: Request, user: User = Depends(get_current_user)):
         return {"status": "success"}
     except: return {"status": "error"}
 
-# 🔥 MEZAT (AUCTION) SİSTEMİ 🔥
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(request: Request, user: User = Depends(get_current_user)):
     data = await request.json()
-    action = data.get("action") # start / stop
+    action = data.get("action") 
     
     if action == "start":
-        active_auctions[user.username] = {"price": 0, "last_bidder": "-"}
-        await manager.broadcast_to_room(json.dumps({"type": "auction_started", "price": 0}), user.username)
+        # Eğer zaten varsa koru, yoksa sıfırdan aç (Böylece yanlışlıkla basınca sıfırlanmaz)
+        if user.username not in active_auctions:
+            active_auctions[user.username] = {"price": 0, "last_bidder": "-"}
+        
+        await manager.broadcast_to_room(json.dumps({
+            "type": "auction_started", 
+            "price": active_auctions[user.username]["price"],
+            "bidder": active_auctions[user.username]["last_bidder"]
+        }), user.username)
     else:
         if user.username in active_auctions: del active_auctions[user.username]
         await manager.broadcast_to_room(json.dumps({"type": "auction_ended"}), user.username)
@@ -127,12 +144,7 @@ async def reset_auction(request: Request, user: User = Depends(get_current_user)
     if user.username in active_auctions:
         active_auctions[user.username]["price"] = 0
         active_auctions[user.username]["last_bidder"] = "-"
-        # Sıfırlama bilgisini yay
-        await manager.broadcast_to_room(json.dumps({
-            "type": "auction_update", 
-            "price": 0, 
-            "bidder": "-"
-        }), user.username)
+        await manager.broadcast_to_room(json.dumps({"type": "auction_update", "price": 0, "bidder": "-"}), user.username)
     return {"status": "ok"}
 
 @router.post("/broadcast/bid")

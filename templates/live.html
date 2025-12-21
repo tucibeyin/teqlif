@@ -90,12 +90,8 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        /* En alta yasla */
         padding-top: max(15px, env(safe-area-inset-top));
-
-        /* 🔥 DÜZELTME: UI Katmanını en dibe kadar indiriyoruz (0px) 🔥 */
-        padding-bottom: 0 !important;
-
+        padding-bottom: 60px !important;
         box-sizing: border-box;
         background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, transparent 40%, rgba(0, 0, 0, 0.6) 80%, rgba(0, 0, 0, 0.95) 100%);
     }
@@ -156,17 +152,15 @@
         font-size: 14px;
     }
 
-    /* 🔥 BOTTOM STACK (SIFIR TOLERANS) 🔥 */
+    /* --- BOTTOM STACK --- */
     .bottom-stack {
         display: flex;
         flex-direction: column;
         width: 100%;
-        /* Alt boşluğu tam Footer boyu (60px) kadar veriyoruz ki üzerine binmesin */
-        padding: 0 10px 60px 10px !important;
+        padding: 0 10px 0 10px !important;
         margin: 0 !important;
         box-sizing: border-box;
-        gap: 0;
-        /* Elemanlar arası boşluk YOK */
+        gap: 2px;
         pointer-events: auto;
     }
 
@@ -187,7 +181,6 @@
         animation: slideUp 0.3s ease;
         gap: 4px;
         margin-bottom: 4px;
-        /* Input ile arasında minik boşluk */
     }
 
     .auc-header {
@@ -431,7 +424,6 @@
         gap: 6px;
         width: 100%;
         margin-bottom: 0 !important;
-        /* Alt boşluk yok */
     }
 
     .chat-input-wrapper {
@@ -648,6 +640,7 @@
 
 <div class="teqlif-stage" id="scroll-container">
     {% if mode == 'broadcast' %}
+    {% set my_auc = active_auctions.get(user.username) %}
     <div class="video-wrapper">
         <video id="preview" autoplay muted playsinline></video>
         <canvas id="broadcast-canvas" width="720" height="1280" style="display:none;"></canvas>
@@ -674,24 +667,30 @@
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
 
-                <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
+                <div id="auction-bar-{{ user.username }}" class="auction-bar"
+                    style="display:{{ 'flex' if my_auc else 'none' }};">
                     <div class="auc-header">
                         <div class="auc-price-group">
                             <div class="auc-label" id="auc-status-{{ user.username }}">MEZAT AKTİF</div>
-                            <div class="auc-price" id="auc-price-{{ user.username }}">0 <span>₺</span></div>
+                            <div class="auc-price" id="auc-price-{{ user.username }}">{{ my_auc.price if my_auc else 0
+                                }} <span>₺</span></div>
                         </div>
                         <div class="auc-bidder-box">
                             <i class="fa-solid fa-crown auc-crown"></i>
-                            <div class="auc-bidder-name" id="auc-bidder-{{ user.username }}">Bekleniyor</div>
+                            <div class="auc-bidder-name" id="auc-bidder-{{ user.username }}">{{ my_auc.last_bidder if
+                                my_auc else 'Bekleniyor' }}</div>
                         </div>
                     </div>
                     <div class="auc-body">
                         <div class="auc-controls-host">
                             <button class="btn-host btn-host-reset" onclick="resetAuction('{{ user.username }}')"><i
                                     class="fa-solid fa-rotate-right"></i></button>
-                            <button id="btn-auc-toggle" class="btn-host btn-host-toggle"
-                                onclick="toggleAuction('{{ user.username }}')"><i class="fa-solid fa-stop"></i>
-                                BİTİR</button>
+                            <button id="btn-auc-toggle"
+                                class="btn-host {{ 'btn-stop-mode' if my_auc else 'btn-host-toggle' }}"
+                                onclick="toggleAuction('{{ user.username }}')">
+                                <i class="fa-solid {{ 'fa-stop' if my_auc else 'fa-play' }}"></i> {{ 'BİTİR' if my_auc
+                                else 'BAŞLAT' }}
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -710,6 +709,7 @@
 
     {% else %}
     {% for stream in streams %}
+    {% set st_auc = active_auctions.get(stream.username) %}
     <div class="video-wrapper feed-item" data-username="{{ stream.username }}">
         <video id="video-{{ stream.username }}" playsinline webkit-playsinline loop
             poster="{{ stream.thumbnail }}"></video>
@@ -730,15 +730,19 @@
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
 
-                <div id="auction-bar-{{ stream.username }}" class="auction-bar">
+                <div id="auction-bar-{{ stream.username }}" class="auction-bar"
+                    style="display:{{ 'flex' if st_auc else 'none' }};">
                     <div class="auc-header">
                         <div class="auc-price-group">
                             <div class="auc-label">MEZAT BAŞLADI 🔥</div>
-                            <div class="auc-price" id="auc-price-{{ stream.username }}">0 <span>₺</span></div>
+                            <div class="auc-price" id="auc-price-{{ stream.username }}">{{ st_auc.price if st_auc else 0
+                                }} <span>₺</span></div>
                         </div>
-                        <div class="auc-bidder-box" id="auc-bidder-box-{{ stream.username }}" style="display:none;">
+                        <div class="auc-bidder-box" id="auc-bidder-box-{{ stream.username }}"
+                            style="display:{{ 'flex' if st_auc and st_auc.last_bidder != '-' else 'none' }};">
                             <i class="fa-solid fa-crown auc-crown"></i>
-                            <div class="auc-bidder-name" id="auc-bidder-{{ stream.username }}"></div>
+                            <div class="auc-bidder-name" id="auc-bidder-{{ stream.username }}">{{ st_auc.last_bidder if
+                                st_auc else '' }}</div>
                         </div>
                     </div>
 
