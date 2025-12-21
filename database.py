@@ -20,8 +20,6 @@ def get_db():
     db = SessionLocal()
     try:
         yield db
-    except Exception as e:
-        print(f"❌ Veritabanı hatası: {e}", file=sys.stderr)
-        db.close()
     finally:
+        # Hata olsa da olmasa da bağlantıyı güvenle kapat
         db.close()
