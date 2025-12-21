@@ -3,7 +3,7 @@ import json
 import shutil
 import subprocess
 import asyncio 
-import signal
+from datetime import datetime
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -15,9 +15,19 @@ from utils import get_current_user, SECRET_KEY, ALGORITHM
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
+# 🔥 LOG TOPLAYICI ENDPOINT 🔥
 @router.post("/log/client")
-async def client_log(request: Request): return {"status": "ok"}
+async def client_log(request: Request):
+    try:
+        data = await request.json()
+        msg = data.get('msg', '')
+        # Saat bilgisi ekle
+        t = datetime.now().strftime("%H:%M:%S")
+        print(f"[{t}] 📱 CLIENT RAPORU: {msg}")
+        return {"status": "ok"}
+    except: return {"status": "err"}
 
+# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -34,14 +44,12 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
-# 🔥 ASENKRON TEMİZLİK (KİLİTLENMEZ) 🔥
+# --- ASENKRON TEMİZLİK ---
 def cleanup_stream_sync(username):
-    print(f"🛑 SERVER: {username} temizleniyor (FORCE KILL)...")
+    print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
         proc = active_processes[username]
-        try:
-            proc.kill() # Acıma, öldür
-            proc.wait(timeout=0.1)
+        try: proc.kill(); proc.wait(timeout=0.1)
         except: pass
         del active_processes[username]
     
@@ -74,8 +82,8 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: str = No
 
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
-    # Artık JS dolu form gönderdiği için burası hata vermeyecek
     user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
+    print(f"✅ SERVER: {user.username} için DB kaydı açıldı.")
     return {"status": "ok"}
 
 @router.post("/broadcast/stop")
@@ -103,7 +111,7 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# --- SOCKET ---
+# --- YAYINCI SOCKETİ ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
@@ -114,15 +122,14 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         from jose import jwt
         payload = jwt.decode(token.partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM])
         user = db.query(User).filter(User.email == payload.get("sub")).first()
+        print(f"🔌 SERVER: {user.username} socket'e bağlandı.")
     except: await websocket.close(); return
 
     stream_dir = f"static/hls/{user.username}"
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 TURBO YAYIN BAŞLIYOR: {user.username}")
-
-    # FFmpeg TURBO (1 saniyelik HLS, Ultra Hızlı)
+    # FFmpeg (Low Latency HLS)
     command = [
         "ffmpeg", "-f", "webm", "-i", "pipe:0",
         "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", 
@@ -146,12 +153,20 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     loop = asyncio.get_event_loop()
     loop.create_task(notify())
 
+    pkt_count = 0
     try:
         while True:
             data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
-    except: pass
+            
+            # Sunucu tarafı log (her 50 pakette bir)
+            pkt_count += 1
+            if pkt_count % 50 == 0:
+                print(f"📥 SERVER: {user.username}'den veri alınıyor... (Pkt: {pkt_count})")
+
+    except Exception as e:
+        print(f"❌ SERVER SOCKET HATASI: {e}")
     finally:
         asyncio.create_task(cleanup_stream_async(user.username))
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
