@@ -23,9 +23,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                // 🔥 GENİŞ AÇI AYARI 🔥
-                // Çözünürlük (720p) zorlamasını kaldırdık.
-                // Sadece Aspect Ratio (9:16) istiyoruz. Telefon en geniş açıyı seçecek.
+                // 🔥 SENSÖRÜ ÖZGÜR BIRAK (EN GENİŞ AÇI) 🔥
+                // Genişlik/Yükseklik/Oran kısıtlamalarını kaldırdık.
+                // Telefonun native (en doğal) çözünürlüğünü alacağız.
+                // Bu sayede "Zoom" etkisi yok olacak.
                 const constraints = {
                     audio: {
                         echoCancellation: true,
@@ -33,19 +34,19 @@ document.addEventListener('DOMContentLoaded', () => {
                         autoGainControl: true
                     },
                     video: {
-                        facingMode: 'user',
-                        // ideal: 0.5625 = 9/16 (Tam Dikey)
-                        aspectRatio: { ideal: 0.5625 }
+                        facingMode: 'user', // Sadece ön kamera iste, gerisine karışma
+                        frameRate: { ideal: 24, max: 30 }
                     }
                 };
 
                 const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 videoElement.srcObject = stream;
 
-                // Gerçekten hangi çözünürlüğü aldığımızı loglayalım
+                // Hangi çözünürlüğü aldığımızı loglayalım (Meraklısına)
+                stream.getVideoTracks()[0].getSettings();
                 const track = stream.getVideoTracks()[0];
                 const settings = track.getSettings();
-                remoteLog(`✅ Kamera Hazır: ${settings.width}x${settings.height} (${(settings.width / settings.height).toFixed(2)})`);
+                remoteLog(`✅ Kamera Doğal Modda Açıldı: ${settings.width}x${settings.height}`);
 
             } catch (e) {
                 alert("Kamera Açılamadı: " + e);
@@ -67,15 +68,13 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                 broadcastWs.onopen = () => {
-                    // DİREKT KAMERA AKIŞI (Canvas Yok, Performans Modu)
                     const cameraStream = videoElement.srcObject;
 
-                    // Codec Seçimi (H.264 tercih et, yoksa VP8)
+                    // Codec Seçimi
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
                         options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
                     }
-                    // Fallback
                     if (!MediaRecorder.isTypeSupported(options.mimeType)) {
                         options = { videoBitsPerSecond: 2500000 };
                     }
@@ -84,45 +83,43 @@ document.addEventListener('DOMContentLoaded', () => {
                         rec = new MediaRecorder(cameraStream, options);
                     } catch (e) {
                         remoteLog("❌ Recorder Hatası: " + e);
-                        rec = new MediaRecorder(cameraStream); // En basit haliyle dene
+                        rec = new MediaRecorder(cameraStream);
                     }
 
                     let pktCount = 0;
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            // Buffer şişerse (internet yavaşsa) paketi atla
                             if (broadcastWs.bufferedAmount > 500 * 1024) return;
-
                             broadcastWs.send(e.data);
                             pktCount++;
                             if (pktCount % 50 === 0) console.log(`Pkt: ${pktCount}`);
                         }
                     };
 
-                    // 1 saniyelik paketler (Stabilite için en iyisi)
                     rec.start(1000);
-                    remoteLog(`🚀 Yayın Başladı. Codec: ${rec.mimeType}`);
+                    remoteLog(`🚀 Yayın Başladı (Native Res). Codec: ${rec.mimeType}`);
 
-                    // Thumbnail (Her 15 saniyede bir)
+                    // Thumbnail (Smart Crop)
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
                             const ctx = canvas.getContext('2d');
-                            // Videonun o anki karesini canvas'a çiz
-                            // Aspect ratio koruyarak ortala (Center Crop for Thumbnail)
                             const vW = videoElement.videoWidth;
                             const vH = videoElement.videoHeight;
-                            const targetRatio = 9 / 16;
 
+                            // Thumbnail'i düzgün ortala
+                            // Hedef: 9:16 (720x1280 canvas)
+                            const targetRatio = 9 / 16;
+                            const sourceRatio = vW / vH;
                             let sW, sH, sX, sY;
 
-                            if (vW / vH > targetRatio) {
-                                // Video daha geniş, yanlardan kırp
+                            if (sourceRatio > targetRatio) {
+                                // Kaynak daha geniş (Yatay veya 4:3), yanlardan kırp
                                 sH = vH;
                                 sW = vH * targetRatio;
                                 sX = (vW - sW) / 2;
                                 sY = 0;
                             } else {
-                                // Video daha uzun, üstten/alttan kırp
+                                // Kaynak daha uzun, üstten kırp
                                 sW = vW;
                                 sH = vW / targetRatio;
                                 sX = 0;
@@ -179,8 +176,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    liveSyncDurationCount: 3,
-                    liveMaxLatencyDurationCount: 6,
                 });
                 hls.loadSource(src);
                 hls.attachMedia(v);
@@ -196,17 +191,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         }
                     });
                 });
-
-                hls.on(Hls.Events.ERROR, (e, d) => {
-                    if (d.fatal) {
-                        switch (d.type) {
-                            case Hls.ErrorTypes.NETWORK_ERROR: hls.startLoad(); break;
-                            case Hls.ErrorTypes.MEDIA_ERROR: hls.recoverMediaError(); break;
-                            default: hls.destroy(); break;
-                        }
-                    }
-                });
-
             } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
                 v.src = src;
                 v.addEventListener('loadedmetadata', () => { v.muted = true; v.play().catch(() => { }); });
