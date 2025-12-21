@@ -6,7 +6,7 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* --- GLOBAL --- */
+    /* GLOBAL */
     html,
     body {
         margin: 0;
@@ -15,7 +15,7 @@
         height: 100%;
         background: #000;
         overflow: hidden;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        font-family: -apple-system, sans-serif;
     }
 
     .teqlif-stage {
@@ -28,63 +28,47 @@
         background: #000;
     }
 
-    /* --- VİDEO VE ARKA PLAN --- */
-    .blur-bg {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-size: cover;
-        background-position: center;
-        filter: blur(50px) brightness(0.5);
-        opacity: 0.8;
-        z-index: 0;
-        display: none;
-        /* Mobilde gizle */
-    }
-
+    /* VİDEO ALANI */
     .video-wrapper {
         position: relative;
         width: 100%;
         height: 100%;
         z-index: 1;
+        overflow: hidden;
         display: flex;
         justify-content: center;
         align-items: center;
-        background: #000;
-        overflow: hidden;
     }
 
-    /* 🔥 PREMIUM VİDEO AYARI 🔥 */
     video {
         width: 100%;
         height: 100%;
         object-fit: cover;
-        /* Instagram Gibi: Ekranı Doldurur */
+        /* INSTAGRAM MODU: EKRANI DOLDURUR */
     }
 
-    /* PC İÇİN ÖZEL AYAR */
+    /* PC İÇİN ORTALAMA */
     @media (min-width: 768px) {
-        .blur-bg {
-            display: block;
-        }
-
         .video-wrapper {
             width: 450px;
-            /* Telefon Genişliği */
-            height: 90vh;
+            height: 95vh;
             border-radius: 20px;
-            box-shadow: 0 20px 50px rgba(0, 0, 0, 0.8);
+            box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
         }
 
-        /* PC'de videoyu sığdır ki kafa kesilmesin */
-        video {
-            object-fit: cover;
+        .blur-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-size: cover;
+            filter: blur(40px) brightness(0.4);
+            z-index: 0;
         }
     }
 
-    /* --- UI KATMANLARI --- */
+    /* ARAYÜZ KATMANI */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -96,89 +80,38 @@
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 15%, transparent 85%, rgba(0, 0, 0, 0.6) 100%);
         padding: 20px;
-        box-sizing: border-box;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent, rgba(0, 0, 0, 0.6));
     }
 
-    .top-bar {
+    .header {
         display: flex;
         align-items: center;
         gap: 10px;
-        pointer-events: auto;
     }
 
-    .live-badge {
-        background: #ff0050;
+    .badge {
+        background: #e91e63;
         color: white;
         padding: 4px 8px;
         border-radius: 4px;
         font-weight: 800;
         font-size: 11px;
-        letter-spacing: 0.5px;
-        animation: pulse 2s infinite;
     }
 
-    .user-pill {
-        background: rgba(0, 0, 0, 0.4);
-        backdrop-filter: blur(10px);
+    .username {
+        background: rgba(0, 0, 0, 0.5);
         color: white;
-        padding: 6px 12px;
+        padding: 5px 15px;
         border-radius: 20px;
         font-weight: 600;
         font-size: 13px;
-        display: flex;
-        align-items: center;
-        gap: 6px;
-    }
-
-    .user-pill img {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: #555;
-    }
-
-    .bottom-bar {
-        display: flex;
-        align-items: flex-end;
-        gap: 10px;
-        pointer-events: auto;
-        width: 100%;
-    }
-
-    .chat-container {
-        flex: 1;
-        height: 200px;
-        /* Chat alanı */
-    }
-
-    .action-btn {
-        width: 45px;
-        height: 45px;
-        border-radius: 50%;
-        background: rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(5px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        color: white;
-        font-size: 20px;
-        cursor: pointer;
-        transition: 0.2s;
     }
 
-    .action-btn:active {
-        transform: scale(0.9);
-        background: rgba(255, 255, 255, 0.3);
-    }
-
-    /* --- SETUP EKRANI --- */
-    .setup-overlay {
+    /* SETUP EKRANI */
+    .setup-layer {
         position: absolute;
-        top: 0;
-        left: 0;
         width: 100%;
         height: 100%;
         background: #000;
@@ -191,134 +124,87 @@
 
     .setup-box {
         width: 80%;
-        max-width: 350px;
+        max-width: 300px;
         text-align: center;
     }
 
-    .glass-input {
+    .inp {
         width: 100%;
         padding: 15px;
-        margin-bottom: 15px;
         background: #222;
         border: 1px solid #333;
         color: white;
-        border-radius: 12px;
-        font-size: 16px;
+        border-radius: 10px;
+        margin-bottom: 10px;
         box-sizing: border-box;
-        outline: none;
     }
 
-    .btn-gradient {
-        background: linear-gradient(45deg, #ff0050, #d60044);
+    .btn {
+        background: #e91e63;
         color: white;
         border: none;
-        padding: 16px;
+        padding: 15px;
         width: 100%;
         border-radius: 30px;
-        font-size: 18px;
         font-weight: bold;
         cursor: pointer;
-        box-shadow: 0 5px 20px rgba(255, 0, 80, 0.4);
+        font-size: 16px;
     }
 
-    /* --- OYNAT BUTONU --- */
-    .play-overlay {
+    /* PLAY BUTONU */
+    .play-btn {
         position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
         z-index: 20;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        cursor: pointer;
-        pointer-events: auto;
-    }
-
-    .play-icon {
         font-size: 60px;
         color: white;
-        filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
-    }
-
-    @keyframes pulse {
-        0% {
-            opacity: 1;
-        }
-
-        50% {
-            opacity: 0.6;
-        }
-
-        100% {
-            opacity: 1;
-        }
+        filter: drop-shadow(0 0 10px black);
+        cursor: pointer;
+        pointer-events: auto;
     }
 </style>
 
 <div class="teqlif-stage">
-
     {% if mode == 'broadcast' %}
     <div class="video-wrapper">
-        <video id="preview" autoplay muted playsinline style="transform: scaleX(-1);"></video>
-        <canvas id="broadcast-canvas" width="720" height="1280" style="display:none;"></canvas>
+        <video id="preview" autoplay muted playsinline></video>
+        <canvas id="broadcast-canvas" width="540" height="960" style="display:none;"></canvas>
 
-        <div id="setup-layer" class="setup-overlay">
+        <div id="setup-layer" class="setup-layer">
             <div class="setup-box">
-                <h1 style="color:white; margin-bottom:5px;">Canlı Yayın</h1>
-                <p style="color:#888; margin-bottom:30px;">Hemen yayına başla!</p>
-                <input type="text" id="streamTitle" class="glass-input" placeholder="Yayın Başlığı">
-                <select id="streamCategory" class="glass-input">
+                <h2 style="color:white;">Yayın Başlat</h2>
+                <input type="text" id="streamTitle" class="inp" placeholder="Başlık">
+                <select id="streamCategory" class="inp">
                     <option>Genel</option>
-                    <option>Sohbet</option>
                 </select>
-                <button id="btn-start-broadcast" class="btn-gradient">BAŞLAT 🚀</button>
+                <button id="btn-start-broadcast" class="btn">CANLI YAYIN 📡</button>
             </div>
         </div>
 
         <div id="live-ui" class="ui-layer" style="display:none;">
-            <div class="top-bar">
-                <div class="live-badge">CANLI</div>
-                <div class="user-pill"><i class="fa-solid fa-eye"></i> 0</div>
+            <div class="header">
+                <div class="badge">CANLI</div>
             </div>
-            <div class="bottom-bar" style="justify-content: center;">
-                <button onclick="stopBroadcast()" class="btn-gradient"
-                    style="width: auto; padding: 10px 30px;">BİTİR</button>
-            </div>
+            <button onclick="stopBroadcast()" class="btn"
+                style="width:auto; align-self:center; pointer-events:auto;">BİTİR</button>
         </div>
     </div>
 
     {% else %}
     {% for stream in streams %}
     <div class="blur-bg" style="background-image: url('/static/thumbnails/thumb_{{ stream.username }}.jpg');"></div>
-
     <div class="video-wrapper">
         <video id="video-{{ stream.username }}" playsinline webkit-playsinline loop></video>
-
-        <div id="play-overlay-{{ stream.username }}" class="play-overlay" onclick="forcePlay('{{ stream.username }}')">
-            <i class="fa-solid fa-play play-icon"></i>
-        </div>
-
+        <i id="play-overlay-{{ stream.username }}" class="fa-solid fa-play play-btn"
+            onclick="forcePlay('{{ stream.username }}')"></i>
         <div class="ui-layer">
-            <div class="top-bar">
-                <div class="live-badge">CANLI</div>
-                <div class="user-pill">
-                    <img src="/static/thumbnails/thumb_{{ stream.username }}.jpg" onerror="this.style.display='none'">
-                    {{ stream.username }}
-                </div>
-            </div>
-            <div class="bottom-bar">
-                <div class="chat-container"></div>
-                <div class="action-btn"><i class="fa-solid fa-gift"></i></div>
-                <div class="action-btn"><i class="fa-solid fa-heart"></i></div>
-                <div class="action-btn"><i class="fa-solid fa-share"></i></div>
+            <div class="header">
+                <div class="badge">CANLI</div>
+                <div class="username">{{ stream.username }}</div>
             </div>
         </div>
     </div>
     {% else %}
-    <div style="color:white;">Aktif yayın yok.</div>
+    <div style="color:white;">Yayın Yok</div>
     {% endfor %}
     {% endif %}
 </div>

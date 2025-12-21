@@ -12,13 +12,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                // 720p HD Kamera
+                // 540p (qHD) - Android Browser Dostu
                 const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true },
-                    video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 }, frameRate: 30 }
+                    audio: { echoCancellation: true, noiseSuppression: true },
+                    video: { facingMode: 'user', width: { ideal: 540 }, height: { ideal: 960 }, frameRate: 24 }
                 });
                 videoElement.srcObject = stream;
-            } catch (e) { alert("Kamera Hatası!"); }
+            } catch (e) { alert("Kamera Hatası: " + e); }
         }
         initCamera();
 
@@ -28,25 +28,35 @@ document.addEventListener('DOMContentLoaded', () => {
             fd.append('category', document.getElementById('streamCategory').value || 'Genel');
 
             fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
-                if (!res.ok) { alert("Sunucu Hatası!"); return; }
+                if (!res.ok) { alert("Hata!"); return; }
                 document.getElementById('setup-layer').style.display = 'none';
                 document.getElementById('live-ui').style.display = 'flex';
 
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    const stream = canvas.captureStream(30);
+                    const stream = canvas.captureStream(24);
                     stream.addTrack(videoElement.srcObject.getAudioTracks()[0]);
 
-                    let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
-                    if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
-                        options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
+                    // 🔥 KRİTİK: ANDROID İÇİN VP8 KULLAN (ÇÖKMEYİ ENGELLER) 🔥
+                    // iOS zaten Safari kullanıyor, o H.264 sever ama Android Chrome VP8 sever.
+                    // Sunucuda bunu H.264'e çevireceğiz.
+                    let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 1500000 };
+
+                    // Eğer VP8 yoksa (çok nadir), varsayılana bırak
+                    if (!MediaRecorder.isTypeSupported('video/webm;codecs=vp8')) {
+                        options = { videoBitsPerSecond: 1500000 };
                     }
 
-                    rec = new MediaRecorder(stream, options);
+                    try {
+                        rec = new MediaRecorder(stream, options);
+                    } catch (e) {
+                        rec = new MediaRecorder(stream); // Fallback
+                    }
+
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data);
                     };
-                    rec.start(1000); // 1 saniyelik paketler (Daha güvenli)
+                    rec.start(1000); // 1 saniyelik paketler
 
                     const ctx = canvas.getContext('2d');
                     function draw() {
@@ -63,13 +73,12 @@ document.addEventListener('DOMContentLoaded', () => {
         window.stopBroadcast = () => { if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); fetch('/broadcast/stop', { method: 'POST' }); location.href = '/'; };
     }
 
-    // --- İZLEYİCİ (HLS) ---
+    // --- İZLEYİCİ ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
         const src = `/static/hls/${u}/index.m3u8`;
 
-        // GLOBAL OYNAT FONKSİYONU
         window.forcePlay = function (target) {
             const vid = document.getElementById(`video-${target}`);
             const btn = document.getElementById(`play-overlay-${target}`);
@@ -79,18 +88,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (v) {
             if (Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: true });
+                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
                 hls.loadSource(src);
                 hls.attachMedia(v);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => {
-                    // Otomatik başlatmayı dene (Sessiz)
-                    v.muted = true;
-                    v.play().then(() => {
+                    v.muted = true; v.play().then(() => {
                         const ov = document.getElementById(`play-overlay-${u}`);
                         if (ov) ov.style.display = 'none';
                     }).catch(() => { });
                 });
-                // Hata olduğunda (Dosya henüz oluşmadıysa) tekrar dene
                 hls.on(Hls.Events.ERROR, (event, data) => {
                     if (data.fatal) {
                         switch (data.type) {

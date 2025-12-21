@@ -17,7 +17,7 @@ templates = Jinja2Templates(directory="templates")
 @router.post("/log/client")
 async def client_log(request: Request): return {"status": "ok"}
 
-# --- MANAGER ---
+# MANAGER
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -34,7 +34,7 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
-# --- CLEANUP ---
+# CLEANUP (Non-Blocking)
 def cleanup_stream_sync(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
@@ -58,7 +58,7 @@ def write_to_ffmpeg(process, data):
         try: process.stdin.write(data); process.stdin.flush()
         except: pass
 
-# --- ROUTES ---
+# ROUTES
 @router.post("/stream/restrict")
 async def restrict(): return {"status": "ok"} 
 @router.get("/live", response_class=HTMLResponse)
@@ -100,7 +100,7 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# --- SOCKET ---
+# SOCKET & FFMPEG
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
@@ -117,27 +117,29 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (720p H.264): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (TRANSCODING VP8->H264): {user.username}")
 
-    # 🔥 FFmpeg ROBUST AYARLAR 🔥
-    # zerolatency kaldırdık (stabilite için)
-    # preset veryfast (ultrafast'ten bir tık yavaş ama daha düzgün dosya üretir)
+    # 🔥 FFmpeg TRANSCODING (Android -> Universal) 🔥
+    # -c:v libx264: VP8'den H.264'e çevirir (iOS için şart)
+    # -preset veryfast: CPU dostu çeviri
+    # -b:v 1500k: Kaliteyi sabitler
     command = [
         "ffmpeg", 
-        "-f", "webm", "-i", "pipe:0",
+        "-f", "webm", 
+        "-i", "pipe:0",
         
         "-c:v", "libx264", 
         "-preset", "veryfast", 
-        "-r", "30", # 30 FPS Akıcı
-        "-b:v", "2000k", # 2 Mbps Kalite
-        "-vf", "scale=-2:720", # 720p HD
-        "-g", "60", # Keyframe
+        "-tune", "zerolatency",
+        "-r", "24", 
+        "-b:v", "1500k", 
+        "-vf", "scale=-2:540",
         
-        "-c:a", "aac", "-b:a", "128k", "-ac", "2", 
+        "-c:a", "aac", "-b:a", "64k", "-ac", "2", 
         
         "-f", "hls", 
         "-hls_time", "2", 
-        "-hls_list_size", "6", 
+        "-hls_list_size", "5", 
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
         f"{stream_dir}/index.m3u8"
     ]
@@ -146,7 +148,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     active_processes[user.username] = process
     
     async def notify():
-        await asyncio.sleep(5) # Dosyaların oluşması için güvenli süre
+        await asyncio.sleep(5) 
         new_db = SessionLocal()
         u = new_db.query(User).filter(User.username == user.username).first()
         u.is_live = True; new_db.commit(); new_db.close()
@@ -157,7 +159,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
-            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
+            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
     except: pass
