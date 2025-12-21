@@ -6,7 +6,24 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* GLOBAL */
+    /* 🔥 KRİTİK: GLOBAL HEADER VE FOOTER'I GİZLE 🔥 */
+    header,
+    footer {
+        display: none !important;
+    }
+
+    /* Ana kapsayıcıyı sıfırla */
+    main {
+        height: 100dvh !important;
+        width: 100vw !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        display: block !important;
+        /* Flex yapısını boz */
+    }
+
+    /* GLOBAL RESET */
     html,
     body {
         margin: 0;
@@ -15,7 +32,7 @@
         height: 100%;
         background: #000;
         overflow: hidden;
-        font-family: -apple-system, sans-serif;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
     /* REELS SCROLL CONTAINER */
@@ -24,15 +41,12 @@
         width: 100%;
         height: 100dvh;
         background: #000;
-
-        /* 🔥 INSTAGRAM SCROLL MANTIĞI 🔥 */
         overflow-y: scroll;
         scroll-snap-type: y mandatory;
-        /* Dikeyde kilitlen */
         scroll-behavior: smooth;
     }
 
-    /* Kaydırma çubuğunu gizle */
+    /* Scrollbar Gizle */
     .teqlif-stage::-webkit-scrollbar {
         display: none;
     }
@@ -48,8 +62,6 @@
         width: 100%;
         height: 100%;
         overflow: hidden;
-
-        /* EKRANA KİLİTLE */
         scroll-snap-align: start;
         display: flex;
         justify-content: center;
@@ -67,7 +79,7 @@
         transform: scaleX(-1);
     }
 
-    /* UI & DİĞERLERİ */
+    /* UI KATMANI (ARAYÜZ) */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -76,17 +88,28 @@
         height: 100%;
         z-index: 10;
         pointer-events: none;
+        /* Tıklamalar videoya geçsin */
+
         display: flex;
         flex-direction: column;
         justify-content: space-between;
-        padding: max(20px, env(safe-area-inset-top)) 20px max(20px, env(safe-area-inset-bottom)) 20px;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4), transparent, rgba(0, 0, 0, 0.8));
+
+        /* 🔥 GÜVENLİ ALAN (Çentik ve Home Bar Koruması) 🔥 */
+        padding-top: max(20px, env(safe-area-inset-top));
+        padding-bottom: max(30px, env(safe-area-inset-bottom));
+        padding-left: 20px;
+        padding-right: 20px;
+
+        box-sizing: border-box;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 20%, transparent 80%, rgba(0, 0, 0, 0.6) 100%);
     }
 
+    /* ÜST BAR */
     .top-bar {
         display: flex;
         align-items: center;
         gap: 10px;
+        pointer-events: auto;
     }
 
     .badge {
@@ -96,6 +119,7 @@
         border-radius: 4px;
         font-weight: 800;
         font-size: 11px;
+        box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
     }
 
     .username-pill {
@@ -109,6 +133,7 @@
         border: 1px solid rgba(255, 255, 255, 0.1);
     }
 
+    /* ALT BAR (BUTONLAR) */
     .bottom-bar {
         width: 100%;
         display: flex;
@@ -125,11 +150,14 @@
         font-weight: bold;
         cursor: pointer;
         backdrop-filter: blur(5px);
+        margin-bottom: 20px;
+        /* Ekstra boşluk */
     }
 
     .btn-red {
         background: #ff3b30;
         border: none;
+        box-shadow: 0 4px 15px rgba(255, 59, 48, 0.4);
     }
 
     /* YAYIN BİTTİ EKRANI */
@@ -139,7 +167,7 @@
         left: 0;
         width: 100%;
         height: 100%;
-        background: rgba(0, 0, 0, 0.9);
+        background: rgba(0, 0, 0, 0.95);
         z-index: 100;
         display: none;
         flex-direction: column;
@@ -168,10 +196,11 @@
             margin: 2.5vh auto;
             border-radius: 20px;
             box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
+            overflow: hidden;
         }
     }
 
-    /* SETUP (YAYINCI) */
+    /* SETUP MODU */
     .setup-layer {
         position: absolute;
         width: 100%;
@@ -264,8 +293,8 @@
     {% else %}
     <div class="video-wrapper" style="background:#111;">
         <div style="color:white; text-align:center;">
-            <h2>Şu an canlı yayın yok 😔</h2>
-            <a href="/" style="color:#aaa; margin-top:20px; display:block;">Yenile</a>
+            <h2>Aktif yayın yok 😔</h2>
+            <a href="/" class="home-btn" style="background:#333; color:white;">Yenile</a>
         </div>
     </div>
     {% endfor %}
