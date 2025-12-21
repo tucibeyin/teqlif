@@ -18,7 +18,6 @@ templates = Jinja2Templates(directory="templates")
 @router.post("/log/client")
 async def client_log(request: Request): return {"status": "ok"}
 
-# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -35,48 +34,31 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
-# 🔥 ASENKRON VE ACIMASIZ TEMİZLİK 🔥
+# 🔥 ASENKRON TEMİZLİK (KİLİTLENMEZ) 🔥
 def cleanup_stream_sync(username):
-    """
-    Bu fonksiyon arka planda çalışır, sunucuyu kilitlemez.
-    FFmpeg işlemini anında öldürür.
-    """
-    print(f"🛑 SERVER: {username} temizleniyor (NON-BLOCKING)...")
-    
-    # 1. FFmpeg'i Öldür (Beklemek yok!)
+    print(f"🛑 SERVER: {username} temizleniyor (FORCE KILL)...")
     if username in active_processes:
         proc = active_processes[username]
         try:
-            proc.kill() # Terminate değil, KILL (Zorla kapat)
-            proc.wait(timeout=0.1) # Sadece 0.1sn bekle, ölüsünü kaldır
+            proc.kill() # Acıma, öldür
+            proc.wait(timeout=0.1)
         except: pass
         del active_processes[username]
     
-    # 2. Veritabanını Güncelle
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
-        if u: 
-            u.is_live = False
-            db.commit()
-    except Exception as e:
-        print(f"DB Temizlik Hatası: {e}")
-    finally:
-        db.close()
+        if u: u.is_live = False; db.commit()
+    finally: db.close()
 
 async def cleanup_stream_async(username):
-    """Cleanup işlemini ana thread'i bloklamadan çalıştırır"""
     loop = asyncio.get_event_loop()
     await loop.run_in_executor(None, cleanup_stream_sync, username)
 
 def write_to_ffmpeg(process, data):
-    """Veriyi FFmpeg'e yazar, hata verirse sessizce geçer"""
     if process and process.stdin:
-        try:
-            process.stdin.write(data)
-            process.stdin.flush()
-        except (BrokenPipeError, OSError):
-            pass # İşlem ölmüşse zorlama
+        try: process.stdin.write(data); process.stdin.flush()
+        except: pass
 
 # --- ROUTES ---
 @router.post("/stream/restrict")
@@ -89,14 +71,15 @@ async def read_live(request: Request, mode: str = "watch", broadcaster: str = No
     active_streams = db.query(User).filter(User.is_live == True).all()
     if mode == "broadcast": target_user = user
     return templates.TemplateResponse("live.html", {"request": request, "user": user, "mode": mode, "streams": active_streams, "broadcaster": target_user})
+
 @router.post("/broadcast/start")
 async def start(title: str = Form(...), category: str = Form(...), user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    # Artık JS dolu form gönderdiği için burası hata vermeyecek
     user.is_live = True; user.stream_title = title; user.stream_category = category; db.commit()
     return {"status": "ok"}
 
 @router.post("/broadcast/stop")
 async def stop(user: User = Depends(get_current_user)):
-    # Stop isteği geldiğinde arka planda temizle, hemen cevap dön
     asyncio.create_task(cleanup_stream_async(user.username))
     await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
     await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
@@ -120,7 +103,7 @@ async def send_gift(): return {"status": "success"}
 @router.websocket("/ws/chat")
 async def chat(ws: WebSocket): await ws.accept()
 
-# --- YAYINCI SOCKETİ ---
+# --- SOCKET ---
 @router.websocket("/ws/broadcast")
 async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     await websocket.accept()
@@ -137,39 +120,24 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 TURBO YAYIN (Low Latency + Quick Kill): {user.username}")
+    print(f"🎥 TURBO YAYIN BAŞLIYOR: {user.username}")
 
-    # 🔥 FFmpeg AYARLARI (TURBO MODE) 🔥
+    # FFmpeg TURBO (1 saniyelik HLS, Ultra Hızlı)
     command = [
-        "ffmpeg", 
-        "-f", "webm", 
-        "-i", "pipe:0",
-        
-        "-c:v", "libx264", 
-        "-preset", "ultrafast", 
-        "-tune", "zerolatency", 
-        "-r", "24", 
-        "-b:v", "1500k", 
-        "-vf", "scale=-2:540", 
-        
-        "-c:a", "aac", 
-        "-b:a", "64k", 
-        "-ac", "2", 
-        
-        "-f", "hls", 
-        "-hls_time", "1", # 1 saniyelik segmentler
-        "-hls_list_size", "5", 
+        "ffmpeg", "-f", "webm", "-i", "pipe:0",
+        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", 
+        "-r", "24", "-b:v", "1500k", "-vf", "scale=-2:540",
+        "-c:a", "aac", "-b:a", "64k", "-ac", "2",
+        "-f", "hls", "-hls_time", "1", "-hls_list_size", "5", 
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
         f"{stream_dir}/index.m3u8"
     ]
     
-    # start_new_session=True: FFmpeg'i ayrı bir işlem grubunda başlatır (Daha kolay öldürülür)
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
     active_processes[user.username] = process
     
-    # Bildirim
     async def notify():
-        await asyncio.sleep(2) 
+        await asyncio.sleep(2)
         new_db = SessionLocal()
         u = new_db.query(User).filter(User.username == user.username).first()
         u.is_live = True; new_db.commit(); new_db.close()
@@ -180,15 +148,11 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
-            # 10 saniye veri gelmezse döngüyü kır
             data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
-    except Exception as e:
-        print(f"Yayın Kesildi: {e}")
+    except: pass
     finally:
-        # 🔥 KRİTİK: BURASI KİLİTLEMEYECEK 🔥
-        # Temizliği asenkron görev olarak başlat ve hemen çık
         asyncio.create_task(cleanup_stream_async(user.username))
         await manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), user.username)
         await manager.broadcast_to_room(json.dumps({"type": "stream_removed", "username": user.username}), "home")
