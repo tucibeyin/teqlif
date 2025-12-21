@@ -154,100 +154,117 @@
         border-color: #ff3b30;
     }
 
-    /* 🔥 MEZAT PANELI (CHAT ÜSTÜNDE) 🔥 */
-    .auction-panel {
-        background: rgba(255, 255, 255, 0.95);
-        color: #000;
-        width: 220px;
-        padding: 12px;
-        border-radius: 16px;
+    /* 🔥 PREMIUM MEZAT BARI (YENİ TASARIM) 🔥 */
+    .auction-bar {
+        /* Konum: Chat'in hemen üstü */
         position: absolute;
-        bottom: 350px;
+        bottom: 300px;
         left: 15px;
-        /* Chat'in üstü */
+        right: 15px;
+        height: 50px;
+
+        /* Görünüm: Glassmorphism */
+        background: rgba(20, 20, 20, 0.85);
+        backdrop-filter: blur(10px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        border-radius: 12px;
+
         display: none;
-        flex-direction: column;
-        gap: 8px;
+        /* Varsayılan gizli */
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 15px;
         pointer-events: auto;
-        box-shadow: 0 5px 20px rgba(0, 0, 0, 0.4);
-        animation: slideInLeft 0.3s ease;
-        border: 1px solid rgba(0, 0, 0, 0.1);
+        animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
     }
 
-    .auc-title {
-        font-size: 11px;
-        font-weight: 900;
+    /* Sol Taraf: Fiyat ve Bilgi */
+    .auc-info {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+
+    .auc-label {
+        font-size: 10px;
+        color: #aaa;
+        font-weight: 600;
         text-transform: uppercase;
-        color: #ff0050;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
     }
 
     .auc-price {
-        font-size: 28px;
+        font-size: 20px;
         font-weight: 900;
-        text-align: left;
-        margin: 0;
-        color: #333;
-        line-height: 1;
-    }
-
-    .auc-bidder {
-        font-size: 12px;
-        color: #666;
-        font-weight: 600;
-    }
-
-    /* Mezat Buton Grubu */
-    .auc-controls {
+        color: #fff;
+        line-height: 1.1;
         display: flex;
-        gap: 8px;
-        margin-top: 5px;
-    }
-
-    .auc-btn {
-        flex: 1;
-        border: none;
-        padding: 10px;
-        border-radius: 10px;
-        font-weight: 800;
-        cursor: pointer;
-        font-size: 12px;
-        text-transform: uppercase;
-        transition: transform 0.1s;
-    }
-
-    .auc-btn:active {
-        transform: scale(0.95);
-    }
-
-    .btn-start {
-        background: #000;
-        color: white;
-    }
-
-    .btn-stop {
-        background: #ff3b30;
-        color: white;
-    }
-
-    .btn-reset {
-        background: #e0e0e0;
-        color: #333;
-        max-width: 40px;
-        display: flex;
-        justify-content: center;
         align-items: center;
-        font-size: 14px;
+        gap: 5px;
     }
 
-    .btn-bid {
-        background: #ff0050;
+    .auc-price span {
+        color: #00ff00;
+    }
+
+    /* TL simgesi yeşil */
+
+    /* Sağ Taraf: Kontroller */
+    .auc-actions {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    /* Küçük Yuvarlak Butonlar */
+    .auc-btn-sm {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: transform 0.1s;
+        font-size: 14px;
         color: white;
-        width: 100%;
-        font-size: 14px;
     }
 
-    /* CHAT VE INPUT */
+    .auc-btn-sm:active {
+        transform: scale(0.9);
+    }
+
+    .btn-auc-start {
+        background: linear-gradient(135deg, #00b09b, #96c93d);
+        box-shadow: 0 0 10px rgba(150, 201, 61, 0.4);
+    }
+
+    .btn-auc-stop {
+        background: linear-gradient(135deg, #ff5f6d, #ffc371);
+        box-shadow: 0 0 10px rgba(255, 95, 109, 0.4);
+    }
+
+    .btn-auc-reset {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    /* İzleyici için Pey Butonu */
+    .btn-bid-pill {
+        background: linear-gradient(90deg, #ff0050, #d60044);
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-weight: 800;
+        font-size: 12px;
+        cursor: pointer;
+        box-shadow: 0 4px 10px rgba(214, 0, 68, 0.3);
+    }
+
+    /* CHAT ALANI */
     .chat-area {
         display: flex;
         flex-direction: column;
@@ -257,7 +274,7 @@
     }
 
     .chat-container {
-        height: 220px;
+        height: 200px;
         width: 85%;
         overflow-y: auto;
         display: flex;
@@ -296,7 +313,6 @@
     .sys-msg {
         background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), transparent);
         border-left: 3px solid gold;
-        padding-left: 8px;
     }
 
     .bottom-controls {
@@ -367,15 +383,15 @@
         }
     }
 
-    @keyframes slideInLeft {
+    @keyframes slideUp {
         from {
             opacity: 0;
-            transform: translateX(-20px);
+            transform: translateY(20px);
         }
 
         to {
             opacity: 1;
-            transform: translateX(0);
+            transform: translateY(0);
         }
     }
 
@@ -524,16 +540,20 @@
                 <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
             </div>
 
-            <div id="auction-controls-{{ user.username }}" class="auction-panel" style="display:flex;">
-                <div class="auc-title">MEZAT YÖNETİMİ</div>
-                <div class="auc-price" id="auc-price-{{ user.username }}">0 ₺</div>
-                <div class="auc-bidder" id="auc-bidder-{{ user.username }}">Son Teklif: -</div>
+            <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
+                <div class="auc-info">
+                    <div class="auc-label">MEZAT DURUMU</div>
+                    <div class="auc-price" id="auc-price-{{ user.username }}">0 <span>₺</span></div>
+                </div>
 
-                <div class="auc-controls">
-                    <button id="btn-auc-toggle" class="auc-btn btn-start"
-                        onclick="toggleAuction('{{ user.username }}')">BAŞLAT</button>
-                    <button class="auc-btn btn-reset" onclick="resetAuction('{{ user.username }}')"><i
-                            class="fa-solid fa-rotate-right"></i></button>
+                <div class="auc-actions">
+                    <button class="auc-btn-sm btn-auc-reset" onclick="resetAuction('{{ user.username }}')">
+                        <i class="fa-solid fa-rotate-right"></i>
+                    </button>
+                    <button id="btn-auc-toggle" class="auc-btn-sm btn-auc-start"
+                        onclick="toggleAuction('{{ user.username }}')">
+                        <i class="fa-solid fa-play"></i>
+                    </button>
                 </div>
             </div>
 
@@ -572,12 +592,17 @@
                 <a href="/" class="btn-close" style="text-decoration:none;"><i class="fa-solid fa-xmark"></i></a>
             </div>
 
-            <div id="auction-panel-{{ stream.username }}" class="auction-panel">
-                <div class="auc-title">CANLI MEZAT</div>
-                <div class="auc-price" id="auc-price-{{ stream.username }}">0 ₺</div>
-                <div class="auc-bidder" id="auc-bidder-{{ stream.username }}">Son Teklif: -</div>
-                <button class="auc-btn btn-bid" onclick="placeBid('{{ stream.username }}', 100)">PEY VER
-                    (+100₺)</button>
+            <div id="auction-bar-{{ stream.username }}" class="auction-bar">
+                <div class="auc-info">
+                    <div class="auc-label">SON TEKLİF: <span id="auc-bidder-{{ stream.username }}"
+                            style="color:#fff;">-</span></div>
+                    <div class="auc-price" id="auc-price-{{ stream.username }}">0 <span>₺</span></div>
+                </div>
+
+                <div class="auc-actions">
+                    <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 100)">PEY VER
+                        (+100₺)</button>
+                </div>
             </div>
 
             <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
