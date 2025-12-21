@@ -3,7 +3,6 @@ import json
 import shutil
 import subprocess
 import asyncio 
-import signal
 from fastapi import APIRouter, Request, WebSocket, WebSocketDisconnect, Depends, Form
 from fastapi.responses import RedirectResponse, HTMLResponse
 from fastapi.templating import Jinja2Templates
@@ -18,6 +17,7 @@ templates = Jinja2Templates(directory="templates")
 @router.post("/log/client")
 async def client_log(request: Request): return {"status": "ok"}
 
+# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -34,14 +34,12 @@ class ConnectionManager:
 manager = ConnectionManager()
 active_processes = {}
 
-# --- TEMİZLİK İŞÇİSİ ---
+# --- CLEANUP ---
 def cleanup_stream_sync(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
     if username in active_processes:
         proc = active_processes[username]
-        try:
-            proc.kill() 
-            proc.wait(timeout=0.1)
+        try: proc.kill(); proc.wait(timeout=0.1)
         except: pass
         del active_processes[username]
     
@@ -119,27 +117,24 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (STABLE HLS): {user.username}")
+    print(f"🎥 YAYIN BAŞLIYOR (720p H.264): {user.username}")
 
-    # 🔥 FFmpeg STABİL AYARLAR 🔥
-    # -hls_time 2: 2 saniyelik parçalar (Denge)
-    # -hls_list_size 6: Liste boyutu (Stabilite)
+    # 🔥 FFmpeg ROBUST AYARLAR 🔥
+    # zerolatency kaldırdık (stabilite için)
+    # preset veryfast (ultrafast'ten bir tık yavaş ama daha düzgün dosya üretir)
     command = [
         "ffmpeg", 
         "-f", "webm", "-i", "pipe:0",
         
-        # VİDEO (H.264)
         "-c:v", "libx264", 
-        "-preset", "ultrafast", 
-        "-tune", "zerolatency", 
-        "-r", "24", 
-        "-b:v", "1500k", 
-        "-vf", "scale=-2:540", 
+        "-preset", "veryfast", 
+        "-r", "30", # 30 FPS Akıcı
+        "-b:v", "2000k", # 2 Mbps Kalite
+        "-vf", "scale=-2:720", # 720p HD
+        "-g", "60", # Keyframe
         
-        # SES (AAC)
-        "-c:a", "aac", "-b:a", "64k", "-ac", "2", 
+        "-c:a", "aac", "-b:a", "128k", "-ac", "2", 
         
-        # HLS
         "-f", "hls", 
         "-hls_time", "2", 
         "-hls_list_size", "6", 
@@ -150,9 +145,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL, start_new_session=True)
     active_processes[user.username] = process
     
-    # Güvenli Başlangıç (Dosyalar kesin oluşsun diye 6sn bekle)
     async def notify():
-        await asyncio.sleep(6)
+        await asyncio.sleep(5) # Dosyaların oluşması için güvenli süre
         new_db = SessionLocal()
         u = new_db.query(User).filter(User.username == user.username).first()
         u.is_live = True; new_db.commit(); new_db.close()
@@ -163,7 +157,7 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
-            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=10.0)
+            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
     except: pass
