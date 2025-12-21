@@ -17,7 +17,6 @@ templates = Jinja2Templates(directory="templates")
 @router.post("/log/client")
 async def client_log(request: Request): return {"status": "ok"}
 
-# --- MANAGER ---
 class ConnectionManager:
     def __init__(self): self.rooms = {}
     async def connect(self, ws, room, user):
@@ -36,12 +35,14 @@ active_processes = {}
 
 def cleanup_stream(username):
     print(f"🛑 SERVER: {username} temizleniyor...")
+    # FFmpeg'i öldür
     if username in active_processes:
         proc = active_processes[username]
         try: proc.terminate(); proc.wait()
         except: pass
         del active_processes[username]
     
+    # Klasörü hemen silme (izleyiciler son kısımları izleyebilsin), ama DB'den düşür
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
@@ -109,43 +110,50 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     if os.path.exists(stream_dir): shutil.rmtree(stream_dir)
     os.makedirs(stream_dir, exist_ok=True)
 
-    print(f"🎥 YAYIN BAŞLIYOR (540p UNIVERSAL): {user.username}")
+    print(f"🎥 TURBO YAYIN (Low Latency): {user.username}")
 
-    # 🔥 FFmpeg "ALTIN ORAN" AYARLARI 🔥
-    # - scale=-2:540: Videoyu 540p'ye boyutlandır (Çok net ama hafif)
-    # - b:v 1200k: 1.2 Mbps Bitrate (Donma yapmaz)
-    # - r 24: Sabit 24 FPS
-    # - c:a aac: iOS için ses şartı
+    # 🔥 FFmpeg TURBO AYARLARI 🔥
     command = [
         "ffmpeg", 
-        "-f", "webm", 
-        "-i", "pipe:0",
+        "-f", "webm",       # Girdi formatı
+        "-i", "pipe:0",     # Girdi kaynağı (WebSocket)
         
-        # VİDEO (H.264 Universal)
+        # --- PERFORMANS AYARLARI ---
+        "-fflags", "nobuffer",          # Girdi tamponunu kapat
+        "-flags", "low_delay",          # Düşük gecikme bayrağı
+        "-strict", "experimental",
+        
+        # --- VİDEO ÇIKIŞI (H.264) ---
         "-c:v", "libx264", 
-        "-preset", "veryfast", # CPU dostu
-        "-tune", "zerolatency", # Düşük gecikme
-        "-r", "24",
-        "-b:v", "1200k", 
-        "-vf", "scale=-2:540", 
+        "-preset", "ultrafast",         # En yüksek kodlama hızı
+        "-tune", "zerolatency",         # Canlı yayın için sıfır gecikme modu
+        "-r", "24",                     # FPS Sabitle (Donmayı önler)
+        "-b:v", "1500k",                # 1.5 Mbps (Kaliteli ve hızlı)
+        "-vf", "scale=-2:540",          # 540p (qHD) - Mobil için ideal, işlemci dostu
+        "-g", "48",                     # Keyframe aralığı (2 saniye)
+        "-sc_threshold", "0",           # Sahne değişiminde keyframe atma
         
-        # SES (AAC)
-        "-c:a", "aac", "-b:a", "64k", "-ac", "2",
+        # --- SES ÇIKIŞI (AAC) ---
+        "-c:a", "aac", 
+        "-b:a", "128k", 
+        "-ac", "2", 
+        "-ar", "44100",
         
-        # HLS
+        # --- HLS AYARLARI (HIZLI PARÇALAR) ---
         "-f", "hls", 
-        "-hls_time", "2", 
-        "-hls_list_size", "5",
+        "-hls_time", "1",               # 1 Saniyelik parçalar (Çok hızlı güncellenir)
+        "-hls_list_size", "5",          # Listede 5 parça tut
         "-hls_flags", "delete_segments+omit_endlist+split_by_time",
+        "-hls_segment_type", "mpegts",  # iOS için en uyumlu format
         f"{stream_dir}/index.m3u8"
     ]
     
     process = subprocess.Popen(command, stdin=subprocess.PIPE, stderr=subprocess.DEVNULL)
     active_processes[user.username] = process
     
-    # DB Bildirim
+    # DB Bildirim (Hemen 2. saniyede başlat)
     async def notify():
-        await asyncio.sleep(5) 
+        await asyncio.sleep(2) # 1 saniyelik parça oluşması için 2sn yeter
         new_db = SessionLocal()
         u = new_db.query(User).filter(User.username == user.username).first()
         u.is_live = True; new_db.commit(); new_db.close()
@@ -156,7 +164,8 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
 
     try:
         while True:
-            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=20.0)
+            # Veri bekleme süresi
+            data = await asyncio.wait_for(websocket.receive_bytes(), timeout=15.0)
             if not data: break
             await loop.run_in_executor(None, write_to_ffmpeg, process, data)
     except: pass
