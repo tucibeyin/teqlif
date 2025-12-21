@@ -2,12 +2,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const CONFIG = window.TEQLIF_CONFIG || {};
     const MODE = CONFIG.mode;
     const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-    let isIntentionalStop = false; // Kasıtlı durdurma kontrolü
+    let isIntentionalStop = false;
 
     function remoteLog(msg) {
-        // Konsol temizliği için gereksiz logları sunucuya atma
         console.log(msg);
-        // Sadece önemli olayları sunucuya bildir
         if (msg.includes("✅") || msg.includes("❌") || msg.includes("🚀") || msg.includes("👀")) {
             fetch('/log/client', {
                 method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -25,14 +23,34 @@ document.addEventListener('DOMContentLoaded', () => {
 
         async function initCamera() {
             try {
-                // 9:16 (720p)
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    audio: { echoCancellation: true, noiseSuppression: true },
-                    video: { facingMode: 'user', width: { ideal: 720 }, height: { ideal: 1280 }, aspectRatio: { ideal: 0.5625 } }
-                });
+                // 🔥 GENİŞ AÇI AYARI 🔥
+                // Çözünürlük (720p) zorlamasını kaldırdık.
+                // Sadece Aspect Ratio (9:16) istiyoruz. Telefon en geniş açıyı seçecek.
+                const constraints = {
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    },
+                    video: {
+                        facingMode: 'user',
+                        // ideal: 0.5625 = 9/16 (Tam Dikey)
+                        aspectRatio: { ideal: 0.5625 }
+                    }
+                };
+
+                const stream = await navigator.mediaDevices.getUserMedia(constraints);
                 videoElement.srcObject = stream;
-                remoteLog("✅ Kamera Hazır (9:16 Direct)");
-            } catch (e) { alert("Kamera Hatası: " + e); }
+
+                // Gerçekten hangi çözünürlüğü aldığımızı loglayalım
+                const track = stream.getVideoTracks()[0];
+                const settings = track.getSettings();
+                remoteLog(`✅ Kamera Hazır: ${settings.width}x${settings.height} (${(settings.width / settings.height).toFixed(2)})`);
+
+            } catch (e) {
+                alert("Kamera Açılamadı: " + e);
+                remoteLog("❌ Kamera Hatası: " + e);
+            }
         }
         initCamera();
 
@@ -49,67 +67,94 @@ document.addEventListener('DOMContentLoaded', () => {
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
 
                 broadcastWs.onopen = () => {
+                    // DİREKT KAMERA AKIŞI (Canvas Yok, Performans Modu)
                     const cameraStream = videoElement.srcObject;
 
-                    // Codec Seçimi (PC: H264, Android: VP8)
-                    let options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2000000 };
-                    if (MediaRecorder.isTypeSupported('video/webm;codecs=h264')) {
-                        options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2000000 };
+                    // Codec Seçimi (H.264 tercih et, yoksa VP8)
+                    let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
+                    }
+                    // Fallback
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) {
+                        options = { videoBitsPerSecond: 2500000 };
                     }
 
-                    try { rec = new MediaRecorder(cameraStream, options); }
-                    catch (e) { rec = new MediaRecorder(cameraStream); }
+                    try {
+                        rec = new MediaRecorder(cameraStream, options);
+                    } catch (e) {
+                        remoteLog("❌ Recorder Hatası: " + e);
+                        rec = new MediaRecorder(cameraStream); // En basit haliyle dene
+                    }
 
                     let pktCount = 0;
                     rec.ondataavailable = e => {
                         if (e.data.size > 0 && broadcastWs.readyState === 1) {
-                            if (broadcastWs.bufferedAmount > 500 * 1024) return; // RAM Koruması
+                            // Buffer şişerse (internet yavaşsa) paketi atla
+                            if (broadcastWs.bufferedAmount > 500 * 1024) return;
+
                             broadcastWs.send(e.data);
                             pktCount++;
-                            // Log kirliliği yapmasın diye sadece konsola yaz
-                            if (pktCount % 50 === 0) console.log(`Veri Pkt: ${pktCount}`);
+                            if (pktCount % 50 === 0) console.log(`Pkt: ${pktCount}`);
                         }
                     };
-                    rec.start(500);
-                    remoteLog("🚀 Yayın Başladı");
 
-                    // Thumbnail (15sn)
+                    // 1 saniyelik paketler (Stabilite için en iyisi)
+                    rec.start(1000);
+                    remoteLog(`🚀 Yayın Başladı. Codec: ${rec.mimeType}`);
+
+                    // Thumbnail (Her 15 saniyede bir)
                     setInterval(() => {
                         if (broadcastWs.readyState === 1) {
                             const ctx = canvas.getContext('2d');
-                            ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+                            // Videonun o anki karesini canvas'a çiz
+                            // Aspect ratio koruyarak ortala (Center Crop for Thumbnail)
+                            const vW = videoElement.videoWidth;
+                            const vH = videoElement.videoHeight;
+                            const targetRatio = 9 / 16;
+
+                            let sW, sH, sX, sY;
+
+                            if (vW / vH > targetRatio) {
+                                // Video daha geniş, yanlardan kırp
+                                sH = vH;
+                                sW = vH * targetRatio;
+                                sX = (vW - sW) / 2;
+                                sY = 0;
+                            } else {
+                                // Video daha uzun, üstten/alttan kırp
+                                sW = vW;
+                                sH = vW / targetRatio;
+                                sX = 0;
+                                sY = (vH - sH) / 2;
+                            }
+
+                            ctx.drawImage(videoElement, sX, sY, sW, sH, 0, 0, canvas.width, canvas.height);
                             fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: canvas.toDataURL('image/jpeg', 0.4) }) });
                         }
                     }, 15000);
                 };
 
-                // Kapanış Yönetimi
                 broadcastWs.onclose = () => {
                     if (!isIntentionalStop) {
                         if (rec) rec.stop();
-                        alert("Yayın Bağlantısı Kesildi!");
+                        alert("Yayın Bağlantısı Koptu!");
                         location.href = '/';
                     }
                 };
             });
         });
 
-        // Temiz Durdurma Fonksiyonu
         window.stopBroadcast = () => {
-            isIntentionalStop = true; // Kasıtlı durdurma bayrağını çek
+            isIntentionalStop = true;
             remoteLog("🛑 Yayıncı durdurdu.");
-
             if (rec && rec.state !== 'inactive') rec.stop();
             if (broadcastWs) broadcastWs.close();
-
-            // Sunucuya bildir ve git
-            fetch('/broadcast/stop', { method: 'POST' }).finally(() => {
-                location.href = '/';
-            });
+            fetch('/broadcast/stop', { method: 'POST' }).finally(() => location.href = '/');
         };
     }
 
-    // --- İZLEYİCİ (AKILLI BEKÇİ) ---
+    // --- İZLEYİCİ ---
     else if (MODE === 'watch' && CONFIG.broadcaster) {
         const u = CONFIG.broadcaster;
         const v = document.getElementById(`video-${u}`);
@@ -121,13 +166,12 @@ document.addEventListener('DOMContentLoaded', () => {
         function checkFile() {
             fetch(src, { method: 'HEAD' }).then(r => {
                 if (r.ok) {
-                    remoteLog("✅ Yayın Bulundu!");
+                    remoteLog("✅ Dosya Bulundu");
                     initPlayer();
                 } else {
-                    console.log("Dosya bekleniyor...");
-                    setTimeout(checkFile, 1000);
+                    setTimeout(checkFile, 1500);
                 }
-            }).catch(() => setTimeout(checkFile, 1000));
+            }).catch(() => setTimeout(checkFile, 1500));
         }
 
         function initPlayer() {
@@ -135,10 +179,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 const hls = new Hls({
                     enableWorker: true,
                     lowLatencyMode: true,
-                    backBufferLength: 30,
-                    // Hata durumunda hemen pes etme
-                    manifestLoadingTimeOut: 15000,
-                    manifestLoadingMaxRetry: 10,
+                    liveSyncDurationCount: 3,
+                    liveMaxLatencyDurationCount: 6,
                 });
                 hls.loadSource(src);
                 hls.attachMedia(v);
@@ -155,7 +197,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     });
                 });
 
-                // Hata Yönetimi
                 hls.on(Hls.Events.ERROR, (e, d) => {
                     if (d.fatal) {
                         switch (d.type) {
@@ -167,7 +208,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 });
 
             } else if (v.canPlayType('application/vnd.apple.mpegurl')) {
-                // iOS Native
                 v.src = src;
                 v.addEventListener('loadedmetadata', () => { v.muted = true; v.play().catch(() => { }); });
                 v.addEventListener('error', () => setTimeout(() => { v.src = src; v.load(); }, 2000));
