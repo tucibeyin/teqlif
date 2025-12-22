@@ -62,7 +62,7 @@ video {
     transform: scaleX(-1);
 }
 
-/* --- UI KATMANI (KAPSAYICI) --- */
+/* --- UI KATMANI --- */
 .ui-layer {
     position: absolute;
     top: 0;
@@ -71,10 +71,9 @@ video {
     height: 100%;
     z-index: 10;
     pointer-events: none;
-    /* Tıklamalar videoya geçsin */
 }
 
-/* --- 1. EN TEPE (TOP BAR) - ÇİVİLİ --- */
+/* --- 1. EN TEPE (TOP BAR) --- */
 .top-bar {
     position: absolute;
     top: 0;
@@ -84,27 +83,32 @@ video {
     align-items: center;
     justify-content: space-between;
     pointer-events: auto;
-    /* Çentik payı + rahat boşluk */
     padding: max(15px, env(safe-area-inset-top)) 15px 15px 15px;
     box-sizing: border-box;
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
 }
 
+/* 🔥 KULLANICI KARTI (DÜZELTİLDİ) 🔥 */
 .user-card {
     display: flex;
     align-items: center;
+    /* Dikey ortala */
     gap: 10px;
-    /* Avatar ve yazı arası boşluk */
-    background: rgba(0, 0, 0, 0.4);
-    padding: 5px 15px 5px 5px;
+    /* Avatar ile yazı arası boşluk */
+    background: rgba(0, 0, 0, 0.5);
+    padding: 6px 14px 6px 6px;
+    /* İç boşluklar rahatlatıldı */
     border-radius: 30px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.15);
+    height: 40px;
+    /* Sabit yükseklik vererek taşmayı engelle */
+    box-sizing: border-box;
 }
 
 .user-avatar {
-    width: 34px;
-    height: 34px;
+    width: 30px;
+    height: 30px;
     background: #222;
     border-radius: 50%;
     display: flex;
@@ -114,15 +118,18 @@ video {
     font-size: 14px;
     border: 1px solid #ff0050;
     flex-shrink: 0;
+    /* Küçülme */
 }
 
-/* DÜZELTME: İsim ve Rozet Yan Yana ve Ortalı */
+/* İsim ve Rozet Kapsayıcısı */
 .user-meta {
     display: flex;
     flex-direction: row;
     align-items: center;
+    /* Dikeyde tam ortala */
     gap: 8px;
-    line-height: 1;
+    /* İsim ve rozet arası net boşluk */
+    height: 100%;
 }
 
 .username {
@@ -133,6 +140,10 @@ video {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    line-height: normal;
+    /* Çakışmayı önler */
+    padding-top: 2px;
+    /* Göz kararı optik hizalama */
 }
 
 .live-badge {
@@ -142,10 +153,12 @@ video {
     padding: 3px 6px;
     border-radius: 4px;
     font-weight: 800;
-    letter-spacing: 0.5px;
     text-transform: uppercase;
+    line-height: normal;
     display: flex;
     align-items: center;
+    height: 16px;
+    /* Rozet yüksekliği sabit */
 }
 
 .btn-close {
@@ -169,11 +182,11 @@ video {
     background: #ff3b30;
 }
 
-/* --- 2. EN ALT (BOTTOM STACK) - ÇİVİLİ --- */
+/* --- 2. EN ALT (BOTTOM STACK) --- */
 .bottom-stack {
     position: absolute;
     bottom: 60px;
-    /* Footer (60px) tam üzerinde başla */
+    /* Footer (60px) üstü */
     left: 0;
     width: 100%;
     display: flex;
@@ -185,7 +198,7 @@ video {
     background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 60%, transparent 100%);
 }
 
-/* A. CHAT */
+/* CHAT */
 .chat-container {
     height: 140px;
     width: 100%;
@@ -228,7 +241,7 @@ video {
     border-left: 3px solid gold;
 }
 
-/* B. MEZAT BARI */
+/* MEZAT BARI */
 .auction-bar {
     position: relative;
     width: 100%;
@@ -253,11 +266,6 @@ video {
     width: 100%;
     border-bottom: 1px solid rgba(255, 255, 255, 0.1);
     padding-bottom: 4px;
-}
-
-.auc-price-group {
-    display: flex;
-    flex-direction: column;
 }
 
 .auc-label {
@@ -421,7 +429,7 @@ video {
     cursor: pointer;
 }
 
-/* C. INPUT */
+/* INPUT */
 .bottom-controls {
     display: flex;
     align-items: center;
