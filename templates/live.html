@@ -73,7 +73,6 @@
         align-items: center;
         background: #000;
         cursor: pointer;
-        /* Tıklanabilir olduğu belli olsun */
     }
 
     video {
@@ -86,6 +85,7 @@
         transform: scaleX(-1);
     }
 
+    /* PC İÇİN SINIRLAMA */
     @media (min-width: 768px) {
         .video-wrapper {
             width: 100%;
@@ -127,6 +127,8 @@
         display: flex;
         align-items: center;
         gap: 8px;
+        background: transparent;
+        padding: 4px;
         border: none;
     }
 
@@ -346,7 +348,6 @@
         transform: scale(0.9);
     }
 
-    /* ANİMASYONLAR */
     .gift-animation-layer {
         position: fixed;
         top: 0;
@@ -383,7 +384,7 @@
         }
     }
 
-    /* 🔥 SES GERİ BİLDİRİM İKONU 🔥 */
+    /* Volume Feedback Animasyonu */
     .volume-feedback {
         position: absolute;
         top: 50%;
@@ -398,7 +399,6 @@
         text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     }
 
-    /* Aktif olduğunda görünsün */
     .volume-show {
         animation: fadeOut 1s forwards;
     }
@@ -620,25 +620,16 @@
     let broadcastWs = null;
     let rec = null;
 
-    // --- SES AÇMA/KAPAMA (BOŞLUĞA TIKLAMA) ---
+    // --- SES AÇMA/KAPAMA ---
     function toggleMute(wrapper, username) {
         const video = wrapper.querySelector('video');
         const iconContainer = document.getElementById('vol-icon-' + username);
-
         if (video) {
             video.muted = !video.muted;
-
-            // İkonu ayarla
-            if (video.muted) {
-                iconContainer.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
-            } else {
-                iconContainer.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
-                video.play().catch(() => { });
-            }
-
-            // Animasyonu tetikle
+            if (video.muted) { iconContainer.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>'; }
+            else { iconContainer.innerHTML = '<i class="fa-solid fa-volume-high"></i>'; video.play().catch(() => { }); }
             iconContainer.classList.remove('volume-show');
-            void iconContainer.offsetWidth; // Reflow
+            void iconContainer.offsetWidth;
             iconContainer.classList.add('volume-show');
         }
     }
@@ -655,7 +646,8 @@
         if (!layer) return;
         const el = document.createElement('div'); el.className = 'gift-pop'; el.innerHTML = '💎';
         layer.appendChild(el);
-        addChatMessage(username, 'SİSTEM', '💎 ' + sender + ' elmas gönderdi!');
+        // 🔥 BURASI DÜZELTİLDİ: SİSTEM DEĞİL SENDER YAZACAK 🔥
+        addChatMessage(username, sender, '💎 ELMAS GÖNDERDİ!');
         setTimeout(() => { el.remove(); }, 2000);
     }
 
@@ -781,10 +773,9 @@
             }, { threshold: 0.6 });
             document.querySelectorAll('.feed-item').forEach(item => observer.observe(item));
 
-            // 🔥 TIKLAMA OYNAYICISI (WRAPPER İÇİN) 🔥
+            // TIKLAMA İLE SES
             document.querySelectorAll('.video-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('click', (e) => {
-                    // Eğer tıklanan yer BUTON veya INPUT değilse sesi aç/kapa
                     if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && !e.target.closest('.chat-input-wrapper') && !e.target.closest('.auc-body')) {
                         toggleMute(wrapper, wrapper.dataset.username);
                     }
@@ -795,7 +786,7 @@
                 const src = '/static/hls/' + username + '/index.m3u8';
                 if (activePlayers[username]) return;
 
-                video.muted = true; // Başlangıçta sessiz
+                video.muted = true;
 
                 if (Hls.isSupported()) {
                     const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
