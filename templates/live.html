@@ -5,47 +5,73 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* --- 1. SIFIRLAMA --- */
+    /* --- 1. EVRENSEL SIFIRLAMA (RESET) --- */
+    * {
+        box-sizing: border-box;
+        -webkit-tap-highlight-color: transparent;
+    }
+
     header {
         display: none !important;
     }
 
-    /* Footer: Sabit 60px */
+    /* Footer Sabit: 60px */
     footer {
         position: fixed !important;
         bottom: 0 !important;
         width: 100% !important;
-        z-index: 999 !important;
+        height: 60px !important;
+        z-index: 9999 !important;
         background: #000 !important;
         border-top: 1px solid rgba(255, 255, 255, 0.1);
-        height: 60px;
+    }
+
+    /* --- 2. ANA YAPI (VIEWPORT FIX) --- */
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        /* Fallback */
+        height: 100dvh;
+        /* Modern Browserlar */
+        background: #000;
+        overflow: hidden;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
 
     main {
-        height: 100dvh !important;
-        width: 100vw !important;
+        height: 100% !important;
+        width: 100% !important;
         margin: 0 !important;
         padding: 0 !important;
-        overflow: hidden !important;
         display: block !important;
-        background: #000;
+        position: fixed;
+        top: 0;
+        left: 0;
+        /* Sayfayı kitle */
     }
 
-    /* --- 2. SAHNE VE VİDEO --- */
+    /* --- 3. SAHNE VE VİDEO --- */
     .teqlif-stage {
-        position: relative;
         width: 100%;
         height: 100%;
-        background: #000;
         overflow-y: scroll;
         scroll-snap-type: y mandatory;
         scroll-behavior: smooth;
-        /* Footer kadar alttan boşluk bırakıyoruz ki son video footer arkasında kalmasın */
         padding-bottom: 60px;
+        /* Footer payı */
     }
 
+    /* Scrollbar'ı gizle (Android/iOS uyumlu) */
     .teqlif-stage::-webkit-scrollbar {
         display: none;
+    }
+
+    .teqlif-stage {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
     }
 
     .video-wrapper {
@@ -64,52 +90,55 @@
         width: 100%;
         height: 100%;
         object-fit: cover;
+        pointer-events: none;
+        /* Video tıklamayı engellemesin */
     }
 
     #preview {
         transform: scaleX(-1);
     }
 
-    /* PC İÇİN ORTALAMA */
+    /* PC İÇİN SINIRLAMA */
     @media (min-width: 768px) {
         .video-wrapper {
             width: 100%;
             max-width: 420px;
-            height: 100%;
             margin: 0 auto;
             border-left: 1px solid #222;
             border-right: 1px solid #222;
         }
     }
 
-    /* --- 3. UI KATMANI --- */
+    /* --- 4. UI KATMANI (EN ÜST KATMAN) --- */
     .ui-layer {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 100%;
-        z-index: 10;
+        z-index: 50;
+        /* Videonun kesinlikle üstünde */
         pointer-events: none;
+        /* Tıklamalar delip geçsin (boş alanlarda) */
     }
 
-    /* --- 4. ÜST BAR (TOP HEADER) --- */
+    /* --- 5. ÜST BAR (TOP HEADER) --- */
     .top-header {
         position: absolute;
         top: 0;
         left: 0;
         width: 100%;
         height: 70px;
-        padding: max(15px, env(safe-area-inset-top)) 15px 0 15px;
-        box-sizing: border-box;
+        padding: max(10px, env(safe-area-inset-top)) 15px 0 15px;
         display: flex;
         justify-content: space-between;
         align-items: flex-start;
         pointer-events: auto;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+        /* Tıklanabilsin */
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+        z-index: 60;
     }
 
-    /* Sol: Profil */
     .header-left {
         display: flex;
         align-items: center;
@@ -119,12 +148,13 @@
         border-radius: 30px;
         border: 1px solid rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(5px);
+        -webkit-backdrop-filter: blur(5px);
     }
 
     .user-avatar {
         width: 32px;
         height: 32px;
-        background: #333;
+        background: #222;
         border-radius: 50%;
         display: flex;
         align-items: center;
@@ -144,7 +174,6 @@
         text-overflow: ellipsis;
     }
 
-    /* Sağ: Rozet + Kapat */
     .header-right {
         display: flex;
         align-items: center;
@@ -176,29 +205,26 @@
         text-decoration: none;
     }
 
-    /* --- 5. ALT STACK (DİP - FOOTER'A YAPIŞIK) --- */
+    /* --- 6. ALT STACK (DİP & GÖRÜNÜRLÜK GARANTİSİ) --- */
     .bottom-stack {
         position: absolute;
-        /* 🔥 KRİTİK NOKTA: Footer (60px) tam üstüne oturur 🔥 */
-        bottom: 60px;
+        /* Footer (60px) + Safe Area kadar yukarı */
+        bottom: calc(60px + env(safe-area-inset-bottom));
         left: 0;
         width: 100%;
         display: flex;
         flex-direction: column;
-
-        /* Alttan boşluk bırakmıyoruz (0px), yanlardan 10px */
         padding: 0 10px 0 10px;
-
         box-sizing: border-box;
         gap: 6px;
-        /* Elemanlar arası boşluk */
         pointer-events: auto;
+        /* Tıklanabilsin */
+        z-index: 60;
+        /* En üstte */
 
-        /* Arkaya hafif gölge atalım ki yazılar okunsun */
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
-
-        /* Alt sınıra tam değmesi için margin yok */
-        margin-bottom: 2px;
+        /* Görünürlük Arkaplanı */
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.95) 0%, rgba(0, 0, 0, 0.5) 70%, transparent 100%);
+        margin-bottom: 0;
     }
 
     /* A. CHAT */
@@ -209,8 +235,8 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        mask-image: linear-gradient(to top, black 85%, transparent 100%);
-        -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
+        mask-image: linear-gradient(to top, black 90%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 90%, transparent 100%);
     }
 
     .chat-msg {
@@ -224,7 +250,7 @@
         display: inline-block;
         max-width: 90%;
         backdrop-filter: blur(2px);
-        text-shadow: 0 1px 1px black;
+        text-shadow: 0 1px 1px rgba(0, 0, 0, 0.5);
     }
 
     .chat-user {
@@ -288,8 +314,9 @@
         display: flex;
         gap: 10px;
         align-items: center;
-        /* Input'un altı footer'a değsin diye padding-bottom yok */
+        width: 100%;
         padding-bottom: 5px;
+        /* Alt boşluk */
     }
 
     .chat-input-wrapper {
@@ -311,6 +338,8 @@
         width: 100%;
         outline: none;
         font-size: 14px;
+        margin: 0;
+        padding: 0;
     }
 
     .gift-trigger {
@@ -324,9 +353,10 @@
         cursor: pointer;
         font-size: 18px;
         border: 2px solid white;
+        flex-shrink: 0;
     }
 
-    /* DİĞER */
+    /* YARDIMCI */
     .end-screen {
         position: absolute;
         top: 0;
@@ -347,7 +377,7 @@
         width: 100%;
         height: 100%;
         background: #000;
-        z-index: 50;
+        z-index: 90;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -411,7 +441,6 @@
                     <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
                 </div>
             </div>
-            <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
 
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
@@ -467,7 +496,6 @@
                     <a href="/" class="btn-close"><i class="fa-solid fa-xmark"></i></a>
                 </div>
             </div>
-            <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
 
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
