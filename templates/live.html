@@ -227,7 +227,6 @@
         -webkit-mask-image: linear-gradient(to top, black 90%, transparent 100%);
     }
 
-    /* CHAT MESAJI STİLİ - GEÇİŞ EFEKTİ EKLENDİ */
     .chat-msg {
         background: transparent;
         padding: 2px 0;
@@ -239,7 +238,6 @@
         max-width: 95%;
         text-shadow: 0 1px 2px black;
         transition: opacity 0.5s ease-out;
-        /* Yavaşça silinmesi için */
     }
 
     .chat-user {
@@ -649,6 +647,7 @@
         if (!layer) return;
         const el = document.createElement('div'); el.className = 'gift-pop'; el.innerHTML = '💎';
         layer.appendChild(el);
+        // Gönderen kişinin adı
         addChatMessage(username, sender, '💎 ELMAS GÖNDERDİ!');
         setTimeout(() => { el.remove(); }, 2000);
     }
@@ -666,24 +665,17 @@
         }
     };
 
-    // 🔥 GÜNCELLENEN KISIM: 4 Saniye Sonra Silme 🔥
+    // 4 Sn sonra silinen chat
     function addChatMessage(username, user, text) {
         const box = document.getElementById('chat-box-' + username);
         if (!box) return;
-
-        const p = document.createElement('div');
-        p.className = 'chat-msg';
+        const p = document.createElement('div'); p.className = 'chat-msg';
         p.innerHTML = '<span class="chat-user">' + user + ':</span>' + text;
+        box.appendChild(p); box.scrollTop = box.scrollHeight;
 
-        box.appendChild(p);
-        box.scrollTop = box.scrollHeight;
-
-        // 4 Saniye sonra sil (Animasyonlu)
         setTimeout(() => {
-            p.style.opacity = '0'; // Görünmez yap
-            setTimeout(() => {
-                p.remove(); // 0.5sn sonra tamamen sil
-            }, 500);
+            p.style.opacity = '0';
+            setTimeout(() => { p.remove(); }, 500);
         }, 4000);
     }
 
@@ -722,6 +714,7 @@
         if (el) el.innerText = count;
     }
 
+    // --- MAIN ---
     document.addEventListener('DOMContentLoaded', () => {
         if (window.TEQLIF_CONFIG.mode === 'broadcast') {
             const videoElement = document.getElementById('preview');
@@ -774,6 +767,7 @@
             }
             window.stopBroadcast = () => { isIntentionalStop = true; if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); if (window.broadcastChatWs) window.broadcastChatWs.close(); fetch('/broadcast/stop', { method: 'POST' }).finally(() => location.href = '/'); };
         }
+
         else if (window.TEQLIF_CONFIG.mode === 'watch') {
             const activePlayers = {};
             const observer = new IntersectionObserver((entries) => {
@@ -785,11 +779,18 @@
             }, { threshold: 0.6 });
             document.querySelectorAll('.feed-item').forEach(item => observer.observe(item));
 
+            // 🔥 TIKLAMA YÖNETİMİ: Butonlara tıklayınca ses açılmasın 🔥
             document.querySelectorAll('.video-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('click', (e) => {
-                    if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && !e.target.closest('.chat-input-wrapper') && !e.target.closest('.auc-body')) {
-                        toggleMute(wrapper, wrapper.dataset.username);
+                    // Tıklanan şeyin sınıfında 'btn', 'input', 'gift' var mı kontrol et
+                    if (
+                        e.target.closest('.bottom-controls') ||
+                        e.target.closest('.auction-bar') ||
+                        e.target.closest('.top-header')
+                    ) {
+                        return; // Olayı yut, ses açma
                     }
+                    toggleMute(wrapper, wrapper.dataset.username);
                 });
             });
 
