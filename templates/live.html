@@ -1,9 +1,367 @@
 {% extends "base.html" %}
 
 {% block content %}
-<link rel="stylesheet" href="/static/css/live.css?v={{ range(1, 99999) | random }}">
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+    /* --- 1. TEMEL AYARLAR --- */
+    header {
+        display: none !important;
+    }
+
+    footer {
+        position: fixed !important;
+        bottom: 0 !important;
+        width: 100% !important;
+        z-index: 999 !important;
+        background: #000 !important;
+        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        height: 60px;
+    }
+
+    main {
+        height: 100dvh !important;
+        width: 100vw !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: hidden !important;
+        display: block !important;
+    }
+
+    html,
+    body {
+        margin: 0;
+        padding: 0;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+        font-family: -apple-system, sans-serif;
+    }
+
+    /* SAHNE */
+    .teqlif-stage {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        overflow: hidden;
+    }
+
+    .video-wrapper {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        background: #000;
+    }
+
+    video {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    #preview {
+        transform: scaleX(-1);
+    }
+
+    /* --- 2. UI KATMANI --- */
+    .ui-layer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 10;
+        pointer-events: none;
+        /* Videoya tıklanabilsin */
+    }
+
+    /* --- 3. ÜST BAR (TOP HEADER) --- */
+    .top-header {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 60px;
+        /* Sabit yükseklik */
+        padding: max(10px, env(safe-area-inset-top)) 15px 0 15px;
+        /* Çentik payı */
+        box-sizing: border-box;
+
+        display: flex;
+        justify-content: space-between;
+        /* SOLU ve SAĞI UÇLARA İT */
+        align-items: center;
+
+        pointer-events: auto;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+    }
+
+    /* SOL GRUP: Profil + İsim */
+    .header-left {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.4);
+        padding: 4px 12px 4px 4px;
+        border-radius: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(5px);
+    }
+
+    .user-avatar {
+        width: 32px;
+        height: 32px;
+        background: #333;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid #ff0050;
+        color: white;
+    }
+
+    .username {
+        color: white;
+        font-weight: 700;
+        font-size: 13px;
+        max-width: 100px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+
+    /* SAĞ GRUP: Canlı + Kapat */
+    .header-right {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        /* Rozet ve Tuş arası boşluk */
+    }
+
+    .live-badge {
+        background: linear-gradient(to right, #ff0050, #d60044);
+        color: white;
+        padding: 5px 8px;
+        border-radius: 4px;
+        font-weight: 800;
+        font-size: 10px;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 5px rgba(255, 0, 0, 0.4);
+    }
+
+    .btn-close {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: rgba(0, 0, 0, 0.4);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        cursor: pointer;
+        text-decoration: none;
+    }
+
+    /* --- 4. ALT STACK (DİP) --- */
+    .bottom-stack {
+        position: absolute;
+        bottom: 60px;
+        /* Footer (60px) kadar yukarıda */
+        left: 0;
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        padding: 0 10px 5px 10px;
+        box-sizing: border-box;
+        gap: 6px;
+        pointer-events: auto;
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 50%, transparent 100%);
+    }
+
+    /* A. CHAT */
+    .chat-container {
+        height: 140px;
+        width: 100%;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+        justify-content: flex-end;
+        mask-image: linear-gradient(to top, black 85%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
+    }
+
+    .chat-msg {
+        background: rgba(0, 0, 0, 0.3);
+        padding: 4px 10px;
+        border-radius: 8px;
+        margin-bottom: 4px;
+        color: white;
+        font-size: 13px;
+        align-self: flex-start;
+        display: inline-block;
+        max-width: 90%;
+    }
+
+    .chat-user {
+        color: #ffeb3b;
+        font-weight: bold;
+        margin-right: 5px;
+    }
+
+    /* B. MEZAT */
+    .auction-bar {
+        background: rgba(20, 20, 20, 0.95);
+        border-radius: 12px;
+        padding: 8px;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        display: none;
+        flex-direction: column;
+        gap: 5px;
+    }
+
+    .auc-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        padding-bottom: 4px;
+    }
+
+    .auc-price {
+        color: white;
+        font-weight: 900;
+        font-size: 18px;
+    }
+
+    .auc-bidder-name {
+        color: #ffeb3b;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .auc-body {
+        display: flex;
+        gap: 5px;
+        overflow-x: auto;
+    }
+
+    .btn-bid-pill {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        color: white;
+        padding: 5px 10px;
+        border-radius: 15px;
+        font-size: 11px;
+        font-weight: bold;
+        cursor: pointer;
+        white-space: nowrap;
+    }
+
+    /* C. INPUT */
+    .bottom-controls {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .chat-input-wrapper {
+        flex: 1;
+        background: rgba(255, 255, 255, 0.15);
+        height: 40px;
+        border-radius: 20px;
+        display: flex;
+        align-items: center;
+        padding: 0 15px;
+        backdrop-filter: blur(5px);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+
+    .chat-input {
+        background: transparent;
+        border: none;
+        color: white;
+        width: 100%;
+        outline: none;
+        font-size: 14px;
+    }
+
+    .gift-trigger {
+        width: 40px;
+        height: 40px;
+        background: linear-gradient(135deg, #4facfe, #00f2fe);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        font-size: 18px;
+        border: 2px solid white;
+    }
+
+    /* YARDIMCI */
+    .end-screen {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.9);
+        z-index: 100;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        color: white;
+    }
+
+    .setup-layer {
+        position: absolute;
+        width: 100%;
+        height: 100%;
+        background: #000;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        pointer-events: auto;
+    }
+
+    .setup-box {
+        width: 80%;
+        max-width: 300px;
+        text-align: center;
+    }
+
+    .inp {
+        width: 100%;
+        padding: 15px;
+        background: #222;
+        border: 1px solid #333;
+        color: white;
+        border-radius: 12px;
+        margin-bottom: 10px;
+        box-sizing: border-box;
+        outline: none;
+    }
+
+    .start-btn {
+        background: linear-gradient(to right, #ff0050, #d60044);
+        color: white;
+        border: none;
+        padding: 15px;
+        width: 100%;
+        border-radius: 30px;
+        font-weight: 800;
+        cursor: pointer;
+    }
+</style>
 
 <div class="teqlif-stage" id="scroll-container">
     {% if mode == 'broadcast' %}
@@ -22,14 +380,12 @@
             </div>
         </div>
         <div id="live-ui" class="ui-layer">
-
-            <div class="top-bar">
-                <div class="user-card">
+            <div class="top-header">
+                <div class="header-left">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
                     <span class="username">{{ user.username }}</span>
                 </div>
-
-                <div class="top-right-group">
+                <div class="header-right">
                     <span class="live-badge">CANLI</span>
                     <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
                 </div>
@@ -42,29 +398,22 @@
 
                 <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
                     <div class="auc-header">
-                        <div class="auc-price-group">
-                            <div class="auc-label" id="auc-status-{{ user.username }}">{{ 'MEZAT AKTİF' if my_auc else
+                        <div>
+                            <div style="font-size:9px; color:#ff0050; font-weight:800;">{{ 'MEZAT AKTİF' if my_auc else
                                 'MEZAT KAPALI' }}</div>
-                            <div class="auc-price" id="auc-price-{{ user.username }}">{{ my_auc.price if my_auc else 0
-                                }} <span>₺</span></div>
+                            <div class="auc-price">{{ my_auc.price if my_auc else 0 }} ₺</div>
                         </div>
-                        <div class="auc-bidder-box">
-                            <i class="fa-solid fa-crown" style="color:#ffd700; font-size:10px;"></i>
-                            <div class="auc-bidder-name" id="auc-bidder-{{ user.username }}">{{ my_auc.last_bidder if
-                                my_auc else 'Bekleniyor' }}</div>
-                        </div>
+                        <div class="auc-bidder-name" id="auc-bidder-{{ user.username }}">{{ my_auc.last_bidder if my_auc
+                            else 'Bekleniyor' }}</div>
                     </div>
                     <div class="auc-body">
-                        <div class="auc-controls-host">
-                            <button class="btn-host btn-host-reset" onclick="resetAuction('{{ user.username }}')"><i
-                                    class="fa-solid fa-rotate-right"></i></button>
-                            <button id="btn-auc-toggle"
-                                class="btn-host {{ 'btn-stop-mode' if my_auc else 'btn-host-start' }}"
-                                onclick="toggleAuction('{{ user.username }}')">
-                                <i class="fa-solid {{ 'fa-stop' if my_auc else 'fa-play' }}"></i> {{ 'BİTİR' if my_auc
-                                else 'BAŞLAT' }}
-                            </button>
-                        </div>
+                        <button class="btn-bid-pill" onclick="resetAuction('{{ user.username }}')"
+                            style="width:30px;"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button id="btn-auc-toggle" class="btn-bid-pill"
+                            style="flex:1; background:{{ '#ff3b30' if my_auc else '#00e676' }}; color:{{ 'white' if my_auc else 'black' }};"
+                            onclick="toggleAuction('{{ user.username }}')">
+                            {{ 'BİTİR' if my_auc else 'BAŞLAT' }}
+                        </button>
                     </div>
                 </div>
 
@@ -72,8 +421,8 @@
                     <div class="chat-input-wrapper">
                         <input type="text" class="chat-input" id="chat-input-{{ user.username }}"
                             placeholder="Yayıncı olarak yaz..." autocomplete="off">
-                        <button class="chat-send" onclick="sendChat('{{ user.username }}')"><i
-                                class="fa-solid fa-paper-plane"></i></button>
+                        <i class="fa-solid fa-paper-plane" style="color:white; cursor:pointer;"
+                            onclick="sendChat('{{ user.username }}')"></i>
                     </div>
                 </div>
             </div>
@@ -91,16 +440,14 @@
         </div>
 
         <div class="ui-layer">
-
-            <div class="top-bar">
-                <div class="user-card">
+            <div class="top-header">
+                <div class="header-left">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
                     <span class="username">{{ stream.username }}</span>
                 </div>
-
-                <div class="top-right-group">
+                <div class="header-right">
                     <span class="live-badge">CANLI</span>
-                    <a href="/" class="btn-close" style="text-decoration:none;"><i class="fa-solid fa-xmark"></i></a>
+                    <a href="/" class="btn-close"><i class="fa-solid fa-xmark"></i></a>
                 </div>
             </div>
 
@@ -112,37 +459,19 @@
                 <div id="auction-bar-{{ stream.username }}" class="auction-bar"
                     style="display:{{ 'flex' if st_auc else 'none' }};">
                     <div class="auc-header">
-                        <div class="auc-price-group">
-                            <div class="auc-label">MEZAT BAŞLADI 🔥</div>
+                        <div>
+                            <div style="font-size:9px; color:#ff0050; font-weight:800;">MEZAT BAŞLADI</div>
                             <div class="auc-price" id="auc-price-{{ stream.username }}">{{ st_auc.price if st_auc else 0
-                                }} <span>₺</span></div>
+                                }} ₺</div>
                         </div>
-                        <div class="auc-bidder-box" id="auc-bidder-box-{{ stream.username }}"
-                            style="display:{{ 'flex' if st_auc and st_auc.last_bidder != '-' else 'none' }};">
-                            <i class="fa-solid fa-crown" style="color:#ffd700; font-size:10px;"></i>
-                            <div class="auc-bidder-name" id="auc-bidder-{{ stream.username }}">{{ st_auc.last_bidder if
-                                st_auc else '' }}</div>
-                        </div>
+                        <div class="auc-bidder-name" id="auc-bidder-{{ stream.username }}">{{ st_auc.last_bidder if
+                            st_auc else '' }}</div>
                     </div>
-
                     <div class="auc-body">
-                        <div class="bid-presets" id="bid-presets-{{ stream.username }}">
-                            <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 50)">+50</button>
-                            <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 100)">+100</button>
-                            <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 500)">+500</button>
-                            <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 1000)">+1k</button>
-                            <button class="btn-bid-pill btn-manual-toggle"
-                                onclick="toggleManualBid('{{ stream.username }}', true)"><i
-                                    class="fa-solid fa-pen"></i></button>
-                        </div>
-                        <div class="bid-manual" id="bid-manual-{{ stream.username }}">
-                            <button class="btn-manual-act" onclick="toggleManualBid('{{ stream.username }}', false)"><i
-                                    class="fa-solid fa-xmark"></i></button>
-                            <input type="tel" class="inp-manual" id="inp-manual-{{ stream.username }}" placeholder="0 ₺"
-                                oninput="formatBidInput(this)">
-                            <button class="btn-manual-act" onclick="sendManualBid('{{ stream.username }}')"><i
-                                    class="fa-solid fa-check" style="color:#00e676;"></i></button>
-                        </div>
+                        <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 50)">+50</button>
+                        <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 100)">+100</button>
+                        <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 500)">+500</button>
+                        <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 1000)">+1k</button>
                     </div>
                 </div>
 
@@ -150,8 +479,8 @@
                     <div class="chat-input-wrapper">
                         <input type="text" class="chat-input" id="chat-input-{{ stream.username }}"
                             placeholder="Yorum yap..." autocomplete="off">
-                        <button class="chat-send" onclick="sendChat('{{ stream.username }}')"><i
-                                class="fa-solid fa-paper-plane"></i></button>
+                        <i class="fa-solid fa-paper-plane" style="color:white; cursor:pointer;"
+                            onclick="sendChat('{{ stream.username }}')"></i>
                     </div>
                     <div class="gift-trigger" onclick="sendGift('{{ stream.username }}')">💎</div>
                 </div>
