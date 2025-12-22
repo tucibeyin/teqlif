@@ -92,6 +92,7 @@
         justify-content: flex-end;
         padding-top: max(15px, env(safe-area-inset-top));
         padding-bottom: 60px !important;
+        /* Footer Hizası */
         box-sizing: border-box;
         background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, transparent 40%, rgba(0, 0, 0, 0.6) 80%, rgba(0, 0, 0, 0.95) 100%);
     }
@@ -286,11 +287,13 @@
         color: #000;
     }
 
+    /* Yeşil Başlat */
     .btn-stop-mode {
         background: #ff3b30;
         color: white;
     }
 
+    /* Kırmızı Bitir */
     .bid-presets {
         display: flex;
         gap: 4px;
@@ -513,16 +516,6 @@
         }
     }
 
-    @keyframes fadeIn {
-        from {
-            opacity: 0;
-        }
-
-        to {
-            opacity: 1;
-        }
-    }
-
     .gift-animation-layer {
         position: absolute;
         top: 0;
@@ -667,11 +660,11 @@
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
 
-                <div id="auction-bar-{{ user.username }}" class="auction-bar"
-                    style="display:{{ 'flex' if my_auc else 'none' }};">
+                <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
                     <div class="auc-header">
                         <div class="auc-price-group">
-                            <div class="auc-label" id="auc-status-{{ user.username }}">MEZAT AKTİF</div>
+                            <div class="auc-label" id="auc-status-{{ user.username }}">{{ 'MEZAT AKTİF' if my_auc else
+                                'MEZAT KAPALI' }}</div>
                             <div class="auc-price" id="auc-price-{{ user.username }}">{{ my_auc.price if my_auc else 0
                                 }} <span>₺</span></div>
                         </div>
