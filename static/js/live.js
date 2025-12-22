@@ -5,7 +5,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let isIntentionalStop = false;
     let auctionState = "stopped";
 
-    // --- PARA FORMAT ---
+    // --- YARDIMCILAR ---
     const moneyFormatter = new Intl.NumberFormat('tr-TR');
     window.formatBidInput = function (el) {
         let val = el.value.replace(/\D/g, '');
@@ -16,8 +16,8 @@ document.addEventListener('DOMContentLoaded', () => {
     window.toggleManualBid = function (username, show) {
         const presets = document.getElementById(`bid-presets-${username}`);
         const manual = document.getElementById(`bid-manual-${username}`);
-        if (show) { presets.style.display = 'none'; manual.style.display = 'flex'; document.getElementById(`inp-manual-${username}`).focus(); }
-        else { manual.style.display = 'none'; presets.style.display = 'flex'; }
+        if (show) { if (presets) presets.style.display = 'none'; if (manual) manual.style.display = 'flex'; }
+        else { if (manual) manual.style.display = 'none'; if (presets) presets.style.display = 'flex'; }
     };
 
     window.sendManualBid = function (username) {
@@ -26,7 +26,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (amount > 0) { placeBid(username, amount); toggleManualBid(username, false); inp.value = ""; }
     };
 
-    // --- GLOBAL ---
     window.sendChat = function (streamUsername) {
         const input = document.getElementById(`chat-input-${streamUsername}`);
         const video = document.getElementById(`video-${streamUsername}`);
@@ -44,76 +43,49 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/gift/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to_user: targetUser, gift_type: 'diamond' }) });
     };
 
-    // --- MEZAT YÖNETİMİ ---
     window.toggleAuction = function (username) {
         const btn = document.getElementById('btn-auc-toggle');
-        const statusEl = document.getElementById(`auc-status-${username}`);
         const action = (auctionState === "stopped") ? "start" : "stop";
-
         fetch('/broadcast/toggle_auction', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action }) });
-
         if (MODE === 'broadcast') {
-            if (action === 'start') {
-                auctionState = "started";
-                btn.innerHTML = '<i class="fa-solid fa-stop"></i> BİTİR';
-                btn.classList.remove('btn-host-toggle'); btn.classList.add('btn-stop-mode');
-                statusEl.innerText = "MEZAT AKTİF";
-            } else {
-                auctionState = "stopped";
-                btn.innerHTML = '<i class="fa-solid fa-play"></i> BAŞLAT';
-                btn.classList.remove('btn-stop-mode'); btn.classList.add('btn-host-toggle');
-                statusEl.innerText = "DURDURULDU";
-            }
+            auctionState = (action === 'start') ? "started" : "stopped";
+            btn.innerHTML = (auctionState === 'started') ? "BİTİR" : "BAŞLAT";
+            btn.style.background = (auctionState === 'started') ? "#ff3b30" : "#00e676";
+            btn.style.color = (auctionState === 'started') ? "white" : "black";
         }
     };
 
-    window.resetAuction = function (username) { if (confirm("Fiyat sıfırlansın mı?")) fetch('/broadcast/reset_auction', { method: 'POST' }); };
+    window.resetAuction = function (username) { if (confirm("Sıfırlansın mı?")) fetch('/broadcast/reset_auction', { method: 'POST' }); };
     window.placeBid = function (broadcaster, amount) { fetch('/broadcast/bid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ broadcaster: broadcaster, amount: amount }) }); };
 
     function updateAuctionUI(username, data) {
         const bar = document.getElementById(`auction-bar-${username}`);
-        const priceEl = document.getElementById(`auc-price-${username}`);
-        const bidderNameEl = document.getElementById(`auc-bidder-${username}`);
-        const bidderBox = document.getElementById(`auc-bidder-box-${username}`);
+        const priceEl = document.querySelector(`#auction-bar-${username} .auc-price`);
+        const bidderEl = document.querySelector(`#auction-bar-${username} .auc-bidder-name`);
 
-        // İzleyici için Panel Görünürlüğü
         if (MODE !== 'broadcast') {
-            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`; if (bidderBox) bidderBox.style.display = 'none'; }
+            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} ₺`; bidderEl.innerText = "Bekleniyor"; }
             else if (data.type === 'auction_ended') bar.style.display = 'none';
         }
-
         if (data.type === 'auction_started' || data.type === 'auction_update') {
-            priceEl.innerHTML = `${moneyFormatter.format(data.price)} <span>₺</span>`;
+            priceEl.innerHTML = `${moneyFormatter.format(data.price)} ₺`;
             priceEl.style.color = '#00ff00'; setTimeout(() => priceEl.style.color = '#fff', 300);
-
-            // Kazananı Güncelle
-            if (data.bidder && data.bidder !== '-') {
-                bidderNameEl.innerText = data.bidder;
-                if (bidderBox) bidderBox.style.display = 'flex'; // İzleyicide kutuyu göster
-                // Yayıncıda zaten visible
-            } else {
-                bidderNameEl.innerText = (MODE === 'broadcast') ? 'Bekleniyor' : '';
-                if (bidderBox) bidderBox.style.display = 'none';
-            }
+            bidderEl.innerText = (data.bidder && data.bidder !== '-') ? data.bidder : "Bekleniyor";
         }
     }
 
-    function showGiftAnimation(username, sender) {
-        const layer = document.getElementById(`gift-layer-${username}`);
-        if (!layer) return;
-        const el = document.createElement('div'); el.className = 'gift-pop'; el.innerHTML = '💎';
-        layer.appendChild(el);
-        addChatMessage(username, 'SİSTEM', `💎 ${sender} elmas gönderdi!`, true);
-        setTimeout(() => el.remove(), 1500);
-    }
-
-    function addChatMessage(username, user, text, isSystem = false) {
+    function addChatMessage(username, user, text) {
         const box = document.getElementById(`chat-box-${username}`);
         if (!box) return;
-        const p = document.createElement('div'); p.className = isSystem ? 'chat-msg sys-msg' : 'chat-msg';
-        p.innerHTML = `<span class="chat-user">${user}:</span><span class="chat-text">${text}</span>`;
+        const p = document.createElement('div'); p.className = 'chat-msg';
+        p.innerHTML = `<span class="chat-user">${user}:</span>${text}`;
         box.appendChild(p); box.scrollTop = box.scrollHeight;
-        setTimeout(() => { p.style.opacity = '0'; setTimeout(() => p.remove(), 500); }, 5000);
+    }
+
+    // 🔥 İZLEYİCİ SAYISI GÜNCELLEME 🔥
+    function updateViewerCount(username, count) {
+        const el = document.getElementById(`view-count-${username}`);
+        if (el) el.innerText = count;
     }
 
     // --- YAYINCI ---
@@ -128,7 +100,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
                 if (!res.ok) return;
                 document.getElementById('setup-layer').style.display = 'none';
-                document.getElementById('live-ui').style.display = 'flex';
+                document.getElementById('live-ui').style.display = 'block'; // ui-layer flex değil, block olabilir veya boş
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
@@ -144,12 +116,13 @@ document.addEventListener('DOMContentLoaded', () => {
                     }, 15000);
                 };
                 broadcastWs.onclose = () => { if (!isIntentionalStop) { if (rec) rec.stop(); alert("Kesildi!"); location.href = '/'; } };
+
                 window.broadcastChatWs = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${CONFIG.username}`);
                 window.broadcastChatWs.onmessage = (e) => {
                     const d = JSON.parse(e.data);
                     if (d.type === "chat_message") addChatMessage(CONFIG.username, d.user, d.text);
-                    else if (d.type === "gift_received") showGiftAnimation(CONFIG.username, d.sender);
                     else if (d.type.startsWith("auction_")) updateAuctionUI(CONFIG.username, d);
+                    else if (d.type === "viewer_update") updateViewerCount(CONFIG.username, d.count); // 🔥 GÜNCELLEME 🔥
                 };
             });
         });
@@ -167,18 +140,18 @@ document.addEventListener('DOMContentLoaded', () => {
             if (activePlayers[username]) return;
             video.onclick = () => { video.muted = !video.muted; };
             if (Hls.isSupported()) {
-                const hls = new Hls({ enableWorker: true, lowLatencyMode: true, liveSyncDurationCount: 3, liveMaxLatencyDurationCount: 5 });
+                const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
                 activePlayers[username] = hls; hls.loadSource(src); hls.attachMedia(video);
                 hls.on(Hls.Events.MANIFEST_PARSED, () => { video.muted = true; video.play().catch(() => { }); });
-                hls.on(Hls.Events.ERROR, (e, d) => { if (d.fatal && d.type === Hls.ErrorTypes.NETWORK_ERROR) hls.startLoad(); });
             } else if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = src; video.addEventListener('loadedmetadata', () => { video.muted = true; video.play().catch(() => { }); }); }
+
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${username}`);
             ws.onmessage = (e) => {
                 const d = JSON.parse(e.data);
                 if (d.type === 'stream_ended') { document.getElementById(`end-screen-${username}`).style.display = 'flex'; stopStream(username, video); }
                 else if (d.type === 'chat_message') addChatMessage(username, d.user, d.text);
-                else if (d.type === 'gift_received') showGiftAnimation(username, d.sender);
                 else if (d.type.startsWith("auction_")) updateAuctionUI(username, d);
+                else if (d.type === "viewer_update") updateViewerCount(username, d.count); // 🔥 GÜNCELLEME 🔥
             };
             video.wsConnection = ws;
         }
