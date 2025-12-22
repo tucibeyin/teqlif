@@ -22,13 +22,14 @@
             </div>
         </div>
         <div id="live-ui" class="ui-layer">
+
             <div class="top-bar">
                 <div class="user-card">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
                     <span class="username">{{ user.username }}</span>
                 </div>
 
-                <div class="top-actions">
+                <div class="top-right-group">
                     <span class="live-badge">CANLI</span>
                     <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
                 </div>
@@ -90,12 +91,14 @@
         </div>
 
         <div class="ui-layer">
+
             <div class="top-bar">
                 <div class="user-card">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
                     <span class="username">{{ stream.username }}</span>
                 </div>
-                <div class="top-actions">
+
+                <div class="top-right-group">
                     <span class="live-badge">CANLI</span>
                     <a href="/" class="btn-close" style="text-decoration:none;"><i class="fa-solid fa-xmark"></i></a>
                 </div>

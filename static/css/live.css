@@ -73,7 +73,7 @@ video {
     pointer-events: none;
 }
 
-/* --- 1. ÜST BAR --- */
+/* --- 1. ÜST BAR (TOP BAR) --- */
 .top-bar {
     position: absolute;
     top: 0;
@@ -82,10 +82,11 @@ video {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    /* SOLU ve SAĞI AYIR */
     pointer-events: auto;
     padding: max(15px, env(safe-area-inset-top)) 15px 15px 15px;
     box-sizing: border-box;
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
 }
 
 /* SOL TARAF: KULLANICI KARTI */
@@ -119,16 +120,18 @@ video {
     font-size: 13px;
     font-weight: 700;
     color: white;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    white-space: nowrap;
+    line-height: normal;
+    margin: 0;
 }
 
-/* SAĞ TARAF: AKSİYONLAR VE ROZET */
-.top-actions {
+/* 🔥 SAĞ TARAF: ROZET VE KAPATMA GRUBU 🔥 */
+.top-right-group {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: 10px;
     /* Rozet ve Kapatma tuşu arası boşluk */
 }
 
@@ -141,7 +144,7 @@ video {
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    display: inline-block;
+    white-space: nowrap;
     box-shadow: 0 2px 5px rgba(255, 0, 80, 0.4);
 }
 
@@ -158,14 +161,10 @@ video {
     backdrop-filter: blur(5px);
     font-size: 16px;
     border: 1px solid rgba(255, 255, 255, 0.2);
-    transition: transform 0.2s;
+    flex-shrink: 0;
 }
 
-.btn-close:active {
-    transform: scale(0.9);
-}
-
-/* --- 2. ALT STACK --- */
+/* --- 2. ALT STACK (DİP) --- */
 .bottom-stack {
     position: absolute;
     bottom: 60px;
