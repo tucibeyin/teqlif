@@ -11,7 +11,7 @@
         display: none !important;
     }
 
-    /* Footer: 60px Sabit */
+    /* Footer Sabit: 60px Yükseklik */
     footer {
         position: fixed !important;
         bottom: 0 !important;
@@ -88,17 +88,9 @@
         height: 100%;
         z-index: 10;
         pointer-events: none;
-        display: flex;
-        flex-direction: column;
-        /* İçeriği en aşağı it */
-        justify-content: flex-end;
+        /* Bu katman artık sadece üst barı tutuyor ve tam ekranı kaplıyor */
         padding-top: max(15px, env(safe-area-inset-top));
-
-        /* 🔥 TAM FOOTER SINIRI: 60px 🔥 */
-        padding-bottom: 60px !important;
-
         box-sizing: border-box;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.2) 0%, transparent 40%, rgba(0, 0, 0, 0.6) 80%, rgba(0, 0, 0, 0.95) 100%);
     }
 
     .top-bar {
@@ -109,7 +101,6 @@
         padding: 0 15px;
         width: 100%;
         box-sizing: border-box;
-        margin-bottom: auto;
     }
 
     .user-info {
@@ -157,19 +148,23 @@
         font-size: 14px;
     }
 
-    /* 🔥 BOTTOM STACK (SIFIR BOŞLUK - YAPIŞIK) 🔥 */
+    /* 🔥 BOTTOM STACK (MUTLAK KONUM - ÇİVİLEME) 🔥 */
     .bottom-stack {
+        position: absolute;
+        /* Footer yüksekliği kadar yukarıdan başla */
+        bottom: 60px;
+        left: 0;
+        width: 100%;
         display: flex;
         flex-direction: column;
-        width: 100%;
-        /* Alt padding YOK, alt margin YOK */
-        padding: 0 10px 0 10px !important;
-        margin-bottom: 0 !important;
-
+        gap: 2px;
+        /* Elemanlar arası boşluk */
+        padding: 10px 10px 5px 10px;
+        /* İç boşluk */
         box-sizing: border-box;
-        gap: 4px;
-        /* Elemanlar arası çok az boşluk */
         pointer-events: auto;
+        /* Yazıların okunması için arkaya hafif bir gölge */
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.4) 60%, transparent 100%);
     }
 
     /* MEZAT BARI */
@@ -188,7 +183,6 @@
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
         animation: slideUp 0.3s ease;
         gap: 4px;
-        /* Mezat ile Input arasına çok az boşluk */
         margin-bottom: 2px;
     }
 
@@ -432,10 +426,6 @@
         align-items: center;
         gap: 6px;
         width: 100%;
-        /* Alttan sıfır boşluk */
-        margin-bottom: 0 !important;
-        padding-bottom: 5px !important;
-        /* Minik bir nefes payı (5px) Footer'dan hemen önce */
     }
 
     .chat-input-wrapper {
