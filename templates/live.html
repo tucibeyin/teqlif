@@ -227,6 +227,7 @@
         -webkit-mask-image: linear-gradient(to top, black 90%, transparent 100%);
     }
 
+    /* CHAT MESAJI STİLİ - GEÇİŞ EFEKTİ EKLENDİ */
     .chat-msg {
         background: transparent;
         padding: 2px 0;
@@ -237,6 +238,8 @@
         display: inline-block;
         max-width: 95%;
         text-shadow: 0 1px 2px black;
+        transition: opacity 0.5s ease-out;
+        /* Yavaşça silinmesi için */
     }
 
     .chat-user {
@@ -384,7 +387,7 @@
         }
     }
 
-    /* Volume Feedback Animasyonu */
+    /* Volume Feedback */
     .volume-feedback {
         position: absolute;
         top: 50%;
@@ -489,6 +492,7 @@
     <div class="video-wrapper">
         <video id="preview" autoplay muted playsinline></video>
         <canvas id="broadcast-canvas" width="720" height="1280" style="display:none;"></canvas>
+
         <div id="setup-layer" class="setup-layer">
             <div class="setup-box">
                 <h2 style="color:white; margin-bottom:20px;">Yayın Başlat</h2>
@@ -500,6 +504,7 @@
                 <button id="btn-start-broadcast" class="start-btn">YAYINA GİR 📡</button>
             </div>
         </div>
+
         <div id="live-ui" class="ui-layer">
             <div class="top-header">
                 <div class="header-left">
@@ -620,7 +625,6 @@
     let broadcastWs = null;
     let rec = null;
 
-    // --- SES AÇMA/KAPAMA ---
     function toggleMute(wrapper, username) {
         const video = wrapper.querySelector('video');
         const iconContainer = document.getElementById('vol-icon-' + username);
@@ -634,7 +638,6 @@
         }
     }
 
-    // --- HEDİYE VE CHAT ---
     window.sendGift = function (targetUser) {
         const btn = document.querySelector('.gift-trigger');
         if (btn) { btn.style.transform = "scale(0.8)"; setTimeout(() => { btn.style.transform = "scale(1)"; }, 100); }
@@ -646,7 +649,6 @@
         if (!layer) return;
         const el = document.createElement('div'); el.className = 'gift-pop'; el.innerHTML = '💎';
         layer.appendChild(el);
-        // 🔥 BURASI DÜZELTİLDİ: SİSTEM DEĞİL SENDER YAZACAK 🔥
         addChatMessage(username, sender, '💎 ELMAS GÖNDERDİ!');
         setTimeout(() => { el.remove(); }, 2000);
     }
@@ -664,15 +666,27 @@
         }
     };
 
+    // 🔥 GÜNCELLENEN KISIM: 4 Saniye Sonra Silme 🔥
     function addChatMessage(username, user, text) {
         const box = document.getElementById('chat-box-' + username);
         if (!box) return;
-        const p = document.createElement('div'); p.className = 'chat-msg';
+
+        const p = document.createElement('div');
+        p.className = 'chat-msg';
         p.innerHTML = '<span class="chat-user">' + user + ':</span>' + text;
-        box.appendChild(p); box.scrollTop = box.scrollHeight;
+
+        box.appendChild(p);
+        box.scrollTop = box.scrollHeight;
+
+        // 4 Saniye sonra sil (Animasyonlu)
+        setTimeout(() => {
+            p.style.opacity = '0'; // Görünmez yap
+            setTimeout(() => {
+                p.remove(); // 0.5sn sonra tamamen sil
+            }, 500);
+        }, 4000);
     }
 
-    // --- MEZAT ---
     window.toggleAuction = function (username) {
         const btn = document.getElementById('btn-auc-toggle');
         const currentState = (btn.innerText === "BİTİR") ? "started" : "stopped";
@@ -708,7 +722,6 @@
         if (el) el.innerText = count;
     }
 
-    // --- MAIN ---
     document.addEventListener('DOMContentLoaded', () => {
         if (window.TEQLIF_CONFIG.mode === 'broadcast') {
             const videoElement = document.getElementById('preview');
@@ -761,7 +774,6 @@
             }
             window.stopBroadcast = () => { isIntentionalStop = true; if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); if (window.broadcastChatWs) window.broadcastChatWs.close(); fetch('/broadcast/stop', { method: 'POST' }).finally(() => location.href = '/'); };
         }
-
         else if (window.TEQLIF_CONFIG.mode === 'watch') {
             const activePlayers = {};
             const observer = new IntersectionObserver((entries) => {
@@ -773,7 +785,6 @@
             }, { threshold: 0.6 });
             document.querySelectorAll('.feed-item').forEach(item => observer.observe(item));
 
-            // TIKLAMA İLE SES
             document.querySelectorAll('.video-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('click', (e) => {
                     if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && !e.target.closest('.chat-input-wrapper') && !e.target.closest('.auc-body')) {
@@ -785,9 +796,7 @@
             function playStream(username, video) {
                 const src = '/static/hls/' + username + '/index.m3u8';
                 if (activePlayers[username]) return;
-
                 video.muted = true;
-
                 if (Hls.isSupported()) {
                     const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
                     activePlayers[username] = hls; hls.loadSource(src); hls.attachMedia(video);
