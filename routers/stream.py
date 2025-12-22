@@ -25,7 +25,6 @@ class ConnectionManager:
         await ws.accept()
         if room not in self.rooms: self.rooms[room] = []
         self.rooms[room].append(ws)
-        # Biri bağlanınca izleyici sayısını güncelle
         await self.broadcast_viewer_count(room)
 
     def disconnect(self, ws, room):
@@ -39,11 +38,10 @@ class ConnectionManager:
                 try: await ws.send_text(msg)
                 except: self.rooms[room].remove(ws)
 
-    # İZLEYİCİ SAYISI
     async def broadcast_viewer_count(self, room):
         if room in self.rooms:
             count = len(self.rooms[room])
-            viewer_count = max(0, count - 1) # Yayıncıyı düş
+            viewer_count = max(0, count - 1) 
             message = json.dumps({"type": "viewer_update", "count": viewer_count})
             for ws in self.rooms[room][:]:
                 try: await ws.send_text(message)
@@ -113,28 +111,19 @@ async def thumb(request: Request, user: User = Depends(get_current_user), db: Se
     except: pass
     return {"status": "ok"}
 
-# 🔥 GÜNCELLENEN: ELMAS GÖNDERME 🔥
 @router.post("/gift/send")
 async def send_gift(request: Request, user: User = Depends(get_current_user)):
     try:
         data = await request.json()
         target_user = data.get("to_user")
-        print(f"💎 GIFT: {user.username} -> {target_user}") # Server logu
-        await manager.broadcast_to_room(json.dumps({
-            "type": "gift_received", 
-            "sender": user.username,
-            "gift": "diamond"
-        }), target_user)
+        await manager.broadcast_to_room(json.dumps({"type": "gift_received", "sender": user.username, "gift": "diamond"}), target_user)
         return {"status": "success"}
-    except Exception as e:
-        print(f"GIFT ERROR: {e}")
-        return {"status": "error"}
+    except: return {"status": "error"}
 
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(request: Request, user: User = Depends(get_current_user)):
     data = await request.json()
     if data.get("action") == "start":
-        # Varsa koru, yoksa oluştur
         if user.username not in active_auctions: active_auctions[user.username] = {"price": 0, "last_bidder": "-"}
         await manager.broadcast_to_room(json.dumps({"type": "auction_started", "price": active_auctions[user.username]["price"], "bidder": active_auctions[user.username]["last_bidder"]}), user.username)
     else:
@@ -142,17 +131,10 @@ async def toggle_auction(request: Request, user: User = Depends(get_current_user
         await manager.broadcast_to_room(json.dumps({"type": "auction_ended"}), user.username)
     return {"status": "ok"}
 
-# 🔥 GÜNCELLENEN: SIFIRLAMA 🔥
 @router.post("/broadcast/reset_auction")
 async def reset_auction(request: Request, user: User = Depends(get_current_user)):
-    # Mezat kapalı olsa bile zorla oluştur ve 0 yap
     active_auctions[user.username] = {"price": 0, "last_bidder": "-"}
-    
-    await manager.broadcast_to_room(json.dumps({
-        "type": "auction_update", # Update gönderiyoruz ki UI güncellensin
-        "price": 0, 
-        "bidder": "-"
-    }), user.username)
+    await manager.broadcast_to_room(json.dumps({"type": "auction_update", "price": 0, "bidder": "-"}), user.username)
     return {"status": "ok"}
 
 @router.post("/broadcast/bid")
@@ -187,7 +169,25 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     user.is_live = True; db.commit()
     stream_dir = f"static/hls/{user.username}"; shutil.rmtree(stream_dir, ignore_errors=True); os.makedirs(stream_dir, exist_ok=True)
     
-    cmd = ["ffmpeg", "-f", "webm", "-i", "pipe:0", "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", "-profile:v", "baseline", "-level", "3.0", "-pix_fmt", "yuv420p", "-r", "24", "-g", "24", "-keyint_min", "24", "-sc_threshold", "0", "-vsync", "1", "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "3000k", "-vf", "scale=-2:540", "-c:a", "aac", "-b:a", "128k", "-ac", "2", "-af", "aresample=async=1", "-f", "hls", "-hls_time", "1", "-hls_list_size", "5", "-hls_flags", "delete_segments+omit_endlist", f"{stream_dir}/index.m3u8"]
+    # 🔥 GÜNCEL FFMEG KOMUTU (SES DÜZELTMELİ) 🔥
+    # -c:a aac : Sesi AAC yap
+    # -ar 44100 : Ses frekansı (Uyumluluk için şart)
+    # -b:a 128k : Ses kalitesi
+    cmd = [
+        "ffmpeg", "-f", "webm", "-i", "pipe:0", 
+        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", 
+        "-profile:v", "baseline", "-level", "3.0", "-pix_fmt", "yuv420p", 
+        "-r", "24", "-g", "24", "-keyint_min", "24", "-sc_threshold", "0", "-vsync", "1", 
+        "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "3000k", "-vf", "scale=-2:540",
+        
+        # SES AYARLARI
+        "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2", 
+        "-af", "aresample=async=1", # Senkron kaymasını önle
+        
+        "-f", "hls", "-hls_time", "1", "-hls_list_size", "5", 
+        "-hls_flags", "delete_segments+omit_endlist", 
+        f"{stream_dir}/index.m3u8"
+    ]
     
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=sys.stderr, start_new_session=True)
     active_processes[user.username] = proc

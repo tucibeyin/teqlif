@@ -39,12 +39,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    // --- 🔥 DÜZELTİLEN ELMAS GÖNDERME ---
     window.sendGift = function (targetUser) {
-        // Butonun geri bildirimi için ufak bir animasyon
         const btn = document.activeElement;
         if (btn) { btn.style.transform = "scale(0.8)"; setTimeout(() => btn.style.transform = "scale(1)", 100); }
-
         fetch('/gift/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
@@ -65,36 +62,22 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     window.resetAuction = function (username) {
-        // Onay kaldırılabilir, direkt reset atıyor
         fetch('/broadcast/reset_auction', { method: 'POST' });
     };
 
     window.placeBid = function (broadcaster, amount) { fetch('/broadcast/bid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ broadcaster: broadcaster, amount: amount }) }); };
 
-    // --- 🔥 DÜZELTİLEN UI GÜNCELLEME ---
     function updateAuctionUI(username, data) {
         const bar = document.getElementById(`auction-bar-${username}`);
         const priceEl = document.querySelector(`#auction-bar-${username} .auc-price`);
         const bidderEl = document.querySelector(`#auction-bar-${username} .auc-bidder-name`);
 
         if (MODE !== 'broadcast') {
-            if (data.type === 'auction_started') {
-                bar.style.display = 'flex';
-                priceEl.innerHTML = `${moneyFormatter.format(data.price)} ₺`;
-                bidderEl.innerText = "Bekleniyor";
-            }
-            else if (data.type === 'auction_ended') {
-                bar.style.display = 'none';
-            }
+            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} ₺`; bidderEl.innerText = "Bekleniyor"; }
+            else if (data.type === 'auction_ended') { bar.style.display = 'none'; }
         }
-
-        // Fiyat güncellendiğinde veya resetlendiğinde
         if (data.type === 'auction_started' || data.type === 'auction_update') {
-            // Eğer izleyici ise ve mezat resetlendiyse (update geldiyse) barı göster
-            if (MODE !== 'broadcast' && bar.style.display === 'none') {
-                bar.style.display = 'flex';
-            }
-
+            if (MODE !== 'broadcast' && bar.style.display === 'none') { bar.style.display = 'flex'; }
             priceEl.innerHTML = `${moneyFormatter.format(data.price)} ₺`;
             priceEl.style.color = '#00ff00'; setTimeout(() => priceEl.style.color = '#fff', 300);
             bidderEl.innerText = (data.bidder && data.bidder !== '-') ? data.bidder : "Bekleniyor";
@@ -114,19 +97,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (el) el.innerText = count;
     }
 
-    // 🔥 DÜZELTİLEN HEDİYE ANİMASYONU 🔥
     function showGiftAnimation(username, sender) {
         const layer = document.getElementById(`gift-layer-${username}`);
         if (!layer) return;
-
-        const el = document.createElement('div');
-        el.className = 'gift-pop';
-        el.innerHTML = '💎';
+        const el = document.createElement('div'); el.className = 'gift-pop'; el.innerHTML = '💎';
         layer.appendChild(el);
-
-        // Chat'e de yaz
         addChatMessage(username, 'SİSTEM', `💎 ${sender} elmas gönderdi!`);
-
         setTimeout(() => el.remove(), 2000);
     }
 
@@ -134,7 +110,19 @@ document.addEventListener('DOMContentLoaded', () => {
     if (MODE === 'broadcast') {
         const videoElement = document.getElementById('preview');
         let broadcastWs = null; let rec = null;
-        async function initCamera() { try { const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true }, video: { facingMode: 'user' } }); videoElement.srcObject = stream; } catch (e) { alert(e); } }
+
+        // 🔥 SESİ AKTİF ET: echoCancellation ve noiseSuppression 🔥
+        async function initCamera() {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({
+                    audio: { echoCancellation: true, noiseSuppression: true },
+                    video: { facingMode: 'user' }
+                });
+                videoElement.srcObject = stream;
+                // Yayıncı kendi sesini duymasın (yankı yapar)
+                videoElement.muted = true;
+            } catch (e) { alert("Kamera/Mikrofon izni gerekli!"); }
+        }
         initCamera();
 
         document.getElementById('btn-start-broadcast').addEventListener('click', () => {
@@ -145,8 +133,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.getElementById('live-ui').style.display = 'block';
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
-                    let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
-                    if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8', videoBitsPerSecond: 2500000 };
+                    // Tarayıcı destekliyorsa H264 (daha iyi ses senkronu), yoksa VP8
+                    let options = { mimeType: 'video/webm;codecs=h264,opus', videoBitsPerSecond: 2500000 };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
+
                     try { rec = new MediaRecorder(videoElement.srcObject, options); } catch (e) { rec = new MediaRecorder(videoElement.srcObject); }
                     rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
                     rec.start(250);
@@ -165,7 +155,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (d.type === "chat_message") addChatMessage(CONFIG.username, d.user, d.text);
                     else if (d.type.startsWith("auction_")) updateAuctionUI(CONFIG.username, d);
                     else if (d.type === "viewer_update") updateViewerCount(CONFIG.username, d.count);
-                    else if (d.type === "gift_received") showGiftAnimation(CONFIG.username, d.sender); // 🔥 Handle Gift
+                    else if (d.type === "gift_received") showGiftAnimation(CONFIG.username, d.sender);
                 };
             });
         });
@@ -181,12 +171,33 @@ document.addEventListener('DOMContentLoaded', () => {
         function playStream(username, video) {
             const src = `/static/hls/${username}/index.m3u8`;
             if (activePlayers[username]) return;
-            video.onclick = () => { video.muted = !video.muted; };
+
+            // 🔥 TIKLAYINCA SES AÇMA MANTIĞI 🔥
+            // Video varsayılan olarak sessiz (muted) başlar.
+            video.muted = true;
+
+            video.onclick = () => {
+                video.muted = !video.muted;
+                if (!video.muted) {
+                    // Sesi açtığını belirtmek için (Opsiyonel)
+                    // alert("Ses Açıldı 🔊");
+                }
+            };
+
             if (Hls.isSupported()) {
                 const hls = new Hls({ enableWorker: true, lowLatencyMode: true });
                 activePlayers[username] = hls; hls.loadSource(src); hls.attachMedia(video);
-                hls.on(Hls.Events.MANIFEST_PARSED, () => { video.muted = true; video.play().catch(() => { }); });
-            } else if (video.canPlayType('application/vnd.apple.mpegurl')) { video.src = src; video.addEventListener('loadedmetadata', () => { video.muted = true; video.play().catch(() => { }); }); }
+                hls.on(Hls.Events.MANIFEST_PARSED, () => {
+                    // Promise hatasını yutuyoruz çünkü ilk başta sessiz oynatmak zorunda
+                    video.play().catch(() => { });
+                });
+            } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                video.src = src;
+                video.addEventListener('loadedmetadata', () => {
+                    video.muted = true;
+                    video.play().catch(() => { });
+                });
+            }
 
             const ws = new WebSocket(`${protocol}://${window.location.host}/ws/chat?stream=${username}`);
             ws.onmessage = (e) => {
@@ -195,7 +206,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 else if (d.type === 'chat_message') addChatMessage(username, d.user, d.text);
                 else if (d.type.startsWith("auction_")) updateAuctionUI(username, d);
                 else if (d.type === "viewer_update") updateViewerCount(username, d.count);
-                else if (d.type === "gift_received") showGiftAnimation(username, d.sender); // 🔥 Handle Gift
+                else if (d.type === "gift_received") showGiftAnimation(username, d.sender);
             };
             video.wsConnection = ws;
         }
