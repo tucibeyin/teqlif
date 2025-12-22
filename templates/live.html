@@ -26,9 +26,12 @@
                 <div class="user-card">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
                     <span class="username">{{ user.username }}</span>
-                    <span class="live-badge">CANLI</span>
                 </div>
-                <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
+
+                <div class="top-actions">
+                    <span class="live-badge">CANLI</span>
+                    <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
+                </div>
             </div>
 
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
@@ -91,9 +94,11 @@
                 <div class="user-card">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
                     <span class="username">{{ stream.username }}</span>
-                    <span class="live-badge">CANLI</span>
                 </div>
-                <a href="/" class="btn-close" style="text-decoration:none;"><i class="fa-solid fa-xmark"></i></a>
+                <div class="top-actions">
+                    <span class="live-badge">CANLI</span>
+                    <a href="/" class="btn-close" style="text-decoration:none;"><i class="fa-solid fa-xmark"></i></a>
+                </div>
             </div>
 
             <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
