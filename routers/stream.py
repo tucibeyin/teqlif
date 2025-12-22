@@ -16,7 +16,7 @@ from utils import get_current_user, SECRET_KEY, ALGORITHM
 router = APIRouter()
 templates = Jinja2Templates(directory="templates")
 
-# --- BAĞLANTI YÖNETİCİSİ (GÜNCELLENDİ) ---
+# --- BAĞLANTI YÖNETİCİSİ ---
 class ConnectionManager:
     def __init__(self): 
         self.rooms = {}
@@ -25,12 +25,12 @@ class ConnectionManager:
         await ws.accept()
         if room not in self.rooms: self.rooms[room] = []
         self.rooms[room].append(ws)
-        await self.broadcast_viewer_count(room) # Biri gelince sayıyı güncelle
+        # Biri bağlanınca izleyici sayısını güncelle
+        await self.broadcast_viewer_count(room)
 
     def disconnect(self, ws, room):
         if room in self.rooms and ws in self.rooms[room]: 
             self.rooms[room].remove(ws)
-            # Async fonksiyonu sync içinden çağırmak için create_task kullanılır
             asyncio.create_task(self.broadcast_viewer_count(room)) 
 
     async def broadcast_to_room(self, msg, room):
@@ -39,18 +39,12 @@ class ConnectionManager:
                 try: await ws.send_text(msg)
                 except: self.rooms[room].remove(ws)
 
-    # 🔥 YENİ: İZLEYİCİ SAYISINI GÖNDERME 🔥
+    # İZLEYİCİ SAYISI
     async def broadcast_viewer_count(self, room):
         if room in self.rooms:
             count = len(self.rooms[room])
-            # Yayıncı da odaya bağlı olduğu için 1 çıkarıyoruz (Kendisi hariç)
-            viewer_count = max(0, count - 1)
-            
-            message = json.dumps({
-                "type": "viewer_update", 
-                "count": viewer_count
-            })
-            
+            viewer_count = max(0, count - 1) # Yayıncıyı düş
+            message = json.dumps({"type": "viewer_update", "count": viewer_count})
             for ws in self.rooms[room][:]:
                 try: await ws.send_text(message)
                 except: pass
@@ -59,7 +53,6 @@ manager = ConnectionManager()
 active_processes = {}
 active_auctions = {} 
 
-# --- DİĞER FONKSİYONLAR (AYNI) ---
 def cleanup_stream_sync(username):
     if username in active_processes:
         try: active_processes[username].kill(); active_processes[username].wait(timeout=0.1)
@@ -120,19 +113,28 @@ async def thumb(request: Request, user: User = Depends(get_current_user), db: Se
     except: pass
     return {"status": "ok"}
 
+# 🔥 GÜNCELLENEN: ELMAS GÖNDERME 🔥
 @router.post("/gift/send")
 async def send_gift(request: Request, user: User = Depends(get_current_user)):
     try:
         data = await request.json()
         target_user = data.get("to_user")
-        await manager.broadcast_to_room(json.dumps({"type": "gift_received", "sender": user.username}), target_user)
+        print(f"💎 GIFT: {user.username} -> {target_user}") # Server logu
+        await manager.broadcast_to_room(json.dumps({
+            "type": "gift_received", 
+            "sender": user.username,
+            "gift": "diamond"
+        }), target_user)
         return {"status": "success"}
-    except: return {"status": "error"}
+    except Exception as e:
+        print(f"GIFT ERROR: {e}")
+        return {"status": "error"}
 
 @router.post("/broadcast/toggle_auction")
 async def toggle_auction(request: Request, user: User = Depends(get_current_user)):
     data = await request.json()
     if data.get("action") == "start":
+        # Varsa koru, yoksa oluştur
         if user.username not in active_auctions: active_auctions[user.username] = {"price": 0, "last_bidder": "-"}
         await manager.broadcast_to_room(json.dumps({"type": "auction_started", "price": active_auctions[user.username]["price"], "bidder": active_auctions[user.username]["last_bidder"]}), user.username)
     else:
@@ -140,11 +142,17 @@ async def toggle_auction(request: Request, user: User = Depends(get_current_user
         await manager.broadcast_to_room(json.dumps({"type": "auction_ended"}), user.username)
     return {"status": "ok"}
 
+# 🔥 GÜNCELLENEN: SIFIRLAMA 🔥
 @router.post("/broadcast/reset_auction")
 async def reset_auction(request: Request, user: User = Depends(get_current_user)):
-    if user.username in active_auctions:
-        active_auctions[user.username]["price"] = 0; active_auctions[user.username]["last_bidder"] = "-"
-        await manager.broadcast_to_room(json.dumps({"type": "auction_update", "price": 0, "bidder": "-"}), user.username)
+    # Mezat kapalı olsa bile zorla oluştur ve 0 yap
+    active_auctions[user.username] = {"price": 0, "last_bidder": "-"}
+    
+    await manager.broadcast_to_room(json.dumps({
+        "type": "auction_update", # Update gönderiyoruz ki UI güncellensin
+        "price": 0, 
+        "bidder": "-"
+    }), user.username)
     return {"status": "ok"}
 
 @router.post("/broadcast/bid")

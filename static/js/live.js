@@ -39,8 +39,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
+    // --- 🔥 DÜZELTİLEN ELMAS GÖNDERME ---
     window.sendGift = function (targetUser) {
-        fetch('/gift/send', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ to_user: targetUser, gift_type: 'diamond' }) });
+        // Butonun geri bildirimi için ufak bir animasyon
+        const btn = document.activeElement;
+        if (btn) { btn.style.transform = "scale(0.8)"; setTimeout(() => btn.style.transform = "scale(1)", 100); }
+
+        fetch('/gift/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ to_user: targetUser, gift_type: 'diamond' })
+        });
     };
 
     window.toggleAuction = function (username) {
@@ -55,19 +64,37 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     };
 
-    window.resetAuction = function (username) { if (confirm("Sıfırlansın mı?")) fetch('/broadcast/reset_auction', { method: 'POST' }); };
+    window.resetAuction = function (username) {
+        // Onay kaldırılabilir, direkt reset atıyor
+        fetch('/broadcast/reset_auction', { method: 'POST' });
+    };
+
     window.placeBid = function (broadcaster, amount) { fetch('/broadcast/bid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ broadcaster: broadcaster, amount: amount }) }); };
 
+    // --- 🔥 DÜZELTİLEN UI GÜNCELLEME ---
     function updateAuctionUI(username, data) {
         const bar = document.getElementById(`auction-bar-${username}`);
         const priceEl = document.querySelector(`#auction-bar-${username} .auc-price`);
         const bidderEl = document.querySelector(`#auction-bar-${username} .auc-bidder-name`);
 
         if (MODE !== 'broadcast') {
-            if (data.type === 'auction_started') { bar.style.display = 'flex'; priceEl.innerHTML = `${moneyFormatter.format(data.price)} ₺`; bidderEl.innerText = "Bekleniyor"; }
-            else if (data.type === 'auction_ended') bar.style.display = 'none';
+            if (data.type === 'auction_started') {
+                bar.style.display = 'flex';
+                priceEl.innerHTML = `${moneyFormatter.format(data.price)} ₺`;
+                bidderEl.innerText = "Bekleniyor";
+            }
+            else if (data.type === 'auction_ended') {
+                bar.style.display = 'none';
+            }
         }
+
+        // Fiyat güncellendiğinde veya resetlendiğinde
         if (data.type === 'auction_started' || data.type === 'auction_update') {
+            // Eğer izleyici ise ve mezat resetlendiyse (update geldiyse) barı göster
+            if (MODE !== 'broadcast' && bar.style.display === 'none') {
+                bar.style.display = 'flex';
+            }
+
             priceEl.innerHTML = `${moneyFormatter.format(data.price)} ₺`;
             priceEl.style.color = '#00ff00'; setTimeout(() => priceEl.style.color = '#fff', 300);
             bidderEl.innerText = (data.bidder && data.bidder !== '-') ? data.bidder : "Bekleniyor";
@@ -82,10 +109,25 @@ document.addEventListener('DOMContentLoaded', () => {
         box.appendChild(p); box.scrollTop = box.scrollHeight;
     }
 
-    // 🔥 İZLEYİCİ SAYISI GÜNCELLEME 🔥
     function updateViewerCount(username, count) {
         const el = document.getElementById(`view-count-${username}`);
         if (el) el.innerText = count;
+    }
+
+    // 🔥 DÜZELTİLEN HEDİYE ANİMASYONU 🔥
+    function showGiftAnimation(username, sender) {
+        const layer = document.getElementById(`gift-layer-${username}`);
+        if (!layer) return;
+
+        const el = document.createElement('div');
+        el.className = 'gift-pop';
+        el.innerHTML = '💎';
+        layer.appendChild(el);
+
+        // Chat'e de yaz
+        addChatMessage(username, 'SİSTEM', `💎 ${sender} elmas gönderdi!`);
+
+        setTimeout(() => el.remove(), 2000);
     }
 
     // --- YAYINCI ---
@@ -100,7 +142,7 @@ document.addEventListener('DOMContentLoaded', () => {
             fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
                 if (!res.ok) return;
                 document.getElementById('setup-layer').style.display = 'none';
-                document.getElementById('live-ui').style.display = 'block'; // ui-layer flex değil, block olabilir veya boş
+                document.getElementById('live-ui').style.display = 'block';
                 broadcastWs = new WebSocket(`${protocol}://${window.location.host}/ws/broadcast`);
                 broadcastWs.onopen = () => {
                     let options = { mimeType: 'video/webm;codecs=h264', videoBitsPerSecond: 2500000 };
@@ -122,7 +164,8 @@ document.addEventListener('DOMContentLoaded', () => {
                     const d = JSON.parse(e.data);
                     if (d.type === "chat_message") addChatMessage(CONFIG.username, d.user, d.text);
                     else if (d.type.startsWith("auction_")) updateAuctionUI(CONFIG.username, d);
-                    else if (d.type === "viewer_update") updateViewerCount(CONFIG.username, d.count); // 🔥 GÜNCELLEME 🔥
+                    else if (d.type === "viewer_update") updateViewerCount(CONFIG.username, d.count);
+                    else if (d.type === "gift_received") showGiftAnimation(CONFIG.username, d.sender); // 🔥 Handle Gift
                 };
             });
         });
@@ -151,7 +194,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (d.type === 'stream_ended') { document.getElementById(`end-screen-${username}`).style.display = 'flex'; stopStream(username, video); }
                 else if (d.type === 'chat_message') addChatMessage(username, d.user, d.text);
                 else if (d.type.startsWith("auction_")) updateAuctionUI(username, d);
-                else if (d.type === "viewer_update") updateViewerCount(username, d.count); // 🔥 GÜNCELLEME 🔥
+                else if (d.type === "viewer_update") updateViewerCount(username, d.count);
+                else if (d.type === "gift_received") showGiftAnimation(username, d.sender); // 🔥 Handle Gift
             };
             video.wsConnection = ws;
         }
