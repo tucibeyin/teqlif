@@ -1,887 +1,633 @@
-/* =========================================
-   1. GENEL AYARLAR VE RESET
-   ========================================= */
-:root {
-    --accent: #34C759;
-    /* Canlı Yeşil */
-    --gold: #FFD700;
-    /* Altın Sarısı */
-    --diamond: #00d2ff;
-    /* Elmas Mavisi */
-    --danger: #ff3b30;
-    /* Kırmızı (Ban/Stop) */
-    --chat-bg: rgba(0, 0, 0, 0.6);
-    --glass-border: 1px solid rgba(255, 255, 255, 0.15);
+/* --- GLOBAL SIFIRLAMA --- */
+header {
+    display: none !important;
 }
 
-* {
-    box-sizing: border-box;
+footer {
+    position: fixed !important;
+    bottom: 0 !important;
+    width: 100% !important;
+    z-index: 999 !important;
+    background: #000 !important;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    height: 60px;
+}
+
+main {
+    height: 100dvh !important;
+    width: 100vw !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+    display: block !important;
+}
+
+html,
+body {
     margin: 0;
     padding: 0;
-    outline: none;
-    -webkit-tap-highlight-color: transparent;
-}
-
-body {
-    background: #000;
-    color: #fff;
-    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", sans-serif;
-    width: 100vw;
-    height: 100dvh;
-    overflow: hidden;
-}
-
-.teqlif-os {
     width: 100%;
     height: 100%;
-    max-width: 500px;
-    margin: 0 auto;
-    position: relative;
     background: #000;
+    overflow: hidden;
+    font-family: -apple-system, sans-serif;
 }
 
-/* =========================================
-   2. EKRAN VE VİDEO YERLEŞİMİ (CROP FIX)
-   ========================================= */
-.feed-scroll::-webkit-scrollbar {
-    display: none;
-}
-
-.feed-scroll {
-    -ms-overflow-style: none;
-    /* IE ve Edge */
-    scrollbar-width: none;
-    /* Firefox */
-
-    /* Mevcut ayarların korunuyor: */
+/* VİDEO SAHNESİ */
+.teqlif-stage {
+    position: relative;
     width: 100%;
     height: 100%;
-    overflow-y: scroll;
-    scroll-snap-type: y mandatory;
+    background: #000;
+    overflow-y: hidden;
 }
 
-.screen {
+.video-wrapper {
     position: relative;
     width: 100%;
-    height: 100% !important;
-    scroll-snap-align: start;
-    overflow: hidden;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     background: #000;
 }
 
-.cinema-video {
-    position: absolute !important;
-    top: 0;
-    left: 0;
-    width: 100% !important;
-    height: 100% !important;
-    object-fit: contain !important;
-    z-index: 0;
-    background: #000;
+video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
 }
 
 #preview {
     transform: scaleX(-1);
-    object-fit: cover !important;
 }
 
-/* =========================================
-   3. ARAYÜZ (UI) KATMANLARI
-   ========================================= */
-.ui-overlay {
-    position: absolute !important;
+/* --- UI KATMANI (KAPSAYICI) --- */
+.ui-layer {
+    position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     z-index: 10;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
     pointer-events: none;
     /* Tıklamalar videoya geçsin */
-    padding-top: max(15px, env(safe-area-inset-top));
-    padding-bottom: env(safe-area-inset-bottom);
-    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.3) 0%, transparent 15%, transparent 85%, rgba(0, 0, 0, 0.8) 100%);
 }
 
-/* --- SOL ÜST KÖŞE --- */
-.top-bar-left {
+/* --- 1. EN TEPE (TOP BAR) - ÇİVİLİ --- */
+.top-bar {
     position: absolute;
-    top: 15px;
-    left: 15px;
-    z-index: 100;
+    top: 0;
+    left: 0;
+    width: 100%;
     display: flex;
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 8px;
-    pointer-events: none;
-}
-
-.top-bar-left>* {
+    align-items: center;
+    justify-content: space-between;
     pointer-events: auto;
+    /* Çentik payı + rahat boşluk */
+    padding: max(15px, env(safe-area-inset-top)) 15px 15px 15px;
+    box-sizing: border-box;
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
 }
 
-.streamer-pill {
+.user-card {
     display: flex;
+    align-items: center;
+    gap: 10px;
+    /* Avatar ve yazı arası boşluk */
+    background: rgba(0, 0, 0, 0.4);
+    padding: 5px 15px 5px 5px;
+    border-radius: 30px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+}
+
+.user-avatar {
+    width: 34px;
+    height: 34px;
+    background: #222;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 14px;
+    border: 1px solid #ff0050;
+    flex-shrink: 0;
+}
+
+/* DÜZELTME: İsim ve Rozet Yan Yana ve Ortalı */
+.user-meta {
+    display: flex;
+    flex-direction: row;
     align-items: center;
     gap: 8px;
-    background: rgba(0, 0, 0, 0.4);
-    padding: 4px;
-    padding-right: 12px;
-    border-radius: 20px;
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.avatar-mini {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    background: linear-gradient(45deg, var(--accent), var(--diamond));
-    color: black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: bold;
-}
-
-.streamer-pill .name {
-    font-size: 12px;
-    font-weight: 700;
-    color: white;
-    margin-right: 5px;
-}
-
-.follow-btn-mini {
-    background: var(--accent);
-    border: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    color: black;
-    font-weight: bold;
-    font-size: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-}
-
-.follow-btn-mini.following {
-    background: transparent;
-    border: 1px solid white;
-    color: white;
-    font-size: 10px;
-}
-
-.brand-pill {
-    background: #ff3b30;
-    color: white;
-    padding: 4px 8px;
-    border-radius: 6px;
-    font-size: 10px;
-    font-weight: 900;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
-    letter-spacing: 0.5px;
-}
-
-.price-board {
-    background: rgba(20, 20, 20, 0.85);
-    backdrop-filter: blur(10px);
-    border: var(--glass-border);
-    padding: 10px 12px;
-    border-radius: 12px;
-    min-width: 110px;
-    display: flex;
-    flex-direction: column !important;
-    gap: 4px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-}
-
-.price-board .label {
-    font-size: 8px;
-    color: #aaa;
-    font-weight: 700;
-    display: block;
-    margin-bottom: 0;
-    text-transform: uppercase;
-}
-
-.price-board .price-row {
-    display: flex;
-    align-items: flex-end;
     line-height: 1;
 }
 
-.price-board .currency {
-    font-size: 14px;
-    color: var(--accent);
+.username {
+    font-size: 13px;
     font-weight: 700;
-    margin-right: 2px;
-    margin-bottom: 2px;
-}
-
-.price-board .amount {
-    font-size: 22px;
-    font-weight: 800;
     color: white;
-}
-
-.leader-row {
-    font-size: 11px;
-    color: var(--gold);
-    padding-top: 6px;
-    border-top: 1px solid rgba(255, 255, 255, 0.15);
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    width: 100%;
-}
-
-.leader-row i {
-    font-size: 10px;
-}
-
-.leader-row .name {
-    font-weight: 700;
+    max-width: 120px;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    max-width: 90px;
 }
 
-/* --- 🔥 SAĞ ÜST KÖŞE (YENİ DÜZEN) 🔥 --- */
-.header-right {
-    position: absolute;
-    top: 15px;
-    right: 15px;
-    z-index: 100;
-    display: flex;
-    flex-direction: column;
-    /* Dikey Sıralama */
-    align-items: flex-end;
-    /* Sağa Yasla */
-    gap: 8px;
-    pointer-events: none;
-}
-
-.header-right>* {
-    pointer-events: auto;
-}
-
-/* İzleyici ve Kapat Butonu (Yan Yana) */
-.header-row-top {
-    display: flex;
-    flex-direction: row;
-    align-items: center;
-    gap: 8px;
-}
-
-.info-pill {
-    background: rgba(0, 0, 0, 0.4);
-    backdrop-filter: blur(10px);
-    padding: 5px 10px;
-    border-radius: 15px;
+.live-badge {
+    font-size: 9px;
+    background: #ff0050;
     color: white;
-    font-size: 11px;
-    font-weight: 700;
+    padding: 3px 6px;
+    border-radius: 4px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
     display: flex;
     align-items: center;
-    gap: 5px;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    height: 32px;
 }
 
-.info-pill.diamond {
-    background: rgba(0, 40, 80, 0.6);
-    border-color: rgba(0, 210, 255, 0.4);
-}
-
-.info-pill.diamond i {
-    color: var(--diamond);
-}
-
-.icon-btn-glass {
-    width: 32px;
-    height: 32px;
+.btn-close {
     background: rgba(0, 0, 0, 0.4);
+    color: white;
+    width: 38px;
+    height: 38px;
     border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: white;
-    text-decoration: none;
-    backdrop-filter: blur(5px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    transition: background 0.2s;
-}
-
-.icon-btn-glass:active {
-    background: rgba(255, 255, 255, 0.2);
-}
-
-/* --- ORTA VE ALT KISIMLAR --- */
-.mid-section {
-    flex: 1;
-    display: flex;
-    flex-direction: row;
-    align-items: flex-end;
-    justify-content: space-between;
-    width: 100%;
-    padding-bottom: 5px;
-    pointer-events: none;
-}
-
-.chat-zone {
-    width: 70%;
-    max-height: 40vh;
-    display: flex;
-    flex-direction: column;
-    justify-content: flex-end;
-    padding-left: 15px;
-    pointer-events: auto !important;
-    mask-image: linear-gradient(to top, black 80%, transparent 100%);
-    -webkit-mask-image: linear-gradient(to top, black 80%, transparent 100%);
-}
-
-.chat-scroller {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    justify-content: flex-end;
-}
-
-.msg {
-    background: var(--chat-bg);
-    color: #fff;
-    padding: 6px 12px;
-    border-radius: 12px;
-    border-bottom-left-radius: 2px;
-    font-size: 13px;
-    width: fit-content;
-    max-width: 90%;
-    white-space: normal;
-    word-wrap: break-word;
-    line-height: 1.4;
-    text-shadow: 0 1px 1px black;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    margin-bottom: 4px;
-    animation: slideInUp 0.3s ease-out forwards;
-}
-
-.msg b {
-    color: var(--gold);
-    margin-right: 4px;
-    font-weight: 700;
     cursor: pointer;
+    backdrop-filter: blur(5px);
+    font-size: 16px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    transition: 0.2s;
 }
 
-.bid-zone {
-    width: 25%;
-    max-height: 40vh;
+.btn-close:active {
+    transform: scale(0.9);
+    background: #ff3b30;
+}
+
+/* --- 2. EN ALT (BOTTOM STACK) - ÇİVİLİ --- */
+.bottom-stack {
+    position: absolute;
+    bottom: 60px;
+    /* Footer (60px) tam üzerinde başla */
+    left: 0;
+    width: 100%;
     display: flex;
     flex-direction: column;
-    justify-content: flex-end;
-    align-items: flex-end;
-    padding-right: 15px;
+    padding: 0 10px 5px 10px;
+    box-sizing: border-box;
+    gap: 6px;
     pointer-events: auto;
+    background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 60%, transparent 100%);
 }
 
-.bid-scroller {
+/* A. CHAT */
+.chat-container {
+    height: 140px;
     width: 100%;
+    overflow-y: auto;
     display: flex;
     flex-direction: column;
-    gap: 6px;
-    align-items: flex-end;
     justify-content: flex-end;
-}
-
-.bid-bubble {
-    background: rgba(52, 199, 89, 0.9);
-    color: white;
-    padding: 6px 10px;
-    border-radius: 12px;
-    border-bottom-right-radius: 2px;
-    font-weight: 700;
-    font-size: 12px;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-    text-align: right;
-    border: 1px solid rgba(255, 255, 255, 0.4);
+    mask-image: linear-gradient(to top, black 85%, transparent 100%);
+    -webkit-mask-image: linear-gradient(to top, black 85%, transparent 100%);
     margin-bottom: 4px;
-    animation: slideInRight 0.3s ease-out forwards;
 }
 
-.bottom-dock {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    pointer-events: auto !important;
-    padding: 10px 10px 5px 10px;
-    z-index: 60;
-}
-
-.bid-layer {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-    align-items: center;
-    scrollbar-width: none;
-}
-
-.bid-layer::-webkit-scrollbar {
+.chat-container::-webkit-scrollbar {
     display: none;
 }
 
-.bid-chip {
-    background: rgba(255, 255, 255, 0.15);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+.chat-msg {
+    margin-bottom: 4px;
+    font-size: 13px;
     color: white;
-    padding: 6px 10px;
-    border-radius: 12px;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.9);
+    animation: slideIn 0.2s ease;
+    background: rgba(0, 0, 0, 0.25);
+    padding: 4px 10px;
+    border-radius: 8px;
+    align-self: flex-start;
+    display: inline-block;
+    max-width: 100%;
+    word-wrap: break-word;
+}
+
+.chat-user {
     font-weight: 700;
-    font-size: 11px;
-    white-space: nowrap;
-    flex-shrink: 0;
+    color: #ffeb3b;
+    margin-right: 5px;
 }
 
-.manual-bid-wrapper {
-    display: flex;
-    gap: 4px;
-    flex-shrink: 0;
+.sys-msg {
+    background: linear-gradient(90deg, rgba(255, 215, 0, 0.2), transparent);
+    border-left: 3px solid gold;
 }
 
-.manual-bid-wrapper input {
-    width: 80px;
-    background: rgba(0, 0, 0, 0.6);
-    border: 1px solid rgba(255, 255, 255, 0.3);
-    border-radius: 10px;
-    color: white;
-    text-align: center;
-    padding: 5px;
-    font-size: 13px;
-}
-
-.manual-bid-wrapper button {
-    background: var(--accent);
-    border: none;
-    color: black;
-    padding: 0 10px;
-    border-radius: 10px;
-    font-weight: 800;
-    font-size: 11px;
-}
-
-.chat-input-bar {
-    display: flex;
-    gap: 8px;
-    align-items: center;
-    background: rgba(255, 255, 255, 0.15);
-    backdrop-filter: blur(10px);
-    border-radius: 20px;
-    padding: 6px 6px 6px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.chat-input-bar input {
-    flex: 1;
-    background: transparent;
-    border: none;
-    color: white;
-    font-size: 13px;
-}
-
-.send-icon-btn {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    background: var(--accent);
-    border: none;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: black;
-    font-size: 13px;
-}
-
-.gift-btn {
-    width: 35px;
-    height: 35px;
-    border-radius: 50%;
-    background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 99%, #fecfef 100%);
-    border: none;
-    font-size: 18px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    margin: 0 5px;
-    transition: transform 0.2s;
-}
-
-.gift-btn:active {
-    transform: scale(0.9);
-}
-
-.admin-controls {
-    display: flex;
-    justify-content: center;
-    gap: 8px;
-    align-items: center;
-}
-
-.btn-stop {
-    background: var(--danger);
-    color: white;
-    border: none;
-    padding: 8px 15px;
-    border-radius: 15px;
-    font-weight: 800;
-    font-size: 11px;
-    cursor: pointer;
-}
-
-.btn-glass {
-    background: rgba(255, 255, 255, 0.2);
-    border: 1px solid rgba(255, 255, 255, 0.2);
-    color: white;
-    padding: 8px 12px;
-    border-radius: 15px;
-    font-weight: 700;
-    font-size: 11px;
-    cursor: pointer;
-}
-
-/* =========================================
-   6. SETUP EKRANI & MODALLAR
-   ========================================= */
-.setup-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
+/* B. MEZAT BARI */
+.auction-bar {
+    position: relative;
     width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    z-index: 2000;
+    height: auto;
+    background: rgba(20, 20, 20, 0.95);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 12px;
+    display: none;
+    flex-direction: column;
+    padding: 8px;
+    box-sizing: border-box;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.5);
+    animation: slideUp 0.3s ease;
+    gap: 6px;
+}
+
+.auc-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+    padding-bottom: 4px;
+}
+
+.auc-price-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.auc-label {
+    font-size: 9px;
+    color: #ff0050;
+    font-weight: 800;
+    letter-spacing: 1px;
+    animation: blink 2s infinite;
+}
+
+.auc-price {
+    font-size: 18px;
+    font-weight: 900;
+    color: #fff;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.auc-price span {
+    font-size: 12px;
+    color: #00ff00;
+}
+
+.auc-bidder-box {
+    background: rgba(255, 235, 59, 0.15);
+    padding: 4px 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid rgba(255, 235, 59, 0.3);
+}
+
+.auc-crown {
+    color: #ffd700;
+    font-size: 11px;
+}
+
+.auc-bidder-name {
+    font-size: 12px;
+    color: #ffeb3b;
+    font-weight: 700;
+    max-width: 100px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.auc-body {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+}
+
+.auc-controls-host {
+    display: flex;
+    gap: 5px;
+    width: 100%;
+}
+
+.btn-host {
+    flex: 1;
+    padding: 10px;
+    border-radius: 8px;
+    border: none;
+    font-weight: bold;
+    cursor: pointer;
+    color: white;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(5px);
+    gap: 5px;
+    font-size: 12px;
 }
 
-.setup-box {
-    width: 85%;
-    max-width: 350px;
-    background: #1c1c1e;
-    padding: 30px;
-    border-radius: 20px;
-    text-align: center;
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+.btn-host-reset {
+    background: rgba(255, 255, 255, 0.2);
+    max-width: 40px;
 }
 
-.input-group-glass {
+.btn-host-start {
+    background: #00e676;
+    color: black;
+}
+
+.btn-host-stop {
+    background: #ff3b30;
+    color: white;
+}
+
+.bid-presets {
+    display: flex;
+    gap: 5px;
+    overflow-x: auto;
+    width: 100%;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.bid-presets::-webkit-scrollbar {
+    display: none;
+}
+
+.btn-bid-pill {
+    background: rgba(255, 255, 255, 0.15);
+    color: white;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    height: 32px;
+    padding: 0 14px;
+    border-radius: 16px;
+    font-weight: 700;
+    font-size: 12px;
+    cursor: pointer;
+    flex-shrink: 0;
     display: flex;
     align-items: center;
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 10px;
-    margin-bottom: 15px;
+    justify-content: center;
 }
 
-.input-group-glass input,
-.input-group-glass select {
+.btn-bid-pill:active {
+    background: #ff0050;
+    border-color: #ff0050;
+}
+
+.btn-manual-toggle {
+    background: #444;
+    width: 32px;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.bid-manual {
+    display: none;
+    width: 100%;
+    gap: 5px;
+}
+
+.inp-manual {
+    flex: 1;
     background: transparent;
     border: none;
+    border-bottom: 2px solid #ff0050;
     color: white;
-    flex: 1;
+    font-size: 14px;
+    font-weight: bold;
+    padding: 4px;
+    text-align: center;
     outline: none;
 }
 
-.btn-go-live {
-    width: 100%;
-    background: var(--accent);
-    color: black;
-    padding: 12px;
-    border-radius: 12px;
-    font-weight: 800;
+.btn-manual-act {
+    background: transparent;
     border: none;
-    margin-top: 10px;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+/* C. INPUT */
+.bottom-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+}
+
+.chat-input-wrapper {
+    flex: 1;
+    background: rgba(255, 255, 255, 0.15);
+    border-radius: 22px;
+    padding: 2px 15px;
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    display: flex;
+    align-items: center;
+    height: 44px;
+}
+
+.chat-input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: white;
+    padding: 0;
+    outline: none;
+    font-size: 14px;
+}
+
+.chat-send {
+    background: transparent;
+    border: none;
+    color: white;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    opacity: 0.9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     font-size: 16px;
 }
 
-.btn-cancel-live {
-    display: block;
-    margin-top: 15px;
-    color: #888;
-    text-decoration: none;
-    font-size: 13px;
-}
-
-/* MODAL (Hediye & Moderasyon) */
-.modal-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    z-index: 2000;
+.gift-trigger {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
-    backdrop-filter: blur(5px);
-    pointer-events: auto;
-}
-
-.modal-box {
-    background: #222;
-    padding: 25px;
-    border-radius: 20px;
-    text-align: center;
-    border: 1px solid #444;
-    width: 85%;
-    max-width: 320px;
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-    pointer-events: auto;
-}
-
-.modal-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: center;
-    margin-top: 10px;
-}
-
-.btn-cancel {
-    background: transparent;
-    border: 1px solid #555;
-    color: #ccc;
-    padding: 10px 20px;
-    border-radius: 12px;
+    border: 2px solid white;
     cursor: pointer;
-    font-weight: 600;
+    font-size: 18px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
-.btn-confirm-red {
-    background: var(--danger);
-    border: none;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 12px;
-    cursor: pointer;
-    font-weight: bold;
-}
-
-/* Moderasyon Butonları */
-.mod-btn {
-    width: 100%;
-    padding: 14px;
-    margin-bottom: 8px;
-    border-radius: 10px;
-    border: none;
-    color: white;
-    font-weight: bold;
-    font-size: 14px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
-    transition: transform 0.1s;
-}
-
-.mod-btn:active {
-    transform: scale(0.98);
-}
-
-.btn-mute {
-    background: linear-gradient(135deg, #f39c12, #d35400);
-}
-
-.btn-ban {
-    background: linear-gradient(135deg, #e74c3c, #c0392b);
-}
-
-.btn-unban {
-    background: linear-gradient(135deg, #2ecc71, #27ae60);
-}
-
-.btn-cancel-mod {
-    background: #333;
-    color: #ccc;
-    margin-top: 5px;
-}
-
-/* Hediye Menüsü */
-.gift-sheet {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    width: 100%;
-    background: rgba(20, 20, 20, 0.95);
-    backdrop-filter: blur(15px);
-    border-top-left-radius: 20px;
-    border-top-right-radius: 20px;
-    z-index: 300;
-    padding: 15px;
-    box-shadow: 0 -5px 20px rgba(0, 0, 0, 0.5);
-    border-top: 1px solid rgba(255, 255, 255, 0.1);
-    animation: slideUp 0.3s ease-out;
-}
-
-.gift-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: 10px;
-}
-
-.gift-item {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 10px;
-    padding: 10px 5px;
-    text-align: center;
-    cursor: pointer;
-    border: 1px solid transparent;
-    transition: all 0.2s;
-}
-
-.gift-item:hover {
-    background: rgba(255, 255, 255, 0.1);
-    border-color: var(--accent);
-}
-
-.gift-icon {
-    font-size: 30px;
-    margin-bottom: 5px;
-}
-
-.gift-name {
-    font-size: 10px;
-    color: #ccc;
-}
-
-.gift-price {
-    font-size: 11px;
-    color: var(--diamond);
-    font-weight: bold;
-    margin-top: 2px;
-}
-
-/* Animasyonlar */
-@keyframes slideInUp {
+/* ANIMASYONLAR */
+@keyframes slideIn {
     from {
         opacity: 0;
-        transform: translateY(20px) scale(0.95);
+        transform: translateY(10px);
     }
 
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
-    }
-}
-
-@keyframes slideInRight {
-    from {
-        opacity: 0;
-        transform: translateX(20px);
-    }
-
-    to {
-        opacity: 1;
-        transform: translateX(0);
+        transform: translateY(0);
     }
 }
 
 @keyframes slideUp {
     from {
-        transform: translateY(100%);
+        opacity: 0;
+        transform: translateY(10px);
     }
 
     to {
+        opacity: 1;
         transform: translateY(0);
     }
 }
 
-@keyframes fadeOut {
+@keyframes blink {
     0% {
         opacity: 1;
     }
 
-    100% {
-        opacity: 0;
-        transform: translateY(-10px);
-    }
-}
-
-@keyframes flyUp {
-    0% {
-        transform: translate(0, 50px) scale(0.5);
-        opacity: 0;
-    }
-
-    10% {
-        transform: translate(0, 0) scale(1.2);
-        opacity: 1;
-    }
-
-    80% {
-        transform: translate(20px, -250px) scale(1);
-        opacity: 1;
+    50% {
+        opacity: 0.5;
     }
 
     100% {
-        transform: translate(40px, -350px) scale(0.5);
-        opacity: 0;
+        opacity: 1;
     }
 }
 
-#gift-animation-layer {
+.gift-animation-layer {
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     pointer-events: none;
-    z-index: 150;
-    overflow: hidden;
+    z-index: 50;
 }
 
-.flying-gift {
+.gift-pop {
+    font-size: 90px;
+    text-shadow: 0 0 30px rgba(255, 255, 255, 0.9);
+    animation: giftPop 1.5s forwards;
+}
+
+@keyframes giftPop {
+    0% {
+        transform: scale(0);
+        opacity: 0;
+    }
+
+    50% {
+        transform: scale(1.5);
+        opacity: 1;
+    }
+
+    100% {
+        transform: scale(2) translateY(-100px);
+        opacity: 0;
+    }
+}
+
+.end-screen {
     position: absolute;
-    bottom: 120px;
-    left: 20px;
-    font-size: 60px;
-    animation: flyUp 3s forwards;
-    z-index: 200;
-    display: flex;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.9);
+    z-index: 100;
+    display: none;
     flex-direction: column;
     align-items: center;
-}
-
-.gift-sender-label {
-    font-size: 14px;
-    background: rgba(255, 193, 7, 0.9);
-    color: black;
-    padding: 2px 8px;
-    border-radius: 10px;
-    margin-top: 5px;
-    font-weight: 800;
-    white-space: nowrap;
-}
-
-.tap-hint {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.6);
+    justify-content: center;
     color: white;
-    padding: 12px 24px;
+}
+
+.home-btn {
+    background: white;
+    color: black;
+    padding: 14px 40px;
     border-radius: 30px;
+    text-decoration: none;
+    font-weight: 800;
+    margin-top: 20px;
     pointer-events: auto;
+}
+
+@media (min-width: 768px) {
+    .video-wrapper {
+        width: 100%;
+        max-width: 400px;
+        height: 95%;
+        margin: 10px auto;
+        border-radius: 20px;
+        box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
+    }
+}
+
+.setup-layer {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    background: #000;
+    z-index: 50;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: auto;
+}
+
+.setup-box {
+    width: 80%;
+    max-width: 300px;
+    text-align: center;
+}
+
+.inp {
+    width: 100%;
+    padding: 15px;
+    background: #222;
+    border: 1px solid #333;
+    color: white;
+    border-radius: 12px;
+    margin-bottom: 10px;
+    box-sizing: border-box;
+    outline: none;
+}
+
+.start-btn {
+    background: linear-gradient(to right, #ff0050, #d60044);
+    color: white;
+    border: none;
+    padding: 15px;
+    width: 100%;
+    border-radius: 30px;
+    font-weight: 800;
+    cursor: pointer;
 }
