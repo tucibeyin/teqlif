@@ -5,11 +5,12 @@
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
 <style>
-    /* --- 1. SIFIRLAMA & TEMEL --- */
+    /* --- 1. SIFIRLAMA --- */
     header {
         display: none !important;
     }
 
+    /* Footer: Sabit 60px */
     footer {
         position: fixed !important;
         bottom: 0 !important;
@@ -20,7 +21,6 @@
         height: 60px;
     }
 
-    /* Sayfa Yapısı */
     main {
         height: 100dvh !important;
         width: 100vw !important;
@@ -31,34 +31,29 @@
         background: #000;
     }
 
-    /* Scroll Container (Yayınlar Arası Geçiş) */
+    /* --- 2. SAHNE VE VİDEO --- */
     .teqlif-stage {
         position: relative;
         width: 100%;
         height: 100%;
-        background: #111;
+        background: #000;
         overflow-y: scroll;
-        /* Dikey kaydırma */
         scroll-snap-type: y mandatory;
-        /* TikTok tarzı geçiş */
         scroll-behavior: smooth;
+        /* Footer kadar alttan boşluk bırakıyoruz ki son video footer arkasında kalmasın */
         padding-bottom: 60px;
-        /* Footer payı */
     }
 
     .teqlif-stage::-webkit-scrollbar {
         display: none;
     }
 
-    /* --- 2. VİDEO KAPSAYICI (PC & MOBİL AYARI) --- */
     .video-wrapper {
         position: relative;
         width: 100%;
         height: 100%;
-        /* Mobilde Tam Ekran */
         overflow: hidden;
         scroll-snap-align: start;
-        /* Kaydırınca buraya yapış */
         display: flex;
         justify-content: center;
         align-items: center;
@@ -75,19 +70,15 @@
         transform: scaleX(-1);
     }
 
-    /* 🔥 PC / TABLET İÇİN SINIRLAMA (ESKİ HALİNE DÖNDÜ) 🔥 */
+    /* PC İÇİN ORTALAMA */
     @media (min-width: 768px) {
         .video-wrapper {
             width: 100%;
             max-width: 420px;
-            /* Telefon Genişliği */
-            height: 90vh;
-            /* Ekranın %90'ı */
-            margin: 20px auto;
-            /* Ortala */
-            border-radius: 20px;
-            box-shadow: 0 0 50px rgba(255, 255, 255, 0.1);
-            border: 1px solid #333;
+            height: 100%;
+            margin: 0 auto;
+            border-left: 1px solid #222;
+            border-right: 1px solid #222;
         }
     }
 
@@ -100,10 +91,9 @@
         height: 100%;
         z-index: 10;
         pointer-events: none;
-        /* Videoya tıklamayı engelleme */
     }
 
-    /* --- 4. ÜST BAR (TOP HEADER) - KESİN AYRIK --- */
+    /* --- 4. ÜST BAR (TOP HEADER) --- */
     .top-header {
         position: absolute;
         top: 0;
@@ -112,18 +102,14 @@
         height: 70px;
         padding: max(15px, env(safe-area-inset-top)) 15px 0 15px;
         box-sizing: border-box;
-
         display: flex;
         justify-content: space-between;
-        /* SOLA ve SAĞA YASLA */
         align-items: flex-start;
-        /* Yukarı hizala */
-
         pointer-events: auto;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
     }
 
-    /* SOL GRUP (Profil) */
+    /* Sol: Profil */
     .header-left {
         display: flex;
         align-items: center;
@@ -133,8 +119,6 @@
         border-radius: 30px;
         border: 1px solid rgba(255, 255, 255, 0.15);
         backdrop-filter: blur(5px);
-        max-width: 50%;
-        /* Ekranın yarısını geçmesin */
     }
 
     .user-avatar {
@@ -154,12 +138,13 @@
         color: white;
         font-weight: 700;
         font-size: 13px;
+        max-width: 100px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
     }
 
-    /* SAĞ GRUP (Rozet + Kapat) */
+    /* Sağ: Rozet + Kapat */
     .header-right {
         display: flex;
         align-items: center;
@@ -175,7 +160,6 @@
         font-size: 10px;
         letter-spacing: 0.5px;
         box-shadow: 0 2px 5px rgba(255, 0, 0, 0.4);
-        white-space: nowrap;
     }
 
     .btn-close {
@@ -192,28 +176,34 @@
         text-decoration: none;
     }
 
-    /* --- 5. ALT STACK (DİP) --- */
+    /* --- 5. ALT STACK (DİP - FOOTER'A YAPIŞIK) --- */
     .bottom-stack {
         position: absolute;
-        bottom: 0;
-        /* En alta yapış */
+        /* 🔥 KRİTİK NOKTA: Footer (60px) tam üstüne oturur 🔥 */
+        bottom: 60px;
         left: 0;
         width: 100%;
         display: flex;
         flex-direction: column;
 
-        /* PC'de Footer olmadığı için 10px, Mobilde Footer var diye 60px padding */
-        padding: 10px 10px 65px 10px;
+        /* Alttan boşluk bırakmıyoruz (0px), yanlardan 10px */
+        padding: 0 10px 0 10px;
 
         box-sizing: border-box;
         gap: 6px;
+        /* Elemanlar arası boşluk */
         pointer-events: auto;
-        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.5) 60%, transparent 100%);
+
+        /* Arkaya hafif gölge atalım ki yazılar okunsun */
+        background: linear-gradient(to top, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.6) 50%, transparent 100%);
+
+        /* Alt sınıra tam değmesi için margin yok */
+        margin-bottom: 2px;
     }
 
-    /* CHAT */
+    /* A. CHAT */
     .chat-container {
-        height: 150px;
+        height: 140px;
         width: 100%;
         overflow-y: auto;
         display: flex;
@@ -224,7 +214,7 @@
     }
 
     .chat-msg {
-        background: rgba(255, 255, 255, 0.1);
+        background: rgba(255, 255, 255, 0.15);
         padding: 4px 10px;
         border-radius: 8px;
         margin-bottom: 4px;
@@ -234,6 +224,7 @@
         display: inline-block;
         max-width: 90%;
         backdrop-filter: blur(2px);
+        text-shadow: 0 1px 1px black;
     }
 
     .chat-user {
@@ -242,7 +233,7 @@
         margin-right: 5px;
     }
 
-    /* MEZAT */
+    /* B. MEZAT */
     .auction-bar {
         background: rgba(20, 20, 20, 0.95);
         border-radius: 12px;
@@ -251,6 +242,7 @@
         display: none;
         flex-direction: column;
         gap: 5px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
     }
 
     .auc-header {
@@ -291,11 +283,13 @@
         white-space: nowrap;
     }
 
-    /* INPUT */
+    /* C. INPUT */
     .bottom-controls {
         display: flex;
         gap: 10px;
         align-items: center;
+        /* Input'un altı footer'a değsin diye padding-bottom yok */
+        padding-bottom: 5px;
     }
 
     .chat-input-wrapper {
@@ -332,7 +326,7 @@
         border: 2px solid white;
     }
 
-    /* YARDIMCI */
+    /* DİĞER */
     .end-screen {
         position: absolute;
         top: 0;
@@ -417,12 +411,10 @@
                     <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
                 </div>
             </div>
-
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
 
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
-
                 <div id="auction-bar-{{ user.username }}" class="auction-bar" style="display:flex;">
                     <div class="auc-header">
                         <div>
@@ -438,12 +430,10 @@
                             style="width:30px;"><i class="fa-solid fa-rotate-right"></i></button>
                         <button id="btn-auc-toggle" class="btn-bid-pill"
                             style="flex:1; background:{{ '#ff3b30' if my_auc else '#00e676' }}; color:{{ 'white' if my_auc else 'black' }};"
-                            onclick="toggleAuction('{{ user.username }}')">
-                            {{ 'BİTİR' if my_auc else 'BAŞLAT' }}
-                        </button>
+                            onclick="toggleAuction('{{ user.username }}')">{{ 'BİTİR' if my_auc else 'BAŞLAT'
+                            }}</button>
                     </div>
                 </div>
-
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper">
                         <input type="text" class="chat-input" id="chat-input-{{ user.username }}"
@@ -477,12 +467,10 @@
                     <a href="/" class="btn-close"><i class="fa-solid fa-xmark"></i></a>
                 </div>
             </div>
-
             <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
 
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
-
                 <div id="auction-bar-{{ stream.username }}" class="auction-bar"
                     style="display:{{ 'flex' if st_auc else 'none' }};">
                     <div class="auc-header">
@@ -501,7 +489,6 @@
                         <button class="btn-bid-pill" onclick="placeBid('{{ stream.username }}', 1000)">+1k</button>
                     </div>
                 </div>
-
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper">
                         <input type="text" class="chat-input" id="chat-input-{{ stream.username }}"
