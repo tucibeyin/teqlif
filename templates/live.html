@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 
 {% block content %}
-<link rel="stylesheet" href="/static/css/live.css?v={{ range(1, 10000) | random }}">
+<link rel="stylesheet" href="/static/css/live.css?v={{ range(1, 99999) | random }}">
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
@@ -21,14 +21,12 @@
                 <button id="btn-start-broadcast" class="start-btn">YAYINA GİR 📡</button>
             </div>
         </div>
-        <div id="live-ui" class="ui-layer" style="display:none;">
+        <div id="live-ui" class="ui-layer">
             <div class="top-bar">
                 <div class="user-card">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
-                    <div class="user-meta">
-                        <span class="username">{{ user.username }}</span>
-                        <span class="live-badge">CANLI</span>
-                    </div>
+                    <span class="username">{{ user.username }}</span>
+                    <span class="live-badge">CANLI</span>
                 </div>
                 <button onclick="stopBroadcast()" class="btn-close"><i class="fa-solid fa-power-off"></i></button>
             </div>
@@ -47,7 +45,7 @@
                                 }} <span>₺</span></div>
                         </div>
                         <div class="auc-bidder-box">
-                            <i class="fa-solid fa-crown auc-crown"></i>
+                            <i class="fa-solid fa-crown" style="color:#ffd700; font-size:10px;"></i>
                             <div class="auc-bidder-name" id="auc-bidder-{{ user.username }}">{{ my_auc.last_bidder if
                                 my_auc else 'Bekleniyor' }}</div>
                         </div>
@@ -92,10 +90,8 @@
             <div class="top-bar">
                 <div class="user-card">
                     <div class="user-avatar"><i class="fa-solid fa-user"></i></div>
-                    <div class="user-meta">
-                        <span class="username">{{ stream.username }}</span>
-                        <span class="live-badge">CANLI</span>
-                    </div>
+                    <span class="username">{{ stream.username }}</span>
+                    <span class="live-badge">CANLI</span>
                 </div>
                 <a href="/" class="btn-close" style="text-decoration:none;"><i class="fa-solid fa-xmark"></i></a>
             </div>
@@ -115,7 +111,7 @@
                         </div>
                         <div class="auc-bidder-box" id="auc-bidder-box-{{ stream.username }}"
                             style="display:{{ 'flex' if st_auc and st_auc.last_bidder != '-' else 'none' }};">
-                            <i class="fa-solid fa-crown auc-crown"></i>
+                            <i class="fa-solid fa-crown" style="color:#ffd700; font-size:10px;"></i>
                             <div class="auc-bidder-name" id="auc-bidder-{{ stream.username }}">{{ st_auc.last_bidder if
                                 st_auc else '' }}</div>
                         </div>
@@ -132,8 +128,7 @@
                                     class="fa-solid fa-pen"></i></button>
                         </div>
                         <div class="bid-manual" id="bid-manual-{{ stream.username }}">
-                            <button class="btn-manual-cancel"
-                                onclick="toggleManualBid('{{ stream.username }}', false)"><i
+                            <button class="btn-manual-act" onclick="toggleManualBid('{{ stream.username }}', false)"><i
                                     class="fa-solid fa-xmark"></i></button>
                             <input type="tel" class="inp-manual" id="inp-manual-{{ stream.username }}" placeholder="0 ₺"
                                 oninput="formatBidInput(this)">

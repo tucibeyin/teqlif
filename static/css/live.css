@@ -73,7 +73,7 @@ video {
     pointer-events: none;
 }
 
-/* --- ÜST BAR --- */
+/* --- 1. ÜST BAR (TOP BAR) --- */
 .top-bar {
     position: absolute;
     top: 0;
@@ -88,19 +88,24 @@ video {
     background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
 }
 
-/* 🔥 BURASI GÜNCELLENDİ: Kapsayıcı Genişliği Otomatik 🔥 */
+/* 🔥 YENİ DÜZ KART YAPISI 🔥 */
 .user-card {
     display: inline-flex !important;
-    /* İçerik kadar genişle */
+    /* Yan yana dizil */
+    flex-direction: row !important;
+    /* Kesinlikle satır */
     align-items: center !important;
-    gap: 8px;
+    /* Dikeyde ortala */
+    gap: 8px !important;
+    /* Elemanlar arası boşluk */
+
     background: rgba(0, 0, 0, 0.5);
     padding: 5px 12px 5px 5px;
     border-radius: 30px;
     backdrop-filter: blur(10px);
     border: 1px solid rgba(255, 255, 255, 0.15);
-    max-width: 70%;
-    /* Ekranın %70'inden fazla yer kaplama */
+    max-width: 80%;
+    /* Çok genişleme */
 }
 
 .user-avatar {
@@ -115,21 +120,7 @@ video {
     font-size: 14px;
     border: 1px solid #ff0050;
     flex-shrink: 0;
-}
-
-/* 🔥 BURASI GÜNCELLENDİ: Asla Alt Satıra Geçme 🔥 */
-.user-meta {
-    display: flex !important;
-    flex-direction: row !important;
-    /* Yan yana */
-    align-items: center !important;
-    /* Ortala */
-    gap: 8px !important;
-    /* Aralarına boşluk koy */
-    flex-wrap: nowrap !important;
-    /* Asla sarma */
-    white-space: nowrap !important;
-    /* Metni kırma */
+    /* Küçülme */
 }
 
 .username {
@@ -137,10 +128,13 @@ video {
     font-weight: 700;
     color: white;
     max-width: 100px;
+    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    /* Sığmazsa ... koy */
-    display: block;
+    /* Taşmayı kes */
+    line-height: normal;
+    margin: 0;
+    padding: 0;
 }
 
 .live-badge {
@@ -153,10 +147,11 @@ video {
     text-transform: uppercase;
     letter-spacing: 0.5px;
     flex-shrink: 0;
-    /* Rozet asla küçülmesin */
-    display: flex;
-    align-items: center;
-    height: 16px;
+    /* Asla küçülme */
+    white-space: nowrap;
+    /* Asla alt satıra inme */
+    line-height: normal;
+    display: inline-block;
 }
 
 .btn-close {
@@ -175,7 +170,7 @@ video {
     flex-shrink: 0;
 }
 
-/* --- ALT STACK (DİP) --- */
+/* --- 2. ALT STACK (DİP) --- */
 .bottom-stack {
     position: absolute;
     bottom: 60px;
@@ -479,6 +474,7 @@ video {
     box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
 }
 
+/* ANIMASYONLAR */
 @keyframes slideIn {
     from {
         opacity: 0;
