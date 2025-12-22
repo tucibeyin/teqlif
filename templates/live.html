@@ -11,7 +11,6 @@
         display: none !important;
     }
 
-    /* Footer 60px Sabit */
     footer {
         position: fixed !important;
         bottom: 0 !important;
@@ -70,7 +69,7 @@
         transform: scaleX(-1);
     }
 
-    /* --- UI KATMANI (BOŞ KAPSAYICI) --- */
+    /* --- UI KATMANI --- */
     .ui-layer {
         position: absolute;
         top: 0;
@@ -79,10 +78,9 @@
         height: 100%;
         z-index: 10;
         pointer-events: none;
-        /* Tıklamalar alttaki videoya geçsin */
     }
 
-    /* --- 1. EN TEPE (TOP BAR) - ÇİVİLİ --- */
+    /* --- 1. EN TEPE (TOP BAR) - GÜNCELLENDİ --- */
     .top-bar {
         position: absolute;
         top: 0;
@@ -92,9 +90,7 @@
         align-items: center;
         justify-content: space-between;
         pointer-events: auto;
-        /* Burası tıklanabilsin */
         padding: max(10px, env(safe-area-inset-top)) 15px 10px 15px;
-        /* Çentik payı */
         box-sizing: border-box;
         background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
     }
@@ -123,28 +119,38 @@
         border: 1px solid #ff0050;
     }
 
+    /* 🔥 DÜZELTİLEN KISIM: Yan Yana Dizilim 🔥 */
     .user-meta {
         display: flex;
-        flex-direction: column;
-        line-height: 1;
+        align-items: center;
+        /* Dikey ortala */
+        gap: 6px;
+        /* İsim ve rozet arası boşluk */
     }
 
     .username {
         font-size: 13px;
         font-weight: 700;
         color: white;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 120px;
+        /* Uzun isimleri kes */
     }
 
     .live-badge {
         font-size: 9px;
         background: #ff0050;
         color: white;
-        padding: 1px 4px;
-        border-radius: 3px;
-        align-self: flex-start;
-        margin-top: 2px;
+        padding: 2px 5px;
+        border-radius: 4px;
         font-weight: 800;
+        letter-spacing: 0.5px;
+        flex-shrink: 0;
     }
+
+    /* ----------------------------------------- */
 
     .btn-close {
         background: rgba(0, 0, 0, 0.4);
@@ -165,22 +171,18 @@
     .bottom-stack {
         position: absolute;
         bottom: 60px;
-        /* Footer (60px) kadar yukarıda dur */
         left: 0;
         width: 100%;
         display: flex;
         flex-direction: column;
-        /* Alt alta diz */
         padding: 0 10px 5px 10px;
         box-sizing: border-box;
         gap: 5px;
-        /* Elemanlar arası boşluk */
         pointer-events: auto;
-        /* Burası tıklanabilsin */
         background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, rgba(0, 0, 0, 0.0) 100%);
     }
 
-    /* A. CHAT (En Üstte - Stack içinde) */
+    /* A. CHAT */
     .chat-container {
         height: 150px;
         width: 100%;
@@ -222,7 +224,7 @@
         border-left: 3px solid gold;
     }
 
-    /* B. MEZAT BARI (Ortada - Stack içinde) */
+    /* B. MEZAT BARI */
     .auction-bar {
         position: relative;
         width: 100%;
@@ -396,7 +398,7 @@
         cursor: pointer;
     }
 
-    /* C. INPUT (En Altta - Stack içinde) */
+    /* C. INPUT */
     .bottom-controls {
         display: flex;
         align-items: center;
