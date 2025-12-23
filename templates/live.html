@@ -16,7 +16,6 @@
         display: none !important;
     }
 
-    /* Footer Sabit: 60px */
     footer {
         position: fixed !important;
         bottom: 0 !important;
@@ -105,7 +104,7 @@
         height: 100%;
         z-index: 50;
         pointer-events: none;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.8);
     }
 
     /* --- 4. ÜST BAR --- */
@@ -120,7 +119,7 @@
         justify-content: space-between;
         align-items: flex-start;
         pointer-events: auto;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.4) 0%, transparent 100%);
         z-index: 60;
     }
 
@@ -202,49 +201,49 @@
         font-size: 20px;
     }
 
-    /* --- 5. ALT STACK (TAM YAPIŞIK) --- */
+    /* --- 5. ALT STACK (KOMPAKT MOD) --- */
     .bottom-stack {
         position: absolute;
-        /* Footer yüksekliği (60px) kadar yukarıda durmalı */
         bottom: 60px;
+        /* Footer'a yapışık */
         left: 0;
         width: 100%;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        /* Yan boşluklar */
         padding: 0 10px;
-        gap: 4px;
-        /* Elemanlar arası çok az boşluk */
+        gap: 0px;
+        /* 🔥 SIFIR BOŞLUK 🔥 */
         pointer-events: none;
         z-index: 60;
         background: transparent;
-        /* Alt boşluğu sıfırla */
-        margin-bottom: 0 !important;
-        padding-bottom: 5px;
-        /* Footer ile çok hafif bir nefes payı */
+        margin-bottom: 0;
     }
 
     .bottom-stack>* {
         pointer-events: auto;
+        margin-bottom: 4px;
+        /* Elemanlar arasına çok ince boşluk */
     }
 
+    /* CHAT KUTUSU (DAHA KISA) */
     .chat-container {
-        height: 140px;
+        height: 120px;
+        /* Yüksekliği azalttım ki ekranı kapatmasın */
         width: 100%;
         overflow-y: auto;
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        mask-image: linear-gradient(to top, black 90%, transparent 100%);
-        -webkit-mask-image: linear-gradient(to top, black 90%, transparent 100%);
-        margin-bottom: 0;
+        /* Maskeyi biraz daha keskin yaptım */
+        mask-image: linear-gradient(to top, black 95%, transparent 100%);
+        -webkit-mask-image: linear-gradient(to top, black 95%, transparent 100%);
     }
 
     .chat-msg {
         background: transparent;
-        padding: 2px 0;
-        margin-bottom: 2px;
+        padding: 1px 0;
+        margin-bottom: 1px;
         color: white;
         font-size: 13px;
         align-self: flex-start;
@@ -260,25 +259,24 @@
         margin-right: 5px;
     }
 
-    /* MEZAT BARI */
+    /* MEZAT BARI (DAHA İNCE) */
     .auction-bar {
-        background: rgba(20, 20, 20, 0.85);
-        backdrop-filter: blur(15px);
-        border-radius: 16px;
-        padding: 8px 12px;
+        background: rgba(20, 20, 20, 0.7);
+        backdrop-filter: blur(5px);
+        border-radius: 12px;
+        padding: 6px 10px;
+        /* Padding azaldı */
         border: 1px solid rgba(255, 255, 255, 0.1);
         display: none;
         flex-direction: column;
-        gap: 6px;
-        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-        margin-bottom: 0;
-        margin-top: 0;
-        animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        gap: 4px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        animation: slideUp 0.2s ease-out;
     }
 
     @keyframes slideUp {
         from {
-            transform: translateY(20px);
+            transform: translateY(10px);
             opacity: 0;
         }
 
@@ -300,19 +298,19 @@
     }
 
     .auc-status {
-        font-size: 10px;
+        font-size: 9px;
         font-weight: 900;
         color: #ff0050;
         text-transform: uppercase;
-        letter-spacing: 1px;
+        letter-spacing: 0.5px;
         display: flex;
         align-items: center;
         gap: 4px;
     }
 
     .auc-dot {
-        width: 6px;
-        height: 6px;
+        width: 5px;
+        height: 5px;
         background: #ff0050;
         border-radius: 50%;
         animation: pulse 1.5s infinite;
@@ -342,37 +340,36 @@
     .auc-price {
         color: white;
         font-weight: 900;
-        font-size: 24px;
-        letter-spacing: -0.5px;
-        text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+        font-size: 20px;
+        text-shadow: 0 0 5px rgba(255, 255, 255, 0.2);
     }
 
     .auc-currency {
-        font-size: 14px;
+        font-size: 12px;
         font-weight: 700;
         color: #ccc;
     }
 
     .auc-bidder-box {
-        background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
-        border: 1px solid rgba(255, 215, 0, 0.3);
-        padding: 4px 10px;
-        border-radius: 8px;
+        background: rgba(255, 215, 0, 0.1);
+        border: 1px solid rgba(255, 215, 0, 0.2);
+        padding: 2px 8px;
+        border-radius: 6px;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 4px;
     }
 
     .auc-crown {
         color: #ffd700;
-        font-size: 12px;
+        font-size: 10px;
     }
 
     .auc-bidder-name {
         color: #ffd700;
-        font-size: 12px;
+        font-size: 11px;
         font-weight: 800;
-        max-width: 100px;
+        max-width: 80px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -380,9 +377,9 @@
 
     .auc-controls {
         display: flex;
-        gap: 6px;
+        gap: 4px;
         overflow-x: auto;
-        padding-top: 4px;
+        padding-top: 2px;
         scrollbar-width: none;
     }
 
@@ -393,20 +390,20 @@
     .btn-pill {
         flex: 1;
         min-width: auto;
-        height: 32px;
+        height: 28px;
         border: none;
-        border-radius: 16px;
-        font-size: 12px;
+        border-radius: 14px;
+        font-size: 11px;
         font-weight: 700;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 4px;
-        transition: transform 0.1s, filter 0.1s;
+        gap: 2px;
+        transition: transform 0.1s;
         color: white;
         white-space: nowrap;
-        padding: 0 12px;
+        padding: 0 10px;
     }
 
     .btn-pill:active {
@@ -416,13 +413,11 @@
     .btn-green {
         background: #00e676;
         color: #000;
-        box-shadow: 0 2px 10px rgba(0, 230, 118, 0.3);
     }
 
     .btn-red {
         background: #ff3b30;
         color: #fff;
-        box-shadow: 0 2px 10px rgba(255, 59, 48, 0.3);
     }
 
     .btn-glass {
@@ -430,30 +425,27 @@
         border: 1px solid rgba(255, 255, 255, 0.2);
     }
 
-    .btn-glass:active {
-        background: rgba(255, 255, 255, 0.3);
-    }
-
-    /* INPUT ALANI */
+    /* INPUT ALANI (KOMPAKT) */
     .bottom-controls {
         display: flex;
-        gap: 10px;
+        gap: 8px;
         align-items: center;
         width: 100%;
-        margin: 0;
-        padding: 0;
+        padding-bottom: 0;
+        margin-bottom: 0 !important;
+        /* En alttaki elemanın alt boşluğunu sil */
     }
 
     .chat-input-wrapper {
         flex: 1;
         background: rgba(0, 0, 0, 0.3);
-        height: 42px;
-        border-radius: 21px;
+        height: 38px;
+        border-radius: 19px;
         display: flex;
         align-items: center;
-        padding: 0 15px;
+        padding: 0 12px;
         border: 1px solid rgba(255, 255, 255, 0.15);
-        backdrop-filter: blur(5px);
+        backdrop-filter: blur(2px);
     }
 
     .chat-input {
@@ -462,7 +454,7 @@
         color: white;
         width: 100%;
         outline: none;
-        font-size: 14px;
+        font-size: 13px;
         margin: 0;
         padding: 0;
     }
@@ -474,24 +466,24 @@
     .chat-send-icon {
         color: white;
         cursor: pointer;
-        font-size: 16px;
+        font-size: 14px;
         padding: 5px;
     }
 
     .gift-trigger {
-        width: 42px;
-        height: 42px;
+        width: 38px;
+        height: 38px;
         background: transparent;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        font-size: 26px;
+        font-size: 22px;
         border: none;
         flex-shrink: 0;
         transition: transform 0.1s;
-        text-shadow: 0 0 15px rgba(79, 172, 254, 0.6);
+        text-shadow: 0 0 10px rgba(79, 172, 254, 0.6);
     }
 
     .gift-trigger:active {
@@ -668,13 +660,6 @@
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
 
-                <div class="bottom-controls">
-                    <div class="chat-input-wrapper"><input type="text" class="chat-input"
-                            id="chat-input-{{ user.username }}" placeholder="Yayıncı olarak yaz..."
-                            autocomplete="off"><i class="fa-solid fa-paper-plane chat-send-icon"
-                            onclick="sendChat('{{ user.username }}')"></i></div>
-                </div>
-
                 <div id="auction-bar-{{ user.username }}" class="auction-bar">
                     <div class="auc-header">
                         <div class="auc-info">
@@ -691,11 +676,18 @@
                     </div>
                     <div class="auc-controls">
                         <button class="btn-pill btn-glass" onclick="resetAuction('{{ user.username }}')"
-                            style="width:40px;"><i class="fa-solid fa-rotate-right"></i></button>
+                            style="width:30px;"><i class="fa-solid fa-rotate-right"></i></button>
                         <button id="btn-auc-toggle" class="btn-pill btn-green"
                             onclick="toggleAuction('{{ user.username }}')"><i class="fa-solid fa-play"></i>
                             BAŞLAT</button>
                     </div>
+                </div>
+
+                <div class="bottom-controls">
+                    <div class="chat-input-wrapper"><input type="text" class="chat-input"
+                            id="chat-input-{{ user.username }}" placeholder="Yayıncı olarak yaz..."
+                            autocomplete="off"><i class="fa-solid fa-paper-plane chat-send-icon"
+                            onclick="sendChat('{{ user.username }}')"></i></div>
                 </div>
             </div>
         </div>
@@ -729,14 +721,6 @@
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
 
-                <div class="bottom-controls">
-                    <div class="chat-input-wrapper"><input type="text" class="chat-input"
-                            id="chat-input-{{ stream.username }}" placeholder="Yorum yap..." autocomplete="off"><i
-                            class="fa-solid fa-paper-plane chat-send-icon"
-                            onclick="sendChat('{{ stream.username }}')"></i></div>
-                    <div class="gift-trigger" onclick="sendGift('{{ stream.username }}')">💎</div>
-                </div>
-
                 {% if stream.stream_category == 'mezat' %}
                 <div id="auction-bar-{{ stream.username }}" class="auction-bar"
                     style="display:{{ 'flex' if st_auc else 'none' }};">
@@ -766,6 +750,14 @@
                     </div>
                 </div>
                 {% endif %}
+
+                <div class="bottom-controls">
+                    <div class="chat-input-wrapper"><input type="text" class="chat-input"
+                            id="chat-input-{{ stream.username }}" placeholder="Yorum yap..." autocomplete="off"><i
+                            class="fa-solid fa-paper-plane chat-send-icon"
+                            onclick="sendChat('{{ stream.username }}')"></i></div>
+                    <div class="gift-trigger" onclick="sendGift('{{ stream.username }}')">💎</div>
+                </div>
             </div>
         </div>
     </div>
