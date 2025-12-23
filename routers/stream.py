@@ -169,24 +169,46 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
     user.is_live = True; db.commit()
     stream_dir = f"static/hls/{user.username}"; shutil.rmtree(stream_dir, ignore_errors=True); os.makedirs(stream_dir, exist_ok=True)
     
-    # 🔥 GÜNCEL FFMEG KOMUTU (SES DÜZELTMELİ) 🔥
-    # -c:a aac : Sesi AAC yap
-    # -ar 44100 : Ses frekansı (Uyumluluk için şart)
-    # -b:a 128k : Ses kalitesi
+    # 🔥 ÇOKLU KALİTE (ABR) İÇİN GELİŞMİŞ FFMPEG KOMUTU 🔥
     cmd = [
-        "ffmpeg", "-f", "webm", "-i", "pipe:0", 
-        "-c:v", "libx264", "-preset", "ultrafast", "-tune", "zerolatency", 
-        "-profile:v", "baseline", "-level", "3.0", "-pix_fmt", "yuv420p", 
-        "-r", "24", "-g", "24", "-keyint_min", "24", "-sc_threshold", "0", "-vsync", "1", 
-        "-b:v", "2000k", "-maxrate", "2500k", "-bufsize", "3000k", "-vf", "scale=-2:540",
+        "ffmpeg", "-f", "webm", "-i", "pipe:0",
         
-        # SES AYARLARI
-        "-c:a", "aac", "-b:a", "128k", "-ar", "44100", "-ac", "2", 
-        "-af", "aresample=async=1", # Senkron kaymasını önle
-        
-        "-f", "hls", "-hls_time", "1", "-hls_list_size", "5", 
-        "-hls_flags", "delete_segments+omit_endlist", 
-        f"{stream_dir}/index.m3u8"
+        # Giriş videosunu 4 farklı boyuta böl ve ölçekle
+        "-filter_complex", 
+        "[0:v]split=4[v1][v2][v3][v4];"
+        "[v1]scale=-2:240[v240];"  # 240p
+        "[v2]scale=-2:360[v360];"  # 360p
+        "[v3]scale=-2:480[v480];"  # 480p
+        "[v4]scale=-2:720[v720]",  # 720p
+
+        # 240p Ayarları (Çok Düşük İnternet)
+        "-map", "[v240]", "-map", "a:0", "-c:v:0", "libx264", "-b:v:0", "300k", "-maxrate:v:0", "350k", "-bufsize:v:0", "500k",
+        "-c:a:0", "aac", "-b:a:0", "64k", "-ar", "44100",
+
+        # 360p Ayarları (Düşük İnternet)
+        "-map", "[v360]", "-map", "a:0", "-c:v:1", "libx264", "-b:v:1", "600k", "-maxrate:v:1", "650k", "-bufsize:v:1", "1000k",
+        "-c:a:1", "aac", "-b:a:1", "96k", "-ar", "44100",
+
+        # 480p Ayarları (Orta)
+        "-map", "[v480]", "-map", "a:0", "-c:v:2", "libx264", "-b:v:2", "1200k", "-maxrate:v:2", "1300k", "-bufsize:v:2", "2000k",
+        "-c:a:2", "aac", "-b:a:2", "128k", "-ar", "44100",
+
+        # 720p Ayarları (Yüksek)
+        "-map", "[v720]", "-map", "a:0", "-c:v:3", "libx264", "-b:v:3", "2500k", "-maxrate:v:3", "2700k", "-bufsize:v:3", "4000k",
+        "-c:a:3", "aac", "-b:a:3", "128k", "-ar", "44100",
+
+        # Performans Ayarları
+        "-preset", "ultrafast", "-tune", "zerolatency", 
+        "-g", "48", "-keyint_min", "48", "-sc_threshold", "0", "-af", "aresample=async=1",
+
+        # HLS Master Playlist Ayarları
+        "-f", "hls",
+        "-hls_time", "2",
+        "-hls_list_size", "4",
+        "-hls_flags", "delete_segments+omit_endlist",
+        "-master_pl_name", "index.m3u8", # Ana liste dosyası (HLS.js bunu okur)
+        "-var_stream_map", "v:0,a:0 v:1,a:1 v:2,a:2 v:3,a:3", # Videoları seslerle eşleştir
+        f"{stream_dir}/stream_%v.m3u8" # Alt dosyaların isim şablonu
     ]
     
     proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stderr=sys.stderr, start_new_session=True)
