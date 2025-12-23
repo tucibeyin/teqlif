@@ -201,7 +201,7 @@
         font-size: 20px;
     }
 
-    /* --- 5. ALT STACK (DİBE YAPIŞIK & SIKI) --- */
+    /* --- 5. ALT STACK --- */
     .bottom-stack {
         position: absolute;
         bottom: 60px;
@@ -211,19 +211,14 @@
         display: flex;
         flex-direction: column;
         justify-content: flex-end;
-        /* İçerikleri en aşağı it */
         padding: 0 10px;
-        gap: 2px;
-        /* Elemanlar arası boşluk min */
+        gap: 6px;
         pointer-events: none;
-        /* Boşluklar tıklanabilsin */
         z-index: 60;
         background: transparent;
         margin-bottom: 2px;
-        /* Çok ince pay */
     }
 
-    /* Stack içindeki her şey tıklanabilir olsun */
     .bottom-stack>* {
         pointer-events: auto;
     }
@@ -259,7 +254,7 @@
         margin-right: 5px;
     }
 
-    /* MEZAT BARI */
+    /* MEZAT BARI (EN ALTA ALINDI) */
     .auction-bar {
         background: rgba(20, 20, 20, 0.85);
         backdrop-filter: blur(15px);
@@ -271,7 +266,7 @@
         gap: 6px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
         margin-bottom: 0;
-        /* Inputa yapışık */
+        /* En alta yapışık */
         animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
@@ -433,14 +428,13 @@
         background: rgba(255, 255, 255, 0.3);
     }
 
-    /* INPUT ALANI */
+    /* INPUT ALANI (Mezatın Üstüne Alındı) */
     .bottom-controls {
         display: flex;
         gap: 10px;
         align-items: center;
         width: 100%;
-        padding-bottom: 2px;
-        /* Minimum alt boşluk */
+        padding-bottom: 0;
     }
 
     .chat-input-wrapper {
@@ -666,6 +660,14 @@
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
+
+                <div class="bottom-controls">
+                    <div class="chat-input-wrapper"><input type="text" class="chat-input"
+                            id="chat-input-{{ user.username }}" placeholder="Yayıncı olarak yaz..."
+                            autocomplete="off"><i class="fa-solid fa-paper-plane chat-send-icon"
+                            onclick="sendChat('{{ user.username }}')"></i></div>
+                </div>
+
                 <div id="auction-bar-{{ user.username }}" class="auction-bar">
                     <div class="auc-header">
                         <div class="auc-info">
@@ -687,12 +689,6 @@
                             onclick="toggleAuction('{{ user.username }}')"><i class="fa-solid fa-play"></i>
                             BAŞLAT</button>
                     </div>
-                </div>
-                <div class="bottom-controls">
-                    <div class="chat-input-wrapper"><input type="text" class="chat-input"
-                            id="chat-input-{{ user.username }}" placeholder="Yayıncı olarak yaz..."
-                            autocomplete="off"><i class="fa-solid fa-paper-plane chat-send-icon"
-                            onclick="sendChat('{{ user.username }}')"></i></div>
                 </div>
             </div>
         </div>
@@ -726,6 +722,14 @@
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
 
+                <div class="bottom-controls">
+                    <div class="chat-input-wrapper"><input type="text" class="chat-input"
+                            id="chat-input-{{ stream.username }}" placeholder="Yorum yap..." autocomplete="off"><i
+                            class="fa-solid fa-paper-plane chat-send-icon"
+                            onclick="sendChat('{{ stream.username }}')"></i></div>
+                    <div class="gift-trigger" onclick="sendGift('{{ stream.username }}')">💎</div>
+                </div>
+
                 {% if stream.stream_category == 'mezat' %}
                 <div id="auction-bar-{{ stream.username }}" class="auction-bar"
                     style="display:{{ 'flex' if st_auc else 'none' }};">
@@ -755,14 +759,6 @@
                     </div>
                 </div>
                 {% endif %}
-
-                <div class="bottom-controls">
-                    <div class="chat-input-wrapper"><input type="text" class="chat-input"
-                            id="chat-input-{{ stream.username }}" placeholder="Yorum yap..." autocomplete="off"><i
-                            class="fa-solid fa-paper-plane chat-send-icon"
-                            onclick="sendChat('{{ stream.username }}')"></i></div>
-                    <div class="gift-trigger" onclick="sendGift('{{ stream.username }}')">💎</div>
-                </div>
             </div>
         </div>
     </div>
