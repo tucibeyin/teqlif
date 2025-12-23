@@ -205,20 +205,23 @@
         font-size: 20px;
     }
 
-    /* --- 5. ALT STACK --- */
+    /* --- 5. ALT STACK (AŞAĞI İNDİRİLDİ) --- */
     .bottom-stack {
         position: absolute;
         bottom: 60px;
+        /* Footer yüksekliği */
         left: 0;
         width: 100%;
         display: flex;
         flex-direction: column;
         padding: 0 10px 0 10px;
-        gap: 8px;
+        gap: 4px;
+        /* Elemanlar arası boşluk azaltıldı */
         pointer-events: auto;
         z-index: 60;
         background: transparent;
-        margin-bottom: 5px;
+        margin-bottom: 0;
+        /* Ekstra boşluk silindi */
     }
 
     .chat-container {
@@ -230,7 +233,8 @@
         justify-content: flex-end;
         mask-image: linear-gradient(to top, black 90%, transparent 100%);
         -webkit-mask-image: linear-gradient(to top, black 90%, transparent 100%);
-        margin-bottom: 5px;
+        margin-bottom: 0;
+        /* Chat ile bar arasını sıkılaştır */
     }
 
     .chat-msg {
@@ -252,21 +256,20 @@
         margin-right: 5px;
     }
 
-    /* 🔥 YENİ MODERN MEZAT BARI 🔥 */
+    /* MEZAT BARI */
     .auction-bar {
         background: rgba(20, 20, 20, 0.85);
-        /* Hafif transparan siyah */
         backdrop-filter: blur(15px);
-        /* Buzlu cam */
         border-radius: 16px;
-        padding: 10px 12px;
+        padding: 8px 12px;
+        /* Padding azaltıldı */
         border: 1px solid rgba(255, 255, 255, 0.1);
         display: none;
-        /* JS ile açılacak */
         flex-direction: column;
-        gap: 8px;
+        gap: 6px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-        margin-bottom: 5px;
+        margin-bottom: 2px;
+        /* Input ile arası sıkılaştırıldı */
         animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
@@ -282,7 +285,6 @@
         }
     }
 
-    /* Üst Kısım: Durum ve Fiyat */
     .auc-header {
         display: flex;
         justify-content: space-between;
@@ -348,7 +350,6 @@
         color: #ccc;
     }
 
-    /* Kazanan Kısmı */
     .auc-bidder-box {
         background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
         border: 1px solid rgba(255, 215, 0, 0.3);
@@ -374,7 +375,6 @@
         text-overflow: ellipsis;
     }
 
-    /* Alt Kısım: Butonlar */
     .auc-controls {
         display: flex;
         gap: 6px;
@@ -387,7 +387,6 @@
         display: none;
     }
 
-    /* Hap Butonlar */
     .btn-pill {
         flex: 1;
         min-width: auto;
@@ -411,7 +410,6 @@
         transform: scale(0.95);
     }
 
-    /* Renkler */
     .btn-green {
         background: #00e676;
         color: #000;
@@ -433,13 +431,14 @@
         background: rgba(255, 255, 255, 0.3);
     }
 
-    /* Input Alanı */
+    /* INPUT ALANI */
     .bottom-controls {
         display: flex;
         gap: 10px;
         align-items: center;
         width: 100%;
-        padding-bottom: 5px;
+        padding-bottom: 2px;
+        /* Minimum boşluk */
     }
 
     .chat-input-wrapper {
@@ -665,7 +664,6 @@
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
-
                 <div id="auction-bar-{{ user.username }}" class="auction-bar">
                     <div class="auc-header">
                         <div class="auc-info">
@@ -675,8 +673,7 @@
                             <div class="auc-price-box"><span class="auc-price" id="auc-price-{{ user.username }}">{{
                                     my_auc.price if my_auc else 0 }}</span><span class="auc-currency">₺</span></div>
                         </div>
-                        <div class="auc-bidder-box">
-                            <i class="fa-solid fa-crown auc-crown"></i>
+                        <div class="auc-bidder-box"><i class="fa-solid fa-crown auc-crown"></i>
                             <div class="auc-bidder-name" id="auc-bidder-{{ user.username }}">{{ my_auc.last_bidder if
                                 my_auc else 'Bekleniyor' }}</div>
                         </div>
@@ -689,7 +686,6 @@
                             BAŞLAT</button>
                     </div>
                 </div>
-
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper"><input type="text" class="chat-input"
                             id="chat-input-{{ user.username }}" placeholder="Yayıncı olarak yaz..."
@@ -739,8 +735,7 @@
                             <div class="auc-price-box"><span class="auc-price" id="auc-price-{{ stream.username }}">{{
                                     st_auc.price if st_auc else 0 }}</span><span class="auc-currency">₺</span></div>
                         </div>
-                        <div class="auc-bidder-box">
-                            <i class="fa-solid fa-crown auc-crown"></i>
+                        <div class="auc-bidder-box"><i class="fa-solid fa-crown auc-crown"></i>
                             <div class="auc-bidder-name" id="auc-bidder-{{ stream.username }}">{{ st_auc.last_bidder if
                                 st_auc else '' }}</div>
                         </div>
@@ -841,9 +836,7 @@
         const btn = document.getElementById('btn-auc-toggle');
         const currentState = (btn.innerText.includes("BİTİR")) ? "started" : "stopped";
         const action = (currentState === "stopped") ? "start" : "stop";
-
         fetch('/broadcast/toggle_auction', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action }) });
-
         if (window.TEQLIF_CONFIG.mode === 'broadcast') {
             if (action === 'start') {
                 btn.innerHTML = '<i class="fa-solid fa-stop"></i> BİTİR';
@@ -859,7 +852,6 @@
 
     window.resetAuction = function (username) { fetch('/broadcast/reset_auction', { method: 'POST' }); };
     window.placeBid = function (broadcaster, amount) {
-        // Efekt
         const btn = document.activeElement;
         if (btn) { btn.style.transform = "scale(0.9)"; setTimeout(() => btn.style.transform = "scale(1)", 100); }
         fetch('/broadcast/bid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ broadcaster: broadcaster, amount: amount }) });
@@ -875,7 +867,6 @@
         if (data.type === 'auction_started' || data.type === 'auction_update') {
             bar.style.display = 'flex';
             if (statusEl && window.TEQLIF_CONFIG.mode !== 'broadcast') statusEl.innerHTML = '<div class="auc-dot"></div> MEZAT AÇIK';
-
             priceEl.innerHTML = moneyFormatter.format(data.price);
             priceEl.style.color = '#00e676'; setTimeout(() => { priceEl.style.color = '#fff'; }, 300);
             bidderEl.innerText = (data.bidder && data.bidder !== '-') ? data.bidder : "Bekleniyor";
@@ -908,10 +899,7 @@
                     const titleVal = document.getElementById('streamTitle').value;
                     const catVal = document.getElementById('streamCategory').value;
                     const aucBar = document.getElementById('auction-bar-' + window.TEQLIF_CONFIG.username);
-                    if (aucBar) {
-                        if (catVal === 'mezat') { aucBar.style.display = 'flex'; }
-                        else { aucBar.style.display = 'none'; }
-                    }
+                    if (aucBar) { if (catVal === 'mezat') { aucBar.style.display = 'flex'; } else { aucBar.style.display = 'none'; } }
 
                     const fd = new FormData(); fd.append('title', titleVal); fd.append('category', catVal);
                     fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
