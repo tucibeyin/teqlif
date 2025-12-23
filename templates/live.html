@@ -3,6 +3,7 @@
 {% block content %}
 <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.0/dist/hls.min.js"></script>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
 
 <style>
     /* --- 1. SIFIRLAMA & TEMEL --- */
@@ -33,7 +34,7 @@
         height: 100dvh;
         background: #000;
         overflow: hidden;
-        font-family: -apple-system, sans-serif;
+        font-family: 'Inter', sans-serif;
     }
 
     main {
@@ -47,7 +48,7 @@
         left: 0;
     }
 
-    /* --- 2. SAHNE VE VİDEO --- */
+    /* --- 2. SAHNE --- */
     .teqlif-stage {
         width: 100%;
         height: 100%;
@@ -85,7 +86,6 @@
         transform: scaleX(-1);
     }
 
-    /* PC İÇİN SINIRLAMA */
     @media (min-width: 768px) {
         .video-wrapper {
             width: 100%;
@@ -104,7 +104,7 @@
         height: 100%;
         z-index: 50;
         pointer-events: none;
-        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.5);
     }
 
     /* --- 4. ÜST BAR --- */
@@ -119,7 +119,7 @@
         justify-content: space-between;
         align-items: flex-start;
         pointer-events: auto;
-        background: transparent;
+        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
         z-index: 60;
     }
 
@@ -127,9 +127,11 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        background: transparent;
-        padding: 4px;
-        border: none;
+        background: rgba(0, 0, 0, 0.3);
+        padding: 4px 12px 4px 4px;
+        border-radius: 30px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        backdrop-filter: blur(5px);
     }
 
     .user-avatar {
@@ -147,9 +149,9 @@
 
     .username {
         color: white;
-        font-weight: 800;
-        font-size: 14px;
-        max-width: 120px;
+        font-weight: 700;
+        font-size: 13px;
+        max-width: 100px;
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
@@ -162,25 +164,28 @@
     }
 
     .viewer-badge {
-        background: transparent;
+        background: rgba(0, 0, 0, 0.3);
         color: white;
-        padding: 5px;
+        padding: 5px 10px;
+        border-radius: 6px;
         font-weight: 800;
-        font-size: 12px;
+        font-size: 11px;
         display: flex;
         align-items: center;
         gap: 5px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         height: 36px;
+        backdrop-filter: blur(5px);
     }
 
     .live-badge {
-        background: #ff0050;
+        background: linear-gradient(to right, #ff0050, #d60044);
         color: white;
-        padding: 3px 6px;
+        padding: 5px 8px;
         border-radius: 4px;
         font-weight: 800;
         font-size: 10px;
-        height: 20px;
+        height: 24px;
         display: flex;
         align-items: center;
     }
@@ -189,7 +194,7 @@
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: transparent;
+        background: rgba(0, 0, 0, 0.3);
         color: white;
         display: flex;
         align-items: center;
@@ -209,7 +214,7 @@
         display: flex;
         flex-direction: column;
         padding: 0 10px 0 10px;
-        gap: 6px;
+        gap: 8px;
         pointer-events: auto;
         z-index: 60;
         background: transparent;
@@ -225,6 +230,7 @@
         justify-content: flex-end;
         mask-image: linear-gradient(to top, black 90%, transparent 100%);
         -webkit-mask-image: linear-gradient(to top, black 90%, transparent 100%);
+        margin-bottom: 5px;
     }
 
     .chat-msg {
@@ -246,55 +252,188 @@
         margin-right: 5px;
     }
 
+    /* 🔥 YENİ MODERN MEZAT BARI 🔥 */
     .auction-bar {
-        background: transparent;
-        border-radius: 12px;
-        padding: 8px 0;
+        background: rgba(20, 20, 20, 0.85);
+        /* Hafif transparan siyah */
+        backdrop-filter: blur(15px);
+        /* Buzlu cam */
+        border-radius: 16px;
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.1);
         display: none;
+        /* JS ile açılacak */
         flex-direction: column;
-        gap: 5px;
+        gap: 8px;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+        margin-bottom: 5px;
+        animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
+    @keyframes slideUp {
+        from {
+            transform: translateY(20px);
+            opacity: 0;
+        }
+
+        to {
+            transform: translateY(0);
+            opacity: 1;
+        }
+    }
+
+    /* Üst Kısım: Durum ve Fiyat */
     .auc-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding-bottom: 4px;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .auc-info {
+        display: flex;
+        flex-direction: column;
+    }
+
+    .auc-status {
+        font-size: 10px;
+        font-weight: 900;
+        color: #ff0050;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+        display: flex;
+        align-items: center;
+        gap: 4px;
+    }
+
+    .auc-dot {
+        width: 6px;
+        height: 6px;
+        background: #ff0050;
+        border-radius: 50%;
+        animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+        0% {
+            opacity: 1;
+        }
+
+        50% {
+            opacity: 0.4;
+        }
+
+        100% {
+            opacity: 1;
+        }
+    }
+
+    .auc-price-box {
+        display: flex;
+        align-items: baseline;
+        gap: 2px;
+        margin-top: -2px;
     }
 
     .auc-price {
         color: white;
         font-weight: 900;
-        font-size: 20px;
-        text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+        font-size: 24px;
+        letter-spacing: -0.5px;
+        text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+    }
+
+    .auc-currency {
+        font-size: 14px;
+        font-weight: 700;
+        color: #ccc;
+    }
+
+    /* Kazanan Kısmı */
+    .auc-bidder-box {
+        background: linear-gradient(135deg, rgba(255, 215, 0, 0.1), rgba(255, 215, 0, 0.05));
+        border: 1px solid rgba(255, 215, 0, 0.3);
+        padding: 4px 10px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .auc-crown {
+        color: #ffd700;
+        font-size: 12px;
     }
 
     .auc-bidder-name {
-        color: #ffeb3b;
-        font-size: 14px;
-        font-weight: 800;
-    }
-
-    .auc-body {
-        display: flex;
-        gap: 5px;
-        overflow-x: auto;
-    }
-
-    .btn-bid-pill {
-        background: rgba(255, 255, 255, 0.2);
-        border: 1px solid white;
-        color: white;
-        padding: 5px 12px;
-        border-radius: 20px;
+        color: #ffd700;
         font-size: 12px;
-        font-weight: bold;
-        cursor: pointer;
+        font-weight: 800;
+        max-width: 100px;
         white-space: nowrap;
-        backdrop-filter: blur(2px);
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
+    /* Alt Kısım: Butonlar */
+    .auc-controls {
+        display: flex;
+        gap: 6px;
+        overflow-x: auto;
+        padding-top: 4px;
+        scrollbar-width: none;
+    }
+
+    .auc-controls::-webkit-scrollbar {
+        display: none;
+    }
+
+    /* Hap Butonlar */
+    .btn-pill {
+        flex: 1;
+        min-width: auto;
+        height: 32px;
+        border: none;
+        border-radius: 16px;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        transition: transform 0.1s, filter 0.1s;
+        color: white;
+        white-space: nowrap;
+        padding: 0 12px;
+    }
+
+    .btn-pill:active {
+        transform: scale(0.95);
+    }
+
+    /* Renkler */
+    .btn-green {
+        background: #00e676;
+        color: #000;
+        box-shadow: 0 2px 10px rgba(0, 230, 118, 0.3);
+    }
+
+    .btn-red {
+        background: #ff3b30;
+        color: #fff;
+        box-shadow: 0 2px 10px rgba(255, 59, 48, 0.3);
+    }
+
+    .btn-glass {
+        background: rgba(255, 255, 255, 0.15);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .btn-glass:active {
+        background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Input Alanı */
     .bottom-controls {
         display: flex;
         gap: 10px;
@@ -305,13 +444,14 @@
 
     .chat-input-wrapper {
         flex: 1;
-        background: rgba(0, 0, 0, 0.2);
-        height: 40px;
-        border-radius: 20px;
+        background: rgba(0, 0, 0, 0.3);
+        height: 42px;
+        border-radius: 21px;
         display: flex;
         align-items: center;
         padding: 0 15px;
-        border: 1px solid rgba(255, 255, 255, 0.3);
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        backdrop-filter: blur(5px);
     }
 
     .chat-input {
@@ -326,23 +466,30 @@
     }
 
     .chat-input::placeholder {
-        color: #ddd;
+        color: #aaa;
+    }
+
+    .chat-send-icon {
+        color: white;
+        cursor: pointer;
+        font-size: 16px;
+        padding: 5px;
     }
 
     .gift-trigger {
-        width: 40px;
-        height: 40px;
+        width: 42px;
+        height: 42px;
         background: transparent;
         border-radius: 50%;
         display: flex;
         align-items: center;
         justify-content: center;
         cursor: pointer;
-        font-size: 24px;
+        font-size: 26px;
         border: none;
         flex-shrink: 0;
         transition: transform 0.1s;
-        text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+        text-shadow: 0 0 15px rgba(79, 172, 254, 0.6);
     }
 
     .gift-trigger:active {
@@ -365,7 +512,7 @@
     .gift-pop {
         font-size: 120px;
         animation: giftPop 1.5s forwards;
-        filter: drop-shadow(0 0 10px rgba(0, 0, 0, 0.5));
+        filter: drop-shadow(0 0 20px rgba(0, 255, 255, 0.8));
     }
 
     @keyframes giftPop {
@@ -385,19 +532,18 @@
         }
     }
 
-    /* Volume Feedback */
     .volume-feedback {
         position: absolute;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         font-size: 60px;
-        color: rgba(255, 255, 255, 0.8);
+        color: rgba(255, 255, 255, 0.9);
         z-index: 200;
         pointer-events: none;
         opacity: 0;
         transition: opacity 0.3s;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        text-shadow: 0 4px 20px rgba(0, 0, 0, 0.6);
     }
 
     .volume-show {
@@ -519,29 +665,35 @@
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
+
                 <div id="auction-bar-{{ user.username }}" class="auction-bar">
                     <div class="auc-header">
-                        <div>
-                            <div style="font-size:9px; color:#ff0050; font-weight:800;">{{ 'MEZAT AKTİF' if my_auc else
-                                'MEZAT KAPALI' }}</div>
-                            <div class="auc-price">{{ my_auc.price if my_auc else 0 }} ₺</div>
+                        <div class="auc-info">
+                            <div class="auc-status" id="auc-status-{{ user.username }}">
+                                <div class="auc-dot"></div> MEZAT AÇIK
+                            </div>
+                            <div class="auc-price-box"><span class="auc-price" id="auc-price-{{ user.username }}">{{
+                                    my_auc.price if my_auc else 0 }}</span><span class="auc-currency">₺</span></div>
                         </div>
-                        <div class="auc-bidder-name" id="auc-bidder-{{ user.username }}">{{ my_auc.last_bidder if my_auc
-                            else 'Bekleniyor' }}</div>
+                        <div class="auc-bidder-box">
+                            <i class="fa-solid fa-crown auc-crown"></i>
+                            <div class="auc-bidder-name" id="auc-bidder-{{ user.username }}">{{ my_auc.last_bidder if
+                                my_auc else 'Bekleniyor' }}</div>
+                        </div>
                     </div>
-                    <div class="auc-body">
-                        <button class="btn-bid-pill" onclick="resetAuction('{{ user.username }}')"
-                            style="width:30px;"><i class="fa-solid fa-rotate-right"></i></button>
-                        <button id="btn-auc-toggle" class="btn-bid-pill"
-                            style="flex:1; background:{{ '#ff3b30' if my_auc else '#00e676' }}; color:{{ 'white' if my_auc else 'black' }};"
-                            onclick="toggleAuction('{{ user.username }}')">{{ 'BİTİR' if my_auc else 'BAŞLAT'
-                            }}</button>
+                    <div class="auc-controls">
+                        <button class="btn-pill btn-glass" onclick="resetAuction('{{ user.username }}')"
+                            style="width:40px;"><i class="fa-solid fa-rotate-right"></i></button>
+                        <button id="btn-auc-toggle" class="btn-pill btn-green"
+                            onclick="toggleAuction('{{ user.username }}')"><i class="fa-solid fa-play"></i>
+                            BAŞLAT</button>
                     </div>
                 </div>
+
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper"><input type="text" class="chat-input"
                             id="chat-input-{{ user.username }}" placeholder="Yayıncı olarak yaz..."
-                            autocomplete="off"><i class="fa-solid fa-paper-plane" style="color:white; cursor:pointer;"
+                            autocomplete="off"><i class="fa-solid fa-paper-plane chat-send-icon"
                             onclick="sendChat('{{ user.username }}')"></i></div>
                 </div>
             </div>
@@ -556,7 +708,6 @@
             poster="{{ stream.thumbnail }}"></video>
 
         <div id="vol-icon-{{ stream.username }}" class="volume-feedback"><i class="fa-solid fa-volume-high"></i></div>
-
         <div id="end-screen-{{ stream.username }}" class="end-screen">
             <h2>Yayın Sona Erdi</h2><a href="/" class="home-btn">Ana Sayfa</a>
         </div>
@@ -576,29 +727,42 @@
             <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
+
                 {% if stream.stream_category == 'mezat' %}
                 <div id="auction-bar-{{ stream.username }}" class="auction-bar"
                     style="display:{{ 'flex' if st_auc else 'none' }};">
                     <div class="auc-header">
-                        <div>
-                            <div style="font-size:9px; color:#ff0050; font-weight:800;">MEZAT BAŞLADI</div>
-                            <div class="auc-price" id="auc-price-{{ stream.username }}">{{ st_auc.price if st_auc else 0
-                                }} ₺</div>
+                        <div class="auc-info">
+                            <div class="auc-status">
+                                <div class="auc-dot"></div> MEZAT AÇIK
+                            </div>
+                            <div class="auc-price-box"><span class="auc-price" id="auc-price-{{ stream.username }}">{{
+                                    st_auc.price if st_auc else 0 }}</span><span class="auc-currency">₺</span></div>
                         </div>
-                        <div class="auc-bidder-name" id="auc-bidder-{{ stream.username }}">{{ st_auc.last_bidder if
-                            st_auc else '' }}</div>
+                        <div class="auc-bidder-box">
+                            <i class="fa-solid fa-crown auc-crown"></i>
+                            <div class="auc-bidder-name" id="auc-bidder-{{ stream.username }}">{{ st_auc.last_bidder if
+                                st_auc else '' }}</div>
+                        </div>
                     </div>
-                    <div class="auc-body"><button class="btn-bid-pill"
-                            onclick="placeBid('{{ stream.username }}', 50)">+50</button><button class="btn-bid-pill"
-                            onclick="placeBid('{{ stream.username }}', 100)">+100</button><button class="btn-bid-pill"
-                            onclick="placeBid('{{ stream.username }}', 500)">+500</button><button class="btn-bid-pill"
-                            onclick="placeBid('{{ stream.username }}', 1000)">+1k</button></div>
+                    <div class="auc-controls">
+                        <button class="btn-pill btn-glass" onclick="placeBid('{{ stream.username }}', 50)">+50</button>
+                        <button class="btn-pill btn-glass"
+                            onclick="placeBid('{{ stream.username }}', 100)">+100</button>
+                        <button class="btn-pill btn-glass"
+                            onclick="placeBid('{{ stream.username }}', 250)">+250</button>
+                        <button class="btn-pill btn-glass"
+                            onclick="placeBid('{{ stream.username }}', 500)">+500</button>
+                        <button class="btn-pill btn-green"
+                            onclick="placeBid('{{ stream.username }}', 1000)">+1k</button>
+                    </div>
                 </div>
                 {% endif %}
+
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper"><input type="text" class="chat-input"
                             id="chat-input-{{ stream.username }}" placeholder="Yorum yap..." autocomplete="off"><i
-                            class="fa-solid fa-paper-plane" style="color:white; cursor:pointer;"
+                            class="fa-solid fa-paper-plane chat-send-icon"
                             onclick="sendChat('{{ stream.username }}')"></i></div>
                     <div class="gift-trigger" onclick="sendGift('{{ stream.username }}')">💎</div>
                 </div>
@@ -647,7 +811,6 @@
         if (!layer) return;
         const el = document.createElement('div'); el.className = 'gift-pop'; el.innerHTML = '💎';
         layer.appendChild(el);
-        // Gönderen kişinin adı
         addChatMessage(username, sender, '💎 ELMAS GÖNDERDİ!');
         setTimeout(() => { el.remove(); }, 2000);
     }
@@ -665,47 +828,61 @@
         }
     };
 
-    // 4 Sn sonra silinen chat
     function addChatMessage(username, user, text) {
         const box = document.getElementById('chat-box-' + username);
         if (!box) return;
         const p = document.createElement('div'); p.className = 'chat-msg';
         p.innerHTML = '<span class="chat-user">' + user + ':</span>' + text;
         box.appendChild(p); box.scrollTop = box.scrollHeight;
-
-        setTimeout(() => {
-            p.style.opacity = '0';
-            setTimeout(() => { p.remove(); }, 500);
-        }, 4000);
+        setTimeout(() => { p.style.opacity = '0'; setTimeout(() => { p.remove(); }, 500); }, 4000);
     }
 
     window.toggleAuction = function (username) {
         const btn = document.getElementById('btn-auc-toggle');
-        const currentState = (btn.innerText === "BİTİR") ? "started" : "stopped";
+        const currentState = (btn.innerText.includes("BİTİR")) ? "started" : "stopped";
         const action = (currentState === "stopped") ? "start" : "stop";
+
         fetch('/broadcast/toggle_auction', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: action }) });
+
         if (window.TEQLIF_CONFIG.mode === 'broadcast') {
-            if (action === 'start') { btn.innerHTML = "BİTİR"; btn.style.background = "#ff3b30"; btn.style.color = "white"; }
-            else { btn.innerHTML = "BAŞLAT"; btn.style.background = "#00e676"; btn.style.color = "black"; }
+            if (action === 'start') {
+                btn.innerHTML = '<i class="fa-solid fa-stop"></i> BİTİR';
+                btn.classList.remove('btn-green'); btn.classList.add('btn-red');
+                document.getElementById('auc-status-' + username).innerHTML = '<div class="auc-dot"></div> MEZAT AKTİF';
+            } else {
+                btn.innerHTML = '<i class="fa-solid fa-play"></i> BAŞLAT';
+                btn.classList.remove('btn-red'); btn.classList.add('btn-green');
+                document.getElementById('auc-status-' + username).innerHTML = '<div class="auc-dot"></div> MEZAT KAPALI';
+            }
         }
     };
 
     window.resetAuction = function (username) { fetch('/broadcast/reset_auction', { method: 'POST' }); };
-    window.placeBid = function (broadcaster, amount) { fetch('/broadcast/bid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ broadcaster: broadcaster, amount: amount }) }); };
+    window.placeBid = function (broadcaster, amount) {
+        // Efekt
+        const btn = document.activeElement;
+        if (btn) { btn.style.transform = "scale(0.9)"; setTimeout(() => btn.style.transform = "scale(1)", 100); }
+        fetch('/broadcast/bid', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ broadcaster: broadcaster, amount: amount }) });
+    };
 
     function updateAuctionUI(username, data) {
         const bar = document.getElementById('auction-bar-' + username);
         if (!bar) return;
-        const priceEl = bar.querySelector('.auc-price');
-        const bidderEl = bar.querySelector('.auc-bidder-name');
+        const priceEl = document.getElementById('auc-price-' + username);
+        const bidderEl = document.getElementById('auc-bidder-' + username);
+        const statusEl = document.getElementById('auc-status-' + username);
+
         if (data.type === 'auction_started' || data.type === 'auction_update') {
             bar.style.display = 'flex';
-            priceEl.innerHTML = moneyFormatter.format(data.price) + ' ₺';
-            priceEl.style.color = '#00ff00'; setTimeout(() => { priceEl.style.color = '#fff'; }, 300);
+            if (statusEl && window.TEQLIF_CONFIG.mode !== 'broadcast') statusEl.innerHTML = '<div class="auc-dot"></div> MEZAT AÇIK';
+
+            priceEl.innerHTML = moneyFormatter.format(data.price);
+            priceEl.style.color = '#00e676'; setTimeout(() => { priceEl.style.color = '#fff'; }, 300);
             bidderEl.innerText = (data.bidder && data.bidder !== '-') ? data.bidder : "Bekleniyor";
         }
         else if (data.type === 'auction_ended') {
             if (window.TEQLIF_CONFIG.mode !== 'broadcast') bar.style.display = 'none';
+            else if (statusEl) statusEl.innerHTML = 'MEZAT KAPALI';
         }
     }
 
@@ -714,7 +891,6 @@
         if (el) el.innerText = count;
     }
 
-    // --- MAIN ---
     document.addEventListener('DOMContentLoaded', () => {
         if (window.TEQLIF_CONFIG.mode === 'broadcast') {
             const videoElement = document.getElementById('preview');
@@ -732,7 +908,10 @@
                     const titleVal = document.getElementById('streamTitle').value;
                     const catVal = document.getElementById('streamCategory').value;
                     const aucBar = document.getElementById('auction-bar-' + window.TEQLIF_CONFIG.username);
-                    if (aucBar) { if (catVal === 'mezat') { aucBar.style.display = 'flex'; } else { aucBar.style.display = 'none'; } }
+                    if (aucBar) {
+                        if (catVal === 'mezat') { aucBar.style.display = 'flex'; }
+                        else { aucBar.style.display = 'none'; }
+                    }
 
                     const fd = new FormData(); fd.append('title', titleVal); fd.append('category', catVal);
                     fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
@@ -779,18 +958,11 @@
             }, { threshold: 0.6 });
             document.querySelectorAll('.feed-item').forEach(item => observer.observe(item));
 
-            // 🔥 TIKLAMA YÖNETİMİ: Butonlara tıklayınca ses açılmasın 🔥
             document.querySelectorAll('.video-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('click', (e) => {
-                    // Tıklanan şeyin sınıfında 'btn', 'input', 'gift' var mı kontrol et
-                    if (
-                        e.target.closest('.bottom-controls') ||
-                        e.target.closest('.auction-bar') ||
-                        e.target.closest('.top-header')
-                    ) {
-                        return; // Olayı yut, ses açma
+                    if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && !e.target.closest('.chat-input-wrapper') && !e.target.closest('.auc-body') && !e.target.closest('.auc-controls')) {
+                        toggleMute(wrapper, wrapper.dataset.username);
                     }
-                    toggleMute(wrapper, wrapper.dataset.username);
                 });
             });
 
