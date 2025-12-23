@@ -48,10 +48,8 @@ class ConnectionManager:
 
 manager = ConnectionManager()
 
-# 🔥 STATE MANAGEMENT (DURUM YÖNETİMİ) 🔥
-# active_processes: { 'username': subprocess }
+# DURUM YÖNETİMİ
 active_processes = {}
-# pending_disconnects: { 'username': asyncio.Task } -> Silinmeyi bekleyen görevler
 pending_disconnects = {}
 active_auctions = {} 
 
@@ -61,13 +59,11 @@ def kill_ffmpeg_process(username):
     """FFmpeg sürecini kesin olarak öldürür."""
     if username in active_processes:
         try:
-            print(f"🛑 STREAM KİLL EDİLİYOR: {username}")
             active_processes[username].kill()
             active_processes[username].wait(timeout=0.1)
         except: pass
         del active_processes[username]
     
-    # DB'de canlı durumunu kapat
     db = SessionLocal()
     try:
         u = db.query(User).filter(User.username == username).first()
@@ -77,20 +73,17 @@ def kill_ffmpeg_process(username):
     finally: 
         db.close()
     
-    # İzleyicilere bitti bilgisini gönder
+    if username in active_auctions: del active_auctions[username]
     asyncio.create_task(manager.broadcast_to_room(json.dumps({"type": "stream_ended"}), username))
 
 async def graceful_disconnect_timer(username, delay=30):
-    """Bağlantı koptuğunda X saniye bekler, gelmezse öldürür."""
-    print(f"⏳ BAĞLANTI KOPTU (GRACE PERIOD): {username} için {delay}sn bekleniyor...")
     try:
         await asyncio.sleep(delay)
-        # Süre doldu, hala pending listesindeyse öldür
         if username in pending_disconnects:
             kill_ffmpeg_process(username)
             del pending_disconnects[username]
     except asyncio.CancelledError:
-        print(f"⚡ YENİDEN BAĞLANDI: {username} (Sayaç iptal edildi)")
+        pass
 
 def write_to_ffmpeg(process, data):
     if process and process.stdin:
@@ -124,7 +117,6 @@ async def start(title: str = Form(...), category: str = Form(...), user: User = 
 
 @router.post("/broadcast/stop")
 async def stop(user: User = Depends(get_current_user)):
-    # Kullanıcı bilerek durdurduysa hemen öldür
     if user.username in pending_disconnects:
         pending_disconnects[user.username].cancel()
         del pending_disconnects[user.username]
@@ -176,9 +168,22 @@ async def bid(request: Request, user: User = Depends(get_current_user)):
         await manager.broadcast_to_room(json.dumps({"type": "auction_update", "price": active_auctions[target]["price"], "bidder": user.username}), target)
     return {"status": "ok"}
 
+# 🔥 GÜNCELLENEN SOHBET WEBSOCKET'İ 🔥
 @router.websocket("/ws/chat")
 async def chat(websocket: WebSocket, stream: str = "home"):
     await manager.connect(websocket, stream)
+    
+    # --- EŞİTLEME MANTIĞI BAŞLANGICI ---
+    # İzleyici bağlandığında, eğer yayında aktif bir mezat varsa hemen bilgisini yolla
+    if stream in active_auctions:
+        auction_data = active_auctions[stream]
+        await websocket.send_text(json.dumps({
+            "type": "auction_started", # Front-end'de barı açar
+            "price": auction_data["price"],
+            "bidder": auction_data["last_bidder"]
+        }))
+    # --- EŞİTLEME MANTIĞI SONU ---
+
     try:
         while True:
             data = await websocket.receive_text()
@@ -196,20 +201,14 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         user = db.query(User).filter(User.email == jwt.decode(websocket.cookies.get("access_token").partition(" ")[2], SECRET_KEY, algorithms=[ALGORITHM]).get("sub")).first()
     except: await websocket.close(); return
 
-    # 🔥 RECONNECT LOGIC (YENİDEN BAĞLANMA MANTIĞI) 🔥
-    # Eğer kullanıcı daha önce düşmüşse ve süresi dolmadan geri geldiyse:
     if user.username in pending_disconnects:
-        # Silinme görevini iptal et
         pending_disconnects[user.username].cancel()
         del pending_disconnects[user.username]
-        print(f"✅ SESSION KURTARILDI: {user.username}")
     
-    # Eğer süreç zaten yoksa (yeni yayın), başlat
     if user.username not in active_processes:
         user.is_live = True; db.commit()
         stream_dir = f"static/hls/{user.username}"; shutil.rmtree(stream_dir, ignore_errors=True); os.makedirs(stream_dir, exist_ok=True)
         
-        # ABR FFMPEG KOMUTU
         cmd = [
             "ffmpeg", "-f", "webm", "-i", "pipe:0",
             "-filter_complex", 
@@ -232,13 +231,10 @@ async def broadcast(websocket: WebSocket, db: Session = Depends(get_db)):
         while True:
             data = await asyncio.wait_for(websocket.receive_bytes(), timeout=60.0)
             if not data: break
-            # Eğer süreç dışarıdan öldürüldüyse (zaman aşımı vs) döngüyü kır
             if user.username not in active_processes: break
             await loop.run_in_executor(None, write_to_ffmpeg, proc, data)
-    except: 
-        pass # Disconnect hatası normal
+    except: pass
     finally:
-        # 🔥 HEMEN ÖLDÜRME, ZAMANLAYICI BAŞLAT (30 Sn) 🔥
         if user.username in active_processes:
             task = asyncio.create_task(graceful_disconnect_timer(user.username, delay=30))
             pending_disconnects[user.username] = task
