@@ -205,23 +205,24 @@
         font-size: 20px;
     }
 
-    /* --- 5. ALT STACK (AŞAĞI İNDİRİLDİ) --- */
+    /* --- 5. ALT STACK (DİBE YAPIŞIK) --- */
     .bottom-stack {
         position: absolute;
         bottom: 60px;
-        /* Footer yüksekliği */
+        /* Tam Footer üstü */
         left: 0;
         width: 100%;
         display: flex;
         flex-direction: column;
-        padding: 0 10px 0 10px;
-        gap: 4px;
-        /* Elemanlar arası boşluk azaltıldı */
+        padding: 0 10px;
+        /* Sadece yan padding */
+        gap: 2px;
+        /* Elemanlar arası boşluk min */
         pointer-events: auto;
         z-index: 60;
         background: transparent;
-        margin-bottom: 0;
-        /* Ekstra boşluk silindi */
+        margin-bottom: 4px;
+        /* Footer ile çok az pay */
     }
 
     .chat-container {
@@ -234,7 +235,6 @@
         mask-image: linear-gradient(to top, black 90%, transparent 100%);
         -webkit-mask-image: linear-gradient(to top, black 90%, transparent 100%);
         margin-bottom: 0;
-        /* Chat ile bar arasını sıkılaştır */
     }
 
     .chat-msg {
@@ -262,14 +262,13 @@
         backdrop-filter: blur(15px);
         border-radius: 16px;
         padding: 8px 12px;
-        /* Padding azaltıldı */
         border: 1px solid rgba(255, 255, 255, 0.1);
         display: none;
         flex-direction: column;
         gap: 6px;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
-        margin-bottom: 2px;
-        /* Input ile arası sıkılaştırıldı */
+        margin-bottom: 0;
+        /* Inputa yapışık */
         animation: slideUp 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
     }
 
@@ -431,14 +430,14 @@
         background: rgba(255, 255, 255, 0.3);
     }
 
-    /* INPUT ALANI */
+    /* INPUT ALANI (SIKIŞTIRILDI) */
     .bottom-controls {
         display: flex;
         gap: 10px;
         align-items: center;
         width: 100%;
-        padding-bottom: 2px;
-        /* Minimum boşluk */
+        padding-bottom: 0;
+        /* Alt boşluk sıfır */
     }
 
     .chat-input-wrapper {
@@ -899,7 +898,10 @@
                     const titleVal = document.getElementById('streamTitle').value;
                     const catVal = document.getElementById('streamCategory').value;
                     const aucBar = document.getElementById('auction-bar-' + window.TEQLIF_CONFIG.username);
-                    if (aucBar) { if (catVal === 'mezat') { aucBar.style.display = 'flex'; } else { aucBar.style.display = 'none'; } }
+                    if (aucBar) {
+                        if (catVal === 'mezat') { aucBar.style.display = 'flex'; }
+                        else { aucBar.style.display = 'none'; }
+                    }
 
                     const fd = new FormData(); fd.append('title', titleVal); fd.append('category', catVal);
                     fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
