@@ -201,6 +201,7 @@
     .bottom-stack {
         position: absolute;
         bottom: 5px;
+        /* Footer'ın tam üstü */
         left: 0;
         width: 100%;
         display: flex;
@@ -786,7 +787,7 @@
     let isIntentionalStop = false;
     let broadcastWs = null;
     let rec = null;
-    let reconnectInterval = null; // Reconnect kontrolü
+    let reconnectInterval = null;
 
     function toggleMute(wrapper, username) {
         const video = wrapper.querySelector('video');
@@ -892,7 +893,6 @@
             const videoElement = document.getElementById('preview');
             const startBtn = document.getElementById('btn-start-broadcast');
 
-            // Reconnect fonksiyonu
             function startBroadcastFlow(isReconnect = false) {
                 if (!isReconnect) {
                     const fd = new FormData();
@@ -913,7 +913,6 @@
                     rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
                     rec.start(250);
 
-                    // Thumbnail
                     if (!isReconnect) {
                         setInterval(() => {
                             if (broadcastWs.readyState === 1) {
@@ -928,7 +927,6 @@
                 broadcastWs.onclose = () => {
                     if (!isIntentionalStop) {
                         if (rec) rec.stop();
-                        // Otomatik yeniden bağlanma
                         document.getElementById('reconnect-toast').style.display = 'block';
                         setTimeout(() => startBroadcastFlow(true), 2000);
                     }
@@ -951,10 +949,8 @@
                         else { aucBar.style.display = 'none'; }
                     }
                     document.getElementById('setup-layer').style.display = 'none';
-
                     startBroadcastFlow(false);
 
-                    // Chat WS
                     window.broadcastChatWs = new WebSocket(protocol + '://' + window.location.host + '/ws/chat?stream=' + window.TEQLIF_CONFIG.username);
                     window.broadcastChatWs.onmessage = (e) => {
                         const d = JSON.parse(e.data);
@@ -984,11 +980,14 @@
             }, { threshold: 0.6 });
             document.querySelectorAll('.feed-item').forEach(item => observer.observe(item));
 
+            // 🔥 TIKLAMA YÖNETİMİ DÜZELTİLDİ: Sadece boş alana tıklayınca ses çalışır 🔥
             document.querySelectorAll('.video-wrapper').forEach(wrapper => {
                 wrapper.addEventListener('click', (e) => {
-                    if (e.target.tagName !== 'BUTTON' && e.target.tagName !== 'INPUT' && !e.target.closest('.chat-input-wrapper') && !e.target.closest('.auc-body') && !e.target.closest('.auc-controls')) {
-                        toggleMute(wrapper, wrapper.dataset.username);
+                    // Eğer tıklanan yer ALT PANEL (.bottom-stack) veya ÜST PANEL (.top-header) ise sesi elleme.
+                    if (e.target.closest('.bottom-stack') || e.target.closest('.top-header') || e.target.closest('.setup-layer')) {
+                        return;
                     }
+                    toggleMute(wrapper, wrapper.dataset.username);
                 });
             });
 
