@@ -119,7 +119,7 @@
         justify-content: space-between;
         align-items: flex-start;
         pointer-events: auto;
-        background: linear-gradient(to bottom, rgba(0, 0, 0, 0.6) 0%, transparent 100%);
+        background: transparent;
         z-index: 60;
     }
 
@@ -127,11 +127,9 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        background: rgba(0, 0, 0, 0.3);
-        padding: 4px 12px 4px 4px;
-        border-radius: 30px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        backdrop-filter: blur(5px);
+        background: transparent;
+        padding: 4px;
+        border: none;
     }
 
     .user-avatar {
@@ -164,7 +162,7 @@
     }
 
     .viewer-badge {
-        background: rgba(0, 0, 0, 0.3);
+        background: transparent;
         color: white;
         padding: 5px 10px;
         border-radius: 6px;
@@ -173,19 +171,17 @@
         display: flex;
         align-items: center;
         gap: 5px;
-        border: 1px solid rgba(255, 255, 255, 0.1);
         height: 36px;
-        backdrop-filter: blur(5px);
     }
 
     .live-badge {
-        background: linear-gradient(to right, #ff0050, #d60044);
+        background: #ff0050;
         color: white;
-        padding: 5px 8px;
+        padding: 3px 6px;
         border-radius: 4px;
         font-weight: 800;
         font-size: 10px;
-        height: 24px;
+        height: 20px;
         display: flex;
         align-items: center;
     }
@@ -194,7 +190,7 @@
         width: 36px;
         height: 36px;
         border-radius: 50%;
-        background: rgba(0, 0, 0, 0.3);
+        background: transparent;
         color: white;
         display: flex;
         align-items: center;
@@ -205,24 +201,31 @@
         font-size: 20px;
     }
 
-    /* --- 5. ALT STACK (DİBE YAPIŞIK) --- */
+    /* --- 5. ALT STACK (DİBE YAPIŞIK & SIKI) --- */
     .bottom-stack {
         position: absolute;
         bottom: 60px;
-        /* Tam Footer üstü */
+        /* Footer'ın tam üstü */
         left: 0;
         width: 100%;
         display: flex;
         flex-direction: column;
+        justify-content: flex-end;
+        /* İçerikleri en aşağı it */
         padding: 0 10px;
-        /* Sadece yan padding */
         gap: 2px;
         /* Elemanlar arası boşluk min */
-        pointer-events: auto;
+        pointer-events: none;
+        /* Boşluklar tıklanabilsin */
         z-index: 60;
         background: transparent;
-        margin-bottom: 4px;
-        /* Footer ile çok az pay */
+        margin-bottom: 2px;
+        /* Çok ince pay */
+    }
+
+    /* Stack içindeki her şey tıklanabilir olsun */
+    .bottom-stack>* {
+        pointer-events: auto;
     }
 
     .chat-container {
@@ -430,14 +433,14 @@
         background: rgba(255, 255, 255, 0.3);
     }
 
-    /* INPUT ALANI (SIKIŞTIRILDI) */
+    /* INPUT ALANI */
     .bottom-controls {
         display: flex;
         gap: 10px;
         align-items: center;
         width: 100%;
-        padding-bottom: 0;
-        /* Alt boşluk sıfır */
+        padding-bottom: 2px;
+        /* Minimum alt boşluk */
     }
 
     .chat-input-wrapper {
