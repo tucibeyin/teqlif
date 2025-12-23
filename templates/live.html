@@ -82,9 +82,6 @@
         object-fit: cover;
     }
 
-    /* 🔥 DÜZELTME: Mirroring (Aynalama) kodu silindi 🔥 */
-    /* #preview { transform: scaleX(-1); } */
-
     @media (min-width: 768px) {
         .video-wrapper {
             width: 100%;
@@ -204,7 +201,6 @@
     .bottom-stack {
         position: absolute;
         bottom: 5px;
-        /* Footer'ın tam üstü */
         left: 0;
         width: 100%;
         display: flex;
@@ -491,6 +487,23 @@
         transform: scale(0.9);
     }
 
+    /* RECONNECT UYARISI */
+    .reconnect-toast {
+        position: absolute;
+        top: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(255, 0, 0, 0.7);
+        color: white;
+        padding: 8px 16px;
+        border-radius: 20px;
+        font-size: 12px;
+        font-weight: bold;
+        z-index: 200;
+        display: none;
+        backdrop-filter: blur(5px);
+    }
+
     .gift-animation-layer {
         position: fixed;
         top: 0;
@@ -626,12 +639,14 @@
 </style>
 
 <div class="teqlif-stage" id="scroll-container">
+    <div id="reconnect-toast" class="reconnect-toast"><i class="fa-solid fa-wifi"></i> Bağlantı zayıf, tekrar
+        bağlanılıyor...</div>
+
     {% if mode == 'broadcast' %}
     {% set my_auc = active_auctions.get(user.username) %}
     <div class="video-wrapper">
         <video id="preview" autoplay muted playsinline></video>
         <canvas id="broadcast-canvas" width="720" height="1280" style="display:none;"></canvas>
-
         <div id="setup-layer" class="setup-layer">
             <div class="setup-box">
                 <h2 style="color:white; margin-bottom:20px;">Yayın Başlat</h2>
@@ -643,7 +658,6 @@
                 <button id="btn-start-broadcast" class="start-btn">YAYINA GİR 📡</button>
             </div>
         </div>
-
         <div id="live-ui" class="ui-layer">
             <div class="top-header">
                 <div class="header-left">
@@ -660,7 +674,6 @@
             <div class="gift-animation-layer" id="gift-layer-{{ user.username }}"></div>
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ user.username }}"></div>
-
                 <div id="auction-bar-{{ user.username }}" class="auction-bar">
                     <div class="auc-header">
                         <div class="auc-info">
@@ -683,7 +696,6 @@
                             BAŞLAT</button>
                     </div>
                 </div>
-
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper"><input type="text" class="chat-input"
                             id="chat-input-{{ user.username }}" placeholder="Yayıncı olarak yaz..."
@@ -696,16 +708,13 @@
 
     {% else %}
     {% for stream in streams %}
-    {% set st_auc = active_auctions.get(stream.username) %}
     <div class="video-wrapper feed-item" data-username="{{ stream.username }}">
         <video id="video-{{ stream.username }}" playsinline webkit-playsinline loop
             poster="{{ stream.thumbnail }}"></video>
-
         <div id="vol-icon-{{ stream.username }}" class="volume-feedback"><i class="fa-solid fa-volume-high"></i></div>
         <div id="end-screen-{{ stream.username }}" class="end-screen">
             <h2>Yayın Sona Erdi</h2><a href="/" class="home-btn">Ana Sayfa</a>
         </div>
-
         <div class="ui-layer">
             <div class="top-header">
                 <div class="header-left">
@@ -721,7 +730,6 @@
             <div class="gift-animation-layer" id="gift-layer-{{ stream.username }}"></div>
             <div class="bottom-stack">
                 <div class="chat-container" id="chat-box-{{ stream.username }}"></div>
-
                 {% if stream.stream_category == 'mezat' %}
                 <div id="auction-bar-{{ stream.username }}" class="auction-bar"
                     style="display:{{ 'flex' if st_auc else 'none' }};">
@@ -751,7 +759,6 @@
                     </div>
                 </div>
                 {% endif %}
-
                 <div class="bottom-controls">
                     <div class="chat-input-wrapper"><input type="text" class="chat-input"
                             id="chat-input-{{ stream.username }}" placeholder="Yorum yap..." autocomplete="off"><i
@@ -779,6 +786,7 @@
     let isIntentionalStop = false;
     let broadcastWs = null;
     let rec = null;
+    let reconnectInterval = null; // Reconnect kontrolü
 
     function toggleMute(wrapper, username) {
         const video = wrapper.querySelector('video');
@@ -861,7 +869,6 @@
         const priceEl = document.getElementById('auc-price-' + username);
         const bidderEl = document.getElementById('auc-bidder-' + username);
         const statusEl = document.getElementById('auc-status-' + username);
-
         if (data.type === 'auction_started' || data.type === 'auction_update') {
             bar.style.display = 'flex';
             if (statusEl && window.TEQLIF_CONFIG.mode !== 'broadcast') statusEl.innerHTML = '<div class="auc-dot"></div> MEZAT AÇIK';
@@ -884,6 +891,50 @@
         if (window.TEQLIF_CONFIG.mode === 'broadcast') {
             const videoElement = document.getElementById('preview');
             const startBtn = document.getElementById('btn-start-broadcast');
+
+            // Reconnect fonksiyonu
+            function startBroadcastFlow(isReconnect = false) {
+                if (!isReconnect) {
+                    const fd = new FormData();
+                    fd.append('title', document.getElementById('streamTitle').value);
+                    fd.append('category', document.getElementById('streamCategory').value);
+                    fetch('/broadcast/start', { method: 'POST', body: fd });
+                }
+
+                broadcastWs = new WebSocket(protocol + '://' + window.location.host + '/ws/broadcast');
+
+                broadcastWs.onopen = () => {
+                    document.getElementById('reconnect-toast').style.display = 'none';
+                    if (reconnectInterval) clearInterval(reconnectInterval);
+
+                    let options = { mimeType: 'video/webm;codecs=h264,opus', videoBitsPerSecond: 2500000 };
+                    if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
+                    try { rec = new MediaRecorder(videoElement.srcObject, options); } catch (e) { rec = new MediaRecorder(videoElement.srcObject); }
+                    rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
+                    rec.start(250);
+
+                    // Thumbnail
+                    if (!isReconnect) {
+                        setInterval(() => {
+                            if (broadcastWs.readyState === 1) {
+                                const cvs = document.getElementById('broadcast-canvas');
+                                const ctx = cvs.getContext('2d'); ctx.drawImage(videoElement, 0, 0, 720, 1280);
+                                fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: cvs.toDataURL('image/jpeg', 0.4) }) });
+                            }
+                        }, 15000);
+                    }
+                };
+
+                broadcastWs.onclose = () => {
+                    if (!isIntentionalStop) {
+                        if (rec) rec.stop();
+                        // Otomatik yeniden bağlanma
+                        document.getElementById('reconnect-toast').style.display = 'block';
+                        setTimeout(() => startBroadcastFlow(true), 2000);
+                    }
+                };
+            }
+
             async function initCamera() {
                 try {
                     const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true }, video: { facingMode: 'user' } });
@@ -894,48 +945,34 @@
 
             if (startBtn) {
                 startBtn.addEventListener('click', () => {
-                    const titleVal = document.getElementById('streamTitle').value;
-                    const catVal = document.getElementById('streamCategory').value;
                     const aucBar = document.getElementById('auction-bar-' + window.TEQLIF_CONFIG.username);
                     if (aucBar) {
-                        if (catVal === 'mezat') { aucBar.style.display = 'flex'; }
+                        if (document.getElementById('streamCategory').value === 'mezat') { aucBar.style.display = 'flex'; }
                         else { aucBar.style.display = 'none'; }
                     }
+                    document.getElementById('setup-layer').style.display = 'none';
 
-                    const fd = new FormData(); fd.append('title', titleVal); fd.append('category', catVal);
-                    fetch('/broadcast/start', { method: 'POST', body: fd }).then(res => {
-                        if (!res.ok) return;
-                        document.getElementById('setup-layer').style.display = 'none';
-                        broadcastWs = new WebSocket(protocol + '://' + window.location.host + '/ws/broadcast');
-                        broadcastWs.onopen = () => {
-                            let options = { mimeType: 'video/webm;codecs=h264,opus', videoBitsPerSecond: 2500000 };
-                            if (!MediaRecorder.isTypeSupported(options.mimeType)) options = { mimeType: 'video/webm;codecs=vp8,opus', videoBitsPerSecond: 2500000 };
-                            try { rec = new MediaRecorder(videoElement.srcObject, options); } catch (e) { rec = new MediaRecorder(videoElement.srcObject); }
-                            rec.ondataavailable = e => { if (e.data.size > 0 && broadcastWs.readyState === 1) broadcastWs.send(e.data); };
-                            rec.start(250);
-                            setInterval(() => {
-                                if (broadcastWs.readyState === 1) {
-                                    const cvs = document.getElementById('broadcast-canvas');
-                                    const ctx = cvs.getContext('2d'); ctx.drawImage(videoElement, 0, 0, 720, 1280);
-                                    fetch('/broadcast/thumbnail', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ image: cvs.toDataURL('image/jpeg', 0.4) }) });
-                                }
-                            }, 15000);
-                        };
-                        broadcastWs.onclose = () => { if (!isIntentionalStop) { if (rec) rec.stop(); alert("Bağlantı koptu!"); location.href = '/'; } };
-                        window.broadcastChatWs = new WebSocket(protocol + '://' + window.location.host + '/ws/chat?stream=' + window.TEQLIF_CONFIG.username);
-                        window.broadcastChatWs.onmessage = (e) => {
-                            const d = JSON.parse(e.data);
-                            if (d.type === "chat_message") addChatMessage(window.TEQLIF_CONFIG.username, d.user, d.text);
-                            else if (d.type.startsWith("auction_")) updateAuctionUI(window.TEQLIF_CONFIG.username, d);
-                            else if (d.type === "viewer_update") updateViewerCount(window.TEQLIF_CONFIG.username, d.count);
-                            else if (d.type === "gift_received") showGiftAnimation(window.TEQLIF_CONFIG.username, d.sender);
-                        };
-                    });
+                    startBroadcastFlow(false);
+
+                    // Chat WS
+                    window.broadcastChatWs = new WebSocket(protocol + '://' + window.location.host + '/ws/chat?stream=' + window.TEQLIF_CONFIG.username);
+                    window.broadcastChatWs.onmessage = (e) => {
+                        const d = JSON.parse(e.data);
+                        if (d.type === "chat_message") addChatMessage(window.TEQLIF_CONFIG.username, d.user, d.text);
+                        else if (d.type.startsWith("auction_")) updateAuctionUI(window.TEQLIF_CONFIG.username, d);
+                        else if (d.type === "viewer_update") updateViewerCount(window.TEQLIF_CONFIG.username, d.count);
+                        else if (d.type === "gift_received") showGiftAnimation(window.TEQLIF_CONFIG.username, d.sender);
+                    };
                 });
             }
-            window.stopBroadcast = () => { isIntentionalStop = true; if (rec) rec.stop(); if (broadcastWs) broadcastWs.close(); if (window.broadcastChatWs) window.broadcastChatWs.close(); fetch('/broadcast/stop', { method: 'POST' }).finally(() => location.href = '/'); };
+            window.stopBroadcast = () => {
+                isIntentionalStop = true;
+                if (rec) rec.stop();
+                if (broadcastWs) broadcastWs.close();
+                if (window.broadcastChatWs) window.broadcastChatWs.close();
+                fetch('/broadcast/stop', { method: 'POST' }).finally(() => location.href = '/');
+            };
         }
-
         else if (window.TEQLIF_CONFIG.mode === 'watch') {
             const activePlayers = {};
             const observer = new IntersectionObserver((entries) => {
