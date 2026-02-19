@@ -1,0 +1,97 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  phone     String?
+  avatar    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  ads  Ad[]
+  bids Bid[]
+}
+
+model Category {
+  id       String @id @default(cuid())
+  name     String @unique
+  slug     String @unique
+  icon     String?
+  parentId String?
+  parent   Category?  @relation("SubCategories", fields: [parentId], references: [id])
+  children Category[] @relation("SubCategories")
+  ads      Ad[]
+}
+
+model Province {
+  id       String     @id
+  name     String
+  districts District[]
+  ads      Ad[]
+}
+
+model District {
+  id         String   @id
+  name       String
+  provinceId String
+  province   Province @relation(fields: [provinceId], references: [id])
+  ads        Ad[]
+}
+
+model Ad {
+  id          String   @id @default(cuid())
+  title       String
+  description String
+  price       Float
+  minBidStep  Float    @default(1)
+  status      AdStatus @default(ACTIVE)
+  images      String[]
+  expiresAt   DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  provinceId String
+  province   Province @relation(fields: [provinceId], references: [id])
+
+  districtId String
+  district   District @relation(fields: [districtId], references: [id])
+
+  bids       Bid[]
+}
+
+model Bid {
+  id        String   @id @default(cuid())
+  amount    Float
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  adId String
+  ad   Ad     @relation(fields: [adId], references: [id], onDelete: Cascade)
+}
+
+enum AdStatus {
+  ACTIVE
+  SOLD
+  EXPIRED
+  DRAFT
+}
