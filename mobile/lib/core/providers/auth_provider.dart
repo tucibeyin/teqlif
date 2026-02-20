@@ -75,9 +75,12 @@ class AuthNotifier extends StateNotifier<AuthState> {
       debugPrint('[LOGIN ERROR] $e');
       String message = 'Giriş başarısız.';
       if (e is DioException) {
-        message = e.response?.data?['message'] ?? message;
+        final data = e.response?.data;
+        if (data is Map) {
+          message = (data['message'] ?? data['error'] ?? message).toString();
+        }
         debugPrint('[LOGIN STATUS] ${e.response?.statusCode}');
-        debugPrint('[LOGIN BODY] ${e.response?.data}');
+        debugPrint('[LOGIN BODY] $data');
       }
       state = state.copyWith(isLoading: false, error: message);
       return false;
