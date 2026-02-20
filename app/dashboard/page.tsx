@@ -69,28 +69,28 @@ export default async function DashboardPage() {
 
                 {/* Stats */}
                 <div className="stats-grid">
-                    <div className="stat-card">
+                    <Link href="#ilanlarim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value">{myAds.length}</div>
                         <div className="stat-label">Aktif İlanım</div>
-                    </div>
-                    <div className="stat-card">
+                    </Link>
+                    <Link href="#ilanlarim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value">{totalBidsReceived}</div>
                         <div className="stat-label">Gelen Teklif</div>
-                    </div>
-                    <div className="stat-card">
+                    </Link>
+                    <Link href="#tekliflerim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value">{myBids.length}</div>
                         <div className="stat-label">Verdiğim Teklif</div>
-                    </div>
-                    <div className="stat-card">
+                    </Link>
+                    <Link href="#ilanlarim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value" style={{ color: "var(--accent-green)" }}>
                             {myAds.filter((a) => a.status === "ACTIVE").length}
                         </div>
                         <div className="stat-label">Aktif</div>
-                    </div>
+                    </Link>
                 </div>
 
                 {/* İlanlarım */}
-                <section className="section">
+                <section className="section" id="ilanlarim">
                     <div className="section-header">
                         <h2 className="section-title">İlanlarım</h2>
                     </div>
@@ -153,7 +153,7 @@ export default async function DashboardPage() {
                 </section>
 
                 {/* Verdiğim Teklifler */}
-                <section className="section">
+                <section className="section" id="tekliflerim">
                     <div className="section-header">
                         <h2 className="section-title">Verdiğim Teklifler</h2>
                     </div>

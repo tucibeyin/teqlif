@@ -230,7 +230,12 @@ export default async function AdDetailPage({
                                             <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
                                         )}
                                         {bid.status === 'ACCEPTED' && (
-                                            <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
+                                                {isOwner && (
+                                                    <AdActions actionType="MESSAGE" adId={ad.id} sellerId={bid.user.id} currentUser={session?.user} isMessageBidder={true} />
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 ))}

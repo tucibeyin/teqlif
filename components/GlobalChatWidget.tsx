@@ -22,10 +22,16 @@ export function GlobalChatWidget() {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Initial fetch
+    // Initial fetch and global polling for unread count
     useEffect(() => {
         if (!session?.user) return;
         fetchConversations();
+
+        const interval = setInterval(() => {
+            fetchConversations();
+        }, 10000);
+
+        return () => clearInterval(interval);
     }, [session]);
 
     const fetchConversations = async () => {

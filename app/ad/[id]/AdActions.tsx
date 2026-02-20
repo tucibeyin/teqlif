@@ -10,6 +10,7 @@ interface AdActionsProps {
     sellerId?: string;
     bidId?: string;
     currentUser: any;
+    isMessageBidder?: boolean;
 }
 
 export function AdActions({
@@ -18,6 +19,7 @@ export function AdActions({
     sellerId,
     bidId,
     currentUser,
+    isMessageBidder,
 }: AdActionsProps) {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
@@ -74,6 +76,29 @@ export function AdActions({
     };
 
     if (actionType === "MESSAGE") {
+        if (isMessageBidder) {
+            return (
+                <button
+                    onClick={handleAction}
+                    disabled={isLoading}
+                    className="btn btn-outline"
+                    style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '4px',
+                        padding: '4px 8px',
+                        fontSize: '0.8rem',
+                        color: 'var(--primary)',
+                        borderColor: 'var(--primary)',
+                        background: 'rgba(0, 188, 212, 0.1)'
+                    }}
+                >
+                    <MessageSquare size={14} />
+                    {isLoading ? "..." : "Mesaj Gönder"}
+                </button>
+            );
+        }
+
         return (
             <button
                 onClick={handleAction}
