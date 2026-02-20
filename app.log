@@ -1,0 +1,13 @@
+
+> teqlif@0.1.0 dev
+> next dev -p 3456
+
+▲ Next.js 16.1.6 (Turbopack)
+- Local:         http://localhost:3456
+- Network:       http://192.168.1.103:3456
+- Environments: .env
+
+✓ Starting...
+⚠ The "middleware" file convention is deprecated. Please use "proxy" instead. Learn more: https://nextjs.org/docs/messages/middleware-to-proxy
+✓ Ready in 536ms
+ GET /login?callbackUrl=%2Fdashboard 200 in 300ms (compile: 186ms, render: 114ms)

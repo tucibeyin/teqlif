@@ -125,9 +125,14 @@ export default async function AdDetailPage({
                 <div>
                     <div className="auction-card">
                         <div style={{ marginBottom: "1.25rem" }}>
-                            <div className="auction-label">Başlangıç Fiyatı</div>
+                            <div className="auction-label">
+                                {ad.startingBid === null ? "Açılış (Serbest Teklif)" : "Minimum Açılış Teklifi"}
+                            </div>
                             <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-secondary)" }}>
-                                {formatPrice(ad.price)}
+                                {ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid)}
+                            </div>
+                            <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.25rem" }}>
+                                Piyasa Değeri: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span>
                             </div>
                         </div>
 
@@ -173,8 +178,8 @@ export default async function AdDetailPage({
                         {!isOwner && session?.user ? (
                             <BidForm
                                 adId={ad.id}
-                                currentHighest={highestBid?.amount ?? ad.price}
-                                minStep={ad.minBidStep}
+                                currentHighest={highestBid?.amount ?? (ad.startingBid !== null ? ad.startingBid : 0)} // If no bids and free bid, it acts as 0. So next minimum is 0 + minStep(1) = 1
+                                minStep={ad.bids.length > 0 ? ad.minBidStep : (ad.startingBid === null ? 1 : 0)} // If first bid and exact startingBid, minStep is 0 to allow exact startingBid amount
                             />
                         ) : !session?.user ? (
                             <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>

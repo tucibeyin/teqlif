@@ -21,6 +21,7 @@ async function getAds(categorySlug?: string) {
         district: true,
         _count: { select: { bids: true } },
       },
+      // Since startingBid is on the Ad model itself, it is automatically selected by default.
     });
   } catch {
     return [];
@@ -134,7 +135,14 @@ export default async function HomePage({
                   )}
                   <div className="ad-card-body">
                     <div className="ad-card-title">{ad.title}</div>
-                    <div className="ad-card-price">{formatPrice(ad.price)}</div>
+                    <div className="ad-card-price" style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
+                      <span style={{ fontSize: "1.125rem", color: "var(--primary)" }}>
+                        {ad.startingBid === null ? "🔥 1,00 ₺'den Serbest Teklif" : formatPrice(ad.startingBid)}
+                      </span>
+                      <span style={{ fontSize: "0.875rem", color: "var(--text-muted)", textDecoration: "line-through", fontWeight: "normal" }}>
+                        Piyasa: {formatPrice(ad.price)}
+                      </span>
+                    </div>
                     <div className="ad-card-meta">
                       <span>📍 {ad.province.name}, {ad.district.name}</span>
                       <span>·</span>

@@ -46,12 +46,24 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Bu ilan artık aktif değil." }, { status: 400 });
         }
 
-        const currentHighest = ad.bids[0]?.amount ?? ad.price;
+        // Determine the opening bid
+        // If there's an explicit startingBid, use it as baseline
+        // If startingBid is null, it means it's a "Free Bid" (Serbest Teklif), so the baseline is 0 (first bid can be anything >= 1)
+        const baseline = ad.startingBid !== null ? ad.startingBid : 0;
+
+        // The highest bid is either the first bid in db, or the baseline
+        const currentHighest = ad.bids[0]?.amount ?? baseline;
+
         if (Number(amount) <= currentHighest) {
             return NextResponse.json(
-                { error: `Teklifiniz mevcut en yüksek tekliften (${currentHighest} ₺) yüksek olmalıdır.` },
+                { error: `Teklifiniz minimum ${currentHighest + (ad.bids.length > 0 ? ad.minBidStep : 0)} ₺ olmalıdır.` },
                 { status: 400 }
             );
+        }
+
+        // Explicit Free Bidding fallback rule (can't bid less than 1 ₺)
+        if (Number(amount) < 1) {
+            return NextResponse.json({ error: "Teklifiniz en az 1 ₺ olmalıdır." }, { status: 400 });
         }
 
         const bid = await prisma.bid.create({

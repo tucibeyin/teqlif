@@ -11,7 +11,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         }
 
         const { id } = await params;
-        const { title, description, price, categorySlug, provinceId, districtId, images } = await req.json();
+        const { title, description, price, startingBid, categorySlug, provinceId, districtId, images } = await req.json();
 
         if (!title || !description || !price || !categorySlug || !provinceId || !districtId) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
@@ -38,6 +38,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                 title,
                 description,
                 price: Number(price),
+                startingBid: startingBid !== undefined ? Number(startingBid) : null,
                 categoryId: category.id,
                 provinceId,
                 districtId,

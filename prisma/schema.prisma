@@ -55,6 +55,7 @@ model Ad {
   title       String
   description String
   price       Float
+  startingBid Float?
   minBidStep  Float    @default(1)
   status      AdStatus @default(ACTIVE)
   images      String[]
