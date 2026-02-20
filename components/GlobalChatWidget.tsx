@@ -8,7 +8,7 @@ import { tr } from 'date-fns/locale';
 
 interface User { id: string; name: string; avatar: string | null; }
 interface Message { id: string; content: string; createdAt: string; senderId: string; }
-interface Conversation { id: string; user1: User; user2: User; ad: { title: string } | null; messages: Message[]; }
+interface Conversation { id: string; user1: User; user2: User; ad: { title: string } | null; messages: Message[]; _count?: { messages: number }; }
 
 export function GlobalChatWidget() {
     const { data: session } = useSession();
@@ -34,9 +34,9 @@ export function GlobalChatWidget() {
             if (res.ok) {
                 const data = await res.json();
                 setConversations(data);
-                // Simple unread calculation: count convs where last message is not from me and is unread
-                // (Note: we didn't expose isRead in the API preview yet, ideally we should.
-                // For now, let's just show a generic dot if we want, or fetch total unreads from another endpoint if added)
+
+                const total = data.reduce((acc: number, conv: any) => acc + (conv._count?.messages || 0), 0);
+                setUnreadTotal(total);
             }
         } catch (e) {
             console.error(e);
@@ -58,11 +58,16 @@ export function GlobalChatWidget() {
         }
     };
 
-    // Polling active conversation
     useEffect(() => {
         let interval: NodeJS.Timeout;
         if (isOpen && !isMinimized && activeConvId) {
             fetchMessages(activeConvId);
+
+            // Optimistically clear unread count
+            setConversations(prev => prev.map(c =>
+                c.id === activeConvId ? { ...c, _count: { messages: 0 } } : c
+            ));
+
             interval = setInterval(() => {
                 fetchMessages(activeConvId);
             }, 5000);
@@ -133,6 +138,26 @@ export function GlobalChatWidget() {
                     onMouseLeave={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
                     <MessageCircle size={30} />
+                    {unreadTotal > 0 && (
+                        <span style={{
+                            position: 'absolute',
+                            top: '-5px',
+                            right: '-5px',
+                            background: 'var(--danger)', // typically red for chat badges
+                            color: 'white',
+                            fontSize: '11px',
+                            fontWeight: 'bold',
+                            width: '24px',
+                            height: '24px',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}>
+                            {unreadTotal > 9 ? '9+' : unreadTotal}
+                        </span>
+                    )}
                 </button>
             )}
 
@@ -214,7 +239,21 @@ export function GlobalChatWidget() {
                                                     className="hover:bg-primary-50"
                                                 >
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                                        <span style={{ fontWeight: 600, fontSize: '0.9rem' }}>{otherUser.name}</span>
+                                                        <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                            {otherUser.name}
+                                                            {conv._count?.messages ? (
+                                                                <span style={{
+                                                                    background: 'var(--primary)',
+                                                                    color: 'white',
+                                                                    fontSize: '0.7rem',
+                                                                    padding: '2px 6px',
+                                                                    borderRadius: '10px',
+                                                                    fontWeight: 'bold'
+                                                                }}>
+                                                                    {conv._count.messages}
+                                                                </span>
+                                                            ) : null}
+                                                        </span>
                                                         <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
                                                             {lastMessage && formatDistanceToNow(new Date(lastMessage.createdAt), { addSuffix: true, locale: tr })}
                                                         </span>

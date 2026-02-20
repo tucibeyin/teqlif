@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { NotificationBell } from "./NotificationBell";
+import { MessageBell } from "./MessageBell";
 
 export async function Navbar() {
     const session = await auth();
@@ -37,6 +38,7 @@ export async function Navbar() {
                                 <Link href="/dashboard" className="btn btn-ghost btn-sm">
                                     Panelim
                                 </Link>
+                                <MessageBell />
                                 <form action={async () => {
                                     "use server";
                                     await signOut({ redirectTo: "/" });

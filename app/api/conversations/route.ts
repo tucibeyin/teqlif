@@ -34,6 +34,16 @@ export async function GET(request: Request) {
                     orderBy: { createdAt: 'desc' },
                     take: 1, // Get the latest message for preview
                 },
+                _count: {
+                    select: {
+                        messages: {
+                            where: {
+                                isRead: false,
+                                senderId: { not: currentUser.id }
+                            }
+                        }
+                    }
+                }
             },
             orderBy: {
                 updatedAt: 'desc',

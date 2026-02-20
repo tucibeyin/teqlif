@@ -29,6 +29,7 @@ interface Conversation {
     ad: { id: string; title: string, images: string[] } | null;
     messages: Message[];
     updatedAt: string;
+    _count?: { messages: number };
 }
 
 function MessagesContent() {
@@ -89,6 +90,11 @@ function MessagesContent() {
     useEffect(() => {
         if (activeConversationId) {
             fetchMessages(activeConversationId);
+            // Optimistically clear unread count for the active conversation
+            setConversations(prev => prev.map(c =>
+                c.id === activeConversationId ? { ...c, _count: { messages: 0 } } : c
+            ));
+
             // Polling for new messages
             const interval = setInterval(() => {
                 fetchMessages(activeConversationId);
@@ -204,7 +210,21 @@ function MessagesContent() {
                                             className="hover:bg-primary-50"
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                                                <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{otherUser.name}</div>
+                                                <div style={{ fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                    {otherUser.name}
+                                                    {conv._count?.messages ? (
+                                                        <span style={{
+                                                            background: 'var(--primary)',
+                                                            color: 'white',
+                                                            fontSize: '0.7rem',
+                                                            padding: '2px 6px',
+                                                            borderRadius: '10px',
+                                                            fontWeight: 'bold'
+                                                        }}>
+                                                            {conv._count.messages}
+                                                        </span>
+                                                    ) : null}
+                                                </div>
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                                     {lastMessage ? formatDistanceToNow(new Date(lastMessage.createdAt), { addSuffix: true, locale: tr }) : ''}
                                                 </div>
