@@ -44,9 +44,14 @@ export async function POST(req: NextRequest) {
         }
 
         const ip = req.headers.get("x-forwarded-for") ?? "anonymous";
-        const { success } = await actionRatelimiter.limit(ip);
-        if (!success) {
-            return NextResponse.json({ error: "Çok fazla istek gönderdiniz. Lütfen bir süre bekleyin." }, { status: 429 });
+        try {
+            const { success } = await actionRatelimiter.limit(ip);
+            if (!success) {
+                return NextResponse.json({ error: "Çok fazla istek gönderdiniz. Lütfen bir süre bekleyin." }, { status: 429 });
+            }
+        } catch (ratelimitError) {
+            console.error("Rate limit check failed (Ad):", ratelimitError);
+            // Fail-open: allow the request to pass if Redis is unreachable
         }
 
         const { title, description, price, categorySlug, provinceId, districtId, images } = await req.json();

@@ -11,9 +11,14 @@ export async function POST(req: NextRequest) {
         }
 
         const ip = req.headers.get("x-forwarded-for") ?? "anonymous";
-        const { success } = await actionRatelimiter.limit(ip);
-        if (!success) {
-            return NextResponse.json({ error: "Çok hızlı teklif veriyorsunuz. Lütfen biraz yavaşlayın." }, { status: 429 });
+        try {
+            const { success } = await actionRatelimiter.limit(ip);
+            if (!success) {
+                return NextResponse.json({ error: "Çok hızlı teklif veriyorsunuz. Lütfen biraz yavaşlayın." }, { status: 429 });
+            }
+        } catch (ratelimitError) {
+            console.error("Rate limit check failed (Bid):", ratelimitError);
+            // Fail-open: allow the request to pass if Redis is unreachable
         }
 
         const { adId, amount } = await req.json();

@@ -4,7 +4,8 @@ import { redis } from "./redis";
 // Define an adapter or simply cast to any to bypass type mismatch since Upstash Ratelimit expects its own Redis interface
 const ratelimitRedis = {
     sadd: (key: string, ...members: string[]) => redis.sadd(key, ...members),
-    eval: (script: string, keys: string[], args: unknown[]) => redis.eval(script, keys.length, ...keys, ...(args as string[])),
+    eval: (script: string, keys: string[], args: unknown[]) =>
+        redis.eval(script, keys.length, ...keys, ...(args.map(a => String(a)))),
     // Use any as a fallback to avoid strict Type issues on adapter
 } as any;
 
