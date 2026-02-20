@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { actionRatelimiter } from "@/lib/rate-limit";
 
 export async function GET(req: NextRequest) {
     try {
@@ -39,6 +40,12 @@ export async function POST(req: NextRequest) {
         const session = await auth();
         if (!session?.user) {
             return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+        }
+
+        const ip = req.headers.get("x-forwarded-for") ?? "anonymous";
+        const { success } = await actionRatelimiter.limit(ip);
+        if (!success) {
+            return NextResponse.json({ error: "Çok fazla istek gönderdiniz. Lütfen bir süre bekleyin." }, { status: 429 });
         }
 
         const { title, description, price, categorySlug, provinceId, districtId, images } = await req.json();
