@@ -10,10 +10,17 @@ interface BidFormProps {
 
 export default function BidForm({ adId, currentHighest, minStep }: BidFormProps) {
     const router = useRouter();
-    const [amount, setAmount] = useState(String(currentHighest + minStep));
+    const [displayAmount, setDisplayAmount] = useState(() => new Intl.NumberFormat("tr-TR").format(currentHighest + minStep));
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
+
+    const formatted = new Intl.NumberFormat("tr-TR", {
+        style: "currency",
+        currency: "TRY",
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    });
 
     async function handleBid(e: React.FormEvent) {
         e.preventDefault();
@@ -21,10 +28,17 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
         setError("");
         setSuccess("");
 
+        const rawAmount = parseInt(displayAmount.replace(/\./g, ""), 10);
+        if (!rawAmount || rawAmount < currentHighest + minStep) {
+            setError(`Teklifiniz minimum ${formatted.format(currentHighest + minStep)} olmalıdır.`);
+            setLoading(false);
+            return;
+        }
+
         const res = await fetch("/api/bids", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ adId, amount: Number(amount) }),
+            body: JSON.stringify({ adId, amount: rawAmount }),
         });
 
         const data = await res.json();
@@ -37,13 +51,6 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
             router.refresh();
         }
     }
-
-    const formatted = new Intl.NumberFormat("tr-TR", {
-        style: "currency",
-        currency: "TRY",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
-    });
 
     return (
         <form onSubmit={handleBid}>
@@ -69,17 +76,26 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
             )}
             <div className="form-group" style={{ marginBottom: "0.75rem" }}>
                 <label>Teklifiniz (₺)</label>
-                <input
-                    id="bid-amount"
-                    type="number"
-                    className="input"
-                    value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
-                    min={currentHighest + minStep}
-                    step={1}
-                    required
-                />
-                <span className="text-muted" style={{ fontSize: "0.75rem" }}>
+                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                    <input
+                        id="bid-amount-text"
+                        type="text"
+                        className="input"
+                        value={displayAmount}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, "");
+                            if (!val) {
+                                setDisplayAmount("");
+                            } else {
+                                setDisplayAmount(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
+                            }
+                        }}
+                        required
+                        style={{ paddingRight: "3rem" }}
+                    />
+                    <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+                </div>
+                <span className="text-muted" style={{ fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
                     Minimum: {formatted.format(currentHighest + minStep)}
                 </span>
             </div>

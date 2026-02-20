@@ -10,6 +10,7 @@ export default function PostAdPage() {
     const [error, setError] = useState("");
     const [selectedProvince, setSelectedProvince] = useState("");
     const [districts, setDistricts] = useState<{ id: string; name: string }[]>([]);
+    const [displayPrice, setDisplayPrice] = useState("");
 
     useEffect(() => {
         if (selectedProvince) {
@@ -118,8 +119,23 @@ export default function PostAdPage() {
                             </h3>
                             <div className="form-group">
                                 <label htmlFor="price">Fiyat (₺) *</label>
-                                <input id="price" name="price" type="number" className="input"
-                                    placeholder="0" min={1} step={1} required />
+                                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder="0"
+                                        value={displayPrice}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, "");
+                                            if (!val) setDisplayPrice("");
+                                            else setDisplayPrice(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
+                                        }}
+                                        required
+                                        style={{ paddingRight: "3rem" }}
+                                    />
+                                    <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+                                </div>
+                                <input type="hidden" name="price" value={displayPrice.replace(/\./g, "")} />
                             </div>
                         </div>
 
