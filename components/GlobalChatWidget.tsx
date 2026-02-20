@@ -50,9 +50,15 @@ export function GlobalChatWidget() {
             if (mounted) fetchConversations();
         }, 10000);
 
+        const handleMessagesRead = () => {
+            if (mounted) fetchConversations();
+        };
+        typeof window !== 'undefined' && window.addEventListener('messagesRead', handleMessagesRead);
+
         return () => {
             mounted = false;
             clearInterval(interval);
+            typeof window !== 'undefined' && window.removeEventListener('messagesRead', handleMessagesRead);
         };
     }, [session, fetchConversations]);
 
@@ -68,6 +74,7 @@ export function GlobalChatWidget() {
                 setTimeout(() => {
                     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
                 }, 100);
+                typeof window !== 'undefined' && window.dispatchEvent(new Event('messagesRead'));
             }
         } catch (error) {
             console.error(error);

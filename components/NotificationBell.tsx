@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Bell } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -17,6 +17,17 @@ export function NotificationBell() {
     const [unreadCount, setUnreadCount] = useState(0);
     const [isOpen, setIsOpen] = useState(false);
     const router = useRouter();
+    const containerRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+        document.addEventListener("mousedown", handleClickOutside);
+        return () => document.removeEventListener("mousedown", handleClickOutside);
+    }, []);
 
     const fetchNotifications = async () => {
         try {
@@ -71,7 +82,7 @@ export function NotificationBell() {
     };
 
     return (
-        <div style={{ position: "relative" }}>
+        <div style={{ position: "relative" }} ref={containerRef}>
             <button
                 onClick={() => setIsOpen(!isOpen)}
                 className="btn btn-ghost"

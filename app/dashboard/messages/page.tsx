@@ -71,6 +71,13 @@ function MessagesContent() {
 
         if (session?.user) {
             fetchConversations();
+
+            const handleMessagesRead = () => fetchConversations();
+            typeof window !== 'undefined' && window.addEventListener('messagesRead', handleMessagesRead);
+
+            return () => {
+                typeof window !== 'undefined' && window.removeEventListener('messagesRead', handleMessagesRead);
+            };
         }
     }, [session, initialConversationId]);
 
@@ -81,6 +88,7 @@ function MessagesContent() {
                 const data = await res.json();
                 setMessages(data);
                 setTimeout(scrollToBottom, 100);
+                typeof window !== 'undefined' && window.dispatchEvent(new Event('messagesRead'));
             }
         } catch (error) {
             console.error("Failed to fetch messages", error);

@@ -28,9 +28,16 @@ export function MessageBell() {
 
         loadCounts();
         const intervalId = setInterval(loadCounts, 10000); // 10 seconds polling for better responsiveness
+
+        const handleMessagesRead = () => {
+            if (mounted) loadCounts();
+        };
+        typeof window !== 'undefined' && window.addEventListener('messagesRead', handleMessagesRead);
+
         return () => {
             mounted = false;
             clearInterval(intervalId);
+            typeof window !== 'undefined' && window.removeEventListener('messagesRead', handleMessagesRead);
         };
     }, []);
 
