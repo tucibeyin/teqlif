@@ -273,40 +273,76 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      // Bid section (only if not owner)
+                      // Bid section
                       if (!isOwner && !ad.isExpired) ...[
                         const Text('Teklif Ver',
                             style: TextStyle(
                                 fontWeight: FontWeight.w700, fontSize: 16)),
                         const SizedBox(height: 8),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _bidCtrl,
-                                keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(
-                                  hintText: 'Teklif miktarı (₺)',
-                                  prefixIcon: Icon(Icons.gavel),
+                        if (currentUser == null)
+                          // Guest: show login prompt
+                          GestureDetector(
+                            onTap: () => context.push('/login'),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE6F9FC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: const Color(0xFF00B4CC)
+                                        .withOpacity(0.4)),
+                              ),
+                              child: Row(
+                                children: const [
+                                  Icon(Icons.lock_outline,
+                                      color: Color(0xFF00B4CC)),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Teklif vermek için giriş yapmanız gerekiyor.',
+                                      style: TextStyle(
+                                          color: Color(0xFF008FA3),
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                  ),
+                                  Icon(Icons.arrow_forward_ios,
+                                      size: 14, color: Color(0xFF00B4CC)),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          // Authenticated: show bid form
+                          Row(
+                            children: [
+                              Expanded(
+                                child: TextField(
+                                  controller: _bidCtrl,
+                                  keyboardType: TextInputType.number,
+                                  decoration: const InputDecoration(
+                                    hintText: 'Teklif miktarı (₺)',
+                                    prefixIcon: Icon(Icons.gavel),
+                                  ),
                                 ),
                               ),
-                            ),
-                            const SizedBox(width: 12),
-                            SizedBox(
-                              height: 52,
-                              child: ElevatedButton(
-                                onPressed: _bidLoading ? null : () => _placeBid(ad),
-                                child: _bidLoading
-                                    ? const SizedBox(
-                                        width: 20,
-                                        height: 20,
-                                        child: CircularProgressIndicator(
-                                            color: Colors.white, strokeWidth: 2))
-                                    : const Text('Ver'),
+                              const SizedBox(width: 12),
+                              SizedBox(
+                                height: 52,
+                                child: ElevatedButton(
+                                  onPressed:
+                                      _bidLoading ? null : () => _placeBid(ad),
+                                  child: _bidLoading
+                                      ? const SizedBox(
+                                          width: 20,
+                                          height: 20,
+                                          child: CircularProgressIndicator(
+                                              color: Colors.white,
+                                              strokeWidth: 2))
+                                      : const Text('Ver'),
+                                ),
                               ),
-                            ),
-                          ],
-                        ),
+                            ],
+                          ),
                         const SizedBox(height: 24),
                       ],
                       // Bid history

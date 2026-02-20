@@ -17,6 +17,14 @@ import '../widgets/main_shell.dart';
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authProvider);
 
+  // Routes that require authentication
+  const protectedRoutes = [
+    '/dashboard',
+    '/messages',
+    '/notifications',
+    '/post-ad',
+  ];
+
   return GoRouter(
     initialLocation: '/home',
     redirect: (context, state) {
@@ -24,11 +32,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       if (isLoading) return null;
 
       final isAuth = authState.isAuthenticated;
-      final isAuthRoute = state.matchedLocation == '/login' ||
-          state.matchedLocation == '/register';
+      final location = state.matchedLocation;
 
-      if (!isAuth && !isAuthRoute) return '/login';
-      if (isAuth && isAuthRoute) return '/home';
+      // Redirect to login if trying to access protected route without auth
+      final isProtected =
+          protectedRoutes.any((r) => location.startsWith(r)) ||
+          location.startsWith('/edit-ad');
+      if (!isAuth && isProtected) return '/login';
+
+      // Redirect away from auth screens if already logged in
+      if (isAuth &&
+          (location == '/login' || location == '/register')) {
+        return '/home';
+      }
+
       return null;
     },
     routes: [
