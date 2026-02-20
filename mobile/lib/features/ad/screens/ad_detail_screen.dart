@@ -384,6 +384,64 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             ),
                           const SizedBox(height: 24),
                         ] else ...[
+                          if (ad.buyItNowPrice != null) ...[
+                            Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFF0FDF4),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: const Color(0xFF22C55E).withOpacity(0.4)),
+                              ),
+                              child: Column(
+                                children: [
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      const Text('Hemen Al Fiyatı',
+                                          style: TextStyle(
+                                              color: Color(0xFF166534),
+                                              fontWeight: FontWeight.w600)),
+                                      Text(_formatPrice(ad.buyItNowPrice!),
+                                          style: const TextStyle(
+                                              color: Color(0xFF166534),
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 18)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  if (currentUser == null)
+                                    GestureDetector(
+                                      onTap: () => context.push('/login'),
+                                      child: const Text(
+                                        'Satın almak için giriş yapın.',
+                                        style: TextStyle(
+                                            color: Color(0xFF166534),
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                    )
+                                  else
+                                    SizedBox(
+                                      width: double.infinity,
+                                      height: 48,
+                                      child: ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: const Color(0xFF22C55E),
+                                          foregroundColor: Colors.white,
+                                        ),
+                                        onPressed: () {
+                                          final initialMsg = 'Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı Hemen Al fiyatı olan ${_formatPrice(ad.buyItNowPrice!)} üzerinden satın almak istiyorum.';
+                                          context.push('/messages/chat/${ad.userId}?initialMessage=$initialMsg');
+                                        },
+                                        icon: const Icon(Icons.flash_on),
+                                        label: const Text('Hemen Satın Al'),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 24),
+                          ],
                           const Text('Teklif Ver',
                               style: TextStyle(
                                   fontWeight: FontWeight.w700, fontSize: 16)),

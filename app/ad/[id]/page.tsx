@@ -251,6 +251,32 @@ export default async function AdDetailPage({
                                 </div>
                             </div>
 
+                            {/* Hemen Al (Buy It Now) */}
+                            {ad.buyItNowPrice !== null && (
+                                <div style={{ marginBottom: "1.25rem", padding: "1rem", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px dashed var(--primary)", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <div style={{ fontWeight: 600, color: "var(--text-secondary)" }}>Hemen Al Fiyatı</div>
+                                        <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--primary)" }}>{formatPrice(ad.buyItNowPrice)}</div>
+                                    </div>
+                                    <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
+                                        Açık artırmanın bitmesini beklemeden bu ürünü hemen satın alabilirsiniz.
+                                    </div>
+                                    {!isOwner && session?.user ? (
+                                        <AdActions
+                                            actionType="MESSAGE"
+                                            adId={ad.id}
+                                            sellerId={ad.userId}
+                                            currentUser={session.user}
+                                            initialMessage={`Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı Hemen Al fiyatı olan ${formatPrice(ad.buyItNowPrice)} üzerinden satın almak istiyorum.`}
+                                        />
+                                    ) : !session?.user && (
+                                        <Link href="/login" className="btn btn-primary btn-full">
+                                            Hemen Almak İçin Giriş Yap
+                                        </Link>
+                                    )}
+                                </div>
+                            )}
+
                             {/* Teklif Formu */}
                             {!isOwner && session?.user ? (
                                 <BidForm

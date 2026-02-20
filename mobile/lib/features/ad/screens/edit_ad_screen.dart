@@ -20,6 +20,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
   final _priceCtrl = TextEditingController();
   final _startBidCtrl = TextEditingController();
   final _minBidStepCtrl = TextEditingController();
+  final _buyItNowCtrl = TextEditingController();
   bool _loading = true;
   bool _saving = false;
   bool _isFixedPrice = false;
@@ -38,6 +39,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
     _priceCtrl.dispose();
     _startBidCtrl.dispose();
     _minBidStepCtrl.dispose();
+    _buyItNowCtrl.dispose();
     super.dispose();
   }
 
@@ -53,6 +55,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         _isFixedPrice = ad.isFixedPrice;
         _freeBid = ad.startingBid == null;
         _startBidCtrl.text = ad.startingBid != null ? ad.startingBid!.toStringAsFixed(0) : '';
+        _buyItNowCtrl.text = ad.buyItNowPrice != null ? ad.buyItNowPrice!.toStringAsFixed(0) : '';
         _loading = false;
       });
     } catch (_) {
@@ -76,6 +79,9 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
             : double.parse(_minBidStepCtrl.text),
+        'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
+            ? null
+            : double.parse(_buyItNowCtrl.text),
       });
       ref.invalidate(adsProvider(const FilterState()));
       if (mounted) {
@@ -167,6 +173,15 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                         decoration: const InputDecoration(
                             labelText: 'Pey Aralığı (Minimum Artış) (₺)',
                             helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _buyItNowCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: 'Hemen Al Fiyatı (₺) (Opsiyonel)',
+                            helperText: 'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'
                         ),
                       ),
                     ],

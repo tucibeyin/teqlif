@@ -59,6 +59,7 @@ class AdModel {
   final double? startingBid;
   final double minBidStep;
   final bool isFixedPrice;
+  final double? buyItNowPrice;
   final String status;
   final List<String> images;
   final int views;
@@ -80,6 +81,7 @@ class AdModel {
     this.startingBid,
     this.minBidStep = 1,
     this.isFixedPrice = false,
+    this.buyItNowPrice,
     required this.status,
     required this.images,
     required this.views,
@@ -97,6 +99,14 @@ class AdModel {
   bool get isExpired =>
       expiresAt != null && expiresAt!.isBefore(DateTime.now());
 
+  double? get highestBidAmount {
+    if (bids.isNotEmpty) {
+      return bids.fold<double>(
+          0, (max, bid) => bid.amount > max ? bid.amount : max);
+    }
+    return null;
+  }
+
   factory AdModel.fromJson(Map<String, dynamic> json) => AdModel(
         id: json['id'] as String,
         title: json['title'] as String,
@@ -108,6 +118,9 @@ class AdModel {
         minBidStep:
             (json['minBidStep'] as num?)?.toDouble() ?? 1,
         isFixedPrice: json['isFixedPrice'] as bool? ?? false,
+        buyItNowPrice: json['buyItNowPrice'] != null
+            ? (json['buyItNowPrice'] as num).toDouble()
+            : null,
         status: json['status'] as String? ?? 'ACTIVE',
         images: (json['images'] as List<dynamic>?)
                 ?.map((e) => e as String)

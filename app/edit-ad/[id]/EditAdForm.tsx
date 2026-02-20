@@ -12,6 +12,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
     const [districts, setDistricts] = useState<{ id: string; name: string }[]>([]);
     const [displayPrice, setDisplayPrice] = useState(() => new Intl.NumberFormat("tr-TR").format(ad.price));
     const [displayMinBidStep, setDisplayMinBidStep] = useState(() => new Intl.NumberFormat("tr-TR").format(ad.minBidStep || 100));
+    const [displayBuyItNowPrice, setDisplayBuyItNowPrice] = useState(() => ad.buyItNowPrice ? new Intl.NumberFormat("tr-TR").format(ad.buyItNowPrice) : "");
     const [existingImages, setExistingImages] = useState<string[]>(ad.images || []);
     const [isFixedPrice, setIsFixedPrice] = useState(ad.isFixedPrice || false);
 
@@ -71,6 +72,9 @@ export default function EditAdForm({ ad }: { ad: any }) {
                 isFixedPrice,
                 startingBid: parsedStartingBid,
                 minBidStep: Number(fd.get("minBidStep")),
+                buyItNowPrice: document.getElementById("buyItNowInput") && (document.getElementById("actualBuyItNowPrice") as HTMLInputElement).value
+                    ? Number((document.getElementById("actualBuyItNowPrice") as HTMLInputElement).value)
+                    : null,
                 categorySlug: fd.get("categorySlug"),
                 provinceId: fd.get("provinceId"),
                 districtId: fd.get("districtId"),
@@ -231,37 +235,64 @@ export default function EditAdForm({ ad }: { ad: any }) {
                             </div>
 
                             {!isFixedPrice && (
-                                <div className="form-group" style={{ marginTop: "1rem" }}>
-                                    <label htmlFor="minBidStepInput">Pey Aralığı (Minimum Artış) (₺) *</label>
-                                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                                        <input
-                                            type="text"
-                                            className="input"
-                                            name="minBidStepDummy"
-                                            id="minBidStepInput"
-                                            defaultValue={ad.minBidStep ? new Intl.NumberFormat("tr-TR").format(ad.minBidStep) : "100"}
-                                            placeholder="Örn: 100"
-                                            onChange={(e) => {
-                                                const val = e.target.value.replace(/[^0-9]/g, "");
-                                                if (!val) {
-                                                    setDisplayMinBidStep("");
-                                                    e.target.value = "";
-                                                } else {
-                                                    const formatted = new Intl.NumberFormat("tr-TR").format(parseInt(val, 10));
-                                                    setDisplayMinBidStep(formatted);
-                                                    e.target.value = formatted;
-                                                }
-                                            }}
-                                            required
-                                            style={{ paddingRight: "3rem" }}
-                                        />
-                                        <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+                                <>
+                                    <div className="form-group" style={{ marginTop: "1rem" }}>
+                                        <label htmlFor="minBidStepInput">Pey Aralığı (Minimum Artış) (₺) *</label>
+                                        <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                name="minBidStepDummy"
+                                                id="minBidStepInput"
+                                                defaultValue={ad.minBidStep ? new Intl.NumberFormat("tr-TR").format(ad.minBidStep) : "100"}
+                                                placeholder="Örn: 100"
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/[^0-9]/g, "");
+                                                    if (!val) {
+                                                        setDisplayMinBidStep("");
+                                                        e.target.value = "";
+                                                    } else {
+                                                        const formatted = new Intl.NumberFormat("tr-TR").format(parseInt(val, 10));
+                                                        setDisplayMinBidStep(formatted);
+                                                        e.target.value = formatted;
+                                                    }
+                                                }}
+                                                required
+                                                style={{ paddingRight: "3rem" }}
+                                            />
+                                            <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+                                        </div>
+                                        <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
+                                        <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
+                                            Teklif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
+                                        </div>
                                     </div>
-                                    <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
-                                    <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
-                                        Teklif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
+
+                                    <div className="form-group" style={{ marginTop: "1.5rem", padding: "1rem", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-secondary)" }}>
+                                        <label htmlFor="buyItNowInput">Hemen Al Fiyatı (₺) <span className="text-muted">(Opsiyonel)</span></label>
+                                        <div style={{ position: "relative", display: "flex", alignItems: "center", marginBottom: "0.25rem" }}>
+                                            <input
+                                                type="text"
+                                                className="input"
+                                                name="buyItNowDummy"
+                                                id="buyItNowInput"
+                                                placeholder="Örn: 7500"
+                                                value={displayBuyItNowPrice}
+                                                onChange={(e) => {
+                                                    const val = e.target.value.replace(/[^0-9]/g, "");
+                                                    if (!val) setDisplayBuyItNowPrice("");
+                                                    else setDisplayBuyItNowPrice(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
+                                                    document.getElementById("actualBuyItNowPrice")!.setAttribute("value", val);
+                                                }}
+                                                style={{ paddingRight: "3rem" }}
+                                            />
+                                            <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+                                        </div>
+                                        <input type="hidden" name="buyItNowPrice" id="actualBuyItNowPrice" value={ad.buyItNowPrice !== null ? ad.buyItNowPrice.toString() : ""} />
+                                        <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
+                                        </div>
                                     </div>
-                                </div>
+                                </>
                             )}
                         </div>
 

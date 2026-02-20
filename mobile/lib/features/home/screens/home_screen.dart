@@ -717,9 +717,11 @@ class _AdCard extends StatelessWidget {
                             fontWeight: FontWeight.w600, fontSize: 13)),
                     const Spacer(),
                     Text(
-                      ad.startingBid == null
-                          ? '🔥 Serbest'
-                          : _fmt(ad.startingBid!),
+                      ad.highestBidAmount != null
+                          ? 'Güncel ${_fmt(ad.highestBidAmount!)}'
+                          : ad.startingBid == null
+                              ? '🔥 Serbest'
+                              : _fmt(ad.startingBid!),
                       style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
@@ -790,16 +792,24 @@ class _AdListTile extends StatelessWidget {
         '${ad.province?.name ?? ''} · ${ad.category?.name ?? ''}',
         style: const TextStyle(fontSize: 12, color: Color(0xFF9AAAB8)),
       ),
-      trailing: ad.startingBid == null
-          ? const Text('🔥',
-              style: TextStyle(fontSize: 16))
-          : Text(
-              '₺${ad.startingBid!.toStringAsFixed(0)}',
+      trailing: ad.highestBidAmount != null
+          ? Text(
+              'Güncel ₺${ad.highestBidAmount!.toStringAsFixed(0)}',
               style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                   color: Color(0xFF00B4CC)),
-            ),
+            )
+          : ad.startingBid == null
+              ? const Text('🔥',
+                  style: TextStyle(fontSize: 16))
+              : Text(
+                  '₺${ad.startingBid!.toStringAsFixed(0)}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700,
+                      fontSize: 13,
+                      color: Color(0xFF00B4CC)),
+                ),
       onTap: () => context.push('/ad/${ad.id}'),
     );
   }

@@ -47,6 +47,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
   final _priceCtrl = TextEditingController();
   final _startBidCtrl = TextEditingController();
   final _minBidStepCtrl = TextEditingController(text: '100');
+  final _buyItNowCtrl = TextEditingController();
   String? _selectedCategory;
   String? _selectedProvinceId;
   bool _freeBid = false;
@@ -62,6 +63,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
     _priceCtrl.dispose();
     _startBidCtrl.dispose();
     _minBidStepCtrl.dispose();
+    _buyItNowCtrl.dispose();
     super.dispose();
   }
 
@@ -109,6 +111,9 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
             : double.parse(_minBidStepCtrl.text),
+        'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
+            ? null
+            : double.parse(_buyItNowCtrl.text),
         'categorySlug': _selectedCategory,
         'provinceId': _selectedProvinceId,
         'districtId': _selectedProvinceId, // simplified: using same as province
@@ -256,6 +261,15 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                         decoration: const InputDecoration(
                             labelText: 'Pey Aralığı (Minimum Artış) (₺)',
                             helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _buyItNowCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: 'Hemen Al Fiyatı (₺) (Opsiyonel)',
+                            helperText: 'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'
                         ),
                       ),
                     ],
