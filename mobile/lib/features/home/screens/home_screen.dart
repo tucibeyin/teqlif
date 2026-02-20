@@ -294,7 +294,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     final filter =
-        _FilterState(category: _selectedCategory, provinceId: _selectedProvinceId);
+        FilterState(category: _selectedCategory, provinceId: _selectedProvinceId);
     final adsAsync = ref.watch(adsProvider(filter));
     final isSearchActive =
         _searchCtrl.text.length >= 2 && _searchResults.isNotEmpty;
