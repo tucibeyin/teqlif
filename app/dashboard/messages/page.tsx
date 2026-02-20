@@ -285,28 +285,35 @@ function MessagesContent() {
                                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
                                             {activeConversation.user1.id === currentUserId ? activeConversation.user2.name : activeConversation.user1.name}
                                         </h3>
-                                        {activeConversation.ad && (
-                                            <Link
-                                                href={`/ad/${activeConversation.ad.id}`}
-                                                style={{
-                                                    display: 'inline-block',
-                                                    marginTop: '4px',
-                                                    fontSize: '0.85rem',
-                                                    color: 'var(--primary)',
-                                                    textDecoration: 'none',
-                                                    fontWeight: 500
-                                                }}
-                                                className="hover:underline"
-                                            >
-                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                    <span style={{ fontSize: '1.2em' }}>🏷️</span>
-                                                    İlan: {activeConversation.ad.title}
-                                                    <span style={{ fontSize: '1.2em' }}>↗</span>
-                                                </div>
-                                            </Link>
-                                        )}
                                     </div>
                                 </div>
+
+                                {/* İlan Banner Alanı */}
+                                {activeConversation.ad && (
+                                    <Link
+                                        href={`/ad/${activeConversation.ad.id}`}
+                                        style={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'space-between',
+                                            padding: '0.75rem 1rem',
+                                            background: '#F4F7FA',
+                                            borderBottom: '1px solid var(--border)',
+                                            color: 'var(--primary)',
+                                            textDecoration: 'none',
+                                            transition: 'background 0.2s',
+                                        }}
+                                        className="hover:bg-primary-50"
+                                    >
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', overflow: 'hidden' }}>
+                                            <span style={{ fontSize: '1.2rem' }}>🏷️</span>
+                                            <span style={{ fontWeight: 600, fontSize: '0.9rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                İlan: {activeConversation.ad.title}
+                                            </span>
+                                        </div>
+                                        <span style={{ fontSize: '1.2rem', color: 'var(--text-muted)' }}>↗</span>
+                                    </Link>
+                                )}
 
                                 {/* Mesaj Listesi */}
                                 <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--bg-secondary)' }}>
@@ -372,9 +379,10 @@ function MessagesContent() {
                             </div>
                         )}
                     </div>
-                )}
-            </div>
-        </div>
+                )
+                }
+            </div >
+        </div >
     );
 }
 
