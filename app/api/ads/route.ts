@@ -4,6 +4,8 @@ import { prisma } from "@/lib/prisma";
 import { actionRatelimiter } from "@/lib/rate-limit";
 import { revalidatePath } from "next/cache";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest) {
     try {
         const { searchParams } = new URL(req.url);

@@ -719,9 +719,11 @@ class _AdCard extends StatelessWidget {
                     Text(
                       ad.highestBidAmount != null
                           ? 'Güncel ${_fmt(ad.highestBidAmount!)}'
-                          : ad.startingBid == null
-                              ? '🔥 Serbest'
-                              : _fmt(ad.startingBid!),
+                          : ad.isFixedPrice
+                              ? _fmt(ad.price)
+                              : ad.startingBid == null
+                                  ? '🔥 Serbest'
+                                  : _fmt(ad.startingBid!),
                       style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
@@ -800,16 +802,24 @@ class _AdListTile extends StatelessWidget {
                   fontSize: 13,
                   color: Color(0xFF00B4CC)),
             )
-          : ad.startingBid == null
-              ? const Text('🔥',
-                  style: TextStyle(fontSize: 16))
-              : Text(
-                  '₺${ad.startingBid!.toStringAsFixed(0)}',
+          : ad.isFixedPrice
+              ? Text(
+                  '₺${ad.price.toStringAsFixed(0)}',
                   style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
                       color: Color(0xFF00B4CC)),
-                ),
+                )
+              : ad.startingBid == null
+                  ? const Text('🔥',
+                      style: TextStyle(fontSize: 16))
+                  : Text(
+                      '₺${ad.startingBid!.toStringAsFixed(0)}',
+                      style: const TextStyle(
+                          fontWeight: FontWeight.w700,
+                          fontSize: 13,
+                          color: Color(0xFF00B4CC)),
+                    ),
       onTap: () => context.push('/ad/${ad.id}'),
     );
   }
