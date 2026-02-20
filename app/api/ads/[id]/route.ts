@@ -64,7 +64,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         if (!user) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
 
         const { id } = await params;
-        const { title, description, price, startingBid, categorySlug, provinceId, districtId, images } = await req.json();
+        const { title, description, price, startingBid, minBidStep, categorySlug, provinceId, districtId, images } = await req.json();
 
         if (!title || !description || !price || !categorySlug || !provinceId || !districtId) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
@@ -83,6 +83,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                 title, description,
                 price: Number(price),
                 startingBid: startingBid !== undefined ? Number(startingBid) : null,
+                minBidStep: minBidStep !== undefined ? Number(minBidStep) : undefined,
                 categoryId: category.id,
                 provinceId, districtId,
                 images: images || [],

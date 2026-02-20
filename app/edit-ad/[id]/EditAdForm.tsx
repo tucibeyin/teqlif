@@ -11,12 +11,18 @@ export default function EditAdForm({ ad }: { ad: any }) {
     const [selectedProvince, setSelectedProvince] = useState(ad.provinceId);
     const [districts, setDistricts] = useState<{ id: string; name: string }[]>([]);
     const [displayPrice, setDisplayPrice] = useState(() => new Intl.NumberFormat("tr-TR").format(ad.price));
+    const [displayMinBidStep, setDisplayMinBidStep] = useState(() => new Intl.NumberFormat("tr-TR").format(ad.minBidStep || 100));
     const [existingImages, setExistingImages] = useState<string[]>(ad.images || []);
 
     useEffect(() => {
+        let isMounted = true;
         if (selectedProvince) {
-            setDistricts(allDistricts[selectedProvince] ?? []);
+            const syncDistricts = async () => {
+                if (isMounted) setDistricts(allDistricts[selectedProvince] ?? []);
+            };
+            syncDistricts();
         }
+        return () => { isMounted = false; };
     }, [selectedProvince]);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -25,7 +31,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
         setError("");
         const fd = new FormData(e.currentTarget);
 
-        let finalImages = [...existingImages];
+        const finalImages = [...existingImages];
         const fileInput = document.getElementById("images") as HTMLInputElement;
 
         if (fileInput && fileInput.files && fileInput.files.length > 0) {
@@ -62,6 +68,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
                 description: fd.get("description"),
                 price: Number(fd.get("price")),
                 startingBid: parsedStartingBid,
+                minBidStep: Number(fd.get("minBidStep")),
                 categorySlug: fd.get("categorySlug"),
                 provinceId: fd.get("provinceId"),
                 districtId: fd.get("districtId"),
@@ -196,6 +203,38 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                         <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
                                     </div>
                                     <input type="hidden" name="startingBid" id="actualStartingBid" value={ad.startingBid !== null ? ad.startingBid : ""} />
+                                </div>
+                            </div>
+
+                            <div className="form-group" style={{ marginTop: "1rem" }}>
+                                <label htmlFor="minBidStepInput">Pey Aralığı (Minimum Artış) (₺) *</label>
+                                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        name="minBidStepDummy"
+                                        id="minBidStepInput"
+                                        defaultValue={ad.minBidStep ? new Intl.NumberFormat("tr-TR").format(ad.minBidStep) : "100"}
+                                        placeholder="Örn: 100"
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, "");
+                                            if (!val) {
+                                                setDisplayMinBidStep("");
+                                                e.target.value = "";
+                                            } else {
+                                                const formatted = new Intl.NumberFormat("tr-TR").format(parseInt(val, 10));
+                                                setDisplayMinBidStep(formatted);
+                                                e.target.value = formatted;
+                                            }
+                                        }}
+                                        required
+                                        style={{ paddingRight: "3rem" }}
+                                    />
+                                    <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+                                </div>
+                                <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
+                                <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
+                                    Teklif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
                                 </div>
                             </div>
                         </div>

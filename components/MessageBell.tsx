@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 
 export function MessageBell() {
     const [unreadCount, setUnreadCount] = useState(0);
@@ -21,9 +20,18 @@ export function MessageBell() {
     };
 
     useEffect(() => {
-        fetchUnreadCount();
-        const intervalId = setInterval(fetchUnreadCount, 10000); // 10 seconds polling for better responsiveness
-        return () => clearInterval(intervalId);
+        let mounted = true;
+        const loadCounts = async () => {
+            if (!mounted) return;
+            await fetchUnreadCount();
+        };
+
+        loadCounts();
+        const intervalId = setInterval(loadCounts, 10000); // 10 seconds polling for better responsiveness
+        return () => {
+            mounted = false;
+            clearInterval(intervalId);
+        };
     }, []);
 
     return (

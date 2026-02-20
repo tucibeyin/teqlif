@@ -2,8 +2,8 @@
 
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import Image from "next/image";
 
 interface SearchResult {
     id: string;
@@ -22,7 +22,6 @@ export function LiveSearch() {
     const [isSearching, setIsSearching] = useState(false);
     const [isOpen, setIsOpen] = useState(false);
     const wrapperRef = useRef<HTMLDivElement>(null);
-    const router = useRouter();
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -116,7 +115,7 @@ export function LiveSearch() {
                             className="hover:bg-primary-50"
                         >
                             {ad.images && ad.images.length > 0 ? (
-                                <img src={ad.images[0]} alt={ad.title} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '4px' }} />
+                                <Image src={ad.images[0]} alt={ad.title} width={40} height={40} style={{ objectFit: 'cover', borderRadius: '4px' }} />
                             ) : (
                                 <div style={{ width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--bg-secondary)', borderRadius: '4px', fontSize: '1.2rem' }}>
                                     {ad.category.icon}

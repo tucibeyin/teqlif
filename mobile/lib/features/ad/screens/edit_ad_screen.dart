@@ -18,6 +18,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
+  final _minBidStepCtrl = TextEditingController();
   bool _loading = true;
   bool _saving = false;
   AdModel? _ad;
@@ -33,6 +34,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
+    _minBidStepCtrl.dispose();
     super.dispose();
   }
 
@@ -45,6 +47,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         _titleCtrl.text = ad.title;
         _descCtrl.text = ad.description;
         _priceCtrl.text = ad.price.toStringAsFixed(0);
+        _minBidStepCtrl.text = ad.minBidStep.toStringAsFixed(0);
         _loading = false;
       });
     } catch (_) {
@@ -59,6 +62,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         'title': _titleCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
         'price': double.parse(_priceCtrl.text),
+        'minBidStep': double.parse(_minBidStepCtrl.text),
       });
       ref.invalidate(adsProvider(const FilterState()));
       if (mounted) {
@@ -107,6 +111,15 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
               decoration: const InputDecoration(
                   labelText: 'Piyasa Değeri (₺)',
                   prefixIcon: Icon(Icons.monetization_on_outlined)),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _minBidStepCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                  labelText: 'Pey Aralığı (Minimum Artış) (₺)',
+                  helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
+              ),
             ),
             const SizedBox(height: 24),
             SizedBox(

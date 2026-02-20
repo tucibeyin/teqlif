@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from "react";
 import { Bell } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 
 interface Notification {
@@ -33,10 +32,19 @@ export function NotificationBell() {
     };
 
     useEffect(() => {
-        fetchNotifications();
+        let mounted = true;
+        const loadNotifications = async () => {
+            if (!mounted) return;
+            await fetchNotifications();
+        };
+
+        loadNotifications();
         // Poll every 30 seconds
-        const intervalId = setInterval(fetchNotifications, 30000);
-        return () => clearInterval(intervalId);
+        const intervalId = setInterval(loadNotifications, 30000);
+        return () => {
+            mounted = false;
+            clearInterval(intervalId);
+        };
     }, []);
 
     const markAsRead = async (id?: string) => {

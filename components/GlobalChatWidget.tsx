@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from 'next-auth/react';
 import { MessageCircle, X, Send, Minus } from 'lucide-react';
 import { formatDistanceToNow } from 'date-fns';
@@ -22,34 +22,43 @@ export function GlobalChatWidget() {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
-    // Initial fetch and global polling for unread count
-    useEffect(() => {
-        if (!session?.user) return;
-        fetchConversations();
-
-        const interval = setInterval(() => {
-            fetchConversations();
-        }, 10000);
-
-        return () => clearInterval(interval);
-    }, [session]);
-
-    const fetchConversations = async () => {
+    const fetchConversations = useCallback(async () => {
         try {
             const res = await fetch('/api/conversations');
             if (res.ok) {
                 const data = await res.json();
                 setConversations(data);
 
-                const total = data.reduce((acc: number, conv: any) => acc + (conv._count?.messages || 0), 0);
-                setUnreadTotal(total);
+                const unread = data.filter((c: any) =>
+                    c.messages.some((m: any) => !m.read && m.senderId !== session?.user?.id)
+                ).length;
+                setUnreadTotal(unread);
             }
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error('Failed to fetch conversations:', error);
         }
-    };
+    }, [session?.user?.id]);
 
-    const fetchMessages = async (convId: string) => {
+    useEffect(() => {
+        let mounted = true;
+        if (!session?.user) return;
+
+        const load = async () => {
+            if (mounted) await fetchConversations();
+        };
+        load();
+
+        const interval = setInterval(() => {
+            if (mounted) fetchConversations();
+        }, 10000);
+
+        return () => {
+            mounted = false;
+            clearInterval(interval);
+        };
+    }, [session, fetchConversations]);
+
+    const fetchMessages = useCallback(async (convId: string) => {
         try {
             const res = await fetch(`/api/messages?conversationId=${convId}`);
             if (res.ok) {
@@ -59,27 +68,31 @@ export function GlobalChatWidget() {
                     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
                 }, 100);
             }
-        } catch (e) {
-            console.error(e);
+        } catch (error) {
+            console.error(error);
         }
-    };
+    }, []);
 
     useEffect(() => {
+        let mounted = true;
         let interval: NodeJS.Timeout;
-        if (isOpen && !isMinimized && activeConvId) {
-            fetchMessages(activeConvId);
 
-            // Optimistically clear unread count
-            setConversations(prev => prev.map(c =>
-                c.id === activeConvId ? { ...c, _count: { messages: 0 } } : c
-            ));
+        const loadMessages = async () => {
+            if (mounted && activeConvId) await fetchMessages(activeConvId);
+        };
+
+        if (isOpen && !isMinimized && activeConvId) {
+            loadMessages();
 
             interval = setInterval(() => {
-                fetchMessages(activeConvId);
-            }, 5000);
+                if (mounted && activeConvId) fetchMessages(activeConvId);
+            }, 3000);
         }
-        return () => clearInterval(interval);
-    }, [isOpen, isMinimized, activeConvId]);
+        return () => {
+            mounted = false;
+            if (interval) clearInterval(interval);
+        };
+    }, [isOpen, isMinimized, activeConvId, fetchMessages]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -170,7 +183,7 @@ export function GlobalChatWidget() {
             {/* Chat Panel */}
             {isOpen && (
                 <div style={{
-                    width: '350px',
+                    width: 'min(350px, calc(100vw - 40px))',
                     height: isMinimized ? '50px' : '500px',
                     maxHeight: 'calc(100vh - 40px)',
                     background: 'var(--bg-card)',
@@ -245,6 +258,7 @@ export function GlobalChatWidget() {
                                                     className="hover:bg-primary-50"
                                                 >
                                                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                                        <p className="text-secondary" style={{ fontSize: '0.9rem', marginBottom: '16px' }}>Bu ilan için satıcı ile görüşebilirsiniz.</p>
                                                         <span style={{ fontWeight: 600, fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                             {otherUser.name}
                                                             {conv._count?.messages ? (

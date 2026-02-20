@@ -45,6 +45,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
   final _startBidCtrl = TextEditingController();
+  final _minBidStepCtrl = TextEditingController(text: '100');
   String? _selectedCategory;
   String? _selectedProvinceId;
   bool _freeBid = false;
@@ -58,6 +59,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
     _descCtrl.dispose();
     _priceCtrl.dispose();
     _startBidCtrl.dispose();
+    _minBidStepCtrl.dispose();
     super.dispose();
   }
 
@@ -101,6 +103,9 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
             : (_startBidCtrl.text.isEmpty
                 ? null
                 : double.parse(_startBidCtrl.text)),
+        'minBidStep': _minBidStepCtrl.text.isEmpty
+            ? 100
+            : double.parse(_minBidStepCtrl.text),
         'categorySlug': _selectedCategory,
         'provinceId': _selectedProvinceId,
         'districtId': _selectedProvinceId, // simplified: using same as province
@@ -225,13 +230,21 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                       title: const Text('🔥 Serbest Teklif (1 ₺\'den başlar)'),
                       contentPadding: EdgeInsets.zero,
                     ),
-                    if (!_freeBid)
                       TextField(
                         controller: _startBidCtrl,
                         keyboardType: TextInputType.number,
                         decoration: const InputDecoration(
                             labelText: 'Minimum Açılış Teklifi (₺)'),
                       ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _minBidStepCtrl,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                          labelText: 'Pey Aralığı (Minimum Artış) (₺)',
+                          helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
+                      ),
+                    ),
                   ],
                 ),
               ),

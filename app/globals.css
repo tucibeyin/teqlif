@@ -64,6 +64,8 @@
 
 html {
   scroll-behavior: smooth;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 body {
@@ -73,6 +75,8 @@ body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  overflow-x: hidden;
+  width: 100%;
 }
 
 a {
@@ -1020,6 +1024,29 @@ textarea.input {
 }
 
 @media (max-width: 640px) {
+
+  .container,
+  .container-sm {
+    padding: 0 1rem;
+  }
+
+  .navbar-inner {
+    gap: 0.5rem;
+  }
+
+  .navbar-logo {
+    font-size: 1.25rem;
+  }
+
+  .navbar-actions {
+    gap: 0.375rem;
+  }
+
+  .navbar-actions .btn {
+    padding: 0.375rem 0.625rem;
+    font-size: 0.75rem;
+  }
+
   .form-row {
     grid-template-columns: 1fr;
   }

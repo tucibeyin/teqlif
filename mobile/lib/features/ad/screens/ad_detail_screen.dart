@@ -237,6 +237,17 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                       decoration: TextDecoration.lineThrough,
                                       color: Color(0xFF4A5568)),
                                 ),
+                                const SizedBox(height: 4),
+                                const Text('Pey Aralığı',
+                                    style: TextStyle(
+                                        color: Color(0xFF9AAAB8), fontSize: 12)),
+                                Text(
+                                  '+${_formatPrice(ad.minBidStep)}',
+                                  style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 14,
+                                      color: Color(0xFF00B4CC)),
+                                ),
                               ],
                             ),
                           ],
@@ -311,38 +322,47 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               ),
                             ),
                           )
-                        else
-                          // Authenticated: show bid form
-                          Row(
+                        else {
+                          final double currentHighest = ad.bids.isNotEmpty ? ad.bids.first.amount : (ad.startingBid ?? 0.0);
+                          final double minRequiredBid = ad.bids.isNotEmpty ? (currentHighest + ad.minBidStep) : (ad.startingBid ?? 1.0);
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [
-                              Expanded(
-                                child: TextField(
-                                  controller: _bidCtrl,
-                                  keyboardType: TextInputType.number,
-                                  decoration: const InputDecoration(
-                                    hintText: 'Teklif miktarı (₺)',
-                                    prefixIcon: Icon(Icons.gavel),
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _bidCtrl,
+                                      keyboardType: TextInputType.number,
+                                      decoration: InputDecoration(
+                                        hintText: 'Teklif miktarı (₺)',
+                                        prefixIcon: const Icon(Icons.gavel),
+                                        helperText: 'En az ${_formatPrice(minRequiredBid)}',
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                              const SizedBox(width: 12),
-                              SizedBox(
-                                height: 52,
-                                child: ElevatedButton(
-                                  onPressed:
-                                      _bidLoading ? null : () => _placeBid(ad),
-                                  child: _bidLoading
-                                      ? const SizedBox(
-                                          width: 20,
-                                          height: 20,
-                                          child: CircularProgressIndicator(
-                                              color: Colors.white,
-                                              strokeWidth: 2))
-                                      : const Text('Ver'),
-                                ),
+                                  const SizedBox(width: 12),
+                                  SizedBox(
+                                    height: 52,
+                                    child: ElevatedButton(
+                                      onPressed:
+                                          _bidLoading ? null : () => _placeBid(ad),
+                                      child: _bidLoading
+                                          ? const SizedBox(
+                                              width: 20,
+                                              height: 20,
+                                              child: CircularProgressIndicator(
+                                                  color: Colors.white,
+                                                  strokeWidth: 2))
+                                          : const Text('Ver'),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ],
-                          ),
+                          );
+                        }
                         const SizedBox(height: 24),
                       ],
                       // Bid history

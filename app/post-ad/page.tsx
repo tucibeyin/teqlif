@@ -11,11 +11,17 @@ export default function PostAdPage() {
     const [selectedProvince, setSelectedProvince] = useState("");
     const [districts, setDistricts] = useState<{ id: string; name: string }[]>([]);
     const [displayPrice, setDisplayPrice] = useState("");
+    const [displayMinBidStep, setDisplayMinBidStep] = useState(new Intl.NumberFormat("tr-TR").format(100));
 
     useEffect(() => {
+        let isMounted = true;
         if (selectedProvince) {
-            setDistricts(allDistricts[selectedProvince] ?? []);
+            const syncDistricts = async () => {
+                if (isMounted) setDistricts(allDistricts[selectedProvince] ?? []);
+            };
+            syncDistricts();
         }
+        return () => { isMounted = false; };
     }, [selectedProvince]);
 
     async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -61,6 +67,7 @@ export default function PostAdPage() {
                 description: fd.get("description"),
                 price: Number(fd.get("price")),
                 startingBid: parsedStartingBid,
+                minBidStep: Number(fd.get("minBidStep")),
                 categorySlug: fd.get("categorySlug"),
                 provinceId: fd.get("provinceId"),
                 districtId: fd.get("districtId"),
@@ -194,6 +201,32 @@ export default function PostAdPage() {
                                     <input type="hidden" name="startingBid" id="actualStartingBid" value="" />
                                 </div>
                             </div>
+
+                            <div className="form-group" style={{ marginTop: "1rem" }}>
+                                <label htmlFor="minBidStepInput">Pey Aralığı (Minimum Artış) (₺) *</label>
+                                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        name="minBidStepDummy"
+                                        id="minBidStepInput"
+                                        placeholder="Örn: 100"
+                                        value={displayMinBidStep}
+                                        onChange={(e) => {
+                                            const val = e.target.value.replace(/[^0-9]/g, "");
+                                            if (!val) setDisplayMinBidStep("");
+                                            else setDisplayMinBidStep(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
+                                        }}
+                                        required
+                                        style={{ paddingRight: "3rem" }}
+                                    />
+                                    <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+                                </div>
+                                <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
+                                <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
+                                    Teklif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
+                                </div>
+                            </div>
                         </div>
 
                         {/* Konum */}
@@ -231,6 +264,11 @@ export default function PostAdPage() {
                                         <option value="" disabled>
                                             {selectedProvince ? "İlçe seçin" : "Önce il seçin"}
                                         </option>
+                                        {districts.length === 0 && selectedProvince && (
+                                            <option value="" disabled>
+                                                &quot;Seçtiğiniz şehre ait ilçe bulunamadı.&quot;
+                                            </option>
+                                        )}
                                         {districts.map((d) => (
                                             <option key={d.id} value={d.id}>{d.name}</option>
                                         ))}

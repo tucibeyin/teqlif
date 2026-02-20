@@ -55,8 +55,10 @@ export default async function AdDetailPage({
 
     if (!ad) notFound();
 
-    const highestBid = ad.bids[0];
-    const isOwner = session?.user?.id === ad.userId;
+    // Type casting to bypass Next.js outdated cached type definitions for the newly added fields
+    const adData = ad as any;
+    const highestBid = adData.bids[0];
+    const isOwner = session?.user?.id === adData.userId;
 
     return (
         <div className="container">
@@ -156,8 +158,9 @@ export default async function AdDetailPage({
                             <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-secondary)" }}>
                                 {ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid)}
                             </div>
-                            <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.25rem" }}>
-                                Piyasa Değeri: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span>
+                            <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.25rem", display: "flex", justifyContent: "space-between" }}>
+                                <span>Piyasa Değeri: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span></span>
+                                <span style={{ color: "var(--primary)", fontWeight: 500 }}>➕ Pey Aralığı: {formatPrice(ad.minBidStep)}</span>
                             </div>
                         </div>
 
