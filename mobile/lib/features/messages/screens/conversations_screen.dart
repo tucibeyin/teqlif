@@ -52,9 +52,31 @@ class ConversationsScreen extends ConsumerWidget {
                       ),
                       title: Text(other?.name ?? 'Kullanıcı',
                           style: const TextStyle(fontWeight: FontWeight.w600)),
-                      subtitle: Text(lastMsg?.content ?? '',
-                          maxLines: 1, overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Color(0xFF9AAAB8))),
+                      subtitle: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          if (conv.ad != null)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 2),
+                              child: Text(
+                                'İlan: ${conv.ad!.title}',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  color: Color(0xFF00B4CC),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          Text(
+                            lastMsg?.content ?? '',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Color(0xFF9AAAB8)),
+                          ),
+                        ],
+                      ),
                       trailing: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.end,

@@ -269,7 +269,8 @@ function MessagesContent() {
                                     borderBottom: '1px solid var(--border)',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '1rem'
+                                    gap: '1rem',
+                                    background: 'var(--bg-card)'
                                 }}>
                                     {isMobileView && (
                                         <button
@@ -280,13 +281,28 @@ function MessagesContent() {
                                             <ArrowLeft size={20} />
                                         </button>
                                     )}
-                                    <div>
+                                    <div style={{ flex: 1 }}>
                                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
                                             {activeConversation.user1.id === currentUserId ? activeConversation.user2.name : activeConversation.user1.name}
                                         </h3>
                                         {activeConversation.ad && (
-                                            <Link href={`/ad/${activeConversation.ad.id}`} className="text-primary text-sm hover:underline">
-                                                İlan: {activeConversation.ad.title}
+                                            <Link
+                                                href={`/ad/${activeConversation.ad.id}`}
+                                                style={{
+                                                    display: 'inline-block',
+                                                    marginTop: '4px',
+                                                    fontSize: '0.85rem',
+                                                    color: 'var(--primary)',
+                                                    textDecoration: 'none',
+                                                    fontWeight: 500
+                                                }}
+                                                className="hover:underline"
+                                            >
+                                                <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                    <span style={{ fontSize: '1.2em' }}>🏷️</span>
+                                                    İlan: {activeConversation.ad.title}
+                                                    <span style={{ fontSize: '1.2em' }}>↗</span>
+                                                </div>
                                             </Link>
                                         )}
                                     </div>

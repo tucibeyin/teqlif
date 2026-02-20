@@ -54,11 +54,22 @@ class ConversationUserModel {
           avatar: json?['avatar'] as String?);
 }
 
+class ConversationAdModel {
+  final String id;
+  final String title;
+  const ConversationAdModel({required this.id, required this.title});
+  factory ConversationAdModel.fromJson(Map<String, dynamic>? json) =>
+      ConversationAdModel(
+          id: json?['id'] as String? ?? '',
+          title: json?['title'] as String? ?? '');
+}
+
 class ConversationModel {
   final String id;
   final String user1Id;
   final String user2Id;
   final String? adId;
+  final ConversationAdModel? ad;
   final DateTime createdAt;
   final DateTime updatedAt;
   final ConversationUserModel? user1;
@@ -71,6 +82,7 @@ class ConversationModel {
     required this.user1Id,
     required this.user2Id,
     this.adId,
+    this.ad,
     required this.createdAt,
     required this.updatedAt,
     this.user1,
@@ -88,6 +100,9 @@ class ConversationModel {
         user1Id: json['user1Id'] as String? ?? '',
         user2Id: json['user2Id'] as String? ?? '',
         adId: json['adId'] as String?,
+        ad: json['ad'] != null
+            ? ConversationAdModel.fromJson(json['ad'] as Map<String, dynamic>)
+            : null,
         createdAt: DateTime.parse(json['createdAt'] as String),
         updatedAt: DateTime.parse(json['updatedAt'] as String),
         user1: json['user1'] != null

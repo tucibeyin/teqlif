@@ -1,11 +1,17 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/message.dart';
 import '../../../core/providers/auth_provider.dart';
+
+final singleConversationProvider = FutureProvider.family<ConversationModel, String>((ref, id) async {
+  final res = await ApiClient().get('${Endpoints.conversations}/$id');
+  return ConversationModel.fromJson(res.data as Map<String, dynamic>);
+});
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -87,10 +93,58 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(authProvider).user?.id ?? '';
+    final convAsync = ref.watch(singleConversationProvider(widget.conversationId));
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Sohbet')),
+      appBar: AppBar(
+        title: convAsync.when(
+          data: (conv) {
+            final other = conv.otherUser(currentUserId);
+            return Text(other?.name ?? 'Sohbet');
+          },
+          loading: () => const Text('Yükleniyor...'),
+          error: (_, __) => const Text('Sohbet'),
+        ),
+      ),
       body: Column(
         children: [
+          convAsync.when(
+            data: (conv) {
+              if (conv.ad == null) return const SizedBox();
+              return GestureDetector(
+                onTap: () => context.push('/ad/${conv.ad!.id}'),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF4F7FA),
+                    border: Border(bottom: BorderSide(color: Color(0xFFE2EBF0))),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.sell_outlined, size: 18, color: Color(0xFF00B4CC)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'İlan: ${conv.ad!.title}',
+                          style: const TextStyle(
+                            color: Color(0xFF00B4CC),
+                            fontWeight: FontWeight.w600,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                      const Icon(Icons.chevron_right, size: 18, color: Color(0xFF00B4CC)),
+                    ],
+                  ),
+                ),
+              );
+            },
+            loading: () => const SizedBox(),
+            error: (_, __) => const SizedBox(),
+          ),
           Expanded(
             child: ListView.builder(
               controller: _scrollCtrl,
