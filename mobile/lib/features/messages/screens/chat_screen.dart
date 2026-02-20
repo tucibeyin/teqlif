@@ -1,0 +1,202 @@
+import 'dart:async';
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:timeago/timeago.dart' as timeago;
+import '../../core/api/api_client.dart';
+import '../../core/api/endpoints.dart';
+import '../../core/models/message.dart';
+import '../../core/providers/auth_provider.dart';
+
+class ChatScreen extends ConsumerStatefulWidget {
+  final String conversationId;
+  const ChatScreen({super.key, required this.conversationId});
+
+  @override
+  ConsumerState<ChatScreen> createState() => _ChatScreenState();
+}
+
+class _ChatScreenState extends ConsumerState<ChatScreen> {
+  final _msgCtrl = TextEditingController();
+  final _scrollCtrl = ScrollController();
+  List<MessageModel> _messages = [];
+  bool _sending = false;
+  Timer? _pollTimer;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+    // Poll for new messages every 3 seconds
+    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _loadMessages());
+  }
+
+  @override
+  void dispose() {
+    _pollTimer?.cancel();
+    _msgCtrl.dispose();
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadMessages() async {
+    try {
+      final res = await ApiClient()
+          .get(Endpoints.messages, params: {'conversationId': widget.conversationId});
+      final list = res.data as List<dynamic>;
+      if (mounted) {
+        setState(() {
+          _messages = list
+              .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
+              .toList();
+        });
+        // Scroll to bottom
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (_scrollCtrl.hasClients) {
+            _scrollCtrl.animateTo(
+              _scrollCtrl.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          }
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _send() async {
+    final content = _msgCtrl.text.trim();
+    if (content.isEmpty) return;
+    setState(() => _sending = true);
+    try {
+      await ApiClient().post(Endpoints.messages, data: {
+        'conversationId': widget.conversationId,
+        'content': content,
+      });
+      _msgCtrl.clear();
+      await _loadMessages();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Mesaj gönderilemedi.')));
+      }
+    } finally {
+      if (mounted) setState(() => _sending = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final currentUserId = ref.watch(authProvider).user?.id ?? '';
+    return Scaffold(
+      appBar: AppBar(title: const Text('Sohbet')),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollCtrl,
+              padding: const EdgeInsets.all(12),
+              itemCount: _messages.length,
+              itemBuilder: (_, i) {
+                final msg = _messages[i];
+                final isMine = msg.senderId == currentUserId;
+                return Align(
+                  alignment:
+                      isMine ? Alignment.centerRight : Alignment.centerLeft,
+                  child: Container(
+                    margin: const EdgeInsets.only(bottom: 8),
+                    constraints: BoxConstraints(
+                        maxWidth: MediaQuery.of(context).size.width * 0.72),
+                    decoration: BoxDecoration(
+                      color: isMine
+                          ? const Color(0xFF00B4CC)
+                          : const Color(0xFFFFFFFF),
+                      borderRadius: BorderRadius.only(
+                        topLeft: const Radius.circular(16),
+                        topRight: const Radius.circular(16),
+                        bottomLeft: Radius.circular(isMine ? 16 : 4),
+                        bottomRight: Radius.circular(isMine ? 4 : 16),
+                      ),
+                      border: isMine
+                          ? null
+                          : Border.all(color: const Color(0xFFE2EBF0)),
+                      boxShadow: [
+                        BoxShadow(
+                            color: Colors.black.withOpacity(0.04),
+                            blurRadius: 4),
+                      ],
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text(
+                          msg.content,
+                          style: TextStyle(
+                            color: isMine
+                                ? Colors.white
+                                : const Color(0xFF0F1923),
+                            fontSize: 14,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          timeago.format(msg.createdAt, locale: 'tr'),
+                          style: TextStyle(
+                            color: isMine
+                                ? Colors.white.withOpacity(0.7)
+                                : const Color(0xFF9AAAB8),
+                            fontSize: 10,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+          // Input bar
+          Container(
+            padding: EdgeInsets.only(
+                left: 12,
+                right: 12,
+                bottom: MediaQuery.of(context).viewInsets.bottom + 12,
+                top: 8),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              border: Border(top: BorderSide(color: Color(0xFFE2EBF0))),
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _msgCtrl,
+                    maxLines: null,
+                    decoration: const InputDecoration(
+                      hintText: 'Mesajınızı yazın...',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
+                  onPressed: _sending ? null : _send,
+                  icon: _sending
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2))
+                      : const Icon(Icons.send),
+                  style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFF00B4CC)),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

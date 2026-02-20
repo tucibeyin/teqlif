@@ -17,6 +17,7 @@ model User {
   password  String
   phone     String?
   avatar    String?
+  fcmToken  String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
