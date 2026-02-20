@@ -8,7 +8,6 @@ class AppTheme {
 
   static ThemeData get light => ThemeData(
         useMaterial3: true,
-        fontFamily: 'Inter',
         colorScheme: ColorScheme.fromSeed(
           seedColor: _primary,
           brightness: Brightness.light,
