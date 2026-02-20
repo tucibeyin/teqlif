@@ -44,12 +44,14 @@ Future<void> _setupFCM() async {
     sound: true,
   );
 
-  // Get token and send to server
-  final token = await messaging.getToken();
-  if (token != null) {
-    try {
+  // Get FCM token — may fail on iOS Simulator (no APNS), safe to ignore
+  try {
+    final token = await messaging.getToken();
+    if (token != null) {
       await ApiClient().post(Endpoints.pushRegister, data: {'fcmToken': token});
-    } catch (_) {}
+    }
+  } catch (e) {
+    debugPrint('[FCM] Token fetch skipped: $e');
   }
 
   // Listen for token refresh
