@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import BidForm from "./BidForm";
 import ImageSlider from "./ImageSlider";
+import { AdActions } from "./AdActions";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -42,7 +43,7 @@ export default async function AdDetailPage({
             bids: {
                 orderBy: { amount: "desc" },
                 take: 10,
-                include: { user: { select: { name: true } } },
+                include: { user: { select: { id: true, name: true } } },
             },
         },
     });
@@ -107,7 +108,20 @@ export default async function AdDetailPage({
                                 {ad.description}
                             </div>
 
-                            {!isOwner && ad.user.phone && (
+                            {!isOwner && session?.user && (
+                                <div style={{ marginTop: "1.25rem", display: "flex", gap: "1rem", flexDirection: "column" }}>
+                                    {ad.user.phone && (
+                                        <a
+                                            href={`tel:${ad.user.phone}`}
+                                            className="btn btn-secondary btn-full"
+                                        >
+                                            📞 {ad.user.phone} - Satıcıyı Ara
+                                        </a>
+                                    )}
+                                    <AdActions actionType="MESSAGE" adId={ad.id} sellerId={ad.userId} currentUser={session.user} />
+                                </div>
+                            )}
+                            {!isOwner && !session?.user && ad.user.phone && (
                                 <div style={{ marginTop: "1.25rem" }}>
                                     <a
                                         href={`tel:${ad.user.phone}`}
@@ -204,12 +218,20 @@ export default async function AdDetailPage({
                                     Teklif Geçmişi
                                 </div>
                                 {ad.bids.map((bid, i) => (
-                                    <div key={bid.id} className="bid-item">
-                                        <span className="bid-item-user">
-                                            {i === 0 && "🏆 "}
-                                            {bid.user.name}
-                                        </span>
-                                        <span className="bid-item-amount">{formatPrice(bid.amount)}</span>
+                                    <div key={bid.id} className="bid-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <div>
+                                            <span className="bid-item-user">
+                                                {i === 0 && "🏆 "}
+                                                {bid.user.name}
+                                            </span>
+                                            <span className="bid-item-amount" style={{ marginLeft: '8px' }}>{formatPrice(bid.amount)}</span>
+                                        </div>
+                                        {isOwner && bid.status === 'PENDING' && (
+                                            <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
+                                        )}
+                                        {bid.status === 'ACCEPTED' && (
+                                            <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
+                                        )}
                                     </div>
                                 ))}
                             </div>

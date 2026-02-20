@@ -22,6 +22,11 @@ model User {
 
   ads  Ad[]
   bids Bid[]
+
+  conversations1 Conversation[] @relation("User1Conversations")
+  conversations2 Conversation[] @relation("User2Conversations")
+  messages       Message[]
+  notifications  Notification[]
 }
 
 model Category {
@@ -75,7 +80,8 @@ model Ad {
   districtId String
   district   District @relation(fields: [districtId], references: [id])
 
-  bids       Bid[]
+  bids          Bid[]
+  conversations Conversation[]
 }
 
 model Bid {
@@ -88,6 +94,58 @@ model Bid {
 
   adId String
   ad   Ad     @relation(fields: [adId], references: [id], onDelete: Cascade)
+
+  status BidStatus @default(PENDING)
+}
+
+model Conversation {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user1Id String
+  user2Id String
+  adId    String?
+
+  user1 User @relation("User1Conversations", fields: [user1Id], references: [id], onDelete: Cascade)
+  user2 User @relation("User2Conversations", fields: [user2Id], references: [id], onDelete: Cascade)
+  ad    Ad?  @relation(fields: [adId], references: [id], onDelete: SetNull)
+
+  messages Message[]
+
+  @@unique([user1Id, user2Id, adId])
+}
+
+model Message {
+  id        String   @id @default(cuid())
+  content   String
+  isRead    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  senderId String
+  sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  type      NotificationType
+  message   String
+  link      String?
+  isRead    Boolean          @default(false)
+  createdAt DateTime         @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum NotificationType {
+  BID_RECEIVED
+  BID_ACCEPTED
+  NEW_MESSAGE
+  SYSTEM
 }
 
 enum AdStatus {
@@ -95,4 +153,10 @@ enum AdStatus {
   SOLD
   EXPIRED
   DRAFT
+}
+
+enum BidStatus {
+  PENDING
+  ACCEPTED
+  REJECTED
 }
