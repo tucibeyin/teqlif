@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "232766108005",
+    "project_id": "teqlif-a24ee",
+    "storage_bucket": "teqlif-a24ee.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:232766108005:android:1be15fe4cb2708a551b18c",
+        "android_client_info": {
+          "package_name": "com.teqlif.teqlif_mobile"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBV6l2Z_D_KHn9_tU6PtUrhBom3YY2AzVY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
