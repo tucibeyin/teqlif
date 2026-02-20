@@ -253,13 +253,15 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  const Text('Açılış Fiyatı',
-                                      style: TextStyle(
+                                  Text(ad.bids.isNotEmpty ? 'Güncel Fiyat' : 'Açılış Fiyatı',
+                                      style: const TextStyle(
                                           color: Color(0xFF9AAAB8), fontSize: 12)),
                                   Text(
-                                    ad.startingBid == null
-                                        ? '🔥 Serbest Teklif'
-                                        : _formatPrice(ad.startingBid!),
+                                    ad.bids.isNotEmpty
+                                        ? _formatPrice(ad.bids.first.amount)
+                                        : (ad.startingBid == null
+                                            ? '🔥 Serbest Teklif'
+                                            : _formatPrice(ad.startingBid!)),
                                     style: const TextStyle(
                                         fontWeight: FontWeight.w800,
                                         fontSize: 22,
@@ -427,6 +429,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Expanded(
                                         child: TextField(
@@ -440,19 +443,22 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                         ),
                                       ),
                                       const SizedBox(width: 12),
-                                      SizedBox(
-                                        height: 52,
-                                        child: ElevatedButton(
-                                          onPressed:
-                                              _bidLoading ? null : () => _placeBid(ad),
-                                          child: _bidLoading
-                                              ? const SizedBox(
-                                                  width: 20,
-                                                  height: 20,
-                                                  child: CircularProgressIndicator(
-                                                      color: Colors.white,
-                                                      strokeWidth: 2))
-                                              : const Text('Ver'),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: SizedBox(
+                                          height: 48,
+                                          child: ElevatedButton(
+                                            onPressed:
+                                                _bidLoading ? null : () => _placeBid(ad),
+                                            child: _bidLoading
+                                                ? const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child: CircularProgressIndicator(
+                                                        color: Colors.white,
+                                                        strokeWidth: 2))
+                                                : const Text('Ver'),
+                                          ),
                                         ),
                                       ),
                                     ],

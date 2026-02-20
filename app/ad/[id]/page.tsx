@@ -209,28 +209,21 @@ export default async function AdDetailPage({
                         <div className="auction-card">
                             <div style={{ marginBottom: "1.25rem" }}>
                                 <div className="auction-label">
-                                    {ad.startingBid === null ? "Açılış (Serbest Teklif)" : "Minimum Açılış Teklifi"}
+                                    {highestBid ? "Güncel Fiyat (En Yüksek Teklif)" : (ad.startingBid === null ? "Açılış (Serbest Teklif)" : "Minimum Açılış Teklifi")}
                                 </div>
                                 <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-secondary)" }}>
-                                    {ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid)}
+                                    {highestBid ? formatPrice(highestBid.amount) : (ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid))}
                                 </div>
                                 <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.25rem", display: "flex", justifyContent: "space-between" }}>
                                     <span>Piyasa Değeri: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span></span>
                                     <span style={{ color: "var(--primary)", fontWeight: 500 }}>➕ Pey Aralığı: {formatPrice(ad.minBidStep)}</span>
                                 </div>
-                            </div>
-
-                            {highestBid && (
-                                <div style={{ marginBottom: "1.25rem" }}>
-                                    <div className="auction-label">En Yüksek Teklif</div>
-                                    <div className="auction-current-price">
-                                        {formatPrice(highestBid.amount)}
-                                    </div>
+                                {highestBid && (
                                     <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                        {highestBid.user.name} tarafından
+                                        Son teklif: {highestBid.user.name} tarafından verildi
                                     </div>
-                                </div>
-                            )}
+                                )}
+                            </div>
 
                             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
                                 <div style={{

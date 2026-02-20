@@ -1,36 +1,66 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Teqlif Platformu
 
-## Getting Started
+Teqlif, kullanıcıların hem **Açık Artırma (Müzayede)** usulüyle hem de **Sabit Fiyatlı** olarak ürünlerini listeleyebildiği ve teklif verip/satın alabildiği yeni nesil bir e-ticaret platformudur. Proje, modern web teknolojileri (Next.js) ve çapraz platform mobil uygulama (Flutter) altyapısını bir arada sunar.
 
-First, run the development server:
+## 🚀 Temel Özellikler
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+- **Çoklu İlan Modelleri:**
+  - **Açık Artırma:** Satıcılar ürünlerine başlangıç fiyatı (`startingBid`) ve minimum artış miktarı / pey aralığı (`minBidStep`) belirleyebilirler. Alıcılar bu kurallara göre teklif verir.
+  - **Sabit Fiyat (Fixed Price):** Teklif mekanizmasının kapalı olduğu, satıcının belirlediği net fiyattan listelenen ve doğrudan iletişime geçilerek satılan ürün modeli.
+- **Gelişmiş Teklif Yönetimi:** Satıcılar, ilanlarına gelen teklifleri görebilir, kabul edebilir (`ACCEPTED`) veya reddedebilir (`REJECTED`). Teklif kabul edildiğinde kazanan dışındaki rezerve teklifler iptal edilir.
+- **Gerçek Zamanlıya Yakın Mesajlaşma:**
+  - Satıcılar ve alıcılar arasında sipariş/teklif üzerine anında mesajlaşma.
+  - Web uygulamasında her sayfadan erişilebilen *Global Chat Widget* ve özel *Dashboard Mesajlar* paneli.
+- **Bildirimler:** Teklif aldığınızda, teklifiniz kabul edildiğinde veya yeni bir mesaj geldiğinde bildirim zili aracılığıyla haberdar olursunuz.
+- **Mobil Entegrasyon:** iOS ve Android cihazlar için geliştirilmiş, API ile tam uyumlu çalışan, Riverpod durum yönetimli Flutter (Mobile) istemci. (FCM Push Notifications destekli).
+
+## 🛠 Teknoloji Yığını (Tech Stack)
+
+### Backend & Web Frontend
+- **Framework:** Next.js 14/15 (App Router)
+- **Dil:** TypeScript, React
+- **Veritabanı & ORM:** PostgreSQL & Prisma ORM (`prisma/schema.prisma`)
+- **Kimlik Doğrulama:** NextAuth.js (v5)
+- **Stil & UI:** Tailwind CSS, Radix UI v.b.
+
+### Mobil Uygulama (Flutter)
+- **Framework:** Flutter (Android & iOS)
+- **State Management:** Riverpod 2 (`flutter_riverpod`)
+- **Ağ/HTTP:** Dio (`dio`)
+- **Navigasyon:** GoRouter (`go_router`)
+- **Yerel Depolama:** Flutter Secure Storage (JWT için)
+
+## 📂 Proje Yapısı
+
+```
+teqlif/
+├── app/                  # Next.js App Router sayfaları ve API uç noktaları (/api)
+│   ├── api/              # Mobil ve Web uygulamasının tükettiği RESTful endpointler
+│   ├── ad/               # İlan detayı sayfaları
+│   ├── dashboard/        # Kullanıcı paneli (İlanlarım, Tekliflerim, Mesajlarım)
+│   ├── post-ad/          # İlan ekleme sayfası
+│   └── edit-ad/          # İlan düzenleme sayfası
+├── components/           # React ortak bileşenleri (Navbar, Footer, Chat v.b.)
+├── lib/                  # Yardımcı fonksiyonlar (Prisma client, rate-limit, utils)
+├── mobile/               # Teqlif Flutter mobil proje dizini
+│   ├── lib/
+│   │   ├── config/       # Mobil router ve tema
+│   │   ├── core/         # API istemcileri (dio) ve Veri Modelleri
+│   │   ├── features/     # Ekranlar (Auth, Home, Ad, Dashboard, Messages)
+│   │   └── widgets/      # Ortak mobil arayüz elemanları (örn: MainShell)
+└── prisma/               # Veritabanı şeması ve migration dosyaları
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## 💻 Kurulum ve Geliştirme
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Web (Next.js) Ortamını Başlatmak
+1. Bağımlılıkları yükleyin: `npm install`
+2. `.env` dosyanızı oluşturup veritabanı url'nizi girin (`DATABASE_URL=...`)
+3. Veritabanını eşitleyin: `npx prisma db push`
+4. Geliştirme sunucusunu çalıştırın: `npm run dev`
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+### Mobil (Flutter) Ortamını Başlatmak
+1. `cd mobile` klasörüne girin.
+2. `flutter pub get` ile bağımlılıkları yükleyin.
+3. Geliştirme API url adresinizi `mobile/lib/core/api/endpoints.dart` içindeki `kBaseUrl` değişkenine ayarlayın. (Yerel ağda test için makinenizin yerel IP'sini girin).
+4. `flutter run -d <cihaz_id>` komutu ile emülatör veya gerçek (iPhone/Android) cihazda başlatın.
