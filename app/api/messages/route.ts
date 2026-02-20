@@ -1,17 +1,11 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getMobileUser } from '@/lib/mobile-auth';
 
 export async function GET(request: Request) {
     try {
-        const session = await auth();
-
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                { message: 'Oturum açmanız gerekiyor' },
-                { status: 401 }
-            );
-        }
+        const currentUser = await getMobileUser(request);
+        if (!currentUser) return NextResponse.json({ message: 'Oturum açmanız gerekiyor' }, { status: 401 });
 
         const { searchParams } = new URL(request.url);
         const conversationId = searchParams.get('conversationId');
@@ -19,12 +13,6 @@ export async function GET(request: Request) {
         if (!conversationId) {
             return NextResponse.json({ message: 'conversationId gerekli' }, { status: 400 });
         }
-
-        const currentUser = await prisma.user.findUnique({
-            where: { email: session.user.email },
-        });
-
-        if (!currentUser) return NextResponse.json({ message: 'User not found' }, { status: 404 });
 
         // Validate if the user is part of the conversation
         const conversation = await prisma.conversation.findUnique({
@@ -73,22 +61,14 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
     try {
-        const session = await auth();
-        if (!session?.user?.email) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-        }
+        const currentUser = await getMobileUser(request);
+        if (!currentUser) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
         const { conversationId, content, recipientId } = await request.json();
 
         if (!conversationId || !content || !recipientId) {
             return NextResponse.json({ message: 'Eksik veri' }, { status: 400 });
         }
-
-        const currentUser = await prisma.user.findUnique({
-            where: { email: session.user.email },
-        });
-
-        if (!currentUser) return NextResponse.json({ message: 'User not found' }, { status: 404 });
 
         const result = await prisma.$transaction(async (tx) => {
             const message = await tx.message.create({

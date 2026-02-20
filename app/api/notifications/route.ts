@@ -1,23 +1,11 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getMobileUser } from '@/lib/mobile-auth';
 
 export async function GET(request: Request) {
     try {
-        const session = await auth();
-
-        if (!session?.user?.email) {
-            return NextResponse.json(
-                { message: 'Oturum açmanız gerekiyor' },
-                { status: 401 }
-            );
-        }
-
-        const currentUser = await prisma.user.findUnique({
-            where: { email: session.user.email },
-        });
-
-        if (!currentUser) return NextResponse.json({ message: 'User not found' }, { status: 404 });
+        const currentUser = await getMobileUser(request);
+        if (!currentUser) return NextResponse.json({ message: 'Oturum açmanız gerekiyor' }, { status: 401 });
 
         const notifications = await prisma.notification.findMany({
             where: {
@@ -48,18 +36,11 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
-        const session = await auth();
-        if (!session?.user?.email) {
-            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
-        }
+        const currentUser = await getMobileUser(request);
+        if (!currentUser) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-        const { id } = await request.json(); // if id is provided mark specific, else mark all
-
-        const currentUser = await prisma.user.findUnique({
-            where: { email: session.user.email },
-        });
-
-        if (!currentUser) return NextResponse.json({ message: 'User not found' }, { status: 404 });
+        const body = await request.json().catch(() => ({}));
+        const { id } = body;
 
         if (id) {
             await prisma.notification.updateMany({

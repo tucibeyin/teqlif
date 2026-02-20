@@ -1,14 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { actionRatelimiter } from "@/lib/rate-limit";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function POST(req: NextRequest) {
     try {
-        const session = await auth();
-        if (!session?.user) {
-            return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
-        }
+        const user = await getMobileUser(req);
+        if (!user) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
 
         const ip = req.headers.get("x-forwarded-for") ?? "anonymous";
         try {
@@ -38,7 +36,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
         }
 
-        if (ad.userId === session.user.id) {
+        if (ad.userId === user.id) {
             return NextResponse.json({ error: "Kendi ilanınıza teklif veremezsiniz." }, { status: 403 });
         }
 
@@ -69,7 +67,7 @@ export async function POST(req: NextRequest) {
         const bid = await prisma.bid.create({
             data: {
                 amount: Number(amount),
-                userId: session.user.id,
+                userId: user.id,
                 adId,
             },
             include: { user: { select: { name: true } } },
