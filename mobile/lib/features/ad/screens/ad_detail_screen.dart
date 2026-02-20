@@ -322,47 +322,48 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               ),
                             ),
                           )
-                        else {
-                          final double currentHighest = ad.bids.isNotEmpty ? ad.bids.first.amount : (ad.startingBid ?? 0.0);
-                          final double minRequiredBid = ad.bids.isNotEmpty ? (currentHighest + ad.minBidStep) : (ad.startingBid ?? 1.0);
+                        else
+                          (() {
+                            final double currentHighest = ad.bids.isNotEmpty ? ad.bids.first.amount : (ad.startingBid ?? 0.0);
+                            final double minRequiredBid = ad.bids.isNotEmpty ? (currentHighest + ad.minBidStep) : (ad.startingBid ?? 1.0);
 
-                          return Column(
-                            crossAxisAlignment: CrossAxisAlignment.stretch,
-                            children: [
-                              Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _bidCtrl,
-                                      keyboardType: TextInputType.number,
-                                      decoration: InputDecoration(
-                                        hintText: 'Teklif miktarı (₺)',
-                                        prefixIcon: const Icon(Icons.gavel),
-                                        helperText: 'En az ${_formatPrice(minRequiredBid)}',
+                            return Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              children: [
+                                Row(
+                                  children: [
+                                    Expanded(
+                                      child: TextField(
+                                        controller: _bidCtrl,
+                                        keyboardType: TextInputType.number,
+                                        decoration: InputDecoration(
+                                          hintText: 'Teklif miktarı (₺)',
+                                          prefixIcon: const Icon(Icons.gavel),
+                                          helperText: 'En az ${_formatPrice(minRequiredBid)}',
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  const SizedBox(width: 12),
-                                  SizedBox(
-                                    height: 52,
-                                    child: ElevatedButton(
-                                      onPressed:
-                                          _bidLoading ? null : () => _placeBid(ad),
-                                      child: _bidLoading
-                                          ? const SizedBox(
-                                              width: 20,
-                                              height: 20,
-                                              child: CircularProgressIndicator(
-                                                  color: Colors.white,
-                                                  strokeWidth: 2))
-                                          : const Text('Ver'),
+                                    const SizedBox(width: 12),
+                                    SizedBox(
+                                      height: 52,
+                                      child: ElevatedButton(
+                                        onPressed:
+                                            _bidLoading ? null : () => _placeBid(ad),
+                                        child: _bidLoading
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child: CircularProgressIndicator(
+                                                    color: Colors.white,
+                                                    strokeWidth: 2))
+                                            : const Text('Ver'),
+                                      ),
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          );
-                        }
+                                  ],
+                                ),
+                              ],
+                            );
+                          })(),
                         const SizedBox(height: 24),
                       ],
                       // Bid history
