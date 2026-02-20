@@ -8,6 +8,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../home/screens/home_screen.dart';
+import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 
 // Locations data - province list
 const _provinces = [
@@ -101,19 +102,19 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
       await ApiClient().post(Endpoints.ads, data: {
         'title': _titleCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
-        'price': double.parse(_priceCtrl.text),
+        'price': double.parse(_priceCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'isFixedPrice': _isFixedPrice,
         'startingBid': _isFixedPrice || _freeBid
             ? null
             : (_startBidCtrl.text.isEmpty
                 ? null
-                : double.parse(_startBidCtrl.text)),
+                : double.parse(_startBidCtrl.text.replaceAll('.', '').replaceAll(',', '.'))),
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
-            : double.parse(_minBidStepCtrl.text),
+            : double.parse(_minBidStepCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
             ? null
-            : double.parse(_buyItNowCtrl.text),
+            : double.parse(_buyItNowCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'categorySlug': _selectedCategory,
         'provinceId': _selectedProvinceId,
         'districtId': _selectedProvinceId, // simplified: using same as province
@@ -221,7 +222,8 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _priceCtrl,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
               decoration: InputDecoration(
                   labelText: _isFixedPrice ? 'Satış Fiyatı (₺)' : 'Piyasa Değeri (₺)',
                   prefixIcon: const Icon(Icons.monetization_on_outlined)),
@@ -250,14 +252,16 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                       ),
                       TextField(
                         controller: _startBidCtrl,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
                         decoration: const InputDecoration(
                             labelText: 'Minimum Açılış Teklifi (₺)'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _minBidStepCtrl,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
                         decoration: const InputDecoration(
                             labelText: 'Pey Aralığı (Minimum Artış) (₺)',
                             helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
@@ -266,7 +270,8 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: _buyItNowCtrl,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
                         decoration: const InputDecoration(
                             labelText: 'Hemen Al Fiyatı (₺) (Opsiyonel)',
                             helperText: 'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'

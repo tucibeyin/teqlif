@@ -41,6 +41,7 @@ dependencies:
 
   # Icons
   cupertino_icons: ^1.0.8
+  currency_text_input_formatter: ^2.3.0
 
 dev_dependencies:
   flutter_test:

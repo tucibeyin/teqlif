@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../../../core/providers/auth_provider.dart';
+import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 
 final adDetailProvider = FutureProvider.family<AdModel, String>((ref, id) async {
   final res = await ApiClient().get(Endpoints.adById(id));
@@ -32,7 +33,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   }
 
   Future<void> _placeBid(AdModel ad) async {
-    final amount = double.tryParse(_bidCtrl.text.replaceAll(',', '.'));
+    // Parse formatted string e.g. "1.000.000,00" -> "1000000.00"
+    final rawText = _bidCtrl.text.replaceAll('.', '').replaceAll(',', '.');
+    final amount = double.tryParse(rawText);
     if (amount == null) {
       _snack('Geçerli bir teklif miktarı girin.');
       return;
@@ -492,7 +495,14 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                       Expanded(
                                         child: TextField(
                                           controller: _bidCtrl,
-                                          keyboardType: TextInputType.number,
+                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          inputFormatters: [
+                                            CurrencyTextInputFormatter.currency(
+                                              locale: 'tr_TR',
+                                              symbol: '',
+                                              decimalDigits: 2,
+                                            )
+                                          ],
                                           decoration: InputDecoration(
                                             hintText: 'Teklif miktarı (₺)',
                                             prefixIcon: const Icon(Icons.gavel),

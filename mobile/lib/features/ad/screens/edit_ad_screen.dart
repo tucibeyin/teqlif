@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../../home/screens/home_screen.dart';
+import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 
 class EditAdScreen extends ConsumerStatefulWidget {
   final String adId;
@@ -48,14 +49,15 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
       final res = await ApiClient().get(Endpoints.adById(widget.adId));
       final ad = AdModel.fromJson(res.data as Map<String, dynamic>);
       setState(() {
+        final formatter = CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2);
         _titleCtrl.text = ad.title;
         _descCtrl.text = ad.description;
-        _priceCtrl.text = ad.price.toStringAsFixed(0);
-        _minBidStepCtrl.text = ad.minBidStep.toStringAsFixed(0);
+        _priceCtrl.text = formatter.formatDouble(ad.price);
+        _minBidStepCtrl.text = formatter.formatDouble(ad.minBidStep);
         _isFixedPrice = ad.isFixedPrice;
         _freeBid = ad.startingBid == null;
-        _startBidCtrl.text = ad.startingBid != null ? ad.startingBid!.toStringAsFixed(0) : '';
-        _buyItNowCtrl.text = ad.buyItNowPrice != null ? ad.buyItNowPrice!.toStringAsFixed(0) : '';
+        _startBidCtrl.text = ad.startingBid != null ? formatter.formatDouble(ad.startingBid!) : '';
+        _buyItNowCtrl.text = ad.buyItNowPrice != null ? formatter.formatDouble(ad.buyItNowPrice!) : '';
         _loading = false;
       });
     } catch (_) {
@@ -69,19 +71,19 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
       await ApiClient().patch(Endpoints.adById(widget.adId), data: {
         'title': _titleCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
-        'price': double.parse(_priceCtrl.text),
+        'price': double.parse(_priceCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'isFixedPrice': _isFixedPrice,
         'startingBid': _isFixedPrice || _freeBid
             ? null
             : (_startBidCtrl.text.isEmpty
                 ? null
-                : double.parse(_startBidCtrl.text)),
+                : double.parse(_startBidCtrl.text.replaceAll('.', '').replaceAll(',', '.'))),
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
-            : double.parse(_minBidStepCtrl.text),
+            : double.parse(_minBidStepCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
             ? null
-            : double.parse(_buyItNowCtrl.text),
+            : double.parse(_buyItNowCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
       });
       ref.invalidate(adsProvider(const FilterState()));
       if (mounted) {
@@ -126,15 +128,8 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _priceCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'Piyasa Değeri (₺)',
-                  prefixIcon: Icon(Icons.monetization_on_outlined)),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _priceCtrl,
-              keyboardType: TextInputType.number,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
               decoration: InputDecoration(
                   labelText: _isFixedPrice ? 'Satış Fiyatı (₺)' : 'Piyasa Değeri (₺)',
                   prefixIcon: const Icon(Icons.monetization_on_outlined)),
@@ -162,14 +157,16 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                       ),
                       TextField(
                         controller: _startBidCtrl,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
                         decoration: const InputDecoration(
                             labelText: 'Minimum Açılış Teklifi (₺)'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _minBidStepCtrl,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
                         decoration: const InputDecoration(
                             labelText: 'Pey Aralığı (Minimum Artış) (₺)',
                             helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
@@ -178,7 +175,8 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                       const SizedBox(height: 12),
                       TextField(
                         controller: _buyItNowCtrl,
-                        keyboardType: TextInputType.number,
+                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
                         decoration: const InputDecoration(
                             labelText: 'Hemen Al Fiyatı (₺) (Opsiyonel)',
                             helperText: 'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'
