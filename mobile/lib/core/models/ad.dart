@@ -77,7 +77,6 @@ class AdModel {
     required this.title,
     required this.description,
     required this.price,
-    required this.price,
     this.startingBid,
     this.minBidStep = 1,
     this.isFixedPrice = false,
