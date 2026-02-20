@@ -610,6 +610,7 @@ class _BidTile extends StatelessWidget {
   final bool isOwner;
   final VoidCallback onAccept;
   final VoidCallback onCancel;
+  final VoidCallback onMessage;
 
   const _BidTile({
     required this.bid,
