@@ -60,7 +60,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         'description': _descCtrl.text.trim(),
         'price': double.parse(_priceCtrl.text),
       });
-      ref.invalidate(adsProvider(null));
+      ref.invalidate(adsProvider(const FilterState()));
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('İlan güncellendi! ✅')));

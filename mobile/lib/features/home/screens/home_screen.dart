@@ -45,13 +45,13 @@ const _provinces = [
 
 // ── Provider ──────────────────────────────────────────────────────────────
 
-class _FilterState {
+class FilterState {
   final String? category;
   final String? provinceId;
-  const _FilterState({this.category, this.provinceId});
+  const FilterState({this.category, this.provinceId});
 }
 
-final adsProvider = FutureProvider.family<List<AdModel>, _FilterState>(
+final adsProvider = FutureProvider.family<List<AdModel>, FilterState>(
   (ref, filter) async {
     final params = <String, dynamic>{'status': 'ACTIVE'};
     if (filter.category != null) params['category'] = filter.category;
