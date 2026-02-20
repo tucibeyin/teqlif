@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
 
         await writeFile(filePath, buffer);
 
-        return NextResponse.json({ url: `/uploads/${filename}` });
+        return NextResponse.json({ url: `/api/uploads/${filename}` });
     } catch (error) {
         console.error("Upload error:", error);
         return NextResponse.json({ error: "Dosya yükleme başarısız" }, { status: 500 });
