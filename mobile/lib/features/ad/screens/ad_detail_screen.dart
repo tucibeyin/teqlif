@@ -628,69 +628,122 @@ class _BidTile extends StatelessWidget {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
+      elevation: 0,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: Colors.grey.shade200),
+      ),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-        child: Row(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (isTop) const Text('🏆 ', style: TextStyle(fontSize: 16)),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Row(
+                  children: [
+                    if (isTop) const Text('🏆 ', style: TextStyle(fontSize: 16)),
+                    Text(bid.user?.name ?? 'Anonim',
+                        style: const TextStyle(fontWeight: FontWeight.w600)),
+                  ],
+                ),
+                if (accepted)
+                  const _StatusBadge('Kabul Edildi', Colors.green)
+                else if (rejected)
+                  const _StatusBadge('Reddedildi', Colors.red)
+              ],
+            ),
+            const SizedBox(height: 4),
+            Text(
+              '₺${bid.amount.toStringAsFixed(0)}',
+              style: const TextStyle(
+                  color: Color(0xFF00B4CC),
+                  fontWeight: FontWeight.w700,
+                  fontSize: 16),
+            ),
+            if (isOwner) ...[
+              const SizedBox(height: 8),
+              Row(
                 children: [
-                  Text(bid.user?.name ?? 'Anonim',
-                      style: const TextStyle(fontWeight: FontWeight.w600)),
-                  Text(
-                    '₺${bid.amount.toStringAsFixed(0)}',
-                    style: const TextStyle(
-                        color: Color(0xFF00B4CC),
-                        fontWeight: FontWeight.w700,
-                        fontSize: 16),
+                  if (bid.status == 'PENDING') ...[
+                    _ActionIconButton(
+                      icon: Icons.check_circle_outline,
+                      label: 'Kabul Et',
+                      color: Colors.green,
+                      onPressed: onAccept,
+                    ),
+                    const SizedBox(width: 8),
+                    _ActionIconButton(
+                      icon: Icons.cancel_outlined,
+                      label: 'Reddet',
+                      color: Colors.red,
+                      onPressed: onCancel,
+                    ),
+                  ],
+                  if (accepted)
+                    _ActionIconButton(
+                      icon: Icons.cancel_outlined,
+                      label: 'İptal Et',
+                      color: Colors.red,
+                      onPressed: onCancel,
+                    ),
+                  if (bid.status == 'PENDING' || accepted)
+                    const SizedBox(width: 8),
+                  _ActionIconButton(
+                    icon: Icons.chat_bubble_outline,
+                    label: 'Mesaj',
+                    color: const Color(0xFF00B4CC),
+                    onPressed: onMessage,
                   ),
                 ],
               ),
-            ),
-            if (accepted)
-              const _StatusBadge('Kabul Edildi', Colors.green)
-            else if (rejected)
-              const _StatusBadge('Reddedildi', Colors.red)
-            else if (isOwner) ...[
-              TextButton(
-                onPressed: onAccept,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.green,
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                ),
-                child: const Text('Kabul Et'),
-              ),
-              TextButton(
-                onPressed: onCancel,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                ),
-                child: const Text('İptal Et'),
-              ),
             ],
-            if (isOwner && accepted)
-              TextButton(
-                onPressed: onCancel,
-                style: TextButton.styleFrom(
-                  foregroundColor: Colors.red,
-                  minimumSize: Size.zero,
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                ),
-                child: const Text('İptal Et'),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ActionIconButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color color;
+  final VoidCallback onPressed;
+
+  const _ActionIconButton({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onPressed,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.1),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                color: color,
               ),
-            if (isOwner)
-              IconButton(
-                onPressed: onMessage,
-                icon: const Icon(Icons.message, size: 20, color: Color(0xFF00B4CC)),
-                tooltip: 'Mesaj Gönder',
-                padding: EdgeInsets.zero,
-                constraints: const BoxConstraints(),
-              ),
+            ),
           ],
         ),
       ),

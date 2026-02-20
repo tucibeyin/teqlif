@@ -307,16 +307,24 @@ export default async function AdDetailPage({
                                         Teklif Geçmişi
                                     </div>
                                     {ad.bids.map((bid: any, i: number) => (
-                                        <div key={bid.id} className="bid-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <div>
-                                                <span className="bid-item-user">
-                                                    {i === 0 && "🏆 "}
-                                                    {bid.user.name}
-                                                </span>
-                                                <span className="bid-item-amount" style={{ marginLeft: '8px' }}>{formatPrice(bid.amount)}</span>
+                                        <div key={bid.id} className="bid-item" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', marginBottom: '8px' }}>
+                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <div>
+                                                    <span className="bid-item-user" style={{ fontWeight: 600 }}>
+                                                        {i === 0 && "🏆 "}
+                                                        {bid.user.name}
+                                                    </span>
+                                                    <span className="bid-item-amount" style={{ marginLeft: '8px', color: 'var(--primary)', fontWeight: 700 }}>{formatPrice(bid.amount)}</span>
+                                                </div>
+                                                {bid.status === 'ACCEPTED' && (
+                                                    <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
+                                                )}
+                                                {bid.status === 'REJECTED' && (
+                                                    <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
+                                                )}
                                             </div>
                                             {isOwner && (
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '4px' }}>
                                                     {bid.status === 'PENDING' && (
                                                         <>
                                                             <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
@@ -335,12 +343,6 @@ export default async function AdDetailPage({
                                                         initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
                                                     />
                                                 </div>
-                                            )}
-                                            {bid.status === 'ACCEPTED' && (
-                                                <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
-                                            )}
-                                            {bid.status === 'REJECTED' && (
-                                                <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
                                             )}
                                         </div>
                                     ))}
