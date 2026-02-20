@@ -41,7 +41,8 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
     const formatted = new Intl.NumberFormat("tr-TR", {
         style: "currency",
         currency: "TRY",
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
     });
 
     return (

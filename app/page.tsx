@@ -29,7 +29,8 @@ function formatPrice(price: number) {
   return new Intl.NumberFormat("tr-TR", {
     style: "currency",
     currency: "TRY",
-    maximumFractionDigits: 0,
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
   }).format(price);
 }
 
@@ -122,9 +123,13 @@ export default async function HomePage({
             <div className="ads-grid">
               {ads.map((ad) => (
                 <Link key={ad.id} href={`/ad/${ad.id}`} className="ad-card">
-                  <div className="ad-card-image-placeholder">
-                    {ad.category.icon}
-                  </div>
+                  {ad.images && ad.images.length > 0 ? (
+                    <img src={ad.images[0]} alt={ad.title} className="ad-card-image" />
+                  ) : (
+                    <div className="ad-card-image-placeholder">
+                      {ad.category.icon}
+                    </div>
+                  )}
                   <div className="ad-card-body">
                     <div className="ad-card-title">{ad.title}</div>
                     <div className="ad-card-price">{formatPrice(ad.price)}</div>

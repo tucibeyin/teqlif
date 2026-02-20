@@ -23,6 +23,32 @@ export default function PostAdPage() {
         setError("");
         const fd = new FormData(e.currentTarget);
 
+        const uploadedImages: string[] = [];
+        const fileInput = document.getElementById("images") as HTMLInputElement;
+
+        if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            for (let i = 0; i < fileInput.files.length; i++) {
+                const fileForm = new FormData();
+                fileForm.append("file", fileInput.files[i]);
+
+                try {
+                    const uploadRes = await fetch("/api/upload", {
+                        method: "POST",
+                        body: fileForm,
+                    });
+
+                    if (uploadRes.ok) {
+                        const upData = await uploadRes.json();
+                        if (upData.url) {
+                            uploadedImages.push(upData.url);
+                        }
+                    }
+                } catch (err) {
+                    console.error("Upload error:", err);
+                }
+            }
+        }
+
         const res = await fetch("/api/ads", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -33,6 +59,7 @@ export default function PostAdPage() {
                 categorySlug: fd.get("categorySlug"),
                 provinceId: fd.get("provinceId"),
                 districtId: fd.get("districtId"),
+                images: uploadedImages,
             }),
         });
 
@@ -144,9 +171,22 @@ export default function PostAdPage() {
                             <h3 style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
                                 Fotoğraf
                             </h3>
-                            <div className="image-upload">
-                                <p>📷 Fotoğraf yükle</p>
-                                <p className="text-sm text-muted" style={{ marginTop: "0.25rem" }}>Yakında aktif edilecek</p>
+                            <div className="form-group">
+                                <label htmlFor="images">İlan fotoğraflarını seçiniz (Birden fazla seçinebilirsiniz)</label>
+                                <input
+                                    id="images"
+                                    name="images"
+                                    type="file"
+                                    multiple
+                                    accept="image/*"
+                                    className="input"
+                                    style={{
+                                        padding: "1rem",
+                                        background: "white",
+                                        border: "2px dashed var(--border)",
+                                        cursor: "pointer"
+                                    }}
+                                />
                             </div>
                         </div>
 

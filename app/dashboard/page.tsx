@@ -7,7 +7,8 @@ function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
         style: "currency",
         currency: "TRY",
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
     }).format(price);
 }
 
@@ -107,7 +108,11 @@ export default async function DashboardPage() {
                             {myAds.map((ad) => (
                                 <div key={ad.id} className="card">
                                     <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                                        <span style={{ fontSize: "2rem" }}>{ad.category.icon}</span>
+                                        {ad.images && ad.images.length > 0 ? (
+                                            <img src={ad.images[0]} alt={ad.title} style={{ width: "48px", height: "48px", objectFit: "cover", borderRadius: "10px" }} />
+                                        ) : (
+                                            <span style={{ fontSize: "2rem" }}>{ad.category.icon}</span>
+                                        )}
                                         <div style={{ flex: 1 }}>
                                             <Link href={`/ad/${ad.id}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
                                                 {ad.title}
@@ -149,7 +154,11 @@ export default async function DashboardPage() {
                             {myBids.map((bid) => (
                                 <div key={bid.id} className="card">
                                     <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                                        <span style={{ fontSize: "2rem" }}>{bid.ad.category.icon}</span>
+                                        {bid.ad.images && bid.ad.images.length > 0 ? (
+                                            <img src={bid.ad.images[0]} alt={bid.ad.title} style={{ width: "48px", height: "48px", objectFit: "cover", borderRadius: "10px" }} />
+                                        ) : (
+                                            <span style={{ fontSize: "2rem" }}>{bid.ad.category.icon}</span>
+                                        )}
                                         <div style={{ flex: 1 }}>
                                             <Link href={`/ad/${bid.adId}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
                                                 {bid.ad.title}

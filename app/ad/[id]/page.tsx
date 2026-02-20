@@ -8,7 +8,8 @@ function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
         style: "currency",
         currency: "TRY",
-        maximumFractionDigits: 0,
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
     }).format(price);
 }
 
@@ -56,19 +57,32 @@ export default async function AdDetailPage({
                 {/* Sol: Görsel ve Detay */}
                 <div>
                     <div className="ad-detail-images">
-                        <div
-                            style={{
-                                width: "100%",
-                                height: "400px",
-                                background: "linear-gradient(135deg, var(--bg-secondary), var(--bg-card-hover))",
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                fontSize: "6rem",
-                            }}
-                        >
-                            {ad.category.icon}
-                        </div>
+                        {ad.images && ad.images.length > 0 ? (
+                            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                <img src={ad.images[0]} alt={ad.title} className="ad-detail-main-image" />
+                                {ad.images.length > 1 && (
+                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: "1rem" }}>
+                                        {ad.images.slice(1).map((img, i) => (
+                                            <img key={i} src={img} alt={`${ad.title} - ${i + 2}`} style={{ width: "100%", height: "100px", objectFit: "cover", borderRadius: "var(--radius-md)" }} />
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <div
+                                style={{
+                                    width: "100%",
+                                    height: "400px",
+                                    background: "linear-gradient(135deg, var(--bg-secondary), var(--bg-card-hover))",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "6rem",
+                                }}
+                            >
+                                {ad.category.icon}
+                            </div>
+                        )}
                     </div>
 
                     {/* İlan Detayları */}

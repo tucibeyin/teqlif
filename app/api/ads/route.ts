@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
         }
 
-        const { title, description, price, categorySlug, provinceId, districtId } = await req.json();
+        const { title, description, price, categorySlug, provinceId, districtId, images } = await req.json();
 
         if (!title || !description || !price || !categorySlug || !provinceId || !districtId) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
@@ -61,6 +61,7 @@ export async function POST(req: NextRequest) {
                 categoryId: category.id,
                 provinceId,
                 districtId,
+                images: images || [],
             },
         });
 
