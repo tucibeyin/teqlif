@@ -76,6 +76,21 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     }
   }
 
+  Future<void> _messageBidder(String bidderId) async {
+    try {
+      final res = await ApiClient().post(Endpoints.conversations, data: {
+        'userId': bidderId,
+        'adId': widget.adId,
+      });
+      final conversationId = res.data['id'];
+      if (mounted) {
+        context.push('/chat/$conversationId');
+      }
+    } catch (e) {
+      _snack('Sohbet başlatılamadı.');
+    }
+  }
+
   void _snack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context)
@@ -553,6 +568,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               isOwner: isOwner,
                               onAccept: () => _acceptBid(bid.id),
                               onCancel: () => _cancelBid(bid.id),
+                              onMessage: () => _messageBidder(bid.user!.id),
                             );
                           },
                         ),
@@ -601,6 +617,7 @@ class _BidTile extends StatelessWidget {
     required this.isOwner,
     required this.onAccept,
     required this.onCancel,
+    required this.onMessage,
   });
 
   @override
@@ -635,16 +652,43 @@ class _BidTile extends StatelessWidget {
               const _StatusBadge('Kabul Edildi', Colors.green)
             else if (rejected)
               const _StatusBadge('Reddedildi', Colors.red)
-            else if (isOwner)
+            else if (isOwner) ...[
               TextButton(
                 onPressed: onAccept,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.green,
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
                 child: const Text('Kabul Et'),
               ),
+              TextButton(
+                onPressed: onCancel,
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+                child: const Text('İptal Et'),
+              ),
+            ],
             if (isOwner && accepted)
               TextButton(
                 onPressed: onCancel,
-                style: TextButton.styleFrom(foregroundColor: Colors.red),
-                child: const Text('İptal'),
+                style: TextButton.styleFrom(
+                  foregroundColor: Colors.red,
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                ),
+                child: const Text('İptal Et'),
+              ),
+            if (isOwner)
+              IconButton(
+                onPressed: onMessage,
+                icon: const Icon(Icons.message, size: 20, color: Color(0xFF00B4CC)),
+                tooltip: 'Mesaj Gönder',
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(),
               ),
           ],
         ),

@@ -26,12 +26,16 @@ const _provinces = [
 
 const _categories = [
   {'slug': 'elektronik', 'name': 'Elektronik'},
-  {'slug': 'mobilya', 'name': 'Mobilya'},
-  {'slug': 'giyim', 'name': 'Giyim'},
   {'slug': 'arac', 'name': 'Araç'},
-  {'slug': 'ev-esyasi', 'name': 'Ev Eşyası'},
-  {'slug': 'spor', 'name': 'Spor'},
-  {'slug': 'kitap', 'name': 'Kitap'},
+  {'slug': 'emlak', 'name': 'Emlak'},
+  {'slug': 'giyim', 'name': 'Giyim & Moda'},
+  {'slug': 'mobilya', 'name': 'Mobilya & Ev'},
+  {'slug': 'spor', 'name': 'Spor & Outdoor'},
+  {'slug': 'kitap', 'name': 'Kitap & Hobi'},
+  {'slug': 'koleksiyon', 'name': 'Koleksiyon & Antika'},
+  {'slug': 'cocuk', 'name': 'Bebek & Çocuk'},
+  {'slug': 'bahce', 'name': 'Bahçe & Tarım'},
+  {'slug': 'hayvan', 'name': 'Hayvanlar'},
   {'slug': 'diger', 'name': 'Diğer'},
 ];
 

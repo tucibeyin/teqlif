@@ -28,8 +28,8 @@ export async function PATCH(
             return NextResponse.json({ message: 'Bu işlem için yetkiniz yok' }, { status: 403 });
         }
 
-        if (bid.status !== 'ACCEPTED') {
-            return NextResponse.json({ message: 'Sadece kabul edilen teklifler iptal edilebilir' }, { status: 400 });
+        if (bid.status !== 'ACCEPTED' && bid.status !== 'PENDING') {
+            return NextResponse.json({ message: 'Geçersiz teklif durumu' }, { status: 400 });
         }
 
         // İptal işlemleri
@@ -39,12 +39,16 @@ export async function PATCH(
                 data: { status: 'REJECTED' }
             });
 
+            const text = bid.status === 'ACCEPTED'
+                ? `"${bid.ad.title}" ilanına verdiğiniz teklifin kabul işlemi satıcı tarafından iptal edildi. İlan hala aktif, yeni teklif verebilirsiniz.`
+                : `"${bid.ad.title}" ilanına verdiğiniz teklif satıcı tarafından reddedildi. İlan hala aktif, yeni teklif verebilirsiniz.`;
+
             // Bildirim gönder
             await tx.notification.create({
                 data: {
                     userId: bid.userId,
                     type: 'SYSTEM',
-                    message: `"${bid.ad.title}" ilanına verdiğiniz teklifin kabul işlemi satıcı tarafından iptal edildi. İlan hala aktif, yeni teklif verebilirsiniz.`,
+                    message: text,
                     link: `/ad/${bid.adId}`,
                 }
             });

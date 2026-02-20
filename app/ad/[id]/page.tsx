@@ -318,7 +318,10 @@ export default async function AdDetailPage({
                                             {isOwner && (
                                                 <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
                                                     {bid.status === 'PENDING' && (
-                                                        <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
+                                                        <>
+                                                            <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
+                                                            <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
+                                                        </>
                                                     )}
                                                     {bid.status === 'ACCEPTED' && (
                                                         <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
