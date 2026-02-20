@@ -148,127 +148,184 @@ export default async function AdDetailPage({
                     </div>
                 </div>
 
-                {/* Sağ: Açık Artırma */}
+                {/* Sağ: Açık Artırma veya Sabit Fiyat */}
                 <div>
-                    <div className="auction-card">
-                        <div style={{ marginBottom: "1.25rem" }}>
-                            <div className="auction-label">
-                                {ad.startingBid === null ? "Açılış (Serbest Teklif)" : "Minimum Açılış Teklifi"}
-                            </div>
-                            <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-secondary)" }}>
-                                {ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid)}
-                            </div>
-                            <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.25rem", display: "flex", justifyContent: "space-between" }}>
-                                <span>Piyasa Değeri: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span></span>
-                                <span style={{ color: "var(--primary)", fontWeight: 500 }}>➕ Pey Aralığı: {formatPrice(ad.minBidStep)}</span>
-                            </div>
-                        </div>
-
-                        {highestBid && (
+                    {adData.isFixedPrice ? (
+                        <div className="auction-card">
                             <div style={{ marginBottom: "1.25rem" }}>
-                                <div className="auction-label">En Yüksek Teklif</div>
-                                <div className="auction-current-price">
-                                    {formatPrice(highestBid.amount)}
+                                <div className="auction-label" style={{ color: "var(--primary)" }}>
+                                    Sabit Fiyatlı Ürün
                                 </div>
-                                <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                    {highestBid.user.name} tarafından
+                                <div style={{ fontSize: "1.75rem", fontWeight: 700, color: "var(--text-secondary)", marginTop: "0.5rem" }}>
+                                    {formatPrice(ad.price)}
                                 </div>
                             </div>
-                        )}
-
-                        <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
-                            <div style={{
-                                background: "rgba(0, 188, 212, 0.08)",
-                                border: "1px solid rgba(0, 188, 212, 0.2)",
-                                borderRadius: "var(--radius-md)",
-                                padding: "0.5rem 0.875rem",
-                                flex: 1,
-                                textAlign: "center",
-                            }}>
-                                <div style={{ fontWeight: 700, color: "var(--primary)" }}>{ad.bids.length}</div>
-                                <div className="text-muted" style={{ fontSize: "0.75rem" }}>Teklif</div>
-                            </div>
-                            <div style={{
-                                background: "rgba(0, 188, 212, 0.08)",
-                                border: "1px solid rgba(0, 188, 212, 0.2)",
-                                borderRadius: "var(--radius-md)",
-                                padding: "0.5rem 0.875rem",
-                                flex: 1,
-                                textAlign: "center",
-                            }}>
-                                <span className={`badge badge-${ad.status.toLowerCase()}`}>
-                                    {ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Süresi Doldu"}
-                                </span>
-                            </div>
-                        </div>
-
-                        {/* Teklif Formu */}
-                        {!isOwner && session?.user ? (
-                            <BidForm
-                                adId={ad.id}
-                                currentHighest={highestBid?.amount ?? (ad.startingBid !== null ? ad.startingBid : 0)} // If no bids and free bid, it acts as 0. So next minimum is 0 + minStep(1) = 1
-                                minStep={ad.bids.length > 0 ? ad.minBidStep : (ad.startingBid === null ? 1 : 0)} // If first bid and exact startingBid, minStep is 0 to allow exact startingBid amount
-                            />
-                        ) : !session?.user ? (
-                            <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
-                                <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
-                                    Bu ilana teklif vermek için giriş yapmalısınız.
-                                </p>
-                                <Link href="/login" className="btn btn-primary btn-full">
-                                    Giriş Yap
-                                </Link>
-                            </div>
-                        ) : (
-                            <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
-                                <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
-                                Kendi ilanınıza teklif veremezsiniz. Başkalarının teklif vermesini bekleyin.
-                            </div>
-                        )}
-
-                        {/* Teklif Geçmişi */}
-                        {ad.bids.length > 0 && (
-                            <div className="bid-history">
-                                <div style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                                    Teklif Geçmişi
+                            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
+                                <div style={{
+                                    background: "rgba(0, 188, 212, 0.08)",
+                                    border: "1px solid rgba(0, 188, 212, 0.2)",
+                                    borderRadius: "var(--radius-md)",
+                                    padding: "0.5rem 0.875rem",
+                                    flex: 1,
+                                    textAlign: "center",
+                                }}>
+                                    <span className={`badge badge-${ad.status.toLowerCase()}`}>
+                                        {ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Süresi Doldu"}
+                                    </span>
                                 </div>
-                                {ad.bids.map((bid, i) => (
-                                    <div key={bid.id} className="bid-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <div>
-                                            <span className="bid-item-user">
-                                                {i === 0 && "🏆 "}
-                                                {bid.user.name}
-                                            </span>
-                                            <span className="bid-item-amount" style={{ marginLeft: '8px' }}>{formatPrice(bid.amount)}</span>
-                                        </div>
-                                        {isOwner && (
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                {bid.status === 'PENDING' && (
-                                                    <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
-                                                )}
-                                                {bid.status === 'ACCEPTED' && (
-                                                    <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
-                                                )}
-                                                <AdActions
-                                                    actionType="MESSAGE"
-                                                    adId={ad.id}
-                                                    sellerId={bid.user.id}
-                                                    currentUser={session?.user}
-                                                    isMessageBidder={true}
-                                                    initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
-                                                />
-                                            </div>
-                                        )}
-                                        {bid.status === 'ACCEPTED' && (
-                                            <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
-                                        )}
-                                        {bid.status === 'REJECTED' && (
-                                            <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
-                                        )}
+                            </div>
+
+                            {/* Satın Alma / İletişime Geçme */}
+                            {!isOwner && session?.user ? (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                    <AdActions
+                                        actionType="MESSAGE"
+                                        adId={ad.id}
+                                        sellerId={ad.userId}
+                                        currentUser={session.user}
+                                        initialMessage={`Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı ${formatPrice(ad.price)} fiyatından satın almak istiyorum.`}
+                                    />
+                                    <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", textAlign: "center" }}>
+                                        Satıcıyla anlaşıp güvenli ödeme/kargo koşullarını belirleyebilirsiniz.
                                     </div>
-                                ))}
+                                </div>
+                            ) : !session?.user ? (
+                                <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
+                                    <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
+                                        Satıcıyla iletişime geçmek için giriş yapmalısınız.
+                                    </p>
+                                    <Link href="/login" className="btn btn-primary btn-full">
+                                        Giriş Yap
+                                    </Link>
+                                </div>
+                            ) : (
+                                <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
+                                    <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
+                                    Sabit fiyatlı ürününüz yayında. Müşterilerden mesaj bekleyin.
+                                </div>
+                            )}
+                        </div>
+                    ) : (
+                        <div className="auction-card">
+                            <div style={{ marginBottom: "1.25rem" }}>
+                                <div className="auction-label">
+                                    {ad.startingBid === null ? "Açılış (Serbest Teklif)" : "Minimum Açılış Teklifi"}
+                                </div>
+                                <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+                                    {ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid)}
+                                </div>
+                                <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.25rem", display: "flex", justifyContent: "space-between" }}>
+                                    <span>Piyasa Değeri: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span></span>
+                                    <span style={{ color: "var(--primary)", fontWeight: 500 }}>➕ Pey Aralığı: {formatPrice(ad.minBidStep)}</span>
+                                </div>
                             </div>
-                        )}
-                    </div>
+
+                            {highestBid && (
+                                <div style={{ marginBottom: "1.25rem" }}>
+                                    <div className="auction-label">En Yüksek Teklif</div>
+                                    <div className="auction-current-price">
+                                        {formatPrice(highestBid.amount)}
+                                    </div>
+                                    <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
+                                        {highestBid.user.name} tarafından
+                                    </div>
+                                </div>
+                            )}
+
+                            <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
+                                <div style={{
+                                    background: "rgba(0, 188, 212, 0.08)",
+                                    border: "1px solid rgba(0, 188, 212, 0.2)",
+                                    borderRadius: "var(--radius-md)",
+                                    padding: "0.5rem 0.875rem",
+                                    flex: 1,
+                                    textAlign: "center",
+                                }}>
+                                    <div style={{ fontWeight: 700, color: "var(--primary)" }}>{ad.bids.length}</div>
+                                    <div className="text-muted" style={{ fontSize: "0.75rem" }}>Teklif</div>
+                                </div>
+                                <div style={{
+                                    background: "rgba(0, 188, 212, 0.08)",
+                                    border: "1px solid rgba(0, 188, 212, 0.2)",
+                                    borderRadius: "var(--radius-md)",
+                                    padding: "0.5rem 0.875rem",
+                                    flex: 1,
+                                    textAlign: "center",
+                                }}>
+                                    <span className={`badge badge-${ad.status.toLowerCase()}`}>
+                                        {ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Süresi Doldu"}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* Teklif Formu */}
+                            {!isOwner && session?.user ? (
+                                <BidForm
+                                    adId={ad.id}
+                                    currentHighest={highestBid?.amount ?? (ad.startingBid !== null ? ad.startingBid : 0)}
+                                    minStep={ad.bids.length > 0 ? ad.minBidStep : (ad.startingBid === null ? 1 : 0)}
+                                />
+                            ) : !session?.user ? (
+                                <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
+                                    <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
+                                        Bu ilana teklif vermek için giriş yapmalısınız.
+                                    </p>
+                                    <Link href="/login" className="btn btn-primary btn-full">
+                                        Giriş Yap
+                                    </Link>
+                                </div>
+                            ) : (
+                                <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
+                                    <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
+                                    Kendi ilanınıza teklif veremezsiniz. Başkalarının teklif vermesini bekleyin.
+                                </div>
+                            )}
+
+                            {/* Teklif Geçmişi */}
+                            {ad.bids.length > 0 && (
+                                <div className="bid-history">
+                                    <div style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.5rem" }}>
+                                        Teklif Geçmişi
+                                    </div>
+                                    {ad.bids.map((bid: any, i: number) => (
+                                        <div key={bid.id} className="bid-item" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <div>
+                                                <span className="bid-item-user">
+                                                    {i === 0 && "🏆 "}
+                                                    {bid.user.name}
+                                                </span>
+                                                <span className="bid-item-amount" style={{ marginLeft: '8px' }}>{formatPrice(bid.amount)}</span>
+                                            </div>
+                                            {isOwner && (
+                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                    {bid.status === 'PENDING' && (
+                                                        <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
+                                                    )}
+                                                    {bid.status === 'ACCEPTED' && (
+                                                        <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
+                                                    )}
+                                                    <AdActions
+                                                        actionType="MESSAGE"
+                                                        adId={ad.id}
+                                                        sellerId={bid.user.id}
+                                                        currentUser={session?.user}
+                                                        isMessageBidder={true}
+                                                        initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
+                                                    />
+                                                </div>
+                                            )}
+                                            {bid.status === 'ACCEPTED' && (
+                                                <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
+                                            )}
+                                            {bid.status === 'REJECTED' && (
+                                                <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
+                                            )}
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

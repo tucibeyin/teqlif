@@ -54,7 +54,7 @@ export async function POST(req: NextRequest) {
             // Fail-open: allow the request to pass if Redis is unreachable
         }
 
-        const { title, description, price, startingBid, minBidStep, categorySlug, provinceId, districtId, images } = await req.json();
+        const { title, description, price, startingBid, minBidStep, isFixedPrice, categorySlug, provinceId, districtId, images } = await req.json();
 
         if (!title || !description || !price || !categorySlug || !provinceId || !districtId) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
@@ -70,8 +70,9 @@ export async function POST(req: NextRequest) {
                 title,
                 description,
                 price: Number(price),
-                startingBid: startingBid !== undefined ? Number(startingBid) : null,
-                minBidStep: minBidStep !== undefined ? Number(minBidStep) : 1,
+                isFixedPrice: Boolean(isFixedPrice),
+                startingBid: isFixedPrice ? null : (startingBid !== undefined ? Number(startingBid) : null),
+                minBidStep: isFixedPrice ? 1 : (minBidStep !== undefined ? Number(minBidStep) : 1),
                 userId: session.user.id,
                 categoryId: category.id,
                 provinceId,

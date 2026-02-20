@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../core/providers/auth_provider.dart';
+import '../features/home/screens/home_screen.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -33,7 +33,11 @@ class MainShell extends ConsumerWidget {
               onDestinationSelected: (index) {
                 switch (index) {
                   case 0:
-                    context.go('/home');
+                    if (location == '/home') {
+                      ref.invalidate(adsProvider);
+                    } else {
+                      context.go('/home');
+                    }
                     break;
                   case 1:
                     context.go('/dashboard');

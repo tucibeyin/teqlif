@@ -197,62 +197,107 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                       ),
                       const SizedBox(height: 16),
                       // Price section
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFE6F9FC),
-                          borderRadius: BorderRadius.circular(12),
+                      if (ad.isFixedPrice)
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE6F9FC),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: const Color(0xFF00B4CC).withOpacity(0.2)),
+                          ),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Sabit Fiyatlı Ürün',
+                                      style: TextStyle(
+                                          color: Color(0xFF00B4CC), fontSize: 13, fontWeight: FontWeight.w600)),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    _formatPrice(ad.price),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 24,
+                                        color: Color(0xFF2D3748)),
+                                  ),
+                                ],
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: ad.status == 'ACTIVE' ? const Color(0xFF00B4CC).withOpacity(0.1) : Colors.grey.shade200,
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  ad.status == 'ACTIVE' ? 'Yayında' : (ad.status == 'SOLD' ? 'Satıldı' : 'Süresi Doldu'),
+                                  style: TextStyle(
+                                    color: ad.status == 'ACTIVE' ? const Color(0xFF00B4CC) : Colors.grey.shade600,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      else
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE6F9FC),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Row(
+                            children: [
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  const Text('Açılış Fiyatı',
+                                      style: TextStyle(
+                                          color: Color(0xFF9AAAB8), fontSize: 12)),
+                                  Text(
+                                    ad.startingBid == null
+                                        ? '🔥 Serbest Teklif'
+                                        : _formatPrice(ad.startingBid!),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w800,
+                                        fontSize: 22,
+                                        color: Color(0xFF00B4CC)),
+                                  ),
+                                ],
+                              ),
+                              const Spacer(),
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  const Text('Piyasa Değeri',
+                                      style: TextStyle(
+                                          color: Color(0xFF9AAAB8), fontSize: 12)),
+                                  Text(
+                                    _formatPrice(ad.price),
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        fontSize: 15,
+                                        decoration: TextDecoration.lineThrough,
+                                        color: Color(0xFF4A5568)),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  const Text('Pey Aralığı',
+                                      style: TextStyle(
+                                          color: Color(0xFF9AAAB8), fontSize: 12)),
+                                  Text(
+                                    '+${_formatPrice(ad.minBidStep)}',
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 14,
+                                        color: Color(0xFF00B4CC)),
+                                  ),
+                                ],
+                              ),
+                            ],
+                          ),
                         ),
-                        child: Row(
-                          children: [
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                const Text('Açılış Fiyatı',
-                                    style: TextStyle(
-                                        color: Color(0xFF9AAAB8), fontSize: 12)),
-                                Text(
-                                  ad.startingBid == null
-                                      ? '🔥 Serbest Teklif'
-                                      : _formatPrice(ad.startingBid!),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w800,
-                                      fontSize: 22,
-                                      color: Color(0xFF00B4CC)),
-                                ),
-                              ],
-                            ),
-                            const Spacer(),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.end,
-                              children: [
-                                const Text('Piyasa Değeri',
-                                    style: TextStyle(
-                                        color: Color(0xFF9AAAB8), fontSize: 12)),
-                                Text(
-                                  _formatPrice(ad.price),
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 15,
-                                      decoration: TextDecoration.lineThrough,
-                                      color: Color(0xFF4A5568)),
-                                ),
-                                const SizedBox(height: 4),
-                                const Text('Pey Aralığı',
-                                    style: TextStyle(
-                                        color: Color(0xFF9AAAB8), fontSize: 12)),
-                                Text(
-                                  '+${_formatPrice(ad.minBidStep)}',
-                                  style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 14,
-                                      color: Color(0xFF00B4CC)),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 16),
                       // Description
                       const Text('Açıklama',
@@ -284,90 +329,142 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                         ),
                       ),
                       const SizedBox(height: 24),
-                      // Bid section
+                      // Bid or Buy section
                       if (!isOwner && !ad.isExpired) ...[
-                        const Text('Teklif Ver',
-                            style: TextStyle(
-                                fontWeight: FontWeight.w700, fontSize: 16)),
-                        const SizedBox(height: 8),
-                        if (currentUser == null)
-                          // Guest: show login prompt
-                          GestureDetector(
-                            onTap: () => context.push('/login'),
-                            child: Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFE6F9FC),
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                    color: const Color(0xFF00B4CC)
-                                        .withOpacity(0.4)),
-                              ),
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.lock_outline,
-                                      color: Color(0xFF00B4CC)),
-                                  SizedBox(width: 12),
-                                  Expanded(
-                                    child: Text(
-                                      'Teklif vermek için giriş yapmanız gerekiyor.',
-                                      style: TextStyle(
-                                          color: Color(0xFF008FA3),
-                                          fontWeight: FontWeight.w500),
-                                    ),
-                                  ),
-                                  Icon(Icons.arrow_forward_ios,
-                                      size: 14, color: Color(0xFF00B4CC)),
-                                ],
-                              ),
-                            ),
-                          )
-                        else
-                          (() {
-                            final double currentHighest = ad.bids.isNotEmpty ? ad.bids.first.amount : (ad.startingBid ?? 0.0);
-                            final double minRequiredBid = ad.bids.isNotEmpty ? (currentHighest + ad.minBidStep) : (ad.startingBid ?? 1.0);
-
-                            return Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                Row(
-                                  children: [
+                        if (ad.isFixedPrice) ...[
+                          const Text('Satın Al',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 16)),
+                          const SizedBox(height: 8),
+                          if (currentUser == null)
+                            // Guest: show login prompt
+                            GestureDetector(
+                              onTap: () => context.push('/login'),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE6F9FC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: const Color(0xFF00B4CC)
+                                          .withOpacity(0.4)),
+                                ),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.lock_outline,
+                                        color: Color(0xFF00B4CC)),
+                                    SizedBox(width: 12),
                                     Expanded(
-                                      child: TextField(
-                                        controller: _bidCtrl,
-                                        keyboardType: TextInputType.number,
-                                        decoration: InputDecoration(
-                                          hintText: 'Teklif miktarı (₺)',
-                                          prefixIcon: const Icon(Icons.gavel),
-                                          helperText: 'En az ${_formatPrice(minRequiredBid)}',
-                                        ),
+                                      child: Text(
+                                        'Satıcı ile iletişime geçmek için giriş yapmanız gerekiyor.',
+                                        style: TextStyle(
+                                            color: Color(0xFF008FA3),
+                                            fontWeight: FontWeight.w500),
                                       ),
                                     ),
-                                    const SizedBox(width: 12),
-                                    SizedBox(
-                                      height: 52,
-                                      child: ElevatedButton(
-                                        onPressed:
-                                            _bidLoading ? null : () => _placeBid(ad),
-                                        child: _bidLoading
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child: CircularProgressIndicator(
-                                                    color: Colors.white,
-                                                    strokeWidth: 2))
-                                            : const Text('Ver'),
-                                      ),
-                                    ),
+                                    Icon(Icons.arrow_forward_ios,
+                                        size: 14, color: Color(0xFF00B4CC)),
                                   ],
                                 ),
-                              ],
-                            );
-                          })(),
-                        const SizedBox(height: 24),
+                              ),
+                            )
+                          else
+                            SizedBox(
+                              width: double.infinity,
+                              height: 52,
+                              child: ElevatedButton.icon(
+                                onPressed: () {
+                                  context.push('/messages/chat/${ad.userId}');
+                                },
+                                icon: const Icon(Icons.message_outlined),
+                                label: const Text('Satıcıya Mesaj Gönder'),
+                              ),
+                            ),
+                          const SizedBox(height: 24),
+                        ] else ...[
+                          const Text('Teklif Ver',
+                              style: TextStyle(
+                                  fontWeight: FontWeight.w700, fontSize: 16)),
+                          const SizedBox(height: 8),
+                          if (currentUser == null)
+                            // Guest: show login prompt
+                            GestureDetector(
+                              onTap: () => context.push('/login'),
+                              child: Container(
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE6F9FC),
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                      color: const Color(0xFF00B4CC)
+                                          .withOpacity(0.4)),
+                                ),
+                                child: Row(
+                                  children: const [
+                                    Icon(Icons.lock_outline,
+                                        color: Color(0xFF00B4CC)),
+                                    SizedBox(width: 12),
+                                    Expanded(
+                                      child: Text(
+                                        'Teklif vermek için giriş yapmanız gerekiyor.',
+                                        style: TextStyle(
+                                            color: Color(0xFF008FA3),
+                                            fontWeight: FontWeight.w500),
+                                      ),
+                                    ),
+                                    Icon(Icons.arrow_forward_ios,
+                                        size: 14, color: Color(0xFF00B4CC)),
+                                  ],
+                                ),
+                              ),
+                            )
+                          else
+                            (() {
+                              final double currentHighest = ad.bids.isNotEmpty ? ad.bids.first.amount : (ad.startingBid ?? 0.0);
+                              final double minRequiredBid = ad.bids.isNotEmpty ? (currentHighest + ad.minBidStep) : (ad.startingBid ?? 1.0);
+
+                              return Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: TextField(
+                                          controller: _bidCtrl,
+                                          keyboardType: TextInputType.number,
+                                          decoration: InputDecoration(
+                                            hintText: 'Teklif miktarı (₺)',
+                                            prefixIcon: const Icon(Icons.gavel),
+                                            helperText: 'En az ${_formatPrice(minRequiredBid)}',
+                                          ),
+                                        ),
+                                      ),
+                                      const SizedBox(width: 12),
+                                      SizedBox(
+                                        height: 52,
+                                        child: ElevatedButton(
+                                          onPressed:
+                                              _bidLoading ? null : () => _placeBid(ad),
+                                          child: _bidLoading
+                                              ? const SizedBox(
+                                                  width: 20,
+                                                  height: 20,
+                                                  child: CircularProgressIndicator(
+                                                      color: Colors.white,
+                                                      strokeWidth: 2))
+                                              : const Text('Ver'),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              );
+                            })(),
+                          const SizedBox(height: 24),
+                        ],
                       ],
                       // Bid history
-                      if (ad.bids.isNotEmpty) ...[
+                      if (!ad.isFixedPrice && ad.bids.isNotEmpty) ...[
                         Text('Teklif Geçmişi (${ad.bids.length})',
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700, fontSize: 16)),

@@ -58,6 +58,7 @@ class AdModel {
   final double price;
   final double? startingBid;
   final double minBidStep;
+  final bool isFixedPrice;
   final String status;
   final List<String> images;
   final int views;
@@ -76,8 +77,10 @@ class AdModel {
     required this.title,
     required this.description,
     required this.price,
+    required this.price,
     this.startingBid,
     this.minBidStep = 1,
+    this.isFixedPrice = false,
     required this.status,
     required this.images,
     required this.views,
@@ -105,6 +108,7 @@ class AdModel {
             : null,
         minBidStep:
             (json['minBidStep'] as num?)?.toDouble() ?? 1,
+        isFixedPrice: json['isFixedPrice'] as bool? ?? false,
         status: json['status'] as String? ?? 'ACTIVE',
         images: (json['images'] as List<dynamic>?)
                 ?.map((e) => e as String)

@@ -63,6 +63,7 @@ model Ad {
   price       Float
   startingBid Float?
   minBidStep  Float    @default(1)
+  isFixedPrice Boolean @default(false)
   status      AdStatus @default(ACTIVE)
   images      String[]
   views       Int      @default(0)

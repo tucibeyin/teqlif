@@ -18,10 +18,12 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
+  final _startBidCtrl = TextEditingController();
   final _minBidStepCtrl = TextEditingController();
   bool _loading = true;
   bool _saving = false;
-  AdModel? _ad;
+  bool _isFixedPrice = false;
+  bool _freeBid = false;
 
   @override
   void initState() {
@@ -34,6 +36,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
+    _startBidCtrl.dispose();
     _minBidStepCtrl.dispose();
     super.dispose();
   }
@@ -43,11 +46,13 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
       final res = await ApiClient().get(Endpoints.adById(widget.adId));
       final ad = AdModel.fromJson(res.data as Map<String, dynamic>);
       setState(() {
-        _ad = ad;
         _titleCtrl.text = ad.title;
         _descCtrl.text = ad.description;
         _priceCtrl.text = ad.price.toStringAsFixed(0);
         _minBidStepCtrl.text = ad.minBidStep.toStringAsFixed(0);
+        _isFixedPrice = ad.isFixedPrice;
+        _freeBid = ad.startingBid == null;
+        _startBidCtrl.text = ad.startingBid != null ? ad.startingBid!.toStringAsFixed(0) : '';
         _loading = false;
       });
     } catch (_) {
@@ -62,7 +67,15 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         'title': _titleCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
         'price': double.parse(_priceCtrl.text),
-        'minBidStep': double.parse(_minBidStepCtrl.text),
+        'isFixedPrice': _isFixedPrice,
+        'startingBid': _isFixedPrice || _freeBid
+            ? null
+            : (_startBidCtrl.text.isEmpty
+                ? null
+                : double.parse(_startBidCtrl.text)),
+        'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
+            ? 100
+            : double.parse(_minBidStepCtrl.text),
       });
       ref.invalidate(adsProvider(const FilterState()));
       if (mounted) {
@@ -114,11 +127,51 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
             ),
             const SizedBox(height: 12),
             TextField(
-              controller: _minBidStepCtrl,
+              controller: _priceCtrl,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                  labelText: 'Pey Aralığı (Minimum Artış) (₺)',
-                  helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
+              decoration: InputDecoration(
+                  labelText: _isFixedPrice ? 'Satış Fiyatı (₺)' : 'Piyasa Değeri (₺)',
+                  prefixIcon: const Icon(Icons.monetization_on_outlined)),
+            ),
+            const SizedBox(height: 12),
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    SwitchListTile(
+                      value: _isFixedPrice,
+                      onChanged: (v) => setState(() => _isFixedPrice = v),
+                      title: const Text('🛍️ Sabit Fiyatlı İlan'),
+                      subtitle: const Text('Ürün direkt belirlenen satış fiyatından tekliflere kapalı listelenir.'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                    if (!_isFixedPrice) ...[
+                      const Divider(),
+                      SwitchListTile(
+                        value: _freeBid,
+                        onChanged: (v) => setState(() => _freeBid = v),
+                        title: const Text('🔥 Serbest Teklif (1 ₺\'den başlar)'),
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                      TextField(
+                        controller: _startBidCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: 'Minimum Açılış Teklifi (₺)'),
+                      ),
+                      const SizedBox(height: 12),
+                      TextField(
+                        controller: _minBidStepCtrl,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                            labelText: 'Pey Aralığı (Minimum Artış) (₺)',
+                            helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 24),

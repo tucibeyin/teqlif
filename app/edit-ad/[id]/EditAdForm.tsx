@@ -13,6 +13,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
     const [displayPrice, setDisplayPrice] = useState(() => new Intl.NumberFormat("tr-TR").format(ad.price));
     const [displayMinBidStep, setDisplayMinBidStep] = useState(() => new Intl.NumberFormat("tr-TR").format(ad.minBidStep || 100));
     const [existingImages, setExistingImages] = useState<string[]>(ad.images || []);
+    const [isFixedPrice, setIsFixedPrice] = useState(ad.isFixedPrice || false);
 
     useEffect(() => {
         let isMounted = true;
@@ -67,6 +68,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
                 title: fd.get("title"),
                 description: fd.get("description"),
                 price: Number(fd.get("price")),
+                isFixedPrice,
                 startingBid: parsedStartingBid,
                 minBidStep: Number(fd.get("minBidStep")),
                 categorySlug: fd.get("categorySlug"),
@@ -133,36 +135,58 @@ export default function EditAdForm({ ad }: { ad: any }) {
                             </h3>
 
                             <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-                                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>Teklif Kuralı Seçin</label>
+                                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>İlan Tipi Seçin</label>
                                 <div style={{ display: "flex", gap: "1rem", flexDirection: "column" }}>
                                     <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
-                                        <input type="radio" name="bidType" value="free" defaultChecked={ad.startingBid === null} onChange={(e) => {
-                                            if (e.target.checked) {
-                                                document.getElementById("startingBidWrapper")!.style.display = "none";
-                                            }
-                                        }} />
+                                        <input type="radio" name="mainAdStyle" value="auction" checked={!isFixedPrice} onChange={() => setIsFixedPrice(false)} />
                                         <span>
-                                            <strong style={{ display: "block", marginBottom: "0.25rem" }}>Serbest Teklif (Açılış 1 ₺)</strong>
-                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>İlanınıza herkes 1 ₺'den başlayarak serbestçe teklif verebilir. Etkileşimi artırır.</span>
+                                            <strong style={{ display: "block", marginBottom: "0.25rem" }}>Açık Artırma İlanı</strong>
+                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>İlanınız tekliflere açık olur ve ürün en yüksek teklifi verene satılır.</span>
                                         </span>
                                     </label>
                                     <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
-                                        <input type="radio" name="bidType" value="minimum" defaultChecked={ad.startingBid !== null} onChange={(e) => {
-                                            if (e.target.checked) {
-                                                document.getElementById("startingBidWrapper")!.style.display = "block";
-                                            }
-                                        }} />
+                                        <input type="radio" name="mainAdStyle" value="fixed" checked={isFixedPrice} onChange={() => setIsFixedPrice(true)} />
                                         <span>
-                                            <strong style={{ display: "block", marginBottom: "0.25rem" }}>Minimum Açılış Teklifi Belirle</strong>
-                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>Tekliflerin sizin belirlediğiniz bir fiyatın üzerinde olmasını sağlar.</span>
+                                            <strong style={{ display: "block", marginBottom: "0.25rem" }}>Sabit Fiyatlı İlan</strong>
+                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>Tekliflere kapalıdır, doğrudan belirlediğiniz fiyattan listeleyip satabilirsiniz.</span>
                                         </span>
                                     </label>
                                 </div>
                             </div>
 
+                            {!isFixedPrice && (
+                                <div className="form-group" style={{ marginBottom: "1.5rem" }}>
+                                    <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>Teklif Kuralı Seçin</label>
+                                    <div style={{ display: "flex", gap: "1rem", flexDirection: "column" }}>
+                                        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+                                            <input type="radio" name="bidType" value="free" defaultChecked={ad.startingBid === null} onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    document.getElementById("startingBidWrapper")!.style.display = "none";
+                                                }
+                                            }} />
+                                            <span>
+                                                <strong style={{ display: "block", marginBottom: "0.25rem" }}>Serbest Teklif (Açılış 1 ₺)</strong>
+                                                <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>İlanınıza herkes 1 ₺'den başlayarak serbestçe teklif verebilir. Etkileşimi artırır.</span>
+                                            </span>
+                                        </label>
+                                        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+                                            <input type="radio" name="bidType" value="minimum" defaultChecked={ad.startingBid !== null} onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    document.getElementById("startingBidWrapper")!.style.display = "block";
+                                                }
+                                            }} />
+                                            <span>
+                                                <strong style={{ display: "block", marginBottom: "0.25rem" }}>Minimum Açılış Teklifi Belirle</strong>
+                                                <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>Tekliflerin sizin belirlediğiniz bir fiyatın üzerinde olmasını sağlar.</span>
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            )}
+
                             <div className="form-row">
                                 <div className="form-group">
-                                    <label htmlFor="price">Piyasa Fiyatı / Değeri (₺) *</label>
+                                    <label htmlFor="price">{isFixedPrice ? "Satış Fiyatı (₺) *" : "Piyasa Fiyatı / Değeri (₺) *"}</label>
                                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                                         <input
                                             type="text"
@@ -202,41 +226,43 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                         />
                                         <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
                                     </div>
-                                    <input type="hidden" name="startingBid" id="actualStartingBid" value={ad.startingBid !== null ? ad.startingBid : ""} />
+                                    <input type="hidden" name="startingBid" id="actualStartingBid" value={ad.startingBid !== null ? ad.startingBid.toString() : ""} />
                                 </div>
                             </div>
 
-                            <div className="form-group" style={{ marginTop: "1rem" }}>
-                                <label htmlFor="minBidStepInput">Pey Aralığı (Minimum Artış) (₺) *</label>
-                                <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
-                                    <input
-                                        type="text"
-                                        className="input"
-                                        name="minBidStepDummy"
-                                        id="minBidStepInput"
-                                        defaultValue={ad.minBidStep ? new Intl.NumberFormat("tr-TR").format(ad.minBidStep) : "100"}
-                                        placeholder="Örn: 100"
-                                        onChange={(e) => {
-                                            const val = e.target.value.replace(/[^0-9]/g, "");
-                                            if (!val) {
-                                                setDisplayMinBidStep("");
-                                                e.target.value = "";
-                                            } else {
-                                                const formatted = new Intl.NumberFormat("tr-TR").format(parseInt(val, 10));
-                                                setDisplayMinBidStep(formatted);
-                                                e.target.value = formatted;
-                                            }
-                                        }}
-                                        required
-                                        style={{ paddingRight: "3rem" }}
-                                    />
-                                    <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+                            {!isFixedPrice && (
+                                <div className="form-group" style={{ marginTop: "1rem" }}>
+                                    <label htmlFor="minBidStepInput">Pey Aralığı (Minimum Artış) (₺) *</label>
+                                    <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
+                                        <input
+                                            type="text"
+                                            className="input"
+                                            name="minBidStepDummy"
+                                            id="minBidStepInput"
+                                            defaultValue={ad.minBidStep ? new Intl.NumberFormat("tr-TR").format(ad.minBidStep) : "100"}
+                                            placeholder="Örn: 100"
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/[^0-9]/g, "");
+                                                if (!val) {
+                                                    setDisplayMinBidStep("");
+                                                    e.target.value = "";
+                                                } else {
+                                                    const formatted = new Intl.NumberFormat("tr-TR").format(parseInt(val, 10));
+                                                    setDisplayMinBidStep(formatted);
+                                                    e.target.value = formatted;
+                                                }
+                                            }}
+                                            required
+                                            style={{ paddingRight: "3rem" }}
+                                        />
+                                        <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+                                    </div>
+                                    <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
+                                    <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
+                                        Teklif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
+                                    </div>
                                 </div>
-                                <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
-                                <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
-                                    Teklif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
-                                </div>
-                            </div>
+                            )}
                         </div>
 
                         {/* Konum */}
