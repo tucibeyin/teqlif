@@ -185,17 +185,13 @@ export default async function HomePage({
                 {featuredAds.map((ad) => {
                   const remaining = daysLeft(ad.expiresAt);
                   return (
-                    <Link key={ad.id} href={`/ad/${ad.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                      <div className="card" style={{
+                    <Link key={ad.id} href={`/ad/${ad.id}`} style={{ textDecoration: "none", color: "inherit" }} className="ad-home-card-link">
+                      <div className="card ad-home-card" style={{
                         display: "flex",
                         flexDirection: "column",
                         height: "100%",
-                        transition: "transform 0.15s, box-shadow 0.15s",
-                        cursor: "pointer",
                         overflow: "hidden"
-                      }}
-                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)"; }}
-                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = ""; }}>
+                      }}>
                         {/* Image */}
                         <div style={{ position: "relative", paddingTop: "60%", background: "var(--bg-secondary)" }}>
                           {ad.images && ad.images.length > 0 ? (
