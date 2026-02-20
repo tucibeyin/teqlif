@@ -12,13 +12,17 @@ class MainShell extends ConsumerWidget {
     if (location.startsWith('/dashboard')) return 1;
     if (location.startsWith('/messages')) return 2;
     if (location.startsWith('/notifications')) return 3;
-    return 0;
+    return 0; // default for /login, /register, /ad/:id, etc.
   }
+
+  bool _isAuthScreen(String location) =>
+      location == '/login' || location == '/register';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).matchedLocation;
     final currentIndex = _locationToIndex(location);
+    final isAuth = _isAuthScreen(location);
 
     return Scaffold(
       body: child,
@@ -63,13 +67,15 @@ class MainShell extends ConsumerWidget {
           ),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/post-ad'),
-        icon: const Icon(Icons.add),
-        label: const Text('İlan Ver'),
-        backgroundColor: const Color(0xFF00B4CC),
-        foregroundColor: Colors.white,
-      ),
+      floatingActionButton: isAuth
+          ? null
+          : FloatingActionButton.extended(
+              onPressed: () => context.push('/post-ad'),
+              icon: const Icon(Icons.add),
+              label: const Text('İlan Ver'),
+              backgroundColor: const Color(0xFF00B4CC),
+              foregroundColor: Colors.white,
+            ),
     );
   }
 }
