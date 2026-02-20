@@ -9,6 +9,13 @@ export const metadata: Metadata = {
   description: "Türkiye'nin en büyük ilan ve açık artırma platformu. Kategori ve konum seçerek kolayca ilan ver, teklif al.",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export default function RootLayout({
   children,
 }: Readonly<{

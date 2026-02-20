@@ -32,6 +32,16 @@ class NotificationsScreen extends ConsumerWidget {
     }
   }
 
+  String? _translateLink(String? link) {
+    if (link == null) return null;
+    if (link == '/') return '/home';
+    if (link.startsWith('/dashboard/messages?conversationId=')) {
+      final id = link.split('=')[1];
+      return '/messages/$id';
+    }
+    return link; // Normal routes like /ad/XYZ
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final notifAsync = ref.watch(notificationsProvider);
@@ -65,12 +75,10 @@ class NotificationsScreen extends ConsumerWidget {
                 ),
               )
             : RefreshIndicator(
-                onRefresh: () =>
-                    ref.refresh(notificationsProvider.future),
+                onRefresh: () => ref.refresh(notificationsProvider.future),
                 child: ListView.separated(
                   itemCount: notifs.length,
-                  separatorBuilder: (_, __) =>
-                      const Divider(height: 1),
+                  separatorBuilder: (_, __) => const Divider(height: 1),
                   itemBuilder: (_, i) {
                     final n = notifs[i];
                     return ListTile(
@@ -103,7 +111,19 @@ class NotificationsScreen extends ConsumerWidget {
                           ? null
                           : const Color(0xFFE6F9FC).withOpacity(0.3),
                       onTap: n.link != null
-                          ? () => context.push(n.link!)
+                          ? () async {
+                              if (!n.isRead) {
+                                // Background API call to mark this single notification as read
+                                ApiClient().patch(Endpoints.notifications,
+                                    data: {'id': n.id}).then((_) {
+                                  ref.invalidate(notificationsProvider);
+                                });
+                              }
+                              final path = _translateLink(n.link);
+                              if (path != null) {
+                                context.push(path);
+                              }
+                            }
                           : null,
                     );
                   },
