@@ -183,12 +183,12 @@ class BidModel {
   });
 
   factory BidModel.fromJson(Map<String, dynamic> json) => BidModel(
-        id: json['id'] as String,
+        id: json['id'] as String? ?? '',
         amount: (json['amount'] as num).toDouble(),
         status: json['status'] as String? ?? 'PENDING',
         userId: json['userId'] as String? ?? '',
         adId: json['adId'] as String? ?? '',
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        createdAt: json['createdAt'] != null ? DateTime.parse(json['createdAt'] as String) : DateTime.now(),
         user: json['user'] != null
             ? BidUserModel.fromJson(json['user'] as Map<String, dynamic>)
             : null,
