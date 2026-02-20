@@ -33,6 +33,9 @@ export default async function AdDetailPage({
     const { id } = await params;
     const session = await auth();
 
+    // Increment view count silently (fire & forget)
+    prisma.ad.update({ where: { id }, data: { views: { increment: 1 } } }).catch(() => { });
+
     const ad = await prisma.ad.findUnique({
         where: { id },
         include: {
@@ -43,7 +46,9 @@ export default async function AdDetailPage({
             bids: {
                 orderBy: { amount: "desc" },
                 take: 10,
-                include: { user: { select: { id: true, name: true } } },
+                include: {
+                    user: { select: { id: true, name: true } },
+                },
             },
         },
     });
@@ -237,6 +242,9 @@ export default async function AdDetailPage({
                                                 {bid.status === 'PENDING' && (
                                                     <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
                                                 )}
+                                                {bid.status === 'ACCEPTED' && (
+                                                    <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
+                                                )}
                                                 <AdActions
                                                     actionType="MESSAGE"
                                                     adId={ad.id}
@@ -249,6 +257,9 @@ export default async function AdDetailPage({
                                         )}
                                         {bid.status === 'ACCEPTED' && (
                                             <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
+                                        )}
+                                        {bid.status === 'REJECTED' && (
+                                            <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
                                         )}
                                     </div>
                                 ))}

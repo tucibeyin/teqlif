@@ -76,6 +76,7 @@ export async function POST(req: NextRequest) {
                 provinceId,
                 districtId,
                 images: images || [],
+                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
             },
         });
 

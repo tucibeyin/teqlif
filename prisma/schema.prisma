@@ -64,6 +64,7 @@ model Ad {
   minBidStep  Float    @default(1)
   status      AdStatus @default(ACTIVE)
   images      String[]
+  views       Int      @default(0)
   expiresAt   DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt

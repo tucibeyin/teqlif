@@ -76,7 +76,7 @@ export function NotificationBell() {
                             position: "absolute",
                             top: "2px",
                             right: "2px",
-                            background: "var(--danger)",
+                            background: "#ef4444",
                             color: "white",
                             fontSize: "10px",
                             fontWeight: 700,

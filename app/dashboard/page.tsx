@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import DeleteAdButton from "./DeleteAdButton";
+import RepublishAdButton from "./RepublishAdButton";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -83,7 +84,7 @@ export default async function DashboardPage() {
                     </Link>
                     <Link href="#ilanlarim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value" style={{ color: "var(--accent-green)" }}>
-                            {myAds.filter((a) => a.status === "ACTIVE").length}
+                            {myAds.filter((a) => a.status === "ACTIVE" && (!a.expiresAt || new Date(a.expiresAt) > new Date())).length}
                         </div>
                         <div className="stat-label">Aktif</div>
                     </Link>
@@ -106,48 +107,52 @@ export default async function DashboardPage() {
                         </div>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                            {myAds.map((ad) => (
-                                <div key={ad.id} className="card">
-                                    <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                                        {ad.images && ad.images.length > 0 ? (
-                                            <img src={ad.images[0]} alt={ad.title} style={{ width: "48px", height: "48px", objectFit: "cover", borderRadius: "10px" }} />
-                                        ) : (
-                                            <span style={{ fontSize: "2rem" }}>{ad.category.icon}</span>
-                                        )}
-                                        <div style={{ flex: 1 }}>
-                                            <Link href={`/ad/${ad.id}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
-                                                {ad.title}
-                                            </Link>
-                                            <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                                {ad.province.name} · {timeAgo(ad.createdAt)} · {ad._count.bids} teklif
-                                            </div>
-                                        </div>
-                                        <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
-                                            <div style={{ color: "var(--primary)", fontWeight: 700 }}>{formatPrice(ad.price)}</div>
-                                            <span className={`badge badge-${ad.status.toLowerCase()}`}>
-                                                {ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Süresi Dolmuş"}
-                                            </span>
-                                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                                                <Link
-                                                    href={`/edit-ad/${ad.id}`}
-                                                    style={{
-                                                        padding: "0.25rem 0.5rem",
-                                                        borderRadius: "var(--radius-sm)",
-                                                        fontSize: "0.875rem",
-                                                        fontWeight: 600,
-                                                        color: "var(--text-secondary)",
-                                                        background: "var(--bg-secondary)",
-                                                        textDecoration: "none"
-                                                    }}
-                                                >
-                                                    Düzenle
+                            {myAds.map((ad) => {
+                                const isExpired = ad.expiresAt ? new Date(ad.expiresAt) < new Date() : false;
+                                return (
+                                    <div key={ad.id} className="card">
+                                        <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                                            {ad.images && ad.images.length > 0 ? (
+                                                <img src={ad.images[0]} alt={ad.title} style={{ width: "48px", height: "48px", objectFit: "cover", borderRadius: "10px" }} />
+                                            ) : (
+                                                <span style={{ fontSize: "2rem" }}>{ad.category.icon}</span>
+                                            )}
+                                            <div style={{ flex: 1 }}>
+                                                <Link href={`/ad/${ad.id}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
+                                                    {ad.title}
                                                 </Link>
-                                                <DeleteAdButton id={ad.id} />
+                                                <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
+                                                    {ad.province.name} · {timeAgo(ad.createdAt)} · {ad._count.bids} teklif
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
+                                                <div style={{ color: "var(--primary)", fontWeight: 700 }}>{formatPrice(ad.price)}</div>
+                                                <span className={`badge badge-${isExpired ? 'sold' : ad.status.toLowerCase()}`}>
+                                                    {isExpired ? "Süresi Dolmuş" : ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Pasif"}
+                                                </span>
+                                                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                                                    {isExpired && <RepublishAdButton id={ad.id} />}
+                                                    <Link
+                                                        href={`/edit-ad/${ad.id}`}
+                                                        style={{
+                                                            padding: "0.25rem 0.5rem",
+                                                            borderRadius: "var(--radius-sm)",
+                                                            fontSize: "0.875rem",
+                                                            fontWeight: 600,
+                                                            color: "var(--text-secondary)",
+                                                            background: "var(--bg-secondary)",
+                                                            textDecoration: "none"
+                                                        }}
+                                                    >
+                                                        Düzenle
+                                                    </Link>
+                                                    <DeleteAdButton id={ad.id} />
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     )}
                 </section>

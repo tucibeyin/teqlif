@@ -4,15 +4,20 @@ import { categories } from "@/lib/categories";
 
 export const dynamic = "force-dynamic";
 
-async function getAds(categorySlug?: string) {
+async function getAds(categorySlug?: string, limit = 24) {
   try {
-    const where = categorySlug
-      ? { category: { slug: categorySlug }, status: "ACTIVE" as const }
-      : { status: "ACTIVE" as const };
+    const where: Record<string, unknown> = {
+      status: "ACTIVE",
+      OR: [
+        { expiresAt: null },
+        { expiresAt: { gt: new Date() } },
+      ],
+    };
+    if (categorySlug) where.category = { slug: categorySlug };
 
     return await prisma.ad.findMany({
       where,
-      take: 30,
+      take: limit,
       orderBy: { createdAt: "desc" },
       include: {
         user: { select: { name: true } },
@@ -21,7 +26,6 @@ async function getAds(categorySlug?: string) {
         district: true,
         _count: { select: { bids: true } },
       },
-      // Since startingBid is on the Ad model itself, it is automatically selected by default.
     });
   } catch {
     return [];
@@ -32,8 +36,8 @@ function formatPrice(price: number) {
   return new Intl.NumberFormat("tr-TR", {
     style: "currency",
     currency: "TRY",
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(price);
 }
 
@@ -42,9 +46,17 @@ function timeAgo(date: Date) {
   const minutes = Math.floor(diff / 60000);
   const hours = Math.floor(diff / 3600000);
   const days = Math.floor(diff / 86400000);
-  if (minutes < 60) return `${minutes} dk önce`;
-  if (hours < 24) return `${hours} sa önce`;
-  return `${days} gün önce`;
+  if (minutes < 60) return `${minutes} dk`;
+  if (hours < 24) return `${hours} sa`;
+  return `${days} gün`;
+}
+
+function daysLeft(expiresAt: Date | null) {
+  if (!expiresAt) return null;
+  const diff = new Date(expiresAt).getTime() - Date.now();
+  const days = Math.ceil(diff / 86400000);
+  if (days <= 0) return null;
+  return days;
 }
 
 export default async function HomePage({
@@ -54,7 +66,9 @@ export default async function HomePage({
 }) {
   const params = await searchParams;
   const activeCategory = params.category;
-  const ads = await getAds(activeCategory);
+  const ads = await getAds(activeCategory, 24);
+  const latestAds = activeCategory ? [] : ads.slice(0, 8);
+  const featuredAds = activeCategory ? ads : ads.slice(0, 16);
 
   return (
     <>
@@ -79,93 +93,207 @@ export default async function HomePage({
         </div>
       </section>
 
-      <div className="container">
-        {/* Kategoriler */}
-        <div className="section-header" style={{ marginBottom: "0.75rem" }}>
-          <h2 className="section-title">Kategoriler</h2>
-        </div>
-        <div className="categories-scroll" style={{ marginBottom: "2.5rem" }}>
-          <Link
-            href="/"
-            className={`category-chip ${!activeCategory ? "active" : ""}`}
-          >
-            🏷️ Tümü
-          </Link>
-          {categories.map((cat) => (
-            <Link
-              key={cat.slug}
-              href={`/?category=${cat.slug}`}
-              className={`category-chip ${activeCategory === cat.slug ? "active" : ""}`}
-            >
-              {cat.icon} {cat.name}
-            </Link>
-          ))}
-        </div>
+      <div className="container" id="ilanlar" style={{ paddingTop: "2rem" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "2rem", alignItems: "start" }}>
 
-        {/* İlanlar */}
-        <section id="ilanlar" className="section" style={{ paddingTop: "0" }}>
-          <div className="section-header">
-            <h2 className="section-title">
-              {activeCategory
-                ? categories.find((c) => c.slug === activeCategory)?.name + " İlanları"
-                : "Son İlanlar"}
-            </h2>
-            <span className="text-sm text-muted">{ads.length} ilan</span>
-          </div>
-
-          {ads.length === 0 ? (
-            <div className="empty-state">
-              <div className="empty-state-icon">📭</div>
-              <div className="empty-state-title">Henüz ilan yok</div>
-              <p>Bu kategoride ilan bulunmuyor. İlk ilanı sen ekle!</p>
-              <Link href="/post-ad" className="btn btn-primary" style={{ marginTop: "1rem" }}>
-                İlan Ver
-              </Link>
+          {/* LEFT SIDEBAR: Categories */}
+          <aside style={{
+            position: "sticky",
+            top: "80px",
+            background: "var(--bg-card)",
+            border: "1px solid var(--border)",
+            borderRadius: "var(--radius-lg)",
+            padding: "1rem",
+            boxShadow: "var(--shadow-sm)"
+          }}>
+            <div style={{ fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)", marginBottom: "0.75rem", padding: "0 0.5rem" }}>
+              Kategoriler
             </div>
-          ) : (
-            <div className="ads-grid">
-              {ads.map((ad) => (
-                <Link key={ad.id} href={`/ad/${ad.id}`} className="ad-card">
-                  {ad.images && ad.images.length > 0 ? (
-                    <img src={ad.images[0]} alt={ad.title} className="ad-card-image" />
-                  ) : (
-                    <div className="ad-card-image-placeholder">
-                      {ad.category.icon}
-                    </div>
-                  )}
-                  <div className="ad-card-body">
-                    <div className="ad-card-title">{ad.title}</div>
-                    <div className="ad-card-price" style={{ display: "flex", flexDirection: "column", gap: "0.25rem" }}>
-                      <span style={{ fontSize: "1.125rem", color: "var(--primary)" }}>
-                        {ad.startingBid === null ? "🔥 1,00 ₺'den Serbest Teklif" : formatPrice(ad.startingBid)}
-                      </span>
-                      <span style={{ fontSize: "0.875rem", color: "var(--text-muted)", textDecoration: "line-through", fontWeight: "normal" }}>
-                        Piyasa: {formatPrice(ad.price)}
-                      </span>
-                    </div>
-                    <div className="ad-card-meta">
-                      <span>📍 {ad.province.name}, {ad.district.name}</span>
-                      <span>·</span>
-                      <span>{timeAgo(ad.createdAt)}</span>
-                    </div>
-                    <div style={{ marginTop: "0.5rem" }}>
-                      <span className="ad-card-badge">
-                        {ad.category.icon} {ad.category.name}
-                      </span>
-                    </div>
-                  </div>
-                  {ad._count.bids > 0 && (
-                    <div className="ad-card-auction">
-                      🔨 <span className="bid-count">{ad._count.bids} teklif</span>
-                      <span className="text-muted">· Açık artırma</span>
-                    </div>
+            <Link
+              href="/"
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "0.625rem",
+                padding: "0.5rem 0.75rem",
+                borderRadius: "var(--radius-md)",
+                textDecoration: "none",
+                fontWeight: !activeCategory ? 700 : 500,
+                color: !activeCategory ? "var(--primary)" : "var(--text-secondary)",
+                background: !activeCategory ? "rgba(0,188,212,0.08)" : "transparent",
+                fontSize: "0.9rem",
+                transition: "all 0.15s",
+                marginBottom: "2px",
+              }}
+            >
+              <span>🏷️</span> Tümü
+              <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{ads.length}</span>
+            </Link>
+            {categories.map((cat) => {
+              const catCount = ads.filter(a => a.category.slug === cat.slug).length;
+              return (
+                <Link
+                  key={cat.slug}
+                  href={`/?category=${cat.slug}`}
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.625rem",
+                    padding: "0.5rem 0.75rem",
+                    borderRadius: "var(--radius-md)",
+                    textDecoration: "none",
+                    fontWeight: activeCategory === cat.slug ? 700 : 500,
+                    color: activeCategory === cat.slug ? "var(--primary)" : "var(--text-secondary)",
+                    background: activeCategory === cat.slug ? "rgba(0,188,212,0.08)" : "transparent",
+                    fontSize: "0.9rem",
+                    transition: "all 0.15s",
+                    marginBottom: "2px",
+                  }}
+                >
+                  <span>{cat.icon}</span> {cat.name}
+                  {catCount > 0 && (
+                    <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{catCount}</span>
                   )}
                 </Link>
-              ))}
+              );
+            })}
+          </aside>
+
+          {/* MAIN CONTENT */}
+          <div>
+            {/* Active Category title or Featured */}
+            <div className="section-header" style={{ marginBottom: "1rem" }}>
+              <h2 className="section-title" style={{ fontSize: "1.25rem" }}>
+                {activeCategory
+                  ? categories.find((c) => c.slug === activeCategory)?.icon + " " + categories.find((c) => c.slug === activeCategory)?.name + " İlanları"
+                  : "Öne Çıkan İlanlar"}
+              </h2>
+              <span className="text-sm text-muted">{featuredAds.length} ilan</span>
             </div>
-          )}
-        </section>
+
+            {featuredAds.length === 0 ? (
+              <div className="empty-state">
+                <div className="empty-state-icon">📭</div>
+                <div className="empty-state-title">Bu kategoride ilan yok</div>
+                <p>Bu kategoride henüz ilan bulunmuyor.</p>
+                <Link href="/post-ad" className="btn btn-primary" style={{ marginTop: "1rem" }}>
+                  İlan Ver
+                </Link>
+              </div>
+            ) : (
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem" }}>
+                {featuredAds.map((ad) => {
+                  const remaining = daysLeft(ad.expiresAt);
+                  return (
+                    <Link key={ad.id} href={`/ad/${ad.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                      <div className="card" style={{
+                        display: "flex",
+                        flexDirection: "column",
+                        height: "100%",
+                        transition: "transform 0.15s, box-shadow 0.15s",
+                        cursor: "pointer",
+                        overflow: "hidden"
+                      }}
+                        onMouseEnter={(e) => { (e.currentTarget as HTMLElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.12)"; }}
+                        onMouseLeave={(e) => { (e.currentTarget as HTMLElement).style.transform = ""; (e.currentTarget as HTMLElement).style.boxShadow = ""; }}>
+                        {/* Image */}
+                        <div style={{ position: "relative", paddingTop: "60%", background: "var(--bg-secondary)" }}>
+                          {ad.images && ad.images.length > 0 ? (
+                            <img src={ad.images[0]} alt={ad.title} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                          ) : (
+                            <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>
+                              {ad.category.icon}
+                            </div>
+                          )}
+                          <span style={{ position: "absolute", top: "8px", left: "8px", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", color: "white", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px" }}>
+                            {ad.category.icon} {ad.category.name}
+                          </span>
+                          {ad._count.bids > 0 && (
+                            <span style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(0,188,212,0.85)", backdropFilter: "blur(4px)", color: "white", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px" }}>
+                              🔨 {ad._count.bids} teklif
+                            </span>
+                          )}
+                        </div>
+                        {/* Body */}
+                        <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", flex: 1 }}>
+                          <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.25rem", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                            {ad.title}
+                          </div>
+                          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.5rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.5 }}>
+                            {ad.description}
+                          </div>
+                          <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                            <div>
+                              <div style={{ fontWeight: 700, color: "var(--primary)", fontSize: "1rem" }}>
+                                {ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)}
+                              </div>
+                              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                📍 {ad.province.name} · {timeAgo(ad.createdAt)} önce
+                              </div>
+                            </div>
+                            {remaining !== null && remaining <= 5 && (
+                              <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px", background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+                                ⏱ {remaining} gün
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Latest Ads section - tylko jeśli nie filtrujemy po kategorii */}
+            {!activeCategory && latestAds.length > 0 && (
+              <section style={{ marginTop: "3rem" }}>
+                <div className="section-header" style={{ marginBottom: "1rem" }}>
+                  <h2 className="section-title" style={{ fontSize: "1.25rem" }}>🕐 Son Eklenen İlanlar</h2>
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                  {latestAds.map((ad) => (
+                    <Link key={ad.id} href={`/ad/${ad.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                      <div className="card" style={{ padding: "0.75rem 1rem" }}>
+                        <div style={{ display: "flex", gap: "0.875rem", alignItems: "center" }}>
+                          {ad.images && ad.images.length > 0 ? (
+                            <img src={ad.images[0]} alt={ad.title} style={{ width: "52px", height: "52px", objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }} />
+                          ) : (
+                            <div style={{ width: "52px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", fontSize: "1.5rem", flexShrink: 0 }}>
+                              {ad.category.icon}
+                            </div>
+                          )}
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontWeight: 600, fontSize: "0.9rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ad.title}</div>
+                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                              {ad.description.slice(0, 80)}...
+                            </div>
+                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                              📍 {ad.province.name} · {timeAgo(ad.createdAt)} önce
+                              {ad._count.bids > 0 && ` · 🔨 ${ad._count.bids} teklif`}
+                            </div>
+                          </div>
+                          <div style={{ textAlign: "right", flexShrink: 0 }}>
+                            <div style={{ fontWeight: 700, color: "var(--primary)" }}>
+                              {ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)}
+                            </div>
+                            <span style={{ fontSize: "0.7rem", padding: "1px 6px", background: "rgba(0,188,212,0.08)", borderRadius: "100px", color: "var(--primary)" }}>
+                              {ad.category.icon} {ad.category.name}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        </div>
       </div>
+
+      {/* Bottom spacing */}
+      <div style={{ height: "4rem" }} />
     </>
   );
 }

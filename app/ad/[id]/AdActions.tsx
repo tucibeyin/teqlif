@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, CheckCircle } from "lucide-react";
+import { MessageSquare, CheckCircle, XCircle } from "lucide-react";
 
 interface AdActionsProps {
-    actionType: "MESSAGE" | "ACCEPT_BID";
+    actionType: "MESSAGE" | "ACCEPT_BID" | "CANCEL_BID";
     adId?: string;
     sellerId?: string;
     bidId?: string;
@@ -88,6 +88,23 @@ export function AdActions({
                     const data = await res.json();
                     alert(data.message || "Teklif kabul edilemedi.");
                 }
+            } else if (actionType === "CANCEL_BID" && bidId) {
+                if (!confirm("Kabul edilen bu teklifi iptal etmek istediğinize emin misiniz?")) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                const res = await fetch(`/api/bids/${bidId}/cancel`, {
+                    method: "PATCH",
+                });
+
+                if (res.ok) {
+                    alert("Teklif iptal edildi.");
+                    router.refresh(); // Refresh page to show status
+                } else {
+                    const data = await res.json();
+                    alert(data.message || "Teklif iptal edilemedi.");
+                }
             }
         } catch (error) {
             console.error("Action error:", error);
@@ -153,6 +170,29 @@ export function AdActions({
             >
                 <CheckCircle size={14} />
                 {isLoading ? "..." : "Kabul Et"}
+            </button>
+        );
+    }
+
+    if (actionType === "CANCEL_BID") {
+        return (
+            <button
+                onClick={handleAction}
+                disabled={isLoading}
+                className="btn btn-outline"
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 8px',
+                    fontSize: '0.8rem',
+                    color: 'var(--danger)',
+                    borderColor: 'var(--danger)',
+                    background: 'rgba(239, 68, 68, 0.1)'
+                }}
+            >
+                <XCircle size={14} />
+                {isLoading ? "..." : "İptal Et"}
             </button>
         );
     }
