@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import DeleteAdButton from "./DeleteAdButton";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -121,11 +122,28 @@ export default async function DashboardPage() {
                                                 {ad.province.name} · {timeAgo(ad.createdAt)} · {ad._count.bids} teklif
                                             </div>
                                         </div>
-                                        <div style={{ textAlign: "right" }}>
+                                        <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
                                             <div style={{ color: "var(--primary)", fontWeight: 700 }}>{formatPrice(ad.price)}</div>
-                                            <span className={`badge badge-${ad.status.toLowerCase()}`} style={{ marginTop: "0.25rem" }}>
+                                            <span className={`badge badge-${ad.status.toLowerCase()}`}>
                                                 {ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Süresi Dolmuş"}
                                             </span>
+                                            <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
+                                                <Link
+                                                    href={`/edit-ad/${ad.id}`}
+                                                    style={{
+                                                        padding: "0.25rem 0.5rem",
+                                                        borderRadius: "var(--radius-sm)",
+                                                        fontSize: "0.875rem",
+                                                        fontWeight: 600,
+                                                        color: "var(--text-secondary)",
+                                                        background: "var(--bg-secondary)",
+                                                        textDecoration: "none"
+                                                    }}
+                                                >
+                                                    Düzenle
+                                                </Link>
+                                                <DeleteAdButton id={ad.id} />
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
