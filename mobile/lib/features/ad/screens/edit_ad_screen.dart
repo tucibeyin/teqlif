@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../core/api/api_client.dart';
-import '../../core/api/endpoints.dart';
-import '../../core/models/ad.dart';
-import '../home/screens/home_screen.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/endpoints.dart';
+import '../../../core/models/ad.dart';
+import '../../home/screens/home_screen.dart';
 
 class EditAdScreen extends ConsumerStatefulWidget {
   final String adId;

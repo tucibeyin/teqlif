@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import '../../core/api/api_client.dart';
-import '../../core/api/endpoints.dart';
-import '../../core/models/notification.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/endpoints.dart';
+import '../../../core/models/notification.dart';
 
 final notificationsProvider =
     FutureProvider<List<NotificationModel>>((ref) async {

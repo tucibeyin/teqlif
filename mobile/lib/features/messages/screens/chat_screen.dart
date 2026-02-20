@@ -2,10 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
-import '../../core/api/api_client.dart';
-import '../../core/api/endpoints.dart';
-import '../../core/models/message.dart';
-import '../../core/providers/auth_provider.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/endpoints.dart';
+import '../../../core/models/message.dart';
+import '../../../core/providers/auth_provider.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
