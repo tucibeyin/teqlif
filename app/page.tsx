@@ -2,6 +2,8 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { categories } from "@/lib/categories";
 
+export const dynamic = "force-dynamic";
+
 async function getAds(categorySlug?: string) {
   try {
     const where = categorySlug

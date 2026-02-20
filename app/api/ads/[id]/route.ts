@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -44,6 +45,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
             },
         });
 
+        revalidatePath("/");
+        revalidatePath("/dashboard");
+
         return NextResponse.json(updatedAd, { status: 200 });
     } catch (err) {
         console.error("PUT /api/ads/[id] error:", err);
@@ -70,6 +74,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         }
 
         await prisma.ad.delete({ where: { id } });
+
+        revalidatePath("/");
+        revalidatePath("/dashboard");
 
         return NextResponse.json({ success: true }, { status: 200 });
     } catch (err) {

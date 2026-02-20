@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { actionRatelimiter } from "@/lib/rate-limit";
+import { revalidatePath } from "next/cache";
 
 export async function GET(req: NextRequest) {
     try {
@@ -71,6 +72,9 @@ export async function POST(req: NextRequest) {
                 images: images || [],
             },
         });
+
+        revalidatePath("/");
+        revalidatePath("/dashboard");
 
         return NextResponse.json(ad, { status: 201 });
     } catch (err) {
