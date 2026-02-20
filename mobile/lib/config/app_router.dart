@@ -1,6 +1,6 @@
-import 'package:go_router/go_router.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import '../core/providers/auth_provider.dart';
 import '../features/auth/screens/login_screen.dart';
 import '../features/auth/screens/register_screen.dart';
@@ -14,60 +14,79 @@ import '../features/messages/screens/chat_screen.dart';
 import '../features/notifications/screens/notifications_screen.dart';
 import '../widgets/main_shell.dart';
 
-final routerProvider = Provider<GoRouter>((ref) {
-  final authState = ref.watch(authProvider);
+// ── RouterNotifier ──────────────────────────────────────────────────────────
+// Bridges Riverpod auth state → GoRouter refreshListenable.
+// When authProvider changes, this calls notifyListeners(), causing GoRouter
+// to re-evaluate its redirect function immediately.
+class RouterNotifier extends ChangeNotifier {
+  final Ref _ref;
+
+  RouterNotifier(this._ref) {
+    _ref.listen<AuthState>(authProvider, (_, __) {
+      notifyListeners();
+    });
+  }
 
   // Routes that require authentication
-  const protectedRoutes = [
+  static const _protected = [
     '/dashboard',
     '/messages',
     '/notifications',
     '/post-ad',
   ];
 
+  String? redirect(BuildContext context, GoRouterState state) {
+    final auth = _ref.read(authProvider);
+    if (auth.isLoading) return null;
+
+    final location = state.matchedLocation;
+    final isAuth = auth.isAuthenticated;
+
+    final isProtected = _protected.any((r) => location.startsWith(r)) ||
+        location.startsWith('/edit-ad');
+
+    if (!isAuth && isProtected) return '/login';
+    if (isAuth && (location == '/login' || location == '/register')) {
+      return '/home';
+    }
+    return null;
+  }
+}
+
+// ── Provider ─────────────────────────────────────────────────────────────────
+final _routerNotifierProvider =
+    ChangeNotifierProvider((ref) => RouterNotifier(ref));
+
+final routerProvider = Provider<GoRouter>((ref) {
+  final notifier = ref.watch(_routerNotifierProvider);
+
   return GoRouter(
     initialLocation: '/home',
-    redirect: (context, state) {
-      final isLoading = authState.isLoading;
-      if (isLoading) return null;
-
-      final isAuth = authState.isAuthenticated;
-      final location = state.matchedLocation;
-
-      // Redirect to login if trying to access protected route without auth
-      final isProtected =
-          protectedRoutes.any((r) => location.startsWith(r)) ||
-          location.startsWith('/edit-ad');
-      if (!isAuth && isProtected) return '/login';
-
-      // Redirect away from auth screens if already logged in
-      if (isAuth &&
-          (location == '/login' || location == '/register')) {
-        return '/home';
-      }
-
-      return null;
-    },
+    refreshListenable: notifier,
+    redirect: notifier.redirect,
     routes: [
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
           GoRoute(path: '/login', builder: (_, __) => const LoginScreen()),
-          GoRoute(path: '/register', builder: (_, __) => const RegisterScreen()),
+          GoRoute(
+              path: '/register', builder: (_, __) => const RegisterScreen()),
           GoRoute(path: '/home', builder: (_, __) => const HomeScreen()),
           GoRoute(
             path: '/ad/:id',
             builder: (_, state) =>
                 AdDetailScreen(adId: state.pathParameters['id']!),
           ),
-          GoRoute(path: '/post-ad', builder: (_, __) => const PostAdScreen()),
+          GoRoute(
+              path: '/post-ad', builder: (_, __) => const PostAdScreen()),
           GoRoute(
             path: '/edit-ad/:id',
             builder: (_, state) =>
                 EditAdScreen(adId: state.pathParameters['id']!),
           ),
           GoRoute(
-              path: '/dashboard', builder: (_, __) => const DashboardScreen()),
+              path: '/dashboard',
+              builder: (_, __) => const DashboardScreen()),
           GoRoute(
               path: '/messages',
               builder: (_, __) => const ConversationsScreen()),
