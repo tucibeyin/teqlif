@@ -227,7 +227,7 @@ class _AdCard extends StatelessWidget {
               flex: 3,
               child: ad.images.isNotEmpty
                   ? CachedNetworkImage(
-                      imageUrl: ad.images.first,
+                      imageUrl: imageUrl(ad.images.first),
                       fit: BoxFit.cover,
                       width: double.infinity,
                       placeholder: (_, __) => Container(
@@ -303,7 +303,7 @@ class _AdListTile extends StatelessWidget {
         borderRadius: BorderRadius.circular(8),
         child: ad.images.isNotEmpty
             ? CachedNetworkImage(
-                imageUrl: ad.images.first,
+                imageUrl: imageUrl(ad.images.first),
                 width: 48,
                 height: 48,
                 fit: BoxFit.cover)

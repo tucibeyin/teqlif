@@ -10,7 +10,7 @@ String imageUrl(String? path) {
 
 class Endpoints {
   // Auth
-  static const login = '/api/auth/mobile';
+  static const login = '/api/mobile/login';
   static const register = '/api/auth/register';
   static const pushRegister = '/api/push/register';
 
