@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import BidForm from "./BidForm";
+import ImageSlider from "./ImageSlider";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -58,16 +59,7 @@ export default async function AdDetailPage({
                 <div>
                     <div className="ad-detail-images">
                         {ad.images && ad.images.length > 0 ? (
-                            <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                                <img src={ad.images[0]} alt={ad.title} className="ad-detail-main-image" />
-                                {ad.images.length > 1 && (
-                                    <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(100px, 1fr))", gap: "1rem" }}>
-                                        {ad.images.slice(1).map((img, i) => (
-                                            <img key={i} src={img} alt={`${ad.title} - ${i + 2}`} style={{ width: "100%", height: "100px", objectFit: "cover", borderRadius: "var(--radius-md)" }} />
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <ImageSlider images={ad.images} title={ad.title} />
                         ) : (
                             <div
                                 style={{
@@ -78,6 +70,8 @@ export default async function AdDetailPage({
                                     alignItems: "center",
                                     justifyContent: "center",
                                     fontSize: "6rem",
+                                    borderRadius: "var(--radius-lg)",
+                                    border: "1px solid var(--border)",
                                 }}
                             >
                                 {ad.category.icon}
@@ -183,17 +177,18 @@ export default async function AdDetailPage({
                                 minStep={ad.minBidStep}
                             />
                         ) : !session?.user ? (
-                            <div style={{ textAlign: "center" }}>
+                            <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
                                 <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
-                                    Teklif vermek için giriş yapın
+                                    Bu ilana teklif vermek için giriş yapmalısınız.
                                 </p>
                                 <Link href="/login" className="btn btn-primary btn-full">
                                     Giriş Yap
                                 </Link>
                             </div>
                         ) : (
-                            <div className="text-muted text-sm" style={{ textAlign: "center", padding: "0.75rem" }}>
-                                Bu ilanı siz verdiniz.
+                            <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
+                                <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
+                                Kendi ilanınıza teklif veremezsiniz. Başkalarının teklif vermesini bekleyin.
                             </div>
                         )}
 
