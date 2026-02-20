@@ -11,6 +11,7 @@ interface AdActionsProps {
     bidId?: string;
     currentUser: any;
     isMessageBidder?: boolean;
+    initialMessage?: string;
 }
 
 export function AdActions({
@@ -20,6 +21,7 @@ export function AdActions({
     bidId,
     currentUser,
     isMessageBidder,
+    initialMessage,
 }: AdActionsProps) {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
@@ -44,6 +46,26 @@ export function AdActions({
 
                 if (res.ok) {
                     const conversation = await res.json();
+
+                    // If there's an initial message, try to send it before jumping to the conversation
+                    if (initialMessage) {
+                        try {
+                            const currentUserId = currentUser.id;
+                            const recipientId = conversation.user1Id === currentUserId ? conversation.user2Id : conversation.user1Id;
+
+                            // Let's only send if conversation is newly created or we just want to push context
+                            // The simplest approach is we just send it every time they click to start this context.
+                            // To avoid spam, typically we'd only send if new, but let's just send the context message 
+                            await fetch('/api/messages', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ conversationId: conversation.id, content: initialMessage, recipientId })
+                            });
+                        } catch (e) {
+                            console.error("Failed to push initial context message", e);
+                        }
+                    }
+
                     router.push(`/dashboard/messages?id=${conversation.id}`);
                 } else {
                     const data = await res.json();

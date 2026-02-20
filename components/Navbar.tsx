@@ -2,6 +2,7 @@ import Link from "next/link";
 import { auth, signOut } from "@/auth";
 import { NotificationBell } from "./NotificationBell";
 import { MessageBell } from "./MessageBell";
+import { LiveSearch } from "./LiveSearch";
 
 export async function Navbar() {
     const session = await auth();
@@ -14,19 +15,7 @@ export async function Navbar() {
                         teqlif
                     </Link>
 
-                    <div className="navbar-search search-input-wrap">
-                        <span className="search-icon">
-                            <svg width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                                <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
-                            </svg>
-                        </span>
-                        <input
-                            type="search"
-                            className="input"
-                            placeholder="İlan ara..."
-                            id="search-input"
-                        />
-                    </div>
+                    <LiveSearch />
 
                     <div className="navbar-actions">
                         {session?.user ? (

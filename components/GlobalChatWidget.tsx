@@ -149,7 +149,7 @@ export function GlobalChatWidget() {
                             position: 'absolute',
                             top: '-5px',
                             right: '-5px',
-                            background: 'var(--danger)', // typically red for chat badges
+                            background: '#ef4444', // explicitly red to avoid transparency issues
                             color: 'white',
                             fontSize: '11px',
                             fontWeight: 'bold',

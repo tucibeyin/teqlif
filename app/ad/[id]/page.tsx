@@ -118,7 +118,13 @@ export default async function AdDetailPage({
                                             📞 {ad.user.phone} - Satıcıyı Ara
                                         </a>
                                     )}
-                                    <AdActions actionType="MESSAGE" adId={ad.id} sellerId={ad.userId} currentUser={session.user} />
+                                    <AdActions
+                                        actionType="MESSAGE"
+                                        adId={ad.id}
+                                        sellerId={ad.userId}
+                                        currentUser={session.user}
+                                        initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanı hakkında bilgi almak istiyorum.`}
+                                    />
                                 </div>
                             )}
                             {!isOwner && !session?.user && ad.user.phone && (
@@ -226,16 +232,23 @@ export default async function AdDetailPage({
                                             </span>
                                             <span className="bid-item-amount" style={{ marginLeft: '8px' }}>{formatPrice(bid.amount)}</span>
                                         </div>
-                                        {isOwner && bid.status === 'PENDING' && (
-                                            <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
+                                        {isOwner && (
+                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                                                {bid.status === 'PENDING' && (
+                                                    <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
+                                                )}
+                                                <AdActions
+                                                    actionType="MESSAGE"
+                                                    adId={ad.id}
+                                                    sellerId={bid.user.id}
+                                                    currentUser={session?.user}
+                                                    isMessageBidder={true}
+                                                    initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
+                                                />
+                                            </div>
                                         )}
                                         {bid.status === 'ACCEPTED' && (
-                                            <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-                                                <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
-                                                {isOwner && (
-                                                    <AdActions actionType="MESSAGE" adId={ad.id} sellerId={bid.user.id} currentUser={session?.user} isMessageBidder={true} />
-                                                )}
-                                            </div>
+                                            <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
                                         )}
                                     </div>
                                 ))}
