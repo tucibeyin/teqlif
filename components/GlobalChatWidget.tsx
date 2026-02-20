@@ -29,9 +29,7 @@ export function GlobalChatWidget() {
                 const data = await res.json();
                 setConversations(data);
 
-                const unread = data.filter((c: any) =>
-                    c.messages.some((m: any) => !m.read && m.senderId !== session?.user?.id)
-                ).length;
+                const unread = data.reduce((acc: number, c: any) => acc + (c._count?.messages || 0), 0);
                 setUnreadTotal(unread);
             }
         } catch (error) {
@@ -58,12 +56,15 @@ export function GlobalChatWidget() {
         };
     }, [session, fetchConversations]);
 
-    const fetchMessages = useCallback(async (convId: string) => {
+    const fetchMessages = useCallback(async (convId: string, refreshConversations = false) => {
         try {
             const res = await fetch(`/api/messages?conversationId=${convId}`);
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data);
+                if (refreshConversations) {
+                    fetchConversations();
+                }
                 setTimeout(() => {
                     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
                 }, 100);
@@ -78,7 +79,7 @@ export function GlobalChatWidget() {
         let interval: NodeJS.Timeout;
 
         const loadMessages = async () => {
-            if (mounted && activeConvId) await fetchMessages(activeConvId);
+            if (mounted && activeConvId) await fetchMessages(activeConvId, true);
         };
 
         if (isOpen && !isMinimized && activeConvId) {
@@ -92,7 +93,7 @@ export function GlobalChatWidget() {
             mounted = false;
             if (interval) clearInterval(interval);
         };
-    }, [isOpen, isMinimized, activeConvId, fetchMessages]);
+    }, [isOpen, isMinimized, activeConvId, fetchMessages, fetchConversations]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();
