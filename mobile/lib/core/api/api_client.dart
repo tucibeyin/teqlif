@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'endpoints.dart';
 
@@ -17,6 +18,16 @@ class ApiClient {
       contentType: 'application/json',
     ));
 
+    // Log all requests/responses in debug mode
+    if (kDebugMode) {
+      _dio.interceptors.add(LogInterceptor(
+        requestBody: true,
+        responseBody: true,
+        error: true,
+        logPrint: (o) => debugPrint('[API] $o'),
+      ));
+    }
+
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         final token = await _storage.read(key: 'jwt_token');
@@ -26,6 +37,9 @@ class ApiClient {
         return handler.next(options);
       },
       onError: (error, handler) {
+        debugPrint('[API ERROR] ${error.response?.statusCode} '
+            '${error.requestOptions.path}: '
+            '${error.response?.data}');
         handler.next(error);
       },
     ));

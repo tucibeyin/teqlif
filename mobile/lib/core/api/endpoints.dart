@@ -1,5 +1,13 @@
 const String kBaseUrl = 'https://teqlif.com';
 
+/// Returns a full URL for an image path.
+/// Handles both already-absolute URLs (http/https) and relative paths (/uploads/...).
+String imageUrl(String? path) {
+  if (path == null || path.isEmpty) return '';
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return '$kBaseUrl$path';
+}
+
 class Endpoints {
   // Auth
   static const login = '/api/auth/mobile';

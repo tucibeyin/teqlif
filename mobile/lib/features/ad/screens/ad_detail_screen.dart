@@ -110,7 +110,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                           onPageChanged: (i) =>
                               setState(() => _currentImage = i),
                           itemBuilder: (_, i) => CachedNetworkImage(
-                            imageUrl: ad.images[i],
+                            imageUrl: imageUrl(ad.images[i]),
                             fit: BoxFit.cover,
                           ),
                         )
