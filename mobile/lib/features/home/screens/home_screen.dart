@@ -49,6 +49,17 @@ class FilterState {
   final String? category;
   final String? provinceId;
   const FilterState({this.category, this.provinceId});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is FilterState &&
+          runtimeType == other.runtimeType &&
+          category == other.category &&
+          provinceId == other.provinceId;
+
+  @override
+  int get hashCode => category.hashCode ^ provinceId.hashCode;
 }
 
 final adsProvider = FutureProvider.family<List<AdModel>, FilterState>(
@@ -74,7 +85,8 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  String? _selectedCategory;
+  String? _selectedCategorySlug;
+  String? _selectedCategoryName;
   String? _selectedProvinceId;
   String? _selectedProvinceName;
   final _searchCtrl = TextEditingController();
@@ -108,6 +120,33 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
   }
 
+  void _showCategorySheet() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) => _CategorySheet(
+        selected: _selectedCategorySlug,
+        onSelect: (slug, name) {
+          setState(() {
+            _selectedCategorySlug = slug;
+            _selectedCategoryName = name;
+          });
+          Navigator.pop(context);
+        },
+        onClear: () {
+          setState(() {
+            _selectedCategorySlug = null;
+            _selectedCategoryName = null;
+          });
+          Navigator.pop(context);
+        },
+      ),
+    );
+  }
+
   void _showProvinceSheet() {
     showModalBottomSheet(
       context: context,
@@ -136,7 +175,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   bool get _hasFilters =>
-      _selectedCategory != null || _selectedProvinceId != null;
+      _selectedCategorySlug != null || _selectedProvinceId != null;
 
   Widget _buildFilterBar() {
     return Container(
@@ -166,19 +205,48 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ),
           const SizedBox(height: 8),
-          // Row: Category chips + Province button
+          // Row: Category button + Province button
           Row(
             children: [
               Expanded(
-                child: SizedBox(
-                  height: 36,
-                  child: ListView(
-                    scrollDirection: Axis.horizontal,
-                    children: [
-                      _buildCatChip(null, '🏷️', 'Tümü'),
-                      ..._categories.map((c) => _buildCatChip(
-                          c['slug'], c['icon']!, c['name']!)),
-                    ],
+                child: GestureDetector(
+                  onTap: _showCategorySheet,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: _selectedCategorySlug != null
+                          ? const Color(0xFF00B4CC)
+                          : const Color(0xFFF4F7FA),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(
+                        color: _selectedCategorySlug != null
+                            ? const Color(0xFF00B4CC)
+                            : const Color(0xFFE2EBF0),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.category_outlined,
+                            size: 14,
+                            color: _selectedCategorySlug != null
+                                ? Colors.white
+                                : const Color(0xFF4A5568)),
+                        const SizedBox(width: 4),
+                        Text(
+                          _selectedCategoryName ?? 'Kategori',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _selectedCategorySlug != null
+                                ? Colors.white
+                                : const Color(0xFF4A5568),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -239,7 +307,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: () => setState(() {
-                    _selectedCategory = null;
+                    _selectedCategorySlug = null;
+                    _selectedCategoryName = null;
                     _selectedProvinceId = null;
                     _selectedProvinceName = null;
                     _searchCtrl.clear();
@@ -262,39 +331,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     );
   }
 
-  Widget _buildCatChip(String? slug, String icon, String name) {
-    final selected = _selectedCategory == slug;
-    return GestureDetector(
-      onTap: () => setState(() => _selectedCategory = slug),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 150),
-        margin: const EdgeInsets.only(right: 6),
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-        decoration: BoxDecoration(
-          color: selected
-              ? const Color(0xFF00B4CC)
-              : const Color(0xFFF4F7FA),
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(
-            color: selected ? const Color(0xFF00B4CC) : const Color(0xFFE2EBF0),
-          ),
-        ),
-        child: Text(
-          '$icon $name',
-          style: TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: selected ? Colors.white : const Color(0xFF4A5568),
-          ),
-        ),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     final filter =
-        FilterState(category: _selectedCategory, provinceId: _selectedProvinceId);
+        FilterState(category: _selectedCategorySlug, provinceId: _selectedProvinceId);
     final adsAsync = ref.watch(adsProvider(filter));
     final isSearchActive =
         _searchCtrl.text.length >= 2 && _searchResults.isNotEmpty;
@@ -354,7 +394,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               ? _EmptyState(
                                   hasFilters: _hasFilters,
                                   onClear: () => setState(() {
-                                    _selectedCategory = null;
+                                    _selectedCategorySlug = null;
+                                    _selectedCategoryName = null;
                                     _selectedProvinceId = null;
                                     _selectedProvinceName = null;
                                   }),
@@ -380,6 +421,90 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+// ── Category bottom sheet ──────────────────────────────────────────────────
+
+class _CategorySheet extends StatelessWidget {
+  final String? selected;
+  final void Function(String slug, String name) onSelect;
+  final VoidCallback onClear;
+
+  const _CategorySheet(
+      {required this.selected,
+      required this.onSelect,
+      required this.onClear});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.6,
+      maxChildSize: 0.9,
+      minChildSize: 0.4,
+      expand: false,
+      builder: (_, scrollCtrl) => Column(
+        children: [
+          // Handle
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 8),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE2EBF0),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          // Header
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Row(
+              children: [
+                const Text('Kategori Seç',
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                const Spacer(),
+                if (selected != null)
+                  TextButton(
+                    onPressed: onClear,
+                    child: const Text('Temizle',
+                        style: TextStyle(color: Color(0xFFEF4444))),
+                  ),
+              ],
+            ),
+          ),
+          // List
+          Expanded(
+            child: ListView.builder(
+              controller: scrollCtrl,
+              itemCount: _categories.length,
+              itemBuilder: (_, i) {
+                final c = _categories[i];
+                final isSelected = c['slug'] == selected;
+                return ListTile(
+                  leading: Text(c['icon']!, style: const TextStyle(fontSize: 20)),
+                  title: Text(
+                    c['name']!,
+                    style: TextStyle(
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w500,
+                      color: isSelected
+                          ? const Color(0xFF00B4CC)
+                          : const Color(0xFF0F1923),
+                    ),
+                  ),
+                  trailing: isSelected
+                      ? const Icon(Icons.check_circle,
+                          color: Color(0xFF00B4CC), size: 20)
+                      : null,
+                  onTap: () => onSelect(c['slug']!, c['name']!),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
