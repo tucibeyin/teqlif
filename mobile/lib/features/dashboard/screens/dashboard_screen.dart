@@ -8,12 +8,14 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/favorites_provider.dart';
 
 final myAdsProvider = FutureProvider<List<AdModel>>((ref) async {
+  ref.watch(authProvider); // React to auth state changes (login/logout)
   final res = await ApiClient().get(Endpoints.ads, params: {'mine': 'true'});
   final list = res.data as List<dynamic>;
   return list.map((e) => AdModel.fromJson(e as Map<String, dynamic>)).toList();
 });
 
 final myBidsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
+  ref.watch(authProvider); // React to auth state changes
   final res = await ApiClient().get(Endpoints.bids);
   final list = res.data as List<dynamic>;
   return list.cast<Map<String, dynamic>>();

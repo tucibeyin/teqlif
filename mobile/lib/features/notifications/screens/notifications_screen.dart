@@ -5,9 +5,11 @@ import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/notification.dart';
+import '../../../core/providers/auth_provider.dart';
 
 final notificationsProvider =
     FutureProvider<List<NotificationModel>>((ref) async {
+  ref.watch(authProvider); // Rebuild provider on auth state changes
   final res = await ApiClient().get(Endpoints.notifications);
   final data = res.data;
   final list = (data['notifications'] ?? data) as List<dynamic>;

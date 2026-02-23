@@ -9,6 +9,7 @@ import '../../../core/providers/auth_provider.dart';
 
 final conversationsProvider =
     FutureProvider<List<ConversationModel>>((ref) async {
+  ref.watch(authProvider); // React to auth state changes (login/logout)
   final res = await ApiClient().get(Endpoints.conversations);
   final list = res.data as List<dynamic>;
   return list
