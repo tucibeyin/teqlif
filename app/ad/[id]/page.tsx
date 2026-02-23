@@ -5,6 +5,7 @@ import Link from "next/link";
 import BidForm from "./BidForm";
 import ImageSlider from "./ImageSlider";
 import { AdActions } from "./AdActions";
+import { FavoriteButton } from "@/components/FavoriteButton";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -55,10 +56,23 @@ export default async function AdDetailPage({
 
     if (!ad) notFound();
 
-    // Type casting to bypass Next.js outdated cached type definitions for the newly added fields
     const adData = ad as any;
     const highestBid = adData.bids[0];
     const isOwner = session?.user?.id === adData.userId;
+
+    // Check if favorited by the current user
+    let isFavorited = false;
+    if (session?.user?.id) {
+        const fav = await prisma.favorite.findUnique({
+            where: {
+                userId_adId: {
+                    userId: session.user.id,
+                    adId: ad.id,
+                },
+            },
+        });
+        isFavorited = !!fav;
+    }
 
     return (
         <div className="container">
@@ -97,7 +111,14 @@ export default async function AdDetailPage({
                                 <span className="text-muted text-sm">{timeAgo(ad.createdAt)}</span>
                             </div>
 
-                            <h1 style={{ fontSize: "1.5rem", fontWeight: 700, marginBottom: "0.75rem" }}>{ad.title}</h1>
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "0.75rem" }}>
+                                <h1 style={{ fontSize: "1.5rem", fontWeight: 700 }}>{ad.title}</h1>
+                                <FavoriteButton
+                                    adId={ad.id}
+                                    initialIsFavorite={isFavorited}
+                                    isLoggedIn={!!session?.user}
+                                />
+                            </div>
 
                             <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
                                 <span>📍 {ad.province.name}, {ad.district.name}</span>

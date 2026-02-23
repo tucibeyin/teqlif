@@ -26,7 +26,7 @@ export default async function DashboardPage() {
     const session = await auth();
     if (!session?.user) redirect("/login");
 
-    const [myAds, myBids] = await Promise.all([
+    const [myAds, myBids, myFavorites] = await Promise.all([
         prisma.ad.findMany({
             where: { userId: session.user.id },
             orderBy: { createdAt: "desc" },
@@ -49,9 +49,22 @@ export default async function DashboardPage() {
                 },
             },
         }),
+        prisma.favorite.findMany({
+            where: { userId: session.user.id },
+            orderBy: { createdAt: "desc" },
+            include: {
+                ad: {
+                    include: {
+                        category: true,
+                        province: true,
+                        _count: { select: { bids: true } }
+                    },
+                },
+            },
+        })
     ]);
 
-    const totalBidsReceived = myAds.reduce((sum, ad) => sum + ad._count.bids, 0);
+    const totalBidsReceived = myAds.reduce((sum: number, ad: any) => sum + ad._count.bids, 0);
 
     return (
         <div className="dashboard">
@@ -82,9 +95,13 @@ export default async function DashboardPage() {
                         <div className="stat-value">{myBids.length}</div>
                         <div className="stat-label">Verdiğim Teklif</div>
                     </Link>
+                    <Link href="#favorilerim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
+                        <div className="stat-value" style={{ color: "var(--accent-red)" }}>{myFavorites.length}</div>
+                        <div className="stat-label">Favorilerim</div>
+                    </Link>
                     <Link href="#ilanlarim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value" style={{ color: "var(--accent-green)" }}>
-                            {myAds.filter((a) => a.status === "ACTIVE" && (!a.expiresAt || new Date(a.expiresAt) > new Date())).length}
+                            {myAds.filter((a: any) => a.status === "ACTIVE" && (!a.expiresAt || new Date(a.expiresAt) > new Date())).length}
                         </div>
                         <div className="stat-label">Aktif</div>
                     </Link>
@@ -107,7 +124,7 @@ export default async function DashboardPage() {
                         </div>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                            {myAds.map((ad) => {
+                            {myAds.map((ad: any) => {
                                 const isExpired = ad.expiresAt ? new Date(ad.expiresAt) < new Date() : false;
                                 return (
                                     <div key={ad.id} className="card">
@@ -157,6 +174,56 @@ export default async function DashboardPage() {
                     )}
                 </section>
 
+                {/* Favorilerim */}
+                <section className="section" id="favorilerim">
+                    <div className="section-header">
+                        <h2 className="section-title">Favorilerim</h2>
+                    </div>
+
+                    {myFavorites.length === 0 ? (
+                        <div className="empty-state">
+                            <div className="empty-state-icon">❤️‍🩹</div>
+                            <div className="empty-state-title">Henüz favori ilanınız yok</div>
+                            <p>İlgilinizi çeken ilanları favorilere ekleyin!</p>
+                            <Link href="/" className="btn btn-outline" style={{ marginTop: "1rem" }}>
+                                İlanlara Bak
+                            </Link>
+                        </div>
+                    ) : (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                            {myFavorites.map((fav: any) => {
+                                const ad = fav.ad;
+                                const isExpired = ad.expiresAt ? new Date(ad.expiresAt) < new Date() : false;
+                                return (
+                                    <div key={fav.id} className="card">
+                                        <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                                            {ad.images && ad.images.length > 0 ? (
+                                                <img src={ad.images[0]} alt={ad.title} style={{ width: "48px", height: "48px", objectFit: "cover", borderRadius: "10px" }} />
+                                            ) : (
+                                                <span style={{ fontSize: "2rem" }}>{ad.category.icon}</span>
+                                            )}
+                                            <div style={{ flex: 1 }}>
+                                                <Link href={`/ad/${ad.id}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
+                                                    {ad.title}
+                                                </Link>
+                                                <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
+                                                    {ad.province.name} · {timeAgo(ad.createdAt)} · {ad._count.bids} teklif
+                                                </div>
+                                            </div>
+                                            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
+                                                <div style={{ color: "var(--primary)", fontWeight: 700 }}>{formatPrice(ad.price)}</div>
+                                                <span className={`badge badge-${isExpired ? 'sold' : ad.status.toLowerCase()}`}>
+                                                    {isExpired ? "Süresi Dolmuş" : ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Pasif"}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    )}
+                </section>
+
                 {/* Verdiğim Teklifler */}
                 <section className="section" id="tekliflerim">
                     <div className="section-header">
@@ -174,7 +241,7 @@ export default async function DashboardPage() {
                         </div>
                     ) : (
                         <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                            {myBids.map((bid) => (
+                            {myBids.map((bid: any) => (
                                 <div key={bid.id} className="card">
                                     <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                                         {bid.ad.images && bid.ad.images.length > 0 ? (
@@ -205,6 +272,6 @@ export default async function DashboardPage() {
                     )}
                 </section>
             </div>
-        </div>
+        </div >
     );
 }

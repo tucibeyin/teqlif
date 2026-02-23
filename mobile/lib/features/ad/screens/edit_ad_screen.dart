@@ -76,24 +76,31 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
       await ApiClient().patch(Endpoints.adById(widget.adId), data: {
         'title': _titleCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
-        'price': double.parse(
-            _priceCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
+        'price': double.parse(_priceCtrl.text
+            .replaceAll('₺', '')
+            .replaceAll(' ', '')
+            .replaceAll('.', '')),
         'isFixedPrice': _isFixedPrice,
         'startingBid': _isFixedPrice || _freeBid
             ? null
             : (_startBidCtrl.text.isEmpty
                 ? null
                 : double.parse(_startBidCtrl.text
-                    .replaceAll('.', '')
-                    .replaceAll(',', '.'))),
+                    .replaceAll('₺', '')
+                    .replaceAll(' ', '')
+                    .replaceAll('.', ''))),
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
-            : double.parse(
-                _minBidStepCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
+            : double.parse(_minBidStepCtrl.text
+                .replaceAll('₺', '')
+                .replaceAll(' ', '')
+                .replaceAll('.', '')),
         'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
             ? null
-            : double.parse(
-                _buyItNowCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
+            : double.parse(_buyItNowCtrl.text
+                .replaceAll('₺', '')
+                .replaceAll(' ', '')
+                .replaceAll('.', '')),
       });
       ref.invalidate(adsProvider(const FilterState()));
       if (mounted) {

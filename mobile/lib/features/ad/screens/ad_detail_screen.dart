@@ -35,8 +35,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   }
 
   Future<void> _placeBid(AdModel ad) async {
-    // Parse formatted string e.g. "1.000.000,00" -> "1000000.00"
-    final rawText = _bidCtrl.text.replaceAll('.', '').replaceAll(',', '.');
+    final rawText = _bidCtrl.text.replaceAll('₺', '').replaceAll(' ', '').replaceAll('.', '');
     final amount = double.tryParse(rawText);
     if (amount == null) {
       _snack('Geçerli bir teklif miktarı girin.');
@@ -588,8 +587,8 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                           inputFormatters: [
                                             CurrencyTextInputFormatter.currency(
                                               locale: 'tr_TR',
-                                              symbol: '',
-                                              decimalDigits: 2,
+                                              symbol: '₺ ',
+                                              decimalDigits: 0,
                                             )
                                           ],
                                           decoration: InputDecoration(
