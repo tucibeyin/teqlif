@@ -254,15 +254,57 @@ class _MyAdTile extends ConsumerWidget {
                 icon: const Icon(Icons.favorite, color: Colors.red),
                 onPressed: () => _unfavorite(context, ref),
               )
-            : (ad.isExpired
-                ? TextButton(
-                    onPressed: () => _republish(context, ref),
-                    child: const Text('Yenile'),
-                  )
-                : IconButton(
-                    icon: const Icon(Icons.edit_outlined),
-                    onPressed: () => context.push('/edit-ad/${ad.id}'),
-                  )),
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.red),
+                    onPressed: () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (ctx) => AlertDialog(
+                          title: const Text('İlanı Sil'),
+                          content: const Text('Bu ilanı kalıcı olarak silmek istediğinize emin misiniz?'),
+                          actions: [
+                            TextButton(
+                                onPressed: () => Navigator.pop(ctx, false),
+                                child: const Text('İptal')),
+                            TextButton(
+                                onPressed: () => Navigator.pop(ctx, true),
+                                child: const Text('Sil',
+                                    style: TextStyle(color: Colors.red))),
+                          ],
+                        ),
+                      );
+                      if (confirm == true && context.mounted) {
+                        try {
+                          await ApiClient().delete('/api/ads/${ad.id}');
+                          ref.invalidate(myAdsProvider);
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('İlan silindi.')));
+                          }
+                        } catch (_) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('İlan silinemedi.')));
+                          }
+                        }
+                      }
+                    },
+                  ),
+                  if (ad.isExpired)
+                    TextButton(
+                      onPressed: () => _republish(context, ref),
+                      child: const Text('Yenile'),
+                    )
+                  else
+                    IconButton(
+                      icon: const Icon(Icons.edit_outlined),
+                      onPressed: () => context.push('/edit-ad/${ad.id}'),
+                    ),
+                ],
+              ),
         onTap: () => context.push('/ad/${ad.id}'),
       ),
     );

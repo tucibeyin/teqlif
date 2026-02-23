@@ -67,6 +67,17 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Missing adId' }, { status: 400 });
         }
 
+        const ad = await prisma.ad.findUnique({
+            where: { id: adId }
+        });
+
+        if (!ad || ad.status !== 'ACTIVE') {
+            return NextResponse.json(
+                { message: 'Bu ilan aktif olmadığı için favorilere eklenemez' },
+                { status: 400 }
+            );
+        }
+
         const favorite = await prisma.favorite.create({
             data: {
                 userId: currentUser.id,
