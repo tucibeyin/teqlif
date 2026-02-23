@@ -9,20 +9,9 @@ import '../../../core/api/endpoints.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../home/screens/home_screen.dart';
 import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
+import '../../../core/constants/locations.dart';
 
-// Locations data - province list
-const _provinces = [
-  {'id': '34', 'name': 'İstanbul'},
-  {'id': '6', 'name': 'Ankara'},
-  {'id': '35', 'name': 'İzmir'},
-  {'id': '7', 'name': 'Antalya'},
-  {'id': '16', 'name': 'Bursa'},
-  {'id': '1', 'name': 'Adana'},
-  {'id': '42', 'name': 'Konya'},
-  {'id': '55', 'name': 'Samsun'},
-  {'id': '61', 'name': 'Trabzon'},
-  {'id': '27', 'name': 'Gaziantep'},
-];
+
 
 const _categories = [
   {'slug': 'elektronik', 'name': 'Elektronik'},
@@ -55,6 +44,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
   final _buyItNowCtrl = TextEditingController();
   String? _selectedCategory;
   String? _selectedProvinceId;
+  String? _selectedDistrictId;
   bool _freeBid = false;
   bool _isFixedPrice = false;
   List<File> _images = [];
@@ -84,7 +74,8 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
         _descCtrl.text.isEmpty ||
         _priceCtrl.text.isEmpty ||
         _selectedCategory == null ||
-        _selectedProvinceId == null) {
+        _selectedProvinceId == null ||
+        _selectedDistrictId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Lütfen tüm alanları doldurun.')));
       return;
@@ -140,7 +131,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
             : double.parse(bStr),
         'categorySlug': _selectedCategory,
         'provinceId': _selectedProvinceId,
-        'districtId': _selectedProvinceId, // simplified: using same as province
+        'districtId': _selectedDistrictId, // true district mapped
         'images': imageUrls,
       });
 
@@ -243,12 +234,32 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
               initialValue: _selectedProvinceId,
-              decoration: const InputDecoration(labelText: 'Şehir'),
-              items: _provinces
+              decoration: const InputDecoration(labelText: 'İl (Şehir)'),
+              items: AppLocations.provinces
                   .map((p) =>
                       DropdownMenuItem(value: p['id'], child: Text(p['name']!)))
                   .toList(),
-              onChanged: (v) => setState(() => _selectedProvinceId = v),
+              onChanged: (v) {
+                setState(() {
+                  _selectedProvinceId = v;
+                  _selectedDistrictId = null; // reset district when province changes
+                });
+              },
+            ),
+            const SizedBox(height: 12),
+            // Dependent District Dropdown
+            DropdownButtonFormField<String>(
+              value: _selectedDistrictId, // Can be null initially
+              decoration: const InputDecoration(labelText: 'İlçe'),
+              items: _selectedProvinceId == null
+                  ? [] // Empty items until province is selected
+                  : (AppLocations.districts[_selectedProvinceId] ?? [])
+                      .map((d) => DropdownMenuItem(
+                          value: d['id'], child: Text(d['name']!)))
+                      .toList(),
+              onChanged: _selectedProvinceId == null
+                  ? null // Disabled if province is not selected
+                  : (v) => setState(() => _selectedDistrictId = v),
             ),
             const SizedBox(height: 12),
             TextField(
