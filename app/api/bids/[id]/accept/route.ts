@@ -61,6 +61,12 @@ export async function PATCH(
                 data: { status: 'REJECTED' },
             });
 
+            // 2.5 Automatically toggle Ad Status to SOLD
+            await tx.ad.update({
+                where: { id: bid.adId },
+                data: { status: 'SOLD' },
+            });
+
             // 3. Create a notification for the bidder
             await tx.notification.create({
                 data: {

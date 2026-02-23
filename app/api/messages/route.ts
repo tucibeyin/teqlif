@@ -70,6 +70,18 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Eksik veri' }, { status: 400 });
         }
 
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: conversationId }
+        });
+
+        if (!conversation) {
+            return NextResponse.json({ message: 'Sohbet bulunamadı' }, { status: 404 });
+        }
+
+        if (conversation.adId === null) {
+            return NextResponse.json({ message: 'Bu ilan yayından kaldırıldığı için yeni mesaj gönderilemez.' }, { status: 403 });
+        }
+
         const result = await prisma.$transaction(async (tx) => {
             const message = await tx.message.create({
                 data: {
