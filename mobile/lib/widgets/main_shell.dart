@@ -20,7 +20,7 @@ class MainShell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final location = GoRouterState.of(context).matchedLocation;
+    final location = GoRouterState.of(context).uri.path;
     final currentIndex = _locationToIndex(location);
     final isAuth = _isAuthScreen(location);
 
