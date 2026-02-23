@@ -109,7 +109,19 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('İlanı Düzenle')),
+      appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/dashboard');
+            }
+          },
+        ),
+        title: const Text('İlanı Düzenle')
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(

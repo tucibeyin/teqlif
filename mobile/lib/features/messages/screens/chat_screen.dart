@@ -97,6 +97,16 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
     return Scaffold(
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            if (context.canPop()) {
+              context.pop();
+            } else {
+              context.go('/messages');
+            }
+          },
+        ),
         title: convAsync.when(
           data: (conv) {
             final other = conv.otherUser(currentUserId);

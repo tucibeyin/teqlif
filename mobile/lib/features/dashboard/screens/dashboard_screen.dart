@@ -5,6 +5,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/favorites_provider.dart';
 
 final myAdsProvider = FutureProvider<List<AdModel>>((ref) async {
   final res = await ApiClient().get(Endpoints.ads, params: {'mine': 'true'});
@@ -18,13 +19,21 @@ final myBidsProvider = FutureProvider<List<Map<String, dynamic>>>((ref) async {
   return list.cast<Map<String, dynamic>>();
 });
 
-class DashboardScreen extends ConsumerWidget {
+class DashboardScreen extends ConsumerStatefulWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends ConsumerState<DashboardScreen> {
+  int _tabIndex = 0; // 0 for My Ads, 1 for Favorites
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     final myAdsAsync = ref.watch(myAdsProvider);
+    final favsAsync = ref.watch(favoritesProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -94,34 +103,56 @@ class DashboardScreen extends ConsumerWidget {
               },
             ),
             const SizedBox(height: 24),
-            // My Ads header
+            // Header Tabs
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('İlanlarım',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-                TextButton.icon(
+                Expanded(
+                  child: SegmentedButton<int>(
+                    segments: const [
+                      ButtonSegment(value: 0, label: Text('İlanlarım')),
+                      ButtonSegment(value: 1, label: Text('Favorilerim')),
+                    ],
+                    selected: {_tabIndex},
+                    onSelectionChanged: (set) => setState(() => _tabIndex = set.first),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton.filled(
                   onPressed: () => context.push('/post-ad'),
-                  icon: const Icon(Icons.add, size: 18),
-                  label: const Text('Yeni İlan'),
+                  icon: const Icon(Icons.add),
+                  style: IconButton.styleFrom(backgroundColor: const Color(0xFF00B4CC)),
                 ),
               ],
             ),
-            const SizedBox(height: 8),
-            myAdsAsync.when(
-              loading: () =>
-                  const Center(child: CircularProgressIndicator()),
-              error: (e, _) => Text('Hata: $e'),
-              data: (ads) => ads.isEmpty
-                  ? const Center(
-                      child: Padding(
-                          padding: EdgeInsets.all(32),
-                          child: Text('Henüz ilan yok.')))
-                  : Column(
-                      children: ads.map((ad) => _MyAdTile(ad: ad)).toList(),
-                    ),
-            ),
+            const SizedBox(height: 16),
+            if (_tabIndex == 0)
+              myAdsAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Hata: $e'),
+                data: (ads) => ads.isEmpty
+                    ? const Center(
+                        child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Text('Henüz ilan yok.')))
+                    : Column(
+                        children: ads.map((ad) => _MyAdTile(ad: ad)).toList(),
+                      ),
+              )
+            else
+              favsAsync.when(
+                loading: () =>
+                    const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Hata: $e'),
+                data: (ads) => ads.isEmpty
+                    ? const Center(
+                        child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Text('Henüz favoriniz yok.')))
+                    : Column(
+                        children: ads.map((ad) => _MyAdTile(ad: ad, isFavorite: true)).toList(),
+                      ),
+              ),
           ],
         ),
       ),
@@ -162,7 +193,8 @@ class _StatCard extends StatelessWidget {
 
 class _MyAdTile extends ConsumerWidget {
   final AdModel ad;
-  const _MyAdTile({required this.ad});
+  final bool isFavorite;
+  const _MyAdTile({required this.ad, this.isFavorite = false});
 
   Future<void> _republish(BuildContext context, WidgetRef ref) async {
     try {
@@ -171,6 +203,22 @@ class _MyAdTile extends ConsumerWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('İlan yeniden yayınlandı! ✅')));
+      }
+    } catch (_) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('İşlem başarısız.')));
+      }
+    }
+  }
+
+  Future<void> _unfavorite(BuildContext context, WidgetRef ref) async {
+    try {
+      await ApiClient().delete(Endpoints.favoriteById(ad.id));
+      ref.invalidate(favoritesProvider);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Favorilerden çıkarıldı')));
       }
     } catch (_) {
       if (context.mounted) {
@@ -198,15 +246,20 @@ class _MyAdTile extends ConsumerWidget {
             fontWeight: FontWeight.w600,
           ),
         ),
-        trailing: ad.isExpired
-            ? TextButton(
-                onPressed: () => _republish(context, ref),
-                child: const Text('Yenile'),
+        trailing: isFavorite
+            ? IconButton(
+                icon: const Icon(Icons.favorite, color: Colors.red),
+                onPressed: () => _unfavorite(context, ref),
               )
-            : IconButton(
-                icon: const Icon(Icons.edit_outlined),
-                onPressed: () => context.push('/edit-ad/${ad.id}'),
-              ),
+            : (ad.isExpired
+                ? TextButton(
+                    onPressed: () => _republish(context, ref),
+                    child: const Text('Yenile'),
+                  )
+                : IconButton(
+                    icon: const Icon(Icons.edit_outlined),
+                    onPressed: () => context.push('/edit-ad/${ad.id}'),
+                  )),
         onTap: () => context.push('/ad/${ad.id}'),
       ),
     );

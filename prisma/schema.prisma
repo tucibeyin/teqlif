@@ -28,6 +28,7 @@ model User {
   conversations2 Conversation[] @relation("User2Conversations")
   messages       Message[]
   notifications  Notification[]
+  favorites      Favorite[]
 }
 
 model Category {
@@ -86,6 +87,7 @@ model Ad {
 
   bids          Bid[]
   conversations Conversation[]
+  favorites     Favorite[]
 }
 
 model Bid {
@@ -163,4 +165,17 @@ enum BidStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+model Favorite {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  adId String
+  ad   Ad     @relation(fields: [adId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, adId])
 }

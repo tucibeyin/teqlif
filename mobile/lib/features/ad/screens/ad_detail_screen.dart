@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/providers/favorites_provider.dart';
 import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 
 final adDetailProvider = FutureProvider.family<AdModel, String>((ref, id) async {
@@ -84,7 +85,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
       });
       final conversationId = res.data['id'];
       if (mounted) {
-        context.push('/chat/$conversationId');
+        context.push('/messages/$conversationId');
       }
     } catch (e) {
       _snack('Sohbet başlatılamadı.');
@@ -104,6 +105,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   Widget build(BuildContext context) {
     final adAsync = ref.watch(adDetailProvider(widget.adId));
     final currentUser = ref.watch(authProvider).user;
+    final favsAsync = ref.watch(favoritesProvider);
 
     return Scaffold(
       body: adAsync.when(
@@ -121,6 +123,16 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
               SliverAppBar(
                 expandedHeight: 280,
                 pinned: true,
+                leading: IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: () {
+                    if (context.canPop()) {
+                      context.pop();
+                    } else {
+                      context.go('/home');
+                    }
+                  },
+                ),
                 flexibleSpace: FlexibleSpaceBar(
                   background: ad.images.isNotEmpty
                       ? PageView.builder(
@@ -141,6 +153,35 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                         ),
                 ),
                 actions: [
+                  favsAsync.when(
+                    data: (favs) {
+                      final isFav = favs.any((f) => f.id == ad.id);
+                      return IconButton(
+                        icon: Icon(
+                          isFav ? Icons.favorite : Icons.favorite_border,
+                          color: isFav ? Colors.red : null,
+                        ),
+                        onPressed: () async {
+                          if (currentUser == null) {
+                            context.push('/login');
+                            return;
+                          }
+                          try {
+                            if (isFav) {
+                              await ApiClient().delete(Endpoints.favoriteById(ad.id));
+                            } else {
+                              await ApiClient().post(Endpoints.favorites, data: {'adId': ad.id});
+                            }
+                            ref.invalidate(favoritesProvider);
+                          } catch (e) {
+                            _snack('İşlem başarısız.');
+                          }
+                        },
+                      );
+                    },
+                    loading: () => const SizedBox(),
+                    error: (_, __) => const SizedBox(),
+                  ),
                   if (isOwner)
                     IconButton(
                       icon: const Icon(Icons.edit),
