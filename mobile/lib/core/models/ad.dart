@@ -21,9 +21,13 @@ class CategoryModel {
 
 class AdUserModel {
   final String? name;
-  const AdUserModel({this.name});
+  final String? phone;
+  const AdUserModel({this.name, this.phone});
   factory AdUserModel.fromJson(Map<String, dynamic>? json) =>
-      AdUserModel(name: json?['name'] as String?);
+      AdUserModel(
+        name: json?['name'] as String?,
+        phone: json?['phone'] as String?,
+      );
 }
 
 class AdCountModel {
@@ -58,6 +62,7 @@ class AdModel {
   final double minBidStep;
   final bool isFixedPrice;
   final double? buyItNowPrice;
+  final bool showPhone;
   final String status;
   final List<String> images;
   final int views;
@@ -80,6 +85,7 @@ class AdModel {
     this.minBidStep = 1,
     this.isFixedPrice = false,
     this.buyItNowPrice,
+    this.showPhone = false,
     required this.status,
     required this.images,
     required this.views,
@@ -118,6 +124,7 @@ class AdModel {
         buyItNowPrice: json['buyItNowPrice'] != null
             ? (json['buyItNowPrice'] as num).toDouble()
             : null,
+        showPhone: json['showPhone'] as bool? ?? false,
         status: json['status'] as String? ?? 'ACTIVE',
         images: (json['images'] as List<dynamic>?)
                 ?.map((e) => e as String)

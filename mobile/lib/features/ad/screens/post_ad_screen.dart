@@ -47,6 +47,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
   String? _selectedDistrictId;
   bool _freeBid = false;
   bool _isFixedPrice = false;
+  bool _showPhone = false;
   List<File> _images = [];
   bool _loading = false;
   final _picker = ImagePicker();
@@ -120,6 +121,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
         'description': _descCtrl.text.trim(),
         'price': double.parse(pStr),
         'isFixedPrice': _isFixedPrice,
+        'showPhone': _showPhone,
         'startingBid': _isFixedPrice || _freeBid
             ? null
             : (_startBidCtrl.text.isEmpty ? null : double.parse(sStr)),
@@ -339,6 +341,15 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                                 'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'),
                       ),
                     ],
+                    const Divider(),
+                    SwitchListTile(
+                      value: _showPhone,
+                      onChanged: (v) => setState(() => _showPhone = v),
+                      title: const Text('📞 Telefonum İlanda Gösterilsin'),
+                      subtitle: const Text(
+                          'İşaretlemezseniz, alıcılar sizinle sadece mesajlaşabilir.'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ],
                 ),
               ),

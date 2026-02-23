@@ -60,6 +60,31 @@ export default async function AdDetailPage({
     const highestBid = adData.bids[0];
     const isOwner = session?.user?.id === adData.userId;
 
+    let displayPhone: string | null = null;
+    let displayName = ad.user.name;
+
+    if (!session?.user) {
+        displayName = "Gizli Kullanıcı";
+        displayPhone = null;
+    } else if (!isOwner) {
+        const nameParts = ad.user.name.trim().split(" ");
+        if (nameParts.length > 1) {
+            const firstName = nameParts.slice(0, -1).join(" ");
+            const lastName = nameParts[nameParts.length - 1];
+            displayName = `${firstName} ${lastName.charAt(0)}.`;
+        } else if (nameParts.length === 1 && nameParts[0].length > 1) {
+            displayName = `${nameParts[0].charAt(0)}.`;
+        }
+
+        if (ad.showPhone) {
+            displayPhone = ad.user.phone;
+        } else {
+            displayPhone = null;
+        }
+    } else {
+        displayPhone = ad.user.phone;
+    }
+
     // Check if favorited by the current user
     let isFavorited = false;
     if (session?.user?.id) {
@@ -122,7 +147,7 @@ export default async function AdDetailPage({
 
                             <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
                                 <span>📍 {ad.province.name}, {ad.district.name}</span>
-                                <span>👤 {ad.user.name}</span>
+                                <span>👤 {displayName}</span>
                             </div>
 
                             <div style={{
@@ -138,12 +163,12 @@ export default async function AdDetailPage({
 
                             {!isOwner && session?.user && (
                                 <div style={{ marginTop: "1.25rem", display: "flex", gap: "1rem", flexDirection: "column" }}>
-                                    {ad.user.phone && (
+                                    {displayPhone && (
                                         <a
-                                            href={`tel:${ad.user.phone}`}
+                                            href={`tel:${displayPhone}`}
                                             className="btn btn-secondary btn-full"
                                         >
-                                            📞 {ad.user.phone} - Satıcıyı Ara
+                                            📞 {displayPhone} - Satıcıyı Ara
                                         </a>
                                     )}
                                     <AdActions
@@ -155,13 +180,13 @@ export default async function AdDetailPage({
                                     />
                                 </div>
                             )}
-                            {!isOwner && !session?.user && ad.user.phone && (
+                            {!isOwner && !session?.user && displayPhone && (
                                 <div style={{ marginTop: "1.25rem" }}>
                                     <a
-                                        href={`tel:${ad.user.phone}`}
+                                        href={`tel:${displayPhone}`}
                                         className="btn btn-secondary btn-full"
                                     >
-                                        📞 {ad.user.phone} - Satıcıyı Ara
+                                        📞 {displayPhone} - Satıcıyı Ara
                                     </a>
                                 </div>
                             )}

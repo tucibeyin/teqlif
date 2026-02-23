@@ -45,6 +45,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
   bool _saving = false;
   bool _isFixedPrice = false;
   bool _freeBid = false;
+  bool _showPhone = false;
 
   @override
   void initState() {
@@ -76,6 +77,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         _minBidStepCtrl.text = formatter.formatDouble(ad.minBidStep);
         _isFixedPrice = ad.isFixedPrice;
         _freeBid = ad.startingBid == null;
+        _showPhone = ad.showPhone;
         _startBidCtrl.text = ad.startingBid != null
             ? formatter.formatDouble(ad.startingBid!)
             : '';
@@ -114,6 +116,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
             .replaceAll('.', '')
             .replaceAll(',', '.')),
         'isFixedPrice': _isFixedPrice,
+        'showPhone': _showPhone,
         'startingBid': _isFixedPrice || _freeBid
             ? null
             : (_startBidCtrl.text.isEmpty
@@ -310,6 +313,15 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                                 'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'),
                       ),
                     ],
+                    const Divider(),
+                    SwitchListTile(
+                      value: _showPhone,
+                      onChanged: (v) => setState(() => _showPhone = v),
+                      title: const Text('📞 Telefonum İlanda Gösterilsin'),
+                      subtitle: const Text(
+                          'İşaretlemezseniz, alıcılar sizinle sadece mesajlaşabilir.'),
+                      contentPadding: EdgeInsets.zero,
+                    ),
                   ],
                 ),
               ),

@@ -15,6 +15,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
     const [displayBuyItNowPrice, setDisplayBuyItNowPrice] = useState(() => ad.buyItNowPrice ? new Intl.NumberFormat("tr-TR").format(ad.buyItNowPrice) : "");
     const [existingImages, setExistingImages] = useState<string[]>(ad.images || []);
     const [isFixedPrice, setIsFixedPrice] = useState(ad.isFixedPrice || false);
+    const [showPhone, setShowPhone] = useState(ad.showPhone || false);
 
     useEffect(() => {
         let isMounted = true;
@@ -75,6 +76,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
                 buyItNowPrice: document.getElementById("buyItNowInput") && (document.getElementById("actualBuyItNowPrice") as HTMLInputElement).value
                     ? Number((document.getElementById("actualBuyItNowPrice") as HTMLInputElement).value)
                     : null,
+                showPhone,
                 categorySlug: fd.get("categorySlug"),
                 provinceId: fd.get("provinceId"),
                 districtId: fd.get("districtId"),
@@ -381,6 +383,22 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                         cursor: "pointer"
                                     }}
                                 />
+                            </div>
+                        </div>
+
+                        {/* İletişim Tercihleri */}
+                        <div className="form-section">
+                            <h3 style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                İletişim Tercihleri
+                            </h3>
+                            <div className="form-group">
+                                <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+                                    <input type="checkbox" name="showPhone" checked={showPhone} onChange={(e) => setShowPhone(e.target.checked)} />
+                                    <span>
+                                        <strong style={{ display: "block", marginBottom: "0.25rem" }}>Telefon Numaram İlanda Gösterilsin</strong>
+                                        <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>İşaretlemezseniz, alıcılar sizinle sadece sistem üzerinden mesajlaşarak iletişim kurabilir.</span>
+                                    </span>
+                                </label>
                             </div>
                         </div>
 

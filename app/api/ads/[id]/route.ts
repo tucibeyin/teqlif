@@ -20,6 +20,29 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             },
         });
         if (!ad) return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
+
+        // Privacy Logic
+        const currentUser = await getMobileUser(_req);
+
+        if (!currentUser) {
+            (ad.user as any) = { id: ad.user.id, name: "Gizli Kullanıcı", email: "", phone: null };
+        } else if (currentUser.id !== ad.userId) {
+            const nameParts = ad.user.name.trim().split(" ");
+            let maskedName = ad.user.name;
+            if (nameParts.length > 1) {
+                const firstName = nameParts.slice(0, -1).join(" ");
+                const lastName = nameParts[nameParts.length - 1];
+                maskedName = `${firstName} ${lastName.charAt(0)}.`;
+            } else if (nameParts.length === 1 && nameParts[0].length > 1) {
+                maskedName = `${nameParts[0].charAt(0)}.`;
+            }
+            ad.user.name = maskedName;
+
+            if (!ad.showPhone) {
+                ad.user.phone = null;
+            }
+        }
+
         return NextResponse.json(ad);
     } catch (err) {
         console.error("GET /api/ads/[id] error:", err);
@@ -64,7 +87,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         if (!user) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
 
         const { id } = await params;
-        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, categorySlug, provinceId, districtId: rawDistrictId, images } = await req.json();
+        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, showPhone, categorySlug, provinceId, districtId: rawDistrictId, images } = await req.json();
 
         if (!title || !description || !price || !categorySlug || !provinceId || !rawDistrictId) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
@@ -97,6 +120,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                 startingBid: isFixedPrice ? null : (startingBid !== undefined ? Number(startingBid) : null),
                 minBidStep: isFixedPrice ? 1 : (minBidStep !== undefined ? Number(minBidStep) : undefined),
                 buyItNowPrice: isFixedPrice ? null : (buyItNowPrice !== undefined ? (buyItNowPrice ? Number(buyItNowPrice) : null) : undefined),
+                showPhone: showPhone !== undefined ? Boolean(showPhone) : undefined,
                 categoryId: category.id,
                 provinceId, districtId,
                 images: images || [],
