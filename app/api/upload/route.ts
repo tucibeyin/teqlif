@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
-import { auth } from "@/auth";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function POST(req: NextRequest) {
     try {
-        const session = await auth();
-        if (!session?.user) {
+        const currentUser = await getMobileUser(req);
+        if (!currentUser?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
