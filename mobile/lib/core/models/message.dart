@@ -113,9 +113,23 @@ class ConversationModel {
             ? ConversationUserModel.fromJson(
                 json['user2'] as Map<String, dynamic>)
             : null,
-        lastMessage: json['lastMessage'] != null
-            ? MessageModel.fromJson(json['lastMessage'] as Map<String, dynamic>)
-            : null,
-        unreadCount: json['unreadCount'] as int? ?? 0,
+        lastMessage: () {
+          if (json['lastMessage'] != null) {
+            return MessageModel.fromJson(json['lastMessage'] as Map<String, dynamic>);
+          }
+          if (json['messages'] != null && (json['messages'] as List).isNotEmpty) {
+            return MessageModel.fromJson((json['messages'] as List).first as Map<String, dynamic>);
+          }
+          return null;
+        }(),
+        unreadCount: () {
+          if (json['unreadCount'] != null) {
+            return json['unreadCount'] as int;
+          }
+          if (json['_count'] != null && json['_count']['messages'] != null) {
+            return json['_count']['messages'] as int;
+          }
+          return 0;
+        }(),
       );
 }
