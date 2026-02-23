@@ -71,6 +71,16 @@ export async function POST(req: NextRequest) {
             include: { user: { select: { name: true } } },
         });
 
+        // 🎯 Notify the Ad Owner about the incoming bid
+        await prisma.notification.create({
+            data: {
+                userId: ad.userId, // Sending to ad owner
+                type: 'BID_RECEIVED',
+                message: `${bid.user.name} "${ad.title}" ilanınıza ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teklif verdi.`,
+                link: `/ad/${ad.id}`
+            },
+        });
+
         return NextResponse.json(bid, { status: 201 });
     } catch (err) {
         console.error("POST /api/bids error:", err);

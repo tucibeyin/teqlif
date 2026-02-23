@@ -649,6 +649,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               onAccept: () => _acceptBid(bid.id),
                               onCancel: () => _cancelBid(bid.id),
                               onMessage: () => _messageBidder(bid.user!.id),
+                              formatPrice: _formatPrice, // Pass formatting function down
                             );
                           },
                         ),
@@ -692,6 +693,7 @@ class _BidTile extends StatelessWidget {
   final VoidCallback onAccept;
   final VoidCallback onCancel;
   final VoidCallback onMessage;
+  final String Function(double) formatPrice; // Added dependency for correct price formatting
 
   const _BidTile({
     required this.bid,
@@ -700,6 +702,7 @@ class _BidTile extends StatelessWidget {
     required this.onAccept,
     required this.onCancel,
     required this.onMessage,
+    required this.formatPrice,
   });
 
   @override
@@ -738,7 +741,7 @@ class _BidTile extends StatelessWidget {
             ),
             const SizedBox(height: 4),
             Text(
-              '₺${bid.amount.toStringAsFixed(0)}',
+              formatPrice(bid.amount),
               style: const TextStyle(
                   color: Color(0xFF00B4CC),
                   fontWeight: FontWeight.w700,
