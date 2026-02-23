@@ -67,6 +67,21 @@ class ConversationsScreen extends ConsumerWidget {
                                   fontWeight: FontWeight.w500,
                                 ),
                               ),
+                            )
+                          else
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 2),
+                              child: Text(
+                                'İlan silinmiştir',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: TextStyle(
+                                  color: Color(0xFF9AAAB8),
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w500,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
                             ),
                           Text(
                             lastMsg?.content ?? '',

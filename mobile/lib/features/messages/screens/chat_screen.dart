@@ -131,7 +131,37 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         children: [
           convAsync.when(
             data: (conv) {
-              if (conv.ad == null) return const SizedBox();
+              if (conv.ad == null) {
+                return Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFF9FAFB),
+                    border:
+                        Border(bottom: BorderSide(color: Color(0xFFE2EBF0))),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.info_outline,
+                          size: 18, color: Color(0xFF9AAAB8)),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Bu ilan yayından kaldırılmıştır.',
+                          style: const TextStyle(
+                            color: Color(0xFF9AAAB8),
+                            fontStyle: FontStyle.italic,
+                            fontSize: 13,
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
               return GestureDetector(
                 onTap: () => context.push('/ad/${conv.ad!.id}'),
                 child: Container(
