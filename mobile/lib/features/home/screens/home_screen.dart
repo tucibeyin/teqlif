@@ -96,6 +96,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   final _searchCtrl = TextEditingController();
   List<AdModel> _searchResults = [];
   bool _isSearching = false;
+  bool _isListView = false;
 
   @override
   void dispose() {
@@ -294,6 +295,35 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   ),
                 ),
               ),
+              const SizedBox(width: 8),
+              // View toggle button
+              GestureDetector(
+                onTap: () => setState(() => _isListView = !_isListView),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF4F7FA),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: const Color(0xFFE2EBF0)),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(_isListView ? Icons.grid_view : Icons.view_list,
+                          size: 14, color: const Color(0xFF4A5568)),
+                      const SizedBox(width: 4),
+                      Text(
+                        _isListView ? 'Izgara' : 'Liste',
+                        style: const TextStyle(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: Color(0xFF4A5568),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
           // Active filter indicators
@@ -407,19 +437,26 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               : RefreshIndicator(
                                   onRefresh: () =>
                                       ref.refresh(adsProvider(filter).future),
-                                  child: GridView.builder(
-                                    padding: const EdgeInsets.all(12),
-                                    gridDelegate:
-                                        const SliverGridDelegateWithFixedCrossAxisCount(
-                                      crossAxisCount: 2,
-                                      childAspectRatio: 0.72,
-                                      crossAxisSpacing: 10,
-                                      mainAxisSpacing: 10,
-                                    ),
-                                    itemCount: ads.length,
-                                    itemBuilder: (ctx, i) =>
-                                        _AdCard(ad: ads[i]),
-                                  ),
+                                  child: _isListView
+                                      ? ListView.separated(
+                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          itemCount: ads.length,
+                                          separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE2EBF0)),
+                                          itemBuilder: (ctx, i) => _AdListTile(ad: ads[i]),
+                                        )
+                                      : GridView.builder(
+                                          padding: const EdgeInsets.all(12),
+                                          gridDelegate:
+                                              const SliverGridDelegateWithFixedCrossAxisCount(
+                                            crossAxisCount: 2,
+                                            childAspectRatio: 0.72,
+                                            crossAxisSpacing: 10,
+                                            mainAxisSpacing: 10,
+                                          ),
+                                          itemCount: ads.length,
+                                          itemBuilder: (ctx, i) =>
+                                              _AdCard(ad: ads[i]),
+                                        ),
                                 ),
                         ),
             ),
@@ -775,7 +812,8 @@ class _AdListTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 4, vertical: 4),
+      onTap: () => context.push('/ad/${ad.id}'),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: ad.images.isNotEmpty
@@ -794,10 +832,27 @@ class _AdListTile extends StatelessWidget {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
           style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
-      subtitle: Text(
-        '${ad.province?.name ?? ''} · ${ad.category?.name ?? ''}',
-        style: const TextStyle(fontSize: 12, color: Color(0xFF9AAAB8)),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const SizedBox(height: 4),
+          Text(
+            '${ad.province?.name ?? ''} · ${ad.category?.name ?? ''}',
+            style: const TextStyle(fontSize: 12, color: Color(0xFF9AAAB8)),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            ad.highestBidAmount != null
+                ? '₺${ad.highestBidAmount!.toStringAsFixed(0)}'
+                : (ad.startingBid != null ? '₺${ad.startingBid!.toStringAsFixed(0)}' : 'Serbest Teklif'),
+            style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF00B4CC)),
+          ),
+        ],
       ),
+    );
+  }
+}
+
       trailing: ad.highestBidAmount != null
           ? Text(
               'Güncel ₺${ad.highestBidAmount!.toStringAsFixed(0)}',

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getMobileUser } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function PATCH(
@@ -7,8 +7,8 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth();
-        if (!session?.user) {
+        const currentUser = await getMobileUser(request);
+        if (!currentUser) {
             return NextResponse.json({ message: 'Yetkisiz erişim' }, { status: 401 });
         }
 
@@ -24,7 +24,7 @@ export async function PATCH(
             return NextResponse.json({ message: 'Teklif bulunamadı' }, { status: 404 });
         }
 
-        if (bid.ad.userId !== session.user.id) {
+        if (bid.ad.userId !== currentUser.id) {
             return NextResponse.json({ message: 'Bu işlem için yetkiniz yok' }, { status: 403 });
         }
 

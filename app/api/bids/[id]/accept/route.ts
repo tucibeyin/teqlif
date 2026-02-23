@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getMobileUser } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 
 export async function PATCH(
@@ -7,9 +7,9 @@ export async function PATCH(
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth();
+        const currentUser = await getMobileUser(request);
 
-        if (!session?.user?.email) {
+        if (!currentUser) {
             return NextResponse.json(
                 { message: 'Oturum açmanız gerekiyor' },
                 { status: 401 }
@@ -36,11 +36,7 @@ export async function PATCH(
         }
 
         // Verify the ad belongs to the logged in user
-        const currentUser = await prisma.user.findUnique({
-            where: { email: session.user.email },
-        });
-
-        if (!currentUser || currentUser.id !== bid.ad.userId) {
+        if (currentUser.id !== bid.ad.userId) {
             return NextResponse.json(
                 { message: 'Bu işlem için yetkiniz yok' },
                 { status: 403 }
