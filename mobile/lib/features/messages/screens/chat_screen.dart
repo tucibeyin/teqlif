@@ -72,6 +72,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Future<void> _send() async {
+    final conv = ref.read(singleConversationProvider(widget.conversationId)).value;
+    if (conv == null) return;
+    
+    final currentUserId = ref.read(authProvider).user?.id ?? '';
+    final recipientId = conv.otherUser(currentUserId)?.id;
+    if (recipientId == null) return;
+
     final content = _msgCtrl.text.trim();
     if (content.isEmpty) return;
     setState(() => _sending = true);
@@ -79,6 +86,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       await ApiClient().post(Endpoints.messages, data: {
         'conversationId': widget.conversationId,
         'content': content,
+        'recipientId': recipientId,
       });
       _msgCtrl.clear();
       await _loadMessages();
