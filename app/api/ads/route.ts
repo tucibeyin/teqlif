@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { actionRatelimiter } from "@/lib/rate-limit";
 import { revalidatePath } from "next/cache";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 export const dynamic = "force-dynamic";
 
@@ -41,8 +41,8 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
     try {
-        const session = await auth();
-        if (!session?.user) {
+        const currentUser = await getMobileUser(req);
+        if (!currentUser?.id) {
             return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
         }
 
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest) {
                 startingBid: isFixedPrice ? null : (startingBid !== undefined ? Number(startingBid) : null),
                 minBidStep: isFixedPrice ? 1 : (minBidStep !== undefined ? Number(minBidStep) : 1),
                 buyItNowPrice: isFixedPrice ? null : (buyItNowPrice ? Number(buyItNowPrice) : null),
-                userId: session.user.id,
+                userId: currentUser.id,
                 categoryId: category.id,
                 provinceId,
                 districtId,
