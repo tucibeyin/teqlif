@@ -18,7 +18,19 @@ interface MobileUser {
  * Returns null if neither is present / valid.
  */
 export async function getMobileUser(req: Request): Promise<MobileUser | null> {
-    // 1. Try next-auth session
+    // 1. Try mobile JWT first to avoid next-auth concurrency blocking on parallel mobile api requests
+    const authHeader = req.headers.get("authorization");
+    if (authHeader?.startsWith("Bearer ")) {
+        try {
+            const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as MobileUser;
+            if (payload?.id) return payload;
+        } catch {
+            // Fails-fast rather than unnecessarily looking for web sessions
+            return null;
+        }
+    }
+
+    // 2. Fallback to next-auth session for browser users
     const session = await auth();
     if (session?.user?.id) {
         const user = await prisma.user.findUnique({
@@ -26,17 +38,6 @@ export async function getMobileUser(req: Request): Promise<MobileUser | null> {
             select: { id: true, email: true, name: true },
         });
         if (user) return user;
-    }
-
-    // 2. Try mobile JWT
-    const authHeader = req.headers.get("authorization");
-    if (authHeader?.startsWith("Bearer ")) {
-        try {
-            const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as MobileUser;
-            if (payload?.id) return payload;
-        } catch {
-            return null;
-        }
     }
 
     return null;
