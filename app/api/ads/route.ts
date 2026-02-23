@@ -12,11 +12,19 @@ export async function GET(req: NextRequest) {
         const category = searchParams.get("category");
         const province = searchParams.get("province");
         const q = searchParams.get("q");
+        const isMine = searchParams.get("mine") === "true";
 
         const where: Record<string, unknown> = { status: "ACTIVE" };
         if (category) where.category = { slug: category };
         if (province) where.provinceId = province;
         if (q) where.title = { contains: q, mode: "insensitive" };
+
+        if (isMine) {
+            const user = await getMobileUser(req);
+            if (!user) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+            where.userId = user.id;
+            delete where.status; // Allow users to see their own inactive/expired ads
+        }
 
         const ads = await prisma.ad.findMany({
             where,
