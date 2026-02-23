@@ -12,6 +12,7 @@ import '../features/dashboard/screens/dashboard_screen.dart';
 import '../features/messages/screens/conversations_screen.dart';
 import '../features/messages/screens/chat_screen.dart';
 import '../features/notifications/screens/notifications_screen.dart';
+import '../features/auth/screens/edit_profile_screen.dart';
 import '../widgets/main_shell.dart';
 
 // ── RouterNotifier ──────────────────────────────────────────────────────────
@@ -96,6 +97,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
               path: '/notifications',
               builder: (_, __) => const NotificationsScreen()),
+          GoRoute(
+              path: '/profile/edit',
+              builder: (_, __) => const EditProfileScreen()),
         ],
       ),
     ],

@@ -74,7 +74,12 @@ export default async function DashboardPage() {
                         <h1 className="dashboard-name">
                             Merhaba, <span>{session.user.name?.split(" ")[0]}</span> 👋
                         </h1>
-                        <p className="text-muted text-sm">{session.user.email}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: "0.5rem" }}>
+                            <p className="text-muted text-sm" style={{ margin: 0 }}>{session.user.email}</p>
+                            <Link href="/dashboard/profile" style={{ fontSize: "0.85rem", color: "var(--primary)", textDecoration: "underline", fontWeight: 500 }}>
+                                Profilimi Düzenle
+                            </Link>
+                        </div>
                     </div>
                     <Link href="/post-ad" className="btn btn-primary">
                         + Yeni İlan Ver

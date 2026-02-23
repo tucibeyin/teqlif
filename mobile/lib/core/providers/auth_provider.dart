@@ -41,6 +41,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> _init() async {
+    await checkAuth();
+  }
+
+  Future<void> checkAuth() async {
     final token = await _storage.read(key: 'jwt_token');
     final userJson = await _storage.read(key: 'user_data');
     if (token != null && userJson != null) {

@@ -79,6 +79,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         Text(user?.email ?? '',
                             style: const TextStyle(
                                 color: Color(0xFF9AAAB8), fontSize: 13)),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          onTap: () => context.push('/profile/edit'),
+                          child: const Text('Profilimi Düzenle',
+                              style: TextStyle(
+                                  color: Color(0xFF00B4CC),
+                                  fontSize: 13,
+                                  decoration: TextDecoration.underline,
+                                  fontWeight: FontWeight.w500)),
+                        )
                       ],
                     ),
                   ],
