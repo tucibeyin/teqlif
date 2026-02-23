@@ -31,6 +31,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final error = ref.read(authProvider).error;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error ?? 'Kayıt başarısız.')));
+    } else if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Hesabınız başarıyla oluşturuldu! ✅', style: TextStyle(color: Colors.white)),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 

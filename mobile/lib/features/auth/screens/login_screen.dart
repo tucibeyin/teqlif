@@ -30,6 +30,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       final error = ref.read(authProvider).error;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(error ?? 'Giriş başarısız.')));
+    } else if (success && mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Başarıyla giriş yapıldı! ✅', style: TextStyle(color: Colors.white)),
+          backgroundColor: Colors.green,
+        ),
+      );
     }
   }
 

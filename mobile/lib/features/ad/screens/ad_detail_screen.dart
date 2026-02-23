@@ -25,6 +25,11 @@ class AdDetailScreen extends ConsumerStatefulWidget {
 
 class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   final _bidCtrl = TextEditingController();
+  final _bidFormatter = CurrencyTextInputFormatter.currency(
+    locale: 'tr_TR',
+    symbol: '₺ ',
+    decimalDigits: 0,
+  );
   int _currentImage = 0;
   bool _bidLoading = false;
 
@@ -588,13 +593,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                           controller: _bidCtrl,
                                           keyboardType: const TextInputType
                                               .numberWithOptions(decimal: true),
-                                          inputFormatters: [
-                                            CurrencyTextInputFormatter.currency(
-                                              locale: 'tr_TR',
-                                              symbol: '₺ ',
-                                              decimalDigits: 0,
-                                            )
-                                          ],
+                                          inputFormatters: [_bidFormatter],
                                           decoration: InputDecoration(
                                             hintText: 'Teklif miktarı (₺)',
                                             prefixIcon: const Icon(Icons.gavel),
