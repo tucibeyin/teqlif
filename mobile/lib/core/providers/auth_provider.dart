@@ -59,8 +59,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final response = await _api.post(Endpoints.login,
-          data: {'email': email, 'password': password});
+      final response = await _api
+          .post(Endpoints.login, data: {'email': email, 'password': password});
 
       final token = response.data['token'] as String;
       final user =

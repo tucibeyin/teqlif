@@ -111,8 +111,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     setState(() => _isSearching = true);
     try {
-      final res =
-          await ApiClient().get(Endpoints.search, params: {'q': q});
+      final res = await ApiClient().get(Endpoints.search, params: {'q': q});
       final list = res.data as List<dynamic>;
       setState(() {
         _searchResults = list
@@ -217,8 +216,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 child: GestureDetector(
                   onTap: _showCategorySheet,
                   child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 10, vertical: 6),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                     decoration: BoxDecoration(
                       color: _selectedCategorySlug != null
                           ? const Color(0xFF00B4CC)
@@ -300,7 +299,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               GestureDetector(
                 onTap: () => setState(() => _isListView = !_isListView),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
                     color: const Color(0xFFF4F7FA),
                     borderRadius: BorderRadius.circular(8),
@@ -367,8 +367,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final filter =
-        FilterState(category: _selectedCategorySlug, provinceId: _selectedProvinceId);
+    final filter = FilterState(
+        category: _selectedCategorySlug, provinceId: _selectedProvinceId);
     final adsAsync = ref.watch(adsProvider(filter));
     final isSearchActive =
         _searchCtrl.text.length >= 2 && _searchResults.isNotEmpty;
@@ -381,8 +381,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             // App bar row
             Container(
               color: Colors.white,
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
               child: Row(
                 children: [
                   const Text(
@@ -422,8 +421,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       : adsAsync.when(
                           loading: () =>
                               const Center(child: CircularProgressIndicator()),
-                          error: (e, _) =>
-                              Center(child: Text('Hata: $e')),
+                          error: (e, _) => Center(child: Text('Hata: $e')),
                           data: (ads) => ads.isEmpty
                               ? _EmptyState(
                                   hasFilters: _hasFilters,
@@ -439,10 +437,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                       ref.refresh(adsProvider(filter).future),
                                   child: _isListView
                                       ? ListView.separated(
-                                          padding: const EdgeInsets.symmetric(vertical: 8),
+                                          padding: const EdgeInsets.symmetric(
+                                              vertical: 8),
                                           itemCount: ads.length,
-                                          separatorBuilder: (_, __) => const Divider(height: 1, color: Color(0xFFE2EBF0)),
-                                          itemBuilder: (ctx, i) => _AdListTile(ad: ads[i]),
+                                          separatorBuilder: (_, __) =>
+                                              const Divider(
+                                                  height: 1,
+                                                  color: Color(0xFFE2EBF0)),
+                                          itemBuilder: (ctx, i) =>
+                                              _AdListTile(ad: ads[i]),
                                         )
                                       : GridView.builder(
                                           padding: const EdgeInsets.all(12),
@@ -475,9 +478,7 @@ class _CategorySheet extends StatelessWidget {
   final VoidCallback onClear;
 
   const _CategorySheet(
-      {required this.selected,
-      required this.onSelect,
-      required this.onClear});
+      {required this.selected, required this.onSelect, required this.onClear});
 
   @override
   Widget build(BuildContext context) {
@@ -525,7 +526,8 @@ class _CategorySheet extends StatelessWidget {
                 final c = _categories[i];
                 final isSelected = c['slug'] == selected;
                 return ListTile(
-                  leading: Text(c['icon']!, style: const TextStyle(fontSize: 20)),
+                  leading:
+                      Text(c['icon']!, style: const TextStyle(fontSize: 20)),
                   title: Text(
                     c['name']!,
                     style: TextStyle(
@@ -559,9 +561,7 @@ class _ProvinceSheet extends StatefulWidget {
   final VoidCallback onClear;
 
   const _ProvinceSheet(
-      {required this.selected,
-      required this.onSelect,
-      required this.onClear});
+      {required this.selected, required this.onSelect, required this.onClear});
 
   @override
   State<_ProvinceSheet> createState() => _ProvinceSheetState();
@@ -580,8 +580,7 @@ class _ProvinceSheetState extends State<_ProvinceSheet> {
   void _filter(String q) {
     setState(() {
       _filtered = _provinces
-          .where((p) =>
-              p['name']!.toLowerCase().contains(q.toLowerCase()))
+          .where((p) => p['name']!.toLowerCase().contains(q.toLowerCase()))
           .toList();
     });
   }
@@ -611,8 +610,8 @@ class _ProvinceSheetState extends State<_ProvinceSheet> {
             child: Row(
               children: [
                 const Text('Şehir Seç',
-                    style: TextStyle(
-                        fontWeight: FontWeight.w700, fontSize: 16)),
+                    style:
+                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
                 const Spacer(),
                 if (widget.selected != null)
                   TextButton(
@@ -661,9 +660,8 @@ class _ProvinceSheetState extends State<_ProvinceSheet> {
                   title: Text(
                     p['name']!,
                     style: TextStyle(
-                      fontWeight: isSelected
-                          ? FontWeight.w700
-                          : FontWeight.w400,
+                      fontWeight:
+                          isSelected ? FontWeight.w700 : FontWeight.w400,
                       color: isSelected
                           ? const Color(0xFF00B4CC)
                           : const Color(0xFF0F1923),
@@ -844,8 +842,11 @@ class _AdListTile extends StatelessWidget {
           Text(
             ad.highestBidAmount != null
                 ? '₺${ad.highestBidAmount!.toStringAsFixed(0)}'
-                : (ad.startingBid != null ? '₺${ad.startingBid!.toStringAsFixed(0)}' : 'Serbest Teklif'),
-            style: const TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF00B4CC)),
+                : (ad.startingBid != null
+                    ? '₺${ad.startingBid!.toStringAsFixed(0)}'
+                    : 'Serbest Teklif'),
+            style: const TextStyle(
+                fontWeight: FontWeight.w700, color: Color(0xFF00B4CC)),
           ),
         ],
       ),
@@ -866,8 +867,7 @@ class _AdListTile extends StatelessWidget {
                       color: Color(0xFF00B4CC)),
                 )
               : ad.startingBid == null
-                  ? const Text('🔥',
-                      style: TextStyle(fontSize: 16))
+                  ? const Text('🔥', style: TextStyle(fontSize: 16))
                   : Text(
                       '₺${ad.startingBid!.toStringAsFixed(0)}',
                       style: const TextStyle(
@@ -892,13 +892,11 @@ class _EmptyState extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Text(hasFilters ? '🔍' : '📭',
-              style: const TextStyle(fontSize: 56)),
+          Text(hasFilters ? '🔍' : '📭', style: const TextStyle(fontSize: 56)),
           const SizedBox(height: 12),
           Text(
             hasFilters ? 'Sonuç bulunamadı' : 'Henüz ilan yok',
-            style:
-                const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+            style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
           ),
           const SizedBox(height: 8),
           Text(

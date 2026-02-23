@@ -114,8 +114,7 @@ class ConversationModel {
                 json['user2'] as Map<String, dynamic>)
             : null,
         lastMessage: json['lastMessage'] != null
-            ? MessageModel.fromJson(
-                json['lastMessage'] as Map<String, dynamic>)
+            ? MessageModel.fromJson(json['lastMessage'] as Map<String, dynamic>)
             : null,
         unreadCount: json['unreadCount'] as int? ?? 0,
       );

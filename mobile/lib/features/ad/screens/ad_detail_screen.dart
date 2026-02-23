@@ -9,7 +9,8 @@ import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/favorites_provider.dart';
 import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 
-final adDetailProvider = FutureProvider.family<AdModel, String>((ref, id) async {
+final adDetailProvider =
+    FutureProvider.family<AdModel, String>((ref, id) async {
   final res = await ApiClient().get(Endpoints.adById(id));
   return AdModel.fromJson(res.data as Map<String, dynamic>);
 });
@@ -94,8 +95,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
 
   void _snack(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context)
-        .showSnackBar(SnackBar(content: Text(msg)));
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   String _formatPrice(double p) =>
@@ -109,8 +109,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
 
     return Scaffold(
       body: adAsync.when(
-        loading: () =>
-            const Center(child: CircularProgressIndicator()),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Scaffold(
           appBar: AppBar(),
           body: Center(child: Text('Hata: $e')),
@@ -168,9 +167,11 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                           }
                           try {
                             if (isFav) {
-                              await ApiClient().delete(Endpoints.favoriteById(ad.id));
+                              await ApiClient()
+                                  .delete(Endpoints.favoriteById(ad.id));
                             } else {
-                              await ApiClient().post(Endpoints.favorites, data: {'adId': ad.id});
+                              await ApiClient().post(Endpoints.favorites,
+                                  data: {'adId': ad.id});
                             }
                             ref.invalidate(favoritesProvider);
                           } catch (e) {
@@ -219,8 +220,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                       Row(
                         children: [
                           if (ad.category != null)
-                            _Chip(
-                                '${ad.category!.icon} ${ad.category!.name}',
+                            _Chip('${ad.category!.icon} ${ad.category!.name}',
                                 color: const Color(0xFFE6F9FC),
                                 textColor: const Color(0xFF008FA3)),
                           const SizedBox(width: 8),
@@ -262,7 +262,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                           decoration: BoxDecoration(
                             color: const Color(0xFFE6F9FC),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: const Color(0xFF00B4CC).withOpacity(0.2)),
+                            border: Border.all(
+                                color:
+                                    const Color(0xFF00B4CC).withOpacity(0.2)),
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -272,7 +274,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                 children: [
                                   const Text('Sabit Fiyatlı Ürün',
                                       style: TextStyle(
-                                          color: Color(0xFF00B4CC), fontSize: 13, fontWeight: FontWeight.w600)),
+                                          color: Color(0xFF00B4CC),
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600)),
                                   const SizedBox(height: 4),
                                   Text(
                                     _formatPrice(ad.price),
@@ -284,15 +288,24 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                 ],
                               ),
                               Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
                                 decoration: BoxDecoration(
-                                  color: ad.status == 'ACTIVE' ? const Color(0xFF00B4CC).withOpacity(0.1) : Colors.grey.shade200,
+                                  color: ad.status == 'ACTIVE'
+                                      ? const Color(0xFF00B4CC).withOpacity(0.1)
+                                      : Colors.grey.shade200,
                                   borderRadius: BorderRadius.circular(20),
                                 ),
                                 child: Text(
-                                  ad.status == 'ACTIVE' ? 'Yayında' : (ad.status == 'SOLD' ? 'Satıldı' : 'Süresi Doldu'),
+                                  ad.status == 'ACTIVE'
+                                      ? 'Yayında'
+                                      : (ad.status == 'SOLD'
+                                          ? 'Satıldı'
+                                          : 'Süresi Doldu'),
                                   style: TextStyle(
-                                    color: ad.status == 'ACTIVE' ? const Color(0xFF00B4CC) : Colors.grey.shade600,
+                                    color: ad.status == 'ACTIVE'
+                                        ? const Color(0xFF00B4CC)
+                                        : Colors.grey.shade600,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -312,9 +325,13 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(ad.bids.isNotEmpty ? 'Güncel Fiyat' : 'Açılış Fiyatı',
+                                  Text(
+                                      ad.bids.isNotEmpty
+                                          ? 'Güncel Fiyat'
+                                          : 'Açılış Fiyatı',
                                       style: const TextStyle(
-                                          color: Color(0xFF9AAAB8), fontSize: 12)),
+                                          color: Color(0xFF9AAAB8),
+                                          fontSize: 12)),
                                   Text(
                                     ad.bids.isNotEmpty
                                         ? _formatPrice(ad.bids.first.amount)
@@ -334,7 +351,8 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                 children: [
                                   const Text('Piyasa Değeri',
                                       style: TextStyle(
-                                          color: Color(0xFF9AAAB8), fontSize: 12)),
+                                          color: Color(0xFF9AAAB8),
+                                          fontSize: 12)),
                                   Text(
                                     _formatPrice(ad.price),
                                     style: const TextStyle(
@@ -346,7 +364,8 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                   const SizedBox(height: 4),
                                   const Text('Pey Aralığı',
                                       style: TextStyle(
-                                          color: Color(0xFF9AAAB8), fontSize: 12)),
+                                          color: Color(0xFF9AAAB8),
+                                          fontSize: 12)),
                                   Text(
                                     '+${_formatPrice(ad.minBidStep)}',
                                     style: const TextStyle(
@@ -367,7 +386,10 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                       const SizedBox(height: 8),
                       Text(ad.description,
                           style: TextStyle(
-                              color: Theme.of(context).colorScheme.onSurface.withOpacity(0.7),
+                              color: Theme.of(context)
+                                  .colorScheme
+                                  .onSurface
+                                  .withOpacity(0.7),
                               height: 1.6)),
                       const SizedBox(height: 24),
                       // Seller info
@@ -450,12 +472,14 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                 color: const Color(0xFFF0FDF4),
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                    color: const Color(0xFF22C55E).withOpacity(0.4)),
+                                    color: const Color(0xFF22C55E)
+                                        .withOpacity(0.4)),
                               ),
                               child: Column(
                                 children: [
                                   Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
                                     children: [
                                       const Text('Hemen Al Fiyatı',
                                           style: TextStyle(
@@ -485,12 +509,15 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                       height: 48,
                                       child: ElevatedButton.icon(
                                         style: ElevatedButton.styleFrom(
-                                          backgroundColor: const Color(0xFF22C55E),
+                                          backgroundColor:
+                                              const Color(0xFF22C55E),
                                           foregroundColor: Colors.white,
                                         ),
                                         onPressed: () {
-                                          final initialMsg = 'Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı Hemen Al fiyatı olan ${_formatPrice(ad.buyItNowPrice!)} üzerinden satın almak istiyorum.';
-                                          context.push('/messages/chat/${ad.userId}?initialMessage=$initialMsg');
+                                          final initialMsg =
+                                              'Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı Hemen Al fiyatı olan ${_formatPrice(ad.buyItNowPrice!)} üzerinden satın almak istiyorum.';
+                                          context.push(
+                                              '/messages/chat/${ad.userId}?initialMessage=$initialMsg');
                                         },
                                         icon: const Icon(Icons.flash_on),
                                         label: const Text('Hemen Satın Al'),
@@ -539,19 +566,25 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             )
                           else
                             (() {
-                              final double currentHighest = ad.bids.isNotEmpty ? ad.bids.first.amount : (ad.startingBid ?? 0.0);
-                              final double minRequiredBid = ad.bids.isNotEmpty ? (currentHighest + ad.minBidStep) : (ad.startingBid ?? 1.0);
+                              final double currentHighest = ad.bids.isNotEmpty
+                                  ? ad.bids.first.amount
+                                  : (ad.startingBid ?? 0.0);
+                              final double minRequiredBid = ad.bids.isNotEmpty
+                                  ? (currentHighest + ad.minBidStep)
+                                  : (ad.startingBid ?? 1.0);
 
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Expanded(
                                         child: TextField(
                                           controller: _bidCtrl,
-                                          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                          keyboardType: const TextInputType
+                                              .numberWithOptions(decimal: true),
                                           inputFormatters: [
                                             CurrencyTextInputFormatter.currency(
                                               locale: 'tr_TR',
@@ -562,7 +595,8 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                           decoration: InputDecoration(
                                             hintText: 'Teklif miktarı (₺)',
                                             prefixIcon: const Icon(Icons.gavel),
-                                            helperText: 'En az ${_formatPrice(minRequiredBid)}',
+                                            helperText:
+                                                'En az ${_formatPrice(minRequiredBid)}',
                                           ),
                                         ),
                                       ),
@@ -572,15 +606,17 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                         child: SizedBox(
                                           height: 48,
                                           child: ElevatedButton(
-                                            onPressed:
-                                                _bidLoading ? null : () => _placeBid(ad),
+                                            onPressed: _bidLoading
+                                                ? null
+                                                : () => _placeBid(ad),
                                             child: _bidLoading
                                                 ? const SizedBox(
                                                     width: 20,
                                                     height: 20,
-                                                    child: CircularProgressIndicator(
-                                                        color: Colors.white,
-                                                        strokeWidth: 2))
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                            color: Colors.white,
+                                                            strokeWidth: 2))
                                                 : const Text('Ver'),
                                           ),
                                         ),
@@ -640,7 +676,8 @@ class _Chip extends StatelessWidget {
       decoration:
           BoxDecoration(color: color, borderRadius: BorderRadius.circular(100)),
       child: Text(label,
-          style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.w600)),
+          style: TextStyle(
+              color: textColor, fontSize: 12, fontWeight: FontWeight.w600)),
     );
   }
 }
@@ -684,7 +721,8 @@ class _BidTile extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    if (isTop) const Text('🏆 ', style: TextStyle(fontSize: 16)),
+                    if (isTop)
+                      const Text('🏆 ', style: TextStyle(fontSize: 16)),
                     Text(bid.user?.name ?? 'Anonim',
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],

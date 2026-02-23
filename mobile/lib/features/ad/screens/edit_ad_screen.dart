@@ -49,15 +49,20 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
       final res = await ApiClient().get(Endpoints.adById(widget.adId));
       final ad = AdModel.fromJson(res.data as Map<String, dynamic>);
       setState(() {
-        final formatter = CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2);
+        final formatter = CurrencyTextInputFormatter.currency(
+            locale: 'tr_TR', symbol: '', decimalDigits: 2);
         _titleCtrl.text = ad.title;
         _descCtrl.text = ad.description;
         _priceCtrl.text = formatter.formatDouble(ad.price);
         _minBidStepCtrl.text = formatter.formatDouble(ad.minBidStep);
         _isFixedPrice = ad.isFixedPrice;
         _freeBid = ad.startingBid == null;
-        _startBidCtrl.text = ad.startingBid != null ? formatter.formatDouble(ad.startingBid!) : '';
-        _buyItNowCtrl.text = ad.buyItNowPrice != null ? formatter.formatDouble(ad.buyItNowPrice!) : '';
+        _startBidCtrl.text = ad.startingBid != null
+            ? formatter.formatDouble(ad.startingBid!)
+            : '';
+        _buyItNowCtrl.text = ad.buyItNowPrice != null
+            ? formatter.formatDouble(ad.buyItNowPrice!)
+            : '';
         _loading = false;
       });
     } catch (_) {
@@ -71,24 +76,29 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
       await ApiClient().patch(Endpoints.adById(widget.adId), data: {
         'title': _titleCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
-        'price': double.parse(_priceCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
+        'price': double.parse(
+            _priceCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'isFixedPrice': _isFixedPrice,
         'startingBid': _isFixedPrice || _freeBid
             ? null
             : (_startBidCtrl.text.isEmpty
                 ? null
-                : double.parse(_startBidCtrl.text.replaceAll('.', '').replaceAll(',', '.'))),
+                : double.parse(_startBidCtrl.text
+                    .replaceAll('.', '')
+                    .replaceAll(',', '.'))),
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
-            : double.parse(_minBidStepCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
+            : double.parse(
+                _minBidStepCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
             ? null
-            : double.parse(_buyItNowCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
+            : double.parse(
+                _buyItNowCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
       });
       ref.invalidate(adsProvider(const FilterState()));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('İlan güncellendi! ✅')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('İlan güncellendi! ✅')));
         context.pop();
       }
     } catch (e) {
@@ -104,24 +114,22 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
   @override
   Widget build(BuildContext context) {
     if (_loading) {
-      return const Scaffold(
-          body: Center(child: CircularProgressIndicator()));
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/dashboard');
-            }
-          },
-        ),
-        title: const Text('İlanı Düzenle')
-      ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/dashboard');
+              }
+            },
+          ),
+          title: const Text('İlanı Düzenle')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -140,10 +148,15 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
             const SizedBox(height: 12),
             TextField(
               controller: _priceCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                CurrencyTextInputFormatter.currency(
+                    locale: 'tr_TR', symbol: '', decimalDigits: 2)
+              ],
               decoration: InputDecoration(
-                  labelText: _isFixedPrice ? 'Satış Fiyatı (₺)' : 'Piyasa Değeri (₺)',
+                  labelText:
+                      _isFixedPrice ? 'Satış Fiyatı (₺)' : 'Piyasa Değeri (₺)',
                   prefixIcon: const Icon(Icons.monetization_on_outlined)),
             ),
             const SizedBox(height: 12),
@@ -156,7 +169,8 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                       value: _isFixedPrice,
                       onChanged: (v) => setState(() => _isFixedPrice = v),
                       title: const Text('🛍️ Sabit Fiyatlı İlan'),
-                      subtitle: const Text('Ürün direkt belirlenen satış fiyatından tekliflere kapalı listelenir.'),
+                      subtitle: const Text(
+                          'Ürün direkt belirlenen satış fiyatından tekliflere kapalı listelenir.'),
                       contentPadding: EdgeInsets.zero,
                     ),
                     if (!_isFixedPrice) ...[
@@ -164,35 +178,48 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                       SwitchListTile(
                         value: _freeBid,
                         onChanged: (v) => setState(() => _freeBid = v),
-                        title: const Text('🔥 Serbest Teklif (1 ₺\'den başlar)'),
+                        title:
+                            const Text('🔥 Serbest Teklif (1 ₺\'den başlar)'),
                         contentPadding: EdgeInsets.zero,
                       ),
                       TextField(
                         controller: _startBidCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          CurrencyTextInputFormatter.currency(
+                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                        ],
                         decoration: const InputDecoration(
                             labelText: 'Minimum Açılış Teklifi (₺)'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _minBidStepCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          CurrencyTextInputFormatter.currency(
+                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                        ],
                         decoration: const InputDecoration(
                             labelText: 'Pey Aralığı (Minimum Artış) (₺)',
-                            helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
-                        ),
+                            helperText:
+                                'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _buyItNowCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          CurrencyTextInputFormatter.currency(
+                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                        ],
                         decoration: const InputDecoration(
                             labelText: 'Hemen Al Fiyatı (₺) (Opsiyonel)',
-                            helperText: 'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'
-                        ),
+                            helperText:
+                                'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'),
                       ),
                     ],
                   ],

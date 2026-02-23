@@ -113,22 +113,23 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                       ButtonSegment(value: 1, label: Text('Favorilerim')),
                     ],
                     selected: {_tabIndex},
-                    onSelectionChanged: (set) => setState(() => _tabIndex = set.first),
+                    onSelectionChanged: (set) =>
+                        setState(() => _tabIndex = set.first),
                   ),
                 ),
                 const SizedBox(width: 8),
                 IconButton.filled(
                   onPressed: () => context.push('/post-ad'),
                   icon: const Icon(Icons.add),
-                  style: IconButton.styleFrom(backgroundColor: const Color(0xFF00B4CC)),
+                  style: IconButton.styleFrom(
+                      backgroundColor: const Color(0xFF00B4CC)),
                 ),
               ],
             ),
             const SizedBox(height: 16),
             if (_tabIndex == 0)
               myAdsAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Text('Hata: $e'),
                 data: (ads) => ads.isEmpty
                     ? const Center(
@@ -141,8 +142,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               )
             else
               favsAsync.when(
-                loading: () =>
-                    const Center(child: CircularProgressIndicator()),
+                loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Text('Hata: $e'),
                 data: (ads) => ads.isEmpty
                     ? const Center(
@@ -150,7 +150,9 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                             padding: EdgeInsets.all(32),
                             child: Text('Henüz favoriniz yok.')))
                     : Column(
-                        children: ads.map((ad) => _MyAdTile(ad: ad, isFavorite: true)).toList(),
+                        children: ads
+                            .map((ad) => _MyAdTile(ad: ad, isFavorite: true))
+                            .toList(),
                       ),
               ),
           ],
@@ -180,8 +182,8 @@ class _StatCard extends StatelessWidget {
                       color: Color(0xFF00B4CC))),
               const SizedBox(height: 4),
               Text(label,
-                  style: const TextStyle(
-                      color: Color(0xFF9AAAB8), fontSize: 12),
+                  style:
+                      const TextStyle(color: Color(0xFF9AAAB8), fontSize: 12),
                   textAlign: TextAlign.center),
             ],
           ),
@@ -206,8 +208,8 @@ class _MyAdTile extends ConsumerWidget {
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('İşlem başarısız.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
       }
     }
   }
@@ -222,8 +224,8 @@ class _MyAdTile extends ConsumerWidget {
       }
     } catch (_) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('İşlem başarısız.')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
       }
     }
   }
@@ -233,8 +235,7 @@ class _MyAdTile extends ConsumerWidget {
     return Card(
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         title: Text(ad.title,
             style: const TextStyle(fontWeight: FontWeight.w600),
             maxLines: 1,

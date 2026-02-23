@@ -21,16 +21,14 @@ final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
 
 Future<void> _initLocalNotifications() async {
-  const androidSettings =
-      AndroidInitializationSettings('@mipmap/ic_launcher');
+  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const iosSettings = DarwinInitializationSettings(
     requestAlertPermission: true,
     requestBadgePermission: true,
     requestSoundPermission: true,
   );
   await _localNotifications.initialize(
-    const InitializationSettings(
-        android: androidSettings, iOS: iosSettings),
+    const InitializationSettings(android: androidSettings, iOS: iosSettings),
   );
 }
 
@@ -92,8 +90,7 @@ void main() async {
   timeago.setLocaleMessages('tr', timeago.TrMessages());
 
   // Firebase
-  await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
   // Background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);

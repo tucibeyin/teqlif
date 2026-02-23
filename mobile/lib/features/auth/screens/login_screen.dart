@@ -23,8 +23,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
-    final success =
-        await ref.read(authProvider.notifier).login(_emailCtrl.text.trim(), _passwordCtrl.text);
+    final success = await ref
+        .read(authProvider.notifier)
+        .login(_emailCtrl.text.trim(), _passwordCtrl.text);
     if (!success && mounted) {
       final error = ref.read(authProvider).error;
       ScaffoldMessenger.of(context)
@@ -62,8 +63,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               const Center(
                 child: Text(
                   'Türkiye\'nin En Büyük İlan Platformu',
-                  style:
-                      TextStyle(color: Color(0xFF9AAAB8), fontSize: 13),
+                  style: TextStyle(color: Color(0xFF9AAAB8), fontSize: 13),
                 ),
               ),
               const SizedBox(height: 48),

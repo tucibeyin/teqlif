@@ -63,10 +63,9 @@ class AppTheme {
             backgroundColor: _primary,
             foregroundColor: Colors.white,
             elevation: 0,
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             textStyle:
                 const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
           ),
@@ -75,10 +74,9 @@ class AppTheme {
           style: OutlinedButton.styleFrom(
             foregroundColor: _primary,
             side: const BorderSide(color: _primary),
-            padding:
-                const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
-            shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10)),
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            shape:
+                RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
             textStyle:
                 const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
           ),
@@ -94,8 +92,8 @@ class AppTheme {
           backgroundColor: const Color(0xFFE6F9FC),
           labelStyle:
               const TextStyle(color: _primaryDark, fontWeight: FontWeight.w500),
-          shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(100)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(100)),
           side: BorderSide.none,
         ),
         dividerTheme:

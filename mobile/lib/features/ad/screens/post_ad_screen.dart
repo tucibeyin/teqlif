@@ -106,19 +106,24 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
       await ApiClient().post(Endpoints.ads, data: {
         'title': _titleCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
-        'price': double.parse(_priceCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
+        'price': double.parse(
+            _priceCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'isFixedPrice': _isFixedPrice,
         'startingBid': _isFixedPrice || _freeBid
             ? null
             : (_startBidCtrl.text.isEmpty
                 ? null
-                : double.parse(_startBidCtrl.text.replaceAll('.', '').replaceAll(',', '.'))),
+                : double.parse(_startBidCtrl.text
+                    .replaceAll('.', '')
+                    .replaceAll(',', '.'))),
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
-            : double.parse(_minBidStepCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
+            : double.parse(
+                _minBidStepCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
             ? null
-            : double.parse(_buyItNowCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
+            : double.parse(
+                _buyItNowCtrl.text.replaceAll('.', '').replaceAll(',', '.')),
         'categorySlug': _selectedCategory,
         'provinceId': _selectedProvinceId,
         'districtId': _selectedProvinceId, // simplified: using same as province
@@ -128,8 +133,8 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
       ref.invalidate(myAdsProvider);
       ref.invalidate(adsProvider);
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('İlan yayınlandı! 🎉')));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text('İlan yayınlandı! 🎉')));
         context.go('/dashboard');
       }
     } catch (e) {
@@ -146,18 +151,17 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            if (context.canPop()) {
-              context.pop();
-            } else {
-              context.go('/home');
-            }
-          },
-        ),
-        title: const Text('İlan Ver')
-      ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () {
+              if (context.canPop()) {
+                context.pop();
+              } else {
+                context.go('/home');
+              }
+            },
+          ),
+          title: const Text('İlan Ver')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -182,8 +186,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                               color: Color(0xFF9AAAB8), size: 36),
                           SizedBox(height: 8),
                           Text('Fotoğraf Ekle',
-                              style:
-                                  TextStyle(color: Color(0xFF9AAAB8))),
+                              style: TextStyle(color: Color(0xFF9AAAB8))),
                         ],
                       )
                     : ListView.builder(
@@ -195,9 +198,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: Image.file(_images[i],
-                                width: 100,
-                                height: 120,
-                                fit: BoxFit.cover),
+                                width: 100, height: 120, fit: BoxFit.cover),
                           ),
                         ),
                       ),
@@ -230,18 +231,23 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
               value: _selectedProvinceId,
               decoration: const InputDecoration(labelText: 'Şehir'),
               items: _provinces
-                  .map((p) => DropdownMenuItem(
-                      value: p['id'], child: Text(p['name']!)))
+                  .map((p) =>
+                      DropdownMenuItem(value: p['id'], child: Text(p['name']!)))
                   .toList(),
               onChanged: (v) => setState(() => _selectedProvinceId = v),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _priceCtrl,
-              keyboardType: const TextInputType.numberWithOptions(decimal: true),
-              inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              inputFormatters: [
+                CurrencyTextInputFormatter.currency(
+                    locale: 'tr_TR', symbol: '', decimalDigits: 2)
+              ],
               decoration: InputDecoration(
-                  labelText: _isFixedPrice ? 'Satış Fiyatı (₺)' : 'Piyasa Değeri (₺)',
+                  labelText:
+                      _isFixedPrice ? 'Satış Fiyatı (₺)' : 'Piyasa Değeri (₺)',
                   prefixIcon: const Icon(Icons.monetization_on_outlined)),
             ),
             const SizedBox(height: 12),
@@ -255,7 +261,8 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                       value: _isFixedPrice,
                       onChanged: (v) => setState(() => _isFixedPrice = v),
                       title: const Text('🛍️ Sabit Fiyatlı İlan'),
-                      subtitle: const Text('Ürün direkt belirlenen satış fiyatından tekliflere kapalı listelenir.'),
+                      subtitle: const Text(
+                          'Ürün direkt belirlenen satış fiyatından tekliflere kapalı listelenir.'),
                       contentPadding: EdgeInsets.zero,
                     ),
                     if (!_isFixedPrice) ...[
@@ -263,35 +270,48 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                       SwitchListTile(
                         value: _freeBid,
                         onChanged: (v) => setState(() => _freeBid = v),
-                        title: const Text('🔥 Serbest Teklif (1 ₺\'den başlar)'),
+                        title:
+                            const Text('🔥 Serbest Teklif (1 ₺\'den başlar)'),
                         contentPadding: EdgeInsets.zero,
                       ),
                       TextField(
                         controller: _startBidCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          CurrencyTextInputFormatter.currency(
+                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                        ],
                         decoration: const InputDecoration(
                             labelText: 'Minimum Açılış Teklifi (₺)'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _minBidStepCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          CurrencyTextInputFormatter.currency(
+                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                        ],
                         decoration: const InputDecoration(
                             labelText: 'Pey Aralığı (Minimum Artış) (₺)',
-                            helperText: 'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'
-                        ),
+                            helperText:
+                                'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
                         controller: _buyItNowCtrl,
-                        keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                        inputFormatters: [CurrencyTextInputFormatter.currency(locale: 'tr_TR', symbol: '', decimalDigits: 2)],
+                        keyboardType: const TextInputType.numberWithOptions(
+                            decimal: true),
+                        inputFormatters: [
+                          CurrencyTextInputFormatter.currency(
+                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                        ],
                         decoration: const InputDecoration(
                             labelText: 'Hemen Al Fiyatı (₺) (Opsiyonel)',
-                            helperText: 'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'
-                        ),
+                            helperText:
+                                'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'),
                       ),
                     ],
                   ],

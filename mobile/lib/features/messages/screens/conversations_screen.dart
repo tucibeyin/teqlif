@@ -32,8 +32,7 @@ class ConversationsScreen extends ConsumerWidget {
         data: (convs) => convs.isEmpty
             ? const Center(child: Text('Henüz mesajınız yok.'))
             : RefreshIndicator(
-                onRefresh: () =>
-                    ref.refresh(conversationsProvider.future),
+                onRefresh: () => ref.refresh(conversationsProvider.future),
                 child: ListView.builder(
                   itemCount: convs.length,
                   itemBuilder: (_, i) {
@@ -46,8 +45,7 @@ class ConversationsScreen extends ConsumerWidget {
                         child: Text(
                           (other?.name ?? 'U')[0].toUpperCase(),
                           style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold),
+                              color: Colors.white, fontWeight: FontWeight.bold),
                         ),
                       ),
                       title: Text(other?.name ?? 'Kullanıcı',

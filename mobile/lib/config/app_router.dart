@@ -77,16 +77,14 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, state) =>
                 AdDetailScreen(adId: state.pathParameters['id']!),
           ),
-          GoRoute(
-              path: '/post-ad', builder: (_, __) => const PostAdScreen()),
+          GoRoute(path: '/post-ad', builder: (_, __) => const PostAdScreen()),
           GoRoute(
             path: '/edit-ad/:id',
             builder: (_, state) =>
                 EditAdScreen(adId: state.pathParameters['id']!),
           ),
           GoRoute(
-              path: '/dashboard',
-              builder: (_, __) => const DashboardScreen()),
+              path: '/dashboard', builder: (_, __) => const DashboardScreen()),
           GoRoute(
               path: '/messages',
               builder: (_, __) => const ConversationsScreen()),

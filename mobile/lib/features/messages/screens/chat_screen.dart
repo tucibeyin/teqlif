@@ -8,7 +8,8 @@ import '../../../core/api/endpoints.dart';
 import '../../../core/models/message.dart';
 import '../../../core/providers/auth_provider.dart';
 
-final singleConversationProvider = FutureProvider.family<ConversationModel, String>((ref, id) async {
+final singleConversationProvider =
+    FutureProvider.family<ConversationModel, String>((ref, id) async {
   final res = await ApiClient().get('${Endpoints.conversations}/$id');
   return ConversationModel.fromJson(res.data as Map<String, dynamic>);
 });
@@ -33,7 +34,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     _loadMessages();
     // Poll for new messages every 3 seconds
-    _pollTimer = Timer.periodic(const Duration(seconds: 3), (_) => _loadMessages());
+    _pollTimer =
+        Timer.periodic(const Duration(seconds: 3), (_) => _loadMessages());
   }
 
   @override
@@ -46,8 +48,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Future<void> _loadMessages() async {
     try {
-      final res = await ApiClient()
-          .get(Endpoints.messages, params: {'conversationId': widget.conversationId});
+      final res = await ApiClient().get(Endpoints.messages,
+          params: {'conversationId': widget.conversationId});
       final list = res.data as List<dynamic>;
       if (mounted) {
         setState(() {
@@ -93,7 +95,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     final currentUserId = ref.watch(authProvider).user?.id ?? '';
-    final convAsync = ref.watch(singleConversationProvider(widget.conversationId));
+    final convAsync =
+        ref.watch(singleConversationProvider(widget.conversationId));
 
     return Scaffold(
       appBar: AppBar(
@@ -125,14 +128,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 onTap: () => context.push('/ad/${conv.ad!.id}'),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   decoration: const BoxDecoration(
                     color: Color(0xFFF4F7FA),
-                    border: Border(bottom: BorderSide(color: Color(0xFFE2EBF0))),
+                    border:
+                        Border(bottom: BorderSide(color: Color(0xFFE2EBF0))),
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.sell_outlined, size: 18, color: Color(0xFF00B4CC)),
+                      const Icon(Icons.sell_outlined,
+                          size: 18, color: Color(0xFF00B4CC)),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
@@ -146,7 +152,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
-                      const Icon(Icons.chevron_right, size: 18, color: Color(0xFF00B4CC)),
+                      const Icon(Icons.chevron_right,
+                          size: 18, color: Color(0xFF00B4CC)),
                     ],
                   ),
                 ),
@@ -197,9 +204,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                         Text(
                           msg.content,
                           style: TextStyle(
-                            color: isMine
-                                ? Colors.white
-                                : const Color(0xFF0F1923),
+                            color:
+                                isMine ? Colors.white : const Color(0xFF0F1923),
                             fontSize: 14,
                           ),
                         ),
