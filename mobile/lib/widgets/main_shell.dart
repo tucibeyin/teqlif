@@ -26,9 +26,7 @@ class MainShell extends ConsumerWidget {
 
     return Scaffold(
       body: child,
-      bottomNavigationBar: isAuth
-          ? null
-          : NavigationBar(
+      bottomNavigationBar: NavigationBar(
               selectedIndex: currentIndex,
               onDestinationSelected: (index) {
                 switch (index) {
