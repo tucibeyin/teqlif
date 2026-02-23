@@ -102,35 +102,42 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
         imageUrls.add(res.data['url'] as String);
       }
 
+      final pStr = _priceCtrl.text
+          .replaceAll('₺', '')
+          .replaceAll(' ', '')
+          .replaceAll('.', '')
+          .replaceAll(',', '.');
+      final sStr = _startBidCtrl.text
+          .replaceAll('₺', '')
+          .replaceAll(' ', '')
+          .replaceAll('.', '')
+          .replaceAll(',', '.');
+      final mStr = _minBidStepCtrl.text
+          .replaceAll('₺', '')
+          .replaceAll(' ', '')
+          .replaceAll('.', '')
+          .replaceAll(',', '.');
+      final bStr = _buyItNowCtrl.text
+          .replaceAll('₺', '')
+          .replaceAll(' ', '')
+          .replaceAll('.', '')
+          .replaceAll(',', '.');
+
       // Create ad
       await ApiClient().post(Endpoints.ads, data: {
         'title': _titleCtrl.text.trim(),
         'description': _descCtrl.text.trim(),
-        'price': double.parse(_priceCtrl.text
-            .replaceAll('₺', '')
-            .replaceAll(' ', '')
-            .replaceAll('.', '')),
+        'price': double.parse(pStr),
         'isFixedPrice': _isFixedPrice,
         'startingBid': _isFixedPrice || _freeBid
             ? null
-            : (_startBidCtrl.text.isEmpty
-                ? null
-                : double.parse(_startBidCtrl.text
-                    .replaceAll('₺', '')
-                    .replaceAll(' ', '')
-                    .replaceAll('.', ''))),
+            : (_startBidCtrl.text.isEmpty ? null : double.parse(sStr)),
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
-            : double.parse(_minBidStepCtrl.text
-                .replaceAll('₺', '')
-                .replaceAll(' ', '')
-                .replaceAll('.', '')),
+            : double.parse(mStr),
         'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
             ? null
-            : double.parse(_buyItNowCtrl.text
-                .replaceAll('₺', '')
-                .replaceAll(' ', '')
-                .replaceAll('.', '')),
+            : double.parse(bStr),
         'categorySlug': _selectedCategory,
         'provinceId': _selectedProvinceId,
         'districtId': _selectedProvinceId, // simplified: using same as province
@@ -225,7 +232,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
             const SizedBox(height: 12),
             // Category dropdown
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
+              initialValue: _selectedCategory,
               decoration: const InputDecoration(labelText: 'Kategori'),
               items: _categories
                   .map((c) => DropdownMenuItem(
@@ -235,7 +242,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
             ),
             const SizedBox(height: 12),
             DropdownButtonFormField<String>(
-              value: _selectedProvinceId,
+              initialValue: _selectedProvinceId,
               decoration: const InputDecoration(labelText: 'Şehir'),
               items: _provinces
                   .map((p) =>

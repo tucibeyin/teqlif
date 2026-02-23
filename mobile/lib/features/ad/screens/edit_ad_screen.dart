@@ -79,7 +79,8 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         'price': double.parse(_priceCtrl.text
             .replaceAll('₺', '')
             .replaceAll(' ', '')
-            .replaceAll('.', '')),
+            .replaceAll('.', '')
+            .replaceAll(',', '.')),
         'isFixedPrice': _isFixedPrice,
         'startingBid': _isFixedPrice || _freeBid
             ? null
@@ -88,19 +89,22 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                 : double.parse(_startBidCtrl.text
                     .replaceAll('₺', '')
                     .replaceAll(' ', '')
-                    .replaceAll('.', ''))),
+                    .replaceAll('.', '')
+                    .replaceAll(',', '.'))),
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
             : double.parse(_minBidStepCtrl.text
                 .replaceAll('₺', '')
                 .replaceAll(' ', '')
-                .replaceAll('.', '')),
+                .replaceAll('.', '')
+                .replaceAll(',', '.')),
         'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
             ? null
             : double.parse(_buyItNowCtrl.text
                 .replaceAll('₺', '')
                 .replaceAll(' ', '')
-                .replaceAll('.', '')),
+                .replaceAll('.', '')
+                .replaceAll(',', '.')),
       });
       ref.invalidate(adsProvider(const FilterState()));
       if (mounted) {

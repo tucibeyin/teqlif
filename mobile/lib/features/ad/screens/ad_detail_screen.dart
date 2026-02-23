@@ -35,7 +35,11 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   }
 
   Future<void> _placeBid(AdModel ad) async {
-    final rawText = _bidCtrl.text.replaceAll('₺', '').replaceAll(' ', '').replaceAll('.', '');
+    final rawText = _bidCtrl.text
+        .replaceAll('₺', '')
+        .replaceAll(' ', '')
+        .replaceAll('.', '')
+        .replaceAll(',', '.');
     final amount = double.tryParse(rawText);
     if (amount == null) {
       _snack('Geçerli bir teklif miktarı girin.');
