@@ -1,16 +1,17 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import bcrypt from "bcryptjs";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function GET(request: Request) {
     try {
-        const session = await auth();
-        if (!session?.user) {
+        const userSession = await getMobileUser(request);
+        if (!userSession?.id) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
 
         const user = await prisma.user.findUnique({
-            where: { id: session.user.id },
+            where: { id: userSession.id },
             select: { name: true, email: true, phone: true }
         });
 
@@ -27,29 +28,39 @@ export async function GET(request: Request) {
 
 export async function PATCH(request: Request) {
     try {
-        const session = await auth();
-        if (!session?.user) {
+        const userSession = await getMobileUser(request);
+        if (!userSession?.id) {
             return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
         }
 
         const body = await request.json();
-        const { name, email, phone } = body;
+        const { name, email, phone, password, passwordConfirm } = body;
 
         if (!name || !email) {
             return NextResponse.json({ message: "Ad ve E-posta alanları zorunludur" }, { status: 400 });
         }
 
+        if (password && password !== passwordConfirm) {
+            return NextResponse.json({ message: "Şifreler birbiriyle eşleşmiyor" }, { status: 400 });
+        }
+
         // Email uniqueness check if email was changed
-        if (email !== session.user.email) {
+        if (email !== userSession.email) {
             const existing = await prisma.user.findUnique({ where: { email } });
             if (existing) {
                 return NextResponse.json({ message: "Bu e-posta adresi zaten kullanılıyor" }, { status: 400 });
             }
         }
 
+        const updateData: any = { name, email, phone: phone || null };
+
+        if (password) {
+            updateData.password = await bcrypt.hash(password, 10);
+        }
+
         const updatedUser = await prisma.user.update({
-            where: { id: session.user.id },
-            data: { name, email, phone: phone || null }
+            where: { id: userSession.id },
+            data: updateData
         });
 
         return NextResponse.json({

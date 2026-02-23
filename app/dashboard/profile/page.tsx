@@ -13,6 +13,8 @@ export default function ProfilePage() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
+    const [password, setPassword] = useState("");
+    const [passwordConfirm, setPasswordConfirm] = useState("");
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "" });
@@ -45,7 +47,7 @@ export default function ProfilePage() {
             const res = await fetch("/api/profile", {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, email, phone })
+                body: JSON.stringify({ name, email, phone, password, passwordConfirm })
             });
 
             const data = await res.json();
@@ -136,6 +138,34 @@ export default function ProfilePage() {
                                 value={phone}
                                 onChange={(e) => setPhone(e.target.value)}
                                 placeholder="05XX XXX XX XX"
+                            />
+                        </div>
+
+                        <hr style={{ margin: "2rem 0", border: "none", borderTop: "1px solid var(--border)" }} />
+
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="password">Yeni Şifre</label>
+                            <input
+                                id="password"
+                                type="password"
+                                className="form-input"
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="Değiştirmek istemiyorsanız boş bırakın"
+                                minLength={6}
+                            />
+                        </div>
+
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="passwordConfirm">Yeni Şifre (Tekrar)</label>
+                            <input
+                                id="passwordConfirm"
+                                type="password"
+                                className="form-input"
+                                value={passwordConfirm}
+                                onChange={(e) => setPasswordConfirm(e.target.value)}
+                                placeholder="Yeni şifrenizi tekrar girin"
+                                minLength={6}
                             />
                         </div>
 

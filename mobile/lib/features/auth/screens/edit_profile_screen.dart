@@ -17,6 +17,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _emailCtrl;
   late final TextEditingController _phoneCtrl;
+  late final TextEditingController _passwordCtrl;
+  late final TextEditingController _passwordConfirmCtrl;
   
   bool _isLoading = false;
   bool _isSaving = false;
@@ -28,6 +30,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _nameCtrl = TextEditingController();
     _emailCtrl = TextEditingController();
     _phoneCtrl = TextEditingController();
+    _passwordCtrl = TextEditingController();
+    _passwordConfirmCtrl = TextEditingController();
     _fetchProfile();
   }
 
@@ -58,10 +62,29 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
 
     try {
       final messenger = ScaffoldMessenger.of(context);
+      
+      final password = _passwordCtrl.text;
+      final confirm = _passwordConfirmCtrl.text;
+      
+      if (password.isNotEmpty) {
+        if (password.length < 6) {
+          setState(() => _error = 'Şifre en az 6 karakter olmalıdır');
+          if (mounted) setState(() => _isSaving = false);
+          return;
+        }
+        if (password != confirm) {
+          setState(() => _error = 'Şifreler birbiriyle eşleşmiyor');
+          if (mounted) setState(() => _isSaving = false);
+          return;
+        }
+      }
+
       final res = await ApiClient().patch('/api/profile', data: {
         'name': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
+        if (password.isNotEmpty) 'password': password,
+        if (password.isNotEmpty) 'passwordConfirm': confirm,
       });
 
       if (res.statusCode == 200) {
@@ -93,6 +116,8 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _passwordCtrl.dispose();
+    _passwordConfirmCtrl.dispose();
     super.dispose();
   }
 
@@ -152,6 +177,22 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       controller: _phoneCtrl,
                       keyboardType: TextInputType.phone,
                       decoration: const InputDecoration(hintText: '05XX XXX XX XX (İsteğe bağlı)'),
+                    ),
+                    const Divider(height: 48, thickness: 1),
+                    const Text('Yeni Şifre', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _passwordCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(hintText: 'Değiştirmek istemiyorsanız boş bırakın'),
+                    ),
+                    const SizedBox(height: 20),
+                    const Text('Yeni Şifre (Tekrar)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _passwordConfirmCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(hintText: 'Yeni şifrenizi tekrar girin'),
                     ),
                     const SizedBox(height: 32),
                     ElevatedButton(
