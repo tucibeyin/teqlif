@@ -849,10 +849,6 @@ class _AdListTile extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
       trailing: ad.highestBidAmount != null
           ? Text(
               'Güncel ₺${ad.highestBidAmount!.toStringAsFixed(0)}',
@@ -879,7 +875,6 @@ class _AdListTile extends StatelessWidget {
                           fontSize: 13,
                           color: Color(0xFF00B4CC)),
                     ),
-      onTap: () => context.push('/ad/${ad.id}'),
     );
   }
 }
