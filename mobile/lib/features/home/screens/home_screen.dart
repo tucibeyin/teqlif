@@ -111,7 +111,11 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     }
     setState(() => _isSearching = true);
     try {
-      final res = await ApiClient().get(Endpoints.search, params: {'q': q});
+      final params = <String, dynamic>{'status': 'ACTIVE', 'q': q};
+      if (_selectedCategorySlug != null) params['category'] = _selectedCategorySlug;
+      if (_selectedProvinceId != null) params['province'] = _selectedProvinceId;
+
+      final res = await ApiClient().get(Endpoints.ads, params: params);
       final list = res.data as List<dynamic>;
       setState(() {
         _searchResults = list
