@@ -57,15 +57,26 @@ export async function POST(req: NextRequest) {
             // Fail-open: allow the request to pass if Redis is unreachable
         }
 
-        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, categorySlug, provinceId, districtId, images } = await req.json();
+        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, categorySlug, provinceId, districtId: rawDistrictId, images } = await req.json();
 
-        if (!title || !description || !price || !categorySlug || !provinceId || !districtId) {
+        if (!title || !description || !price || !categorySlug || !provinceId || !rawDistrictId) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
         }
 
         const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
         if (!category) {
             return NextResponse.json({ error: "Geçersiz kategori." }, { status: 400 });
+        }
+
+        let districtId = rawDistrictId;
+        const districtExists = await prisma.district.findUnique({ where: { id: districtId } });
+        if (!districtExists) {
+            const firstDistrict = await prisma.district.findFirst({ where: { provinceId } });
+            if (firstDistrict) {
+                districtId = firstDistrict.id;
+            } else {
+                return NextResponse.json({ error: "Geçersiz ilçe." }, { status: 400 });
+            }
         }
 
         const ad = await prisma.ad.create({
