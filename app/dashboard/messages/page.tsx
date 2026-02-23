@@ -6,7 +6,7 @@ import { formatDistanceToNow } from "date-fns";
 import { tr } from "date-fns/locale";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { Send, ArrowLeft } from "lucide-react";
+import { Send, ArrowLeft, Trash2 } from "lucide-react";
 
 interface User {
     id: string;
@@ -110,6 +110,26 @@ function MessagesContent() {
             return () => clearInterval(interval);
         }
     }, [activeConversationId]);
+
+    const handleDeleteConversation = async (e: React.MouseEvent, conversationId: string) => {
+        e.stopPropagation();
+        if (!confirm("Sohbeti kalıcı olarak silmek istediğinize emin misiniz?")) return;
+
+        try {
+            const res = await fetch(`/api/conversations/${conversationId}`, { method: 'DELETE' });
+            if (res.ok) {
+                setConversations(prev => prev.filter(c => c.id !== conversationId));
+                if (activeConversationId === conversationId) {
+                    setActiveConversationId(null);
+                    setMessages([]);
+                }
+            } else {
+                alert("Sohbet silinemedi.");
+            }
+        } catch (error) {
+            console.error("Error deleting conversation", error);
+        }
+    };
 
     const handleSendMessage = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -220,18 +240,33 @@ function MessagesContent() {
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                                                 <div style={{ fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                                     {otherUser.name}
-                                                    {conv._count?.messages ? (
-                                                        <span style={{
-                                                            background: 'var(--primary)',
-                                                            color: 'white',
-                                                            fontSize: '0.7rem',
-                                                            padding: '2px 6px',
-                                                            borderRadius: '10px',
-                                                            fontWeight: 'bold'
-                                                        }}>
-                                                            {conv._count.messages}
-                                                        </span>
-                                                    ) : null}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                        {conv._count?.messages ? (
+                                                            <span style={{
+                                                                background: 'var(--primary)',
+                                                                color: 'white',
+                                                                fontSize: '0.7rem',
+                                                                padding: '2px 6px',
+                                                                borderRadius: '10px',
+                                                                fontWeight: 'bold'
+                                                            }}>
+                                                                {conv._count.messages}
+                                                            </span>
+                                                        ) : null}
+                                                        <button
+                                                            onClick={(e) => handleDeleteConversation(e, conv.id)}
+                                                            style={{
+                                                                background: "none",
+                                                                border: "none",
+                                                                color: "var(--text-muted)",
+                                                                cursor: "pointer",
+                                                                padding: "2px"
+                                                            }}
+                                                            title="Sohbeti Sil"
+                                                        >
+                                                            <Trash2 size={14} />
+                                                        </button>
+                                                    </div>
                                                 </div>
                                                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                                     {lastMessage ? formatDistanceToNow(new Date(lastMessage.createdAt), { addSuffix: true, locale: tr }) : ''}

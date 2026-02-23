@@ -63,3 +63,31 @@ export async function PATCH(request: Request) {
         );
     }
 }
+
+export async function DELETE(request: Request) {
+    try {
+        const currentUser = await getMobileUser(request);
+        if (!currentUser) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+
+        const url = new URL(request.url);
+        const id = url.searchParams.get("id");
+
+        if (id) {
+            await prisma.notification.delete({
+                where: { id, userId: currentUser.id }
+            });
+        } else {
+            await prisma.notification.deleteMany({
+                where: { userId: currentUser.id }
+            });
+        }
+
+        return NextResponse.json({ success: true, message: 'Bildirim(ler) silindi' });
+    } catch (error) {
+        console.error('Delete Notifications Error:', error);
+        return NextResponse.json(
+            { message: 'Bir hata oluştu' },
+            { status: 500 }
+        );
+    }
+}

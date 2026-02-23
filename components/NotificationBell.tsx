@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Notification {
@@ -81,6 +81,19 @@ export function NotificationBell() {
         }
     };
 
+    const deleteNotification = async (e: React.MouseEvent, id?: string) => {
+        e.stopPropagation();
+        try {
+            const url = id ? `/api/notifications?id=${id}` : "/api/notifications";
+            const res = await fetch(url, { method: "DELETE" });
+            if (res.ok) {
+                fetchNotifications(); // Refresh list immediately
+            }
+        } catch (error) {
+            console.error("Error deleting notification(s)", error);
+        }
+    };
+
     return (
         <div style={{ position: "relative" }} ref={containerRef}>
             <button
@@ -137,20 +150,40 @@ export function NotificationBell() {
                         }}
                     >
                         <h4 style={{ margin: 0, fontWeight: 600 }}>Bildirimler</h4>
-                        {unreadCount > 0 && (
-                            <button
-                                onClick={() => markAsRead()}
-                                style={{
-                                    fontSize: "0.8rem",
-                                    color: "var(--primary)",
-                                    background: "none",
-                                    border: "none",
-                                    cursor: "pointer",
-                                }}
-                            >
-                                Tümünü Okundu İşaretle
-                            </button>
-                        )}
+                        <div style={{ display: "flex", gap: "10px" }}>
+                            {unreadCount > 0 && (
+                                <button
+                                    onClick={() => markAsRead()}
+                                    style={{
+                                        fontSize: "0.8rem",
+                                        color: "var(--primary)",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    Tümünü Okundu İşaretle
+                                </button>
+                            )}
+                            {notifications.length > 0 && (
+                                <button
+                                    onClick={(e) => {
+                                        if (confirm("Tüm bildirimleri silmek istediğinize emin misiniz?")) {
+                                            deleteNotification(e);
+                                        }
+                                    }}
+                                    style={{
+                                        fontSize: "0.8rem",
+                                        color: "#ef4444",
+                                        background: "none",
+                                        border: "none",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    Tümünü Sil
+                                </button>
+                            )}
+                        </div>
                     </div>
                     <div style={{ maxHeight: "300px", overflowY: "auto" }}>
                         {notifications.length === 0 ? (
@@ -170,16 +203,32 @@ export function NotificationBell() {
                                         transition: "background 0.2s",
                                     }}
                                 >
-                                    <p
-                                        style={{
-                                            margin: 0,
-                                            fontSize: "0.9rem",
-                                            color: notif.isRead ? "var(--text-secondary)" : "var(--text-primary)",
-                                            fontWeight: notif.isRead ? 400 : 500,
-                                        }}
-                                    >
-                                        {notif.message}
-                                    </p>
+                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                        <p
+                                            style={{
+                                                margin: 0,
+                                                fontSize: "0.9rem",
+                                                color: notif.isRead ? "var(--text-secondary)" : "var(--text-primary)",
+                                                fontWeight: notif.isRead ? 400 : 500,
+                                                paddingRight: "8px"
+                                            }}
+                                        >
+                                            {notif.message}
+                                        </p>
+                                        <button
+                                            onClick={(e) => deleteNotification(e, notif.id)}
+                                            style={{
+                                                background: "none",
+                                                border: "none",
+                                                color: "var(--text-muted)",
+                                                cursor: "pointer",
+                                                padding: "4px"
+                                            }}
+                                            title="Bildirimi Sil"
+                                        >
+                                            <Trash2 size={16} />
+                                        </button>
+                                    </div>
                                     <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.25rem", display: "block" }}>
                                         {new Date(notif.createdAt).toLocaleDateString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
                                     </span>

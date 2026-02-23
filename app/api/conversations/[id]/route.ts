@@ -41,3 +41,41 @@ export async function GET(
         );
     }
 }
+
+export async function DELETE(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+        const currentUser = await getMobileUser(request);
+        if (!currentUser) {
+            return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
+        }
+
+        const conversation = await prisma.conversation.findUnique({
+            where: { id: id },
+            select: { user1Id: true, user2Id: true }
+        });
+
+        if (!conversation) {
+            return NextResponse.json({ message: 'Sohbet bulunamadı' }, { status: 404 });
+        }
+
+        if (conversation.user1Id !== currentUser.id && conversation.user2Id !== currentUser.id) {
+            return NextResponse.json({ message: 'Bu işlem için yetkiniz yok' }, { status: 403 });
+        }
+
+        await prisma.conversation.delete({
+            where: { id: id }
+        });
+
+        return NextResponse.json({ message: 'Sohbet başarıyla silindi' });
+    } catch (error) {
+        console.error('Delete Conversation Error:', error);
+        return NextResponse.json(
+            { message: 'Bir hata oluştu' },
+            { status: 500 }
+        );
+    }
+}

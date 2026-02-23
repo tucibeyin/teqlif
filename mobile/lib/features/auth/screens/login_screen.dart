@@ -23,15 +23,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _login() async {
+    final messenger = ScaffoldMessenger.of(context);
     final success = await ref
         .read(authProvider.notifier)
         .login(_emailCtrl.text.trim(), _passwordCtrl.text);
+
     if (!success && mounted) {
       final error = ref.read(authProvider).error;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error ?? 'Giriş başarısız.')));
-    } else if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(SnackBar(content: Text(error ?? 'Giriş başarısız.')));
+    } else if (success) {
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Başarıyla giriş yapıldı! ✅', style: TextStyle(color: Colors.white)),
           backgroundColor: Colors.green,

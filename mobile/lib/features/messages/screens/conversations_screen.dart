@@ -91,31 +91,69 @@ class ConversationsScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      trailing: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        crossAxisAlignment: CrossAxisAlignment.end,
+                      trailing: Row(
+                        mainAxisSize: MainAxisSize.min,
                         children: [
-                          if (lastMsg != null)
-                            Text(
-                              timeago.format(lastMsg.createdAt, locale: 'tr'),
-                              style: const TextStyle(
-                                  fontSize: 11, color: Color(0xFF9AAAB8)),
-                            ),
-                          if (conv.unreadCount > 0)
-                            Container(
-                              margin: const EdgeInsets.only(top: 4),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFF00B4CC),
-                                borderRadius: BorderRadius.circular(100),
-                              ),
-                              child: Text(
-                                '${conv.unreadCount}',
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 10),
-                              ),
-                            ),
+                          Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              if (lastMsg != null)
+                                Text(
+                                  timeago.format(lastMsg.createdAt, locale: 'tr'),
+                                  style: const TextStyle(
+                                      fontSize: 11, color: Color(0xFF9AAAB8)),
+                                ),
+                              if (conv.unreadCount > 0)
+                                Container(
+                                  margin: const EdgeInsets.only(top: 4),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFF00B4CC),
+                                    borderRadius: BorderRadius.circular(100),
+                                  ),
+                                  child: Text(
+                                    '${conv.unreadCount}',
+                                    style: const TextStyle(
+                                        color: Colors.white, fontSize: 10),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(width: 8),
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline,
+                                color: Colors.red),
+                            onPressed: () async {
+                              final confirm = await showDialog<bool>(
+                                context: context,
+                                builder: (context) => AlertDialog(
+                                  title: const Text('Sohbeti Sil'),
+                                  content: const Text(
+                                      'Bu sohbeti kalıcı olarak silmek istediğinizden emin misiniz?'),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, false),
+                                      child: const Text('İptal'),
+                                    ),
+                                    TextButton(
+                                      onPressed: () =>
+                                          Navigator.pop(context, true),
+                                      child: const Text('Sil',
+                                          style: TextStyle(color: Colors.red)),
+                                    ),
+                                  ],
+                                ),
+                              );
+                              if (confirm == true) {
+                                await ApiClient().delete(
+                                    '/api/conversations/${conv.id}');
+                                ref.invalidate(conversationsProvider);
+                              }
+                            },
+                          ),
                         ],
                       ),
                       onTap: () => context.push('/messages/${conv.id}'),

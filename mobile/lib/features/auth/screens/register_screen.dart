@@ -25,14 +25,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Future<void> _register() async {
+    final messenger = ScaffoldMessenger.of(context);
     final success = await ref.read(authProvider.notifier).register(
         _nameCtrl.text.trim(), _emailCtrl.text.trim(), _passwordCtrl.text);
+
     if (!success && mounted) {
       final error = ref.read(authProvider).error;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(error ?? 'Kayıt başarısız.')));
-    } else if (success && mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
+      messenger.showSnackBar(SnackBar(content: Text(error ?? 'Kayıt başarısız.')));
+    } else if (success) {
+      messenger.showSnackBar(
         const SnackBar(
           content: Text('Hesabınız başarıyla oluşturuldu! ✅', style: TextStyle(color: Colors.white)),
           backgroundColor: Colors.green,

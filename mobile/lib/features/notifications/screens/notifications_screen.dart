@@ -52,6 +52,35 @@ class NotificationsScreen extends ConsumerWidget {
       appBar: AppBar(
         title: const Text('Bildirimler'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.delete_sweep, color: Colors.red),
+            tooltip: 'Tümünü Sil',
+            onPressed: () async {
+              final confirm = await showDialog<bool>(
+                context: context,
+                builder: (context) => AlertDialog(
+                  title: const Text('Tümünü Sil'),
+                  content: const Text(
+                      'Tüm bildirimleri kalıcı olarak silmek istediğinize emin misiniz?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, false),
+                      child: const Text('İptal'),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.pop(context, true),
+                      child: const Text('Sil',
+                          style: TextStyle(color: Colors.red)),
+                    ),
+                  ],
+                ),
+              );
+              if (confirm == true) {
+                await ApiClient().delete(Endpoints.notifications);
+                ref.invalidate(notificationsProvider);
+              }
+            },
+          ),
           TextButton(
             onPressed: () async {
               await ApiClient().patch(Endpoints.notifications);
@@ -112,6 +141,13 @@ class NotificationsScreen extends ConsumerWidget {
                       tileColor: n.isRead
                           ? null
                           : const Color(0xFFE6F9FC).withOpacity(0.3),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.delete_outline, color: Colors.grey, size: 20),
+                        onPressed: () async {
+                            await ApiClient().delete('${Endpoints.notifications}?id=${n.id}');
+                            ref.invalidate(notificationsProvider);
+                        },
+                      ),
                       onTap: n.link != null
                           ? () async {
                               if (!n.isRead) {
