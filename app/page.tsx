@@ -73,218 +73,257 @@ export default async function HomePage({
 
   return (
     <>
-      {/* Hero */}
-      <section className="hero">
-        <div className="container">
-          <h1 className="hero-title">
-            Türkiye&apos;nin En Büyük<br />
-            <span style={{ color: "var(--primary)" }}>İlan Platformu</span>
-          </h1>
-          <p className="hero-subtitle">
-            Kategori ve konum seçerek saniyeler içinde ilan ver. Açık artırmaya katıl, en iyi teklifleri ver.
-          </p>
-          <div className="hero-actions">
-            <Link href="/post-ad" className="btn btn-primary btn-lg">
-              🚀 Ücretsiz İlan Ver
-            </Link>
-            <Link href="#ilanlar" className="btn btn-secondary btn-lg">
-              İlanları Gör
-            </Link>
+      {/* --- DESKTOP VIEW ONLY --- */}
+      <div className="desktop-only">
+        {/* Hero */}
+        <section className="hero">
+          <div className="container">
+            <h1 className="hero-title">
+              Türkiye&apos;nin En Büyük<br />
+              <span style={{ color: "var(--primary)" }}>İlan Platformu</span>
+            </h1>
+            <p className="hero-subtitle">
+              Kategori ve konum seçerek saniyeler içinde ilan ver. Açık artırmaya katıl, en iyi teklifleri ver.
+            </p>
+            <div className="hero-actions">
+              <Link href="/post-ad" className="btn btn-primary btn-lg">
+                🚀 Ücretsiz İlan Ver
+              </Link>
+              <Link href="#ilanlar" className="btn btn-secondary btn-lg">
+                İlanları Gör
+              </Link>
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <div className="container" id="ilanlar" style={{ paddingTop: "2rem" }}>
-        <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "2rem", alignItems: "start" }}>
+        <div className="container" id="ilanlar" style={{ paddingTop: "2rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "2rem", alignItems: "start" }}>
 
-          {/* LEFT SIDEBAR: Categories */}
-          <aside style={{
-            position: "sticky",
-            top: "80px",
-            background: "var(--bg-card)",
-            border: "1px solid var(--border)",
-            borderRadius: "var(--radius-lg)",
-            padding: "1rem",
-            boxShadow: "var(--shadow-sm)"
-          }}>
-            <div style={{ fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)", marginBottom: "0.75rem", padding: "0 0.5rem" }}>
-              Kategoriler
-            </div>
-            <Link
-              href="/"
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "0.625rem",
-                padding: "0.5rem 0.75rem",
-                borderRadius: "var(--radius-md)",
-                textDecoration: "none",
-                fontWeight: !activeCategory ? 700 : 500,
-                color: !activeCategory ? "var(--primary)" : "var(--text-secondary)",
-                background: !activeCategory ? "rgba(0,188,212,0.08)" : "transparent",
-                fontSize: "0.9rem",
-                transition: "all 0.15s",
-                marginBottom: "2px",
-              }}
-            >
-              <span>🏷️</span> Tümü
-              <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{ads.length}</span>
-            </Link>
-            {categories.map((cat) => {
-              const catCount = ads.filter(a => a.category.slug === cat.slug).length;
-              return (
-                <Link
-                  key={cat.slug}
-                  href={`/?category=${cat.slug}`}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.625rem",
-                    padding: "0.5rem 0.75rem",
-                    borderRadius: "var(--radius-md)",
-                    textDecoration: "none",
-                    fontWeight: activeCategory === cat.slug ? 700 : 500,
-                    color: activeCategory === cat.slug ? "var(--primary)" : "var(--text-secondary)",
-                    background: activeCategory === cat.slug ? "rgba(0,188,212,0.08)" : "transparent",
-                    fontSize: "0.9rem",
-                    transition: "all 0.15s",
-                    marginBottom: "2px",
-                  }}
-                >
-                  <span>{cat.icon}</span> {cat.name}
-                  {catCount > 0 && (
-                    <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{catCount}</span>
-                  )}
-                </Link>
-              );
-            })}
-          </aside>
-
-          {/* MAIN CONTENT */}
-          <div>
-            {/* Active Category title or Featured */}
-            <div className="section-header" style={{ marginBottom: "1rem" }}>
-              <h2 className="section-title" style={{ fontSize: "1.25rem" }}>
-                {activeCategory
-                  ? categories.find((c) => c.slug === activeCategory)?.icon + " " + categories.find((c) => c.slug === activeCategory)?.name + " İlanları"
-                  : "Öne Çıkan İlanlar"}
-              </h2>
-              <span className="text-sm text-muted">{featuredAds.length} ilan</span>
-            </div>
-
-            {featuredAds.length === 0 ? (
-              <div className="empty-state">
-                <div className="empty-state-icon">📭</div>
-                <div className="empty-state-title">Bu kategoride ilan yok</div>
-                <p>Bu kategoride henüz ilan bulunmuyor.</p>
-                <Link href="/post-ad" className="btn btn-primary" style={{ marginTop: "1rem" }}>
-                  İlan Ver
-                </Link>
+            {/* LEFT SIDEBAR: Categories */}
+            <aside style={{
+              position: "sticky",
+              top: "80px",
+              background: "var(--bg-card)",
+              border: "1px solid var(--border)",
+              borderRadius: "var(--radius-lg)",
+              padding: "1rem",
+              boxShadow: "var(--shadow-sm)"
+            }}>
+              <div style={{ fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)", marginBottom: "0.75rem", padding: "0 0.5rem" }}>
+                Kategoriler
               </div>
-            ) : (
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem" }}>
-                {featuredAds.map((ad) => {
-                  const remaining = daysLeft(ad.expiresAt);
-                  return (
-                    <Link key={ad.id} href={`/ad/${ad.id}`} style={{ textDecoration: "none", color: "inherit" }} className="ad-home-card-link">
-                      <div className="card ad-home-card" style={{
-                        display: "flex",
-                        flexDirection: "column",
-                        height: "100%",
-                        overflow: "hidden"
-                      }}>
-                        {/* Image */}
-                        <div style={{ position: "relative", paddingTop: "60%", background: "var(--bg-secondary)" }}>
-                          {ad.images && ad.images.length > 0 ? (
-                            <img src={ad.images[0]} alt={ad.title} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
-                          ) : (
-                            <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>
-                              {ad.category.icon}
-                            </div>
-                          )}
-                          <span style={{ position: "absolute", top: "8px", left: "8px", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", color: "white", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px" }}>
-                            {ad.category.icon} {ad.category.name}
-                          </span>
-                          {ad._count.bids > 0 && (
-                            <span style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(0,188,212,0.85)", backdropFilter: "blur(4px)", color: "white", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px" }}>
-                              🔨 {ad._count.bids} teklif
+              <Link
+                href="/"
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "0.625rem",
+                  padding: "0.5rem 0.75rem",
+                  borderRadius: "var(--radius-md)",
+                  textDecoration: "none",
+                  fontWeight: !activeCategory ? 700 : 500,
+                  color: !activeCategory ? "var(--primary)" : "var(--text-secondary)",
+                  background: !activeCategory ? "rgba(0,188,212,0.08)" : "transparent",
+                  fontSize: "0.9rem",
+                  transition: "all 0.15s",
+                  marginBottom: "2px",
+                }}
+              >
+                <span>🏷️</span> Tümü
+                <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{ads.length}</span>
+              </Link>
+              {categories.map((cat) => {
+                const catCount = ads.filter(a => a.category.slug === cat.slug).length;
+                return (
+                  <Link
+                    key={cat.slug}
+                    href={`/?category=${cat.slug}`}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: "0.625rem",
+                      padding: "0.5rem 0.75rem",
+                      borderRadius: "var(--radius-md)",
+                      textDecoration: "none",
+                      fontWeight: activeCategory === cat.slug ? 700 : 500,
+                      color: activeCategory === cat.slug ? "var(--primary)" : "var(--text-secondary)",
+                      background: activeCategory === cat.slug ? "rgba(0,188,212,0.08)" : "transparent",
+                      fontSize: "0.9rem",
+                      transition: "all 0.15s",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    <span>{cat.icon}</span> {cat.name}
+                    {catCount > 0 && (
+                      <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{catCount}</span>
+                    )}
+                  </Link>
+                );
+              })}
+            </aside>
+
+            {/* MAIN CONTENT */}
+            <div>
+              {/* Active Category title or Featured */}
+              <div className="section-header" style={{ marginBottom: "1rem" }}>
+                <h2 className="section-title" style={{ fontSize: "1.25rem" }}>
+                  {activeCategory
+                    ? categories.find((c) => c.slug === activeCategory)?.icon + " " + categories.find((c) => c.slug === activeCategory)?.name + " İlanları"
+                    : "Öne Çıkan İlanlar"}
+                </h2>
+                <span className="text-sm text-muted">{featuredAds.length} ilan</span>
+              </div>
+
+              {featuredAds.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-state-icon">📭</div>
+                  <div className="empty-state-title">Bu kategoride ilan yok</div>
+                  <p>Bu kategoride henüz ilan bulunmuyor.</p>
+                  <Link href="/post-ad" className="btn btn-primary" style={{ marginTop: "1rem" }}>
+                    İlan Ver
+                  </Link>
+                </div>
+              ) : (
+                <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(260px, 1fr))", gap: "1rem" }}>
+                  {featuredAds.map((ad) => {
+                    const remaining = daysLeft(ad.expiresAt);
+                    return (
+                      <Link key={ad.id} href={`/ad/${ad.id}`} style={{ textDecoration: "none", color: "inherit" }} className="ad-home-card-link">
+                        <div className="card ad-home-card" style={{
+                          display: "flex",
+                          flexDirection: "column",
+                          height: "100%",
+                          overflow: "hidden"
+                        }}>
+                          {/* Image */}
+                          <div style={{ position: "relative", paddingTop: "60%", background: "var(--bg-secondary)" }}>
+                            {ad.images && ad.images.length > 0 ? (
+                              <img src={ad.images[0]} alt={ad.title} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                            ) : (
+                              <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>
+                                {ad.category.icon}
+                              </div>
+                            )}
+                            <span style={{ position: "absolute", top: "8px", left: "8px", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(4px)", color: "white", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px" }}>
+                              {ad.category.icon} {ad.category.name}
                             </span>
-                          )}
-                        </div>
-                        {/* Body */}
-                        <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", flex: 1 }}>
-                          <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.25rem", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
-                            {ad.title}
-                          </div>
-                          <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.5rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.5 }}>
-                            {ad.description}
-                          </div>
-                          <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-                            <div>
-                              <div style={{ fontWeight: 700, color: "var(--primary)", fontSize: "1rem" }}>
-                                {ad.bids?.length > 0 ? `Güncel ${formatPrice(ad.bids[0].amount)}` : (ad.isFixedPrice ? formatPrice(ad.price) : (ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)))}
-                              </div>
-                              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
-                                📍 {ad.province.name} · {timeAgo(ad.createdAt)} önce
-                              </div>
-                            </div>
-                            {remaining !== null && remaining <= 5 && (
-                              <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px", background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
-                                ⏱ {remaining} gün
+                            {ad._count.bids > 0 && (
+                              <span style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(0,188,212,0.85)", backdropFilter: "blur(4px)", color: "white", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px" }}>
+                                🔨 {ad._count.bids} teklif
                               </span>
                             )}
                           </div>
+                          {/* Body */}
+                          <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", flex: 1 }}>
+                            <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.25rem", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
+                              {ad.title}
+                            </div>
+                            <div style={{ fontSize: "0.78rem", color: "var(--text-muted)", marginBottom: "0.5rem", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.5 }}>
+                              {ad.description}
+                            </div>
+                            <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
+                              <div>
+                                <div style={{ fontWeight: 700, color: "var(--primary)", fontSize: "1rem" }}>
+                                  {ad.bids?.length > 0 ? `Güncel ${formatPrice(ad.bids[0].amount)}` : (ad.isFixedPrice ? formatPrice(ad.price) : (ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)))}
+                                </div>
+                                <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
+                                  📍 {ad.province.name} · {timeAgo(ad.createdAt)} önce
+                                </div>
+                              </div>
+                              {remaining !== null && remaining <= 5 && (
+                                <span style={{ fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px", background: "rgba(239,68,68,0.1)", color: "#ef4444" }}>
+                                  ⏱ {remaining} gün
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    </Link>
-                  );
-                })}
-              </div>
-            )}
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
 
-            {/* Latest Ads section - tylko jeśli nie filtrujemy po kategorii */}
-            {!activeCategory && latestAds.length > 0 && (
-              <section style={{ marginTop: "3rem" }}>
-                <div className="section-header" style={{ marginBottom: "1rem" }}>
-                  <h2 className="section-title" style={{ fontSize: "1.25rem" }}>🕐 Son Eklenen İlanlar</h2>
-                </div>
-                <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
-                  {latestAds.map((ad) => (
-                    <Link key={ad.id} href={`/ad/${ad.id}`} style={{ textDecoration: "none", color: "inherit" }}>
-                      <div className="card" style={{ padding: "0.75rem 1rem" }}>
-                        <div style={{ display: "flex", gap: "0.875rem", alignItems: "center" }}>
-                          {ad.images && ad.images.length > 0 ? (
-                            <img src={ad.images[0]} alt={ad.title} style={{ width: "52px", height: "52px", objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }} />
-                          ) : (
-                            <div style={{ width: "52px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", fontSize: "1.5rem", flexShrink: 0 }}>
-                              {ad.category.icon}
+              {/* Latest Ads section - tylko jeśli nie filtrujemy po kategorii */}
+              {!activeCategory && latestAds.length > 0 && (
+                <section style={{ marginTop: "3rem" }}>
+                  <div className="section-header" style={{ marginBottom: "1rem" }}>
+                    <h2 className="section-title" style={{ fontSize: "1.25rem" }}>🕐 Son Eklenen İlanlar</h2>
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", gap: "0.625rem" }}>
+                    {latestAds.map((ad) => (
+                      <Link key={ad.id} href={`/ad/${ad.id}`} style={{ textDecoration: "none", color: "inherit" }}>
+                        <div className="card" style={{ padding: "0.75rem 1rem" }}>
+                          <div style={{ display: "flex", gap: "0.875rem", alignItems: "center" }}>
+                            {ad.images && ad.images.length > 0 ? (
+                              <img src={ad.images[0]} alt={ad.title} style={{ width: "52px", height: "52px", objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }} />
+                            ) : (
+                              <div style={{ width: "52px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", fontSize: "1.5rem", flexShrink: 0 }}>
+                                {ad.category.icon}
+                              </div>
+                            )}
+                            <div style={{ flex: 1, minWidth: 0 }}>
+                              <div style={{ fontWeight: 600, fontSize: "0.9rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ad.title}</div>
+                              <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                {ad.description.slice(0, 80)}...
+                              </div>
+                              <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
+                                📍 {ad.province.name} · {timeAgo(ad.createdAt)} önce
+                                {ad._count.bids > 0 && ` · 🔨 ${ad._count.bids} teklif`}
+                              </div>
                             </div>
-                          )}
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ fontWeight: 600, fontSize: "0.9rem", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{ad.title}</div>
-                            <div style={{ fontSize: "0.75rem", color: "var(--text-muted)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
-                              {ad.description.slice(0, 80)}...
+                            <div style={{ textAlign: "right", flexShrink: 0 }}>
+                              <div style={{ fontWeight: 700, color: "var(--primary)" }}>
+                                {ad.bids?.length > 0 ? `Güncel ${formatPrice(ad.bids[0].amount)}` : (ad.isFixedPrice ? formatPrice(ad.price) : (ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)))}
+                              </div>
+                              <span style={{ fontSize: "0.7rem", padding: "1px 6px", background: "rgba(0,188,212,0.08)", borderRadius: "100px", color: "var(--primary)" }}>
+                                {ad.category.icon} {ad.category.name}
+                              </span>
                             </div>
-                            <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
-                              📍 {ad.province.name} · {timeAgo(ad.createdAt)} önce
-                              {ad._count.bids > 0 && ` · 🔨 ${ad._count.bids} teklif`}
-                            </div>
-                          </div>
-                          <div style={{ textAlign: "right", flexShrink: 0 }}>
-                            <div style={{ fontWeight: 700, color: "var(--primary)" }}>
-                              {ad.bids?.length > 0 ? `Güncel ${formatPrice(ad.bids[0].amount)}` : (ad.isFixedPrice ? formatPrice(ad.price) : (ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)))}
-                            </div>
-                            <span style={{ fontSize: "0.7rem", padding: "1px 6px", background: "rgba(0,188,212,0.08)", borderRadius: "100px", color: "var(--primary)" }}>
-                              {ad.category.icon} {ad.category.name}
-                            </span>
                           </div>
                         </div>
-                      </div>
-                    </Link>
-                  ))}
-                </div>
-              </section>
-            )}
+                      </Link>
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* --- MOBILE VIEW ONLY --- */}
+      <div className="mobile-gate">
+        <div className="mobile-gate-wrapper">
+          <div className="mobile-gate-icon">
+            <span style={{
+              background: 'linear-gradient(135deg, var(--primary), var(--primary-dark))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+              fontWeight: 900,
+              display: 'block'
+            }}>t</span>
+          </div>
+          <h2 className="mobile-gate-title">
+            Türkiye'nin en gelişmiş ilan<br />
+            uygulaması cebinizde.
+          </h2>
+          <p className="mobile-gate-subtitle">
+            Daha hızlı ilan vermek, teklif almak ve premium alışveriş deneyimi yaşamak için hemen indirin.
+          </p>
+          <div className="mobile-gate-actions">
+            <a href="#" className="gate-store-btn">
+              <svg viewBox="0 0 384 512" fill="currentColor">
+                <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.1-44.6-35.9-2.8-74.3 22.7-93.1 22.7-18.9 0-46.3-21-76-21-39.2 0-76.3 23-96.6 59.6-41.1 74.6-11.5 185.1 28.5 242.7 19.3 27.6 42 56.6 71.3 55.4 28.2-1.2 39.2-18.3 73-18.3 33.6 0 44.1 18.2 73.1 17.8 30.6-.4 50.1-26.4 69.1-54.8 23.3-34.8 32.8-68.5 33.3-70.3-4.2-2.1-48.4-18.7-48.3-64.4zM263.8 89.2c16.1-19.4 27.2-46.5 24.3-73.4-23.7 1-52.6 15.8-69.3 35.5-14.8 17.5-27.4 45.4-24 71.9 26.2 2 52.8-14.6 69-34z" />
+              </svg>
+              App Store'dan İndir
+            </a>
+            <a href="#" className="gate-store-btn">
+              <svg viewBox="0 0 512 512" fill="currentColor">
+                <path d="M325.3 234.3L104.6 13l280.8 161.2-60.1 60.1zM47 0C34 6.8 25.3 19.2 25.3 35.3v441.3c0 16.1 8.7 28.5 21.7 35.3l256.6-256L47 0zm425.2 225.6l-58.9-34.1-65.7 64.5 65.7 64.5 60.1-34.1c18-14.3 18-46.5-1.2-60.8zM104.6 499l280.8-161.2-60.1-60.1L104.6 499z" />
+              </svg>
+              Google Play'den Edinin
+            </a>
           </div>
         </div>
       </div>
