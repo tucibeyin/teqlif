@@ -48,7 +48,12 @@ Future<void> _setupFCM() async {
   try {
     // For iOS, the APNs token must be fetched before FCM gets its token
     if (defaultTargetPlatform == TargetPlatform.iOS) {
-      final apnsToken = await messaging.getAPNSToken();
+      String? apnsToken;
+      for (int i = 0; i < 5; i++) {
+        apnsToken = await messaging.getAPNSToken();
+        if (apnsToken != null) break;
+        await Future.delayed(const Duration(seconds: 1));
+      }
       debugPrint('[FCM] APNS Token: $apnsToken');
     }
 
