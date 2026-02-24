@@ -53,14 +53,13 @@ export default function RegisterPage() {
 
         if (data.pendingVerification) {
             setUserEmail(data.email);
-            setUserPass(password); // Save temporarily to auto-login later
+            // No need to save userPass if we don't auto-login
             setUserName(data.name.split(" ")[0]);
             setStep("verify");
         } else {
             // Fallback for immediate success
             setUserName(data.name.split(" ")[0]);
             setStep("success");
-            attemptLogin(data.email, password);
         }
     }
 
@@ -84,24 +83,6 @@ export default function RegisterPage() {
         }
 
         setStep("success");
-        attemptLogin(userEmail, userPass);
-    }
-
-    async function attemptLogin(email: string, password: string) {
-        // Auto-login dene
-        const loginResult = await signIn("credentials", {
-            email,
-            password,
-            redirect: false,
-        });
-
-        if (loginResult?.ok) {
-            // 3 saniye sonra anasayfaya yönlendir
-            setTimeout(() => {
-                router.push("/");
-                router.refresh();
-            }, 2500);
-        }
     }
 
     // ─── Başarı Ekranı ───────────────────────────────────────
@@ -112,7 +93,7 @@ export default function RegisterPage() {
                     <div style={{ fontSize: "3.5rem", marginBottom: "1rem" }}>🎉</div>
                     <h1 className="auth-title">Hoş Geldin, {userName}!</h1>
                     <p className="auth-subtitle">
-                        E-postanız başarıyla doğrulandı. Sizi içeri alıyoruz...
+                        E-postanız başarıyla doğrulandı.
                     </p>
                     <div style={{
                         background: "var(--primary-50)",
@@ -123,13 +104,10 @@ export default function RegisterPage() {
                         color: "var(--primary-dark)",
                         fontSize: "0.9rem",
                     }}>
-                        ✅ Hesabın aktif! İlan vermeye ve teklif yapmaya hazırsın.
+                        ✅ Hesabınız aktif! Artık ilan vermeye ve teklif yapmaya hazırsınız. Giriş yaparak işlemlere başlayabilirsiniz.
                     </div>
                     <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
-                        <Link href="/" className="btn btn-primary">
-                            Anasayfaya Git
-                        </Link>
-                        <Link href="/login" className="btn btn-secondary">
+                        <Link href="/login" className="btn btn-primary">
                             Giriş Yap
                         </Link>
                     </div>

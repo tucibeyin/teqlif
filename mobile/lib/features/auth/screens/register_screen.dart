@@ -58,8 +58,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final success = await ref.read(authProvider.notifier).verifyEmail(email, code);
 
     if (success && mounted) {
-      // Login attempt after successful verification
-      await ref.read(authProvider.notifier).login(email, _passwordCtrl.text);
       if (mounted) setState(() => _step = RegisterStep.success);
     } else if (mounted) {
       final error = ref.read(authProvider).error;
@@ -92,11 +90,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           Text(
             'Hoş Geldin, ${_nameCtrl.text.trim().split(' ').first}!',
             textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
           const Text(
-            'Hesabın başarıyla onaylandı. Sizi içeri alıyoruz...',
+            'Hesabınız başarıyla onaylandı. Yeni hesabınızla giriş yapabilirsiniz.',
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF9AAAB8)),
           ),
@@ -104,8 +99,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           SizedBox(
             height: 52,
             child: ElevatedButton(
-              onPressed: () => context.go('/home'),
-              child: const Text('Anasayfaya Git'),
+              onPressed: () => context.go('/login'),
+              child: const Text('Giriş Yap'),
             ),
           ),
         ],
