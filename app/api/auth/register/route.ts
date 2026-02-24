@@ -16,7 +16,35 @@ export async function POST(req: NextRequest) {
 
         const existing = await prisma.user.findUnique({ where: { email } });
         if (existing) {
-            return NextResponse.json({ error: "Bu email zaten kayıtlı." }, { status: 409 });
+            if (existing.isVerified) {
+                return NextResponse.json({ error: "Bu email zaten kayıtlı." }, { status: 409 });
+            } else {
+                // User exists but is not verified. Resend OTP and update password/name.
+                const hashed = await bcrypt.hash(password, 12);
+                const verifyCode = Math.floor(100000 + Math.random() * 900000).toString();
+                const verifyCodeExpires = new Date(Date.now() + 15 * 60 * 1000);
+
+                const updatedUser = await prisma.user.update({
+                    where: { email },
+                    data: {
+                        name,
+                        phone: phone || null,
+                        password: hashed,
+                        verifyCode,
+                        verifyCodeExpires,
+                    },
+                });
+
+                const { sendVerificationEmail } = await import("@/lib/mail");
+                await sendVerificationEmail(updatedUser.email, verifyCode);
+
+                return NextResponse.json({
+                    id: updatedUser.id,
+                    name: updatedUser.name,
+                    email: updatedUser.email,
+                    pendingVerification: true
+                }, { status: 200 });
+            }
         }
 
         const hashed = await bcrypt.hash(password, 12);

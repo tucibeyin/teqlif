@@ -19,6 +19,10 @@ export async function POST(req: Request) {
             return NextResponse.json({ message: "Geçersiz email veya şifre." }, { status: 401 });
         }
 
+        if (!user.isVerified) {
+            return NextResponse.json({ message: "Lütfen önce e-postanızı doğrulayın." }, { status: 403 });
+        }
+
         const isValid = await bcrypt.compare(password, user.password);
         if (!isValid) {
             return NextResponse.json({ message: "Geçersiz email veya şifre." }, { status: 401 });

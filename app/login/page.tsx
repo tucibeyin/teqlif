@@ -25,7 +25,11 @@ function LoginForm() {
 
         setLoading(false);
         if (result?.error) {
-            setError("Email veya şifre hatalı.");
+            if (result.error === "unverified") {
+                setError("Hesabınız henüz onaylanmadı. Lütfen e-postanızı doğrulayın (veya tekrar kayıt olmayı deneyerek onay kodunu yeniden gönderin).");
+            } else {
+                setError("Email veya şifre hatalı.");
+            }
         } else {
             router.push(callbackUrl);
             router.refresh();
