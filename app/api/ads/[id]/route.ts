@@ -44,21 +44,21 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
             if (!ad.showPhone) {
                 ad.user.phone = null;
             }
-
-            // Mask bidders
-            ad.bids.forEach((bid: any) => {
-                if (currentUser?.id !== bid.user.id) {
-                    const parts = bid.user.name.trim().split(" ");
-                    if (parts.length > 1) {
-                        const firstName = parts.slice(0, -1).join(" ");
-                        const lastName = parts[parts.length - 1];
-                        bid.user.name = `${firstName} ${lastName.charAt(0)}.`;
-                    } else if (parts.length === 1 && parts[0].length > 1) {
-                        bid.user.name = `${parts[0].charAt(0)}.`;
-                    }
-                }
-            });
         }
+
+        // Mask bidders (everyone sees masked bidders except the bidder themselves)
+        ad.bids.forEach((bid: any) => {
+            if (currentUser?.id !== bid.user.id) {
+                const parts = bid.user.name.trim().split(" ");
+                if (parts.length > 1) {
+                    const firstName = parts.slice(0, -1).join(" ");
+                    const lastName = parts[parts.length - 1];
+                    bid.user.name = `${firstName} ${lastName.charAt(0)}.`;
+                } else if (parts.length === 1 && parts[0].length > 1) {
+                    bid.user.name = `${parts[0].charAt(0)}.`;
+                }
+            }
+        });
 
         return NextResponse.json(ad);
     } catch (err) {

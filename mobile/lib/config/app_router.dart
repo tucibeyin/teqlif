@@ -13,6 +13,7 @@ import '../features/messages/screens/conversations_screen.dart';
 import '../features/messages/screens/chat_screen.dart';
 import '../features/notifications/screens/notifications_screen.dart';
 import '../features/auth/screens/edit_profile_screen.dart';
+import '../features/splash/screens/splash_screen.dart';
 import '../widgets/main_shell.dart';
 
 // ── RouterNotifier ──────────────────────────────────────────────────────────
@@ -43,6 +44,8 @@ class RouterNotifier extends ChangeNotifier {
     final location = state.matchedLocation;
     final isAuth = auth.isAuthenticated;
 
+    if (location == '/splash') return null;
+
     final isProtected = _protected.any((r) => location.startsWith(r)) ||
         location.startsWith('/edit-ad');
 
@@ -62,10 +65,14 @@ final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(_routerNotifierProvider);
 
   return GoRouter(
-    initialLocation: '/home',
+    initialLocation: '/splash',
     refreshListenable: notifier,
     redirect: notifier.redirect,
     routes: [
+      GoRoute(
+        path: '/splash',
+        builder: (_, __) => const SplashScreen(),
+      ),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
