@@ -90,6 +90,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           Text(
             'Hoş Geldin, ${_nameCtrl.text.trim().split(' ').first}!',
             textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+          ),
+          const SizedBox(height: 8),
           const Text(
             'Hesabınız başarıyla onaylandı. Yeni hesabınızla giriş yapabilirsiniz.',
             textAlign: TextAlign.center,
