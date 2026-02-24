@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { writeFile, mkdir } from "fs/promises";
 import { join } from "path";
+import { existsSync } from "fs";
 import { getMobileUser } from "@/lib/mobile-auth";
+
+export const maxDuration = 60;
 
 export async function POST(req: NextRequest) {
     try {
@@ -20,8 +23,13 @@ export async function POST(req: NextRequest) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        const uploadsDir = join(process.cwd(), "public", "uploads");
-        await mkdir(uploadsDir, { recursive: true });
+        const isVercel = process.env.VERCEL || process.env.NODE_ENV === "production";
+        const baseUploadPath = isVercel ? "/tmp" : join(process.cwd(), "public");
+        const uploadsDir = join(baseUploadPath, "uploads");
+
+        if (!existsSync(uploadsDir)) {
+            await mkdir(uploadsDir, { recursive: true });
+        }
 
         const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
         const ext = file.name.split(".").pop();

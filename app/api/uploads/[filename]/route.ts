@@ -5,7 +5,10 @@ import { join } from "path";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ filename: string }> }) {
     try {
         const { filename } = await params;
-        const filePath = join(process.cwd(), "public", "uploads", filename);
+        const isVercel = process.env.VERCEL || process.env.NODE_ENV === "production";
+        const baseUploadPath = isVercel ? "/tmp" : join(process.cwd(), "public");
+        const filePath = join(baseUploadPath, "uploads", filename);
+
         const buffer = await readFile(filePath);
 
         const ext = filename.split(".").pop()?.toLowerCase();
