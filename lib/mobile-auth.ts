@@ -24,9 +24,9 @@ export async function getMobileUser(req: Request): Promise<MobileUser | null> {
         try {
             const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as MobileUser;
             if (payload?.id) return payload;
-        } catch {
-            // Fails-fast rather than unnecessarily looking for web sessions
-            return null;
+        } catch (e) {
+            // Do not return null here, fall back to NextAuth session checking
+            console.warn("JWT verification failed, falling back to NextAuth", e);
         }
     }
 
