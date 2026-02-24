@@ -58,7 +58,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final success = await ref.read(authProvider.notifier).verifyEmail(email, code);
 
     if (success && mounted) {
-      if (mounted) setState(() => _step = RegisterStep.success);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('E-posta başarıyla doğrulandı! Lütfen giriş yapın.')));
+        context.go('/login');
+      }
     } else if (mounted) {
       final error = ref.read(authProvider).error;
       messenger.showSnackBar(SnackBar(content: Text(error ?? 'Doğrulama başarısız.')));
@@ -80,36 +83,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   }
 
   Widget _buildBody(bool isLoading) {
-    if (_step == RegisterStep.success) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 48),
-          const Center(child: Text('🎉', style: TextStyle(fontSize: 64))),
-          const SizedBox(height: 24),
-          Text(
-            'Hoş Geldin, ${_nameCtrl.text.trim().split(' ').first}!',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Hesabınız başarıyla onaylandı. Yeni hesabınızla giriş yapabilirsiniz.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF9AAAB8)),
-          ),
-          const SizedBox(height: 48),
-          SizedBox(
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () => context.go('/login'),
-              child: const Text('Giriş Yap'),
-            ),
-          ),
-        ],
-      );
-    }
-
     if (_step == RegisterStep.verify) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

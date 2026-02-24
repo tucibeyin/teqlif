@@ -98,13 +98,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
           data: {'name': name, 'email': email, 'password': password});
       
       state = const AuthState(isLoading: false);
-      
-      if (response.data != null && response.data['pendingVerification'] == true) {
-        return 'pending_verification';
-      }
-      
-      final success = await login(email, password);
-      return success ? 'success' : 'error';
+      return 'pending_verification';
     } catch (e) {
       state = state.copyWith(isLoading: false, error: 'Kayıt başarısız.');
       return 'error';

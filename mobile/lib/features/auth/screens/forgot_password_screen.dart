@@ -57,7 +57,8 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     final success = await ref.read(authProvider.notifier).resetPassword(email, code, newPassword);
 
     if (success && mounted) {
-      setState(() => _step = ForgotPasswordStep.success);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Şifreniz başarıyla sıfırlandı! Lütfen giriş yapın.')));
+      context.go('/login');
     } else if (mounted) {
       final error = ref.read(authProvider).error;
       messenger.showSnackBar(SnackBar(content: Text(error ?? 'Şifre sıfırlama başarısız.')));
@@ -80,36 +81,6 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   }
 
   Widget _buildBody(bool isLoading) {
-    if (_step == ForgotPasswordStep.success) {
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          const SizedBox(height: 48),
-          const Center(child: Text('✅', style: TextStyle(fontSize: 64))),
-          const SizedBox(height: 24),
-          Text(
-            'Şifreniz Sıfırlandı!',
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
-          ),
-          const SizedBox(height: 8),
-          const Text(
-            'Yeni şifrenizle hemen hesabınıza giriş yapabilirsiniz.',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFF9AAAB8)),
-          ),
-          const SizedBox(height: 48),
-          SizedBox(
-            height: 52,
-            child: ElevatedButton(
-              onPressed: () => context.go('/login'),
-              child: const Text('Giriş Yap'),
-            ),
-          ),
-        ],
-      );
-    }
-
     if (_step == ForgotPasswordStep.reset) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
