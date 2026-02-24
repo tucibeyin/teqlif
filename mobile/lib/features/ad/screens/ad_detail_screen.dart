@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
@@ -417,6 +418,24 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             ),
                           ),
                           title: Text(ad.user?.name ?? 'Satıcı'),
+                          subtitle: ad.user?.phone != null
+                              ? Text(ad.user!.phone!)
+                              : null,
+                          trailing: ad.user?.phone != null && !isOwner
+                              ? IconButton(
+                                  icon: const Icon(Icons.phone,
+                                      color: Color(0xFF00B4CC)),
+                                  onPressed: () async {
+                                    final uri =
+                                        Uri.parse('tel:${ad.user!.phone}');
+                                    if (await canLaunchUrl(uri)) {
+                                      await launchUrl(uri);
+                                    } else {
+                                      _snack('Arama başlatılamadı.');
+                                    }
+                                  },
+                                )
+                              : null,
                         ),
                       ),
                       const SizedBox(height: 24),
