@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import path from 'path';
+import fs from 'fs';
 
 // Check if Firebase Admin is already initialized to prevent errors during hot reloads
 if (!admin.apps.length) {
@@ -11,9 +12,14 @@ if (!admin.apps.length) {
 
         try {
             // First attempt: try loading from a local file
-            const serviceAccount = require(path.resolve('./firebase-admin.json'));
-            credential = admin.credential.cert(serviceAccount);
-            console.log('Firebase Admin initialized from firebase-admin.json');
+            const serviceAccountPath = path.resolve(process.cwd(), 'firebase-admin.json');
+            if (fs.existsSync(serviceAccountPath)) {
+                const serviceAccount = JSON.parse(fs.readFileSync(serviceAccountPath, 'utf8'));
+                credential = admin.credential.cert(serviceAccount);
+                console.log('Firebase Admin initialized from firebase-admin.json');
+            } else {
+                throw new Error('firebase-admin.json not found locally');
+            }
         } catch (fileError) {
             // Second attempt: try loading from environment variable
             if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
