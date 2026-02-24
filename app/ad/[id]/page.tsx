@@ -66,6 +66,9 @@ export default async function AdDetailPage({
     if (!session?.user) {
         displayName = "Gizli Kullanıcı";
         displayPhone = null;
+        ad.bids.forEach((bid: any) => {
+            bid.user.name = "Gizli Kullanıcı";
+        });
     } else if (!isOwner) {
         const nameParts = ad.user.name.trim().split(" ");
         if (nameParts.length > 1) {
@@ -81,6 +84,20 @@ export default async function AdDetailPage({
         } else {
             displayPhone = null;
         }
+
+        // Mask bidders
+        ad.bids.forEach((bid: any) => {
+            if (session?.user?.id !== bid.user.id) {
+                const parts = bid.user.name.trim().split(" ");
+                if (parts.length > 1) {
+                    const firstName = parts.slice(0, -1).join(" ");
+                    const lastName = parts[parts.length - 1];
+                    bid.user.name = `${firstName} ${lastName.charAt(0)}.`;
+                } else if (parts.length === 1 && parts[0].length > 1) {
+                    bid.user.name = `${parts[0].charAt(0)}.`;
+                }
+            }
+        });
     } else {
         displayPhone = ad.user.phone;
     }
