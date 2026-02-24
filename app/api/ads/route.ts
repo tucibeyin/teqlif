@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
             // Fail-open: allow the request to pass if Redis is unreachable
         }
 
-        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, showPhone, categorySlug, provinceId, districtId: rawDistrictId, images } = await req.json();
+        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, showPhone, categorySlug, provinceId, districtId: rawDistrictId, images, durationDays, customExpiresAt } = await req.json();
 
         if (!title || !description || !price || !categorySlug || !provinceId || !rawDistrictId) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
@@ -87,6 +87,19 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        let expiresAt = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000); // Varsayılan 30 Gün
+        if (customExpiresAt) {
+            const parsedDate = new Date(customExpiresAt);
+            if (!isNaN(parsedDate.getTime())) {
+                expiresAt = parsedDate;
+            }
+        } else if (durationDays) {
+            const days = Number(durationDays);
+            if (!isNaN(days) && days > 0) {
+                expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
+            }
+        }
+
         const ad = await prisma.ad.create({
             data: {
                 title,
@@ -102,7 +115,7 @@ export async function POST(req: NextRequest) {
                 provinceId,
                 districtId,
                 images: images || [],
-                expiresAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // 30 days from now
+                expiresAt,
             },
         });
 

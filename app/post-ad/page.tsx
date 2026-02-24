@@ -15,6 +15,8 @@ export default function PostAdPage() {
     const [displayBuyItNowPrice, setDisplayBuyItNowPrice] = useState("");
     const [isFixedPrice, setIsFixedPrice] = useState(false);
     const [showPhone, setShowPhone] = useState(false);
+    const [durationDays, setDurationDays] = useState<number | "custom">(30);
+    const [customExpiresAt, setCustomExpiresAt] = useState("");
 
     useEffect(() => {
         let isMounted = true;
@@ -76,6 +78,8 @@ export default function PostAdPage() {
                     ? Number((document.getElementById("actualBuyItNowPrice") as HTMLInputElement).value)
                     : null,
                 showPhone,
+                durationDays: durationDays !== "custom" ? durationDays : null,
+                customExpiresAt: durationDays === "custom" ? customExpiresAt : null,
                 categorySlug: fd.get("categorySlug"),
                 provinceId: fd.get("provinceId"),
                 districtId: fd.get("districtId"),
@@ -128,6 +132,67 @@ export default function PostAdPage() {
                                 <label htmlFor="description">Açıklama *</label>
                                 <textarea id="description" name="description" className="input"
                                     placeholder="İlanınızı detaylıca açıklayın..." rows={5} required />
+                            </div>
+                        </div>
+
+                        {/* İlan Süresi */}
+                        <div className="form-section">
+                            <h3 style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
+                                İlan Süresi
+                            </h3>
+                            <div className="form-group" style={{ marginBottom: "1.5rem" }}>
+                                <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>İlanın Yayında Kalacağı Süre</label>
+                                <div style={{ display: "flex", gap: "0.75rem", flexWrap: "wrap", marginBottom: "1rem" }}>
+                                    {[
+                                        { label: "1 Hafta", value: 7 },
+                                        { label: "1 Ay", value: 30 },
+                                        { label: "3 Ay", value: 90 },
+                                        { label: "Özel Tarih", value: "custom" },
+                                    ].map((opt) => (
+                                        <button
+                                            key={opt.value}
+                                            type="button"
+                                            onClick={() => setDurationDays(opt.value as any)}
+                                            style={{
+                                                flex: "1 1 calc(25% - 0.75rem)",
+                                                minWidth: "100px",
+                                                padding: "1rem 0.5rem",
+                                                border: durationDays === opt.value ? "2px solid var(--primary)" : "1px solid var(--border)",
+                                                background: durationDays === opt.value ? "var(--primary-50)" : "var(--bg-card)",
+                                                color: durationDays === opt.value ? "var(--primary-dark)" : "var(--text)",
+                                                borderRadius: "var(--radius-md)",
+                                                fontWeight: durationDays === opt.value ? 700 : 500,
+                                                cursor: "pointer",
+                                                transition: "all 0.2s ease"
+                                            }}
+                                        >
+                                            {opt.label}
+                                        </button>
+                                    ))}
+                                </div>
+                                {durationDays === "custom" && (
+                                    <div style={{
+                                        animation: "fadeIn 0.3s ease-out",
+                                        padding: "1rem",
+                                        background: "var(--bg-secondary)",
+                                        borderRadius: "var(--radius-md)",
+                                        border: "1px dashed var(--border)"
+                                    }}>
+                                        <label htmlFor="customExpires" style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>Tarih ve Saat Seçiniz *</label>
+                                        <input
+                                            type="datetime-local"
+                                            id="customExpires"
+                                            className="input"
+                                            required
+                                            min={new Date(Date.now() + 86400000).toISOString().slice(0, 16)} // Yarın
+                                            value={customExpiresAt}
+                                            onChange={(e) => setCustomExpiresAt(e.target.value)}
+                                        />
+                                        <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
+                                            En erken yarınki bir tarihi seçebilirsiniz.
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
 

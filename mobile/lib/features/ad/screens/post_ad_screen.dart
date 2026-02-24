@@ -48,6 +48,8 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
   bool _freeBid = false;
   bool _isFixedPrice = false;
   bool _showPhone = false;
+  int? _selectedDurationDays = 30; // 30 is default, null means Custom
+  DateTime? _customExpiresAt;
   List<File> _images = [];
   bool _loading = false;
   final _picker = ImagePicker();
@@ -131,6 +133,10 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
         'buyItNowPrice': _isFixedPrice || _buyItNowCtrl.text.isEmpty
             ? null
             : double.parse(bStr),
+        'durationDays': _selectedDurationDays,
+        'customExpiresAt': _selectedDurationDays == null && _customExpiresAt != null
+            ? _customExpiresAt!.toIso8601String()
+            : null,
         'categorySlug': _selectedCategory,
         'provinceId': _selectedProvinceId,
         'districtId': _selectedDistrictId, // true district mapped
@@ -276,6 +282,78 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                   labelText:
                       _isFixedPrice ? 'Satış Fiyatı (₺)' : 'Piyasa Değeri (₺)',
                   prefixIcon: const Icon(Icons.monetization_on_outlined)),
+            ),
+            const SizedBox(height: 12),
+            // Ad Duration Component
+            Card(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('İlan Yayında Kalma Süresi', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16)),
+                    const SizedBox(height: 12),
+                    SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      child: Row(
+                        children: [
+                          _buildDurationChip('1 Hafta', 7),
+                          const SizedBox(width: 8),
+                          _buildDurationChip('1 Ay', 30),
+                          const SizedBox(width: 8),
+                          _buildDurationChip('3 Ay', 90),
+                          const SizedBox(width: 8),
+                          _buildDurationChip('Özel', null),
+                        ],
+                      ),
+                    ),
+                    if (_selectedDurationDays == null) ...[
+                      const SizedBox(height: 12),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F7FA),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFE2EBF0)),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                             Text(
+                              _customExpiresAt == null
+                                ? 'Bir son kullanma tarihi seçin...'
+                                : 'Bitiş: ${_customExpiresAt!.day}/${_customExpiresAt!.month}/${_customExpiresAt!.year}',
+                              style: const TextStyle(fontWeight: FontWeight.w500),
+                            ),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: OutlinedButton.icon(
+                                icon: const Icon(Icons.calendar_month),
+                                label: const Text('Tarih Seç'),
+                                onPressed: () async {
+                                  final selected = await showDatePicker(
+                                    context: context,
+                                    initialDate: DateTime.now().add(const Duration(days: 1)),
+                                    firstDate: DateTime.now().add(const Duration(days: 1)),
+                                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                                  );
+                                  if (selected != null) {
+                                    setState(() {
+                                      _customExpiresAt = selected;
+                                    });
+                                  }
+                                },
+                              ),
+                            )
+                          ],
+                        ),
+                      )
+                    ]
+                  ],
+                ),
+              ),
             ),
             const SizedBox(height: 12),
             // Bid settings
