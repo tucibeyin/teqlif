@@ -62,7 +62,9 @@ export default function PostAdPage() {
         }
 
         const bidType = fd.get("bidType");
-        const parsedStartingBid = bidType === "minimum" && fd.get("startingBid") ? Number(fd.get("startingBid")) : null;
+        const parsedStartingBid = isFixedPrice
+            ? null
+            : (bidType === "free" ? 1 : (fd.get("startingBid") ? Number(fd.get("startingBid")) : null));
 
         const res = await fetch("/api/ads", {
             method: "POST",

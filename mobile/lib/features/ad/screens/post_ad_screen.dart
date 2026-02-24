@@ -124,9 +124,9 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
         'price': double.parse(pStr),
         'isFixedPrice': _isFixedPrice,
         'showPhone': _showPhone,
-        'startingBid': _isFixedPrice || _freeBid
+        'startingBid': _isFixedPrice
             ? null
-            : (_startBidCtrl.text.isEmpty ? null : double.parse(sStr)),
+            : (_freeBid ? 1 : (_startBidCtrl.text.isEmpty ? null : double.parse(sStr))),
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
             : double.parse(mStr),
