@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getMobileUser } from '@/lib/mobile-auth';
+import { sendPushNotification } from '@/lib/fcm';
 
 export async function GET(request: Request) {
     try {
@@ -70,6 +71,11 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Eksik veri' }, { status: 400 });
         }
 
+        const recipient = await prisma.user.findUnique({
+            where: { id: recipientId },
+            select: { fcmToken: true }
+        });
+
         const conversation = await prisma.conversation.findUnique({
             where: { id: conversationId }
         });
@@ -112,6 +118,16 @@ export async function POST(request: Request) {
 
             return message;
         });
+
+        // Send push notification outside the transaction
+        if (recipient?.fcmToken) {
+            await sendPushNotification(
+                recipient.fcmToken,
+                'Yeni Mesaj 💬',
+                `${currentUser.name}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
+                { type: 'NEW_MESSAGE', link: `/dashboard/messages?conversationId=${conversationId}` }
+            ).catch(err => console.error("FCM Send Error:", err));
+        }
 
         return NextResponse.json(result);
     } catch (error) {

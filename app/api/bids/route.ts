@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { actionRatelimiter } from "@/lib/rate-limit";
 import { getMobileUser } from "@/lib/mobile-auth";
+import { sendPushNotification } from "@/lib/fcm";
 
 export async function POST(req: NextRequest) {
     try {
@@ -29,6 +30,7 @@ export async function POST(req: NextRequest) {
             where: { id: adId },
             include: {
                 bids: { orderBy: { amount: "desc" }, take: 1 },
+                user: { select: { fcmToken: true } },
             },
         });
 
@@ -80,6 +82,16 @@ export async function POST(req: NextRequest) {
                 link: `/ad/${ad.id}`
             },
         });
+
+        // Send push notification
+        if (ad.user?.fcmToken) {
+            await sendPushNotification(
+                ad.user.fcmToken,
+                'Yeni Teklif Var! 💰',
+                `${bid.user.name} "${ad.title}" ilanına ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teklif verdi.`,
+                { type: 'BID_RECEIVED', link: `/ad/${ad.id}` }
+            ).catch(err => console.error("FCM Send Error:", err));
+        }
 
         return NextResponse.json(bid, { status: 201 });
     } catch (err) {
