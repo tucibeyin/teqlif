@@ -12,6 +12,7 @@ interface AdActionsProps {
     currentUser: any;
     isMessageBidder?: boolean;
     initialMessage?: string;
+    customLabel?: string;
 }
 
 export function AdActions({
@@ -22,6 +23,7 @@ export function AdActions({
     currentUser,
     isMessageBidder,
     initialMessage,
+    customLabel,
 }: AdActionsProps) {
     const [isLoading, setIsLoading] = useState(false);
     const router = useRouter();
@@ -146,7 +148,7 @@ export function AdActions({
                 style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
                 <MessageSquare size={18} />
-                {isLoading ? "İşleniyor..." : "Satıcıya Mesaj Gönder"}
+                {isLoading ? "İşleniyor..." : (customLabel || "Satıcıya Mesaj Gönder")}
             </button>
         );
     }

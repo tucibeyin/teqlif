@@ -28,8 +28,8 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   final _bidCtrl = TextEditingController();
   final _bidFormatter = CurrencyTextInputFormatter.currency(
     locale: 'tr_TR',
-    symbol: '₺ ',
-    decimalDigits: 0,
+    symbol: '',
+    decimalDigits: 2,
   );
   int _currentImage = 0;
   bool _bidLoading = false;
@@ -94,6 +94,32 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
         'adId': widget.adId,
       });
       final conversationId = res.data['id'];
+      if (mounted) {
+        context.push('/messages/$conversationId');
+      }
+    } catch (e) {
+      _snack('Sohbet başlatılamadı.');
+    }
+  }
+
+  Future<void> _contactSeller(String sellerId, String? initialMessage) async {
+    try {
+      final res = await ApiClient().post(Endpoints.conversations, data: {
+        'userId': sellerId,
+        'adId': widget.adId,
+      });
+      final conversationId = res.data['id'];
+
+      if (initialMessage != null) {
+        try {
+          await ApiClient().post(Endpoints.messages, data: {
+            'conversationId': conversationId,
+            'content': initialMessage,
+            'recipientId': sellerId,
+          });
+        } catch (_) {}
+      }
+
       if (mounted) {
         context.push('/messages/$conversationId');
       }
@@ -484,7 +510,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               height: 52,
                               child: ElevatedButton.icon(
                                 onPressed: () {
-                                  context.push('/messages/chat/${ad.userId}');
+                                  final initialMsg =
+                                      'Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı ${_formatPrice(ad.price)} fiyatından satın almak istiyorum.';
+                                  _contactSeller(ad.userId, initialMsg);
                                 },
                                 icon: const Icon(Icons.message_outlined),
                                 label: const Text('Satıcıya Mesaj Gönder'),
@@ -543,8 +571,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                         onPressed: () {
                                           final initialMsg =
                                               'Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı Hemen Al fiyatı olan ${_formatPrice(ad.buyItNowPrice!)} üzerinden satın almak istiyorum.';
-                                          context.push(
-                                              '/messages/chat/${ad.userId}?initialMessage=$initialMsg');
+                                          _contactSeller(ad.userId, initialMsg);
                                         },
                                         icon: const Icon(Icons.flash_on),
                                         label: const Text('Hemen Satın Al'),

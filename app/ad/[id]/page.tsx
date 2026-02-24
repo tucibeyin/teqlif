@@ -229,6 +229,7 @@ export default async function AdDetailPage({
                                         adId={ad.id}
                                         sellerId={ad.userId}
                                         currentUser={session.user}
+                                        customLabel="⚡ Hemen Satın Al"
                                         initialMessage={`Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı ${formatPrice(ad.price)} fiyatından satın almak istiyorum.`}
                                     />
                                     <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", textAlign: "center" }}>
@@ -313,6 +314,7 @@ export default async function AdDetailPage({
                                             adId={ad.id}
                                             sellerId={ad.userId}
                                             currentUser={session.user}
+                                            customLabel="⚡ Hemen Satın Al"
                                             initialMessage={`Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı Hemen Al fiyatı olan ${formatPrice(ad.buyItNowPrice)} üzerinden satın almak istiyorum.`}
                                         />
                                     ) : !session?.user && (
