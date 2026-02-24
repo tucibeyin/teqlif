@@ -16,6 +16,16 @@ function formatPrice(price: number) {
     }).format(price);
 }
 
+function formatDate(date: Date) {
+    return new Intl.DateTimeFormat("tr-TR", {
+        day: "numeric",
+        month: "long",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    }).format(new Date(date));
+}
+
 function timeAgo(date: Date) {
     const diff = Date.now() - new Date(date).getTime();
     const minutes = Math.floor(diff / 60000);
@@ -163,9 +173,12 @@ export default async function AdDetailPage({
                                 />
                             </div>
 
-                            <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem", color: "var(--text-secondary)", fontSize: "0.9rem" }}>
+                            <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem", color: "var(--text-secondary)", fontSize: "0.9rem", flexWrap: "wrap" }}>
                                 <span>📍 {ad.province.name}, {ad.district.name}</span>
                                 <span>👤 {displayName}</span>
+                                {ad.expiresAt && (
+                                    <span style={{ color: "var(--primary)" }}>⏰ Bitiş: {formatDate(ad.expiresAt)}</span>
+                                )}
                             </div>
 
                             <div style={{
@@ -381,6 +394,9 @@ export default async function AdDetailPage({
                                                         {bid.user.name}
                                                     </span>
                                                     <span className="bid-item-amount" style={{ marginLeft: '8px', color: 'var(--primary)', fontWeight: 700 }}>{formatPrice(bid.amount)}</span>
+                                                    <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                                                        {timeAgo(bid.createdAt)}
+                                                    </div>
                                                 </div>
                                                 {bid.status === 'ACCEPTED' && (
                                                     <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>

@@ -9,6 +9,8 @@ import '../../../core/models/ad.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/favorites_provider.dart';
 import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
+import 'package:intl/intl.dart';
+import 'package:timeago/timeago.dart' as timeago;
 
 final adDetailProvider =
     FutureProvider.family<AdModel, String>((ref, id) async {
@@ -289,6 +291,22 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                   color: Color(0xFF9AAAB8), fontSize: 13)),
                         ],
                       ),
+                      if (ad.expiresAt != null) ...[
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            const Icon(Icons.access_time,
+                                size: 16, color: Color(0xFF00B4CC)),
+                            const SizedBox(width: 4),
+                            Text(
+                                'Bitiş: ${DateFormat('d MMMM yyyy HH:mm', 'tr_TR').format(ad.expiresAt!)}',
+                                style: const TextStyle(
+                                    color: Color(0xFF00B4CC),
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 13)),
+                          ],
+                        ),
+                      ],
                       const SizedBox(height: 16),
                       // Price section
                       if (ad.isFixedPrice)
@@ -792,6 +810,17 @@ class _BidTile extends StatelessWidget {
                   fontWeight: FontWeight.w700,
                   fontSize: 16),
             ),
+            if (bid.createdAt != null)
+              Padding(
+                padding: const EdgeInsets.only(top: 4),
+                child: Text(
+                  timeago.format(bid.createdAt!, locale: 'tr'),
+                  style: const TextStyle(
+                      color: Color(0xFF9AAAB8),
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500),
+                ),
+              ),
             if (isOwner) ...[
               const SizedBox(height: 8),
               Row(
