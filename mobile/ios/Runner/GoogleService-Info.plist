@@ -9,7 +9,7 @@
 	<key>PLIST_VERSION</key>
 	<string>1</string>
 	<key>BUNDLE_ID</key>
-	<string>com.teqlif.teqlifMobile</string>
+	<string>teqlif</string>
 	<key>PROJECT_ID</key>
 	<string>teqlif-a24ee</string>
 	<key>STORAGE_BUCKET</key>
@@ -25,6 +25,6 @@
 	<key>IS_SIGNIN_ENABLED</key>
 	<true></true>
 	<key>GOOGLE_APP_ID</key>
-	<string>1:232766108005:ios:6a81408c6615407451b18c</string>
+	<string>1:232766108005:ios:df83bb877e95d34b51b18c</string>
 </dict>
 </plist>
