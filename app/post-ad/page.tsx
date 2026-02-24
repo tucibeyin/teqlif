@@ -62,9 +62,12 @@ export default function PostAdPage() {
         }
 
         const bidType = fd.get("bidType");
+        const actualStartingBidInput = document.getElementById("actualStartingBid") as HTMLInputElement;
         const parsedStartingBid = isFixedPrice
             ? null
-            : (bidType === "free" ? 1 : (fd.get("startingBid") ? Number(fd.get("startingBid")) : null));
+            : (bidType === "free" ? 1 : (actualStartingBidInput && actualStartingBidInput.value ? Number(actualStartingBidInput.value) : null));
+
+        const actualBuyItNowInput = document.getElementById("actualBuyItNowPrice") as HTMLInputElement;
 
         const res = await fetch("/api/ads", {
             method: "POST",
@@ -76,9 +79,7 @@ export default function PostAdPage() {
                 isFixedPrice,
                 startingBid: parsedStartingBid,
                 minBidStep: Number(fd.get("minBidStep")),
-                buyItNowPrice: document.getElementById("buyItNowInput") && (document.getElementById("actualBuyItNowPrice") as HTMLInputElement).value
-                    ? Number((document.getElementById("actualBuyItNowPrice") as HTMLInputElement).value)
-                    : null,
+                buyItNowPrice: actualBuyItNowInput && actualBuyItNowInput.value ? Number(actualBuyItNowInput.value) : null,
                 showPhone,
                 durationDays: durationDays !== "custom" ? durationDays : null,
                 customExpiresAt: durationDays === "custom" ? customExpiresAt : null,
