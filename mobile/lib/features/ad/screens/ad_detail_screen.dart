@@ -12,6 +12,8 @@ import 'package:currency_text_input_formatter/currency_text_input_formatter.dart
 import 'package:intl/intl.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
+import 'fullscreen_image_viewer.dart';
+
 final adDetailProvider =
     FutureProvider.family<AdModel, String>((ref, id) async {
   final res = await ApiClient().get(Endpoints.adById(id));
@@ -175,9 +177,24 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                           itemCount: ad.images.length,
                           onPageChanged: (i) =>
                               setState(() => _currentImage = i),
-                          itemBuilder: (_, i) => CachedNetworkImage(
-                            imageUrl: imageUrl(ad.images[i]),
-                            fit: BoxFit.cover,
+                          itemBuilder: (_, i) => GestureDetector(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                MaterialPageRoute(
+                                  builder: (_) => FullScreenImageViewer(
+                                    images: ad.images,
+                                    initialIndex: i,
+                                  ),
+                                ),
+                              );
+                            },
+                            child: Hero(
+                              tag: ad.images[i],
+                              child: CachedNetworkImage(
+                                imageUrl: imageUrl(ad.images[i]),
+                                fit: BoxFit.cover,
+                              ),
+                            ),
                           ),
                         )
                       : Container(
