@@ -34,7 +34,7 @@ export default function RootLayout({
           <Navbar />
           <main>{children}</main>
           <GlobalChatWidget />
-          <footer className="footer desktop-only">
+          <footer className="footer">
             <div className="container">
               <div className="footer-premium-app">
                 <div className="footer-premium-app-content">
