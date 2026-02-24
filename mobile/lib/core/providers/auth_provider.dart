@@ -91,14 +91,81 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  Future<bool> register(String name, String email, String password) async {
+  Future<String> register(String name, String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      await _api.post(Endpoints.register,
+      final response = await _api.post(Endpoints.register,
           data: {'name': name, 'email': email, 'password': password});
-      return await login(email, password);
+      
+      state = const AuthState(isLoading: false);
+      
+      if (response.data != null && response.data['pendingVerification'] == true) {
+        return 'pending_verification';
+      }
+      
+      final success = await login(email, password);
+      return success ? 'success' : 'error';
     } catch (e) {
       state = state.copyWith(isLoading: false, error: 'Kayıt başarısız.');
+      return 'error';
+    }
+  }
+
+  Future<bool> verifyEmail(String email, String code) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _api.post(Endpoints.verifyEmail,
+          data: {'email': email, 'code': code});
+      state = const AuthState(isLoading: false);
+      return true;
+    } catch (e) {
+      String message = 'Doğrulama başarısız.';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map) {
+          message = (data['message'] ?? data['error'] ?? message).toString();
+        }
+      }
+      state = state.copyWith(isLoading: false, error: message);
+      return false;
+    }
+  }
+
+  Future<bool> requestPasswordReset(String email) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _api.post(Endpoints.forgotPassword, data: {'email': email});
+      state = const AuthState(isLoading: false);
+      return true;
+    } catch (e) {
+      String message = 'İşlem başarısız.';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map) {
+          message = (data['message'] ?? data['error'] ?? message).toString();
+        }
+      }
+      state = state.copyWith(isLoading: false, error: message);
+      return false;
+    }
+  }
+
+  Future<bool> resetPassword(String email, String code, String newPassword) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      await _api.post(Endpoints.resetPassword,
+          data: {'email': email, 'code': code, 'newPassword': newPassword});
+      state = const AuthState(isLoading: false);
+      return true;
+    } catch (e) {
+      String message = 'Şifre sıfırlama başarısız.';
+      if (e is DioException) {
+        final data = e.response?.data;
+        if (data is Map) {
+          message = (data['message'] ?? data['error'] ?? message).toString();
+        }
+      }
+      state = state.copyWith(isLoading: false, error: message);
       return false;
     }
   }

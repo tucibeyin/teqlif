@@ -13,6 +13,9 @@ class Endpoints {
   static const login = '/api/mobile/login';
   static const register = '/api/auth/register';
   static const pushRegister = '/api/push/register';
+  static const verifyEmail = '/api/auth/verify-email';
+  static const forgotPassword = '/api/auth/forgot-password';
+  static const resetPassword = '/api/auth/reset-password';
 
   // Ads
   static const ads = '/api/ads';

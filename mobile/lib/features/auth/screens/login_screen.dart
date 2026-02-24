@@ -111,6 +111,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
               ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () => context.push('/forgot-password'),
+                  style: TextButton.styleFrom(
+                    padding: EdgeInsets.zero,
+                    minimumSize: const Size(50, 30),
+                    alignment: Alignment.centerRight,
+                  ),
+                  child: const Text('Şifremi Unuttum?', style: TextStyle(color: Color(0xFF00B4CC))),
+                ),
+              ),
               const SizedBox(height: 24),
               SizedBox(
                 height: 52,

@@ -16,10 +16,15 @@ model User {
   email     String   @unique
   password  String
   phone     String?
-  avatar    String?
-  fcmToken  String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  avatar            String?
+  fcmToken          String?
+  isVerified        Boolean  @default(false)
+  verifyCode        String?
+  verifyCodeExpires DateTime?
+  resetCode         String?
+  resetCodeExpires  DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
 
   ads  Ad[]
   bids Bid[]
