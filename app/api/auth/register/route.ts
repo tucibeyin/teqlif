@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { sendVerificationEmail } from "@/lib/mail";
 
 export async function POST(req: NextRequest) {
     try {
@@ -35,7 +36,6 @@ export async function POST(req: NextRequest) {
                     },
                 });
 
-                const { sendVerificationEmail } = await import("@/lib/mail");
                 await sendVerificationEmail(updatedUser.email, verifyCode);
 
                 return NextResponse.json({
@@ -66,8 +66,6 @@ export async function POST(req: NextRequest) {
             },
         });
 
-        // Use the mail utility to send the OTP
-        const { sendVerificationEmail } = await import("@/lib/mail");
         await sendVerificationEmail(user.email, verifyCode);
 
         return NextResponse.json({
@@ -76,8 +74,8 @@ export async function POST(req: NextRequest) {
             email: user.email,
             pendingVerification: true
         }, { status: 201 });
-    } catch (err) {
+    } catch (err: any) {
         console.error("Register error:", err);
-        return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
+        return NextResponse.json({ error: "Sunucu hatası: " + (err?.message || "Bilinmiyor") }, { status: 500 });
     }
 }
