@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:intl/date_symbol_data_local.dart';
@@ -45,6 +46,12 @@ Future<void> _setupFCM() async {
 
   // Get FCM token — may fail on iOS Simulator (no APNS), safe to ignore
   try {
+    // For iOS, the APNs token must be fetched before FCM gets its token
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      final apnsToken = await messaging.getAPNSToken();
+      debugPrint('[FCM] APNS Token: $apnsToken');
+    }
+
     final token = await messaging.getToken();
     if (token != null) {
       await ApiClient().post(Endpoints.pushRegister, data: {'fcmToken': token});
