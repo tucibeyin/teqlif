@@ -40,20 +40,32 @@ class RouterNotifier extends ChangeNotifier {
 
   String? redirect(BuildContext context, GoRouterState state) {
     final auth = _ref.read(authProvider);
-    if (auth.isLoading) return null;
-
     final location = state.matchedLocation;
+
+    // If still initializing from storage, keep them on splash
+    if (auth.isLoading && location == '/splash') return null;
+    
+    // If auth state is just toggling 'isLoading' during an API call (like login/register),
+    // we should NOT redirect them. We let the current screen show its loading spinner.
+    if (auth.isLoading) return null;
     final isAuth = auth.isAuthenticated;
 
-    if (location == '/splash') return null;
+    // Once initialization is done, Splash should forcefully route away
+    if (location == '/splash') {
+      return isAuth ? '/home' : '/login';
+    }
 
     final isProtected = _protected.any((r) => location.startsWith(r)) ||
         location.startsWith('/edit-ad');
 
     if (!isAuth && isProtected) return '/login';
-    if (isAuth && (location == '/login' || location == '/register')) {
+    
+    // Prevent logged-in users from seeing login/register screens
+    if (isAuth && (location == '/login' || location == '/register' || location == '/forgot-password')) {
       return '/home';
     }
+    
+    // Maintain current route for everything else
     return null;
   }
 }
