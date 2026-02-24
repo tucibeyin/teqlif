@@ -192,7 +192,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
             onPressed: isLoading ? null : _requestReset,
             child: isLoading
                 ? const SizedBox(width: 22, height: 22, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Text('Bağlantıyı Gönder'),
+                : const Text('Doğrulama Kodu Gönder'),
           ),
         ),
       ],

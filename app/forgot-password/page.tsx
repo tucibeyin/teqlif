@@ -150,7 +150,7 @@ export default function ForgotPasswordPage() {
                         />
                     </div>
                     <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
-                        {loading ? "Gönderiliyor..." : "Bağlantıyı Gönder"}
+                        {loading ? "Gönderiliyor..." : "Doğrulama Kodu Gönder"}
                     </button>
                 </form>
 
