@@ -21,6 +21,22 @@ export function GlobalChatWidget() {
     const [unreadTotal, setUnreadTotal] = useState(0);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const widgetRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (widgetRef.current && !widgetRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+            }
+        };
+
+        if (isOpen) {
+            document.addEventListener('mousedown', handleClickOutside);
+        }
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, [isOpen]);
 
     const fetchConversations = useCallback(async () => {
         try {
@@ -134,7 +150,7 @@ export function GlobalChatWidget() {
     const currentUserId = (session.user as any).id;
 
     return (
-        <div style={{
+        <div ref={widgetRef} style={{
             position: 'fixed',
             bottom: '20px',
             right: '20px',
