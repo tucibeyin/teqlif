@@ -46,7 +46,12 @@ function LoginForm() {
                         <input id="email" name="email" type="email" className="input" placeholder="ornek@email.com" required />
                     </div>
                     <div className="form-group">
-                        <label htmlFor="password">Şifre</label>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+                            <label htmlFor="password" style={{ marginBottom: 0 }}>Şifre</label>
+                            <Link href="/forgot-password" style={{ fontSize: "0.85rem", color: "var(--primary)", textDecoration: "none", fontWeight: 500 }}>
+                                Şifremi unuttum
+                            </Link>
+                        </div>
                         <input id="password" name="password" type="password" className="input" placeholder="••••••••" required />
                     </div>
                     <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
