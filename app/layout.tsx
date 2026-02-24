@@ -4,6 +4,7 @@ import { Navbar } from "@/components/Navbar";
 import { Providers } from "./providers";
 import { GlobalChatWidget } from "@/components/GlobalChatWidget";
 import { MobileAppBanner } from "@/components/MobileAppBanner";
+import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "teqlif - İlan ve Açık Artırma Platformu",
@@ -62,7 +63,12 @@ export default function RootLayout({
 
               <div className="footer-bottom">
                 <span className="footer-logo">teqlif</span>
-                <p>© 2026 teqlif. Tüm hakları saklıdır.</p>
+                <div className="footer-links" style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+                  <Link href="/gizlilik-politikasi" className="text-gray-500 hover:text-cyan-600 text-sm transition-colors">
+                    Gizlilik Politikası
+                  </Link>
+                  <p>© 2026 teqlif. Tüm hakları saklıdır.</p>
+                </div>
               </div>
             </div>
           </footer>
