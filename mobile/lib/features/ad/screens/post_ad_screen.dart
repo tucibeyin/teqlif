@@ -452,4 +452,27 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
       ),
     );
   }
+
+  Widget _buildDurationChip(String label, int? value) {
+    final isSelected = _selectedDurationDays == value;
+    return ChoiceChip(
+      label: Text(label),
+      selected: isSelected,
+      selectedColor: const Color(0xFF00B4CC).withOpacity(0.2),
+      labelStyle: TextStyle(
+        color: isSelected ? const Color(0xFF00B4CC) : const Color(0xFF4A5568),
+        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+      ),
+      onSelected: (selected) {
+        if (selected) {
+          setState(() {
+            _selectedDurationDays = value;
+            if (value != null) {
+              _customExpiresAt = null; // reset custom context
+            }
+          });
+        }
+      },
+    );
+  }
 }
