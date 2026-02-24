@@ -75,7 +75,7 @@ final _routerNotifierProvider =
     ChangeNotifierProvider((ref) => RouterNotifier(ref));
 
 final routerProvider = Provider<GoRouter>((ref) {
-  final notifier = ref.watch(_routerNotifierProvider);
+  final notifier = ref.read(_routerNotifierProvider);
 
   return GoRouter(
     initialLocation: '/splash',
