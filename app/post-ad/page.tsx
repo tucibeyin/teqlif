@@ -13,6 +13,7 @@ export default function PostAdPage() {
     const [displayPrice, setDisplayPrice] = useState("");
     const [displayMinBidStep, setDisplayMinBidStep] = useState(new Intl.NumberFormat("tr-TR").format(100));
     const [displayBuyItNowPrice, setDisplayBuyItNowPrice] = useState("");
+    const [displayStartingBid, setDisplayStartingBid] = useState("");
     const [isFixedPrice, setIsFixedPrice] = useState(false);
     const [showPhone, setShowPhone] = useState(false);
     const [durationDays, setDurationDays] = useState<number | "custom">(30);
@@ -62,12 +63,13 @@ export default function PostAdPage() {
         }
 
         const bidType = fd.get("bidType");
-        const actualStartingBidInput = document.getElementById("actualStartingBid") as HTMLInputElement;
+
+        const actualStartingBidValue = displayStartingBid.replace(/\./g, "");
         const parsedStartingBid = isFixedPrice
             ? null
-            : (bidType === "free" ? 1 : (actualStartingBidInput && actualStartingBidInput.value ? Number(actualStartingBidInput.value) : null));
+            : (bidType === "free" ? 1 : (actualStartingBidValue ? Number(actualStartingBidValue) : null));
 
-        const actualBuyItNowInput = document.getElementById("actualBuyItNowPrice") as HTMLInputElement;
+        const actualBuyItNowValue = displayBuyItNowPrice.replace(/\./g, "");
 
         const res = await fetch("/api/ads", {
             method: "POST",
@@ -79,7 +81,7 @@ export default function PostAdPage() {
                 isFixedPrice,
                 startingBid: parsedStartingBid,
                 minBidStep: Number(fd.get("minBidStep")),
-                buyItNowPrice: actualBuyItNowInput && actualBuyItNowInput.value ? Number(actualBuyItNowInput.value) : null,
+                buyItNowPrice: actualBuyItNowValue ? Number(actualBuyItNowValue) : null,
                 showPhone,
                 durationDays: durationDays !== "custom" ? durationDays : null,
                 customExpiresAt: durationDays === "custom" ? customExpiresAt : null,
@@ -286,17 +288,17 @@ export default function PostAdPage() {
                                             name="startingBidDummy" // Sadece frontend UI için
                                             id="startingBidInput"
                                             placeholder="Örn: 5000"
+                                            value={displayStartingBid}
                                             onChange={(e) => {
                                                 const val = e.target.value.replace(/[^0-9]/g, "");
-                                                if (!val) e.target.value = "";
-                                                else e.target.value = new Intl.NumberFormat("tr-TR").format(parseInt(val, 10));
-                                                document.getElementById("actualStartingBid")!.setAttribute("value", val);
+                                                if (!val) setDisplayStartingBid("");
+                                                else setDisplayStartingBid(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
                                             }}
                                             style={{ paddingRight: "3rem" }}
                                         />
                                         <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
                                     </div>
-                                    <input type="hidden" name="startingBid" id="actualStartingBid" value="" />
+                                    <input type="hidden" name="startingBid" value={displayStartingBid.replace(/\./g, "")} />
                                 </div>
                             </div>
 
@@ -342,13 +344,12 @@ export default function PostAdPage() {
                                                     const val = e.target.value.replace(/[^0-9]/g, "");
                                                     if (!val) setDisplayBuyItNowPrice("");
                                                     else setDisplayBuyItNowPrice(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
-                                                    document.getElementById("actualBuyItNowPrice")!.setAttribute("value", val);
                                                 }}
                                                 style={{ paddingRight: "3rem" }}
                                             />
                                             <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
                                         </div>
-                                        <input type="hidden" name="buyItNowPrice" id="actualBuyItNowPrice" value="" />
+                                        <input type="hidden" name="buyItNowPrice" value={displayBuyItNowPrice.replace(/\./g, "")} />
                                         <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
                                             Açık artırma bitmeden bu fiyata hemen alıcı bulabilirsiniz. Açılış teklifinden büyük olmalıdır.
                                         </div>

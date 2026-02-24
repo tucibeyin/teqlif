@@ -725,18 +725,21 @@ class _AdCard extends StatelessWidget {
             Expanded(
               flex: 3,
               child: ad.images.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: imageUrl(ad.images.first),
-                      fit: BoxFit.cover,
+                  ? Container(
+                      color: const Color(0xFFF4F7FA),
                       width: double.infinity,
-                      placeholder: (_, __) => Container(
-                          color: const Color(0xFFF4F7FA),
-                          child: const Icon(Icons.image_outlined,
-                              color: Color(0xFF9AAAB8), size: 32)),
-                      errorWidget: (_, __, ___) => Container(
-                          color: const Color(0xFFF4F7FA),
-                          child: const Icon(Icons.image_not_supported_outlined,
-                              color: Color(0xFF9AAAB8))),
+                      child: CachedNetworkImage(
+                        imageUrl: imageUrl(ad.images.first),
+                        fit: BoxFit.contain,
+                        placeholder: (_, __) => const Center(
+                          child: Icon(Icons.image_outlined,
+                              color: Color(0xFF9AAAB8), size: 32),
+                        ),
+                        errorWidget: (_, __, ___) => const Center(
+                          child: Icon(Icons.image_not_supported_outlined,
+                              color: Color(0xFF9AAAB8)),
+                        ),
+                      ),
                     )
                   : Container(
                       color: const Color(0xFFF4F7FA),
@@ -811,6 +814,9 @@ class _AdListTile extends StatelessWidget {
   final AdModel ad;
   const _AdListTile({required this.ad});
 
+  String _fmt(double p) =>
+      '₺${p.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+
   @override
   Widget build(BuildContext context) {
     return ListTile(
@@ -819,11 +825,15 @@ class _AdListTile extends StatelessWidget {
       leading: ClipRRect(
         borderRadius: BorderRadius.circular(8),
         child: ad.images.isNotEmpty
-            ? CachedNetworkImage(
-                imageUrl: imageUrl(ad.images.first),
+            ? Container(
                 width: 56,
                 height: 56,
-                fit: BoxFit.cover)
+                color: const Color(0xFFF4F7FA),
+                child: CachedNetworkImage(
+                    imageUrl: imageUrl(ad.images.first),
+                    fit: BoxFit.contain,
+                ),
+              )
             : Container(
                 width: 56,
                 height: 56,
@@ -845,9 +855,9 @@ class _AdListTile extends StatelessWidget {
           const SizedBox(height: 4),
           Text(
             ad.highestBidAmount != null
-                ? '₺${ad.highestBidAmount!.toStringAsFixed(0)}'
+                ? _fmt(ad.highestBidAmount!)
                 : (ad.startingBid != null
-                    ? '₺${ad.startingBid!.toStringAsFixed(0)}'
+                    ? _fmt(ad.startingBid!)
                     : 'Serbest Teklif'),
             style: const TextStyle(
                 fontWeight: FontWeight.w700, color: Color(0xFF00B4CC)),
@@ -856,7 +866,7 @@ class _AdListTile extends StatelessWidget {
       ),
       trailing: ad.highestBidAmount != null
           ? Text(
-              'Güncel ₺${ad.highestBidAmount!.toStringAsFixed(0)}',
+              'Güncel ${_fmt(ad.highestBidAmount!)}',
               style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
@@ -864,7 +874,7 @@ class _AdListTile extends StatelessWidget {
             )
           : ad.isFixedPrice
               ? Text(
-                  '₺${ad.price.toStringAsFixed(0)}',
+                  _fmt(ad.price),
                   style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
@@ -873,7 +883,7 @@ class _AdListTile extends StatelessWidget {
               : ad.startingBid == null
                   ? const Text('🔥', style: TextStyle(fontSize: 16))
                   : Text(
-                      '₺${ad.startingBid!.toStringAsFixed(0)}',
+                      _fmt(ad.startingBid!),
                       style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 13,

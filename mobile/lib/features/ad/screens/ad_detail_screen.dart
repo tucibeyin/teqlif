@@ -190,9 +190,12 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             },
                             child: Hero(
                               tag: ad.images[i],
-                              child: CachedNetworkImage(
-                                imageUrl: imageUrl(ad.images[i]),
-                                fit: BoxFit.cover,
+                              child: Container(
+                                color: const Color(0xFFF4F7FA),
+                                child: CachedNetworkImage(
+                                  imageUrl: imageUrl(ad.images[i]),
+                                  fit: BoxFit.contain,
+                                ),
                               ),
                             ),
                           ),
