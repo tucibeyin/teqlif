@@ -23,8 +23,9 @@ export async function POST(req: NextRequest) {
         const bytes = await file.arrayBuffer();
         const buffer = Buffer.from(bytes);
 
-        const isVercel = process.env.VERCEL || process.env.NODE_ENV === "production";
-        const baseUploadPath = isVercel ? "/tmp" : join(process.cwd(), "public");
+        // Save everything to public/uploads directly.
+        // If a cloud provider is used later, they should be uploaded to S3/Cloudinary instead.
+        const baseUploadPath = join(process.cwd(), "public");
         const uploadsDir = join(baseUploadPath, "uploads");
 
         if (!existsSync(uploadsDir)) {
@@ -38,7 +39,8 @@ export async function POST(req: NextRequest) {
 
         await writeFile(filePath, buffer);
 
-        return NextResponse.json({ url: `/api/uploads/${filename}` });
+        // Next.js serves the 'public' folder directly at the root.
+        return NextResponse.json({ url: `/uploads/${filename}` });
     } catch (error) {
         console.error("Upload error:", error);
         return NextResponse.json({ error: "Dosya yükleme başarısız" }, { status: 500 });
