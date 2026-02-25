@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:timeago/timeago.dart' as timeago;
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
@@ -36,6 +38,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
     final user = ref.watch(authProvider).user;
     final myAdsAsync = ref.watch(myAdsProvider);
     final favsAsync = ref.watch(favoritesProvider);
+    final myBidsAsync = ref.watch(myBidsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -123,6 +126,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     segments: const [
                       ButtonSegment(value: 0, label: Text('İlanlarım')),
                       ButtonSegment(value: 1, label: Text('Favorilerim')),
+                      ButtonSegment(value: 2, label: Text('Tekliflerim')),
                     ],
                     selected: {_tabIndex},
                     onSelectionChanged: (set) =>
@@ -152,7 +156,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         children: ads.map((ad) => _MyAdTile(ad: ad)).toList(),
                       ),
               )
-            else
+            else if (_tabIndex == 1)
               favsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Text('Hata: $e'),
@@ -165,6 +169,19 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                         children: ads
                             .map((ad) => _MyAdTile(ad: ad, isFavorite: true))
                             .toList(),
+                      ),
+              )
+            else
+              myBidsAsync.when(
+                loading: () => const Center(child: CircularProgressIndicator()),
+                error: (e, _) => Text('Hata: $e'),
+                data: (bids) => bids.isEmpty
+                    ? const Center(
+                        child: Padding(
+                            padding: EdgeInsets.all(32),
+                            child: Text('Henüz teklifiniz yok.')))
+                    : Column(
+                        children: bids.map((bid) => _MyBidTile(bid: bid)).toList(),
                       ),
               ),
           ],
@@ -248,6 +265,18 @@ class _MyAdTile extends ConsumerWidget {
       margin: const EdgeInsets.only(bottom: 10),
       child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: ad.images.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: ad.images.first,
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => _fallbackIcon(ad.category?.icon),
+                )
+              : _fallbackIcon(ad.category?.icon),
+        ),
         title: Text(ad.title,
             style: const TextStyle(fontWeight: FontWeight.w600),
             maxLines: 1,
@@ -315,8 +344,92 @@ class _MyAdTile extends ConsumerWidget {
                     ),
                 ],
               ),
-        onTap: () => context.push('/ad/${ad.id}'),
       ),
+    );
+  }
+
+  Widget _fallbackIcon(String? iconString) {
+    return Container(
+      width: 56,
+      height: 56,
+      color: const Color(0xFFF4F7FA),
+      alignment: Alignment.center,
+      child: Text(
+        iconString ?? '📦',
+        style: const TextStyle(fontSize: 24),
+      ),
+    );
+  }
+}
+
+class _MyBidTile extends StatelessWidget {
+  final Map<String, dynamic> bid;
+  const _MyBidTile({required this.bid});
+
+  @override
+  Widget build(BuildContext context) {
+    final adMap = bid['ad'] as Map<String, dynamic>? ?? {};
+    final title = adMap['title'] as String? ?? 'Bilinmiyor';
+    final images = adMap['images'] as List<dynamic>? ?? [];
+    final category = adMap['category'] as Map<String, dynamic>? ?? {};
+    final iconString = category['icon'] as String? ?? '📦';
+    final adId = bid['adId'] as String?;
+    final amount = double.tryParse(bid['amount'].toString()) ?? 0.0;
+    final createdAtStr = bid['createdAt'] as String?;
+    final timeStr = createdAtStr != null
+        ? timeago.format(DateTime.parse(createdAtStr), locale: 'tr')
+        : '';
+
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: ListTile(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+        leading: ClipRRect(
+          borderRadius: BorderRadius.circular(8),
+          child: images.isNotEmpty
+              ? CachedNetworkImage(
+                  imageUrl: images.first.toString(),
+                  width: 56,
+                  height: 56,
+                  fit: BoxFit.cover,
+                  errorWidget: (_, __, ___) => _fallbackBidIcon(iconString),
+                )
+              : _fallbackBidIcon(iconString),
+        ),
+        title: Text(title,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const SizedBox(height: 4),
+            Text(timeStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 4),
+            Text(
+              'Teklifim: ₺${amount.toStringAsFixed(2)}',
+              style: const TextStyle(
+                  color: Color(0xFF00B4CC), fontWeight: FontWeight.bold),
+            ),
+          ],
+        ),
+        trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+        onTap: () {
+          if (adId != null) {
+            context.push('/ad/$adId');
+          }
+        },
+      ),
+    );
+  }
+
+  Widget _fallbackBidIcon(String iconString) {
+    return Container(
+      width: 56,
+      height: 56,
+      color: const Color(0xFFF4F7FA),
+      alignment: Alignment.center,
+      child: Text(iconString, style: const TextStyle(fontSize: 24)),
     );
   }
 }
