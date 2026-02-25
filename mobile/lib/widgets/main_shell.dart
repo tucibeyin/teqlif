@@ -3,7 +3,6 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/notifications/providers/unread_counts_provider.dart';
-import 'package:flutter_app_badger/flutter_app_badger.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -24,11 +23,7 @@ class MainShell extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
     final currentIndex = _locationToIndex(location);
-    final isAuth = _isAuthScreen(location);
     final unreadCounts = ref.watch(unreadCountsProvider);
-
-    // Remove the native device OS app icon badge when the app is active
-    FlutterAppBadger.removeBadge();
 
     return Scaffold(
       body: child,

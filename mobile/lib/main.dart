@@ -12,6 +12,7 @@ import 'config/theme.dart';
 import 'core/api/api_client.dart';
 import 'core/api/endpoints.dart';
 import 'features/notifications/providers/unread_counts_provider.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 
 // Background message handler (must be top-level)
 @pragma('vm:entry-point')
@@ -37,6 +38,9 @@ Future<void> _initLocalNotifications() async {
 
 Future<void> _setupFCM(WidgetRef ref) async {
   final messaging = FirebaseMessaging.instance;
+
+  // Clear native app badge on launch
+  FlutterAppBadger.removeBadge();
 
   // Request permission (iOS)
   await messaging.requestPermission(
