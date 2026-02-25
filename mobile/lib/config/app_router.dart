@@ -55,11 +55,6 @@ class RouterNotifier extends ChangeNotifier {
     if (auth.isLoading) return null;
     final isAuth = auth.isAuthenticated;
 
-    // Once initialization is done, Splash should forcefully route away
-    if (location == '/splash') {
-      return isAuth ? '/home' : '/login';
-    }
-
     final isProtected = _protected.any((r) => location.startsWith(r)) ||
         location.startsWith('/edit-ad');
 

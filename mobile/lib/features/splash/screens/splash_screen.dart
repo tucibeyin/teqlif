@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../config/app_router.dart';
+import '../../../core/providers/auth_provider.dart';
 
 class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
@@ -22,7 +23,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 1200),
+      duration: const Duration(milliseconds: 2500),
     );
 
     _fadeAnimation = Tween<double>(begin: 0.0, end: 1.0).animate(
@@ -41,15 +42,16 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
 
     _controller.forward();
 
-    // After 3 seconds, navigate to home (or pending deep link).
-    Future.delayed(const Duration(seconds: 3), () {
+    // After 3.5 seconds, navigate to home/login (or pending deep link).
+    Future.delayed(const Duration(milliseconds: 3500), () {
       if (mounted) {
         final pendingRoute = ref.read(pendingRouteProvider);
         if (pendingRoute != null) {
           ref.read(pendingRouteProvider.notifier).state = null; // Clear it
           context.go(pendingRoute);
         } else {
-          context.go('/home');
+          final isAuth = ref.read(authProvider).isAuthenticated;
+          context.go(isAuth ? '/home' : '/login');
         }
       }
     });
