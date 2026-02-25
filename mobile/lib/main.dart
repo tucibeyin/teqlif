@@ -17,6 +17,7 @@ import 'features/notifications/providers/unread_counts_provider.dart';
 import 'features/messages/screens/chat_screen.dart';
 import 'features/messages/screens/conversations_screen.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 
 // Background message handler (must be top-level)
 @pragma('vm:entry-point')
@@ -202,7 +203,10 @@ Future<void> _setupFCM(WidgetRef ref) async {
 }
 
 void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  
+  // Preserve the native OS splash screen until the Animated Flutter Splash Screen is ready
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
 
   await initializeDateFormatting('tr_TR', null);
 

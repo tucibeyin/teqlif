@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import '../../../config/app_router.dart';
 import '../../../core/providers/auth_provider.dart';
 
@@ -20,6 +21,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   @override
   void initState() {
     super.initState();
+    // Drop the OS-level native splash screen exactly when this Flutter widget is ready to animate
+    FlutterNativeSplash.remove();
 
     _controller = AnimationController(
       vsync: this,
