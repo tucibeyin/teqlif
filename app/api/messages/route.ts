@@ -107,15 +107,6 @@ export async function POST(request: Request) {
             });
 
             // Create notification for recipient
-            await tx.notification.create({
-                data: {
-                    userId: recipientId,
-                    type: 'NEW_MESSAGE',
-                    message: `${currentUser.name} sana yeni bir mesaj gönderdi.`,
-                    link: `/dashboard/messages?conversationId=${conversationId}`
-                }
-            });
-
             return message;
         });
 
