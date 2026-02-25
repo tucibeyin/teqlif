@@ -120,27 +120,34 @@ Future<void> _setupFCM(WidgetRef ref) async {
   });
 
   // Foreground messages → show local notification AND refresh badges
-  FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+    debugPrint('[FCM] Foreground push received! Title: ${message.notification?.title}');
     ref.read(unreadCountsProvider.notifier).refresh();
     
     final notification = message.notification;
     if (notification != null) {
-      _localNotifications.show(
-        notification.hashCode,
-        notification.title,
-        notification.body,
-        const NotificationDetails(
-          android: AndroidNotificationDetails(
-            'teqlif_channel',
-            'Teqlif Bildirimleri',
-            importance: Importance.high,
-            priority: Priority.high,
-            icon: '@mipmap/launcher_icon',
+      try {
+        await _localNotifications.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          const NotificationDetails(
+            android: AndroidNotificationDetails(
+              'teqlif_channel',
+              'Teqlif Bildirimleri',
+              importance: Importance.high,
+              priority: Priority.high,
+              icon: '@mipmap/launcher_icon',
+            ),
+            iOS: DarwinNotificationDetails(),
           ),
-          iOS: DarwinNotificationDetails(),
-        ),
-        payload: jsonEncode(message.data),
-      );
+          payload: jsonEncode(message.data),
+        );
+        debugPrint('[FCM] Local notification displayed successfully!');
+      } catch (e, stack) {
+        debugPrint('[FCM] CRASH while showing local notification: $e');
+        debugPrint(stack.toString());
+      }
     }
   });
 
