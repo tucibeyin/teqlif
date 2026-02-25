@@ -78,30 +78,26 @@ class MainShell extends ConsumerWidget {
                 ),
                 NavigationDestination(
                   icon: Badge(
-                    isLabelVisible: unreadCounts.value?.messages != null && 
-                                    unreadCounts.value!.messages > 0,
-                    label: Text(unreadCounts.value?.messages.toString() ?? ''),
+                    isLabelVisible: (unreadCounts.value?.messages ?? 0) > 0,
+                    label: Text(unreadCounts.value?.messages?.toString() ?? ''),
                     child: const Icon(Icons.message_outlined),
                   ),
                   selectedIcon: Badge(
-                    isLabelVisible: unreadCounts.value?.messages != null && 
-                                    unreadCounts.value!.messages > 0,
-                    label: Text(unreadCounts.value?.messages.toString() ?? ''),
+                    isLabelVisible: (unreadCounts.value?.messages ?? 0) > 0,
+                    label: Text(unreadCounts.value?.messages?.toString() ?? ''),
                     child: const Icon(Icons.message),
                   ),
                   label: 'Mesajlar',
                 ),
                 NavigationDestination(
                   icon: Badge(
-                    isLabelVisible: unreadCounts.value?.notifications != null && 
-                                    unreadCounts.value!.notifications > 0,
-                    label: Text(unreadCounts.value?.notifications.toString() ?? ''),
+                    isLabelVisible: (unreadCounts.value?.notifications ?? 0) > 0,
+                    label: Text(unreadCounts.value?.notifications?.toString() ?? ''),
                     child: const Icon(Icons.notifications_outlined),
                   ),
                   selectedIcon: Badge(
-                    isLabelVisible: unreadCounts.value?.notifications != null && 
-                                    unreadCounts.value!.notifications > 0,
-                    label: Text(unreadCounts.value?.notifications.toString() ?? ''),
+                    isLabelVisible: (unreadCounts.value?.notifications ?? 0) > 0,
+                    label: Text(unreadCounts.value?.notifications?.toString() ?? ''),
                     child: const Icon(Icons.notifications),
                   ),
                   label: 'Bildirimler',
