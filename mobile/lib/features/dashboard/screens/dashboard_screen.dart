@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:intl/intl.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
@@ -399,7 +400,7 @@ class _MyBidTile extends StatelessWidget {
             Text(timeStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 4),
             Text(
-              'Teklifim: ₺${amount.toStringAsFixed(2)}',
+              'Teklifim: ${NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0).format(amount)}',
               style: const TextStyle(
                   color: Color(0xFF00B4CC), fontWeight: FontWeight.bold),
             ),
