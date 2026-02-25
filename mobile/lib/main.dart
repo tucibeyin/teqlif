@@ -32,7 +32,7 @@ final FlutterLocalNotificationsPlugin _localNotifications =
 void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
   // Force a global synchronization the moment the user taps a push notification
   ref.read(unreadCountsProvider.notifier).refresh();
-  ref.invalidate(conversationsProvider);
+  ref.read(conversationsProvider.notifier).refresh();
   final activeConvId = ref.read(activeChatIdProvider);
   if (activeConvId != null) {
     ref.invalidate(chatMessagesProvider(activeConvId));
@@ -142,7 +142,7 @@ Future<void> _setupFCM(WidgetRef ref) async {
     
     if (type == 'NEW_MESSAGE') {
       // Refresh the Inbox list so the new message snippet appears
-      ref.invalidate(conversationsProvider);
+      ref.read(conversationsProvider.notifier).refresh();
 
       // Extract conversationId from the deep link payload (e.g. /dashboard/messages?conversationId=123)
       final link = payloadData['link'] as String?;
@@ -268,7 +268,7 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
     if (state == AppLifecycleState.resumed) {
       if (ref.read(authProvider).isAuthenticated) {
         ref.read(unreadCountsProvider.notifier).refresh();
-        ref.invalidate(conversationsProvider);
+        ref.read(conversationsProvider.notifier).refresh();
         
         final activeConvId = ref.read(activeChatIdProvider);
         if (activeConvId != null) {

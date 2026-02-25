@@ -8,14 +8,36 @@ import '../../../core/models/message.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../notifications/providers/unread_counts_provider.dart';
 
+class ConversationsNotifier extends AsyncNotifier<List<ConversationModel>> {
+  @override
+  Future<List<ConversationModel>> build() async {
+    return _fetchConversations();
+  }
+
+  Future<List<ConversationModel>> _fetchConversations() async {
+    ref.watch(authProvider); // React to auth state changes
+    final res = await ApiClient().get(Endpoints.conversations);
+    final list = res.data as List<dynamic>;
+    return list
+        .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<void> refresh() async {
+    // Refresh without destroying the current UI state
+    state = const AsyncValue.loading();
+    try {
+      final newConversations = await _fetchConversations();
+      state = AsyncValue.data(newConversations);
+    } catch (e, st) {
+      state = AsyncValue.error(e, st);
+    }
+  }
+}
+
 final conversationsProvider =
-    FutureProvider<List<ConversationModel>>((ref) async {
-  ref.watch(authProvider); // React to auth state changes (login/logout)
-  final res = await ApiClient().get(Endpoints.conversations);
-  final list = res.data as List<dynamic>;
-  return list
-      .map((e) => ConversationModel.fromJson(e as Map<String, dynamic>))
-      .toList();
+    AsyncNotifierProvider<ConversationsNotifier, List<ConversationModel>>(() {
+  return ConversationsNotifier();
 });
 
 class ConversationsScreen extends ConsumerWidget {
@@ -29,12 +51,15 @@ class ConversationsScreen extends ConsumerWidget {
     return Scaffold(
       appBar: AppBar(title: const Text('Mesajlar')),
       body: convAsync.when(
+        skipLoadingOnReload: true,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(child: Text('Hata: $e')),
         data: (convs) => convs.isEmpty
             ? const Center(child: Text('Henüz mesajınız yok.'))
             : RefreshIndicator(
-                onRefresh: () => ref.refresh(conversationsProvider.future),
+                onRefresh: () async {
+                  await ref.read(conversationsProvider.notifier).refresh();
+                },
                 child: ListView.builder(
                   itemCount: convs.length,
                   itemBuilder: (_, i) {
@@ -151,7 +176,7 @@ class ConversationsScreen extends ConsumerWidget {
                               if (confirm == true) {
                                 await ApiClient().delete(
                                     '/api/conversations/${conv.id}');
-                                ref.invalidate(conversationsProvider);
+                                ref.read(conversationsProvider.notifier).refresh();
                               }
                             },
                           ),
@@ -160,7 +185,7 @@ class ConversationsScreen extends ConsumerWidget {
                       onTap: () async {
                         await context.push('/messages/${conv.id}');
                         // Refresh both the list and the bottom tab badges when returning
-                        ref.invalidate(conversationsProvider);
+                        ref.read(conversationsProvider.notifier).refresh();
                         ref.read(unreadCountsProvider.notifier).refresh();
                       },
                     );
