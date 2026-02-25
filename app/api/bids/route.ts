@@ -4,6 +4,32 @@ import { actionRatelimiter } from "@/lib/rate-limit";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { sendPushNotification } from "@/lib/fcm";
 
+export async function GET(req: NextRequest) {
+    try {
+        const user = await getMobileUser(req);
+        if (!user) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
+
+        const myBids = await prisma.bid.findMany({
+            where: { userId: user.id },
+            orderBy: { createdAt: "desc" },
+            take: 20,
+            include: {
+                ad: {
+                    include: {
+                        category: true,
+                        province: true,
+                    },
+                },
+            },
+        });
+
+        return NextResponse.json(myBids);
+    } catch (err) {
+        console.error("GET /api/bids error:", err);
+        return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
+    }
+}
+
 export async function POST(req: NextRequest) {
     try {
         const user = await getMobileUser(req);

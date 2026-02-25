@@ -119,28 +119,18 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             ),
             const SizedBox(height: 24),
             // Header Tabs
-            Row(
-              children: [
-                Expanded(
-                  child: SegmentedButton<int>(
-                    segments: const [
-                      ButtonSegment(value: 0, label: Text('İlanlarım')),
-                      ButtonSegment(value: 1, label: Text('Favorilerim')),
-                      ButtonSegment(value: 2, label: Text('Tekliflerim')),
-                    ],
-                    selected: {_tabIndex},
-                    onSelectionChanged: (set) =>
-                        setState(() => _tabIndex = set.first),
-                  ),
-                ),
-                const SizedBox(width: 8),
-                IconButton.filled(
-                  onPressed: () => context.push('/post-ad'),
-                  icon: const Icon(Icons.add),
-                  style: IconButton.styleFrom(
-                      backgroundColor: const Color(0xFF00B4CC)),
-                ),
-              ],
+            SizedBox(
+              width: double.infinity,
+              child: SegmentedButton<int>(
+                segments: const [
+                  ButtonSegment(value: 0, label: Text('İlanlarım')),
+                  ButtonSegment(value: 1, label: Text('Favorilerim')),
+                  ButtonSegment(value: 2, label: Text('Tekliflerim')),
+                ],
+                selected: {_tabIndex},
+                onSelectionChanged: (set) =>
+                    setState(() => _tabIndex = set.first),
+              ),
             ),
             const SizedBox(height: 16),
             if (_tabIndex == 0)
