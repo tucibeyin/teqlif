@@ -29,6 +29,10 @@ final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
 
 void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
+  // Force a global synchronization the moment the user taps a push notification
+  ref.read(unreadCountsProvider.notifier).refresh();
+  ref.invalidate(conversationsProvider);
+
   final type = data['type'] as String?;
   final route = (type == 'NEW_MESSAGE') ? '/messages' : '/notifications';
 
@@ -217,10 +221,11 @@ class TeqlifApp extends ConsumerStatefulWidget {
   ConsumerState<TeqlifApp> createState() => _TeqlifAppState();
 }
 
-class _TeqlifAppState extends ConsumerState<TeqlifApp> {
+class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     
     // Listen for Authentication state changes to dynamically register Push Tokens upon successful Login/Registration mid-session.
     ref.listenManual(authProvider, (previous, next) async {
@@ -239,6 +244,25 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
       await _initLocalNotifications(ref);
       await _setupFCM(ref);
     });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    // When the app comes back to the foreground from the OS background, 
+    // silently re-sync all badges and messages to catch any silent pushes we missed.
+    if (state == AppLifecycleState.resumed) {
+      if (ref.read(authProvider).isAuthenticated) {
+        ref.read(unreadCountsProvider.notifier).refresh();
+        ref.invalidate(conversationsProvider);
+      }
+    }
   }
 
   @override
