@@ -122,6 +122,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
             SizedBox(
               width: double.infinity,
               child: SegmentedButton<int>(
+                showSelectedIcon: false,
                 segments: const [
                   ButtonSegment(value: 0, label: Text('İlanlarım')),
                   ButtonSegment(value: 1, label: Text('Favorilerim')),
