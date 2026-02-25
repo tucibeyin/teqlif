@@ -18,7 +18,7 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
     try {
       state = const AsyncValue.loading();
       final notificationsRes = await ApiClient().get(Endpoints.notifications);
-      final messagesRes = await ApiClient().get(Endpoints.unreadMessages);
+      final messagesRes = await ApiClient().get(Endpoints.messagesUnread);
 
       int unreadNotifications = 0;
       if (notificationsRes.data is List) {
