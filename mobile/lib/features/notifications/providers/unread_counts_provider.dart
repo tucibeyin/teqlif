@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:dio/dio.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/endpoints.dart';
 
@@ -36,6 +37,13 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
         messages: unreadMessages,
         notifications: unreadNotifications,
       ));
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) {
+        // User not logged in, siliently return 0 counts
+        state = AsyncValue.data(UnreadCounts(messages: 0, notifications: 0));
+      } else {
+        state = AsyncValue.error(e, e.stackTrace);
+      }
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
