@@ -58,6 +58,19 @@ Future<void> _initLocalNotifications(WidgetRef ref) async {
       }
     },
   );
+
+  // Explicitly create the high-importance Android channel for Firebase to use in the background
+  if (defaultTargetPlatform == TargetPlatform.android) {
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'teqlif_channel',
+      'Teqlif Bildirimleri',
+      description: 'Teqlif uygulaması için önemli bildirimler.',
+      importance: Importance.high,
+    );
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(channel);
+  }
 }
 
 Future<void> _setupFCM(WidgetRef ref) async {
