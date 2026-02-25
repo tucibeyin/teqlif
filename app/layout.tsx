@@ -8,8 +8,58 @@ import { MobileGate } from "@/components/MobileGate";
 import Link from "next/link";
 
 export const metadata: Metadata = {
-  title: "teqlif - İlan ve Açık Artırma Platformu",
-  description: "Türkiye'nin en büyük ilan ve açık artırma platformu. Kategori ve konum seçerek kolayca ilan ver, teklif al.",
+  title: {
+    template: "%s | teqlif",
+    default: "teqlif - İstediğin fiyattan al ve sat",
+  },
+  description: "Türkiye'nin en hızlı büyüyen dijital ilan platformu. Araba, emlak, elektronik ve daha fazlasını doğrudan alıcı ve satıcılarla buluşturuyoruz. Hemen ücretsiz ilan ver!",
+  applicationName: "teqlif",
+  keywords: ["ilan", "ikinci el", "araba", "emlak", "elektronik", "teklif ver", "açık artırma", "alışveriş"],
+  authors: [{ name: "teqlif" }],
+  creator: "teqlif",
+  publisher: "teqlif",
+  formatDetection: {
+    email: false,
+    address: false,
+    telephone: false,
+  },
+  openGraph: {
+    title: "teqlif - İstediğin fiyattan al ve sat",
+    description: "Türkiye'nin yeni nesil pazaryeri. Kategori ve konum seçerek kolayca ilan ver, teklif al, istediğin fiyattan ürün sahibi ol.",
+    url: "https://teqlif.com",
+    siteName: "teqlif",
+    images: [
+      {
+        url: "/app_icon.png",
+        width: 1024,
+        height: 1024,
+        alt: "teqlif logo",
+      }
+    ],
+    locale: "tr_TR",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "teqlif - İstediğin fiyattan al ve sat",
+    description: "Binlerce ilan arasından aradığını bul veya hemen sat. Yeni nesil pazar yeri deneyimi teqlif'te.",
+    images: ["/app_icon.png"],
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-video-preview": -1,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
+  icons: {
+    icon: "/favicon.ico",
+    apple: "/app_icon.png",
+  },
 };
 
 export const viewport = {
