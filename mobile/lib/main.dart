@@ -11,6 +11,7 @@ import 'config/app_router.dart';
 import 'config/theme.dart';
 import 'core/api/api_client.dart';
 import 'core/api/endpoints.dart';
+import 'features/notifications/providers/unread_counts_provider.dart';
 
 // Background message handler (must be top-level)
 @pragma('vm:entry-point')
@@ -34,7 +35,7 @@ Future<void> _initLocalNotifications() async {
   );
 }
 
-Future<void> _setupFCM() async {
+Future<void> _setupFCM(WidgetRef ref) async {
   final messaging = FirebaseMessaging.instance;
 
   // Request permission (iOS)
@@ -73,8 +74,10 @@ Future<void> _setupFCM() async {
     } catch (_) {}
   });
 
-  // Foreground messages → show local notification
+  // Foreground messages → show local notification AND refresh badges
   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+    ref.read(unreadCountsProvider.notifier).refresh();
+    
     final notification = message.notification;
     if (notification != null) {
       _localNotifications.show(
@@ -128,7 +131,7 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
   void initState() {
     super.initState();
     // Setup FCM after the first frame (so auth provider is ready)
-    WidgetsBinding.instance.addPostFrameCallback((_) => _setupFCM());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _setupFCM(ref));
   }
 
   @override

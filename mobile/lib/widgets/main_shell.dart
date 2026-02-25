@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/home/screens/home_screen.dart';
+import '../features/notifications/providers/unread_counts_provider.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -23,6 +25,10 @@ class MainShell extends ConsumerWidget {
     final location = GoRouterState.of(context).uri.path;
     final currentIndex = _locationToIndex(location);
     final isAuth = _isAuthScreen(location);
+    final unreadCounts = ref.watch(unreadCountsProvider);
+
+    // Remove the native device OS app icon badge when the app is active
+    FlutterAppBadger.removeBadge();
 
     return Scaffold(
       body: child,
@@ -44,9 +50,11 @@ class MainShell extends ConsumerWidget {
                     context.push('/post-ad');
                     break;
                   case 3:
+                    ref.read(unreadCountsProvider.notifier).refresh();
                     context.go('/messages');
                     break;
                   case 4:
+                    ref.read(unreadCountsProvider.notifier).refresh();
                     context.go('/notifications');
                     break;
                 }
@@ -73,14 +81,34 @@ class MainShell extends ConsumerWidget {
                   ),
                   label: 'İlan Ver',
                 ),
-                const NavigationDestination(
-                  icon: Icon(Icons.message_outlined),
-                  selectedIcon: Icon(Icons.message),
+                NavigationDestination(
+                  icon: Badge(
+                    isLabelVisible: unreadCounts.value?.messages != null && 
+                                    unreadCounts.value!.messages > 0,
+                    label: Text(unreadCounts.value?.messages.toString() ?? ''),
+                    child: const Icon(Icons.message_outlined),
+                  ),
+                  selectedIcon: Badge(
+                    isLabelVisible: unreadCounts.value?.messages != null && 
+                                    unreadCounts.value!.messages > 0,
+                    label: Text(unreadCounts.value?.messages.toString() ?? ''),
+                    child: const Icon(Icons.message),
+                  ),
                   label: 'Mesajlar',
                 ),
-                const NavigationDestination(
-                  icon: Icon(Icons.notifications_outlined),
-                  selectedIcon: Icon(Icons.notifications),
+                NavigationDestination(
+                  icon: Badge(
+                    isLabelVisible: unreadCounts.value?.notifications != null && 
+                                    unreadCounts.value!.notifications > 0,
+                    label: Text(unreadCounts.value?.notifications.toString() ?? ''),
+                    child: const Icon(Icons.notifications_outlined),
+                  ),
+                  selectedIcon: Badge(
+                    isLabelVisible: unreadCounts.value?.notifications != null && 
+                                    unreadCounts.value!.notifications > 0,
+                    label: Text(unreadCounts.value?.notifications.toString() ?? ''),
+                    child: const Icon(Icons.notifications),
+                  ),
                   label: 'Bildirimler',
                 ),
               ],
