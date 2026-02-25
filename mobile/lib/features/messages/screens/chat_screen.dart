@@ -46,15 +46,20 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.initState();
     // Mark this chat as active so push notifications can silent-refresh it
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(activeChatIdProvider.notifier).state = widget.conversationId;
+      if (mounted) {
+        ref.read(activeChatIdProvider.notifier).state = widget.conversationId;
+      }
     });
   }
 
   @override
   void dispose() {
-    // Clear the active chat when leaving the screen
+    // Clear the active chat when leaving the screen.
+    // We capture the notifier synchronously before the widget is disposed,
+    // so the async post-frame callback doesn't try to read a destroyed 'ref'.
+    final activeChatNotifier = ref.read(activeChatIdProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(activeChatIdProvider.notifier).state = null;
+      activeChatNotifier.state = null;
     });
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
