@@ -2,6 +2,7 @@
 import { useState } from "react";
 import Lightbox from "yet-another-react-lightbox";
 import Zoom from "yet-another-react-lightbox/plugins/zoom";
+import Image from "next/image";
 import "yet-another-react-lightbox/styles.css";
 
 export default function ImageSlider({ images, title }: { images: string[], title: string }) {
@@ -23,11 +24,12 @@ export default function ImageSlider({ images, title }: { images: string[], title
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <div style={{ position: "relative", width: "100%", height: "400px", borderRadius: "var(--radius-lg)", overflow: "hidden", background: "var(--bg-secondary)", border: "1px solid var(--border)", boxShadow: "var(--shadow-sm)" }}>
-                <img
+                <Image
                     src={images[currentIndex]}
                     alt={`${title} - Görsel ${currentIndex + 1}`}
                     onClick={() => setLightboxOpen(true)}
-                    style={{ width: "100%", height: "100%", objectFit: "contain", background: "#f8fafb", cursor: "zoom-in" }}
+                    fill
+                    style={{ objectFit: "contain", background: "#f8fafb", cursor: "zoom-in" }}
                 />
 
                 {images.length > 1 && (
@@ -55,14 +57,14 @@ export default function ImageSlider({ images, title }: { images: string[], title
             {images.length > 1 && (
                 <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", paddingBottom: "0.5rem" }}>
                     {images.map((img, i) => (
-                        <img
+                        <Image
                             key={i}
                             src={img}
                             alt={`Küçük Resim ${i + 1}`}
                             onClick={() => setCurrentIndex(i)}
+                            width={80}
+                            height={80}
                             style={{
-                                width: "80px",
-                                height: "80px",
                                 objectFit: "cover",
                                 borderRadius: "var(--radius-sm)",
                                 cursor: "pointer",

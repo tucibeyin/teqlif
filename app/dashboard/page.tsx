@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import Image from "next/image";
 import { redirect } from "next/navigation";
 import DeleteAdButton from "./DeleteAdButton";
 import RepublishAdButton from "./RepublishAdButton";
@@ -135,7 +136,7 @@ export default async function DashboardPage() {
                                     <div key={ad.id} className="card">
                                         <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                                             {ad.images && ad.images.length > 0 ? (
-                                                <img src={ad.images[0]} alt={ad.title} style={{ width: "48px", height: "48px", objectFit: "cover", borderRadius: "10px" }} />
+                                                <Image src={ad.images[0]} alt={ad.title} width={48} height={48} style={{ objectFit: "cover", borderRadius: "10px" }} />
                                             ) : (
                                                 <span style={{ fontSize: "2rem" }}>{ad.category.icon}</span>
                                             )}
@@ -203,7 +204,7 @@ export default async function DashboardPage() {
                                     <div key={fav.id} className="card">
                                         <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                                             {ad.images && ad.images.length > 0 ? (
-                                                <img src={ad.images[0]} alt={ad.title} style={{ width: "48px", height: "48px", objectFit: "cover", borderRadius: "10px" }} />
+                                                <Image src={ad.images[0]} alt={ad.title} width={48} height={48} style={{ objectFit: "cover", borderRadius: "10px" }} />
                                             ) : (
                                                 <span style={{ fontSize: "2rem" }}>{ad.category.icon}</span>
                                             )}
@@ -250,7 +251,7 @@ export default async function DashboardPage() {
                                 <div key={bid.id} className="card">
                                     <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
                                         {bid.ad.images && bid.ad.images.length > 0 ? (
-                                            <img src={bid.ad.images[0]} alt={bid.ad.title} style={{ width: "48px", height: "48px", objectFit: "cover", borderRadius: "10px" }} />
+                                            <Image src={bid.ad.images[0]} alt={bid.ad.title} width={48} height={48} style={{ objectFit: "cover", borderRadius: "10px" }} />
                                         ) : (
                                             <span style={{ fontSize: "2rem" }}>{bid.ad.category.icon}</span>
                                         )}

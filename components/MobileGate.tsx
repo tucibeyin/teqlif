@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
@@ -135,19 +136,8 @@ export function MobileGate() {
                         <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>App Store</div>
                     </div>
                 </a>
-
-                <a href="#" className="btn" style={{
-                    backgroundColor: "#000", // Veya Play Store spesifik bir renk
-                    color: "#fff",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    gap: "1rem",
-                    padding: "1rem",
-                    borderRadius: "var(--radius-lg)",
-                    textDecoration: "none"
-                }}>
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Play_Arrow_logo.svg" alt="Play Store" style={{ width: "24px", height: "24px", filter: "brightness(0) invert(1)" }} />
+                <a href="#" className="store-btn" style={{ background: "black", color: "white", padding: "0.875rem 1.5rem", borderRadius: "var(--radius-full)", textDecoration: "none", display: "flex", alignItems: "center", gap: "0.75rem", fontWeight: 600, fontSize: "1rem" }}>
+                    <Image src="https://upload.wikimedia.org/wikipedia/commons/d/d0/Google_Play_Arrow_logo.svg" alt="Play Store" width={24} height={24} style={{ filter: "brightness(0) invert(1)" }} />
                     <div style={{ textAlign: "left" }}>
                         <div style={{ fontSize: "0.75rem", opacity: 0.8 }}>GET IT ON</div>
                         <div style={{ fontSize: "1.25rem", fontWeight: 600 }}>Google Play</div>

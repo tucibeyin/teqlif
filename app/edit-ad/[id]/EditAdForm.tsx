@@ -3,6 +3,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { provinces, allDistricts } from "@/lib/locations";
 import { categories } from "@/lib/categories";
+import Image from "next/image";
 
 export default function EditAdForm({ ad }: { ad: any }) {
     const router = useRouter();
@@ -331,7 +332,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                     <div style={{ display: "flex", gap: "0.5rem", flexWrap: "wrap" }}>
                                         {existingImages.map((img, i) => (
                                             <div key={i} style={{ position: "relative", width: "80px", height: "80px" }}>
-                                                <img src={img} alt="Uploaded" style={{ width: "100%", height: "100%", objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }} />
+                                                <Image src={img} alt="Uploaded" fill style={{ objectFit: "cover", borderRadius: "var(--radius-sm)", border: "1px solid var(--border)" }} />
                                                 <button
                                                     type="button"
                                                     onClick={() => removeImage(i)}

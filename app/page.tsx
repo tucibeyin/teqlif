@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { categories } from "@/lib/categories";
 
@@ -196,7 +197,7 @@ export default async function HomePage({
                         {/* Image */}
                         <div style={{ position: "relative", paddingTop: "60%", background: "var(--bg-secondary)" }}>
                           {ad.images && ad.images.length > 0 ? (
-                            <img src={ad.images[0]} alt={ad.title} style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", objectFit: "cover" }} />
+                            <Image src={ad.images[0]} alt={ad.title} fill style={{ objectFit: "cover" }} />
                           ) : (
                             <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "2.5rem" }}>
                               {ad.category.icon}
@@ -254,7 +255,7 @@ export default async function HomePage({
                       <div className="card" style={{ padding: "0.75rem 1rem" }}>
                         <div style={{ display: "flex", gap: "0.875rem", alignItems: "center" }}>
                           {ad.images && ad.images.length > 0 ? (
-                            <img src={ad.images[0]} alt={ad.title} style={{ width: "52px", height: "52px", objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }} />
+                            <Image src={ad.images[0]} alt={ad.title} width={52} height={52} style={{ objectFit: "cover", borderRadius: "var(--radius-md)", flexShrink: 0 }} />
                           ) : (
                             <div style={{ width: "52px", height: "52px", display: "flex", alignItems: "center", justifyContent: "center", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", fontSize: "1.5rem", flexShrink: 0 }}>
                               {ad.category.icon}
