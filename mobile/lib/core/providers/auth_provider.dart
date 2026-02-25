@@ -2,6 +2,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
+import 'package:firebase_messaging/firebase_messaging.dart'; // Yeni import
 import 'dart:convert';
 import '../models/user.dart';
 import '../api/api_client.dart';
@@ -44,6 +45,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
     await checkAuth();
   }
 
+  /// Uygulama açılışında oturumu kontrol eder ve varsa Push Token'ı günceller
   Future<void> checkAuth() async {
     final token = await _storage.read(key: 'jwt_token');
     final userJson = await _storage.read(key: 'user_data');
@@ -52,11 +54,40 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final user =
             UserModel.fromJson(json.decode(userJson) as Map<String, dynamic>);
         state = AuthState(isLoading: false, user: user);
+        
+        // Oturum varsa FCM Token'ı alıp sunucuya gönderelim
+        _refreshPushToken();
       } catch (_) {
         state = const AuthState(isLoading: false);
       }
     } else {
       state = const AuthState(isLoading: false);
+    }
+  }
+
+  /// Firebase'den token alıp sunucuya kaydeder
+  Future<void> _refreshPushToken() async {
+    try {
+      final fcmToken = await FirebaseMessaging.instance.getToken();
+      if (fcmToken != null) {
+        await updatePushToken(fcmToken);
+      }
+    } catch (e) {
+      debugPrint('[FCM GET TOKEN ERROR] $e');
+    }
+  }
+
+  /// Belirli bir token'ı sunucuya POST eder
+  Future<void> updatePushToken(String? fcmToken) async {
+    if (fcmToken == null || !state.isAuthenticated) return;
+    
+    try {
+      await _api.post(Endpoints.pushRegister, data: {
+        'fcmToken': fcmToken,
+      });
+      debugPrint('[PUSH] Token sunucuya başarıyla kaydedildi.');
+    } catch (e) {
+      debugPrint('[PUSH ERROR] Token kaydedilemedi: $e');
     }
   }
 
@@ -74,6 +105,10 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _storage.write(key: 'user_data', value: json.encode(user.toJson()));
 
       state = AuthState(isLoading: false, user: user);
+      
+      // Giriş başarılı olduktan hemen sonra token'ı kaydet
+      _refreshPushToken();
+      
       return true;
     } catch (e) {
       debugPrint('[LOGIN ERROR] $e');
@@ -83,8 +118,6 @@ class AuthNotifier extends StateNotifier<AuthState> {
         if (data is Map) {
           message = (data['message'] ?? data['error'] ?? message).toString();
         }
-        debugPrint('[LOGIN STATUS] ${e.response?.statusCode}');
-        debugPrint('[LOGIN BODY] $data');
       }
       state = state.copyWith(isLoading: false, error: message);
       return false;
@@ -94,7 +127,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<String> register(String name, String email, String password) async {
     state = state.copyWith(isLoading: true, error: null);
     try {
-      final response = await _api.post(Endpoints.register,
+      await _api.post(Endpoints.register,
           data: {'name': name, 'email': email, 'password': password});
       
       state = const AuthState(isLoading: false);
