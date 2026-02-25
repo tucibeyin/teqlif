@@ -218,7 +218,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                       backgroundColor: Colors.white.withValues(alpha: 0.8),
                     ),
                     onPressed: () {
-                      Share.share('Bana Teqlif ver! ${ad.title}\nhttps://teqlif.com/ilan/${ad.id}');
+                      Share.share('Bana Teqlif ver! ${ad.title}\nhttps://teqlif.com/ad/${ad.id}');
                     },
                   ),
                   favsAsync.when(
