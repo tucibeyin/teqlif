@@ -32,6 +32,10 @@ void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
   // Force a global synchronization the moment the user taps a push notification
   ref.read(unreadCountsProvider.notifier).refresh();
   ref.invalidate(conversationsProvider);
+  final activeConvId = ref.read(activeChatIdProvider);
+  if (activeConvId != null) {
+    ref.invalidate(chatMessagesProvider(activeConvId));
+  }
 
   final type = data['type'] as String?;
   final route = (type == 'NEW_MESSAGE') ? '/messages' : '/notifications';
@@ -261,6 +265,11 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
       if (ref.read(authProvider).isAuthenticated) {
         ref.read(unreadCountsProvider.notifier).refresh();
         ref.invalidate(conversationsProvider);
+        
+        final activeConvId = ref.read(activeChatIdProvider);
+        if (activeConvId != null) {
+          ref.invalidate(chatMessagesProvider(activeConvId));
+        }
       }
     }
   }
