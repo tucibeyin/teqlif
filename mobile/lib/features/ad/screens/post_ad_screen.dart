@@ -45,7 +45,6 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
   String? _selectedCategory;
   String? _selectedProvinceId;
   String? _selectedDistrictId;
-  bool _freeBid = false;
   bool _isFixedPrice = false;
   bool _showPhone = false;
   int? _selectedDurationDays = 30; // 30 is default, null means Custom
@@ -126,7 +125,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
         'showPhone': _showPhone,
         'startingBid': _isFixedPrice
             ? null
-            : (_freeBid ? 1 : (_startBidCtrl.text.isEmpty ? null : double.parse(sStr))),
+            : (_startBidCtrl.text.isEmpty ? null : double.parse(sStr)),
         'minBidStep': _isFixedPrice || _minBidStepCtrl.text.isEmpty
             ? 100
             : double.parse(mStr),
@@ -372,13 +371,18 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                     ),
                     if (!_isFixedPrice) ...[
                       const Divider(),
-                      SwitchListTile(
-                        value: _freeBid,
-                        onChanged: (v) => setState(() => _freeBid = v),
-                        title:
-                            const Text('🔥 Serbest Teklif (1 ₺\'den başlar)'),
-                        contentPadding: EdgeInsets.zero,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F7FA),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Nasıl İşler? İlanınıza teklif verilebilir durumdadır. İster bir başlangıç açılış teklifi belirleyebilir (Örn: 5000 ₺), isterseniz boş bırakarak serbest pazar fiyatlamasına (1 ₺\'den başlar) izin verebilirsiniz.',
+                          style: TextStyle(fontSize: 13, color: Color(0xFF4A5568)),
+                        ),
                       ),
+                      const SizedBox(height: 12),
                       TextField(
                         controller: _startBidCtrl,
                         keyboardType: const TextInputType.numberWithOptions(
@@ -388,7 +392,8 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                               locale: 'tr_TR', symbol: '', decimalDigits: 2)
                         ],
                         decoration: const InputDecoration(
-                            labelText: 'Minimum Açılış Teklifi (₺)'),
+                            labelText: 'Açılış Teklifi (₺) (İsteğe Bağlı)',
+                            helperText: 'Boş bırakırsanız 1 ₺\'den açık artırma başlar.'),
                       ),
                       const SizedBox(height: 12),
                       TextField(

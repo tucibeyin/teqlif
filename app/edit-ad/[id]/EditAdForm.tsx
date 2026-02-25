@@ -60,8 +60,8 @@ export default function EditAdForm({ ad }: { ad: any }) {
             }
         }
 
-        const bidType = fd.get("bidType");
-        const parsedStartingBid = bidType === "minimum" && fd.get("startingBid") ? Number(fd.get("startingBid")) : null;
+        const rawStartingBid = document.getElementById("actualStartingBid") ? (document.getElementById("actualStartingBid") as HTMLInputElement).value : "";
+        const parsedStartingBid = rawStartingBid ? Number(rawStartingBid) : null;
 
         const res = await fetch(`/api/ads/${ad.id}`, {
             method: "PUT",
@@ -162,30 +162,8 @@ export default function EditAdForm({ ad }: { ad: any }) {
 
                             {!isFixedPrice && (
                                 <div className="form-group" style={{ marginBottom: "1.5rem" }}>
-                                    <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>Teklif Kuralı Seçin</label>
-                                    <div style={{ display: "flex", gap: "1rem", flexDirection: "column" }}>
-                                        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
-                                            <input type="radio" name="bidType" value="free" defaultChecked={ad.startingBid === null} onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    document.getElementById("startingBidWrapper")!.style.display = "none";
-                                                }
-                                            }} />
-                                            <span>
-                                                <strong style={{ display: "block", marginBottom: "0.25rem" }}>Serbest Teklif (Açılış 1 ₺)</strong>
-                                                <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>İlanınıza herkes 1 ₺'den başlayarak serbestçe teklif verebilir. Etkileşimi artırır.</span>
-                                            </span>
-                                        </label>
-                                        <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
-                                            <input type="radio" name="bidType" value="minimum" defaultChecked={ad.startingBid !== null} onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    document.getElementById("startingBidWrapper")!.style.display = "block";
-                                                }
-                                            }} />
-                                            <span>
-                                                <strong style={{ display: "block", marginBottom: "0.25rem" }}>Minimum Açılış Teklifi Belirle</strong>
-                                                <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>Tekliflerin sizin belirlediğiniz bir fiyatın üzerinde olmasını sağlar.</span>
-                                            </span>
-                                        </label>
+                                    <div style={{ fontSize: "0.875rem", color: "var(--text-muted)", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
+                                        <strong>Nasıl İşler?</strong> İlanınıza teklif verilebilir durumdadır. İster bir başlangıç teklifi belirleyebilir (Örn: 5000 ₺), isterseniz boş bırakarak serbest pazar fiyatlamasına (1 ₺'den başlar) izin verebilirsiniz.
                                     </div>
                                 </div>
                             )}
@@ -212,8 +190,8 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                     <input type="hidden" name="price" value={displayPrice.replace(/\./g, "")} />
                                 </div>
 
-                                <div className="form-group" id="startingBidWrapper" style={{ display: ad.startingBid !== null ? "block" : "none" }}>
-                                    <label htmlFor="startingBid">Açılış Teklifi (₺) *</label>
+                                <div className="form-group" id="startingBidWrapper" style={{ display: isFixedPrice ? "none" : "block" }}>
+                                    <label htmlFor="startingBid">Açılış Teklifi (₺) <span className="text-muted">(İsteğe Bağlı)</span></label>
                                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                                         <input
                                             type="text"

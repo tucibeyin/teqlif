@@ -44,7 +44,6 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
   bool _loading = true;
   bool _saving = false;
   bool _isFixedPrice = false;
-  bool _freeBid = false;
   bool _showPhone = false;
 
   @override
@@ -76,7 +75,6 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         _priceCtrl.text = formatter.formatDouble(ad.price);
         _minBidStepCtrl.text = formatter.formatDouble(ad.minBidStep);
         _isFixedPrice = ad.isFixedPrice;
-        _freeBid = ad.startingBid == null;
         _showPhone = ad.showPhone;
         _startBidCtrl.text = ad.startingBid != null
             ? formatter.formatDouble(ad.startingBid!)
@@ -117,7 +115,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
             .replaceAll(',', '.')),
         'isFixedPrice': _isFixedPrice,
         'showPhone': _showPhone,
-        'startingBid': _isFixedPrice || _freeBid
+        'startingBid': _isFixedPrice
             ? null
             : (_startBidCtrl.text.isEmpty
                 ? null
@@ -266,13 +264,18 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                     ),
                     if (!_isFixedPrice) ...[
                       const Divider(),
-                      SwitchListTile(
-                        value: _freeBid,
-                        onChanged: (v) => setState(() => _freeBid = v),
-                        title:
-                            const Text('🔥 Serbest Teklif (1 ₺\'den başlar)'),
-                        contentPadding: EdgeInsets.zero,
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF4F7FA),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text(
+                          'Nasıl İşler? İlanınıza teklif verilebilir durumdadır. İster bir başlangıç açılış teklifi belirleyebilir (Örn: 5000 ₺), isterseniz boş bırakarak serbest pazar fiyatlamasına (1 ₺\'den başlar) izin verebilirsiniz.',
+                          style: TextStyle(fontSize: 13, color: Color(0xFF4A5568)),
+                        ),
                       ),
+                      const SizedBox(height: 12),
                       TextField(
                         controller: _startBidCtrl,
                         keyboardType: const TextInputType.numberWithOptions(
@@ -282,7 +285,8 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                               locale: 'tr_TR', symbol: '', decimalDigits: 2)
                         ],
                         decoration: const InputDecoration(
-                            labelText: 'Minimum Açılış Teklifi (₺)'),
+                            labelText: 'Açılış Teklifi (₺) (İsteğe Bağlı)',
+                            helperText: 'Boş bırakırsanız 1 ₺\'den açık artırma başlar.'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
