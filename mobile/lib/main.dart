@@ -40,7 +40,7 @@ void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
 }
 
 Future<void> _initLocalNotifications(WidgetRef ref) async {
-  const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+  const androidSettings = AndroidInitializationSettings('@mipmap/launcher_icon');
   const iosSettings = DarwinInitializationSettings(
     requestAlertPermission: true,
     requestBadgePermission: true,
@@ -117,7 +117,7 @@ Future<void> _setupFCM(WidgetRef ref) async {
             'Teqlif Bildirimleri',
             importance: Importance.high,
             priority: Priority.high,
-            icon: '@mipmap/ic_launcher',
+            icon: '@mipmap/launcher_icon',
           ),
           iOS: DarwinNotificationDetails(),
         ),
