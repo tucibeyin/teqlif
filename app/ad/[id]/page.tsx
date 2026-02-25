@@ -288,9 +288,16 @@ export default async function AdDetailPage({
                                     </Link>
                                 </div>
                             ) : (
-                                <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
-                                    <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
-                                    Sabit fiyatlı ürününüz yayında. Müşterilerden mesaj bekleyin.
+                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                    <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
+                                        <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
+                                        Sabit fiyatlı ürününüz yayında. Müşterilerden mesaj bekleyin.
+                                    </div>
+                                    {displayPhone && (
+                                        <div className="btn btn-secondary btn-full" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", opacity: 0.8, cursor: "default" }}>
+                                            📞 {displayPhone} - İlanda Görünüyor
+                                        </div>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -393,9 +400,16 @@ export default async function AdDetailPage({
                                     </Link>
                                 </div>
                             ) : (
-                                <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
-                                    <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
-                                    Kendi ilanınıza teklif veremezsiniz. Başkalarının teklif vermesini bekleyin.
+                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                    <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
+                                        <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
+                                        Kendi ilanınıza teklif veremezsiniz. Başkalarının teklif vermesini bekleyin.
+                                    </div>
+                                    {displayPhone && (
+                                        <div className="btn btn-secondary btn-full" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", opacity: 0.8, cursor: "default" }}>
+                                            📞 {displayPhone} - İlanda Görünüyor
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
