@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -49,11 +50,41 @@ final conversationsProvider =
   return ConversationsNotifier();
 });
 
-class ConversationsScreen extends ConsumerWidget {
+class ConversationsScreen extends ConsumerStatefulWidget {
   const ConversationsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ConversationsScreen> createState() => _ConversationsScreenState();
+}
+
+class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
+  Timer? _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    // Refresh instantly when entering the tab
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(conversationsProvider.notifier).refresh();
+      }
+    });
+    // Continuous polling fallback every 10 seconds while the screen is active
+    _timer = Timer.periodic(const Duration(seconds: 10), (_) {
+      if (mounted) {
+        ref.read(conversationsProvider.notifier).refresh();
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final convAsync = ref.watch(conversationsProvider);
     final currentUserId = ref.watch(authProvider).user?.id ?? '';
 
