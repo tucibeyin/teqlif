@@ -56,8 +56,14 @@ export const metadata: Metadata = {
       "max-snippet": -1,
     },
   },
+  manifest: "/manifest.json",
   icons: {
-    icon: "/favicon.ico",
+    icon: [
+      { url: "/favicon.ico", sizes: "32x32" },
+      { url: "/app_icon.png", sizes: "192x192", type: "image/png" },
+      { url: "/app_icon.png", sizes: "512x512", type: "image/png" },
+    ],
+    shortcut: "/app_icon.png",
     apple: "/app_icon.png",
   },
 };
