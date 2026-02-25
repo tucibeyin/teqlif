@@ -198,6 +198,7 @@ export default async function AdDetailPage({
                                         <a
                                             href={`tel:${displayPhone}`}
                                             className="btn btn-secondary btn-full"
+                                            style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
                                         >
                                             📞 {displayPhone} - Satıcıyı Ara
                                         </a>
@@ -216,6 +217,7 @@ export default async function AdDetailPage({
                                     <a
                                         href={`tel:${displayPhone}`}
                                         className="btn btn-secondary btn-full"
+                                        style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
                                     >
                                         📞 {displayPhone} - Satıcıyı Ara
                                     </a>
@@ -260,9 +262,18 @@ export default async function AdDetailPage({
                                         adId={ad.id}
                                         sellerId={ad.userId}
                                         currentUser={session.user}
-                                        customLabel="⚡ Hemen Satın Al"
+                                        customLabel="⚡ Satıcıya Mesaj Gönder"
                                         initialMessage={`Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı ${formatPrice(ad.price)} fiyatından satın almak istiyorum.`}
                                     />
+                                    {displayPhone && (
+                                        <a
+                                            href={`tel:${displayPhone}`}
+                                            className="btn btn-secondary btn-full"
+                                            style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
+                                        >
+                                            📞 {displayPhone} - Satıcıyı Ara
+                                        </a>
+                                    )}
                                     <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", textAlign: "center" }}>
                                         Satıcıyla anlaşıp güvenli ödeme/kargo koşullarını belirleyebilirsiniz.
                                     </div>
@@ -353,6 +364,15 @@ export default async function AdDetailPage({
                                             Hemen Almak İçin Giriş Yap
                                         </Link>
                                     )}
+                                    {!isOwner && displayPhone && (
+                                        <a
+                                            href={`tel:${displayPhone}`}
+                                            className="btn btn-secondary btn-full"
+                                            style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
+                                        >
+                                            📞 {displayPhone} - Satıcıyı Ara
+                                        </a>
+                                    )}
                                 </div>
                             )}
 
@@ -377,6 +397,17 @@ export default async function AdDetailPage({
                                     <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
                                     Kendi ilanınıza teklif veremezsiniz. Başkalarının teklif vermesini bekleyin.
                                 </div>
+                            )}
+
+                            {/* Extra Phone Backup outside Buy It Now */}
+                            {!isOwner && ad.buyItNowPrice === null && displayPhone && (
+                                <a
+                                    href={`tel:${displayPhone}`}
+                                    className="btn btn-secondary btn-full"
+                                    style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", marginTop: "1rem" }}
+                                >
+                                    📞 {displayPhone} - Satıcıyı Ara
+                                </a>
                             )}
 
                             {/* Teklif Geçmişi */}
