@@ -23,12 +23,21 @@ class ConversationsNotifier extends AsyncNotifier<List<ConversationModel>> {
         .toList();
   }
 
+  @override
+  bool updateShouldNotify(AsyncValue<List<ConversationModel>> previous, AsyncValue<List<ConversationModel>> next) {
+    // Always force the UI to rebuild when a refresh occurs, 
+    // bypassing deep equality checks that might swallow updates 
+    // where only inner fields (like lastMessage) changed.
+    return true;
+  }
+
   Future<void> refresh() async {
     // Refresh without destroying the current UI state
     state = const AsyncValue.loading();
     try {
       final newConversations = await _fetchConversations();
-      state = AsyncValue.data(newConversations);
+      // Yielding a completely fresh list instance guarantees reference inequality
+      state = AsyncValue.data(List.from(newConversations));
     } catch (e, st) {
       state = AsyncValue.error(e, st);
     }
