@@ -14,6 +14,16 @@ final singleConversationProvider =
   return ConversationModel.fromJson(res.data as Map<String, dynamic>);
 });
 
+final chatMessagesProvider =
+    FutureProvider.family<List<MessageModel>, String>((ref, conversationId) async {
+  final res = await ApiClient().get(Endpoints.messages,
+      params: {'conversationId': conversationId});
+  final list = res.data as List<dynamic>;
+  return list
+      .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
+      .toList();
+});
+
 class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
   const ChatScreen({super.key, required this.conversationId});
@@ -22,53 +32,45 @@ class ChatScreen extends ConsumerStatefulWidget {
   ConsumerState<ChatScreen> createState() => _ChatScreenState();
 }
 
+// Tracks the currently opened conversation ID, so push notifications
+// know whether to refresh this specific chat screen or just show an OS popup.
+final activeChatIdProvider = StateProvider<String?>((ref) => null);
+
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
-  List<MessageModel> _messages = [];
   bool _sending = false;
-  Timer? _pollTimer;
 
   @override
   void initState() {
     super.initState();
-    _loadMessages();
-    // Poll for new messages every 3 seconds
-    _pollTimer =
-        Timer.periodic(const Duration(seconds: 3), (_) => _loadMessages());
+    // Mark this chat as active so push notifications can silent-refresh it
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(activeChatIdProvider.notifier).state = widget.conversationId;
+    });
   }
 
   @override
   void dispose() {
-    _pollTimer?.cancel();
+    // Clear the active chat when leaving the screen
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(activeChatIdProvider.notifier).state = null;
+    });
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
   }
 
-  Future<void> _loadMessages() async {
-    try {
-      final res = await ApiClient().get(Endpoints.messages,
-          params: {'conversationId': widget.conversationId});
-      final list = res.data as List<dynamic>;
-      if (mounted) {
-        setState(() {
-          _messages = list
-              .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
-              .toList();
-        });
-        // Scroll to bottom
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (_scrollCtrl.hasClients) {
-            _scrollCtrl.animateTo(
-              _scrollCtrl.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-            );
-          }
-        });
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollCtrl.hasClients) {
+        _scrollCtrl.animateTo(
+          _scrollCtrl.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeOut,
+        );
       }
-    } catch (_) {}
+    });
   }
 
   Future<void> _send() async {
@@ -89,7 +91,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         'recipientId': recipientId,
       });
       _msgCtrl.clear();
-      await _loadMessages();
+      ref.invalidate(chatMessagesProvider(widget.conversationId));
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -105,6 +107,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     final currentUserId = ref.watch(authProvider).user?.id ?? '';
     final convAsync =
         ref.watch(singleConversationProvider(widget.conversationId));
+    final messagesAsync = ref.watch(chatMessagesProvider(widget.conversationId));
+
+    // Listen for incoming messages and scroll down automatically
+    ref.listen<AsyncValue<List<MessageModel>>>(
+      chatMessagesProvider(widget.conversationId),
+      (_, next) {
+        if (next.hasValue) {
+          _scrollToBottom();
+        }
+      },
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -201,65 +214,74 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
             error: (_, __) => const SizedBox(),
           ),
           Expanded(
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              padding: const EdgeInsets.all(12),
-              itemCount: _messages.length,
-              itemBuilder: (_, i) {
-                final msg = _messages[i];
-                final isMine = msg.senderId == currentUserId;
-                return Align(
-                  alignment:
-                      isMine ? Alignment.centerRight : Alignment.centerLeft,
-                  child: Container(
-                    margin: const EdgeInsets.only(bottom: 8),
-                    constraints: BoxConstraints(
-                        maxWidth: MediaQuery.of(context).size.width * 0.72),
-                    decoration: BoxDecoration(
-                      color: isMine
-                          ? const Color(0xFF00B4CC)
-                          : const Color(0xFFFFFFFF),
-                      borderRadius: BorderRadius.only(
-                        topLeft: const Radius.circular(16),
-                        topRight: const Radius.circular(16),
-                        bottomLeft: Radius.circular(isMine ? 16 : 4),
-                        bottomRight: Radius.circular(isMine ? 4 : 16),
+            child: messagesAsync.when(
+              loading: () => const Center(child: CircularProgressIndicator()),
+              error: (e, _) => Center(child: Text('Hata: $e')),
+              data: (messages) {
+                if (messages.isEmpty) {
+                  return const Center(child: Text('Henüz mesaj yok.'));
+                }
+                return ListView.builder(
+                  controller: _scrollCtrl,
+                  padding: const EdgeInsets.all(12),
+                  itemCount: messages.length,
+                  itemBuilder: (_, i) {
+                    final msg = messages[i];
+                    final isMine = msg.senderId == currentUserId;
+                    return Align(
+                      alignment:
+                          isMine ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        constraints: BoxConstraints(
+                            maxWidth: MediaQuery.of(context).size.width * 0.72),
+                        decoration: BoxDecoration(
+                          color: isMine
+                              ? const Color(0xFF00B4CC)
+                              : const Color(0xFFFFFFFF),
+                          borderRadius: BorderRadius.only(
+                            topLeft: const Radius.circular(16),
+                            topRight: const Radius.circular(16),
+                            bottomLeft: Radius.circular(isMine ? 16 : 4),
+                            bottomRight: Radius.circular(isMine ? 4 : 16),
+                          ),
+                          border: isMine
+                              ? null
+                              : Border.all(color: const Color(0xFFE2EBF0)),
+                          boxShadow: [
+                            BoxShadow(
+                                color: Colors.black.withOpacity(0.04),
+                                blurRadius: 4),
+                          ],
+                        ),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              msg.content,
+                              style: TextStyle(
+                                color:
+                                    isMine ? Colors.white : const Color(0xFF0F1923),
+                                fontSize: 14,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              timeago.format(msg.createdAt, locale: 'tr'),
+                              style: TextStyle(
+                                color: isMine
+                                    ? Colors.white.withOpacity(0.7)
+                                    : const Color(0xFF9AAAB8),
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
-                      border: isMine
-                          ? null
-                          : Border.all(color: const Color(0xFFE2EBF0)),
-                      boxShadow: [
-                        BoxShadow(
-                            color: Colors.black.withOpacity(0.04),
-                            blurRadius: 4),
-                      ],
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 10),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Text(
-                          msg.content,
-                          style: TextStyle(
-                            color:
-                                isMine ? Colors.white : const Color(0xFF0F1923),
-                            fontSize: 14,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          timeago.format(msg.createdAt, locale: 'tr'),
-                          style: TextStyle(
-                            color: isMine
-                                ? Colors.white.withOpacity(0.7)
-                                : const Color(0xFF9AAAB8),
-                            fontSize: 10,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                    );
+                  },
                 );
               },
             ),

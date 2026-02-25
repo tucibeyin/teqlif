@@ -14,6 +14,8 @@ import 'core/api/api_client.dart';
 import 'core/api/endpoints.dart';
 import 'core/providers/auth_provider.dart';
 import 'features/notifications/providers/unread_counts_provider.dart';
+import 'features/messages/screens/chat_screen.dart';
+import 'features/messages/screens/conversations_screen.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 
 // Background message handler (must be top-level)
@@ -122,7 +124,35 @@ Future<void> _setupFCM(WidgetRef ref) async {
   // Foreground messages → show local notification AND refresh badges
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
     debugPrint('[FCM] Foreground push received! Title: ${message.notification?.title}');
+    
+    // Always refresh the global bottom nav unread badges
     ref.read(unreadCountsProvider.notifier).refresh();
+    
+    final payloadData = message.data;
+    final type = payloadData['type'] as String?;
+    
+    if (type == 'NEW_MESSAGE') {
+      // Refresh the Inbox list so the new message snippet appears
+      ref.invalidate(conversationsProvider);
+
+      // Extract conversationId from the deep link payload (e.g. /dashboard/messages?conversationId=123)
+      final link = payloadData['link'] as String?;
+      String? incomingConvId;
+      if (link != null && link.contains('conversationId=')) {
+        incomingConvId = Uri.parse(link).queryParameters['conversationId'];
+      }
+
+      // Check if the user is currently looking at this very conversation
+      final activeConvId = ref.read(activeChatIdProvider);
+      if (incomingConvId != null && activeConvId == incomingConvId) {
+        // User is currently chatting with this person!
+        // Silently refresh the chat screen messages list
+        ref.invalidate(chatMessagesProvider(incomingConvId));
+        debugPrint('[FCM] Silently refreshed active chat screen $incomingConvId');
+        // DO NOT show a banner/toast if they are already looking at the chat
+        return; 
+      }
+    }
     
     final notification = message.notification;
     if (notification != null) {
