@@ -12,6 +12,7 @@ import 'config/app_router.dart';
 import 'config/theme.dart';
 import 'core/api/api_client.dart';
 import 'core/api/endpoints.dart';
+import 'core/providers/auth_provider.dart';
 import 'features/notifications/providers/unread_counts_provider.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 
@@ -130,9 +131,19 @@ Future<void> _setupFCM(WidgetRef ref) async {
   // Handle tap from terminated state
   final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
   if (initialMessage != null) {
-    Future.delayed(const Duration(milliseconds: 500), () {
-      _handleNotificationTap(initialMessage.data, ref);
-    });
+    void tryRoute() {
+      final auth = ref.read(authProvider);
+      if (!auth.isLoading) {
+        // Wait an extra 100ms for GoRouter to finish Splash -> Home redirect
+        Future.delayed(const Duration(milliseconds: 100), () {
+          _handleNotificationTap(initialMessage.data, ref);
+        });
+      } else {
+        Future.delayed(const Duration(milliseconds: 100), tryRoute);
+      }
+    }
+
+    tryRoute();
   }
 }
 
