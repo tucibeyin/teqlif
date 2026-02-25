@@ -12,6 +12,7 @@ import 'config/app_router.dart';
 import 'config/theme.dart';
 import 'core/api/api_client.dart';
 import 'core/api/endpoints.dart';
+import 'core/providers/auth_provider.dart';
 import 'features/notifications/providers/unread_counts_provider.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 
@@ -87,17 +88,21 @@ Future<void> _setupFCM(WidgetRef ref) async {
 
     final token = await messaging.getToken();
     if (token != null) {
-      await ApiClient().post(Endpoints.pushRegister, data: {'fcmToken': token});
+      if (ref.read(authProvider).isAuthenticated) {
+        await ApiClient().post(Endpoints.pushRegister, data: {'fcmToken': token});
+      }
     }
   } catch (e) {
-    debugPrint('[FCM] Token fetch skipped: $e');
+    debugPrint('[FCM] Token fetch skipped/failed: $e');
   }
 
   // Listen for token refresh
   messaging.onTokenRefresh.listen((newToken) async {
     try {
-      await ApiClient()
-          .post(Endpoints.pushRegister, data: {'fcmToken': newToken});
+      if (ref.read(authProvider).isAuthenticated) {
+        await ApiClient()
+            .post(Endpoints.pushRegister, data: {'fcmToken': newToken});
+      }
     } catch (_) {}
   });
 
@@ -166,6 +171,19 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
   @override
   void initState() {
     super.initState();
+    
+    // Listen for Authentication state changes to dynamically register Push Tokens upon successful Login/Registration mid-session.
+    ref.listenManual(authProvider, (previous, next) async {
+      if (previous?.isAuthenticated != true && next.isAuthenticated) {
+        try {
+          final token = await FirebaseMessaging.instance.getToken();
+          if (token != null) {
+            await ApiClient().post(Endpoints.pushRegister, data: {'fcmToken': token});
+          }
+        } catch (_) {}
+      }
+    });
+
     // Setup FCM after the first frame (so auth provider is ready)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initLocalNotifications(ref);
