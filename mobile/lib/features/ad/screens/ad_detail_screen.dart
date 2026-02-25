@@ -13,6 +13,7 @@ import 'package:intl/intl.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 import 'fullscreen_image_viewer.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
 
 final adDetailProvider =
     FutureProvider.family<AdModel, String>((ref, id) async {
@@ -63,6 +64,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
       });
       _bidCtrl.clear();
       ref.invalidate(adDetailProvider(widget.adId));
+      ref.invalidate(myBidsProvider);
       _snack('Teklifiniz verildi! 🎉');
     } catch (e) {
       _snack('Teklif verilemedi.');
