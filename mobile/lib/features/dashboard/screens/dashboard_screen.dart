@@ -259,7 +259,7 @@ class _MyAdTile extends ConsumerWidget {
           borderRadius: BorderRadius.circular(8),
           child: ad.images.isNotEmpty
               ? CachedNetworkImage(
-                  imageUrl: ad.images.first,
+                  imageUrl: imageUrl(ad.images.first),
                   width: 56,
                   height: 56,
                   fit: BoxFit.cover,
@@ -378,7 +378,7 @@ class _MyBidTile extends StatelessWidget {
           borderRadius: BorderRadius.circular(8),
           child: images.isNotEmpty
               ? CachedNetworkImage(
-                  imageUrl: images.first.toString(),
+                  imageUrl: imageUrl(images.first.toString()),
                   width: 56,
                   height: 56,
                   fit: BoxFit.cover,
