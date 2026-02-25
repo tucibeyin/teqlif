@@ -2,6 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 	<dict>
+		<key>NSCameraUsageDescription</key>
+		<string>Teqlif, ilanlarınıza fotoğraf çekip ekleyebilmeniz için kameranıza erişim izni ister.</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Teqlif, cihazınızdaki galeriye erişerek ilanlarınıza fotoğraf yüklemenizi sağlar.</string>
+		<key>NSMicrophoneUsageDescription</key>
+		<string>Teqlif, video çekerken mikrofonunuza erişim izni ister.</string>
 		<key>CADisableMinimumFrameDurationOnPhone</key>
 		<true/>
 		<key>CFBundleDevelopmentRegion</key>
