@@ -334,6 +334,7 @@ class _MyAdTile extends ConsumerWidget {
                     ),
                 ],
               ),
+        onTap: () => context.push('/ad/${ad.id}'),
       ),
     );
   }
