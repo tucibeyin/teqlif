@@ -66,10 +66,13 @@ flutter_launcher_icons:
 
 flutter_native_splash:
   color: "#00B4CC"
-  image: "assets/icon/splash_logo.png"
+  image: "assets/icon/transparent.png"
   fullscreen: true
   android: true
   ios: true
+  android_12:
+    color: "#00B4CC"
+    image: "assets/icon/transparent.png"
 
 flutter:
   uses-material-design: true
