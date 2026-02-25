@@ -12,7 +12,6 @@ import 'config/app_router.dart';
 import 'config/theme.dart';
 import 'core/api/api_client.dart';
 import 'core/api/endpoints.dart';
-import 'core/providers/auth_provider.dart';
 import 'features/notifications/providers/unread_counts_provider.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
 
@@ -28,11 +27,15 @@ final FlutterLocalNotificationsPlugin _localNotifications =
 
 void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
   final type = data['type'] as String?;
+  final route = (type == 'NEW_MESSAGE') ? '/messages' : '/notifications';
+
   final router = ref.read(routerProvider);
-  if (type == 'NEW_MESSAGE') {
-    router.go('/messages');
+  final location = router.routerDelegate.currentConfiguration.uri.path;
+
+  if (location == '/splash') {
+    ref.read(pendingRouteProvider.notifier).state = route;
   } else {
-    router.go('/notifications');
+    router.go(route);
   }
 }
 
@@ -131,19 +134,7 @@ Future<void> _setupFCM(WidgetRef ref) async {
   // Handle tap from terminated state
   final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
   if (initialMessage != null) {
-    void tryRoute() {
-      final auth = ref.read(authProvider);
-      if (!auth.isLoading) {
-        // Wait an extra 100ms for GoRouter to finish Splash -> Home redirect
-        Future.delayed(const Duration(milliseconds: 100), () {
-          _handleNotificationTap(initialMessage.data, ref);
-        });
-      } else {
-        Future.delayed(const Duration(milliseconds: 100), tryRoute);
-      }
-    }
-
-    tryRoute();
+    _handleNotificationTap(initialMessage.data, ref);
   }
 }
 

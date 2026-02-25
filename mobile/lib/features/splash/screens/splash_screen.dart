@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../config/app_router.dart';
 
-class SplashScreen extends StatefulWidget {
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen>
+class _SplashScreenState extends ConsumerState<SplashScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _fadeAnimation;
@@ -39,10 +41,16 @@ class _SplashScreenState extends State<SplashScreen>
 
     _controller.forward();
 
-    // After 2 seconds, navigate to home. GoRouter redirect will handle auth checks.
-    Future.delayed(const Duration(seconds: 2), () {
+    // After 3 seconds, navigate to home (or pending deep link).
+    Future.delayed(const Duration(seconds: 3), () {
       if (mounted) {
-        context.go('/home');
+        final pendingRoute = ref.read(pendingRouteProvider);
+        if (pendingRoute != null) {
+          ref.read(pendingRouteProvider.notifier).state = null; // Clear it
+          context.go(pendingRoute);
+        } else {
+          context.go('/home');
+        }
       }
     });
   }

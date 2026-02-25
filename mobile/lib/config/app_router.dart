@@ -17,6 +17,11 @@ import '../features/auth/screens/edit_profile_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
 import '../widgets/main_shell.dart';
 
+// ── Pending Route ───────────────────────────────────────────────────────────
+// Stores deep links / push notification taps that arrive while the app
+// is still on the splash screen or loading.
+final pendingRouteProvider = StateProvider<String?>((ref) => null);
+
 // ── RouterNotifier ──────────────────────────────────────────────────────────
 // Bridges Riverpod auth state → GoRouter refreshListenable.
 // When authProvider changes, this calls notifyListeners(), causing GoRouter
