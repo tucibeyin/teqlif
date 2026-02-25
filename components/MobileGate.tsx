@@ -43,7 +43,9 @@ export function MobileGate() {
             left: 0,
             right: 0,
             bottom: 0,
-            backgroundColor: "var(--bg-primary)",
+            backgroundColor: "rgba(244, 247, 250, 0.70)", // var(--bg) with opacity
+            backdropFilter: "blur(16px)",
+            WebkitBackdropFilter: "blur(16px)",
             zIndex: 99999, // En üstte olması için
             display: "flex",
             flexDirection: "column",
