@@ -65,10 +65,44 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
   }
 
   Future<void> _pickImages() async {
-    final picked = await _picker.pickMultiImage(imageQuality: 80);
-    if (picked.isNotEmpty) {
-      setState(() => _images = picked.map((x) => File(x.path)).toList());
-    }
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => SafeArea(
+        child: Wrap(
+          children: [
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text('Fotoğraf Ekle', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.black87)),
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library, color: Color(0xFF00B4CC)),
+              title: const Text('Galeriden Seç'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picked = await _picker.pickMultiImage(imageQuality: 80);
+                if (picked.isNotEmpty) {
+                  setState(() => _images.addAll(picked.map((x) => File(x.path))));
+                }
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt, color: Color(0xFF00B4CC)),
+              title: const Text('Kamerayla Çek'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
+                if (picked != null) {
+                  setState(() => _images.add(File(picked.path)));
+                }
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _submit() async {
@@ -207,10 +241,32 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                         itemCount: _images.length,
                         itemBuilder: (_, i) => Padding(
                           padding: const EdgeInsets.only(right: 8),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8),
-                            child: Image.file(_images[i],
-                                width: 100, height: 120, fit: BoxFit.cover),
+                          child: Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(_images[i],
+                                    width: 100, height: 120, fit: BoxFit.cover),
+                              ),
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: GestureDetector(
+                                  onTap: () {
+                                    setState(() => _images.removeAt(i));
+                                  },
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(Icons.close,
+                                        size: 16, color: Colors.white),
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
