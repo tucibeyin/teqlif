@@ -723,20 +723,32 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700, fontSize: 16)),
                         const SizedBox(height: 8),
-                        ...ad.bids.asMap().entries.map(
-                          (entry) {
-                            final i = entry.key;
-                            final bid = entry.value;
-                            return _BidTile(
-                              bid: bid,
-                              isTop: i == 0,
-                              isOwner: isOwner,
-                              onAccept: () => _acceptBid(bid.id),
-                              onCancel: () => _cancelBid(bid.id),
-                              onMessage: () => _messageBidder(bid.user!.id),
-                              formatPrice: _formatPrice, // Pass formatting function down
-                            );
-                          },
+                        Container(
+                          constraints: const BoxConstraints(maxHeight: 300),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: const Color(0xFFE2EBF0)),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: ListView.builder(
+                              shrinkWrap: true,
+                              padding: EdgeInsets.zero,
+                              itemCount: ad.bids.length,
+                              itemBuilder: (context, i) {
+                                final bid = ad.bids[i];
+                                return _BidTile(
+                                  bid: bid,
+                                  isTop: i == 0,
+                                  isOwner: isOwner,
+                                  onAccept: () => _acceptBid(bid.id),
+                                  onCancel: () => _cancelBid(bid.id),
+                                  onMessage: () => _messageBidder(bid.user!.id),
+                                  formatPrice: _formatPrice,
+                                );
+                              },
+                            ),
+                          ),
                         ),
                       ],
                       const SizedBox(height: 80),

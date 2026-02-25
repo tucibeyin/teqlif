@@ -381,53 +381,55 @@ export default async function AdDetailPage({
 
                             {/* Teklif Geçmişi */}
                             {ad.bids.length > 0 && (
-                                <div className="bid-history">
+                                <div className="bid-history" style={{ marginTop: "1.5rem" }}>
                                     <div style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                                        Teklif Geçmişi
+                                        Teklif Geçmişi ({ad.bids.length})
                                     </div>
-                                    {ad.bids.map((bid: any, i: number) => (
-                                        <div key={bid.id} className="bid-item" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', marginBottom: '8px' }}>
-                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                <div>
-                                                    <span className="bid-item-user" style={{ fontWeight: 600 }}>
-                                                        {i === 0 && "🏆 "}
-                                                        {bid.user.name}
-                                                    </span>
-                                                    <span className="bid-item-amount" style={{ marginLeft: '8px', color: 'var(--primary)', fontWeight: 700 }}>{formatPrice(bid.amount)}</span>
-                                                    <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                                                        {timeAgo(bid.createdAt)}
+                                    <div style={{ maxHeight: "350px", overflowY: "auto", paddingRight: "0.5rem" }}>
+                                        {ad.bids.map((bid: any, i: number) => (
+                                            <div key={bid.id} className="bid-item" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', marginBottom: '8px' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <div>
+                                                        <span className="bid-item-user" style={{ fontWeight: 600 }}>
+                                                            {i === 0 && "🏆 "}
+                                                            {bid.user.name}
+                                                        </span>
+                                                        <span className="bid-item-amount" style={{ marginLeft: '8px', color: 'var(--primary)', fontWeight: 700 }}>{formatPrice(bid.amount)}</span>
+                                                        <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
+                                                            {timeAgo(bid.createdAt)}
+                                                        </div>
                                                     </div>
+                                                    {bid.status === 'ACCEPTED' && (
+                                                        <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
+                                                    )}
+                                                    {bid.status === 'REJECTED' && (
+                                                        <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
+                                                    )}
                                                 </div>
-                                                {bid.status === 'ACCEPTED' && (
-                                                    <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
-                                                )}
-                                                {bid.status === 'REJECTED' && (
-                                                    <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
+                                                {isOwner && (
+                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                        {bid.status === 'PENDING' && (
+                                                            <>
+                                                                <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
+                                                                <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
+                                                            </>
+                                                        )}
+                                                        {bid.status === 'ACCEPTED' && (
+                                                            <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
+                                                        )}
+                                                        <AdActions
+                                                            actionType="MESSAGE"
+                                                            adId={ad.id}
+                                                            sellerId={bid.user.id}
+                                                            currentUser={session?.user}
+                                                            isMessageBidder={true}
+                                                            initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
+                                                        />
+                                                    </div>
                                                 )}
                                             </div>
-                                            {isOwner && (
-                                                <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '4px' }}>
-                                                    {bid.status === 'PENDING' && (
-                                                        <>
-                                                            <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
-                                                            <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
-                                                        </>
-                                                    )}
-                                                    {bid.status === 'ACCEPTED' && (
-                                                        <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
-                                                    )}
-                                                    <AdActions
-                                                        actionType="MESSAGE"
-                                                        adId={ad.id}
-                                                        sellerId={bid.user.id}
-                                                        currentUser={session?.user}
-                                                        isMessageBidder={true}
-                                                        initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
-                                                    />
-                                                </div>
-                                            )}
-                                        </div>
-                                    ))}
+                                        ))}
+                                    </div>
                                 </div>
                             )}
                         </div>
