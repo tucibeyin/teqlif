@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/message.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../notifications/providers/unread_counts_provider.dart';
 
 final conversationsProvider =
     FutureProvider<List<ConversationModel>>((ref) async {
@@ -156,7 +157,12 @@ class ConversationsScreen extends ConsumerWidget {
                           ),
                         ],
                       ),
-                      onTap: () => context.push('/messages/${conv.id}'),
+                      onTap: () async {
+                        await context.push('/messages/${conv.id}');
+                        // Refresh both the list and the bottom tab badges when returning
+                        ref.invalidate(conversationsProvider);
+                        ref.read(unreadCountsProvider.notifier).refresh();
+                      },
                     );
                   },
                 ),
