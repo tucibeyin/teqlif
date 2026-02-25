@@ -1,16 +1,18 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getMobileUser } from '@/lib/mobile-auth';
 
-export async function GET() {
+export async function GET(request: Request) {
     try {
         const session = await auth();
+        const mobileUser = await getMobileUser(request);
 
-        if (!session?.user?.id) {
+        const userId = session?.user?.id || mobileUser?.id;
+
+        if (!userId) {
             return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
         }
-
-        const userId = session.user.id;
 
         const unreadCount = await prisma.message.count({
             where: {
