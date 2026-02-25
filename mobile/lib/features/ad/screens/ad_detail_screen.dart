@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
@@ -211,6 +212,15 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                         ),
                 ),
                 actions: [
+                  IconButton(
+                    icon: const Icon(Icons.share, color: Colors.black87),
+                    style: IconButton.styleFrom(
+                      backgroundColor: Colors.white.withValues(alpha: 0.8),
+                    ),
+                    onPressed: () {
+                      Share.share('Bana Teqlif ver! ${ad.title}\nhttps://teqlif.com/ilan/${ad.id}');
+                    },
+                  ),
                   favsAsync.when(
                     data: (favs) {
                       final isFav = favs.any((f) => f.id == ad.id);
