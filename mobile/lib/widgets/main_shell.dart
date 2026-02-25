@@ -16,9 +16,6 @@ class MainShell extends ConsumerWidget {
     return 0; // default
   }
 
-  bool _isAuthScreen(String location) =>
-      location == '/login' || location == '/register';
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final location = GoRouterState.of(context).uri.path;
@@ -79,12 +76,12 @@ class MainShell extends ConsumerWidget {
                 NavigationDestination(
                   icon: Badge(
                     isLabelVisible: (unreadCounts.value?.messages ?? 0) > 0,
-                    label: Text(unreadCounts.value?.messages?.toString() ?? ''),
+                    label: Text(unreadCounts.value?.messages.toString() ?? ''),
                     child: const Icon(Icons.message_outlined),
                   ),
                   selectedIcon: Badge(
                     isLabelVisible: (unreadCounts.value?.messages ?? 0) > 0,
-                    label: Text(unreadCounts.value?.messages?.toString() ?? ''),
+                    label: Text(unreadCounts.value?.messages.toString() ?? ''),
                     child: const Icon(Icons.message),
                   ),
                   label: 'Mesajlar',
@@ -92,12 +89,12 @@ class MainShell extends ConsumerWidget {
                 NavigationDestination(
                   icon: Badge(
                     isLabelVisible: (unreadCounts.value?.notifications ?? 0) > 0,
-                    label: Text(unreadCounts.value?.notifications?.toString() ?? ''),
+                    label: Text(unreadCounts.value?.notifications.toString() ?? ''),
                     child: const Icon(Icons.notifications_outlined),
                   ),
                   selectedIcon: Badge(
                     isLabelVisible: (unreadCounts.value?.notifications ?? 0) > 0,
-                    label: Text(unreadCounts.value?.notifications?.toString() ?? ''),
+                    label: Text(unreadCounts.value?.notifications.toString() ?? ''),
                     child: const Icon(Icons.notifications),
                   ),
                   label: 'Bildirimler',

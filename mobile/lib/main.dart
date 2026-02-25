@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 import 'package:timeago/timeago.dart' as timeago;
 import 'package:intl/date_symbol_data_local.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -24,7 +25,17 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
 
-Future<void> _initLocalNotifications() async {
+void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
+  final type = data['type'] as String?;
+  final router = ref.read(routerProvider);
+  if (type == 'NEW_MESSAGE') {
+    router.go('/messages');
+  } else {
+    router.go('/notifications');
+  }
+}
+
+Future<void> _initLocalNotifications(WidgetRef ref) async {
   const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
   const iosSettings = DarwinInitializationSettings(
     requestAlertPermission: true,
@@ -33,6 +44,14 @@ Future<void> _initLocalNotifications() async {
   );
   await _localNotifications.initialize(
     const InitializationSettings(android: androidSettings, iOS: iosSettings),
+    onDidReceiveNotificationResponse: (NotificationResponse response) {
+      if (response.payload != null) {
+        try {
+          final data = jsonDecode(response.payload!) as Map<String, dynamic>;
+          _handleNotificationTap(data, ref);
+        } catch (_) {}
+      }
+    },
   );
 }
 
@@ -98,9 +117,23 @@ Future<void> _setupFCM(WidgetRef ref) async {
           ),
           iOS: DarwinNotificationDetails(),
         ),
+        payload: jsonEncode(message.data),
       );
     }
   });
+
+  // Handle tap from background state
+  FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+    _handleNotificationTap(message.data, ref);
+  });
+
+  // Handle tap from terminated state
+  final initialMessage = await FirebaseMessaging.instance.getInitialMessage();
+  if (initialMessage != null) {
+    Future.delayed(const Duration(milliseconds: 500), () {
+      _handleNotificationTap(initialMessage.data, ref);
+    });
+  }
 }
 
 void main() async {
@@ -117,9 +150,6 @@ void main() async {
   // Background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  // Local notifications
-  await _initLocalNotifications();
-
   runApp(const ProviderScope(child: TeqlifApp()));
 }
 
@@ -135,7 +165,10 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> {
   void initState() {
     super.initState();
     // Setup FCM after the first frame (so auth provider is ready)
-    WidgetsBinding.instance.addPostFrameCallback((_) => _setupFCM(ref));
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await _initLocalNotifications(ref);
+      await _setupFCM(ref);
+    });
   }
 
   @override
