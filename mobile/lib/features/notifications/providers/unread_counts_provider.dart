@@ -17,7 +17,11 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
 
   Future<void> refresh() async {
     try {
-      state = const AsyncValue.loading();
+      // If we already have a value, don't wipe it out. Emitting loading 
+      // without copying the previous state causes the UI to flicker.
+      if (!state.hasValue) {
+        state = const AsyncValue.loading();
+      }
       final notificationsRes = await ApiClient().get(Endpoints.notifications);
       final messagesRes = await ApiClient().get(Endpoints.messagesUnread);
 
