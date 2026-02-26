@@ -33,7 +33,7 @@ CategoryNode? findNode(String slug, [List<CategoryNode>? nodes]) {
 List<CategoryNode>? findPath(String slug, [List<CategoryNode>? nodes, List<CategoryNode>? path]) {
   final list = nodes ?? categoryTree;
   for (final node in list) {
-    final newPath = [...(path ?? []), node];
+    final newPath = <CategoryNode>[...(path ?? []), node];
     if (node.slug == slug) return newPath;
     final found = findPath(slug, node.children, newPath);
     if (found != null) return found;
