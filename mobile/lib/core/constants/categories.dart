@@ -1,6 +1,28 @@
 // Teqlif — 3 Seviyeli Kategori Ağacı (Flutter)
 // Yalnızca leaf (yaprak) slug'ı API'ye gönderilir.
 
+class CategoryGroup {
+  final String slug;
+  final String name;
+  final String icon;
+  final List<String> members; // root slug'ları
+  const CategoryGroup(
+      {required this.slug,
+      required this.name,
+      required this.icon,
+      required this.members});
+}
+
+/// Gayrimenkul altındaki root kategoriler accordion olarak gösterilir
+final List<CategoryGroup> categoryGroups = [
+  const CategoryGroup(
+    slug: 'gayrimenkul',
+    name: 'Gayrimenkul',
+    icon: '🏠',
+    members: ['konut', 'is-yeri', 'arsa', 'bina', 'devre-mulk', 'turistik-tesis'],
+  ),
+];
+
 class LeafCategory {
   final String slug;
   final String name;

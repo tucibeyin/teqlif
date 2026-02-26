@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { provinces, allDistricts } from "@/lib/locations";
-import { categoryTree } from "@/lib/categories";
+import { categoryTree, categoryGroups } from "@/lib/categories";
 
 export default function PostAdPage() {
     const router = useRouter();
@@ -136,9 +136,27 @@ export default function PostAdPage() {
                                     onChange={(e) => { setSelectedRoot(e.target.value); setSelectedSub(""); setSelectedLeaf(""); }}
                                 >
                                     <option value="" disabled>Ana kategori seçin</option>
-                                    {categoryTree.map((r) => (
-                                        <option key={r.slug} value={r.slug}>{r.icon} {r.name}</option>
-                                    ))}
+                                    {(() => {
+                                        const grouped = new Set(categoryGroups.flatMap(g => g.members));
+                                        return (
+                                            <>
+                                                {categoryGroups.map(g => (
+                                                    <optgroup key={g.slug} label={`${g.icon} ${g.name}`}>
+                                                        {categoryTree
+                                                            .filter(r => g.members.includes(r.slug))
+                                                            .map(r => (
+                                                                <option key={r.slug} value={r.slug}>{r.icon} {r.name}</option>
+                                                            ))}
+                                                    </optgroup>
+                                                ))}
+                                                {categoryTree
+                                                    .filter(r => !grouped.has(r.slug))
+                                                    .map(r => (
+                                                        <option key={r.slug} value={r.slug}>{r.icon} {r.name}</option>
+                                                    ))}
+                                            </>
+                                        );
+                                    })()}
                                 </select>
                             </div>
                             {selectedRoot && !isLeafOnly && rootObj && rootObj.children.length > 0 && (

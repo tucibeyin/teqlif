@@ -147,3 +147,18 @@ export const categories = categoryTree.map((c) => ({
     name: c.name,
     icon: c.icon,
 }));
+
+/** UI'da accordion/optgroup ile gruplanan root kategoriler */
+export const categoryGroups: {
+    slug: string;
+    name: string;
+    icon: string;
+    members: string[]; // root slug'ları
+}[] = [
+        {
+            slug: "gayrimenkul",
+            name: "Gayrimenkul",
+            icon: "🏠",
+            members: ["konut", "is-yeri", "arsa", "bina", "devre-mulk", "turistik-tesis"],
+        },
+    ];
