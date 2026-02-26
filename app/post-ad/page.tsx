@@ -43,6 +43,14 @@ export default function PostAdPage() {
         setError("");
         const fd = new FormData(e.currentTarget);
 
+        // Kategori slug'ını doğrudan React state'den al (hidden input'a güvenmek yerine)
+        const effectiveCategorySlug = isLeafOnly ? selectedRoot : selectedLeaf;
+        if (!effectiveCategorySlug) {
+            setError("Lütfen İlan Türü'nü seçin.");
+            setLoading(false);
+            return;
+        }
+
         const uploadedImages: string[] = [];
         const fileInput = document.getElementById("images") as HTMLInputElement;
 
@@ -90,7 +98,7 @@ export default function PostAdPage() {
                 showPhone,
                 durationDays: durationDays !== "custom" ? durationDays : null,
                 customExpiresAt: durationDays === "custom" ? customExpiresAt : null,
-                categorySlug: fd.get("categorySlug"),
+                categorySlug: effectiveCategorySlug,
                 provinceId: fd.get("provinceId"),
                 districtId: fd.get("districtId"),
                 images: uploadedImages,

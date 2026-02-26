@@ -58,6 +58,14 @@ export default function EditAdForm({ ad }: { ad: any }) {
         setError("");
         const fd = new FormData(e.currentTarget);
 
+        // Kategori slug'ını doğrudan React state'den al
+        const effectiveCategorySlug = isLeafOnly ? selectedRoot : selectedLeaf;
+        if (!effectiveCategorySlug) {
+            setError("İlan Türü seçilmedi. Lütfen 3 kademedeki seçimleri eksiksiz tamamlayın.");
+            setLoading(false);
+            return;
+        }
+
         const finalImages = [...existingImages];
         const fileInput = document.getElementById("images") as HTMLInputElement;
 
@@ -101,7 +109,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
                     ? Number((document.getElementById("actualBuyItNowPrice") as HTMLInputElement).value)
                     : null,
                 showPhone,
-                categorySlug: fd.get("categorySlug"),
+                categorySlug: effectiveCategorySlug,
                 provinceId: fd.get("provinceId"),
                 districtId: fd.get("districtId"),
                 images: finalImages,
