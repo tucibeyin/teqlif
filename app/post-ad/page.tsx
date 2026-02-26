@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { provinces, allDistricts } from "@/lib/locations";
-import { categories } from "@/lib/categories";
+import { categoryTree } from "@/lib/categories";
 
 export default function PostAdPage() {
     const router = useRouter();
@@ -18,6 +18,13 @@ export default function PostAdPage() {
     const [showPhone, setShowPhone] = useState(false);
     const [durationDays, setDurationDays] = useState<number | "custom">(30);
     const [customExpiresAt, setCustomExpiresAt] = useState("");
+    // 3 kademeli kategori seçimi
+    const [selectedRoot, setSelectedRoot] = useState("");
+    const [selectedSub, setSelectedSub] = useState("");
+    const [selectedLeaf, setSelectedLeaf] = useState("");
+    const rootObj = categoryTree.find((r) => r.slug === selectedRoot);
+    const subObj = rootObj?.children.find((s) => s.slug === selectedSub);
+    const isLeafOnly = !!rootObj && rootObj.children.length === 0;
 
     useEffect(() => {
         let isMounted = true;
@@ -121,16 +128,57 @@ export default function PostAdPage() {
                                     placeholder="Ör: iPhone 15 Pro 256GB" required maxLength={100} />
                             </div>
                             <div className="form-group">
-                                <label htmlFor="categorySlug">Kategori *</label>
-                                <select id="categorySlug" name="categorySlug" className="input" required defaultValue="">
-                                    <option value="" disabled>Kategori seçin</option>
-                                    {categories.map((cat) => (
-                                        <option key={cat.slug} value={cat.slug}>
-                                            {cat.icon} {cat.name}
-                                        </option>
+                                <label>Ana Kategori *</label>
+                                <select
+                                    className="input"
+                                    required
+                                    value={selectedRoot}
+                                    onChange={(e) => { setSelectedRoot(e.target.value); setSelectedSub(""); setSelectedLeaf(""); }}
+                                >
+                                    <option value="" disabled>Ana kategori seçin</option>
+                                    {categoryTree.map((r) => (
+                                        <option key={r.slug} value={r.slug}>{r.icon} {r.name}</option>
                                     ))}
                                 </select>
                             </div>
+                            {selectedRoot && !isLeafOnly && rootObj && rootObj.children.length > 0 && (
+                                <div className="form-group">
+                                    <label>Alt Kategori *</label>
+                                    <select
+                                        className="input"
+                                        required
+                                        value={selectedSub}
+                                        onChange={(e) => { setSelectedSub(e.target.value); setSelectedLeaf(""); }}
+                                    >
+                                        <option value="" disabled>Alt kategori seçin</option>
+                                        {rootObj.children.map((s) => (
+                                            <option key={s.slug} value={s.slug}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            {selectedSub && subObj && subObj.leaves.length > 0 && (
+                                <div className="form-group">
+                                    <label>İlan Türü *</label>
+                                    <select
+                                        className="input"
+                                        required
+                                        value={selectedLeaf}
+                                        onChange={(e) => setSelectedLeaf(e.target.value)}
+                                    >
+                                        <option value="" disabled>İlan türü seçin</option>
+                                        {subObj.leaves.map((l) => (
+                                            <option key={l.slug} value={l.slug}>{l.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            {/* Gizli input: API'ye gönderilecek leaf slug */}
+                            <input
+                                type="hidden"
+                                name="categorySlug"
+                                value={isLeafOnly ? selectedRoot : selectedLeaf}
+                            />
                             <div className="form-group">
                                 <label htmlFor="description">Açıklama *</label>
                                 <textarea id="description" name="description" className="input"

@@ -7,21 +7,7 @@ import '../../../core/models/ad.dart';
 import '../../home/screens/home_screen.dart';
 import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 import '../../../core/constants/locations.dart';
-
-const _categories = [
-  {'slug': 'elektronik', 'name': 'Elektronik'},
-  {'slug': 'arac', 'name': 'Araç'},
-  {'slug': 'emlak', 'name': 'Emlak'},
-  {'slug': 'giyim', 'name': 'Giyim & Moda'},
-  {'slug': 'mobilya', 'name': 'Mobilya & Ev'},
-  {'slug': 'spor', 'name': 'Spor & Outdoor'},
-  {'slug': 'kitap', 'name': 'Kitap & Hobi'},
-  {'slug': 'koleksiyon', 'name': 'Koleksiyon & Antika'},
-  {'slug': 'cocuk', 'name': 'Bebek & Çocuk'},
-  {'slug': 'bahce', 'name': 'Bahçe & Tarım'},
-  {'slug': 'hayvan', 'name': 'Hayvanlar'},
-  {'slug': 'diger', 'name': 'Diğer'},
-];
+import '../../../core/constants/categories.dart';
 
 class EditAdScreen extends ConsumerStatefulWidget {
   final String adId;
@@ -38,13 +24,28 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
   final _startBidCtrl = TextEditingController();
   final _minBidStepCtrl = TextEditingController();
   final _buyItNowCtrl = TextEditingController();
-  String? _selectedCategory;
+  String? _selectedCategory; // leaf slug
+  String? _selectedRootSlug;
+  String? _selectedSubSlug;
   String? _selectedProvinceId;
   String? _selectedDistrictId;
   bool _loading = true;
   bool _saving = false;
   bool _isFixedPrice = false;
   bool _showPhone = false;
+
+  RootCategory? get _rootObj => _selectedRootSlug == null
+      ? null
+      : categoryTree.firstWhere((r) => r.slug == _selectedRootSlug,
+          orElse: () => categoryTree.first);
+  SubCategory? get _subObj => _selectedSubSlug == null || _rootObj == null
+      ? null
+      : _rootObj!.children.firstWhere((s) => s.slug == _selectedSubSlug,
+          orElse: () => _rootObj!.children.first);
+  bool get _isLeafOnly =>
+      _rootObj != null && _rootObj!.children.isEmpty;
+  String? get _effectiveLeafSlug =>
+      _isLeafOnly ? _selectedRootSlug : _selectedCategory;
 
   @override
   void initState() {
@@ -82,7 +83,10 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
         _buyItNowCtrl.text = ad.buyItNowPrice != null
             ? formatter.formatDouble(ad.buyItNowPrice!)
             : '';
-        _selectedCategory = ad.category?.slug;
+        final sel = findSelections(ad.category?.slug ?? '');
+        _selectedRootSlug = sel.root.isEmpty ? null : sel.root;
+        _selectedSubSlug = sel.sub.isEmpty ? null : sel.sub;
+        _selectedCategory = sel.leaf.isEmpty ? null : sel.leaf;
         _selectedProvinceId = ad.province?.id;
         _selectedDistrictId = ad.district?.id;
         _loading = false;
@@ -96,7 +100,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
     if (_titleCtrl.text.isEmpty ||
         _descCtrl.text.isEmpty ||
         _priceCtrl.text.isEmpty ||
-        _selectedCategory == null ||
+        _effectiveLeafSlug == null ||
         _selectedProvinceId == null ||
         _selectedDistrictId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -138,7 +142,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                 .replaceAll(' ', '')
                 .replaceAll('.', '')
                 .replaceAll(',', '.')),
-        'categorySlug': _selectedCategory,
+        'categorySlug': _effectiveLeafSlug,
         'provinceId': _selectedProvinceId,
         'districtId': _selectedDistrictId,
       });
@@ -193,16 +197,55 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
               decoration: const InputDecoration(labelText: 'Açıklama'),
             ),
             const SizedBox(height: 12),
-            // Category dropdown
+            // ── 3 Kademeli Kategori Seçimi ──
+            // Level 1: Ana Kategori
             DropdownButtonFormField<String>(
-              value: _selectedCategory,
-              decoration: const InputDecoration(labelText: 'Kategori'),
-              items: _categories
-                  .map((c) => DropdownMenuItem(
-                      value: c['slug'], child: Text(c['name']!)))
+              value: _selectedRootSlug,
+              decoration: const InputDecoration(labelText: 'Ana Kategori'),
+              items: categoryTree
+                  .map((r) => DropdownMenuItem(
+                      value: r.slug, child: Text('${r.icon} ${r.name}')))
                   .toList(),
-              onChanged: (v) => setState(() => _selectedCategory = v),
+              onChanged: (v) => setState(() {
+                _selectedRootSlug = v;
+                _selectedSubSlug = null;
+                _selectedCategory = null;
+              }),
             ),
+            const SizedBox(height: 12),
+            // Level 2: Alt Kategori
+            if (_selectedRootSlug != null &&
+                _rootObj != null &&
+                _rootObj!.children.isNotEmpty) ...[
+              DropdownButtonFormField<String>(
+                value: _selectedSubSlug,
+                decoration: const InputDecoration(labelText: 'Alt Kategori'),
+                items: _rootObj!.children
+                    .map((s) =>
+                        DropdownMenuItem(value: s.slug, child: Text(s.name)))
+                    .toList(),
+                onChanged: (v) => setState(() {
+                  _selectedSubSlug = v;
+                  _selectedCategory = null;
+                }),
+              ),
+              const SizedBox(height: 12),
+            ],
+            // Level 3: İlan Türü
+            if (_selectedSubSlug != null &&
+                _subObj != null &&
+                _subObj!.leaves.isNotEmpty) ...[
+              DropdownButtonFormField<String>(
+                value: _selectedCategory,
+                decoration: const InputDecoration(labelText: 'İlan Türü'),
+                items: _subObj!.leaves
+                    .map((l) =>
+                        DropdownMenuItem(value: l.slug, child: Text(l.name)))
+                    .toList(),
+                onChanged: (v) => setState(() => _selectedCategory = v),
+              ),
+              const SizedBox(height: 12),
+            ],
             const SizedBox(height: 12),
             // Province dropdown
             DropdownButtonFormField<String>(

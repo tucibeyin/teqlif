@@ -5,23 +5,10 @@ import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
+import '../../../core/constants/categories.dart';
 
 // ── Static data ────────────────────────────────────────────────────────────
-
-const _categories = [
-  {'slug': 'elektronik', 'name': 'Elektronik', 'icon': '💻'},
-  {'slug': 'arac', 'name': 'Araç', 'icon': '🚗'},
-  {'slug': 'emlak', 'name': 'Emlak', 'icon': '🏠'},
-  {'slug': 'giyim', 'name': 'Giyim & Moda', 'icon': '👗'},
-  {'slug': 'mobilya', 'name': 'Mobilya & Ev', 'icon': '🛋️'},
-  {'slug': 'spor', 'name': 'Spor & Outdoor', 'icon': '⚽'},
-  {'slug': 'kitap', 'name': 'Kitap & Hobi', 'icon': '📚'},
-  {'slug': 'koleksiyon', 'name': 'Koleksiyon & Antika', 'icon': '🏺'},
-  {'slug': 'cocuk', 'name': 'Bebek & Çocuk', 'icon': '🧸'},
-  {'slug': 'bahce', 'name': 'Bahçe & Tarım', 'icon': '🌱'},
-  {'slug': 'hayvan', 'name': 'Hayvanlar', 'icon': '🐾'},
-  {'slug': 'diger', 'name': 'Diğer', 'icon': '📦'},
-];
+// (categoryTree artık categories.dart'tan geliyor)
 
 // Top 20 provinces for quick access
 const _provinces = [
@@ -474,9 +461,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// ── Category bottom sheet ──────────────────────────────────────────────────
+// ── Category bottom sheet (3 seviyeli) ─────────────────────────────────────
 
-class _CategorySheet extends StatelessWidget {
+class _CategorySheet extends StatefulWidget {
   final String? selected;
   final void Function(String slug, String name) onSelect;
   final VoidCallback onClear;
@@ -485,10 +472,44 @@ class _CategorySheet extends StatelessWidget {
       {required this.selected, required this.onSelect, required this.onClear});
 
   @override
+  State<_CategorySheet> createState() => _CategorySheetState();
+}
+
+class _CategorySheetState extends State<_CategorySheet> {
+  RootCategory? _activeRoot;
+  SubCategory? _activeSub;
+
+  void _selectRoot(RootCategory root) {
+    if (root.children.isEmpty) {
+      // Leaf-only root (Elektronik, Araç…) — doğrudan seç
+      widget.onSelect(root.slug, '${root.icon} ${root.name}');
+    } else {
+      setState(() => _activeRoot = root);
+    }
+  }
+
+  void _selectSub(SubCategory sub) {
+    if (sub.leaves.length == 1) {
+      // Tek leaf varsa doğrudan seç (örn. Arsa > Satılık > Arsa)
+      widget.onSelect(sub.leaves.first.slug,
+          '${_activeRoot!.icon} ${_activeRoot!.name} > ${sub.name} > ${sub.leaves.first.name}');
+    } else {
+      setState(() => _activeSub = sub);
+    }
+  }
+
+  void _selectLeaf(LeafCategory leaf) {
+    widget.onSelect(
+      leaf.slug,
+      '${_activeRoot!.icon} ${_activeRoot!.name} > ${_activeSub!.name} > ${leaf.name}',
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
-      maxChildSize: 0.9,
+      maxChildSize: 0.92,
       minChildSize: 0.4,
       expand: false,
       builder: (_, scrollCtrl) => Column(
@@ -505,49 +526,111 @@ class _CategorySheet extends StatelessWidget {
           ),
           // Header
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               children: [
-                const Text('Kategori Seç',
-                    style:
-                        TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                if (_activeRoot != null)
+                  IconButton(
+                    icon: const Icon(Icons.arrow_back_ios, size: 16),
+                    onPressed: () => setState(() {
+                      if (_activeSub != null) {
+                        _activeSub = null;
+                      } else {
+                        _activeRoot = null;
+                      }
+                    }),
+                  ),
+                Text(
+                  _activeSub != null
+                      ? '${_activeRoot!.name} › ${_activeSub!.name}'
+                      : _activeRoot != null
+                          ? _activeRoot!.name
+                          : 'Kategori Seç',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.w700, fontSize: 16),
+                ),
                 const Spacer(),
-                if (selected != null)
+                if (widget.selected != null)
                   TextButton(
-                    onPressed: onClear,
+                    onPressed: widget.onClear,
                     child: const Text('Temizle',
                         style: TextStyle(color: Color(0xFFEF4444))),
                   ),
               ],
             ),
           ),
+          const Divider(height: 1),
           // List
           Expanded(
             child: ListView.builder(
               controller: scrollCtrl,
-              itemCount: _categories.length,
+              itemCount: _activeSub != null
+                  ? _activeSub!.leaves.length
+                  : _activeRoot != null
+                      ? _activeRoot!.children.length
+                      : categoryTree.length,
               itemBuilder: (_, i) {
-                final c = _categories[i];
-                final isSelected = c['slug'] == selected;
-                return ListTile(
-                  leading:
-                      Text(c['icon']!, style: const TextStyle(fontSize: 20)),
-                  title: Text(
-                    c['name']!,
-                    style: TextStyle(
-                      fontWeight:
-                          isSelected ? FontWeight.w700 : FontWeight.w500,
-                      color: isSelected
-                          ? const Color(0xFF00B4CC)
-                          : const Color(0xFF0F1923),
+                if (_activeSub != null) {
+                  final leaf = _activeSub!.leaves[i];
+                  final isSelected = leaf.slug == widget.selected;
+                  return ListTile(
+                    title: Text(leaf.name,
+                        style: TextStyle(
+                          fontWeight: isSelected
+                              ? FontWeight.w700
+                              : FontWeight.w500,
+                          color: isSelected
+                              ? const Color(0xFF00B4CC)
+                              : const Color(0xFF0F1923),
+                        )),
+                    trailing: isSelected
+                        ? const Icon(Icons.check_circle,
+                            color: Color(0xFF00B4CC), size: 20)
+                        : const Icon(Icons.chevron_right,
+                            color: Color(0xFF9AAAB8)),
+                    onTap: () => _selectLeaf(leaf),
+                  );
+                } else if (_activeRoot != null) {
+                  final sub = _activeRoot!.children[i];
+                  return ListTile(
+                    title: Text(sub.name,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w500,
+                            color: Color(0xFF0F1923))),
+                    trailing: sub.leaves.length == 1
+                        ? null
+                        : const Icon(Icons.chevron_right,
+                            color: Color(0xFF9AAAB8)),
+                    onTap: () => _selectSub(sub),
+                  );
+                } else {
+                  final root = categoryTree[i];
+                  final isSelected = widget.selected != null &&
+                      findSelections(widget.selected!).root == root.slug;
+                  return ListTile(
+                    leading: Text(root.icon,
+                        style: const TextStyle(fontSize: 20)),
+                    title: Text(
+                      root.name,
+                      style: TextStyle(
+                        fontWeight: isSelected
+                            ? FontWeight.w700
+                            : FontWeight.w500,
+                        color: isSelected
+                            ? const Color(0xFF00B4CC)
+                            : const Color(0xFF0F1923),
+                      ),
                     ),
-                  ),
-                  trailing: isSelected
-                      ? const Icon(Icons.check_circle,
-                          color: Color(0xFF00B4CC), size: 20)
-                      : null,
-                  onTap: () => onSelect(c['slug']!, c['name']!),
-                );
+                    trailing: root.children.isEmpty
+                        ? (isSelected
+                            ? const Icon(Icons.check_circle,
+                                color: Color(0xFF00B4CC), size: 20)
+                            : null)
+                        : const Icon(Icons.chevron_right,
+                            color: Color(0xFF9AAAB8)),
+                    onTap: () => _selectRoot(root),
+                  );
+                }
               },
             ),
           ),

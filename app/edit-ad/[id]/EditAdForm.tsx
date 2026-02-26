@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { provinces, allDistricts } from "@/lib/locations";
-import { categories } from "@/lib/categories";
+import { categoryTree } from "@/lib/categories";
 import Image from "next/image";
 
 export default function EditAdForm({ ad }: { ad: any }) {
@@ -10,6 +10,29 @@ export default function EditAdForm({ ad }: { ad: any }) {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [selectedProvince, setSelectedProvince] = useState(ad.provinceId);
+    // ── 3 kademeli kategori seçimi ────────────────────────────────────
+    // Mevcut ilan slug’ından geriye doğru root/sub/leaf bulunur
+    function findInitialSelections(leafSlug: string) {
+        for (const root of categoryTree) {
+            if (root.slug === leafSlug) return { root: root.slug, sub: "", leaf: "" };
+            for (const sub of root.children) {
+                if (sub.slug === leafSlug) return { root: root.slug, sub: sub.slug, leaf: "" };
+                for (const leaf of sub.leaves) {
+                    if (leaf.slug === leafSlug) return { root: root.slug, sub: sub.slug, leaf: leaf.slug };
+                }
+            }
+        }
+        return { root: "", sub: "", leaf: "" };
+    }
+    const initSlug = ad.category?.slug ?? "";
+    const initSel = findInitialSelections(initSlug);
+    const [selectedRoot, setSelectedRoot] = useState(initSel.root);
+    const [selectedSub, setSelectedSub] = useState(initSel.sub);
+    const [selectedLeaf, setSelectedLeaf] = useState(initSel.leaf);
+    const rootObj = categoryTree.find((r) => r.slug === selectedRoot);
+    const subObj = rootObj?.children.find((s) => s.slug === selectedSub);
+    const isLeafOnly = !!rootObj && rootObj.children.length === 0;
+    // ──────────────────────────────────────────────────────────────────
     const [districts, setDistricts] = useState<{ id: string; name: string }[]>([]);
     const [displayPrice, setDisplayPrice] = useState(() => new Intl.NumberFormat("tr-TR").format(ad.price));
     const [displayMinBidStep, setDisplayMinBidStep] = useState(() => new Intl.NumberFormat("tr-TR").format(ad.minBidStep || 100));
@@ -119,16 +142,57 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                 <input id="title" name="title" type="text" className="input" defaultValue={ad.title} required maxLength={100} />
                             </div>
                             <div className="form-group">
-                                <label htmlFor="categorySlug">Kategori *</label>
-                                <select id="categorySlug" name="categorySlug" className="input" required defaultValue={ad.category.slug}>
-                                    <option value="" disabled>Kategori seçin</option>
-                                    {categories.map((cat) => (
-                                        <option key={cat.slug} value={cat.slug}>
-                                            {cat.icon} {cat.name}
-                                        </option>
+                                <label>Ana Kategori *</label>
+                                <select
+                                    className="input"
+                                    required
+                                    value={selectedRoot}
+                                    onChange={(e) => { setSelectedRoot(e.target.value); setSelectedSub(""); setSelectedLeaf(""); }}
+                                >
+                                    <option value="" disabled>Ana kategori seçin</option>
+                                    {categoryTree.map((r) => (
+                                        <option key={r.slug} value={r.slug}>{r.icon} {r.name}</option>
                                     ))}
                                 </select>
                             </div>
+                            {selectedRoot && !isLeafOnly && rootObj && rootObj.children.length > 0 && (
+                                <div className="form-group">
+                                    <label>Alt Kategori *</label>
+                                    <select
+                                        className="input"
+                                        required
+                                        value={selectedSub}
+                                        onChange={(e) => { setSelectedSub(e.target.value); setSelectedLeaf(""); }}
+                                    >
+                                        <option value="" disabled>Alt kategori seçin</option>
+                                        {rootObj.children.map((s) => (
+                                            <option key={s.slug} value={s.slug}>{s.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            {selectedSub && subObj && subObj.leaves.length > 0 && (
+                                <div className="form-group">
+                                    <label>İlan Türü *</label>
+                                    <select
+                                        className="input"
+                                        required
+                                        value={selectedLeaf}
+                                        onChange={(e) => setSelectedLeaf(e.target.value)}
+                                    >
+                                        <option value="" disabled>İlan türü seçin</option>
+                                        {subObj.leaves.map((l) => (
+                                            <option key={l.slug} value={l.slug}>{l.name}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                            )}
+                            {/* Gizli input: API'ye gönderilecek leaf slug */}
+                            <input
+                                type="hidden"
+                                name="categorySlug"
+                                value={isLeafOnly ? selectedRoot : selectedLeaf}
+                            />
                             <div className="form-group">
                                 <label htmlFor="description">Açıklama *</label>
                                 <textarea id="description" name="description" className="input" defaultValue={ad.description} rows={5} required />
