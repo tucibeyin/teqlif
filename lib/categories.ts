@@ -1,133 +1,138 @@
-// Teqlif — 3 Seviyeli Kategori Ağacı
-// Ana Kategori > Alt Kategori (Satılık/Kiralık…) > İlan Türü (leaf)
-// Sadece leaf node'ların slug'ı API'ye gönderilir.
+// Teqlif — Recursive 4-Katmanlı Kategori Ağacı
+// Yapı: Gayrimenkul → Konut → Satılık → Daire
+// Leaf tespiti: node.children.length === 0
+// API'ye sadece leaf slug'ı gönderilir.
 
-export type LeafCategory = {
+export type CategoryNode = {
     slug: string;
     name: string;
+    icon?: string;
+    children: CategoryNode[];
 };
 
-export type SubCategory = {
-    slug: string;
-    name: string;
-    leaves: LeafCategory[];
-};
+// ─── Yardımcı fonksiyonlar ─────────────────────────────────────────────────
 
-export type RootCategory = {
-    slug: string;
-    name: string;
-    icon: string;
-    children: SubCategory[];
-};
-
-function makeLeaves(parentSlug: string, names: string[]): LeafCategory[] {
-    return names.map((n) => ({
-        slug: `${parentSlug}-${n.toLowerCase().replace(/[^a-z0-9ğüşıöçA-ZÜŞĞÖÇI]/gi, "-").replace(/-+/g, "-").replace(/^-|-$/g, "")}`,
-        name: n,
-    }));
+/** Tüm ağaçta slug ile node bulur */
+export function findNode(
+    slug: string,
+    nodes: CategoryNode[] = categoryTree,
+): CategoryNode | null {
+    for (const node of nodes) {
+        if (node.slug === slug) return node;
+        const found = findNode(slug, node.children);
+        if (found) return found;
+    }
+    return null;
 }
 
-export const categoryTree: RootCategory[] = [
+/** Kökten yaprağa giden yolu döndürür */
+export function findPath(
+    slug: string,
+    nodes: CategoryNode[] = categoryTree,
+    path: CategoryNode[] = [],
+): CategoryNode[] | null {
+    for (const node of nodes) {
+        const next = [...path, node];
+        if (node.slug === slug) return next;
+        const found = findPath(slug, node.children, next);
+        if (found) return found;
+    }
+    return null;
+}
+
+/** Çocuğu olmayan node'dur (yaprak) */
+export function isLeaf(node: CategoryNode): boolean {
+    return node.children.length === 0;
+}
+
+// ─── Slug yardımcısı ───────────────────────────────────────────────────────
+function s(base: string, name: string): string {
+    const suffix = name
+        .toLowerCase()
+        .replace(/[^a-z0-9ğüşıöç]/gi, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "");
+    return `${base}-${suffix}`;
+}
+
+function leaves(parent: string, names: string[]): CategoryNode[] {
+    return names.map((n) => ({ slug: s(parent, n), name: n, children: [] }));
+}
+
+// ─── Ağaç Verisi ───────────────────────────────────────────────────────────
+
+const GR = "gayrimenkul";
+const KNT = s(GR, "konut");
+const ISY = s(GR, "is-yeri");
+const ARS = s(GR, "arsa");
+const BIN = s(GR, "bina");
+const DVM = s(GR, "devre-mulk");
+const TRT = s(GR, "turistik-tesis");
+
+export const categoryTree: CategoryNode[] = [
+    // ── GAYRİMENKUL ─────────────────────────────────────────────────────────
     {
-        slug: "konut",
-        name: "Konut",
+        slug: GR,
+        name: "Gayrimenkul",
         icon: "🏠",
         children: [
+            // KONUT
             {
-                slug: "konut-satilik",
-                name: "Satılık",
-                leaves: makeLeaves("konut-satilik", ["Daire", "Rezidans", "Müstakil Ev", "Villa", "Çiftlik Evi", "Köşk & Konak", "Yalı", "Yalı Dairesi", "Yazlık", "Kooperatif"]),
+                slug: KNT, name: "Konut", icon: "🏠",
+                children: [
+                    { slug: s(KNT, "satilik"), name: "Satılık", children: leaves(s(KNT, "satilik"), ["Daire", "Rezidans", "Müstakil Ev", "Villa", "Çiftlik Evi", "Köşk & Konak", "Yalı", "Yalı Dairesi", "Yazlık", "Kooperatif"]) },
+                    { slug: s(KNT, "kiralik"), name: "Kiralık", children: leaves(s(KNT, "kiralik"), ["Daire", "Rezidans", "Müstakil Ev", "Villa", "Çiftlik Evi", "Köşk & Konak", "Yalı", "Yalı Dairesi", "Yazlık", "Kooperatif"]) },
+                    { slug: s(KNT, "turistik-gunluk-kiralik"), name: "Turistik Günlük Kiralık", children: leaves(s(KNT, "turistik-gunluk-kiralik"), ["Daire", "Rezidans", "Müstakil Ev", "Villa", "Yazlık", "Apart Otel", "Pansiyon"]) },
+                    { slug: s(KNT, "devren-satilik"), name: "Devren Satılık", children: leaves(s(KNT, "devren-satilik"), ["Daire", "Rezidans", "Müstakil Ev", "Villa"]) },
+                ],
             },
+            // İŞ YERİ
             {
-                slug: "konut-kiralik",
-                name: "Kiralık",
-                leaves: makeLeaves("konut-kiralik", ["Daire", "Rezidans", "Müstakil Ev", "Villa", "Çiftlik Evi", "Köşk & Konak", "Yalı", "Yalı Dairesi", "Yazlık", "Kooperatif"]),
+                slug: ISY, name: "İş Yeri", icon: "🏢",
+                children: [
+                    { slug: s(ISY, "satilik"), name: "Satılık", children: leaves(s(ISY, "satilik"), ["Akaryakıt İstasyonu", "Apartman Dairesi", "Atölye", "AVM", "Büfe", "Büro & Ofis", "Çiftlik", "Depo & Antrepo", "Düğün Salonu", "Dükkan & Mağaza", "Fabrika & Üretim Tesisi", "Garaj & Park Yeri", "İmalathane", "İş Hanı Katı & Ofisi", "Kafe & Bar", "Kantin", "Kıraathane", "Komple Bina", "Otopark & Garaj", "Oto Yıkama & Kuaför", "Pastane, Fırın & Tatlıcı", "Pazar Yeri", "Plaza", "Plaza Katı & Ofisi", "Restoran & Lokanta", "Rezidans Katı & Ofisi", "Sağlık Merkezi", "SPA, Hamam & Sauna", "Spor Tesisi", "Villa", "Yurt"]) },
+                    { slug: s(ISY, "kiralik"), name: "Kiralık", children: leaves(s(ISY, "kiralik"), ["Akaryakıt İstasyonu", "Apartman Dairesi", "Atölye", "AVM", "Büfe", "Büro & Ofis", "Çiftlik", "Depo & Antrepo", "Düğün Salonu", "Dükkan & Mağaza", "Fabrika & Üretim Tesisi", "Garaj & Park Yeri", "İmalathane", "İş Hanı Katı & Ofisi", "Kafe & Bar", "Kantin", "Kıraathane", "Komple Bina", "Otopark & Garaj", "Oto Yıkama & Kuaför", "Pastane, Fırın & Tatlıcı", "Pazar Yeri", "Plaza", "Plaza Katı & Ofisi", "Restoran & Lokanta", "Rezidans Katı & Ofisi", "Sağlık Merkezi", "SPA, Hamam & Sauna", "Spor Tesisi", "Villa", "Yurt"]) },
+                    { slug: s(ISY, "devren-satilik"), name: "Devren Satılık", children: leaves(s(ISY, "devren-satilik"), ["Atölye", "Büfe", "Dükkan & Mağaza", "Fabrika & Üretim Tesisi", "İmalathane", "Kafe & Bar", "Kıraathane", "Oto Yıkama & Kuaför", "Pastane, Fırın & Tatlıcı", "Restoran & Lokanta", "SPA, Hamam & Sauna", "Spor Tesisi"]) },
+                    { slug: s(ISY, "devren-kiralik"), name: "Devren Kiralık", children: leaves(s(ISY, "devren-kiralik"), ["Atölye", "Büfe", "Dükkan & Mağaza", "İmalathane", "Kafe & Bar", "Kıraathane", "Restoran & Lokanta"]) },
+                ],
             },
+            // ARSA
             {
-                slug: "konut-turistik-gunluk-kiralik",
-                name: "Turistik Günlük Kiralık",
-                leaves: makeLeaves("konut-turistik-gunluk-kiralik", ["Daire", "Rezidans", "Müstakil Ev", "Villa", "Yazlık", "Apart Otel", "Pansiyon"]),
+                slug: ARS, name: "Arsa", icon: "🌿",
+                children: [
+                    { slug: s(ARS, "satilik"), name: "Satılık", children: [] },
+                    { slug: s(ARS, "kiralik"), name: "Kiralık", children: [] },
+                    { slug: s(ARS, "kat-karsiligi"), name: "Kat Karşılığı", children: [] },
+                ],
             },
+            // BİNA
             {
-                slug: "konut-devren-satilik",
-                name: "Devren Satılık Konut",
-                leaves: makeLeaves("konut-devren-satilik", ["Daire", "Rezidans", "Müstakil Ev", "Villa"]),
+                slug: BIN, name: "Bina", icon: "🏗️",
+                children: [
+                    { slug: s(BIN, "satilik"), name: "Satılık", children: [] },
+                    { slug: s(BIN, "kiralik"), name: "Kiralık", children: [] },
+                ],
             },
-        ],
-    },
-    {
-        slug: "is-yeri",
-        name: "İş Yeri",
-        icon: "🏢",
-        children: [
+            // DEVRE MÜLK
             {
-                slug: "is-yeri-satilik",
-                name: "Satılık",
-                leaves: makeLeaves("is-yeri-satilik", ["Akaryakıt İstasyonu", "Apartman Dairesi", "Atölye", "AVM", "Büfe", "Büro & Ofis", "Çiftlik", "Depo & Antrepo", "Düğün Salonu", "Dükkan & Mağaza", "Fabrika & Üretim Tesisi", "Garaj & Park Yeri", "İmalathane", "İş Hanı Katı & Ofisi", "Kafe & Bar", "Kantin", "Kıraathane", "Komple Bina", "Otopark & Garaj", "Oto Yıkama & Kuaför", "Pastane, Fırın & Tatlıcı", "Pazar Yeri", "Plaza", "Plaza Katı & Ofisi", "Restoran & Lokanta", "Rezidans Katı & Ofisi", "Sağlık Merkezi", "SPA, Hamam & Sauna", "Spor Tesisi", "Villa", "Yurt"]),
+                slug: DVM, name: "Devre Mülk", icon: "🏖️",
+                children: [
+                    { slug: s(DVM, "satilik"), name: "Satılık", children: [] },
+                    { slug: s(DVM, "kiralik"), name: "Kiralık", children: [] },
+                ],
             },
+            // TURİSTİK TESİS
             {
-                slug: "is-yeri-kiralik",
-                name: "Kiralık",
-                leaves: makeLeaves("is-yeri-kiralik", ["Akaryakıt İstasyonu", "Apartman Dairesi", "Atölye", "AVM", "Büfe", "Büro & Ofis", "Çiftlik", "Depo & Antrepo", "Düğün Salonu", "Dükkan & Mağaza", "Fabrika & Üretim Tesisi", "Garaj & Park Yeri", "İmalathane", "İş Hanı Katı & Ofisi", "Kafe & Bar", "Kantin", "Kıraathane", "Komple Bina", "Otopark & Garaj", "Oto Yıkama & Kuaför", "Pastane, Fırın & Tatlıcı", "Pazar Yeri", "Plaza", "Plaza Katı & Ofisi", "Restoran & Lokanta", "Rezidans Katı & Ofisi", "Sağlık Merkezi", "SPA, Hamam & Sauna", "Spor Tesisi", "Villa", "Yurt"]),
-            },
-            {
-                slug: "is-yeri-devren-satilik",
-                name: "Devren Satılık",
-                leaves: makeLeaves("is-yeri-devren-satilik", ["Atölye", "Büfe", "Dükkan & Mağaza", "Fabrika & Üretim Tesisi", "İmalathane", "Kafe & Bar", "Kıraathane", "Oto Yıkama & Kuaför", "Pastane, Fırın & Tatlıcı", "Restoran & Lokanta", "SPA, Hamam & Sauna", "Spor Tesisi"]),
-            },
-            {
-                slug: "is-yeri-devren-kiralik",
-                name: "Devren Kiralık",
-                leaves: makeLeaves("is-yeri-devren-kiralik", ["Atölye", "Büfe", "Dükkan & Mağaza", "İmalathane", "Kafe & Bar", "Kıraathane", "Restoran & Lokanta"]),
-            },
-        ],
-    },
-    {
-        slug: "arsa",
-        name: "Arsa",
-        icon: "🌿",
-        children: [
-            { slug: "arsa-satilik", name: "Satılık", leaves: makeLeaves("arsa-satilik", ["Arsa"]) },
-            { slug: "arsa-kiralik", name: "Kiralık", leaves: makeLeaves("arsa-kiralik", ["Arsa"]) },
-            { slug: "arsa-kat-karsiligi-satilik", name: "Kat Karşılığı Satılık", leaves: makeLeaves("arsa-kat-karsiligi-satilik", ["Arsa"]) },
-        ],
-    },
-    {
-        slug: "bina",
-        name: "Bina",
-        icon: "🏗️",
-        children: [
-            { slug: "bina-satilik", name: "Satılık", leaves: makeLeaves("bina-satilik", ["Komple Bina"]) },
-            { slug: "bina-kiralik", name: "Kiralık", leaves: makeLeaves("bina-kiralik", ["Komple Bina"]) },
-        ],
-    },
-    {
-        slug: "devre-mulk",
-        name: "Devre Mülk",
-        icon: "🏖️",
-        children: [
-            { slug: "devre-mulk-satilik", name: "Satılık", leaves: makeLeaves("devre-mulk-satilik", ["Devre Mülk"]) },
-            { slug: "devre-mulk-kiralik", name: "Kiralık", leaves: makeLeaves("devre-mulk-kiralik", ["Devre Mülk"]) },
-        ],
-    },
-    {
-        slug: "turistik-tesis",
-        name: "Turistik Tesis",
-        icon: "🏨",
-        children: [
-            {
-                slug: "turistik-tesis-satilik",
-                name: "Satılık",
-                leaves: makeLeaves("turistik-tesis-satilik", ["Otel", "Apart Otel", "Butik Otel", "Motel", "Pansiyon", "Kamp Yeri (Mocamp)", "Tatil Köyü"]),
-            },
-            {
-                slug: "turistik-tesis-kiralik",
-                name: "Kiralık",
-                leaves: makeLeaves("turistik-tesis-kiralik", ["Otel", "Apart Otel", "Butik Otel", "Motel", "Pansiyon", "Kamp Yeri (Mocamp)", "Tatil Köyü"]),
+                slug: TRT, name: "Turistik Tesis", icon: "🏨",
+                children: [
+                    { slug: s(TRT, "satilik"), name: "Satılık", children: leaves(s(TRT, "satilik"), ["Otel", "Apart Otel", "Butik Otel", "Motel", "Pansiyon", "Tatil Köyü"]) },
+                    { slug: s(TRT, "kiralik"), name: "Kiralık", children: leaves(s(TRT, "kiralik"), ["Otel", "Apart Otel", "Butik Otel", "Motel", "Pansiyon", "Tatil Köyü"]) },
+                ],
             },
         ],
     },
-    // Diğer Ana Kategoriler (düz — leaf = kendisi)
+
+    // ── DİĞER KATEGORİLER (leaf = kendisi) ───────────────────────────────────
     { slug: "elektronik", name: "Elektronik", icon: "💻", children: [] },
     { slug: "arac", name: "Araç", icon: "🚗", children: [] },
     { slug: "giyim", name: "Giyim & Moda", icon: "👗", children: [] },
@@ -141,24 +146,7 @@ export const categoryTree: RootCategory[] = [
     { slug: "diger", name: "Diğer", icon: "📦", children: [] },
 ];
 
-// Eski flat liste — seed ve API uyumluluğu için tutulur, zamanla kaldırılabilir.
+// Geriye dönük uyumluluk için (import edip kullanan eski yerler)
 export const categories = categoryTree.map((c) => ({
-    slug: c.slug,
-    name: c.name,
-    icon: c.icon,
+    slug: c.slug, name: c.name, icon: c.icon,
 }));
-
-/** UI'da accordion/optgroup ile gruplanan root kategoriler */
-export const categoryGroups: {
-    slug: string;
-    name: string;
-    icon: string;
-    members: string[]; // root slug'ları
-}[] = [
-        {
-            slug: "gayrimenkul",
-            name: "Gayrimenkul",
-            icon: "🏠",
-            members: ["konut", "is-yeri", "arsa", "bina", "devre-mulk", "turistik-tesis"],
-        },
-    ];

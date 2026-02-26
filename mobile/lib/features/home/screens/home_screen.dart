@@ -461,7 +461,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
-// ── Category bottom sheet (3 seviyeli) ─────────────────────────────────────
+// ── Category bottom sheet (N-katmanlı, stack tabanlı) ─────────────────────
 
 class _CategorySheet extends StatefulWidget {
   final String? selected;
@@ -476,139 +476,29 @@ class _CategorySheet extends StatefulWidget {
 }
 
 class _CategorySheetState extends State<_CategorySheet> {
-  RootCategory? _activeRoot;
-  SubCategory? _activeSub;
-  // track which group slugs are expanded
-  final Set<String> _expandedGroups = {};
+  /// Geçmişe göre yığın: boşsa root listelenir,
+  /// doluysa son elemanın children listelenir.
+  final List<CategoryNode> _stack = [];
 
-  void _selectRoot(RootCategory root) {
-    if (root.children.isEmpty) {
-      widget.onSelect(root.slug, '${root.icon} ${root.name}');
+  List<CategoryNode> get _currentChildren =>
+      _stack.isEmpty ? categoryTree : _stack.last.children;
+
+  String get _headerTitle {
+    if (_stack.isEmpty) return 'Kategori Seç';
+    return _stack.map((n) => n.name).join(' › ');
+  }
+
+  void _onTap(CategoryNode node) {
+    if (node.isLeaf) {
+      // Yaprak → seç ve kapat
+      final path = [..._stack, node];
+      final label = path
+          .map((n) => n.name)
+          .join(' › ');
+      widget.onSelect(node.slug, label);
     } else {
-      setState(() => _activeRoot = root);
+      setState(() => _stack.add(node));
     }
-  }
-
-  void _selectSub(SubCategory sub) {
-    if (sub.leaves.length == 1) {
-      widget.onSelect(sub.leaves.first.slug,
-          '${_activeRoot!.icon} ${_activeRoot!.name} › ${sub.name} › ${sub.leaves.first.name}');
-    } else {
-      setState(() => _activeSub = sub);
-    }
-  }
-
-  void _selectLeaf(LeafCategory leaf) {
-    widget.onSelect(
-      leaf.slug,
-      '${_activeRoot!.icon} ${_activeRoot!.name} › ${_activeSub!.name} › ${leaf.name}',
-    );
-  }
-
-  /// Root listesi için widget'ları oluşturur:
-  /// Gruplananlar → ExpansionTile (accordion)
-  /// Gruplamayanlar → normal ListTile
-  List<Widget> _buildRootList() {
-    final groupedSlugs =
-        categoryGroups.expand((g) => g.members).toSet();
-    final items = <Widget>[];
-
-    for (final group in categoryGroups) {
-      final groupRoots =
-          categoryTree.where((r) => group.members.contains(r.slug)).toList();
-      final isExpanded = _expandedGroups.contains(group.slug);
-      final hasActiveSelection = widget.selected != null &&
-          groupRoots.any(
-              (r) => findSelections(widget.selected!).root == r.slug);
-
-      items.add(
-        Theme(
-          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
-          child: ExpansionTile(
-            leading: Text(group.icon,
-                style: const TextStyle(fontSize: 22)),
-            title: Text(
-              group.name,
-              style: TextStyle(
-                fontWeight: FontWeight.w600,
-                fontSize: 15,
-                color: hasActiveSelection
-                    ? const Color(0xFF00B4CC)
-                    : const Color(0xFF0F1923),
-              ),
-            ),
-            trailing: Icon(
-              isExpanded
-                  ? Icons.keyboard_arrow_up
-                  : Icons.keyboard_arrow_down,
-              color: const Color(0xFF9AAAB8),
-              size: 20,
-            ),
-            initiallyExpanded: isExpanded || hasActiveSelection,
-            onExpansionChanged: (val) => setState(() {
-              if (val) {
-                _expandedGroups.add(group.slug);
-              } else {
-                _expandedGroups.remove(group.slug);
-              }
-            }),
-            childrenPadding: const EdgeInsets.only(left: 16),
-            children: groupRoots.map((root) {
-              final isSelected = hasActiveSelection &&
-                  findSelections(widget.selected!).root == root.slug;
-              return ListTile(
-                dense: true,
-                leading: Text(root.icon,
-                    style: const TextStyle(fontSize: 18)),
-                title: Text(
-                  root.name,
-                  style: TextStyle(
-                    fontWeight:
-                        isSelected ? FontWeight.w700 : FontWeight.w500,
-                    color: isSelected
-                        ? const Color(0xFF00B4CC)
-                        : const Color(0xFF0F1923),
-                  ),
-                ),
-                trailing: isSelected
-                    ? const Icon(Icons.check_circle,
-                        color: Color(0xFF00B4CC), size: 18)
-                    : const Icon(Icons.chevron_right,
-                        color: Color(0xFF9AAAB8), size: 18),
-                onTap: () => _selectRoot(root),
-              );
-            }).toList(),
-          ),
-        ),
-      );
-    }
-
-    // Gruba dahil olmayan root kategoriler
-    for (final root in categoryTree.where((r) => !groupedSlugs.contains(r.slug))) {
-      final isSelected = widget.selected != null &&
-          findSelections(widget.selected!).root == root.slug;
-      items.add(ListTile(
-        leading: Text(root.icon, style: const TextStyle(fontSize: 20)),
-        title: Text(
-          root.name,
-          style: TextStyle(
-            fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-            color: isSelected
-                ? const Color(0xFF00B4CC)
-                : const Color(0xFF0F1923),
-          ),
-        ),
-        trailing: root.children.isEmpty
-            ? (isSelected
-                ? const Icon(Icons.check_circle,
-                    color: Color(0xFF00B4CC), size: 20)
-                : null)
-            : const Icon(Icons.chevron_right, color: Color(0xFF9AAAB8)),
-        onTap: () => _selectRoot(root),
-      ));
-    }
-
-    return items;
   }
 
   @override
@@ -635,27 +525,19 @@ class _CategorySheetState extends State<_CategorySheet> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: Row(
               children: [
-                if (_activeRoot != null)
+                if (_stack.isNotEmpty)
                   IconButton(
                     icon: const Icon(Icons.arrow_back_ios, size: 16),
-                    onPressed: () => setState(() {
-                      if (_activeSub != null) {
-                        _activeSub = null;
-                      } else {
-                        _activeRoot = null;
-                      }
-                    }),
+                    onPressed: () => setState(() => _stack.removeLast()),
                   ),
-                Text(
-                  _activeSub != null
-                      ? '${_activeRoot!.name} › ${_activeSub!.name}'
-                      : _activeRoot != null
-                          ? _activeRoot!.name
-                          : 'Kategori Seç',
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w700, fontSize: 16),
+                Expanded(
+                  child: Text(
+                    _headerTitle,
+                    style: const TextStyle(
+                        fontWeight: FontWeight.w700, fontSize: 16),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-                const Spacer(),
                 if (widget.selected != null)
                   TextButton(
                     onPressed: widget.onClear,
@@ -668,55 +550,42 @@ class _CategorySheetState extends State<_CategorySheet> {
           const Divider(height: 1),
           // List
           Expanded(
-            child: _activeRoot == null
-                // ROOT LİSTESİ — Gayrimenkul accordion + diğerleri
-                ? ListView(
-                    controller: scrollCtrl,
-                    children: _buildRootList(),
-                  )
-                // SUB veya LEAF LİSTESİ
-                : ListView.builder(
-                    controller: scrollCtrl,
-                    itemCount: _activeSub != null
-                        ? _activeSub!.leaves.length
-                        : _activeRoot!.children.length,
-                    itemBuilder: (_, i) {
-                      if (_activeSub != null) {
-                        final leaf = _activeSub!.leaves[i];
-                        final isSelected = leaf.slug == widget.selected;
-                        return ListTile(
-                          title: Text(leaf.name,
-                              style: TextStyle(
-                                fontWeight: isSelected
-                                    ? FontWeight.w700
-                                    : FontWeight.w500,
-                                color: isSelected
-                                    ? const Color(0xFF00B4CC)
-                                    : const Color(0xFF0F1923),
-                              )),
-                          trailing: isSelected
-                              ? const Icon(Icons.check_circle,
-                                  color: Color(0xFF00B4CC), size: 20)
-                              : const Icon(Icons.chevron_right,
-                                  color: Color(0xFF9AAAB8)),
-                          onTap: () => _selectLeaf(leaf),
-                        );
-                      } else {
-                        final sub = _activeRoot!.children[i];
-                        return ListTile(
-                          title: Text(sub.name,
-                              style: const TextStyle(
-                                  fontWeight: FontWeight.w500,
-                                  color: Color(0xFF0F1923))),
-                          trailing: sub.leaves.length == 1
-                              ? null
-                              : const Icon(Icons.chevron_right,
-                                  color: Color(0xFF9AAAB8)),
-                          onTap: () => _selectSub(sub),
-                        );
-                      }
-                    },
+            child: ListView.builder(
+              controller: scrollCtrl,
+              itemCount: _currentChildren.length,
+              itemBuilder: (_, i) {
+                final node = _currentChildren[i];
+                final isSelected = widget.selected == node.slug;
+                final hasSelectedChild = widget.selected != null &&
+                    findPath(widget.selected!, node.children) != null;
+
+                return ListTile(
+                  leading: node.icon.isNotEmpty
+                      ? Text(node.icon,
+                          style: const TextStyle(fontSize: 20))
+                      : null,
+                  title: Text(
+                    node.name,
+                    style: TextStyle(
+                      fontWeight: isSelected || hasSelectedChild
+                          ? FontWeight.w700
+                          : FontWeight.w500,
+                      color: isSelected || hasSelectedChild
+                          ? const Color(0xFF00B4CC)
+                          : const Color(0xFF0F1923),
+                    ),
                   ),
+                  trailing: node.isLeaf
+                      ? (isSelected
+                          ? const Icon(Icons.check_circle,
+                              color: Color(0xFF00B4CC), size: 20)
+                          : null)
+                      : const Icon(Icons.chevron_right,
+                          color: Color(0xFF9AAAB8)),
+                  onTap: () => _onTap(node),
+                );
+              },
+            ),
           ),
         ],
       ),
