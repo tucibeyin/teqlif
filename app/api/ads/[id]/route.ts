@@ -163,6 +163,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         if (!ad) return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
         if (ad.userId !== user.id) return NextResponse.json({ error: "Bu ilanı silme yetkiniz yok." }, { status: 403 });
 
+        // İlana ait bildirimleri sil
+        await prisma.notification.deleteMany({ where: { link: `/ad/${id}` } });
+
         await prisma.ad.delete({ where: { id } });
         revalidatePath("/");
         revalidatePath("/dashboard");
