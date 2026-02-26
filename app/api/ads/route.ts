@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { actionRatelimiter } from "@/lib/rate-limit";
 import { revalidatePath } from "next/cache";
 import { getMobileUser } from "@/lib/mobile-auth";
+import { ensureCategory } from "@/lib/ensure-category";
 
 export const dynamic = "force-dynamic";
 
@@ -71,7 +72,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
         }
 
-        const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
+        const category = await ensureCategory(categorySlug);
         if (!category) {
             return NextResponse.json({ error: "Geçersiz kategori." }, { status: 400 });
         }

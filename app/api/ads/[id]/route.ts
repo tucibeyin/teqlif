@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getMobileUser } from "@/lib/mobile-auth";
+import { ensureCategory } from "@/lib/ensure-category";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
@@ -114,7 +115,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         if (!ad) return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
         if (ad.userId !== user.id) return NextResponse.json({ error: "Bu ilanı düzenleme yetkiniz yok." }, { status: 403 });
 
-        const category = await prisma.category.findUnique({ where: { slug: categorySlug } });
+        const category = await ensureCategory(categorySlug);
         if (!category) return NextResponse.json({ error: "Geçersiz kategori." }, { status: 400 });
 
         let districtId = rawDistrictId;
