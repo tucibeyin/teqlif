@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
-import { categories } from "@/lib/categories";
+import { categoryTree, categoryGroups } from "@/lib/categories";
 
 export const dynamic = "force-dynamic";
 
@@ -111,6 +111,7 @@ export default async function HomePage({
             <div style={{ fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)", marginBottom: "0.75rem", padding: "0 0.5rem" }}>
               Kategoriler
             </div>
+            {/* Tümü linki */}
             <Link
               href="/"
               style={{
@@ -131,34 +132,106 @@ export default async function HomePage({
               <span>🏷️</span> Tümü
               <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{ads.length}</span>
             </Link>
-            {categories.map((cat) => {
-              const catCount = ads.filter(a => a.category.slug === cat.slug).length;
+
+            {/* Gruplu kategoriler — accordion (details/summary) */}
+            {categoryGroups.map((group) => {
+              const groupedSlugs = group.members;
+              const groupRoots = categoryTree.filter(r => groupedSlugs.includes(r.slug));
+              const isGroupActive = activeCategory !== undefined && groupedSlugs.some(s => {
+                // Aktif kategori bu gruba mı ait? (root veya daha derin slug kontrolü)
+                const root = categoryTree.find(r => r.slug === s);
+                if (!root) return false;
+                if (s === activeCategory) return true;
+                return root.children.some(sub =>
+                  sub.slug === activeCategory ||
+                  sub.leaves.some(l => l.slug === activeCategory)
+                );
+              });
               return (
-                <Link
-                  key={cat.slug}
-                  href={`/?category=${cat.slug}`}
-                  style={{
+                <details key={group.slug} open={isGroupActive || undefined} style={{ marginBottom: "2px" }}>
+                  <summary style={{
                     display: "flex",
                     alignItems: "center",
                     gap: "0.625rem",
                     padding: "0.5rem 0.75rem",
                     borderRadius: "var(--radius-md)",
-                    textDecoration: "none",
-                    fontWeight: activeCategory === cat.slug ? 700 : 500,
-                    color: activeCategory === cat.slug ? "var(--primary)" : "var(--text-secondary)",
-                    background: activeCategory === cat.slug ? "rgba(0,188,212,0.08)" : "transparent",
+                    cursor: "pointer",
+                    fontWeight: isGroupActive ? 700 : 500,
+                    color: isGroupActive ? "var(--primary)" : "var(--text-secondary)",
+                    background: isGroupActive ? "rgba(0,188,212,0.08)" : "transparent",
                     fontSize: "0.9rem",
-                    transition: "all 0.15s",
-                    marginBottom: "2px",
-                  }}
-                >
-                  <span>{cat.icon}</span> {cat.name}
-                  {catCount > 0 && (
-                    <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{catCount}</span>
-                  )}
-                </Link>
+                    listStyle: "none",
+                    userSelect: "none",
+                  }}>
+                    <span>{group.icon}</span> {group.name}
+                    <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>▾</span>
+                  </summary>
+                  <div style={{ paddingLeft: "0.75rem", marginTop: "2px" }}>
+                    {groupRoots.map((root) => {
+                      const isRootActive = activeCategory === root.slug ||
+                        root.children.some(s => s.slug === activeCategory || s.leaves.some(l => l.slug === activeCategory));
+                      return (
+                        <Link
+                          key={root.slug}
+                          href={`/?category=${root.slug}`}
+                          style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "0.5rem",
+                            padding: "0.4rem 0.625rem",
+                            borderRadius: "var(--radius-md)",
+                            textDecoration: "none",
+                            fontWeight: isRootActive ? 700 : 500,
+                            color: isRootActive ? "var(--primary)" : "var(--text-secondary)",
+                            background: isRootActive ? "rgba(0,188,212,0.08)" : "transparent",
+                            fontSize: "0.85rem",
+                            transition: "all 0.15s",
+                            marginBottom: "1px",
+                          }}
+                        >
+                          <span>{root.icon}</span> {root.name}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                </details>
               );
             })}
+
+            {/* Grupta olmayan kategoriler — düz liste */}
+            {(() => {
+              const grouped = new Set(categoryGroups.flatMap(g => g.members));
+              return categoryTree
+                .filter(r => !grouped.has(r.slug))
+                .map((cat) => {
+                  const catCount = ads.filter(a => a.category.slug === cat.slug).length;
+                  return (
+                    <Link
+                      key={cat.slug}
+                      href={`/?category=${cat.slug}`}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: "0.625rem",
+                        padding: "0.5rem 0.75rem",
+                        borderRadius: "var(--radius-md)",
+                        textDecoration: "none",
+                        fontWeight: activeCategory === cat.slug ? 700 : 500,
+                        color: activeCategory === cat.slug ? "var(--primary)" : "var(--text-secondary)",
+                        background: activeCategory === cat.slug ? "rgba(0,188,212,0.08)" : "transparent",
+                        fontSize: "0.9rem",
+                        transition: "all 0.15s",
+                        marginBottom: "2px",
+                      }}
+                    >
+                      <span>{cat.icon}</span> {cat.name}
+                      {catCount > 0 && (
+                        <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{catCount}</span>
+                      )}
+                    </Link>
+                  );
+                });
+            })()}
           </aside>
 
           {/* MAIN CONTENT */}
@@ -167,7 +240,19 @@ export default async function HomePage({
             <div className="section-header" style={{ marginBottom: "1rem" }}>
               <h2 className="section-title" style={{ fontSize: "1.25rem" }}>
                 {activeCategory
-                  ? categories.find((c) => c.slug === activeCategory)?.icon + " " + categories.find((c) => c.slug === activeCategory)?.name + " İlanları"
+                  ? (() => {
+                    // Aktif slug'a sahip kategoriyi tüm ağaçta bul
+                    for (const root of categoryTree) {
+                      if (root.slug === activeCategory) return `${root.icon} ${root.name} İlanları`;
+                      for (const sub of root.children) {
+                        if (sub.slug === activeCategory) return `${root.icon} ${root.name} › ${sub.name} İlanları`;
+                        for (const leaf of sub.leaves) {
+                          if (leaf.slug === activeCategory) return `${root.icon} ${root.name} › ${sub.name} › ${leaf.name} İlanları`;
+                        }
+                      }
+                    }
+                    return "İlanlar";
+                  })()
                   : "Öne Çıkan İlanlar"}
               </h2>
               <span className="text-sm text-muted">{featuredAds.length} ilan</span>

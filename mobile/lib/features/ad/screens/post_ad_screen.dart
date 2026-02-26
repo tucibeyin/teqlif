@@ -11,6 +11,7 @@ import '../../home/screens/home_screen.dart';
 import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 import '../../../core/constants/locations.dart';
 import '../../../core/constants/categories.dart';
+import '../../../core/widgets/grouped_category_dropdown.dart';
 
 class PostAdScreen extends ConsumerStatefulWidget {
   const PostAdScreen({super.key});
@@ -283,14 +284,9 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
             ),
             const SizedBox(height: 12),
             // ── 3 Kademeli Kategori Seçimi ──
-            // Level 1: Ana Kategori
-            DropdownButtonFormField<String>(
+            // Level 1: Ana Kategori (Gayrimenkul gruplanmış)
+            GroupedCategoryDropdown(
               value: _selectedRootSlug,
-              decoration: const InputDecoration(labelText: 'Ana Kategori'),
-              items: categoryTree
-                  .map((r) => DropdownMenuItem(
-                      value: r.slug, child: Text('${r.icon} ${r.name}')))
-                  .toList(),
               onChanged: (v) => setState(() {
                 _selectedRootSlug = v;
                 _selectedSubSlug = null;
