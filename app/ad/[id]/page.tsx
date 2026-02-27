@@ -479,7 +479,7 @@ export default async function AdDetailPage({
                                                 </div>
                                                 {isOwner && (
                                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '4px' }}>
-                                                        {/* Message button is always available to owner for any bid status */}
+                                                        {/* Her zaman görünür olan mesaj butonu */}
                                                         <AdActions
                                                             actionType="MESSAGE"
                                                             adId={ad.id}
@@ -489,6 +489,7 @@ export default async function AdDetailPage({
                                                             initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
                                                         />
 
+                                                        {/* Sadece Kabul Edilmiş teklifler için */}
                                                         {bid.status === 'ACCEPTED' && (
                                                             <>
                                                                 {bid.user.phone && (
@@ -512,6 +513,8 @@ export default async function AdDetailPage({
                                                                 <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
                                                             </>
                                                         )}
+
+                                                        {/* Sadece Bekleyen teklifler için */}
                                                         {bid.status === 'PENDING' && (
                                                             <>
                                                                 <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />

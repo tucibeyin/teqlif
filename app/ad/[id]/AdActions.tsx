@@ -126,16 +126,17 @@ export function AdActions({
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        padding: '4px 8px',
+                        gap: '6px',
+                        padding: '4px 10px',
                         fontSize: '0.8rem',
                         color: 'var(--primary)',
                         borderColor: 'var(--primary)',
-                        background: 'rgba(0, 188, 212, 0.1)'
+                        background: 'rgba(0, 188, 212, 0.1)',
+                        fontWeight: 600
                     }}
                 >
                     <MessageSquare size={14} />
-                    {isLoading ? "..." : ""}
+                    {isLoading ? "..." : "Mesaj"}
                 </button>
             );
         }
