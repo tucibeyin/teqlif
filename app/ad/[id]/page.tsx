@@ -520,7 +520,7 @@ export default async function AdDetailPage({
                                                     </div>
                                                 </div>
 
-                                                {isOwner && (bid.status === 'PENDING' || bid.status === 'ACCEPTED') && (
+                                                {isOwner && ad.status !== 'SOLD' && (bid.status === 'PENDING' || bid.status === 'ACCEPTED') && (
                                                     <div style={{
                                                         display: 'flex',
                                                         gap: '8px',

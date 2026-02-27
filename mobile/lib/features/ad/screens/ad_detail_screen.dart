@@ -283,7 +283,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                     loading: () => const SizedBox(),
                     error: (_, __) => const SizedBox(),
                   ),
-                  if (isOwner)
+                  if (isOwner && ad.status != 'SOLD')
                     IconButton(
                       icon: const Icon(Icons.edit),
                       onPressed: () => context.push('/edit-ad/${ad.id}'),
@@ -906,7 +906,7 @@ class _BidTile extends StatelessWidget {
                       fontWeight: FontWeight.w500),
                 ),
               ),
-            if (isOwner) ...[
+            if (isOwner && ad.status != 'SOLD') ...[
               const SizedBox(height: 8),
               Row(
                 children: [

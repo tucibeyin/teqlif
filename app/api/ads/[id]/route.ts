@@ -80,6 +80,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
         const ad = await prisma.ad.findUnique({ where: { id } });
         if (!ad) return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
         if (ad.userId !== user.id) return NextResponse.json({ error: "Yetkiniz yok." }, { status: 403 });
+        if (ad.status === 'SOLD') return NextResponse.json({ error: "Satılmış ilanlar düzenlenemez." }, { status: 400 });
 
         const updatedAd = await prisma.ad.update({
             where: { id },
@@ -114,6 +115,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         const ad = await prisma.ad.findUnique({ where: { id } });
         if (!ad) return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
         if (ad.userId !== user.id) return NextResponse.json({ error: "Bu ilanı düzenleme yetkiniz yok." }, { status: 403 });
+        if (ad.status === 'SOLD') return NextResponse.json({ error: "Satılmış ilanlar düzenlenemez." }, { status: 400 });
 
         const category = await ensureCategory(categorySlug);
         if (!category) return NextResponse.json({ error: "Geçersiz kategori." }, { status: 400 });

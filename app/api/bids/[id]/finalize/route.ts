@@ -47,6 +47,13 @@ export async function POST(
             );
         }
 
+        if (bid.ad.status === 'SOLD') {
+            return NextResponse.json(
+                { message: 'Bu ilan zaten satıldı' },
+                { status: 400 }
+            );
+        }
+
         if (bid.status !== 'ACCEPTED') {
             return NextResponse.json(
                 { message: 'Sadece kabul edilmiş teklifler için satış tamamlanabilir' },

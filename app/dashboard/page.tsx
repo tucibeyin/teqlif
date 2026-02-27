@@ -155,20 +155,22 @@ export default async function DashboardPage() {
                                                 </span>
                                                 <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
                                                     {isExpired && <RepublishAdButton id={ad.id} />}
-                                                    <Link
-                                                        href={`/edit-ad/${ad.id}`}
-                                                        style={{
-                                                            padding: "0.25rem 0.5rem",
-                                                            borderRadius: "var(--radius-sm)",
-                                                            fontSize: "0.875rem",
-                                                            fontWeight: 600,
-                                                            color: "var(--text-secondary)",
-                                                            background: "var(--bg-secondary)",
-                                                            textDecoration: "none"
-                                                        }}
-                                                    >
-                                                        Düzenle
-                                                    </Link>
+                                                    {ad.status !== 'SOLD' && (
+                                                        <Link
+                                                            href={`/edit-ad/${ad.id}`}
+                                                            style={{
+                                                                padding: "0.25rem 0.5rem",
+                                                                borderRadius: "var(--radius-sm)",
+                                                                fontSize: "0.875rem",
+                                                                fontWeight: 600,
+                                                                color: "var(--text-secondary)",
+                                                                background: "var(--bg-secondary)",
+                                                                textDecoration: "none"
+                                                            }}
+                                                        >
+                                                            Düzenle
+                                                        </Link>
+                                                    )}
                                                     <DeleteAdButton id={ad.id} />
                                                 </div>
                                             </div>
