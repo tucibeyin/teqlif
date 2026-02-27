@@ -5,6 +5,7 @@ import Image from "next/image";
 import { redirect } from "next/navigation";
 import DeleteAdButton from "./DeleteAdButton";
 import RepublishAdButton from "./RepublishAdButton";
+import DashboardSection from "./DashboardSection";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -27,7 +28,7 @@ export default async function DashboardPage() {
     const session = await auth();
     if (!session?.user) redirect("/login");
 
-    const [myAds, myBids, myFavorites] = await Promise.all([
+    const [myAds, allMyBids, myFavorites] = await Promise.all([
         prisma.ad.findMany({
             where: { userId: session.user.id },
             orderBy: { createdAt: "desc" },
@@ -39,8 +40,7 @@ export default async function DashboardPage() {
         }),
         prisma.bid.findMany({
             where: { userId: session.user.id },
-            orderBy: { createdAt: "desc" },
-            take: 100,
+            orderBy: { amount: "desc" }, // Sort by amount desc to easily pick highest
             include: {
                 ad: {
                     include: {
@@ -64,6 +64,15 @@ export default async function DashboardPage() {
             },
         })
     ]);
+
+    // Unique bids: Only show the highest bid per advertisement
+    const uniqueBidsMap = new Map();
+    allMyBids.forEach((bid) => {
+        if (!uniqueBidsMap.has(bid.adId)) {
+            uniqueBidsMap.set(bid.adId, bid);
+        }
+    });
+    const myBids = Array.from(uniqueBidsMap.values());
 
     const totalBidsReceived = myAds.reduce((sum: number, ad: any) => sum + ad._count.bids, 0);
 
@@ -114,11 +123,7 @@ export default async function DashboardPage() {
                 </div>
 
                 {/* İlanlarım */}
-                <section className="section" id="ilanlarim">
-                    <div className="section-header">
-                        <h2 className="section-title">İlanlarım</h2>
-                    </div>
-
+                <DashboardSection title="İlanlarım" id="ilanlarim" count={myAds.length} defaultExpanded={true}>
                     {myAds.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-state-icon">📭</div>
@@ -180,14 +185,10 @@ export default async function DashboardPage() {
                             })}
                         </div>
                     )}
-                </section>
+                </DashboardSection>
 
                 {/* Favorilerim */}
-                <section className="section" id="favorilerim">
-                    <div className="section-header">
-                        <h2 className="section-title">Favorilerim</h2>
-                    </div>
-
+                <DashboardSection title="Favorilerim" id="favorilerim" count={myFavorites.length}>
                     {myFavorites.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-state-icon">❤️‍🩹</div>
@@ -230,14 +231,10 @@ export default async function DashboardPage() {
                             })}
                         </div>
                     )}
-                </section>
+                </DashboardSection>
 
                 {/* Verdiğim Teklifler */}
-                <section className="section" id="tekliflerim">
-                    <div className="section-header">
-                        <h2 className="section-title">Verdiğim Teklifler</h2>
-                    </div>
-
+                <DashboardSection title="Verdiğim Teklifler" id="tekliflerim" count={myBids.length}>
                     {myBids.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-state-icon">🔨</div>
@@ -248,39 +245,37 @@ export default async function DashboardPage() {
                             </Link>
                         </div>
                     ) : (
-                        <div className="scrollable-list" style={{ maxHeight: "450px", overflowY: "auto", paddingRight: "0.5rem" }}>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                                {myBids.map((bid: any) => (
-                                    <div key={bid.id} className="card">
-                                        <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                                            {bid.ad.images && bid.ad.images.length > 0 ? (
-                                                <Image src={bid.ad.images[0]} alt={bid.ad.title} width={48} height={48} style={{ objectFit: "cover", borderRadius: "10px" }} />
-                                            ) : (
-                                                <span style={{ fontSize: "2rem" }}>{bid.ad.category.icon}</span>
-                                            )}
-                                            <div style={{ flex: 1 }}>
-                                                <Link href={`/ad/${bid.adId}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
-                                                    {bid.ad.title}
-                                                </Link>
-                                                <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                                    {bid.ad.province.name} · {timeAgo(bid.createdAt)}
-                                                </div>
+                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                            {myBids.map((bid: any) => (
+                                <div key={bid.id} className="card">
+                                    <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                                        {bid.ad.images && bid.ad.images.length > 0 ? (
+                                            <Image src={bid.ad.images[0]} alt={bid.ad.title} width={48} height={48} style={{ objectFit: "cover", borderRadius: "10px" }} />
+                                        ) : (
+                                            <span style={{ fontSize: "2rem" }}>{bid.ad.category.icon}</span>
+                                        )}
+                                        <div style={{ flex: 1 }}>
+                                            <Link href={`/ad/${bid.adId}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
+                                                {bid.ad.title}
+                                            </Link>
+                                            <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
+                                                {bid.ad.province.name} · {timeAgo(bid.createdAt)}
                                             </div>
-                                            <div style={{ textAlign: "right" }}>
-                                                <div style={{ color: "var(--primary)", fontWeight: 700 }}>
-                                                    Teklifim: {formatPrice(bid.amount)}
-                                                </div>
-                                                <div className="text-muted text-sm">
-                                                    İlan: {formatPrice(bid.ad.price)}
-                                                </div>
+                                        </div>
+                                        <div style={{ textAlign: "right" }}>
+                                            <div style={{ color: "var(--primary)", fontWeight: 700 }}>
+                                                Teklifim: {formatPrice(bid.amount)}
+                                            </div>
+                                            <div className="text-muted text-sm">
+                                                İlan: {formatPrice(bid.ad.price)}
                                             </div>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                </div>
+                            ))}
                         </div>
                     )}
-                </section>
+                </DashboardSection>
             </div >
         </div >
     );
