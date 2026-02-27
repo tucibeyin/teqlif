@@ -195,7 +195,6 @@ export const categoryTree: CategoryNode[] = [
 
     // ── DİĞER KATEGORİLER (leaf = kendisi) ───────────────────────────────────
     { slug: "elektronik", name: "Elektronik", icon: "💻", children: [] },
-    { slug: "arac", name: "Araç", icon: "🚗", children: [] },
     { slug: "giyim", name: "Giyim & Moda", icon: "👗", children: [] },
     { slug: "mobilya", name: "Mobilya & Ev", icon: "🛋️", children: [] },
     { slug: "spor", name: "Spor & Outdoor", icon: "⚽", children: [] },

@@ -103,19 +103,6 @@ final List<CategoryNode> categoryTree = [
     ]),
   ]),
 
-  // ── DİĞER KATEGORİLER ───────────────────────────────────────────────────
-  CategoryNode(slug: 'elektronik', name: 'Elektronik', icon: '💻'),
-  CategoryNode(slug: 'arac', name: 'Araç', icon: '🚗'),
-  CategoryNode(slug: 'giyim', name: 'Giyim & Moda', icon: '👗'),
-  CategoryNode(slug: 'mobilya', name: 'Mobilya & Ev', icon: '🛋️'),
-  CategoryNode(slug: 'spor', name: 'Spor & Outdoor', icon: '⚽'),
-  CategoryNode(slug: 'kitap', name: 'Kitap & Hobi', icon: '📚'),
-  CategoryNode(slug: 'koleksiyon', name: 'Koleksiyon & Antika', icon: '🏺'),
-  CategoryNode(slug: 'cocuk', name: 'Bebek & Çocuk', icon: '🧸'),
-  CategoryNode(slug: 'bahce', name: 'Bahçe & Tarım', icon: '🌱'),
-  CategoryNode(slug: 'hayvan', name: 'Hayvanlar', icon: '🐾'),
-  CategoryNode(slug: 'diger', name: 'Diğer', icon: '📦'),
-
   // ── VASITA ──────────────────────────────────────────────────────────────────
   CategoryNode(slug: 'vasita', name: 'Vasıta', icon: '🚗', children: [
     CategoryNode(slug: 'vasita-otomobil', name: 'Otomobil', icon: '🚗', children: [
@@ -160,4 +147,17 @@ final List<CategoryNode> categoryTree = [
       CategoryNode(slug: "vasita-otomobil-yuki", name: "Yuki", children: [CategoryNode(slug: "vasita-otomobil-yuki-amy", name: "Amy", children: [CategoryNode(slug: "vasita-otomobil-yuki-amy-electric", name: "Electric", children: [CategoryNode(slug: _s("vasita-otomobil-yuki-amy-electric", "Standard"), name: "Standard")])]), CategoryNode(slug: "vasita-otomobil-yuki-tery", name: "Tery", children: [CategoryNode(slug: "vasita-otomobil-yuki-tery-electric", name: "Electric", children: [CategoryNode(slug: _s("vasita-otomobil-yuki-tery-electric", "Micro"), name: "Micro")])])])
     ]),
   ]),
+];
+
+  // ── DİĞER KATEGORİLER ───────────────────────────────────────────────────
+  CategoryNode(slug: 'elektronik', name: 'Elektronik', icon: '💻'),
+  CategoryNode(slug: 'giyim', name: 'Giyim & Moda', icon: '👗'),
+  CategoryNode(slug: 'mobilya', name: 'Mobilya & Ev', icon: '🛋️'),
+  CategoryNode(slug: 'spor', name: 'Spor & Outdoor', icon: '⚽'),
+  CategoryNode(slug: 'kitap', name: 'Kitap & Hobi', icon: '📚'),
+  CategoryNode(slug: 'koleksiyon', name: 'Koleksiyon & Antika', icon: '🏺'),
+  CategoryNode(slug: 'cocuk', name: 'Bebek & Çocuk', icon: '🧸'),
+  CategoryNode(slug: 'bahce', name: 'Bahçe & Tarım', icon: '🌱'),
+  CategoryNode(slug: 'hayvan', name: 'Hayvanlar', icon: '🐾'),
+  CategoryNode(slug: 'diger', name: 'Diğer', icon: '📦'),
 ];
