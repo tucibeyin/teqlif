@@ -53,6 +53,14 @@ export async function PATCH(
                 }
             });
 
+            // If the bid being cancelled was the ACCEPTED one, set ad status back to ACTIVE
+            if (bid.status === 'ACCEPTED') {
+                await tx.ad.update({
+                    where: { id: bid.adId },
+                    data: { status: 'ACTIVE' }
+                });
+            }
+
             return result;
         });
 

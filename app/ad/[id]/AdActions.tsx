@@ -135,7 +135,7 @@ export function AdActions({
                     }}
                 >
                     <MessageSquare size={14} />
-                    {isLoading ? "..." : "Mesaj Gönder"}
+                    {isLoading ? "..." : ""}
                 </button>
             );
         }

@@ -59,7 +59,7 @@ export default async function AdDetailPage({
                 orderBy: { amount: "desc" },
                 take: 10,
                 include: {
-                    user: { select: { id: true, name: true } },
+                    user: { select: { id: true, name: true, phone: true } },
                 },
             },
         },
@@ -479,23 +479,51 @@ export default async function AdDetailPage({
                                                 </div>
                                                 {isOwner && (
                                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                        {bid.status === 'ACCEPTED' && (
+                                                            <>
+                                                                <AdActions
+                                                                    actionType="MESSAGE"
+                                                                    adId={ad.id}
+                                                                    sellerId={bid.user.id}
+                                                                    currentUser={session?.user}
+                                                                    isMessageBidder={true}
+                                                                    initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
+                                                                />
+                                                                {bid.user.phone && (
+                                                                    <a
+                                                                        href={`tel:${bid.user.phone}`}
+                                                                        className="btn btn-outline"
+                                                                        title="Ara"
+                                                                        style={{
+                                                                            display: 'flex',
+                                                                            alignItems: 'center',
+                                                                            justifyContent: 'center',
+                                                                            padding: '4px 8px',
+                                                                            color: 'var(--secondary)',
+                                                                            borderColor: 'var(--secondary)',
+                                                                            background: 'rgba(96, 125, 139, 0.1)'
+                                                                        }}
+                                                                    >
+                                                                        📞
+                                                                    </a>
+                                                                )}
+                                                                <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
+                                                            </>
+                                                        )}
                                                         {bid.status === 'PENDING' && (
                                                             <>
                                                                 <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
                                                                 <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
+                                                                <AdActions
+                                                                    actionType="MESSAGE"
+                                                                    adId={ad.id}
+                                                                    sellerId={bid.user.id}
+                                                                    currentUser={session?.user}
+                                                                    isMessageBidder={true}
+                                                                    initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
+                                                                />
                                                             </>
                                                         )}
-                                                        {bid.status === 'ACCEPTED' && (
-                                                            <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
-                                                        )}
-                                                        <AdActions
-                                                            actionType="MESSAGE"
-                                                            adId={ad.id}
-                                                            sellerId={bid.user.id}
-                                                            currentUser={session?.user}
-                                                            isMessageBidder={true}
-                                                            initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
-                                                        />
                                                     </div>
                                                 )}
                                             </div>
