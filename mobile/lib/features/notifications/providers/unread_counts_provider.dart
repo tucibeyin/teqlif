@@ -9,6 +9,17 @@ class UnreadCounts {
   final int notifications;
 
   UnreadCounts({required this.messages, required this.notifications});
+
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      other is UnreadCounts &&
+          runtimeType == other.runtimeType &&
+          messages == other.messages &&
+          notifications == other.notifications;
+
+  @override
+  int get hashCode => messages.hashCode ^ notifications.hashCode;
 }
 
 class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {

@@ -75,6 +75,7 @@ class NotificationsScreen extends ConsumerWidget {
             onPressed: () async {
               await ApiClient().patch(Endpoints.notifications);
               ref.invalidate(notificationsProvider);
+              ref.read(unreadCountsProvider.notifier).refresh();
             },
             child: const Text('Tümünü Oku'),
           ),

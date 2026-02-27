@@ -158,15 +158,16 @@ Future<void> _setupFCM(WidgetRef ref) async {
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
     debugPrint('[FCM] Foreground push received! Title: ${message.notification?.title}');
     
-    // Always refresh the global bottom nav unread badges
-    // We add a tiny delay to ensure the database on the backend has fully 
-    // committed the new message/notification before we fetch counts.
-    Future.delayed(const Duration(milliseconds: 500), () {
-      if (ref.read(authProvider).isAuthenticated) {
-        ref.read(unreadCountsProvider.notifier).refresh();
-        ref.invalidate(notificationsProvider);
-      }
-    });
+    // Multi-Stage Refresh: Trigger refreshes at different intervals to ensure 
+    // we catch the backend update even if there's a slight delay or race condition.
+    for (final delay in [500, 3000, 8000]) {
+      Future.delayed(Duration(milliseconds: delay), () {
+        if (ref.read(authProvider).isAuthenticated) {
+          ref.read(unreadCountsProvider.notifier).refresh();
+          ref.invalidate(notificationsProvider);
+        }
+      });
+    }
     
     final payloadData = message.data;
     final type = payloadData['type'] as String?;
@@ -291,11 +292,29 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initLocalNotifications(ref);
       await _setupFCM(ref);
+      _startGlobalSyncTimer();
+    });
+  }
+
+  Timer? _syncTimer;
+
+  void _startGlobalSyncTimer() {
+    _syncTimer?.cancel();
+    // Refresh unread counts every 30 seconds as long as app is open and user is authed.
+    _syncTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+      if (ref.read(authProvider).isAuthenticated) {
+        ref.read(unreadCountsProvider.notifier).refresh();
+        // Also refresh conversations if we are NOT on the chat screen to avoid heavy polling
+        if (ref.read(activeChatIdProvider) == null) {
+          ref.read(conversationsProvider.notifier).refresh();
+        }
+      }
     });
   }
 
   @override
   void dispose() {
+    _syncTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
