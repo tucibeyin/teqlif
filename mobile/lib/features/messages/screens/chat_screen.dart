@@ -7,6 +7,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/message.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../notifications/providers/unread_counts_provider.dart';
 import 'conversations_screen.dart';
 
 final singleConversationProvider =
