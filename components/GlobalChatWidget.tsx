@@ -326,74 +326,81 @@ export function GlobalChatWidget() {
                             ) : (
                                 // Active Conversation
                                 <>
-                                    <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                        {messages.map((msg) => {
-                                            const isMine = msg.senderId === currentUserId;
-                                            return (
-                                                <div key={msg.id} style={{
-                                                    alignSelf: isMine ? 'flex-end' : 'flex-start',
-                                                    maxWidth: '85%',
-                                                    background: isMine ? 'var(--primary)' : 'var(--bg-card)',
-                                                    color: isMine ? 'white' : 'var(--text-primary)',
-                                                    padding: '8px 12px',
-                                                    borderRadius: '12px',
-                                                    borderBottomRightRadius: isMine ? '2px' : '12px',
-                                                    borderBottomLeftRadius: !isMine ? '2px' : '12px',
-                                                    fontSize: '0.9rem',
-                                                    border: isMine ? 'none' : '1px solid var(--border)'
-                                                }}>
-                                                    {msg.content}
+                                    {(() => {
+                                        const activeConv = conversations.find(c => c.id === activeConvId);
+                                        return (
+                                            <>
+                                                <div style={{ flex: 1, overflowY: 'auto', padding: '16px', background: 'var(--bg-secondary)', display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                    {messages.map((msg) => {
+                                                        const isMine = msg.senderId === currentUserId;
+                                                        return (
+                                                            <div key={msg.id} style={{
+                                                                alignSelf: isMine ? 'flex-end' : 'flex-start',
+                                                                maxWidth: '85%',
+                                                                background: isMine ? 'var(--primary)' : 'var(--bg-card)',
+                                                                color: isMine ? 'white' : 'var(--text-primary)',
+                                                                padding: '8px 12px',
+                                                                borderRadius: '12px',
+                                                                borderBottomRightRadius: isMine ? '2px' : '12px',
+                                                                borderBottomLeftRadius: !isMine ? '2px' : '12px',
+                                                                fontSize: '0.9rem',
+                                                                border: isMine ? 'none' : '1px solid var(--border)'
+                                                            }}>
+                                                                {msg.content}
+                                                            </div>
+                                                        );
+                                                    })}
+                                                    <div ref={messagesEndRef} />
                                                 </div>
-                                            );
-                                        })}
-                                        <div ref={messagesEndRef} />
-                                    </div>
-                                    {conv?.ad ? (
-                                        <form onSubmit={handleSend} style={{ display: 'flex', padding: '12px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                                            <input
-                                                type="text"
-                                                value={newMessage}
-                                                onChange={(e) => setNewMessage(e.target.value)}
-                                                placeholder="Mesaj yaz..."
-                                                style={{
-                                                    flex: 1,
-                                                    padding: '8px 12px',
-                                                    border: '1px solid var(--border)',
-                                                    borderRadius: '20px',
-                                                    outline: 'none',
-                                                    background: 'var(--bg-secondary)',
-                                                    color: 'var(--text-primary)'
-                                                }}
-                                            />
-                                            <button
-                                                type="submit"
-                                                disabled={!newMessage.trim()}
-                                                style={{
-                                                    background: 'none',
-                                                    border: 'none',
-                                                    color: newMessage.trim() ? 'var(--primary)' : 'var(--text-muted)',
-                                                    padding: '0 8px',
-                                                    cursor: newMessage.trim() ? 'pointer' : 'default',
-                                                    display: 'flex',
-                                                    alignItems: 'center'
-                                                }}
-                                            >
-                                                <Send size={20} />
-                                            </button>
-                                        </form>
-                                    ) : (
-                                        <div style={{
-                                            padding: '12px',
-                                            borderTop: '1px solid var(--border)',
-                                            background: '#F9FAFB',
-                                            color: 'var(--text-muted)',
-                                            fontSize: '0.8rem',
-                                            textAlign: 'center',
-                                            fontStyle: 'italic'
-                                        }}>
-                                            Bu ilan yayından kaldırıldığı için mesaj gönderilemez.
-                                        </div>
-                                    )}
+                                                {activeConv?.ad ? (
+                                                    <form onSubmit={handleSend} style={{ display: 'flex', padding: '12px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                                                        <input
+                                                            type="text"
+                                                            value={newMessage}
+                                                            onChange={(e) => setNewMessage(e.target.value)}
+                                                            placeholder="Mesaj yaz..."
+                                                            style={{
+                                                                flex: 1,
+                                                                padding: '8px 12px',
+                                                                border: '1px solid var(--border)',
+                                                                borderRadius: '20px',
+                                                                outline: 'none',
+                                                                background: 'var(--bg-secondary)',
+                                                                color: 'var(--text-primary)'
+                                                            }}
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            disabled={!newMessage.trim()}
+                                                            style={{
+                                                                background: 'none',
+                                                                border: 'none',
+                                                                color: newMessage.trim() ? 'var(--primary)' : 'var(--text-muted)',
+                                                                padding: '0 8px',
+                                                                cursor: newMessage.trim() ? 'pointer' : 'default',
+                                                                display: 'flex',
+                                                                alignItems: 'center'
+                                                            }}
+                                                        >
+                                                            <Send size={20} />
+                                                        </button>
+                                                    </form>
+                                                ) : (
+                                                    <div style={{
+                                                        padding: '12px',
+                                                        borderTop: '1px solid var(--border)',
+                                                        background: '#F9FAFB',
+                                                        color: 'var(--text-muted)',
+                                                        fontSize: '0.8rem',
+                                                        textAlign: 'center',
+                                                        fontStyle: 'italic'
+                                                    }}>
+                                                        Bu ilan yayından kaldırıldığı için mesaj gönderilemez.
+                                                    </div>
+                                                )}
+                                            </>
+                                        );
+                                    })()}
                                 </>
                             )}
                         </div>
