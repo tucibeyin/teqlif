@@ -196,6 +196,19 @@ Future<void> _setupFCM(WidgetRef ref) async {
       }
     }
     
+    if (type == 'BID_RECEIVED' || type == 'BID_ACCEPTED') {
+      final link = payloadData['link'] as String?;
+      if (link != null) {
+        try {
+          final adId = link.split('/').last;
+          if (adId.isNotEmpty) {
+            ref.invalidate(adDetailProvider(adId));
+            debugPrint('[FCM] Invalidated adDetailProvider for $adId in foreground');
+          }
+        } catch (_) {}
+      }
+    }
+
     final notification = message.notification;
     if (notification != null) {
       try {

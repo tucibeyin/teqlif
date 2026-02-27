@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { ensureCategory } from "@/lib/ensure-category";
 
+export const dynamic = 'force-dynamic';
+
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
     try {
         const { id } = await params;
