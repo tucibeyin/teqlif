@@ -198,8 +198,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
+    // 1. Remove FCM token from backend → stops push notifications
+    try {
+      await _api.post(Endpoints.pushUnregister, data: {});
+    } catch (e) {
+      debugPrint('[LOGOUT] FCM unregister failed (ok): $e');
+    }
+
+    // 2. Revoke FCM token on this device → new token will be issued on next login
+    try {
+      await FirebaseMessaging.instance.deleteToken();
+    } catch (e) {
+      debugPrint('[LOGOUT] FCM deleteToken failed (ok): $e');
+    }
+
+    // 3. Wipe ALL secure storage keys (jwt_token, user_data, anything else)
+    await _storage.deleteAll();
+
+    // 4. Clear Dio auth header
     await _api.clearToken();
-    await _storage.delete(key: 'user_data');
+
+    // 5. Reset state → router redirects to login
     state = const AuthState(isLoading: false);
   }
 
