@@ -278,7 +278,7 @@ export default async function AdDetailPage({
                                         adId={ad.id}
                                         sellerId={ad.userId}
                                         currentUser={session.user}
-                                        customLabel="⚡ Satıcıya Mesaj Gönder"
+                                        customLabel="💬 Satıcıya Mesaj Gönder"
                                         initialMessage={`Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı ${formatPrice(ad.price)} fiyatından satın almak istiyorum.`}
                                     />
                                     {displayPhone && (

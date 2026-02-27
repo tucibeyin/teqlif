@@ -554,60 +554,59 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               : null,
                         ),
                       ),
+                      const SizedBox(height: 12),
+                      if (!isOwner && !ad.isExpired) ...[
+                        if (currentUser == null)
+                          GestureDetector(
+                            onTap: () => context.push('/login'),
+                            child: Container(
+                              padding: const EdgeInsets.all(16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFE6F9FC),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: const Color(0xFF00B4CC)
+                                        .withOpacity(0.4)),
+                              ),
+                              child: Row(
+                                children: const [
+                                  Icon(Icons.lock_outline,
+                                      color: Color(0xFF00B4CC)),
+                                  SizedBox(width: 12),
+                                  Expanded(
+                                    child: Text(
+                                      'Satıcı ile iletişime geçmek için giriş yapmanız gerekiyor.',
+                                      style: TextStyle(
+                                          color: Color(0xFF008FA3),
+                                          fontWeight: FontWeight.w500),
+                                    ),
+                                  ),
+                                  Icon(Icons.arrow_forward_ios,
+                                      size: 14, color: Color(0xFF00B4CC)),
+                                ],
+                              ),
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                final initialMsg = ad.isFixedPrice
+                                    ? 'Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı ${_formatPrice(ad.price)} fiyatından satın almak istiyorum.'
+                                    : '"${ad.title}" (İlan No: ${ad.id}) ilanı hakkında bilgi almak istiyorum.';
+                                _contactSeller(ad.userId, initialMsg);
+                              },
+                              icon: const Icon(Icons.message_outlined),
+                              label: const Text('Satıcıya Mesaj Gönder'),
+                            ),
+                          ),
+                      ],
                       const SizedBox(height: 24),
                       // Bid or Buy section
                       if (!isOwner && !ad.isExpired) ...[
                         if (ad.isFixedPrice) ...[
-                          const Text('Satın Al',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 16)),
-                          const SizedBox(height: 8),
-                          if (currentUser == null)
-                            // Guest: show login prompt
-                            GestureDetector(
-                              onTap: () => context.push('/login'),
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE6F9FC),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: const Color(0xFF00B4CC)
-                                          .withOpacity(0.4)),
-                                ),
-                                child: Row(
-                                  children: const [
-                                    Icon(Icons.lock_outline,
-                                        color: Color(0xFF00B4CC)),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        'Satıcı ile iletişime geçmek için giriş yapmanız gerekiyor.',
-                                        style: TextStyle(
-                                            color: Color(0xFF008FA3),
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                    ),
-                                    Icon(Icons.arrow_forward_ios,
-                                        size: 14, color: Color(0xFF00B4CC)),
-                                  ],
-                                ),
-                              ),
-                            )
-                          else
-                            SizedBox(
-                              width: double.infinity,
-                              height: 52,
-                              child: ElevatedButton.icon(
-                                onPressed: () {
-                                  final initialMsg =
-                                      'Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı ${_formatPrice(ad.price)} fiyatından satın almak istiyorum.';
-                                  _contactSeller(ad.userId, initialMsg);
-                                },
-                                icon: const Icon(Icons.message_outlined),
-                                label: const Text('Satıcıya Mesaj Gönder'),
-                              ),
-                            ),
                           const SizedBox(height: 24),
                         ] else ...[
                           if (ad.buyItNowPrice != null) ...[
@@ -676,39 +675,8 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               style: TextStyle(
                                   fontWeight: FontWeight.w700, fontSize: 16)),
                           const SizedBox(height: 8),
-                          if (currentUser == null)
-                            // Guest: show login prompt
-                            GestureDetector(
-                              onTap: () => context.push('/login'),
-                              child: Container(
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE6F9FC),
-                                  borderRadius: BorderRadius.circular(12),
-                                  border: Border.all(
-                                      color: const Color(0xFF00B4CC)
-                                          .withOpacity(0.4)),
-                                ),
-                                child: Row(
-                                  children: const [
-                                    Icon(Icons.lock_outline,
-                                        color: Color(0xFF00B4CC)),
-                                    SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        'Teklif vermek için giriş yapmanız gerekiyor.',
-                                        style: TextStyle(
-                                            color: Color(0xFF008FA3),
-                                            fontWeight: FontWeight.w500),
-                                      ),
-                                    ),
-                                    Icon(Icons.arrow_forward_ios,
-                                        size: 14, color: Color(0xFF00B4CC)),
-                                  ],
-                                ),
-                              ),
-                            )
-                          else
+                          const SizedBox(height: 8),
+                          if (currentUser != null)
                             (() {
                               final double currentHighest = ad.bids.isNotEmpty
                                   ? ad.bids.first.amount
@@ -764,21 +732,6 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                 ],
                               );
                             })(),
-                          const SizedBox(height: 12),
-                          if (currentUser != null)
-                            SizedBox(
-                              width: double.infinity,
-                              height: 48,
-                              child: OutlinedButton.icon(
-                                onPressed: () {
-                                  final initialMsg =
-                                      '"${ad.title}" (İlan No: ${ad.id}) ilanı hakkında bilgi almak istiyorum.';
-                                  _contactSeller(ad.userId, initialMsg);
-                                },
-                                icon: const Icon(Icons.message_outlined),
-                                label: const Text('Satıcıya Mesaj Gönder'),
-                              ),
-                            ),
                           const SizedBox(height: 24),
                         ],
                       ],
