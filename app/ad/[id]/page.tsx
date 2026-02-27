@@ -479,16 +479,18 @@ export default async function AdDetailPage({
                                                 </div>
                                                 {isOwner && (
                                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '4px' }}>
+                                                        {/* Message button is always available to owner for any bid status */}
+                                                        <AdActions
+                                                            actionType="MESSAGE"
+                                                            adId={ad.id}
+                                                            sellerId={bid.user.id}
+                                                            currentUser={session?.user}
+                                                            isMessageBidder={true}
+                                                            initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
+                                                        />
+
                                                         {bid.status === 'ACCEPTED' && (
                                                             <>
-                                                                <AdActions
-                                                                    actionType="MESSAGE"
-                                                                    adId={ad.id}
-                                                                    sellerId={bid.user.id}
-                                                                    currentUser={session?.user}
-                                                                    isMessageBidder={true}
-                                                                    initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
-                                                                />
                                                                 {bid.user.phone && (
                                                                     <a
                                                                         href={`tel:${bid.user.phone}`}
@@ -514,14 +516,6 @@ export default async function AdDetailPage({
                                                             <>
                                                                 <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
                                                                 <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
-                                                                <AdActions
-                                                                    actionType="MESSAGE"
-                                                                    adId={ad.id}
-                                                                    sellerId={bid.user.id}
-                                                                    currentUser={session?.user}
-                                                                    isMessageBidder={true}
-                                                                    initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
-                                                                />
                                                             </>
                                                         )}
                                                     </div>
