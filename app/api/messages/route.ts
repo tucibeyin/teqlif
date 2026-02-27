@@ -24,6 +24,7 @@ export async function GET(request: Request) {
             return NextResponse.json({ message: 'Yetkisiz erişim' }, { status: 403 });
         }
 
+        const read = searchParams.get('read') === 'true';
         const messages = await prisma.message.findMany({
             where: {
                 conversationId,
@@ -38,17 +39,19 @@ export async function GET(request: Request) {
             },
         });
 
-        // Mark messages as read automatically
-        await prisma.message.updateMany({
-            where: {
-                conversationId,
-                senderId: { not: currentUser.id },
-                isRead: false
-            },
-            data: {
-                isRead: true
-            }
-        });
+        // Mark messages as read ONLY IF explicitly requested (e.g. window is focused)
+        if (read) {
+            await prisma.message.updateMany({
+                where: {
+                    conversationId,
+                    senderId: { not: currentUser.id },
+                    isRead: false
+                },
+                data: {
+                    isRead: true
+                }
+            });
+        }
 
         return NextResponse.json(messages);
     } catch (error) {

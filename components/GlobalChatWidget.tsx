@@ -80,7 +80,10 @@ export function GlobalChatWidget() {
 
     const fetchMessages = useCallback(async (convId: string, refreshConversations = false) => {
         try {
-            const res = await fetch(`/api/messages?conversationId=${convId}`);
+            const isTabFocused = typeof document !== 'undefined' && document.hasFocus();
+            const shouldMarkAsRead = isTabFocused && isOpen && !isMinimized;
+
+            const res = await fetch(`/api/messages?conversationId=${convId}&read=${shouldMarkAsRead}`);
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data);
@@ -90,12 +93,15 @@ export function GlobalChatWidget() {
                 setTimeout(() => {
                     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
                 }, 100);
-                typeof window !== 'undefined' && window.dispatchEvent(new Event('messagesRead'));
+
+                if (shouldMarkAsRead) {
+                    typeof window !== 'undefined' && window.dispatchEvent(new Event('messagesRead'));
+                }
             }
         } catch (error) {
             console.error(error);
         }
-    }, []);
+    }, [isOpen, isMinimized, fetchConversations]);
 
     useEffect(() => {
         let mounted = true;
@@ -108,15 +114,22 @@ export function GlobalChatWidget() {
         if (isOpen && !isMinimized && activeConvId) {
             loadMessages();
 
+            const handleFocus = () => {
+                if (mounted && activeConvId) fetchMessages(activeConvId);
+            };
+            window.addEventListener('focus', handleFocus);
+
             interval = setInterval(() => {
                 if (mounted && activeConvId) fetchMessages(activeConvId);
-            }, 3000);
+            }, 5000); // Polling interval
+
+            return () => {
+                mounted = false;
+                if (interval) clearInterval(interval);
+                window.removeEventListener('focus', handleFocus);
+            };
         }
-        return () => {
-            mounted = false;
-            if (interval) clearInterval(interval);
-        };
-    }, [isOpen, isMinimized, activeConvId, fetchMessages, fetchConversations]);
+    }, [isOpen, isMinimized, activeConvId, fetchMessages]);
 
     const handleSend = async (e: React.FormEvent) => {
         e.preventDefault();

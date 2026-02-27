@@ -87,7 +87,8 @@ function MessagesContent() {
 
     const fetchMessages = async (convId: string) => {
         try {
-            const res = await fetch(`/api/messages?conversationId=${convId}`);
+            const isTabFocused = typeof document !== 'undefined' && document.hasFocus();
+            const res = await fetch(`/api/messages?conversationId=${convId}&read=${isTabFocused}`);
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data);
@@ -95,7 +96,14 @@ function MessagesContent() {
                 const behavior = isFirstLoadRef.current ? "instant" : "smooth";
                 isFirstLoadRef.current = false;
                 setTimeout(() => scrollToBottom(behavior as ScrollBehavior), 50);
-                typeof window !== 'undefined' && window.dispatchEvent(new Event('messagesRead'));
+
+                if (isTabFocused) {
+                    typeof window !== 'undefined' && window.dispatchEvent(new Event('messagesRead'));
+                    // Update conversation list locally
+                    setConversations(prev => prev.map(c =>
+                        c.id === convId ? { ...c, _count: { messages: 0 } } : c
+                    ));
+                }
             }
         } catch (error) {
             console.error("Failed to fetch messages", error);
@@ -106,18 +114,19 @@ function MessagesContent() {
         if (activeConversationId) {
             isFirstLoadRef.current = true; // reset so next conversation open scrolls instantly
             fetchMessages(activeConversationId);
-            // Optimistically clear unread count for the active conversation
-            setConversations(prev => prev.map(c =>
-                c.id === activeConversationId ? { ...c, _count: { messages: 0 } } : c
-            ));
-            // Dispatch event immediately to clear global badges optimistically
-            typeof window !== 'undefined' && window.dispatchEvent(new Event('messagesRead'));
+
+            // Mark as read when coming back to the tab
+            const handleFocus = () => fetchMessages(activeConversationId);
+            window.addEventListener('focus', handleFocus);
 
             // Polling for new messages
             const interval = setInterval(() => {
                 fetchMessages(activeConversationId);
             }, 5000);
-            return () => clearInterval(interval);
+            return () => {
+                clearInterval(interval);
+                window.removeEventListener('focus', handleFocus);
+            };
         }
     }, [activeConversationId]);
 
