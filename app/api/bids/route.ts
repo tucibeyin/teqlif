@@ -4,6 +4,7 @@ import { actionRatelimiter } from "@/lib/rate-limit";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { sendPushNotification } from "@/lib/fcm";
 import { logger } from "@/lib/logger";
+import { revalidatePath } from "next/cache";
 
 export async function GET(req: NextRequest) {
     try {
@@ -71,8 +72,26 @@ export async function POST(req: NextRequest) {
         }
 
         if (ad.status !== "ACTIVE") {
-            logger.warn("Bid rejected: Ad not active", { adId, adStatus: ad.status, userId: user.id });
-            return NextResponse.json({ error: "Bu ilan artık aktif değil." }, { status: 400 });
+            // [SELF-HEALING] If ad is SOLD but has 0 ACCEPTED bids, fix it automatically
+            const acceptedBidsCount = await prisma.bid.count({
+                where: { adId, status: 'ACCEPTED' }
+            });
+
+            if (ad.status === 'SOLD' && acceptedBidsCount === 0) {
+                logger.info("Self-healing: SOLD ad found with 0 accepted bids, resetting to ACTIVE", { adId });
+                await prisma.ad.update({
+                    where: { id: adId },
+                    data: { status: 'ACTIVE' }
+                });
+                // Revalidate so the UI update is reflected immediately
+                revalidatePath('/');
+                revalidatePath(`/ad/${adId}`);
+                // Refresh local ad object status for the rest of the function
+                ad.status = "ACTIVE";
+            } else {
+                logger.warn("Bid rejected: Ad not active", { adId, adStatus: ad.status, userId: user.id });
+                return NextResponse.json({ error: "Bu ilan artık aktif değil." }, { status: 400 });
+            }
         }
 
         logger.info("Processing bid", { adId, amount, userId: user.id });
