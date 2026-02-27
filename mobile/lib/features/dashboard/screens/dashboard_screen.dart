@@ -330,7 +330,7 @@ class _MyAdTile extends ConsumerWidget {
                       onPressed: () => _republish(context, ref),
                       child: const Text('Yenile'),
                     )
-                  else
+                  else if (ad.status != 'SOLD')
                     IconButton(
                       icon: const Icon(Icons.edit_outlined),
                       onPressed: () => context.push('/edit-ad/${ad.id}'),
