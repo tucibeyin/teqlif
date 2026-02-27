@@ -61,7 +61,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
     super.dispose();
   }
 
-  Future<void> _pickImages() async {
+  Future<void> _showImageSourceSheet() async {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
@@ -81,7 +81,10 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                 Navigator.pop(ctx);
                 final picked = await _picker.pickMultiImage(imageQuality: 80);
                 if (picked.isNotEmpty) {
-                  setState(() => _images.addAll(picked.map((x) => File(x.path))));
+                  setState(() {
+                    final remaining = 10 - _images.length;
+                    _images.addAll(picked.take(remaining).map((x) => File(x.path)));
+                  });
                 }
               },
             ),
@@ -91,7 +94,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
               onTap: () async {
                 Navigator.pop(ctx);
                 final picked = await _picker.pickImage(source: ImageSource.camera, imageQuality: 80);
-                if (picked != null) {
+                if (picked != null && _images.length < 10) {
                   setState(() => _images.add(File(picked.path)));
                 }
               },
@@ -212,61 +215,88 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
           children: [
             // Image picker
             GestureDetector(
-              onTap: _pickImages,
+              onTap: _showImageSourceSheet,
               child: Container(
                 height: 140,
-                decoration: BoxDecoration(
-                  border: Border.all(
-                      color: const Color(0xFFE2EBF0), style: BorderStyle.solid),
-                  borderRadius: BorderRadius.circular(12),
-                  color: const Color(0xFFF4F7FA),
-                ),
-                child: _images.isEmpty
-                    ? const Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.add_photo_alternate_outlined,
-                              color: Color(0xFF9AAAB8), size: 36),
-                          SizedBox(height: 8),
-                          Text('Fotoğraf Ekle',
-                              style: TextStyle(color: Color(0xFF9AAAB8))),
-                        ],
-                      )
-                    : ListView.builder(
-                        scrollDirection: Axis.horizontal,
-                        padding: const EdgeInsets.all(8),
-                        itemCount: _images.length,
-                        itemBuilder: (_, i) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: Stack(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(8),
-                                child: Image.file(_images[i],
-                                    width: 100, height: 120, fit: BoxFit.cover),
-                              ),
-                              Positioned(
-                                top: 4,
-                                right: 4,
-                                child: GestureDetector(
-                                  onTap: () {
-                                    setState(() => _images.removeAt(i));
-                                  },
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Colors.black54,
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: const Icon(Icons.close,
-                                        size: 16, color: Colors.white),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
+                 decoration: BoxDecoration(
+                   border: Border.all(
+                       color: const Color(0xFFE2EBF0), style: BorderStyle.solid),
+                   borderRadius: BorderRadius.circular(12),
+                   color: const Color(0xFFF4F7FA),
+                 ),
+                 child: ListView.builder(
+                         scrollDirection: Axis.horizontal,
+                         padding: const EdgeInsets.all(8),
+                         // Extra slot for the "add" button if under limit
+                         itemCount: _images.length + (_images.length < 10 ? 1 : 0),
+                         itemBuilder: (_, i) {
+                           // "Add more" button as last item
+                           if (i == _images.length) {
+                             return Padding(
+                               padding: const EdgeInsets.only(right: 8),
+                               child: GestureDetector(
+                                 onTap: _showImageSourceSheet,
+                                 child: Container(
+                                   width: 100,
+                                   height: 120,
+                                   decoration: BoxDecoration(
+                                     color: const Color(0xFFE6F9FC),
+                                     borderRadius: BorderRadius.circular(8),
+                                     border: Border.all(
+                                         color: const Color(0xFF00B4CC),
+                                         style: BorderStyle.solid),
+                                   ),
+                                   child: Column(
+                                     mainAxisAlignment: MainAxisAlignment.center,
+                                     children: [
+                                       const Icon(Icons.add_photo_alternate_outlined,
+                                           color: Color(0xFF00B4CC), size: 30),
+                                       const SizedBox(height: 4),
+                                       Text(
+                                         '${_images.length}/10',
+                                         style: const TextStyle(
+                                             color: Color(0xFF00B4CC),
+                                             fontSize: 12,
+                                             fontWeight: FontWeight.w600),
+                                       ),
+                                     ],
+                                   ),
+                                 ),
+                               ),
+                             );
+                           }
+                           return Padding(
+                             padding: const EdgeInsets.only(right: 8),
+                             child: Stack(
+                               children: [
+                                 ClipRRect(
+                                   borderRadius: BorderRadius.circular(8),
+                                   child: Image.file(_images[i],
+                                       width: 100, height: 120, fit: BoxFit.cover),
+                                 ),
+                                 Positioned(
+                                   top: 4,
+                                   right: 4,
+                                   child: GestureDetector(
+                                     onTap: () {
+                                       setState(() => _images.removeAt(i));
+                                     },
+                                     child: Container(
+                                       padding: const EdgeInsets.all(4),
+                                       decoration: const BoxDecoration(
+                                         color: Colors.black54,
+                                         shape: BoxShape.circle,
+                                       ),
+                                       child: const Icon(Icons.close,
+                                           size: 16, color: Colors.white),
+                                     ),
+                                   ),
+                                 ),
+                               ],
+                             ),
+                           );
+                         },
+                       ),
               ),
             ),
             const SizedBox(height: 16),

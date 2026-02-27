@@ -42,6 +42,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _scrollCtrl = ScrollController();
   bool _sending = false;
   bool _isFirstLoad = true;
+  Timer? _pollTimer;
 
   @override
   void initState() {
@@ -52,13 +53,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         ref.read(activeChatIdProvider.notifier).state = widget.conversationId;
       }
     });
+    // Poll for new incoming messages every 5 seconds
+    _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (mounted) {
+        ref.invalidate(chatMessagesProvider(widget.conversationId));
+      }
+    });
   }
 
   @override
   void dispose() {
-    // Clear the active chat when leaving the screen.
-    // We capture the notifier synchronously before the widget is disposed,
-    // so the async post-frame callback doesn't try to read a destroyed 'ref'.
+    _pollTimer?.cancel();
     final activeChatNotifier = ref.read(activeChatIdProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       activeChatNotifier.state = null;
