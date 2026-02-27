@@ -1255,3 +1255,22 @@ textarea.input {
     gap: 1rem;
   }
 }
+/* Dashboard scrollable list styling */
+.scrollable-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollable-list::-webkit-scrollbar-track {
+  background: var(--bg);
+  border-radius: var(--radius-full);
+}
+
+.scrollable-list::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: var(--radius-full);
+  transition: var(--transition);
+}
+
+.scrollable-list::-webkit-scrollbar-thumb:hover {
+  background: var(--primary-100);
+}

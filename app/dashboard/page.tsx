@@ -40,7 +40,7 @@ export default async function DashboardPage() {
         prisma.bid.findMany({
             where: { userId: session.user.id },
             orderBy: { createdAt: "desc" },
-            take: 20,
+            take: 100,
             include: {
                 ad: {
                     include: {
@@ -248,34 +248,36 @@ export default async function DashboardPage() {
                             </Link>
                         </div>
                     ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                            {myBids.map((bid: any) => (
-                                <div key={bid.id} className="card">
-                                    <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                                        {bid.ad.images && bid.ad.images.length > 0 ? (
-                                            <Image src={bid.ad.images[0]} alt={bid.ad.title} width={48} height={48} style={{ objectFit: "cover", borderRadius: "10px" }} />
-                                        ) : (
-                                            <span style={{ fontSize: "2rem" }}>{bid.ad.category.icon}</span>
-                                        )}
-                                        <div style={{ flex: 1 }}>
-                                            <Link href={`/ad/${bid.adId}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
-                                                {bid.ad.title}
-                                            </Link>
-                                            <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                                {bid.ad.province.name} · {timeAgo(bid.createdAt)}
+                        <div className="scrollable-list" style={{ maxHeight: "450px", overflowY: "auto", paddingRight: "0.5rem" }}>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                {myBids.map((bid: any) => (
+                                    <div key={bid.id} className="card">
+                                        <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                                            {bid.ad.images && bid.ad.images.length > 0 ? (
+                                                <Image src={bid.ad.images[0]} alt={bid.ad.title} width={48} height={48} style={{ objectFit: "cover", borderRadius: "10px" }} />
+                                            ) : (
+                                                <span style={{ fontSize: "2rem" }}>{bid.ad.category.icon}</span>
+                                            )}
+                                            <div style={{ flex: 1 }}>
+                                                <Link href={`/ad/${bid.adId}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
+                                                    {bid.ad.title}
+                                                </Link>
+                                                <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
+                                                    {bid.ad.province.name} · {timeAgo(bid.createdAt)}
+                                                </div>
                                             </div>
-                                        </div>
-                                        <div style={{ textAlign: "right" }}>
-                                            <div style={{ color: "var(--primary)", fontWeight: 700 }}>
-                                                Teklifim: {formatPrice(bid.amount)}
-                                            </div>
-                                            <div className="text-muted text-sm">
-                                                İlan: {formatPrice(bid.ad.price)}
+                                            <div style={{ textAlign: "right" }}>
+                                                <div style={{ color: "var(--primary)", fontWeight: 700 }}>
+                                                    Teklifim: {formatPrice(bid.amount)}
+                                                </div>
+                                                <div className="text-muted text-sm">
+                                                    İlan: {formatPrice(bid.ad.price)}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
                     )}
                 </section>
