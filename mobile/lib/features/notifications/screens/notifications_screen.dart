@@ -7,6 +7,7 @@ import '../../../core/api/endpoints.dart';
 import '../../../core/models/notification.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../providers/notifications_provider.dart';
+import '../providers/unread_counts_provider.dart';
 
 class NotificationsScreen extends ConsumerWidget {
   const NotificationsScreen({super.key});
