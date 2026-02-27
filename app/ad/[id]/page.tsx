@@ -234,7 +234,7 @@ export default async function AdDetailPage({
                                 </div>
                                 <div style={{ flex: 1 }}>
                                     <div style={{ fontWeight: 600, fontSize: "1.1rem" }}>{displayName}</div>
-                                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Satıcı</div>
+                                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>İlan Sahibi</div>
                                 </div>
                             </div>
 
@@ -247,7 +247,7 @@ export default async function AdDetailPage({
                                                 className="btn btn-secondary btn-full"
                                                 style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
                                             >
-                                                📞 {displayPhone} - Satıcıyı Ara
+                                                📞 {displayPhone} - İlan Sahibini Ara
                                             </a>
                                         )}
                                         <AdActions
@@ -255,14 +255,14 @@ export default async function AdDetailPage({
                                             adId={ad.id}
                                             sellerId={ad.userId}
                                             currentUser={session.user}
-                                            customLabel="💬 Satıcıya Mesaj Gönder"
+                                            customLabel="💬 İlan Sahibine Mesaj Gönder"
                                             initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanı hakkında bilgi almak istiyorum.`}
                                         />
                                     </div>
                                 ) : (
                                     <div style={{ textAlign: "center", padding: "1rem", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
                                         <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
-                                            Satıcıyla iletişime geçmek için giriş yapmalısınız.
+                                            İlan sahibiyle iletişime geçmek için giriş yapmalısınız.
                                         </p>
                                         <Link href="/login" className="btn btn-primary btn-full">
                                             Giriş Yap
