@@ -528,7 +528,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 CurrencyTextInputFormatter.currency(
-                    locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                    locale: 'tr_TR', symbol: '', decimalDigits: 0)
               ],
               decoration: InputDecoration(
                   labelText:
@@ -642,7 +642,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                             decimal: true),
                         inputFormatters: [
                           CurrencyTextInputFormatter.currency(
-                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                              locale: 'tr_TR', symbol: '', decimalDigits: 0)
                         ],
                         decoration: const InputDecoration(
                             labelText: 'Açılış Teklifi (₺) (İsteğe Bağlı)',
@@ -655,7 +655,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                             decimal: true),
                         inputFormatters: [
                           CurrencyTextInputFormatter.currency(
-                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                              locale: 'tr_TR', symbol: '', decimalDigits: 0)
                         ],
                         decoration: const InputDecoration(
                             labelText: 'Pey Aralığı (Minimum Artış) (₺)',
@@ -669,7 +669,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                             decimal: true),
                         inputFormatters: [
                           CurrencyTextInputFormatter.currency(
-                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                              locale: 'tr_TR', symbol: '', decimalDigits: 0)
                         ],
                         decoration: const InputDecoration(
                             labelText: 'Hemen Al Fiyatı (₺) (Opsiyonel)',

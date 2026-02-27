@@ -36,7 +36,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   final _bidFormatter = CurrencyTextInputFormatter.currency(
     locale: 'tr_TR',
     symbol: '',
-    decimalDigits: 2,
+    decimalDigits: 0,
   );
   int _currentImage = 0;
   bool _bidLoading = false;

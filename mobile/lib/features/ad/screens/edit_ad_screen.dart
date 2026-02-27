@@ -67,7 +67,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
       final ad = AdModel.fromJson(res.data as Map<String, dynamic>);
       setState(() {
         final formatter = CurrencyTextInputFormatter.currency(
-            locale: 'tr_TR', symbol: '', decimalDigits: 2);
+            locale: 'tr_TR', symbol: '', decimalDigits: 0);
         _titleCtrl.text = ad.title;
         _descCtrl.text = ad.description;
         _priceCtrl.text = formatter.formatDouble(ad.price);
@@ -263,7 +263,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                   const TextInputType.numberWithOptions(decimal: true),
               inputFormatters: [
                 CurrencyTextInputFormatter.currency(
-                    locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                    locale: 'tr_TR', symbol: '', decimalDigits: 0)
               ],
               decoration: InputDecoration(
                   labelText:
@@ -304,7 +304,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                             decimal: true),
                         inputFormatters: [
                           CurrencyTextInputFormatter.currency(
-                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                              locale: 'tr_TR', symbol: '', decimalDigits: 0)
                         ],
                         decoration: const InputDecoration(
                             labelText: 'Açılış Teklifi (₺) (İsteğe Bağlı)',
@@ -317,7 +317,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                             decimal: true),
                         inputFormatters: [
                           CurrencyTextInputFormatter.currency(
-                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                              locale: 'tr_TR', symbol: '', decimalDigits: 0)
                         ],
                         decoration: const InputDecoration(
                             labelText: 'Pey Aralığı (Minimum Artış) (₺)',
@@ -331,7 +331,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                             decimal: true),
                         inputFormatters: [
                           CurrencyTextInputFormatter.currency(
-                              locale: 'tr_TR', symbol: '', decimalDigits: 2)
+                              locale: 'tr_TR', symbol: '', decimalDigits: 0)
                         ],
                         decoration: const InputDecoration(
                             labelText: 'Hemen Al Fiyatı (₺) (Opsiyonel)',
