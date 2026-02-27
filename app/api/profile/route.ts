@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { getMobileUser } from "@/lib/mobile-auth";
+import { sendProfileUpdateVerificationEmail } from "@/lib/mail";
 
 export async function GET(request: Request) {
     try {
@@ -34,7 +35,7 @@ export async function PATCH(request: Request) {
         }
 
         const body = await request.json();
-        const { name, email, phone, password, passwordConfirm } = body;
+        const { name, email, phone, password, passwordConfirm, verificationCode } = body;
 
         if (!name || !email) {
             return NextResponse.json({ message: "Ad ve E-posta alanları zorunludur" }, { status: 400 });
@@ -42,6 +43,37 @@ export async function PATCH(request: Request) {
 
         if (password && password !== passwordConfirm) {
             return NextResponse.json({ message: "Şifreler birbiriyle eşleşmiyor" }, { status: 400 });
+        }
+
+        // 1. If verificationCode is missing, send a new code
+        if (!verificationCode) {
+            const code = Math.floor(100000 + Math.random() * 900000).toString();
+            const expires = new Date(Date.now() + 15 * 60 * 1000); // 15 minutes
+
+            await prisma.user.update({
+                where: { id: userSession.id },
+                data: {
+                    verifyCode: code,
+                    verifyCodeExpires: expires
+                }
+            });
+
+            await sendProfileUpdateVerificationEmail(userSession.email, code);
+
+            return NextResponse.json({
+                message: "Lütfen e-posta adresinize gönderilen 6 haneli doğrulama kodunu girin.",
+                requiresVerification: true
+            }, { status: 202 });
+        }
+
+        // 2. If verificationCode is present, verify it
+        const user = await prisma.user.findUnique({
+            where: { id: userSession.id },
+            select: { verifyCode: true, verifyCodeExpires: true }
+        });
+
+        if (!user || user.verifyCode !== verificationCode || !user.verifyCodeExpires || user.verifyCodeExpires < new Date()) {
+            return NextResponse.json({ message: "Geçersiz veya süresi dolmuş doğrulama kodu" }, { status: 400 });
         }
 
         // Email uniqueness check if email was changed
@@ -57,6 +89,10 @@ export async function PATCH(request: Request) {
         if (password) {
             updateData.password = await bcrypt.hash(password, 10);
         }
+
+        // Clear verification code after success
+        updateData.verifyCode = null;
+        updateData.verifyCodeExpires = null;
 
         const updatedUser = await prisma.user.update({
             where: { id: userSession.id },
