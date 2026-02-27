@@ -566,6 +566,7 @@ class _CategorySheetState extends State<_CategorySheet> {
                       : null,
                   title: Text(
                     node.name,
+                    overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontWeight: isSelected || hasSelectedChild
                           ? FontWeight.w700

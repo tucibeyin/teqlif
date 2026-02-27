@@ -292,13 +292,16 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
               return Column(
                 children: [
                   DropdownButtonFormField<String>(
+                    isExpanded: true,
                     value: currentVal,
                     decoration: InputDecoration(labelText: label),
                     items: opts
                         .map((o) => DropdownMenuItem(
                             value: o.slug,
                             child: Text(
-                                o.icon.isNotEmpty ? '${o.icon} ${o.name}' : o.name)))
+                                o.icon.isNotEmpty ? '${o.icon} ${o.name}' : o.name,
+                                overflow: TextOverflow.ellipsis,
+                            )))
                         .toList(),
                     onChanged: (v) {
                       if (v == null) return;
