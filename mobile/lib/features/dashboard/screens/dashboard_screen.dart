@@ -105,15 +105,16 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
               data: (ads) {
-                final active = ads.where((a) => !a.isExpired).length;
+                final active = ads.where((a) => a.status == 'ACTIVE' && !a.isExpired).length;
                 final expired = ads.where((a) => a.isExpired).length;
+                final sold = ads.where((a) => a.status == 'SOLD').length;
                 return Row(
                   children: [
                     _StatCard(label: 'Aktif İlan', value: '$active'),
-                    const SizedBox(width: 12),
+                    const SizedBox(width: 8),
+                    _StatCard(label: 'Satılan', value: '$sold'),
+                    const SizedBox(width: 8),
                     _StatCard(label: 'Süresi Dolan', value: '$expired'),
-                    const SizedBox(width: 12),
-                    _StatCard(label: 'Toplam', value: '${ads.length}'),
                   ],
                 );
               },
@@ -274,9 +275,9 @@ class _MyAdTile extends ConsumerWidget {
             maxLines: 1,
             overflow: TextOverflow.ellipsis),
         subtitle: Text(
-          ad.isExpired ? 'Süresi Doldu' : 'Aktif',
+          ad.status == 'SOLD' ? 'Satıldı' : (ad.isExpired ? 'Süresi Doldu' : 'Aktif'),
           style: TextStyle(
-            color: ad.isExpired ? Colors.red : Colors.green,
+            color: ad.status == 'SOLD' ? Colors.blueGrey : (ad.isExpired ? Colors.red : Colors.green),
             fontWeight: FontWeight.w600,
           ),
         ),
