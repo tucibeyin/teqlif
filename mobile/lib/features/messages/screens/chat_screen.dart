@@ -95,7 +95,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       _convsNotifier.refresh();
     });
     _msgCtrl.dispose();
-    _scrollCtrl.dispose();
     super.dispose();
   }
 
@@ -375,7 +374,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             const SizedBox(width: 8),
                             Expanded(
                               child: GestureDetector(
-                                onTap: () => _jumpToMessage(_replyingTo!.id, messages),
+                                onTap: () {
+                                  final msgs = ref.read(chatMessagesProvider(widget.conversationId)).value ?? [];
+                                  _jumpToMessage(_replyingTo!.id, msgs);
+                                },
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
