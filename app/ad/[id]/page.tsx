@@ -458,19 +458,56 @@ export default async function AdDetailPage({
                                     </div>
                                     <div style={{ maxHeight: "350px", overflowY: "auto", paddingRight: "0.5rem" }}>
                                         {ad.bids.map((bid: any, i: number) => (
-                                            <div key={bid.id} className="bid-item" style={{ display: 'flex', flexDirection: 'column', gap: '8px', padding: '12px', background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', marginBottom: '8px' }}>
-                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <div>
-                                                        <span className="bid-item-user" style={{ fontWeight: 600 }}>
-                                                            {i === 0 && "🏆 "}
-                                                            {bid.user.name}
-                                                        </span>
-                                                        <span className="bid-item-amount" style={{ marginLeft: '8px', color: 'var(--primary)', fontWeight: 700 }}>{formatPrice(bid.amount)}</span>
-                                                        <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px' }}>
-                                                            {timeAgo(bid.createdAt)}
+                                            <div key={bid.id} className="bid-item" style={{
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                padding: '12px 16px',
+                                                background: 'var(--bg-card)',
+                                                border: '1px solid var(--border)',
+                                                borderRadius: 'var(--radius-lg)',
+                                                marginBottom: '10px',
+                                                transition: 'all 0.2s ease',
+                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                                                            <span className="bid-item-user" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                                                                {i === 0 && "🏆 "}
+                                                                {bid.user.name}
+                                                            </span>
+                                                            <span style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '1rem' }}>
+                                                                {formatPrice(bid.amount)}
+                                                            </span>
+                                                        </div>
+                                                        <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                            <span>{timeAgo(bid.createdAt)}</span>
+                                                            {bid.status === 'ACCEPTED' && (
+                                                                <span style={{
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '20px',
+                                                                    fontSize: '0.65rem',
+                                                                    background: 'rgba(34,197,94,0.1)',
+                                                                    color: '#22c55e',
+                                                                    fontWeight: 600,
+                                                                    textTransform: 'uppercase'
+                                                                }}>Kabul Edildi</span>
+                                                            )}
+                                                            {bid.status === 'REJECTED' && (
+                                                                <span style={{
+                                                                    padding: '2px 8px',
+                                                                    borderRadius: '20px',
+                                                                    fontSize: '0.65rem',
+                                                                    background: 'rgba(239,68,68,0.1)',
+                                                                    color: '#ef4444',
+                                                                    fontWeight: 600,
+                                                                    textTransform: 'uppercase'
+                                                                }}>Reddedildi</span>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
                                                         {(isOwner || (session?.user?.id === bid.userId)) && (
                                                             <AdActions
                                                                 actionType="MESSAGE"
@@ -484,42 +521,41 @@ export default async function AdDetailPage({
                                                                 }
                                                             />
                                                         )}
-                                                        {bid.status === 'ACCEPTED' && (
-                                                            <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
-                                                        )}
-                                                        {bid.status === 'REJECTED' && (
-                                                            <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
-                                                        )}
                                                     </div>
                                                 </div>
-                                                {isOwner && (
-                                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '4px' }}>
-                                                        {/* Sadece Kabul Edilmiş teklifler için */}
+
+                                                {isOwner && (bid.status === 'PENDING' || bid.status === 'ACCEPTED') && (
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        gap: '8px',
+                                                        alignItems: 'center',
+                                                        marginTop: '12px',
+                                                        paddingTop: '12px',
+                                                        borderTop: '1px border-dashed var(--border)'
+                                                    }}>
                                                         {bid.status === 'ACCEPTED' && (
                                                             <>
                                                                 {bid.user.phone && (
                                                                     <a
                                                                         href={`tel:${bid.user.phone}`}
-                                                                        className="btn btn-outline"
+                                                                        className="btn btn-primary"
                                                                         title="Ara"
                                                                         style={{
                                                                             display: 'flex',
                                                                             alignItems: 'center',
                                                                             justifyContent: 'center',
-                                                                            padding: '4px 8px',
-                                                                            color: 'var(--secondary)',
-                                                                            borderColor: 'var(--secondary)',
-                                                                            background: 'rgba(96, 125, 139, 0.1)'
+                                                                            padding: '6px 12px',
+                                                                            fontSize: '0.8rem',
+                                                                            gap: '6px'
                                                                         }}
                                                                     >
-                                                                        📞
+                                                                        📞 Ara
                                                                     </a>
                                                                 )}
                                                                 <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
                                                             </>
                                                         )}
 
-                                                        {/* Sadece Bekleyen teklifler için */}
                                                         {bid.status === 'PENDING' && (
                                                             <>
                                                                 <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />

@@ -122,19 +122,33 @@ export function AdActions({
                 <button
                     onClick={handleAction}
                     disabled={isLoading}
-                    className="btn btn-outline"
+                    title="Mesaj Gönder"
                     style={{
                         display: 'flex',
                         alignItems: 'center',
-                        gap: '4px',
-                        padding: '4px 8px',
+                        justifyContent: 'center',
+                        width: '32px',
+                        height: '32px',
+                        padding: '0',
                         fontSize: '0.8rem',
                         color: 'var(--primary)',
-                        borderColor: 'var(--primary)',
-                        background: 'rgba(0, 188, 212, 0.1)'
+                        borderColor: 'transparent',
+                        background: 'rgba(0, 180, 204, 0.08)',
+                        borderRadius: '50%',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s ease',
+                        border: '1px solid transparent'
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.background = 'rgba(0, 180, 204, 0.15)';
+                        e.currentTarget.style.borderColor = 'rgba(0, 180, 204, 0.2)';
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.background = 'rgba(0, 180, 204, 0.08)';
+                        e.currentTarget.style.borderColor = 'transparent';
                     }}
                 >
-                    <MessageSquare size={14} />
+                    <MessageSquare size={16} style={{ minWidth: '16px' }} />
                     {isLoading ? "..." : ""}
                 </button>
             );
