@@ -150,7 +150,7 @@ export default async function DashboardPage() {
                                             </div>
                                             <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
                                                 <div style={{ color: "var(--primary)", fontWeight: 700 }}>{formatPrice(ad.price)}</div>
-                                                <span className={`badge badge-${isExpired ? 'sold' : ad.status.toLowerCase()}`}>
+                                                <span className={`badge badge-${isExpired ? 'expired' : ad.status.toLowerCase()}`}>
                                                     {isExpired ? "Süresi Dolmuş" : ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Pasif"}
                                                 </span>
                                                 <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
@@ -218,7 +218,7 @@ export default async function DashboardPage() {
                                             </div>
                                             <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
                                                 <div style={{ color: "var(--primary)", fontWeight: 700 }}>{formatPrice(ad.price)}</div>
-                                                <span className={`badge badge-${isExpired ? 'sold' : ad.status.toLowerCase()}`}>
+                                                <span className={`badge badge-${isExpired ? 'expired' : ad.status.toLowerCase()}`}>
                                                     {isExpired ? "Süresi Dolmuş" : ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Pasif"}
                                                 </span>
                                             </div>
