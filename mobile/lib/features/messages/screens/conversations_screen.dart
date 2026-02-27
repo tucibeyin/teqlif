@@ -33,11 +33,9 @@ class ConversationsNotifier extends AsyncNotifier<List<ConversationModel>> {
   }
 
   Future<void> refresh() async {
-    // Refresh without destroying the current UI state
-    state = const AsyncValue.loading();
+    // Refresh without destroying the current UI state (prevents flickering)
     try {
       final newConversations = await _fetchConversations();
-      // Yielding a completely fresh list instance guarantees reference inequality
       state = AsyncValue.data(List.from(newConversations));
     } catch (e, st) {
       state = AsyncValue.error(e, st);

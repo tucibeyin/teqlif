@@ -21,8 +21,11 @@ final chatMessagesProvider =
   final res = await ApiClient().get(Endpoints.messages,
       params: {'conversationId': conversationId, 'read': 'true'});
   final list = res.data as List<dynamic>;
+  // Reverse the list so the latest messages (bottom) are at index 0
   return list
       .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
+      .toList()
+      .reversed
       .toList();
 });
 
@@ -152,14 +155,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     ref.listen<AsyncValue<List<MessageModel>>>(
       chatMessagesProvider(widget.conversationId),
       (_, next) {
-        if (next.hasValue) {
-          if (_isFirstLoad) {
-            _isFirstLoad = false;
-            _scrollToBottom(instant: true);
-          } else {
-            _scrollToBottom();
-          }
-        }
+        // With reverse: true, we don't need manual scrolling logic 
+        // as new messages (index 0) naturally appear at the bottom
       },
     );
 
@@ -267,6 +264,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 }
                 return ListView.builder(
                   controller: _scrollCtrl,
+                  reverse: true, // index 0 is at the bottom
                   padding: const EdgeInsets.all(12),
                   itemCount: messages.length,
                   itemBuilder: (_, i) {
