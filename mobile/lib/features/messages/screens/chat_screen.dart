@@ -51,6 +51,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(activeChatIdProvider.notifier).state = widget.conversationId;
+        // Immediate badge refresh when entering the chat
+        ref.read(unreadCountsProvider.notifier).refresh();
       }
     });
     // Poll for new incoming messages every 5 seconds
@@ -65,8 +67,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void dispose() {
     _pollTimer?.cancel();
     final activeChatNotifier = ref.read(activeChatIdProvider.notifier);
+    final countsNotifier = ref.read(unreadCountsProvider.notifier);
+    final convsNotifier = ref.read(conversationsProvider.notifier);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       activeChatNotifier.state = null;
+      // Immediate badge refresh when leaving the chat
+      countsNotifier.refresh();
+      convsNotifier.refresh();
     });
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
@@ -74,19 +81,22 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _scrollToBottom({bool instant = false}) {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
-        if (instant) {
-          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
-        } else {
-          _scrollCtrl.animateTo(
-            _scrollCtrl.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 200),
-            curve: Curves.easeOut,
-          );
+    // Proactively call multiple times to handle laggy frame updates
+    for (var i = 0; i < 3; i++) {
+      Future.delayed(Duration(milliseconds: i * 50), () {
+        if (mounted && _scrollCtrl.hasClients) {
+          if (instant) {
+            _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+          } else {
+            _scrollCtrl.animateTo(
+              _scrollCtrl.position.maxScrollExtent,
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+            );
+          }
         }
-      }
-    });
+      });
+    }
   }
 
   Future<void> _send() async {

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/endpoints.dart';
+import 'package:flutter_app_badger/flutter_app_badger.dart';
 
 class UnreadCounts {
   final int messages;
@@ -33,6 +34,13 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
       int unreadMessages = 0;
       if (messagesRes.data != null && messagesRes.data['unreadCount'] != null) {
         unreadMessages = messagesRes.data['unreadCount'] as int;
+      }
+
+      final totalUnread = unreadMessages + unreadNotifications;
+      if (totalUnread > 0) {
+        FlutterAppBadger.updateBadgeCount(totalUnread);
+      } else {
+        FlutterAppBadger.removeBadge();
       }
 
       state = AsyncValue.data(UnreadCounts(
