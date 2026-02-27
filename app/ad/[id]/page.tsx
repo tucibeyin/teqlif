@@ -208,43 +208,74 @@ export default async function AdDetailPage({
                                 {ad.description}
                             </div>
 
-                            {!isOwner && session?.user && (
-                                <div style={{ marginTop: "1.25rem", display: "flex", gap: "1rem", flexDirection: "column" }}>
-                                    {displayPhone && (
-                                        <a
-                                            href={`tel:${displayPhone}`}
-                                            className="btn btn-secondary btn-full"
-                                            style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
-                                        >
-                                            📞 {displayPhone} - Satıcıyı Ara
-                                        </a>
-                                    )}
-                                    <AdActions
-                                        actionType="MESSAGE"
-                                        adId={ad.id}
-                                        sellerId={ad.userId}
-                                        currentUser={session.user}
-                                        initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanı hakkında bilgi almak istiyorum.`}
-                                    />
-                                </div>
-                            )}
-                            {!isOwner && !session?.user && displayPhone && (
-                                <div style={{ marginTop: "1.25rem" }}>
-                                    <a
-                                        href={`tel:${displayPhone}`}
-                                        className="btn btn-secondary btn-full"
-                                        style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
-                                    >
-                                        📞 {displayPhone} - Satıcıyı Ara
-                                    </a>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
 
                 {/* Sağ: Açık Artırma veya Sabit Fiyat */}
                 <div>
+                    {/* Satıcı İletişim Kartı */}
+                    <div className="card" style={{ marginBottom: "1.5rem" }}>
+                        <div className="card-body">
+                            <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.25rem" }}>
+                                <div style={{
+                                    width: "48px",
+                                    height: "48px",
+                                    borderRadius: "50%",
+                                    background: "var(--primary-50)",
+                                    color: "var(--primary)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "1.25rem",
+                                    fontWeight: 700
+                                }}>
+                                    {displayName.charAt(0)}
+                                </div>
+                                <div style={{ flex: 1 }}>
+                                    <div style={{ fontWeight: 600, fontSize: "1.1rem" }}>{displayName}</div>
+                                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>Satıcı</div>
+                                </div>
+                            </div>
+
+                            {!isOwner ? (
+                                session?.user ? (
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                        {displayPhone && (
+                                            <a
+                                                href={`tel:${displayPhone}`}
+                                                className="btn btn-secondary btn-full"
+                                                style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
+                                            >
+                                                📞 {displayPhone} - Satıcıyı Ara
+                                            </a>
+                                        )}
+                                        <AdActions
+                                            actionType="MESSAGE"
+                                            adId={ad.id}
+                                            sellerId={ad.userId}
+                                            currentUser={session.user}
+                                            customLabel="💬 Satıcıya Mesaj Gönder"
+                                            initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanı hakkında bilgi almak istiyorum.`}
+                                        />
+                                    </div>
+                                ) : (
+                                    <div style={{ textAlign: "center", padding: "1rem", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
+                                        <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
+                                            Satıcıyla iletişime geçmek için giriş yapmalısınız.
+                                        </p>
+                                        <Link href="/login" className="btn btn-primary btn-full">
+                                            Giriş Yap
+                                        </Link>
+                                    </div>
+                                )
+                            ) : (
+                                <div style={{ textAlign: "center", padding: "1rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
+                                    <strong style={{ display: "block", fontSize: "0.9rem" }}>Bu ilan size ait</strong>
+                                </div>
+                            )}
+                        </div>
+                    </div>
                     {adData.isFixedPrice ? (
                         <div className="auction-card">
                             <div style={{ marginBottom: "1.25rem" }}>
@@ -270,50 +301,10 @@ export default async function AdDetailPage({
                                 </div>
                             </div>
 
-                            {/* Satın Alma / İletişime Geçme */}
-                            {!isOwner && session?.user ? (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                                    <AdActions
-                                        actionType="MESSAGE"
-                                        adId={ad.id}
-                                        sellerId={ad.userId}
-                                        currentUser={session.user}
-                                        customLabel="💬 Satıcıya Mesaj Gönder"
-                                        initialMessage={`Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı ${formatPrice(ad.price)} fiyatından satın almak istiyorum.`}
-                                    />
-                                    {displayPhone && (
-                                        <a
-                                            href={`tel:${displayPhone}`}
-                                            className="btn btn-secondary btn-full"
-                                            style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
-                                        >
-                                            📞 {displayPhone} - Satıcıyı Ara
-                                        </a>
-                                    )}
-                                    <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", textAlign: "center" }}>
-                                        Satıcıyla anlaşıp güvenli ödeme/kargo koşullarını belirleyebilirsiniz.
-                                    </div>
-                                </div>
-                            ) : !session?.user ? (
-                                <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
-                                    <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
-                                        Satıcıyla iletişime geçmek için giriş yapmalısınız.
-                                    </p>
-                                    <Link href="/login" className="btn btn-primary btn-full">
-                                        Giriş Yap
-                                    </Link>
-                                </div>
-                            ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                                    <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
-                                        <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
-                                        Sabit fiyatlı ürününüz yayında. Müşterilerden mesaj bekleyin.
-                                    </div>
-                                    {displayPhone && (
-                                        <div className="btn btn-secondary btn-full" style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem", opacity: 0.8, cursor: "default" }}>
-                                            📞 {displayPhone} - İlanda Görünüyor
-                                        </div>
-                                    )}
+                            {/* Satın Alma Bilgisi */}
+                            {isOwner && (
+                                <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
+                                    Sabit fiyatlı ürününüz yayında.
                                 </div>
                             )}
                         </div>
@@ -387,15 +378,6 @@ export default async function AdDetailPage({
                                             Hemen Almak İçin Giriş Yap
                                         </Link>
                                     )}
-                                    {!isOwner && displayPhone && (
-                                        <a
-                                            href={`tel:${displayPhone}`}
-                                            className="btn btn-secondary btn-full"
-                                            style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
-                                        >
-                                            📞 {displayPhone} - Satıcıyı Ara
-                                        </a>
-                                    )}
                                 </div>
                             )}
 
@@ -409,40 +391,22 @@ export default async function AdDetailPage({
                                     />
                                 )}
 
-                                {!isOwner && session?.user ? (
-                                    <AdActions
-                                        actionType="MESSAGE"
-                                        adId={ad.id}
-                                        sellerId={ad.userId}
-                                        currentUser={session.user}
-                                        customLabel="💬 Satıcıya Mesaj Gönder"
-                                        initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanı hakkında bilgi almak istiyorum.`}
-                                    />
-                                ) : !session?.user ? (
+                                {!session?.user && (
                                     <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
                                         <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
-                                            Bu ilana teklif vermek veya mesaj atmak için giriş yapmalısınız.
+                                            Bu ilana teklif vermek için giriş yapmalısınız.
                                         </p>
                                         <Link href="/login" className="btn btn-primary btn-full">
                                             Giriş Yap
                                         </Link>
                                     </div>
-                                ) : (
+                                )}
+
+                                {isOwner && (
                                     <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
                                         <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
                                         {ad.status === 'ACTIVE' ? "Kendi ilanınıza teklif veremezsiniz." : "İlan satış işlemi tamamlandı."}
                                     </div>
-                                )}
-
-                                {/* Extra Phone Backup */}
-                                {!isOwner && displayPhone && (
-                                    <a
-                                        href={`tel:${displayPhone}`}
-                                        className="btn btn-secondary btn-full"
-                                        style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
-                                    >
-                                        📞 {displayPhone} - Satıcıyı Ara
-                                    </a>
                                 )}
                             </div>
 
