@@ -2,7 +2,10 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:scrollable_positioned_list/scrollable_positioned_list.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:timeago/timeago.dart' as timeago;
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/message.dart';
@@ -43,7 +46,8 @@ final activeChatIdProvider = StateProvider<String?>((ref) => null);
 
 class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _msgCtrl = TextEditingController();
-  final _scrollCtrl = ScrollController();
+  final ItemScrollController _itemScrollCtrl = ItemScrollController();
+  final ItemPositionsListener _itemPositionsListener = ItemPositionsListener.create();
   bool _sending = false;
   bool _isFirstLoad = true;
   Timer? _pollTimer;
@@ -96,21 +100,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   void _scrollToBottom({bool instant = false}) {
-    // Proactively call multiple times to handle laggy frame updates
-    for (var i = 0; i < 3; i++) {
-      Future.delayed(Duration(milliseconds: i * 50), () {
-        if (mounted && _scrollCtrl.hasClients) {
-          if (instant) {
-            _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
-          } else {
-            _scrollCtrl.animateTo(
-              _scrollCtrl.position.maxScrollExtent,
-              duration: const Duration(milliseconds: 200),
-              curve: Curves.easeOut,
-            );
-          }
-        }
-      });
+    if (!_itemScrollCtrl.isAttached) return;
+    if (instant) {
+      _itemScrollCtrl.jumpTo(index: 0);
+    } else {
+      _itemScrollCtrl.scrollTo(
+        index: 0,
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  void _jumpToMessage(String messageId, List<MessageModel> messages) {
+    final index = messages.indexWhere((m) => m.id == messageId);
+    if (index != -1 && _itemScrollCtrl.isAttached) {
+      _itemScrollCtrl.scrollTo(
+        index: index,
+        duration: const Duration(milliseconds: 500),
+        curve: Curves.easeInOutCubic,
+        alignment: 0.5, // Center the message
+      );
+      // Highlight effect logic will be in the message bubble itself
     }
   }
 
@@ -265,8 +276,9 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                 if (messages.isEmpty) {
                   return const Center(child: Text('Henüz mesaj yok.'));
                 }
-                return ListView.builder(
-                  controller: _scrollCtrl,
+                return ScrollablePositionedList.builder(
+                  itemScrollController: _itemScrollCtrl,
+                  itemPositionsListener: _itemPositionsListener,
                   reverse: true, // index 0 is at the bottom
                   padding: const EdgeInsets.all(12),
                   itemCount: messages.length,
@@ -277,6 +289,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                       message: msg,
                       isMine: isMine,
                       onReply: (m) => setState(() => _replyingTo = m),
+                      onJumpTo: (id) => _jumpToMessage(id, messages),
                     );
                   },
                 );
@@ -361,27 +374,30 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                             const Icon(Icons.reply, size: 16, color: Color(0xFF00B4CC)),
                             const SizedBox(width: 8),
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _replyingTo!.sender?.name ?? 'Kullanıcı',
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w700,
-                                      fontSize: 12,
-                                      color: Color(0xFF00B4CC),
+                              child: GestureDetector(
+                                onTap: () => _jumpToMessage(_replyingTo!.id, messages),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _replyingTo!.sender?.name ?? 'Kullanıcı',
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w700,
+                                        fontSize: 12,
+                                        color: Color(0xFF00B4CC),
+                                      ),
                                     ),
-                                  ),
-                                  Text(
-                                    _replyingTo!.content,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      color: Color(0xFF9AAAB8),
+                                    Text(
+                                      _replyingTo!.content,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                        fontSize: 12,
+                                        color: Color(0xFF9AAAB8),
+                                      ),
                                     ),
-                                  ),
-                                ],
+                                  ],
+                                ),
                               ),
                             ),
                             IconButton(
@@ -436,20 +452,47 @@ class _SwipeableMessage extends StatefulWidget {
   final MessageModel message;
   final bool isMine;
   final Function(MessageModel) onReply;
+  final Function(String) onJumpTo;
 
   const _SwipeableMessage({
     required this.message,
     required this.isMine,
     required this.onReply,
+    required this.onJumpTo,
   });
 
   @override
   State<_SwipeableMessage> createState() => _SwipeableMessageState();
 }
 
-class _SwipeableMessageState extends State<_SwipeableMessage> {
+class _SwipeableMessageState extends State<_SwipeableMessage> with SingleTickerProviderStateMixin {
   double _offset = 0.0;
   bool _triggered = false;
+  late AnimationController _highlightCtrl;
+  late Animation<Color?> _highlightAnim;
+
+  @override
+  void initState() {
+    super.initState();
+    _highlightCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+    _highlightAnim = ColorTween(
+      begin: Colors.transparent,
+      end: const Color(0xFF00B4CC).withOpacity(0.2),
+    ).animate(CurvedAnimation(parent: _highlightCtrl, curve: Curves.easeInOut));
+  }
+
+  @override
+  void dispose() {
+    _highlightCtrl.dispose();
+    super.dispose();
+  }
+
+  void _runHighlight() {
+    _highlightCtrl.forward().then((_) => _highlightCtrl.reverse());
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -479,111 +522,129 @@ class _SwipeableMessageState extends State<_SwipeableMessage> {
       },
       child: Transform.translate(
         offset: Offset(_offset > 70 ? 70 : _offset, 0),
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            if (_offset > 10)
-              Positioned(
-                left: -40,
-                top: 0,
-                bottom: 0,
-                child: Center(
-                  child: Icon(
-                    Icons.reply,
-                    color: const Color(0xFF00B4CC).withOpacity((_offset / 60).clamp(0.0, 1.0)),
-                    size: 24,
+        child: AnimatedBuilder(
+          animation: _highlightAnim,
+          builder: (context, child) {
+            return Container(
+              color: _highlightAnim.value,
+              child: child,
+            );
+          },
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              if (_offset > 10)
+                Positioned(
+                  left: -40,
+                  top: 0,
+                  bottom: 0,
+                  child: Center(
+                    child: Icon(
+                      Icons.reply,
+                      color: const Color(0xFF00B4CC).withOpacity((_offset / 60).clamp(0.0, 1.0)),
+                      size: 24,
+                    ),
                   ),
                 ),
-              ),
-            Align(
-              alignment: widget.isMine ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                constraints: BoxConstraints(
-                    maxWidth: MediaQuery.of(context).size.width * 0.72),
-                decoration: BoxDecoration(
-                  color: widget.isMine
-                      ? const Color(0xFF00B4CC)
-                      : const Color(0xFFFFFFFF),
-                  borderRadius: BorderRadius.only(
-                    topLeft: const Radius.circular(16),
-                    topRight: const Radius.circular(16),
-                    bottomLeft: Radius.circular(widget.isMine ? 16 : 4),
-                    bottomRight: Radius.circular(widget.isMine ? 4 : 16),
+              Align(
+                alignment: widget.isMine ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  margin: const EdgeInsets.all(8),
+                  constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.72),
+                  decoration: BoxDecoration(
+                    color: widget.isMine
+                        ? const Color(0xFF00B4CC)
+                        : const Color(0xFFFFFFFF),
+                    borderRadius: BorderRadius.only(
+                      topLeft: const Radius.circular(16),
+                      topRight: const Radius.circular(16),
+                      bottomLeft: Radius.circular(widget.isMine ? 16 : 4),
+                      bottomRight: Radius.circular(widget.isMine ? 4 : 16),
+                    ),
+                    border: widget.isMine
+                        ? null
+                        : Border.all(color: const Color(0xFFE2EBF0)),
+                    boxShadow: [
+                      BoxShadow(
+                          color: Colors.black.withOpacity(0.04),
+                          blurRadius: 4),
+                    ],
                   ),
-                  border: widget.isMine
-                      ? null
-                      : Border.all(color: const Color(0xFFE2EBF0)),
-                  boxShadow: [
-                    BoxShadow(
-                        color: Colors.black.withOpacity(0.04),
-                        blurRadius: 4),
-                  ],
-                ),
-                padding: const EdgeInsets.symmetric(
-                    horizontal: 14, vertical: 10),
-                child: Column(
-                  crossAxisAlignment: widget.isMine
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
-                  children: [
-                    if (widget.message.parentMessage != null)
-                      Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 10),
+                  child: Column(
+                    crossAxisAlignment: widget.isMine
+                        ? CrossAxisAlignment.end
+                        : CrossAxisAlignment.start,
+                    children: [
+                      if (widget.message.parentMessage != null)
+                        GestureDetector(
+                          onTap: () => widget.onJumpTo(widget.message.parentMessage!.id),
+                          child: Container(
+                            margin: const EdgeInsets.only(bottom: 8),
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: widget.isMine
+                                  ? Colors.white.withOpacity(0.15)
+                                  : const Color(0xFFF4F7FA),
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border(
+                                left: BorderSide(
+                                  color: widget.isMine ? Colors.white : const Color(0xFF00B4CC),
+                                  width: 3,
+                                ),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Text(
+                                  widget.message.parentMessage!.sender?.name ?? 'Kullanıcı',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 11,
+                                    color: widget.isMine ? Colors.white : const Color(0xFF00B4CC),
+                                  ),
+                                ),
+                                Text(
+                                  widget.message.parentMessage!.content,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: widget.isMine ? Colors.white.withOpacity(0.9) : const Color(0xFF9AAAB8),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      Text(
+                        widget.message.content,
+                        style: TextStyle(
+                          color:
+                              widget.isMine ? Colors.white : const Color(0xFF0F1923),
+                          fontSize: 14,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        timeago.format(widget.message.createdAt, locale: 'tr'),
+                        style: TextStyle(
                           color: widget.isMine
-                              ? Colors.white.withOpacity(0.15)
-                              : const Color(0xFFF4F7FA),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Text(
-                              widget.message.parentMessage!.sender?.name ?? 'Kullanıcı',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 11,
-                                color: widget.isMine ? Colors.white : const Color(0xFF00B4CC),
-                              ),
-                            ),
-                            Text(
-                              widget.message.parentMessage!.content,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: widget.isMine ? Colors.white.withOpacity(0.9) : const Color(0xFF9AAAB8),
-                              ),
-                            ),
-                          ],
+                              ? Colors.white.withOpacity(0.7)
+                              : const Color(0xFF9AAAB8),
+                          fontSize: 10,
                         ),
                       ),
-                    Text(
-                      widget.message.content,
-                      style: TextStyle(
-                        color:
-                            widget.isMine ? Colors.white : const Color(0xFF0F1923),
-                        fontSize: 14,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      timeago.format(widget.message.createdAt, locale: 'tr'),
-                      style: TextStyle(
-                        color: widget.isMine
-                            ? Colors.white.withOpacity(0.7)
-                            : const Color(0xFF9AAAB8),
-                        fontSize: 10,
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
