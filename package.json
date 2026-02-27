@@ -10,7 +10,7 @@
     "db:push": "prisma db push",
     "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
     "db:studio": "prisma studio",
-    "users:list": "ts-node --transpile-only --compiler-options '{\"module\":\"CommonJS\"}' -e \"const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.user.findMany({ select: { id: true, name: true, email: true, createdAt: true }, orderBy: { createdAt: 'desc' } }).then(u => { console.table(u); process.exit(0); });\""
+    "users:list": "ts-node --transpile-only --compiler-options '{\"module\":\"CommonJS\", \"moduleResolution\": \"node\"}' -e \"const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.user.findMany({ select: { id: true, name: true, email: true, createdAt: true }, orderBy: { createdAt: 'desc' } }).then(u => { console.table(u); process.exit(0); });\""
   },
   "dependencies": {
     "@prisma/client": "^5.22.0",
