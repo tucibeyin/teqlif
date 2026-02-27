@@ -18,7 +18,7 @@ final singleConversationProvider =
 final chatMessagesProvider =
     FutureProvider.family<List<MessageModel>, String>((ref, conversationId) async {
   final res = await ApiClient().get(Endpoints.messages,
-      params: {'conversationId': conversationId});
+      params: {'conversationId': conversationId, 'read': 'true'});
   final list = res.data as List<dynamic>;
   return list
       .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
