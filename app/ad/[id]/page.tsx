@@ -6,6 +6,7 @@ import BidForm from "./BidForm";
 import ImageSlider from "./ImageSlider";
 import { AdActions } from "./AdActions";
 import { FavoriteButton } from "@/components/FavoriteButton";
+import { findPath, categoryTree } from "@/lib/categories";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -159,7 +160,22 @@ export default async function AdDetailPage({
                         <div className="card-body">
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                                 <div>
-                                    <span className="ad-card-badge">{ad.category.icon} {ad.category.name}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '4px', flexWrap: 'wrap' }}>
+                                        {(() => {
+                                            const path = findPath(ad.category.slug, categoryTree);
+                                            if (path && path.length > 1) {
+                                                return path.map((node, i) => (
+                                                    <span key={node.slug} style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+                                                        {i > 0 && <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}>›</span>}
+                                                        <span className="ad-card-badge" style={{ fontSize: '0.75rem', padding: '2px 8px' }}>
+                                                            {node.icon ? `${node.icon} ` : ''}{node.name}
+                                                        </span>
+                                                    </span>
+                                                ));
+                                            }
+                                            return <span className="ad-card-badge">{ad.category.icon} {ad.category.name}</span>;
+                                        })()}
+                                    </div>
                                 </div>
                                 <span className="text-muted text-sm">{timeAgo(ad.createdAt)}</span>
                             </div>

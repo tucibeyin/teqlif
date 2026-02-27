@@ -40,6 +40,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final _msgCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   bool _sending = false;
+  bool _isFirstLoad = true;
 
   @override
   void initState() {
@@ -66,14 +67,18 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     super.dispose();
   }
 
-  void _scrollToBottom() {
+  void _scrollToBottom({bool instant = false}) {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
+        if (instant) {
+          _scrollCtrl.jumpTo(_scrollCtrl.position.maxScrollExtent);
+        } else {
+          _scrollCtrl.animateTo(
+            _scrollCtrl.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
       }
     });
   }
@@ -119,7 +124,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       chatMessagesProvider(widget.conversationId),
       (_, next) {
         if (next.hasValue) {
-          _scrollToBottom();
+          if (_isFirstLoad) {
+            _isFirstLoad = false;
+            _scrollToBottom(instant: true);
+          } else {
+            _scrollToBottom();
+          }
         }
       },
     );

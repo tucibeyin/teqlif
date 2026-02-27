@@ -53,9 +53,9 @@ function renderSidebarNode(
         padding: depth === 0 ? "0.5rem 0.75rem" : "0.375rem 0.625rem",
         paddingLeft: depth > 0 ? `${0.75 + depth * 0.75}rem` : undefined,
         borderRadius: "var(--radius-md)", cursor: "pointer",
-        fontWeight: isActive || hasActiveDescendant ? 700 : 500,
-        color: isActive || hasActiveDescendant ? "var(--primary)" : "var(--text-secondary)",
-        background: isActive || hasActiveDescendant ? "rgba(0,188,212,0.08)" : "transparent",
+        fontWeight: isActive ? 700 : 500,
+        color: isActive ? "var(--primary)" : "var(--text-secondary)",
+        background: isActive ? "rgba(0,188,212,0.08)" : "transparent",
         fontSize: depth === 0 ? "0.9rem" : "0.84rem",
         listStyle: "none", userSelect: "none",
       }}>

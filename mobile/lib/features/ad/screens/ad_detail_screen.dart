@@ -15,6 +15,7 @@ import 'package:timeago/timeago.dart' as timeago;
 
 import 'fullscreen_image_viewer.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
+import '../../../core/constants/categories.dart';
 
 final adDetailProvider =
     FutureProvider.family<AdModel, String>((ref, id) async {
@@ -285,18 +286,57 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                           ),
                         ),
                       const SizedBox(height: 12),
-                      // Badge row
-                      Row(
+                      // Breadcrumb + expired chip
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
+                          // Breadcrumb: Gayrimenkul › Konut › Satılık › Daire
                           if (ad.category != null)
-                            _Chip('${ad.category!.icon} ${ad.category!.name}',
+                            (() {
+                              final path = findPath(ad.category!.slug);
+                              if (path != null && path.length > 1) {
+                                return Wrap(
+                                  spacing: 4,
+                                  runSpacing: 4,
+                                  children: path.asMap().entries.map((entry) {
+                                    final i = entry.key;
+                                    final node = entry.value;
+                                    return Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (i > 0)
+                                          const Padding(
+                                            padding: EdgeInsets.symmetric(horizontal: 2),
+                                            child: Text('›',
+                                                style: TextStyle(
+                                                    color: Color(0xFF9AAAB8),
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.bold)),
+                                          ),
+                                        _Chip(
+                                          node.icon.isNotEmpty
+                                              ? '${node.icon} ${node.name}'
+                                              : node.name,
+                                          color: const Color(0xFFE6F9FC),
+                                          textColor: const Color(0xFF008FA3),
+                                        ),
+                                      ],
+                                    );
+                                  }).toList(),
+                                );
+                              }
+                              return _Chip(
+                                '${ad.category!.icon} ${ad.category!.name}',
                                 color: const Color(0xFFE6F9FC),
-                                textColor: const Color(0xFF008FA3)),
-                          const SizedBox(width: 8),
-                          if (ad.isExpired)
+                                textColor: const Color(0xFF008FA3),
+                              );
+                            })(),
+                          if (ad.isExpired) ...[
+                            const SizedBox(height: 4),
                             _Chip('Süresi Doldu',
                                 color: const Color(0xFFFEF2F2),
                                 textColor: const Color(0xFFEF4444)),
+                          ],
                         ],
                       ),
                       const SizedBox(height: 12),

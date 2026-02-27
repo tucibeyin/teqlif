@@ -45,9 +45,10 @@ function MessagesContent() {
     const [isSending, setIsSending] = useState(false);
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const isFirstLoadRef = useRef(true);
 
-    const scrollToBottom = () => {
-        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
+        messagesEndRef.current?.scrollIntoView({ behavior });
     };
 
     useEffect(() => {
@@ -57,10 +58,7 @@ function MessagesContent() {
                 if (res.ok) {
                     const data = await res.json();
                     setConversations(data);
-                    // If no initial id and there are conversations, select the first one on desktop
-                    if (!initialConversationId && data.length > 0 && window.innerWidth > 768) {
-                        setActiveConversationId(data[0].id);
-                    }
+                    // Do NOT auto-select — user must click a conversation
                 }
             } catch (error) {
                 console.error("Failed to fetch conversations", error);
@@ -87,7 +85,10 @@ function MessagesContent() {
             if (res.ok) {
                 const data = await res.json();
                 setMessages(data);
-                setTimeout(scrollToBottom, 100);
+                // Instant scroll on first open, smooth on polling updates
+                const behavior = isFirstLoadRef.current ? "instant" : "smooth";
+                isFirstLoadRef.current = false;
+                setTimeout(() => scrollToBottom(behavior as ScrollBehavior), 50);
                 typeof window !== 'undefined' && window.dispatchEvent(new Event('messagesRead'));
             }
         } catch (error) {
@@ -97,6 +98,7 @@ function MessagesContent() {
 
     useEffect(() => {
         if (activeConversationId) {
+            isFirstLoadRef.current = true; // reset so next conversation open scrolls instantly
             fetchMessages(activeConversationId);
             // Optimistically clear unread count for the active conversation
             setConversations(prev => prev.map(c =>
