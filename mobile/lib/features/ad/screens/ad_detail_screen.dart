@@ -17,11 +17,7 @@ import 'fullscreen_image_viewer.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../core/constants/categories.dart';
 
-final adDetailProvider =
-    FutureProvider.family<AdModel, String>((ref, id) async {
-  final res = await ApiClient().get(Endpoints.adById(id));
-  return AdModel.fromJson(res.data as Map<String, dynamic>);
-});
+import '../providers/ad_detail_provider.dart';
 
 class AdDetailScreen extends ConsumerStatefulWidget {
   final String adId;

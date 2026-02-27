@@ -15,6 +15,7 @@ import 'core/api/endpoints.dart';
 import 'core/providers/auth_provider.dart';
 import 'features/notifications/providers/unread_counts_provider.dart';
 import 'features/notifications/providers/notifications_provider.dart';
+import 'features/ad/providers/ad_detail_provider.dart';
 import 'features/messages/screens/chat_screen.dart';
 import 'features/messages/screens/conversations_screen.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
