@@ -164,7 +164,7 @@ Future<void> _setupFCM(WidgetRef ref) async {
     for (final delay in [500, 3000, 8000, 15000]) {
       Future.delayed(Duration(milliseconds: delay), () {
         if (ref.read(authProvider).isAuthenticated) {
-          debugPrint('[FCM] Executing delayed refresh ($delay ms) for unread counts');
+          debugPrint('[FCM] Executing delayed invalidate ($delay ms) for unread counts');
           ref.invalidate(unreadCountsProvider);
           ref.invalidate(notificationsProvider);
         }
@@ -294,30 +294,11 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initLocalNotifications(ref);
       await _setupFCM(ref);
-      _startGlobalSyncTimer();
-    });
-  }
-
-  Timer? _syncTimer;
-
-  void _startGlobalSyncTimer() {
-    _syncTimer?.cancel();
-    // Refresh unread counts every 15 seconds as long as app is open and user is authed.
-    _syncTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
-      if (ref.read(authProvider).isAuthenticated) {
-        debugPrint('[SYNC] Global background unread count refresh triggered');
-        ref.invalidate(unreadCountsProvider);
-        // Also refresh conversations if we are NOT on the chat screen to avoid heavy polling
-        if (ref.read(activeChatIdProvider) == null) {
-          ref.read(conversationsProvider.notifier).refresh();
-        }
-      }
     });
   }
 
   @override
   void dispose() {
-    _syncTimer?.cancel();
     WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
@@ -329,7 +310,6 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
     // silently re-sync all badges and messages to catch any silent pushes we missed.
     if (state == AppLifecycleState.resumed) {
       if (ref.read(authProvider).isAuthenticated) {
-        ref.read(unreadCountsProvider.notifier).refresh();
         ref.read(conversationsProvider.notifier).refresh();
         
         final activeConvId = ref.read(activeChatIdProvider);

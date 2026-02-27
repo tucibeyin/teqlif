@@ -1,9 +1,11 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:dio/dio.dart';
 import '../../../../core/api/api_client.dart';
 import '../../../../core/api/endpoints.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
+import '../../../core/providers/auth_provider.dart';
 
 class UnreadCounts {
   final int messages;
@@ -23,26 +25,36 @@ class UnreadCounts {
   int get hashCode => messages.hashCode ^ notifications.hashCode;
 }
 
-class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
-  final Ref ref;
-  UnreadCountsNotifier(this.ref) : super(const AsyncValue.loading()) {
-    refresh();
+class UnreadCountsNotifier extends AsyncNotifier<UnreadCounts> {
+  Timer? _timer;
+
+  @override
+  FutureOr<UnreadCounts> build() async {
+    // Only start polling if authenticated
+    final auth = ref.watch(authProvider);
+    
+    _timer?.cancel();
+    if (auth.isAuthenticated) {
+      _timer = Timer.periodic(const Duration(seconds: 10), (_) {
+        if (state.hasValue) {
+           refresh();
+        }
+      });
+    }
+
+    ref.onDispose(() {
+      _timer?.cancel();
+    });
+
+    return _fetch();
   }
 
-  Future<void> refresh() async {
+  Future<UnreadCounts> _fetch() async {
     try {
-      if (!mounted) return;
-      // If we already have a value, don't wipe it out. Emitting loading 
-      // without copying the previous state causes the UI to flicker.
-      if (!state.hasValue) {
-        state = const AsyncValue.loading();
-      }
       final timestamp = DateTime.now().millisecondsSinceEpoch;
       final notificationsRes = await ApiClient().get(Endpoints.notifications, params: {'_t': timestamp});
       final messagesRes = await ApiClient().get(Endpoints.messagesUnread, params: {'_t': timestamp});
 
-      if (!mounted) return;
-      
       int unreadNotifications = 0;
       if (notificationsRes.data != null && notificationsRes.data['unreadCount'] != null) {
         unreadNotifications = notificationsRes.data['unreadCount'] as int;
@@ -62,30 +74,29 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
         }
       }
 
-      if (!mounted) return;
+      debugPrint('[API] Unread Counts Fetched: Messages: $unreadMessages, Notifications: $unreadNotifications (Poll)');
 
-      debugPrint('[API] Unread Counts Fetched: Messages: $unreadMessages, Notifications: $unreadNotifications');
-
-      state = AsyncValue.data(UnreadCounts(
+      return UnreadCounts(
         messages: unreadMessages,
         notifications: unreadNotifications,
-      ));
+      );
     } on DioException catch (e) {
-      if (!mounted) return;
       if (e.response?.statusCode == 401) {
-        // User not logged in, siliently return 0 counts
-        state = AsyncValue.data(UnreadCounts(messages: 0, notifications: 0));
-      } else {
-        state = AsyncValue.error(e, e.stackTrace);
+        return UnreadCounts(messages: 0, notifications: 0);
       }
-    } catch (e, st) {
-      if (!mounted) return;
-      state = AsyncValue.error(e, st);
+      rethrow;
     }
+  }
+
+  Future<void> refresh() async {
+    debugPrint('[SYNC] Provider refresh() called manually or via timer');
+    // Using copyWithPrevious ensures the old data is still available while loading
+    state = const AsyncLoading<UnreadCounts>().copyWithPrevious(state);
+    state = await AsyncValue.guard(() => _fetch());
   }
 }
 
 final unreadCountsProvider =
-    StateNotifierProvider<UnreadCountsNotifier, AsyncValue<UnreadCounts>>((ref) {
-  return UnreadCountsNotifier(ref);
+    AsyncNotifierProvider<UnreadCountsNotifier, UnreadCounts>(() {
+  return UnreadCountsNotifier();
 });
