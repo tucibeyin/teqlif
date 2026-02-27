@@ -64,7 +64,7 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
         state = AsyncValue.error(e, e.stackTrace);
       }
     } catch (e, st) {
-      if (!ref.mounted) return;
+      if (!mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
