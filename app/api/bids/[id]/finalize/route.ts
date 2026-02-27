@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getMobileUser } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
-import { sendPushNotification } from '@/lib/fcm';
+import { sendPushNotification, getUnreadCount } from '@/lib/fcm';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/lib/logger';
 
@@ -87,11 +87,13 @@ export async function POST(
 
         // Send push notification outside the transaction
         if (bid.user.fcmToken) {
+            const badgeCount = await getUnreadCount(bid.userId);
             await sendPushNotification(
                 bid.user.fcmToken,
                 'Satış Tamamlandı! 🤝',
                 `${bid.ad.title} ilanı için satış süreci tamamlandı. Hayırlı olsun!`,
-                { type: 'SYSTEM', link: `/ad/${bid.adId}` }
+                { type: 'SYSTEM', link: `/ad/${bid.adId}` },
+                badgeCount
             ).catch(err => console.error("FCM Send Error:", err));
         }
 

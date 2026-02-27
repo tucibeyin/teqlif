@@ -46,13 +46,44 @@ if (!admin.apps.length) {
 }
 
 /**
+ * Calculates the total unread count for a user (messages + notifications)
+ */
+export async function getUnreadCount(userId: string): Promise<number> {
+    const { prisma } = await import('./prisma');
+
+    const [unreadMessages, unreadNotifications] = await Promise.all([
+        prisma.message.count({
+            where: {
+                conversation: {
+                    OR: [
+                        { user1Id: userId },
+                        { user2Id: userId }
+                    ]
+                },
+                senderId: { not: userId },
+                isRead: false
+            }
+        }),
+        prisma.notification.count({
+            where: {
+                userId: userId,
+                isRead: false
+            }
+        })
+    ]);
+
+    return unreadMessages + unreadNotifications;
+}
+
+/**
  * Sends a push notification to a specific FCM token
  */
 export async function sendPushNotification(
     token: string,
     title: string,
     body: string,
-    data?: { [key: string]: string }
+    data?: { [key: string]: string },
+    badge?: number
 ): Promise<boolean> {
     if (!admin.apps.length) {
         console.warn('Cannot send push notification: Firebase Admin is not initialized.');
@@ -83,7 +114,7 @@ export async function sendPushNotification(
                 payload: {
                     aps: {
                         sound: 'default',
-                        badge: 1,
+                        badge: badge ?? 1,
                     },
                 },
             },

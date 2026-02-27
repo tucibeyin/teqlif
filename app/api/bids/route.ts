@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { actionRatelimiter } from "@/lib/rate-limit";
 import { getMobileUser } from "@/lib/mobile-auth";
-import { sendPushNotification } from "@/lib/fcm";
+import { sendPushNotification, getUnreadCount } from "@/lib/fcm";
 import { logger } from "@/lib/logger";
 import { revalidatePath } from "next/cache";
 
@@ -135,11 +135,13 @@ export async function POST(req: NextRequest) {
 
         // Send push notification
         if (ad.user?.fcmToken) {
+            const badgeCount = await getUnreadCount(ad.userId);
             await sendPushNotification(
                 ad.user.fcmToken,
                 'Yeni Teklif Var! 💰',
                 `${bid.user.name} "${ad.title}" ilanına ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teklif verdi.`,
-                { type: 'BID_RECEIVED', link: `/ad/${ad.id}` }
+                { type: 'BID_RECEIVED', link: `/ad/${ad.id}` },
+                badgeCount
             ).catch(err => console.error("FCM Send Error:", err));
         }
 

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { getMobileUser } from '@/lib/mobile-auth';
-import { sendPushNotification } from '@/lib/fcm';
+import { sendPushNotification, getUnreadCount } from '@/lib/fcm';
 
 export async function GET(request: Request) {
     try {
@@ -147,11 +147,13 @@ export async function POST(request: Request) {
 
         // Send push notification outside the transaction
         if (recipient?.fcmToken) {
+            const badgeCount = await getUnreadCount(recipientId);
             await sendPushNotification(
                 recipient.fcmToken,
                 'Yeni Mesaj 💬',
                 `${currentUser.name}: ${content.substring(0, 50)}${content.length > 50 ? '...' : ''}`,
-                { type: 'NEW_MESSAGE', link: `/dashboard/messages?conversationId=${conversationId}` }
+                { type: 'NEW_MESSAGE', link: `/dashboard/messages?conversationId=${conversationId}` },
+                badgeCount
             ).catch(err => console.error("FCM Send Error:", err));
         }
 
