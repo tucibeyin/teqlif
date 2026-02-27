@@ -69,7 +69,7 @@ export async function PATCH(
                     where: {
                         adId: bid.adId,
                         status: 'ACCEPTED',
-                        id: { not: bidId } // Exclude the one we just rejected
+                        id: { not: bidId } // Exclude the one we just rejected/cancelled
                     }
                 });
 

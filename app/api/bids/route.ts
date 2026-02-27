@@ -71,9 +71,8 @@ export async function POST(req: NextRequest) {
         }
 
         if (ad.status !== "ACTIVE") {
-            const errorMsg = `Bu ilan artık aktif değil (İlan Durumu: ${ad.status})`;
             logger.warn("Bid rejected: Ad not active", { adId, adStatus: ad.status, userId: user.id });
-            return NextResponse.json({ error: errorMsg }, { status: 400 });
+            return NextResponse.json({ error: "Bu ilan artık aktif değil." }, { status: 400 });
         }
 
         logger.info("Processing bid", { adId, amount, userId: user.id });
