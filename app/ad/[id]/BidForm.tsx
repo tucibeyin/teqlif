@@ -18,8 +18,8 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
     const formatted = new Intl.NumberFormat("tr-TR", {
         style: "currency",
         currency: "TRY",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
     });
 
     async function handleBid(e: React.FormEvent) {
@@ -91,9 +91,8 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
                             }
                         }}
                         required
-                        style={{ paddingRight: "3rem" }}
+                        style={{ paddingRight: "1rem" }}
                     />
-                    <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
                 </div>
                 <span className="text-muted" style={{ fontSize: "0.75rem", marginTop: "0.25rem", display: "block" }}>
                     Minimum: {formatted.format(currentHighest + minStep)}

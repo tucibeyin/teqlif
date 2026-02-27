@@ -294,9 +294,9 @@ export default function PostAdPage() {
                                                 else setDisplayPrice(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
                                             }}
                                             required
-                                            style={{ paddingRight: "3rem" }}
+                                            style={{ paddingRight: "1rem" }}
                                         />
-                                        <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+
                                     </div>
                                     <input type="hidden" name="price" value={displayPrice.replace(/\./g, "")} />
                                 </div>
@@ -316,9 +316,9 @@ export default function PostAdPage() {
                                                 if (!val) setDisplayStartingBid("");
                                                 else setDisplayStartingBid(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
                                             }}
-                                            style={{ paddingRight: "3rem" }}
+                                            style={{ paddingRight: "1rem" }}
                                         />
-                                        <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+
                                     </div>
                                     <input type="hidden" name="startingBid" value={displayStartingBid.replace(/\./g, "")} />
                                 </div>
@@ -342,9 +342,9 @@ export default function PostAdPage() {
                                                     else setDisplayMinBidStep(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
                                                 }}
                                                 required={!isFixedPrice}
-                                                style={{ paddingRight: "3rem" }}
+                                                style={{ paddingRight: "1rem" }}
                                             />
-                                            <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+
                                         </div>
                                         <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
                                         <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
@@ -367,9 +367,9 @@ export default function PostAdPage() {
                                                     if (!val) setDisplayBuyItNowPrice("");
                                                     else setDisplayBuyItNowPrice(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
                                                 }}
-                                                style={{ paddingRight: "3rem" }}
+                                                style={{ paddingRight: "1rem" }}
                                             />
-                                            <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+
                                         </div>
                                         <input type="hidden" name="buyItNowPrice" value={displayBuyItNowPrice.replace(/\./g, "")} />
                                         <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>

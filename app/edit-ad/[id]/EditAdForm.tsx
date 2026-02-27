@@ -225,9 +225,9 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                                 else setDisplayPrice(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
                                             }}
                                             required
-                                            style={{ paddingRight: "3rem" }}
+                                            style={{ paddingRight: "1rem" }}
                                         />
-                                        <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+
                                     </div>
                                     <input type="hidden" name="price" value={displayPrice.replace(/\./g, "")} />
                                 </div>
@@ -248,9 +248,9 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                                 else e.target.value = new Intl.NumberFormat("tr-TR").format(parseInt(val, 10));
                                                 document.getElementById("actualStartingBid")!.setAttribute("value", val);
                                             }}
-                                            style={{ paddingRight: "3rem" }}
+                                            style={{ paddingRight: "1rem" }}
                                         />
-                                        <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+
                                     </div>
                                     <input type="hidden" name="startingBid" id="actualStartingBid" value={ad.startingBid !== null ? ad.startingBid.toString() : ""} />
                                 </div>
@@ -280,9 +280,9 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                                     }
                                                 }}
                                                 required
-                                                style={{ paddingRight: "3rem" }}
+                                                style={{ paddingRight: "1rem" }}
                                             />
-                                            <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+
                                         </div>
                                         <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
                                         <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
@@ -306,9 +306,9 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                                     else setDisplayBuyItNowPrice(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
                                                     document.getElementById("actualBuyItNowPrice")!.setAttribute("value", val);
                                                 }}
-                                                style={{ paddingRight: "3rem" }}
+                                                style={{ paddingRight: "1rem" }}
                                             />
-                                            <span style={{ position: "absolute", right: "1rem", color: "var(--text-muted)", pointerEvents: "none" }}>,00</span>
+
                                         </div>
                                         <input type="hidden" name="buyItNowPrice" id="actualBuyItNowPrice" value={ad.buyItNowPrice !== null ? ad.buyItNowPrice.toString() : ""} />
                                         <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>

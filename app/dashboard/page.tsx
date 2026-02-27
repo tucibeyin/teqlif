@@ -10,8 +10,8 @@ function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
         style: "currency",
         currency: "TRY",
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2,
+        minimumFractionDigits: 0,
+        maximumFractionDigits: 0,
     }).format(price);
 }
 
