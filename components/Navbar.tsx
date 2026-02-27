@@ -25,7 +25,7 @@ export async function Navbar() {
                                 </Link>
                                 <NotificationBell />
                                 <Link href="/dashboard" className="btn btn-ghost btn-sm">
-                                    Panelim
+                                    Hesabım
                                 </Link>
                                 <MessageBell />
                                 <form action={async () => {

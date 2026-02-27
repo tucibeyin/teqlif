@@ -60,7 +60,7 @@ class MainShell extends ConsumerWidget {
                 const NavigationDestination(
                   icon: Icon(Icons.dashboard_outlined),
                   selectedIcon: Icon(Icons.dashboard),
-                  label: 'Panelim',
+                  label: 'Hesabım',
                 ),
                 NavigationDestination(
                   icon: Container(
