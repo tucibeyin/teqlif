@@ -44,6 +44,15 @@ void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
   
   String route = (type == 'NEW_MESSAGE') ? '/messages' : '/notifications';
 
+  if ((type == 'BID_RECEIVED' || type == 'BID_ACCEPTED') && link != null) {
+    try {
+      final adId = link.split('/').last;
+      if (adId.isNotEmpty) {
+        ref.invalidate(adDetailProvider(adId));
+      }
+    } catch (_) {}
+  }
+
   // If it's a message, try to extract specific conversation ID for deep linking
   if (type == 'NEW_MESSAGE' && link != null) {
     try {
