@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getMobileUser } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
 
 export async function PATCH(
     request: Request,
@@ -53,16 +54,35 @@ export async function PATCH(
                 }
             });
 
-            // If the bid being cancelled was the ACCEPTED one, set ad status back to ACTIVE
-            if (bid.status === 'ACCEPTED') {
-                await tx.ad.update({
-                    where: { id: bid.adId },
-                    data: { status: 'ACTIVE' }
+            // If the ad is currently SOLD, check if we should reactivate it
+            const currentAd = await tx.ad.findUnique({
+                where: { id: bid.adId },
+                select: { status: true }
+            });
+
+            if (currentAd?.status === 'SOLD') {
+                const acceptedBidsCount = await tx.bid.count({
+                    where: {
+                        adId: bid.adId,
+                        status: 'ACCEPTED',
+                        id: { not: bidId } // Exclude the one we just rejected
+                    }
                 });
+
+                if (acceptedBidsCount === 0) {
+                    await tx.ad.update({
+                        where: { id: bid.adId },
+                        data: { status: 'ACTIVE' }
+                    });
+                }
             }
 
             return result;
         });
+
+        // Revalidate cache for the ad and the home page
+        revalidatePath('/');
+        revalidatePath(`/ad/${bid.adId}`);
 
         return NextResponse.json(updatedBid);
     } catch (error) {

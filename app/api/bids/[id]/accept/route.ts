@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getMobileUser } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 import { sendPushNotification } from '@/lib/fcm';
+import { revalidatePath } from 'next/cache';
 
 export async function PATCH(
     request: Request,
@@ -125,6 +126,10 @@ export async function PATCH(
                 { type: 'BID_ACCEPTED', link: `/ad/${bid.adId}` }
             ).catch(err => console.error("FCM Send Error:", err));
         }
+
+        // Revalidate cache for the ad and the home page
+        revalidatePath('/');
+        revalidatePath(`/ad/${bid.adId}`);
 
         return NextResponse.json(result);
     } catch (error) {
