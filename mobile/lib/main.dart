@@ -14,6 +14,7 @@ import 'core/api/api_client.dart';
 import 'core/api/endpoints.dart';
 import 'core/providers/auth_provider.dart';
 import 'features/notifications/providers/unread_counts_provider.dart';
+import 'features/notifications/providers/notifications_provider.dart';
 import 'features/messages/screens/chat_screen.dart';
 import 'features/messages/screens/conversations_screen.dart';
 import 'package:flutter_app_badger/flutter_app_badger.dart';
@@ -136,6 +137,7 @@ Future<void> _setupFCM(WidgetRef ref) async {
     
     // Always refresh the global bottom nav unread badges
     ref.read(unreadCountsProvider.notifier).refresh();
+    ref.invalidate(notificationsProvider);
     
     final payloadData = message.data;
     final type = payloadData['type'] as String?;

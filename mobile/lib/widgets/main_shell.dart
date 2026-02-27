@@ -3,6 +3,8 @@ import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/home/screens/home_screen.dart';
 import '../features/notifications/providers/unread_counts_provider.dart';
+import '../features/notifications/providers/notifications_provider.dart';
+import '../features/messages/screens/conversations_screen.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -43,10 +45,12 @@ class MainShell extends ConsumerWidget {
                     break;
                   case 3:
                     ref.read(unreadCountsProvider.notifier).refresh();
+                    ref.read(conversationsProvider.notifier).refresh();
                     context.go('/messages');
                     break;
                   case 4:
                     ref.read(unreadCountsProvider.notifier).refresh();
+                    ref.invalidate(notificationsProvider);
                     context.go('/notifications');
                     break;
                 }
