@@ -635,7 +635,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                       ],
                       const SizedBox(height: 24),
                       // Bid or Buy section
-                      if (!isOwner && !ad.isExpired) ...[
+                      if (!isOwner && !ad.isExpired && ad.status == 'ACTIVE') ...[
                         if (ad.isFixedPrice) ...[
                           const SizedBox(height: 24),
                         ] else ...[
