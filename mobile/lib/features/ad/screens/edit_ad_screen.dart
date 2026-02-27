@@ -81,7 +81,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
             ? formatter.formatDouble(ad.buyItNowPrice!)
             : '';
         final pathNodes = findPath(ad.category?.slug ?? '');
-        _selectedPath = pathNodes?.map((n) => n.slug).toList() ?? [];
+        _selectedPath = pathNodes?.map((CategoryNode n) => n.slug).toList() ?? [];
         _selectedProvinceId = ad.province?.id;
         _selectedDistrictId = ad.district?.id;
         _loading = false;

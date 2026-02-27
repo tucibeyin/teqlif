@@ -147,7 +147,6 @@ final List<CategoryNode> categoryTree = [
       CategoryNode(slug: "vasita-otomobil-yuki", name: "Yuki", children: [CategoryNode(slug: "vasita-otomobil-yuki-amy", name: "Amy", children: [CategoryNode(slug: "vasita-otomobil-yuki-amy-electric", name: "Electric", children: [CategoryNode(slug: _s("vasita-otomobil-yuki-amy-electric", "Standard"), name: "Standard")])]), CategoryNode(slug: "vasita-otomobil-yuki-tery", name: "Tery", children: [CategoryNode(slug: "vasita-otomobil-yuki-tery-electric", name: "Electric", children: [CategoryNode(slug: _s("vasita-otomobil-yuki-tery-electric", "Micro"), name: "Micro")])])])
     ]),
   ]),
-];
 
   // ── DİĞER KATEGORİLER ───────────────────────────────────────────────────
   CategoryNode(slug: 'elektronik', name: 'Elektronik', icon: '💻'),
