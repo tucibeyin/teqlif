@@ -415,10 +415,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                           : const Icon(Icons.send),
                       style: IconButton.styleFrom(
                           backgroundColor: const Color(0xFF00B4CC)),
-                    ),
-                  ],
-                ),
-              );
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            );
               },
               loading: () => const SizedBox(),
               error: (_, __) => const SizedBox(),
