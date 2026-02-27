@@ -470,25 +470,30 @@ export default async function AdDetailPage({
                                                             {timeAgo(bid.createdAt)}
                                                         </div>
                                                     </div>
-                                                    {bid.status === 'ACCEPTED' && (
-                                                        <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
-                                                    )}
-                                                    {bid.status === 'REJECTED' && (
-                                                        <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
-                                                    )}
+                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                                        {(isOwner || (session?.user?.id === bid.userId)) && (
+                                                            <AdActions
+                                                                actionType="MESSAGE"
+                                                                adId={ad.id}
+                                                                sellerId={isOwner ? bid.userId : ad.userId}
+                                                                currentUser={session?.user}
+                                                                isMessageBidder={true}
+                                                                initialMessage={isOwner
+                                                                    ? `"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`
+                                                                    : `"${ad.title}" (İlan No: ${ad.id}) ilanına verdiğim teklif hakkında iletişime geçmek istiyorum.`
+                                                                }
+                                                            />
+                                                        )}
+                                                        {bid.status === 'ACCEPTED' && (
+                                                            <span className="badge badge-active" style={{ fontSize: '0.7rem' }}>Kabul Edildi</span>
+                                                        )}
+                                                        {bid.status === 'REJECTED' && (
+                                                            <span className="badge" style={{ fontSize: '0.7rem', background: 'rgba(239,68,68,0.1)', color: '#ef4444' }}>Reddedildi</span>
+                                                        )}
+                                                    </div>
                                                 </div>
                                                 {isOwner && (
                                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap', marginTop: '4px' }}>
-                                                        {/* Her zaman görünür olan mesaj butonu */}
-                                                        <AdActions
-                                                            actionType="MESSAGE"
-                                                            adId={ad.id}
-                                                            sellerId={bid.user.id}
-                                                            currentUser={session?.user}
-                                                            isMessageBidder={true}
-                                                            initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`}
-                                                        />
-
                                                         {/* Sadece Kabul Edilmiş teklifler için */}
                                                         {bid.status === 'ACCEPTED' && (
                                                             <>
