@@ -931,7 +931,7 @@ class _BidTile extends StatelessWidget {
                   if (accepted) ...[
                     _ActionIconButton(
                       icon: Icons.check_circle,
-                      label: 'Satışı Tamamla',
+                      label: 'SAT',
                       color: Colors.green,
                       onPressed: onFinalize,
                     ),
@@ -1004,6 +1004,15 @@ class _ActionIconButton extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             Icon(icon, size: 20, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(
+                color: color,
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ],
         ),
       ),

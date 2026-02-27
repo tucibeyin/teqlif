@@ -242,7 +242,7 @@ export function AdActions({
                 }}
             >
                 <CheckCircle size={14} />
-                {isLoading ? "..." : "Satışı Tamamla"}
+                {isLoading ? "..." : "SAT"}
             </button>
         );
     }
