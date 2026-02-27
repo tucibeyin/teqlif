@@ -348,38 +348,52 @@ export function GlobalChatWidget() {
                                         })}
                                         <div ref={messagesEndRef} />
                                     </div>
-                                    <form onSubmit={handleSend} style={{ display: 'flex', padding: '12px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                                        <input
-                                            type="text"
-                                            value={newMessage}
-                                            onChange={(e) => setNewMessage(e.target.value)}
-                                            placeholder="Mesaj yaz..."
-                                            style={{
-                                                flex: 1,
-                                                padding: '8px 12px',
-                                                border: '1px solid var(--border)',
-                                                borderRadius: '20px',
-                                                outline: 'none',
-                                                background: 'var(--bg-secondary)',
-                                                color: 'var(--text-primary)'
-                                            }}
-                                        />
-                                        <button
-                                            type="submit"
-                                            disabled={!newMessage.trim()}
-                                            style={{
-                                                background: 'none',
-                                                border: 'none',
-                                                color: newMessage.trim() ? 'var(--primary)' : 'var(--text-muted)',
-                                                padding: '0 8px',
-                                                cursor: newMessage.trim() ? 'pointer' : 'default',
-                                                display: 'flex',
-                                                alignItems: 'center'
-                                            }}
-                                        >
-                                            <Send size={20} />
-                                        </button>
-                                    </form>
+                                    {conv?.ad ? (
+                                        <form onSubmit={handleSend} style={{ display: 'flex', padding: '12px', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
+                                            <input
+                                                type="text"
+                                                value={newMessage}
+                                                onChange={(e) => setNewMessage(e.target.value)}
+                                                placeholder="Mesaj yaz..."
+                                                style={{
+                                                    flex: 1,
+                                                    padding: '8px 12px',
+                                                    border: '1px solid var(--border)',
+                                                    borderRadius: '20px',
+                                                    outline: 'none',
+                                                    background: 'var(--bg-secondary)',
+                                                    color: 'var(--text-primary)'
+                                                }}
+                                            />
+                                            <button
+                                                type="submit"
+                                                disabled={!newMessage.trim()}
+                                                style={{
+                                                    background: 'none',
+                                                    border: 'none',
+                                                    color: newMessage.trim() ? 'var(--primary)' : 'var(--text-muted)',
+                                                    padding: '0 8px',
+                                                    cursor: newMessage.trim() ? 'pointer' : 'default',
+                                                    display: 'flex',
+                                                    alignItems: 'center'
+                                                }}
+                                            >
+                                                <Send size={20} />
+                                            </button>
+                                        </form>
+                                    ) : (
+                                        <div style={{
+                                            padding: '12px',
+                                            borderTop: '1px solid var(--border)',
+                                            background: '#F9FAFB',
+                                            color: 'var(--text-muted)',
+                                            fontSize: '0.8rem',
+                                            textAlign: 'center',
+                                            fontStyle: 'italic'
+                                        }}>
+                                            Bu ilan yayından kaldırıldığı için mesaj gönderilemez.
+                                        </div>
+                                    )}
                                 </>
                             )}
                         </div>

@@ -413,26 +413,42 @@ function MessagesContent() {
                                     })}
                                 </div>
 
-                                {/* Mesaj Gönderme Formu */}
+                                {/* Mesaj Gönderme Formu or Disabled Message */}
                                 <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                                    <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
-                                        <input
-                                            type="text"
-                                            value={newMessage}
-                                            onChange={(e) => setNewMessage(e.target.value)}
-                                            placeholder="Bir mesaj yazın..."
-                                            className="input"
-                                            style={{ flex: 1 }}
-                                        />
-                                        <button
-                                            type="submit"
-                                            className="btn btn-primary"
-                                            disabled={isSending || !newMessage.trim()}
-                                            style={{ padding: '0 1.5rem' }}
-                                        >
-                                            {isSending ? "..." : <Send size={18} />}
-                                        </button>
-                                    </form>
+                                    {!activeConversation.ad ? (
+                                        <div style={{
+                                            textAlign: 'center',
+                                            padding: '0.5rem',
+                                            background: '#F9FAFB',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-muted)',
+                                            fontSize: '0.9rem',
+                                            fontWeight: 500,
+                                            fontStyle: 'italic',
+                                            border: '1px dashed var(--border)'
+                                        }}>
+                                            Bu ilan yayından kaldırıldığı için yeni mesaj gönderilemez.
+                                        </div>
+                                    ) : (
+                                        <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <input
+                                                type="text"
+                                                value={newMessage}
+                                                onChange={(e) => setNewMessage(e.target.value)}
+                                                placeholder="Bir mesaj yazın..."
+                                                className="input"
+                                                style={{ flex: 1 }}
+                                            />
+                                            <button
+                                                type="submit"
+                                                className="btn btn-primary"
+                                                disabled={isSending || !newMessage.trim()}
+                                                style={{ padding: '0 1.5rem' }}
+                                            >
+                                                {isSending ? "..." : <Send size={18} />}
+                                            </button>
+                                        </form>
+                                    )}
                                 </div>
                             </>
                         ) : (
