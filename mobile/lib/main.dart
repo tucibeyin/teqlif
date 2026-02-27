@@ -161,10 +161,11 @@ Future<void> _setupFCM(WidgetRef ref) async {
     
     // Multi-Stage Refresh: Trigger refreshes at different intervals to ensure 
     // we catch the backend update even if there's a slight delay or race condition.
-    for (final delay in [500, 3000, 8000]) {
+    for (final delay in [500, 3000, 8000, 15000]) {
       Future.delayed(Duration(milliseconds: delay), () {
         if (ref.read(authProvider).isAuthenticated) {
-          ref.read(unreadCountsProvider.notifier).refresh();
+          debugPrint('[FCM] Executing delayed refresh ($delay ms) for unread counts');
+          ref.invalidate(unreadCountsProvider);
           ref.invalidate(notificationsProvider);
         }
       });
@@ -301,10 +302,11 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
 
   void _startGlobalSyncTimer() {
     _syncTimer?.cancel();
-    // Refresh unread counts every 30 seconds as long as app is open and user is authed.
-    _syncTimer = Timer.periodic(const Duration(seconds: 30), (timer) {
+    // Refresh unread counts every 15 seconds as long as app is open and user is authed.
+    _syncTimer = Timer.periodic(const Duration(seconds: 15), (timer) {
       if (ref.read(authProvider).isAuthenticated) {
-        ref.read(unreadCountsProvider.notifier).refresh();
+        debugPrint('[SYNC] Global background unread count refresh triggered');
+        ref.invalidate(unreadCountsProvider);
         // Also refresh conversations if we are NOT on the chat screen to avoid heavy polling
         if (ref.read(activeChatIdProvider) == null) {
           ref.read(conversationsProvider.notifier).refresh();

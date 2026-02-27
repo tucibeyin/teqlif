@@ -71,6 +71,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
     _timer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted) {
         ref.read(conversationsProvider.notifier).refresh();
+        ref.read(unreadCountsProvider.notifier).refresh();
       }
     });
   }

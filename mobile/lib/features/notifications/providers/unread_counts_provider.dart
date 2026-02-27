@@ -63,6 +63,8 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
 
       if (!mounted) return;
 
+      debugPrint('[API] Unread Counts Fetched: Messages: $unreadMessages, Notifications: $unreadNotifications');
+
       state = AsyncValue.data(UnreadCounts(
         messages: unreadMessages,
         notifications: unreadNotifications,
