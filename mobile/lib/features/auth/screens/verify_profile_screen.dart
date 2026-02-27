@@ -43,8 +43,12 @@ class _VerifyProfileScreenState extends ConsumerState<VerifyProfileScreen> {
       });
 
       if (res.statusCode == 200) {
-        // Sync user state
-        await ref.read(authProvider.notifier).checkAuth();
+        // Parse the updated user from response
+        final userData = res.data['user'] as Map<String, dynamic>;
+        final updatedUser = UserModel.fromJson(userData);
+        
+        // Sync user state immediately for Dashboard
+        await ref.read(authProvider.notifier).updateUserState(updatedUser);
         
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(

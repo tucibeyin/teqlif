@@ -88,8 +88,12 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
       });
 
       if (res.statusCode == 200) {
-        // Sync Riverpod user state
-        await ref.read(authProvider.notifier).checkAuth();
+        // Parse the updated user from response
+        final userData = res.data['user'] as Map<String, dynamic>;
+        final updatedUser = UserModel.fromJson(userData);
+        
+        // Sync Riverpod user state immediately
+        await ref.read(authProvider.notifier).updateUserState(updatedUser);
         
         if (mounted) {
           messenger.showSnackBar(

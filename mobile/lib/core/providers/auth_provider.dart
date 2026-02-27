@@ -222,6 +222,11 @@ class AuthNotifier extends StateNotifier<AuthState> {
     state = const AuthState(isLoading: false);
   }
 
+  Future<void> updateUserState(UserModel user) async {
+    await _storage.write(key: 'user_data', value: json.encode(user.toJson()));
+    state = state.copyWith(user: user, isLoading: false);
+  }
+
   String? get currentUserId => state.user?.id;
 }
 

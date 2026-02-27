@@ -101,7 +101,13 @@ export async function PATCH(request: Request) {
 
         return NextResponse.json({
             message: "Profil başarıyla güncellendi",
-            user: { name: updatedUser.name, email: updatedUser.email, phone: updatedUser.phone }
+            user: {
+                id: updatedUser.id,
+                name: updatedUser.name,
+                email: updatedUser.email,
+                phone: updatedUser.phone,
+                avatar: updatedUser.avatar
+            }
         });
 
     } catch (error) {
