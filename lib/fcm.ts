@@ -51,6 +51,8 @@ if (!admin.apps.length) {
 export async function getUnreadCount(userId: string): Promise<number> {
     const { prisma } = await import('./prisma');
 
+    console.log(`[BADGE_SYNC] Calculating unread count for user: ${userId}`);
+
     const [unreadMessages, unreadNotifications] = await Promise.all([
         prisma.message.count({
             where: {
@@ -72,7 +74,10 @@ export async function getUnreadCount(userId: string): Promise<number> {
         })
     ]);
 
-    return unreadMessages + unreadNotifications;
+    const total = unreadMessages + unreadNotifications;
+    console.log(`[BADGE_SYNC] Result for ${userId} -> Messages: ${unreadMessages}, Notifications: ${unreadNotifications}, Total: ${total}`);
+
+    return total;
 }
 
 /**
@@ -96,6 +101,8 @@ export async function sendPushNotification(
     }
 
     try {
+        console.log(`[FCM] Sending push to token: ${token.substring(0, 10)}... with badge: ${badge}`);
+
         const payload: admin.messaging.Message = {
             token,
             notification: {
@@ -114,17 +121,17 @@ export async function sendPushNotification(
                 payload: {
                     aps: {
                         sound: 'default',
-                        badge: badge ?? 1,
+                        badge: (badge !== undefined && badge !== null) ? badge : 1,
                     },
                 },
             },
         };
 
         const response = await admin.messaging().send(payload);
-        console.log('Successfully sent message:', response);
+        console.log('[FCM] Successfully sent message:', response);
         return true;
     } catch (error) {
-        console.error('Error sending message:', error);
+        console.error('[FCM] Error sending message:', error);
         return false;
     }
 }
