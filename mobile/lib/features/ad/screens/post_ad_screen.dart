@@ -61,6 +61,86 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
     super.dispose();
   }
 
+  void _showSearchableSheet(
+    String title,
+    List<CategoryNode> options,
+    void Function(String slug) onSelected,
+  ) {
+    String query = '';
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setSheetState) {
+          final filtered = query.isEmpty
+              ? options
+              : options
+                  .where((o) =>
+                      o.name.toLowerCase().contains(query.toLowerCase()))
+                  .toList();
+          return DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.7,
+            maxChildSize: 0.95,
+            builder: (_, scrollCtrl) => Column(
+              children: [
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(title,
+                            style: const TextStyle(
+                                fontWeight: FontWeight.bold, fontSize: 16)),
+                      ),
+                      IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.pop(ctx)),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
+                  child: TextField(
+                    autofocus: true,
+                    decoration: InputDecoration(
+                      hintText: '$title ara...',
+                      prefixIcon: const Icon(Icons.search),
+                      contentPadding: const EdgeInsets.symmetric(vertical: 0),
+                    ),
+                    onChanged: (v) => setSheetState(() => query = v),
+                  ),
+                ),
+                Expanded(
+                  child: ListView.builder(
+                    controller: scrollCtrl,
+                    itemCount: filtered.length,
+                    itemBuilder: (_, i) {
+                      final o = filtered[i];
+                      final label = o.icon.isNotEmpty
+                          ? '${o.icon} ${o.name}'
+                          : o.name;
+                      return ListTile(
+                        title: Text(label),
+                        onTap: () {
+                          Navigator.pop(ctx);
+                          onSelected(o.slug);
+                        },
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+
   Future<void> _showImageSourceSheet() async {
     showModalBottomSheet(
       context: context,
@@ -315,10 +395,67 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
             ...List.generate(_selectedPath.length + 1, (level) {
               final opts = _childrenAt(level);
               if (opts.isEmpty) return const SizedBox.shrink();
-              final labels = ['Ana Kategori', 'Alt Kategori', 'Kategori Türü', 'İlan Türü'];
-              final label = level < labels.length ? labels[level] : 'İlan Türü';
+              const labels = [
+                'Ana Kategori',
+                'Alt Kategori',
+                'Marka',
+                'Model',
+                'Motor / Versiyon',
+                'Donanım',
+              ];
+              final label = level < labels.length ? labels[level] : 'Seçiniz';
               final currentVal =
                   level < _selectedPath.length ? _selectedPath[level] : null;
+              final currentNode = currentVal != null ? findNode(currentVal) : null;
+              final displayText = currentNode != null
+                  ? (currentNode.icon.isNotEmpty
+                      ? '${currentNode.icon} ${currentNode.name}'
+                      : currentNode.name)
+                  : null;
+
+              // If many options, open a searchable bottom sheet
+              if (opts.length > 10) {
+                return Column(
+                  children: [
+                    GestureDetector(
+                      onTap: () => _showSearchableSheet(label, opts, (slug) {
+                        setState(() {
+                          _selectedPath = [..._selectedPath.sublist(0, level), slug];
+                        });
+                      }),
+                      child: Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                        decoration: BoxDecoration(
+                          border: Border.all(color: const Color(0xFFCCDDE3)),
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.white,
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                displayText ?? label,
+                                style: TextStyle(
+                                  color: displayText != null
+                                      ? Colors.black87
+                                      : const Color(0xFF90A4AE),
+                                  fontSize: 15,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Icon(Icons.search, color: Color(0xFF00B4CC), size: 20),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+                );
+              }
+
+              // Few options: use dropdown
               return Column(
                 children: [
                   DropdownButtonFormField<String>(
@@ -329,8 +466,8 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                         .map((o) => DropdownMenuItem(
                             value: o.slug,
                             child: Text(
-                                o.icon.isNotEmpty ? '${o.icon} ${o.name}' : o.name,
-                                overflow: TextOverflow.ellipsis,
+                              o.icon.isNotEmpty ? '${o.icon} ${o.name}' : o.name,
+                              overflow: TextOverflow.ellipsis,
                             )))
                         .toList(),
                     onChanged: (v) {
