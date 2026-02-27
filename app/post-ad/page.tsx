@@ -61,6 +61,12 @@ export default function PostAdPage() {
         const fileInput = document.getElementById("images") as HTMLInputElement;
 
         if (fileInput && fileInput.files && fileInput.files.length > 0) {
+            if (fileInput.files.length > 10) {
+                setError("En fazla 10 fotoğraf yükleyebilirsiniz.");
+                setLoading(false);
+                return;
+            }
+
             for (let i = 0; i < fileInput.files.length; i++) {
                 const fileForm = new FormData();
                 fileForm.append("file", fileInput.files[i]);
@@ -428,7 +434,7 @@ export default function PostAdPage() {
                                 Fotoğraf
                             </h3>
                             <div className="form-group">
-                                <label htmlFor="images">İlan fotoğraflarını seçiniz (Birden fazla seçinebilirsiniz)</label>
+                                <label htmlFor="images">İlan fotoğraflarını seçiniz (En fazla 10 adet)</label>
                                 <input
                                     id="images"
                                     name="images"

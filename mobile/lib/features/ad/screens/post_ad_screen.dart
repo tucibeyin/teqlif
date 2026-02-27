@@ -379,6 +379,16 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                        ),
               ),
             ),
+            const SizedBox(height: 8),
+            const Text(
+              'En fazla 10 fotoğraf yükleyebilirsiniz.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: Color(0xFF9AAAB8),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
             const SizedBox(height: 16),
             TextField(
               controller: _titleCtrl,
