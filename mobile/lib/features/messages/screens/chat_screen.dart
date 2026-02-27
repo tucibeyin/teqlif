@@ -76,7 +76,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     });
     // Poll for new incoming messages every 5 seconds
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) {
+      if (mounted && WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
         ref.invalidate(chatMessagesProvider(widget.conversationId));
       }
     });

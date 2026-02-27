@@ -36,8 +36,9 @@ class UnreadCountsNotifier extends AsyncNotifier<UnreadCounts> {
     _timer?.cancel();
     if (auth.isAuthenticated) {
       _timer = Timer.periodic(const Duration(seconds: 10), (_) {
-        if (state.hasValue) {
-           refresh();
+        if (state.hasValue &&
+            WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
+          refresh();
         }
       });
     }

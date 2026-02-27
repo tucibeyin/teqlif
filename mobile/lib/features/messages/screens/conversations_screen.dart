@@ -69,7 +69,7 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
     });
     // Continuous polling fallback every 5 seconds while the screen is active
     _timer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (mounted) {
+      if (mounted && WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
         ref.read(conversationsProvider.notifier).refresh();
         ref.read(unreadCountsProvider.notifier).refresh();
       }
