@@ -17,7 +17,7 @@ export async function GET(request: Request) {
             include: {
                 user1: { select: { id: true, name: true, email: true, avatar: true } },
                 user2: { select: { id: true, name: true, email: true, avatar: true } },
-                ad: { select: { id: true, title: true, images: true } },
+                ad: { select: { id: true, title: true, images: true, status: true, winnerId: true, userId: true } },
                 messages: {
                     orderBy: { createdAt: 'desc' },
                     take: 1, // Get the latest message for preview
@@ -57,6 +57,17 @@ export async function POST(request: Request) {
 
         if (!userId) {
             return NextResponse.json({ message: 'Eksik veri: userId' }, { status: 400 });
+        }
+
+        if (adId) {
+            const ad = await prisma.ad.findUnique({
+                where: { id: adId },
+                select: { status: true, winnerId: true, userId: true }
+            });
+
+            if (ad?.status === 'SOLD' && ad.winnerId !== currentUser.id && ad.userId !== currentUser.id) {
+                return NextResponse.json({ message: 'Bu ilan satıldığı için yeni mesajlaşma başlatılamaz.' }, { status: 403 });
+            }
         }
 
         if (currentUser.id === userId) {

@@ -59,7 +59,10 @@ export async function POST(
             // 1. Mark ad as SOLD
             const updatedAd = await tx.ad.update({
                 where: { id: bid.adId },
-                data: { status: 'SOLD' },
+                data: {
+                    status: 'SOLD',
+                    winnerId: bid.userId
+                },
             });
 
             // 2. Create a notification for the buyer

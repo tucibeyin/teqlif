@@ -82,6 +82,8 @@ model Ad {
   userId     String
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  winnerId   String?
+
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 

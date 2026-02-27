@@ -26,7 +26,7 @@ interface Conversation {
     id: string;
     user1: User;
     user2: User;
-    ad: { id: string; title: string, images: string[] } | null;
+    ad: { id: string; title: string, images: string[], status: string, winnerId: string | null, userId: string } | null;
     messages: Message[];
     updatedAt: string;
     _count?: { messages: number };
@@ -428,6 +428,21 @@ function MessagesContent() {
                                             border: '1px dashed var(--border)'
                                         }}>
                                             Bu ilan yayından kaldırıldığı için yeni mesaj gönderilemez.
+                                        </div>
+                                    ) : activeConversation.ad.status === 'SOLD' &&
+                                        activeConversation.ad.winnerId !== currentUserId &&
+                                        activeConversation.ad.userId !== currentUserId ? (
+                                        <div style={{
+                                            textAlign: 'center',
+                                            padding: '0.75rem',
+                                            background: 'var(--bg-secondary)',
+                                            borderRadius: 'var(--radius-md)',
+                                            color: 'var(--text-muted)',
+                                            fontSize: '0.9rem',
+                                            fontWeight: 600,
+                                            border: '1px solid var(--border)'
+                                        }}>
+                                            İlan satıldı. Mesajlaşma sadece alıcı ve satıcı için aktiftir.
                                         </div>
                                     ) : (
                                         <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>

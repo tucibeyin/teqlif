@@ -24,7 +24,7 @@ export async function GET(
             include: {
                 user1: { select: { id: true, name: true, avatar: true } },
                 user2: { select: { id: true, name: true, avatar: true } },
-                ad: { select: { id: true, title: true, images: true } }
+                ad: { select: { id: true, title: true, images: true, status: true, winnerId: true, userId: true } }
             }
         });
 
