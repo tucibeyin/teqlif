@@ -19,7 +19,7 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
 
   Future<void> refresh() async {
     try {
-      if (!ref.mounted) return;
+      if (!mounted) return;
       // If we already have a value, don't wipe it out. Emitting loading 
       // without copying the previous state causes the UI to flicker.
       if (!state.hasValue) {
@@ -28,7 +28,7 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
       final notificationsRes = await ApiClient().get(Endpoints.notifications);
       final messagesRes = await ApiClient().get(Endpoints.messagesUnread);
 
-      if (!ref.mounted) return;
+      if (!mounted) return;
       
       int unreadNotifications = 0;
       if (notificationsRes.data != null && notificationsRes.data['unreadCount'] != null) {
@@ -49,14 +49,14 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
         }
       }
 
-      if (!ref.mounted) return;
+      if (!mounted) return;
 
       state = AsyncValue.data(UnreadCounts(
         messages: unreadMessages,
         notifications: unreadNotifications,
       ));
     } on DioException catch (e) {
-      if (!ref.mounted) return;
+      if (!mounted) return;
       if (e.response?.statusCode == 401) {
         // User not logged in, siliently return 0 counts
         state = AsyncValue.data(UnreadCounts(messages: 0, notifications: 0));
