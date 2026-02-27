@@ -789,6 +789,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                   bid: bid,
                                   isTop: i == 0,
                                   isOwner: isOwner,
+                                  adStatus: ad.status,
                                   onAccept: () => _acceptBid(bid.id),
                                   onCancel: () => _cancelBid(bid.id),
                                   onFinalize: () => _finalizeSale(bid.id),
@@ -836,6 +837,7 @@ class _BidTile extends StatelessWidget {
   final BidModel bid;
   final bool isTop;
   final bool isOwner;
+  final String adStatus;
   final VoidCallback onAccept;
   final VoidCallback onCancel;
   final VoidCallback onFinalize;
@@ -846,6 +848,7 @@ class _BidTile extends StatelessWidget {
     required this.bid,
     required this.isTop,
     required this.isOwner,
+    required this.adStatus,
     required this.onAccept,
     required this.onCancel,
     required this.onMessage,
@@ -906,7 +909,7 @@ class _BidTile extends StatelessWidget {
                       fontWeight: FontWeight.w500),
                 ),
               ),
-            if (isOwner && ad.status != 'SOLD') ...[
+            if (isOwner && adStatus != 'SOLD') ...[
               const SizedBox(height: 8),
               Row(
                 children: [
