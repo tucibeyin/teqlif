@@ -3,6 +3,7 @@ import "./globals.css";
 import { Navbar } from "@/components/Navbar";
 import { Providers } from "./providers";
 import { GlobalChatWidget } from "@/components/GlobalChatWidget";
+import TitleBadgeManager from "@/components/TitleBadgeManager";
 import { MobileAppBanner } from "@/components/MobileAppBanner";
 import { MobileGate } from "@/components/MobileGate";
 import Link from "next/link";
@@ -88,6 +89,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
+          <TitleBadgeManager />
           <MobileGate />
           <MobileAppBanner />
           <Navbar />
