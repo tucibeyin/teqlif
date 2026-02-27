@@ -45,15 +45,25 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _isFirstLoad = true;
   Timer? _pollTimer;
 
+  // Capture notifiers in initState so we don't need to use 'ref' in dispose()
+  // after the widget/element might already be defunct.
+  late StateController<String?> _activeChatNotifier;
+  late UnreadCountsNotifier _countsNotifier;
+  late ConversationsNotifier _convsNotifier;
+
   @override
   void initState() {
     super.initState();
+    _activeChatNotifier = ref.read(activeChatIdProvider.notifier);
+    _countsNotifier = ref.read(unreadCountsProvider.notifier);
+    _convsNotifier = ref.read(conversationsProvider.notifier);
+
     // Mark this chat as active so push notifications can silent-refresh it
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
-        ref.read(activeChatIdProvider.notifier).state = widget.conversationId;
+        _activeChatNotifier.state = widget.conversationId;
         // Immediate badge refresh when entering the chat
-        ref.read(unreadCountsProvider.notifier).refresh();
+        _countsNotifier.refresh();
       }
     });
     // Poll for new incoming messages every 5 seconds
@@ -67,14 +77,14 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   @override
   void dispose() {
     _pollTimer?.cancel();
-    final activeChatNotifier = ref.read(activeChatIdProvider.notifier);
-    final countsNotifier = ref.read(unreadCountsProvider.notifier);
-    final convsNotifier = ref.read(conversationsProvider.notifier);
+    // Use the captured notifiers. We use addPostFrameCallback to ensure 
+    // we don't update state during the build/dispose phase itself if possible,
+    // although for these specific side effects it's mostly about safety.
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      activeChatNotifier.state = null;
+      _activeChatNotifier.state = null;
       // Immediate badge refresh when leaving the chat
-      countsNotifier.refresh();
-      convsNotifier.refresh();
+      _countsNotifier.refresh();
+      _convsNotifier.refresh();
     });
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
