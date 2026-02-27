@@ -53,29 +53,28 @@ export async function getUnreadCount(userId: string): Promise<number> {
 
     console.log(`[BADGE_SYNC] Calculating unread count for user: ${userId}`);
 
-    const [unreadMessages, unreadNotifications] = await Promise.all([
-        prisma.message.count({
-            where: {
-                conversation: {
-                    OR: [
-                        { user1Id: userId },
-                        { user2Id: userId }
-                    ]
-                },
-                senderId: { not: userId },
-                isRead: false
-            }
-        }),
-        prisma.notification.count({
-            where: {
-                userId: userId,
-                isRead: false
-            }
-        })
-    ]);
+    const msgCount = await prisma.message.count({
+        where: {
+            conversation: {
+                OR: [
+                    { user1Id: userId },
+                    { user2Id: userId }
+                ]
+            },
+            senderId: { not: userId },
+            isRead: false
+        }
+    });
 
-    const total = unreadMessages + unreadNotifications;
-    console.log(`[BADGE_SYNC] Result for ${userId} -> Messages: ${unreadMessages}, Notifications: ${unreadNotifications}, Total: ${total}`);
+    const notifCount = await prisma.notification.count({
+        where: {
+            userId: userId,
+            isRead: false
+        }
+    });
+
+    const total = Number(msgCount) + Number(notifCount);
+    console.log(`[BADGE_SYNC] Detailed -> User: ${userId}, Msgs: ${msgCount}, Notifs: ${notifCount}, Total: ${total}`);
 
     return total;
 }
