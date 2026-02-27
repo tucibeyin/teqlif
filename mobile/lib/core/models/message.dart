@@ -57,11 +57,26 @@ class ConversationUserModel {
 class ConversationAdModel {
   final String id;
   final String title;
-  const ConversationAdModel({required this.id, required this.title});
+  final String status;
+  final String? winnerId;
+  final String userId;
+
+  const ConversationAdModel({
+    required this.id, 
+    required this.title,
+    required this.status,
+    this.winnerId,
+    required this.userId,
+  });
+
   factory ConversationAdModel.fromJson(Map<String, dynamic>? json) =>
       ConversationAdModel(
           id: json?['id'] as String? ?? '',
-          title: json?['title'] as String? ?? '');
+          title: json?['title'] as String? ?? '',
+          status: json?['status'] as String? ?? 'ACTIVE',
+          winnerId: json?['winnerId'] as String?,
+          userId: json?['userId'] as String? ?? '',
+      );
 }
 
 class ConversationModel {
