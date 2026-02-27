@@ -147,13 +147,21 @@ Future<void> _setupFCM(WidgetRef ref) async {
       // Extract conversationId from the deep link payload (e.g. /dashboard/messages?conversationId=123)
       final link = payloadData['link'] as String?;
       String? incomingConvId;
-      if (link != null && link.contains('conversationId=')) {
-        incomingConvId = Uri.parse(link).queryParameters['conversationId'];
+      if (link != null) {
+        try {
+          // link can be a path like /dashboard/messages?conversationId=...
+          // If it doesn't have a scheme, Uri.parse parses it as a path/query
+          final uri = Uri.parse(link);
+          incomingConvId = uri.queryParameters['conversationId'];
+          debugPrint('[FCM] Parsed conversationId: $incomingConvId from link: $link');
+        } catch (e) {
+          debugPrint('[FCM] Failed to parse link: $link error: $e');
+        }
       }
 
       // Check if the user is currently looking at this very conversation
       final activeConvId = ref.read(activeChatIdProvider);
-      if (incomingConvId != null && activeConvId == incomingConvId) {
+      if (incomingConvId != null && activeConvId != null && incomingConvId == activeConvId) {
         // User is currently chatting with this person!
         // Silently refresh the chat screen messages list
         ref.invalidate(chatMessagesProvider(incomingConvId));

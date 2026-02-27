@@ -37,10 +37,12 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
       }
 
       final totalUnread = unreadMessages + unreadNotifications;
-      if (totalUnread > 0) {
-        FlutterAppBadger.updateBadgeCount(totalUnread);
-      } else {
-        FlutterAppBadger.removeBadge();
+      if (await FlutterAppBadger.isAppBadgeSupported()) {
+        if (totalUnread > 0) {
+          FlutterAppBadger.updateBadgeCount(totalUnread);
+        } else {
+          FlutterAppBadger.removeBadge();
+        }
       }
 
       state = AsyncValue.data(UnreadCounts(

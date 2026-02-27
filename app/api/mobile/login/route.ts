@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 
-const JWT_SECRET = process.env.AUTH_SECRET || "fallback-secret-change-me";
+const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "fallback-secret-change-me";
 
 export async function POST(req: Request) {
     try {

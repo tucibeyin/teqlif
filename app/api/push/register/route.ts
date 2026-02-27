@@ -1,31 +1,16 @@
 import { NextResponse } from "next/server";
-import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import jwt from "jsonwebtoken";
-
-const JWT_SECRET = process.env.AUTH_SECRET || "fallback-secret-change-me";
-
-function verifyMobileToken(authHeader: string | null) {
-    if (!authHeader?.startsWith("Bearer ")) return null;
-    try {
-        return jwt.verify(authHeader.slice(7), JWT_SECRET) as { id: string };
-    } catch {
-        return null;
-    }
-}
+import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function POST(req: Request) {
     try {
-        // Support both web session and mobile JWT
-        const session = await auth();
-        const authHeader = req.headers.get("authorization");
-        const mobilePayload = verifyMobileToken(authHeader);
+        const currentUser = await getMobileUser(req);
 
-        const userId = session?.user?.id ?? mobilePayload?.id;
-
-        if (!userId) {
+        if (!currentUser) {
             return NextResponse.json({ message: "Yetkisiz erişim" }, { status: 401 });
         }
+
+        const userId = currentUser.id;
 
         const { fcmToken } = await req.json();
         if (!fcmToken) {
