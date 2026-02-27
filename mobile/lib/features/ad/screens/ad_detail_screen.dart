@@ -95,6 +95,36 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     }
   }
 
+  Future<void> _finalizeSale(String bidId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Satışı Tamamla'),
+        content: const Text(
+            'Dikkat! Satışın gerçekleştiğini onaylıyorsunuz. Bu işlemden sonra ilan PASİF (Satıldı) durumuna düşecektir. Emin misiniz?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('Vazgeç')),
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, true),
+              child: const Text('Evet, Satış Yapıldı',
+                  style: TextStyle(color: Colors.green))),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      await ApiClient().post(Endpoints.finalizeBid(bidId));
+      ref.invalidate(adDetailProvider(widget.adId));
+      _snack('Satış başarıyla tamamlandı! ✅');
+    } catch (_) {
+      _snack('İşlem başarısız.');
+    }
+  }
+
   Future<void> _messageBidder(String bidderId) async {
     try {
       final res = await ApiClient().post(Endpoints.conversations, data: {
@@ -761,6 +791,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                   isOwner: isOwner,
                                   onAccept: () => _acceptBid(bid.id),
                                   onCancel: () => _cancelBid(bid.id),
+                                  onFinalize: () => _finalizeSale(bid.id),
                                   onMessage: () => _messageBidder(bid.user!.id),
                                   formatPrice: _formatPrice,
                                 );
@@ -807,6 +838,7 @@ class _BidTile extends StatelessWidget {
   final bool isOwner;
   final VoidCallback onAccept;
   final VoidCallback onCancel;
+  final VoidCallback onFinalize;
   final VoidCallback onMessage;
   final String Function(double) formatPrice; // Added dependency for correct price formatting
 
@@ -817,6 +849,7 @@ class _BidTile extends StatelessWidget {
     required this.onAccept,
     required this.onCancel,
     required this.onMessage,
+    required this.onFinalize,
     required this.formatPrice,
   });
 
@@ -893,6 +926,13 @@ class _BidTile extends StatelessWidget {
                     ),
                   ],
                   if (accepted) ...[
+                    _ActionIconButton(
+                      icon: Icons.check_circle,
+                      label: 'Satışı Tamamla',
+                      color: Colors.green,
+                      onPressed: onFinalize,
+                    ),
+                    const SizedBox(width: 8),
                     _ActionIconButton(
                       icon: Icons.cancel_outlined,
                       label: 'İptal Et',

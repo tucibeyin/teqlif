@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageSquare, CheckCircle, XCircle } from "lucide-react";
 
 interface AdActionsProps {
-    actionType: "MESSAGE" | "ACCEPT_BID" | "CANCEL_BID";
+    actionType: "MESSAGE" | "ACCEPT_BID" | "CANCEL_BID" | "FINALIZE_SALE";
     adId?: string;
     sellerId?: string;
     bidId?: string;
@@ -38,8 +38,7 @@ export function AdActions({
 
         try {
             if (actionType === "MESSAGE") {
-                // Navigate to messages or open widget
-                // For now, we'll navigate to the messages panel and create a conversation if it doesn't exist
+                // ... (existing message logic)
                 const res = await fetch("/api/conversations", {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
@@ -48,16 +47,10 @@ export function AdActions({
 
                 if (res.ok) {
                     const conversation = await res.json();
-
-                    // If there's an initial message, try to send it before jumping to the conversation
                     if (initialMessage) {
                         try {
                             const currentUserId = currentUser.id;
                             const recipientId = conversation.user1Id === currentUserId ? conversation.user2Id : conversation.user1Id;
-
-                            // Let's only send if conversation is newly created or we just want to push context
-                            // The simplest approach is we just send it every time they click to start this context.
-                            // To avoid spam, typically we'd only send if new, but let's just send the context message 
                             await fetch('/api/messages', {
                                 method: 'POST',
                                 headers: { 'Content-Type': 'application/json' },
@@ -67,14 +60,13 @@ export function AdActions({
                             console.error("Failed to push initial context message", e);
                         }
                     }
-
                     router.push(`/dashboard/messages?id=${conversation.id}`);
                 } else {
                     const data = await res.json();
                     alert(data.message || "Mesajlaşma başlatılamadı.");
                 }
             } else if (actionType === "ACCEPT_BID" && bidId) {
-                if (!confirm("Bu teklifi kabul etmek istediğinize emin misiniz?")) {
+                if (!confirm("Bu teklifi kabul etmek istediğinize emin misiniz? (Sadece sohbet başlatılacaktır, ilan hala aktif kalacaktır)")) {
                     setIsLoading(false);
                     return;
                 }
@@ -84,8 +76,8 @@ export function AdActions({
                 });
 
                 if (res.ok) {
-                    alert("Teklif kabul edildi!");
-                    router.refresh(); // Refresh page to show status
+                    alert("Teklif kabul edildi! Şimdi alıcı ile iletişime geçebilirsiniz.");
+                    router.refresh();
                 } else {
                     const data = await res.json();
                     alert(data.message || "Teklif kabul edilemedi.");
@@ -102,10 +94,27 @@ export function AdActions({
 
                 if (res.ok) {
                     alert("Teklif iptal edildi.");
-                    router.refresh(); // Refresh page to show status
+                    router.refresh();
                 } else {
                     const data = await res.json();
                     alert(data.message || "Teklif iptal edilemedi.");
+                }
+            } else if (actionType === "FINALIZE_SALE" && bidId) {
+                if (!confirm("Dikkat! Satışın gerçekleştiğini onaylıyorsunuz. Bu işlemden sonra ilan PASİF (Satıldı) durumuna düşecektir. Emin misiniz?")) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                const res = await fetch(`/api/bids/${bidId}/finalize`, {
+                    method: "POST",
+                });
+
+                if (res.ok) {
+                    alert("Satış başarıyla tamamlandı! İlan yayından kaldırıldı.");
+                    router.refresh();
+                } else {
+                    const data = await res.json();
+                    alert(data.message || "Satış tamamlanamadı.");
                 }
             }
         } catch (error) {
@@ -185,7 +194,7 @@ export function AdActions({
                 }}
             >
                 <CheckCircle size={14} />
-                {isLoading ? "..." : "Kabul Et"}
+                {isLoading ? "..." : "Kabul Et ve Konuş"}
             </button>
         );
     }
@@ -209,6 +218,31 @@ export function AdActions({
             >
                 <XCircle size={14} />
                 {isLoading ? "..." : "İptal Et"}
+            </button>
+        );
+    }
+
+    if (actionType === "FINALIZE_SALE") {
+        return (
+            <button
+                onClick={handleAction}
+                disabled={isLoading}
+                className="btn btn-primary"
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '4px 12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 700,
+                    backgroundColor: 'var(--accent-green)',
+                    color: 'white',
+                    borderColor: 'var(--accent-green)',
+                    boxShadow: '0 2px 4px rgba(34, 197, 94, 0.2)'
+                }}
+            >
+                <CheckCircle size={14} />
+                {isLoading ? "..." : "Satışı Tamamla"}
             </button>
         );
     }

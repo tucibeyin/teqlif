@@ -535,10 +535,11 @@ export default async function AdDetailPage({
                                                     }}>
                                                         {bid.status === 'ACCEPTED' && (
                                                             <>
+                                                                <AdActions actionType="FINALIZE_SALE" bidId={bid.id} currentUser={session?.user} />
                                                                 {bid.user.phone && (
                                                                     <a
                                                                         href={`tel:${bid.user.phone}`}
-                                                                        className="btn btn-primary"
+                                                                        className="btn btn-secondary"
                                                                         title="Ara"
                                                                         style={{
                                                                             display: 'flex',

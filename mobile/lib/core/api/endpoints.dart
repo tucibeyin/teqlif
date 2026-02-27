@@ -28,6 +28,7 @@ class Endpoints {
   static const bids = '/api/bids';
   static String acceptBid(String id) => '/api/bids/$id/accept';
   static String cancelBid(String id) => '/api/bids/$id/cancel';
+  static String finalizeBid(String id) => '/api/bids/$id/finalize';
 
   // Favorites
   static const favorites = '/api/favorites';
