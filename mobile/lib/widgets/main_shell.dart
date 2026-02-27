@@ -75,26 +75,26 @@ class MainShell extends ConsumerWidget {
                 ),
                 NavigationDestination(
                   icon: Badge(
-                    isLabelVisible: (unreadCounts.value?.messages ?? 0) > 0,
-                    label: Text(unreadCounts.value?.messages.toString() ?? ''),
+                    isLabelVisible: (unreadCounts.valueOrNull?.messages ?? 0) > 0,
+                    label: Text(unreadCounts.valueOrNull?.messages.toString() ?? ''),
                     child: const Icon(Icons.message_outlined),
                   ),
                   selectedIcon: Badge(
-                    isLabelVisible: (unreadCounts.value?.messages ?? 0) > 0,
-                    label: Text(unreadCounts.value?.messages.toString() ?? ''),
+                    isLabelVisible: (unreadCounts.valueOrNull?.messages ?? 0) > 0,
+                    label: Text(unreadCounts.valueOrNull?.messages.toString() ?? ''),
                     child: const Icon(Icons.message),
                   ),
                   label: 'Mesajlar',
                 ),
                 NavigationDestination(
                   icon: Badge(
-                    isLabelVisible: (unreadCounts.value?.notifications ?? 0) > 0,
-                    label: Text(unreadCounts.value?.notifications.toString() ?? ''),
+                    isLabelVisible: (unreadCounts.valueOrNull?.notifications ?? 0) > 0,
+                    label: Text(unreadCounts.valueOrNull?.notifications.toString() ?? ''),
                     child: const Icon(Icons.notifications_outlined),
                   ),
                   selectedIcon: Badge(
-                    isLabelVisible: (unreadCounts.value?.notifications ?? 0) > 0,
-                    label: Text(unreadCounts.value?.notifications.toString() ?? ''),
+                    isLabelVisible: (unreadCounts.valueOrNull?.notifications ?? 0) > 0,
+                    label: Text(unreadCounts.valueOrNull?.notifications.toString() ?? ''),
                     child: const Icon(Icons.notifications),
                   ),
                   label: 'Bildirimler',
