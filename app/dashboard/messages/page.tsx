@@ -44,11 +44,17 @@ function MessagesContent() {
     const [isLoading, setIsLoading] = useState(true);
     const [isSending, setIsSending] = useState(false);
 
-    const messagesEndRef = useRef<HTMLDivElement>(null);
+    const messagesContainerRef = useRef<HTMLDivElement>(null);
     const isFirstLoadRef = useRef(true);
 
     const scrollToBottom = (behavior: ScrollBehavior = "smooth") => {
-        messagesEndRef.current?.scrollIntoView({ behavior });
+        const el = messagesContainerRef.current;
+        if (!el) return;
+        if (behavior === "instant") {
+            el.scrollTop = el.scrollHeight;
+        } else {
+            el.scrollTo({ top: el.scrollHeight, behavior });
+        }
     };
 
     useEffect(() => {
@@ -361,7 +367,9 @@ function MessagesContent() {
                                 )}
 
                                 {/* Mesaj Listesi */}
-                                <div style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--bg-secondary)' }}>
+                                <div
+                                    ref={messagesContainerRef}
+                                    style={{ flex: 1, overflowY: 'auto', padding: '1rem', display: 'flex', flexDirection: 'column', gap: '1rem', background: 'var(--bg-secondary)' }}>
                                     {messages.map((msg) => {
                                         const isMine = msg.senderId === currentUserId;
                                         return (
@@ -392,7 +400,6 @@ function MessagesContent() {
                                             </div>
                                         );
                                     })}
-                                    <div ref={messagesEndRef} />
                                 </div>
 
                                 {/* Mesaj Gönderme Formu */}
