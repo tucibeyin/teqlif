@@ -141,6 +141,11 @@ model Message {
 
   senderId String
   sender   User   @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  // Reply System
+  parentMessageId String?
+  parentMessage   Message?  @relation("MessageReplies", fields: [parentMessageId], references: [id])
+  replies         Message[] @relation("MessageReplies")
 }
 
 model Notification {

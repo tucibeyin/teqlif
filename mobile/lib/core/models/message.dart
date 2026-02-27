@@ -16,6 +16,7 @@ class MessageModel {
   final String senderId;
   final String conversationId;
   final MessageSenderModel? sender;
+  final MessageModel? parentMessage;
 
   const MessageModel({
     required this.id,
@@ -25,6 +26,7 @@ class MessageModel {
     required this.senderId,
     required this.conversationId,
     this.sender,
+    this.parentMessage,
   });
 
   factory MessageModel.fromJson(Map<String, dynamic> json) => MessageModel(
@@ -37,6 +39,10 @@ class MessageModel {
         sender: json['sender'] != null
             ? MessageSenderModel.fromJson(
                 json['sender'] as Map<String, dynamic>)
+            : null,
+        parentMessage: json['parentMessage'] != null
+            ? MessageModel.fromJson(
+                json['parentMessage'] as Map<String, dynamic>)
             : null,
       );
 }

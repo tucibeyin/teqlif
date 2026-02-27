@@ -47,6 +47,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   bool _sending = false;
   bool _isFirstLoad = true;
   Timer? _pollTimer;
+  MessageModel? _replyingTo;
 
   // Capture notifiers in initState so we don't need to use 'ref' in dispose()
   // after the widget/element might already be defunct.
@@ -129,8 +130,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         'conversationId': widget.conversationId,
         'content': content,
         'recipientId': recipientId,
+        'parentMessageId': _replyingTo?.id,
       });
       _msgCtrl.clear();
+      setState(() => _replyingTo = null);
       ref.invalidate(chatMessagesProvider(widget.conversationId));
       // Also refresh the conversations list so last message updates immediately
       ref.invalidate(conversationsProvider);
@@ -270,60 +273,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   itemBuilder: (_, i) {
                     final msg = messages[i];
                     final isMine = msg.senderId == currentUserId;
-                    return Align(
-                      alignment:
-                          isMine ? Alignment.centerRight : Alignment.centerLeft,
-                      child: Container(
-                        margin: const EdgeInsets.only(bottom: 8),
-                        constraints: BoxConstraints(
-                            maxWidth: MediaQuery.of(context).size.width * 0.72),
-                        decoration: BoxDecoration(
-                          color: isMine
-                              ? const Color(0xFF00B4CC)
-                              : const Color(0xFFFFFFFF),
-                          borderRadius: BorderRadius.only(
-                            topLeft: const Radius.circular(16),
-                            topRight: const Radius.circular(16),
-                            bottomLeft: Radius.circular(isMine ? 16 : 4),
-                            bottomRight: Radius.circular(isMine ? 4 : 16),
-                          ),
-                          border: isMine
-                              ? null
-                              : Border.all(color: const Color(0xFFE2EBF0)),
-                          boxShadow: [
-                            BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 4),
-                          ],
-                        ),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        child: Column(
-                          crossAxisAlignment: isMine
-                              ? CrossAxisAlignment.end
-                              : CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              msg.content,
-                              style: TextStyle(
-                                color:
-                                    isMine ? Colors.white : const Color(0xFF0F1923),
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              timeago.format(msg.createdAt, locale: 'tr'),
-                              style: TextStyle(
-                                color: isMine
-                                    ? Colors.white.withOpacity(0.7)
-                                    : const Color(0xFF9AAAB8),
-                                fontSize: 10,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
+                    return _SwipeableMessage(
+                      message: msg,
+                      isMine: isMine,
+                      onReply: (m) => setState(() => _replyingTo = m),
                     );
                   },
                 );
@@ -393,13 +346,54 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     right: 12,
                     bottom: MediaQuery.of(context).viewInsets.bottom + 12,
                     top: 8),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  border: Border(top: BorderSide(color: Color(0xFFE2EBF0))),
-                ),
-                child: Row(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
+                    if (_replyingTo != null)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFF9FAFB),
+                          border: Border(bottom: BorderSide(color: Color(0xFFE2EBF0))),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.reply, size: 16, color: Color(0xFF00B4CC)),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    _replyingTo!.sender?.name ?? 'Kullanıcı',
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w700,
+                                      fontSize: 12,
+                                      color: Color(0xFF00B4CC),
+                                    ),
+                                  ),
+                                  Text(
+                                    _replyingTo!.content,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: const TextStyle(
+                                      fontSize: 12,
+                                      color: Color(0xFF9AAAB8),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 16),
+                              onPressed: () => setState(() => _replyingTo = null),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Row(
+                      children: [
+                        Expanded(
                       child: TextField(
                         controller: _msgCtrl,
                         maxLines: null,

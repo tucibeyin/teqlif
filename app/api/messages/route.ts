@@ -33,6 +33,11 @@ export async function GET(request: Request) {
                 sender: {
                     select: { id: true, name: true, avatar: true },
                 },
+                parentMessage: {
+                    include: {
+                        sender: { select: { id: true, name: true } }
+                    }
+                }
             },
             orderBy: {
                 createdAt: 'asc', // oldest to newest
@@ -68,7 +73,7 @@ export async function POST(request: Request) {
         const currentUser = await getMobileUser(request);
         if (!currentUser) return NextResponse.json({ message: 'Unauthorized' }, { status: 401 });
 
-        const { conversationId, content, recipientId } = await request.json();
+        const { conversationId, content, recipientId, parentMessageId } = await request.json();
 
         if (!conversationId || !content || !recipientId) {
             return NextResponse.json({ message: 'Eksik veri' }, { status: 400 });
@@ -117,10 +122,16 @@ export async function POST(request: Request) {
                 data: {
                     conversationId,
                     senderId: currentUser.id,
-                    content
+                    content,
+                    parentMessageId: parentMessageId || null
                 },
                 include: {
-                    sender: { select: { id: true, name: true, avatar: true } }
+                    sender: { select: { id: true, name: true, avatar: true } },
+                    parentMessage: {
+                        include: {
+                            sender: { select: { id: true, name: true } }
+                        }
+                    }
                 }
             });
 
