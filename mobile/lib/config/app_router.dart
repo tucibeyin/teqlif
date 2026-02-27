@@ -14,6 +14,7 @@ import '../features/messages/screens/conversations_screen.dart';
 import '../features/messages/screens/chat_screen.dart';
 import '../features/notifications/screens/notifications_screen.dart';
 import '../features/auth/screens/edit_profile_screen.dart';
+import '../features/auth/screens/verify_profile_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
 import '../widgets/main_shell.dart';
 
@@ -122,6 +123,12 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
               path: '/profile/edit',
               builder: (_, __) => const EditProfileScreen()),
+          GoRoute(
+            path: '/profile/verify',
+            builder: (_, state) => VerifyProfileScreen(
+              profileData: state.extra as Map<String, dynamic>,
+            ),
+          ),
         ],
       ),
     ],

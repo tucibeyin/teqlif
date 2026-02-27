@@ -100,6 +100,17 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
           );
           context.pop();
         }
+      } else if (res.statusCode == 202 && res.data['requiresVerification'] == true) {
+        // Navigate to verification screen
+        if (mounted) {
+          context.push('/profile/verify', extra: {
+            'name': _nameCtrl.text.trim(),
+            'email': _emailCtrl.text.trim(),
+            'phone': _phoneCtrl.text.trim(),
+            if (password.isNotEmpty) 'password': password,
+            if (password.isNotEmpty) 'passwordConfirm': confirm,
+          });
+        }
       } else {
         setState(() => _error = res.data['message'] ?? 'Güncelleme başarısız');
       }
