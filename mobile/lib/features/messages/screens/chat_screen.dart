@@ -429,3 +429,161 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 }
+
+class _SwipeableMessage extends StatefulWidget {
+  final MessageModel message;
+  final bool isMine;
+  final Function(MessageModel) onReply;
+
+  const _SwipeableMessage({
+    required this.message,
+    required this.isMine,
+    required this.onReply,
+  });
+
+  @override
+  State<_SwipeableMessage> createState() => _SwipeableMessageState();
+}
+
+class _SwipeableMessageState extends State<_SwipeableMessage> {
+  double _offset = 0.0;
+  bool _triggered = false;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onHorizontalDragUpdate: (details) {
+        if (details.delta.dx > 0) {
+          setState(() {
+            _offset += details.delta.dx;
+            if (_offset > 60 && !_triggered) {
+              _triggered = true;
+              widget.onReply(widget.message);
+            }
+          });
+        }
+      },
+      onHorizontalDragEnd: (details) {
+        setState(() {
+          _offset = 0.0;
+          _triggered = false;
+        });
+      },
+      onHorizontalDragCancel: () {
+        setState(() {
+          _offset = 0.0;
+          _triggered = false;
+        });
+      },
+      child: Transform.translate(
+        offset: Offset(_offset > 70 ? 70 : _offset, 0),
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            if (_offset > 10)
+              Positioned(
+                left: -40,
+                top: 0,
+                bottom: 0,
+                child: Center(
+                  child: Icon(
+                    Icons.reply,
+                    color: const Color(0xFF00B4CC).withOpacity((_offset / 60).clamp(0.0, 1.0)),
+                    size: 24,
+                  ),
+                ),
+              ),
+            Align(
+              alignment: widget.isMine ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                constraints: BoxConstraints(
+                    maxWidth: MediaQuery.of(context).size.width * 0.72),
+                decoration: BoxDecoration(
+                  color: widget.isMine
+                      ? const Color(0xFF00B4CC)
+                      : const Color(0xFFFFFFFF),
+                  borderRadius: BorderRadius.only(
+                    topLeft: const Radius.circular(16),
+                    topRight: const Radius.circular(16),
+                    bottomLeft: Radius.circular(widget.isMine ? 16 : 4),
+                    bottomRight: Radius.circular(widget.isMine ? 4 : 16),
+                  ),
+                  border: widget.isMine
+                      ? null
+                      : Border.all(color: const Color(0xFFE2EBF0)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Colors.black.withOpacity(0.04),
+                        blurRadius: 4),
+                  ],
+                ),
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 14, vertical: 10),
+                child: Column(
+                  crossAxisAlignment: widget.isMine
+                      ? CrossAxisAlignment.end
+                      : CrossAxisAlignment.start,
+                  children: [
+                    if (widget.message.parentMessage != null)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: widget.isMine
+                              ? Colors.white.withOpacity(0.15)
+                              : const Color(0xFFF4F7FA),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              widget.message.parentMessage!.sender?.name ?? 'Kullanıcı',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 11,
+                                color: widget.isMine ? Colors.white : const Color(0xFF00B4CC),
+                              ),
+                            ),
+                            Text(
+                              widget.message.parentMessage!.content,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: widget.isMine ? Colors.white.withOpacity(0.9) : const Color(0xFF9AAAB8),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    Text(
+                      widget.message.content,
+                      style: TextStyle(
+                        color:
+                            widget.isMine ? Colors.white : const Color(0xFF0F1923),
+                        fontSize: 14,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      timeago.format(widget.message.createdAt, locale: 'tr'),
+                      style: TextStyle(
+                        color: widget.isMine
+                            ? Colors.white.withOpacity(0.7)
+                            : const Color(0xFF9AAAB8),
+                        fontSize: 10,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
