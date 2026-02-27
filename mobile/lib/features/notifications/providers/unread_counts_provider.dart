@@ -25,8 +25,9 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
       if (!state.hasValue) {
         state = const AsyncValue.loading();
       }
-      final notificationsRes = await ApiClient().get(Endpoints.notifications);
-      final messagesRes = await ApiClient().get(Endpoints.messagesUnread);
+      final timestamp = DateTime.now().millisecondsSinceEpoch;
+      final notificationsRes = await ApiClient().get(Endpoints.notifications, params: {'_t': timestamp});
+      final messagesRes = await ApiClient().get(Endpoints.messagesUnread, params: {'_t': timestamp});
 
       if (!mounted) return;
       

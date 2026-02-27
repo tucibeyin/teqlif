@@ -159,8 +159,14 @@ Future<void> _setupFCM(WidgetRef ref) async {
     debugPrint('[FCM] Foreground push received! Title: ${message.notification?.title}');
     
     // Always refresh the global bottom nav unread badges
-    ref.read(unreadCountsProvider.notifier).refresh();
-    ref.invalidate(notificationsProvider);
+    // We add a tiny delay to ensure the database on the backend has fully 
+    // committed the new message/notification before we fetch counts.
+    Future.delayed(const Duration(milliseconds: 500), () {
+      if (ref.read(authProvider).isAuthenticated) {
+        ref.read(unreadCountsProvider.notifier).refresh();
+        ref.invalidate(notificationsProvider);
+      }
+    });
     
     final payloadData = message.data;
     final type = payloadData['type'] as String?;
