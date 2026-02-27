@@ -401,11 +401,21 @@ export default async function AdDetailPage({
 
                             {/* Teklif Formu */}
                             {!isOwner && session?.user ? (
-                                <BidForm
-                                    adId={ad.id}
-                                    currentHighest={highestBid?.amount ?? (ad.startingBid !== null ? ad.startingBid : 0)}
-                                    minStep={ad.bids.length > 0 ? ad.minBidStep : (ad.startingBid === null ? 1 : 0)}
-                                />
+                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                    <BidForm
+                                        adId={ad.id}
+                                        currentHighest={highestBid?.amount ?? (ad.startingBid !== null ? ad.startingBid : 0)}
+                                        minStep={ad.bids.length > 0 ? ad.minBidStep : (ad.startingBid === null ? 1 : 0)}
+                                    />
+                                    <AdActions
+                                        actionType="MESSAGE"
+                                        adId={ad.id}
+                                        sellerId={ad.userId}
+                                        currentUser={session.user}
+                                        customLabel="💬 Satıcıya Mesaj Gönder"
+                                        initialMessage={`"${ad.title}" (İlan No: ${ad.id}) ilanı hakkında bilgi almak istiyorum.`}
+                                    />
+                                </div>
                             ) : !session?.user ? (
                                 <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
                                     <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>

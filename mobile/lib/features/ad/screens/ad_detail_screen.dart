@@ -764,6 +764,21 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                 ],
                               );
                             })(),
+                          const SizedBox(height: 12),
+                          if (currentUser != null)
+                            SizedBox(
+                              width: double.infinity,
+                              height: 48,
+                              child: OutlinedButton.icon(
+                                onPressed: () {
+                                  final initialMsg =
+                                      '"${ad.title}" (İlan No: ${ad.id}) ilanı hakkında bilgi almak istiyorum.';
+                                  _contactSeller(ad.userId, initialMsg);
+                                },
+                                icon: const Icon(Icons.message_outlined),
+                                label: const Text('Satıcıya Mesaj Gönder'),
+                              ),
+                            ),
                           const SizedBox(height: 24),
                         ],
                       ],
