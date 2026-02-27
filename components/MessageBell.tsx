@@ -3,9 +3,11 @@
 import { useState, useEffect } from "react";
 import { MessageCircle } from "lucide-react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 export function MessageBell() {
     const [unreadCount, setUnreadCount] = useState(0);
+    const pathname = usePathname();
 
     const fetchUnreadCount = async () => {
         try {
@@ -19,6 +21,11 @@ export function MessageBell() {
         }
     };
 
+    // Refresh when pathname changes (e.g., navigating away from messages)
+    useEffect(() => {
+        fetchUnreadCount();
+    }, [pathname]);
+
     useEffect(() => {
         let mounted = true;
         const loadCounts = async () => {
@@ -26,7 +33,6 @@ export function MessageBell() {
             await fetchUnreadCount();
         };
 
-        loadCounts();
         const intervalId = setInterval(loadCounts, 10000); // 10 seconds polling for better responsiveness
 
         const handleMessagesRead = () => {

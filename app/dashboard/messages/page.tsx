@@ -110,6 +110,8 @@ function MessagesContent() {
             setConversations(prev => prev.map(c =>
                 c.id === activeConversationId ? { ...c, _count: { messages: 0 } } : c
             ));
+            // Dispatch event immediately to clear global badges optimistically
+            typeof window !== 'undefined' && window.dispatchEvent(new Event('messagesRead'));
 
             // Polling for new messages
             const interval = setInterval(() => {
