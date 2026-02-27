@@ -579,27 +579,27 @@ function MessagesContent() {
                                                     {isSending ? "..." : <Send size={18} />}
                                                 </button>
                                             </form>
-                                    )}
                                         </div>
-                            </>
-                                ) : (
-                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: '1rem' }}>
-                                    <div style={{ fontSize: '3rem', opacity: 0.2 }}>💬</div>
-                                    <p>Sohbete başlamak için soldan bir kişi seçin.</p>
+                                    )}
                                 </div>
-                        )}
+                            </>
+                        ) : (
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: '1rem' }}>
+                                <div style={{ fontSize: '3rem', opacity: 0.2 }}>💬</div>
+                                <p>Sohbete başlamak için soldan bir kişi seçin.</p>
                             </div>
-                        )
-                }
-                    </div >
-        </div >
-            );
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
 }
 
-            export default function MessagesPage() {
+export default function MessagesPage() {
     return (
-            <Suspense fallback={<div className="container" style={{ padding: '2rem 0', textAlign: 'center' }}>Yükleniyor...</div>}>
-                <MessagesContent />
-            </Suspense>
-            );
+        <Suspense fallback={<div className="container" style={{ padding: '2rem 0', textAlign: 'center' }}>Yükleniyor...</div>}>
+            <MessagesContent />
+        </Suspense>
+    );
 }
