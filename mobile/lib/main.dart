@@ -40,7 +40,20 @@ void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
   }
 
   final type = data['type'] as String?;
-  final route = (type == 'NEW_MESSAGE') ? '/messages' : '/notifications';
+  final link = data['link'] as String?;
+  
+  String route = (type == 'NEW_MESSAGE') ? '/messages' : '/notifications';
+
+  // If it's a message, try to extract specific conversation ID for deep linking
+  if (type == 'NEW_MESSAGE' && link != null) {
+    try {
+      final uri = Uri.parse(link);
+      final conversationId = uri.queryParameters['conversationId'];
+      if (conversationId != null) {
+        route = '/messages/$conversationId';
+      }
+    } catch (_) {}
+  }
 
   final router = ref.read(routerProvider);
   final location = router.routerDelegate.currentConfiguration.uri.path;
