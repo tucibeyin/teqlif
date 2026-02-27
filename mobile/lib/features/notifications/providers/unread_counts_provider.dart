@@ -12,12 +12,14 @@ class UnreadCounts {
 }
 
 class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
-  UnreadCountsNotifier() : super(const AsyncValue.loading()) {
+  final Ref ref;
+  UnreadCountsNotifier(this.ref) : super(const AsyncValue.loading()) {
     refresh();
   }
 
   Future<void> refresh() async {
     try {
+      if (!ref.mounted) return;
       // If we already have a value, don't wipe it out. Emitting loading 
       // without copying the previous state causes the UI to flicker.
       if (!state.hasValue) {
@@ -26,6 +28,8 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
       final notificationsRes = await ApiClient().get(Endpoints.notifications);
       final messagesRes = await ApiClient().get(Endpoints.messagesUnread);
 
+      if (!ref.mounted) return;
+      
       int unreadNotifications = 0;
       if (notificationsRes.data != null && notificationsRes.data['unreadCount'] != null) {
         unreadNotifications = notificationsRes.data['unreadCount'] as int;
@@ -45,11 +49,14 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
         }
       }
 
+      if (!ref.mounted) return;
+
       state = AsyncValue.data(UnreadCounts(
         messages: unreadMessages,
         notifications: unreadNotifications,
       ));
     } on DioException catch (e) {
+      if (!ref.mounted) return;
       if (e.response?.statusCode == 401) {
         // User not logged in, siliently return 0 counts
         state = AsyncValue.data(UnreadCounts(messages: 0, notifications: 0));
@@ -57,6 +64,7 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
         state = AsyncValue.error(e, e.stackTrace);
       }
     } catch (e, st) {
+      if (!ref.mounted) return;
       state = AsyncValue.error(e, st);
     }
   }
@@ -64,5 +72,5 @@ class UnreadCountsNotifier extends StateNotifier<AsyncValue<UnreadCounts>> {
 
 final unreadCountsProvider =
     StateNotifierProvider<UnreadCountsNotifier, AsyncValue<UnreadCounts>>((ref) {
-  return UnreadCountsNotifier();
+  return UnreadCountsNotifier(ref);
 });

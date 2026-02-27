@@ -243,18 +243,6 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     
-    // Listen for Authentication state changes to dynamically register Push Tokens upon successful Login/Registration mid-session.
-    ref.listenManual(authProvider, (previous, next) async {
-      if (previous?.isAuthenticated != true && next.isAuthenticated) {
-        try {
-          final token = await FirebaseMessaging.instance.getToken();
-          if (token != null) {
-            await ApiClient().post(Endpoints.pushRegister, data: {'fcmToken': token});
-          }
-        } catch (_) {}
-      }
-    });
-
     // Setup FCM after the first frame (so auth provider is ready)
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await _initLocalNotifications(ref);
@@ -288,6 +276,18 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
 
   @override
   Widget build(BuildContext context) {
+    // Listen for Authentication state changes to dynamically register Push Tokens upon successful Login/Registration mid-session.
+    ref.listen(authProvider, (previous, next) async {
+      if (previous?.isAuthenticated != true && next.isAuthenticated) {
+        try {
+          final token = await FirebaseMessaging.instance.getToken();
+          if (token != null) {
+            await ApiClient().post(Endpoints.pushRegister, data: {'fcmToken': token});
+          }
+        } catch (_) {}
+      }
+    });
+
     final router = ref.watch(routerProvider);
     return MaterialApp.router(
       title: 'teqlif',

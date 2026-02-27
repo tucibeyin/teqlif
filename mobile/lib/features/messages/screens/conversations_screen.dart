@@ -12,11 +12,11 @@ import '../../notifications/providers/unread_counts_provider.dart';
 class ConversationsNotifier extends AsyncNotifier<List<ConversationModel>> {
   @override
   Future<List<ConversationModel>> build() async {
+    ref.watch(authProvider); // React to auth state changes
     return _fetchConversations();
   }
 
   Future<List<ConversationModel>> _fetchConversations() async {
-    ref.watch(authProvider); // React to auth state changes
     final res = await ApiClient().get(Endpoints.conversations);
     final list = res.data as List<dynamic>;
     return list
