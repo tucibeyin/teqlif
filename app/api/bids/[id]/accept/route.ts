@@ -3,6 +3,7 @@ import { getMobileUser } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 import { sendPushNotification } from '@/lib/fcm';
 import { revalidatePath } from 'next/cache';
+import { logger } from '@/lib/logger';
 
 export async function PATCH(
     request: Request,
@@ -20,6 +21,7 @@ export async function PATCH(
 
         const resolvedParams = await params;
         const bidId = resolvedParams.id;
+        logger.info("PATCH /api/bids/[id]/accept start", { bidId, userId: currentUser.id });
 
         // Get the bid and the associated ad
         const bid = await prisma.bid.findUnique({
@@ -64,6 +66,7 @@ export async function PATCH(
             });
 
             // 2.5 Automatically toggle Ad Status to SOLD
+            logger.info("Setting ad to SOLD on bid acceptance", { adId: bid.adId, bidId });
             await tx.ad.update({
                 where: { id: bid.adId },
                 data: { status: 'SOLD' },

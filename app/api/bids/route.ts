@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { actionRatelimiter } from "@/lib/rate-limit";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { sendPushNotification } from "@/lib/fcm";
+import { logger } from "@/lib/logger";
 
 export async function GET(req: NextRequest) {
     try {
@@ -47,6 +48,7 @@ export async function POST(req: NextRequest) {
         }
 
         const { adId, amount } = await req.json();
+        logger.info("POST /api/bids start", { adId, amount, userId: user.id });
 
         if (!adId || !amount) {
             return NextResponse.json({ error: "İlan ve teklif miktarı zorunludur." }, { status: 400 });
@@ -69,8 +71,12 @@ export async function POST(req: NextRequest) {
         }
 
         if (ad.status !== "ACTIVE") {
-            return NextResponse.json({ error: "Bu ilan artık aktif değil." }, { status: 400 });
+            const errorMsg = `Bu ilan artık aktif değil (İlan Durumu: ${ad.status})`;
+            logger.warn("Bid rejected: Ad not active", { adId, adStatus: ad.status, userId: user.id });
+            return NextResponse.json({ error: errorMsg }, { status: 400 });
         }
+
+        logger.info("Processing bid", { adId, amount, userId: user.id });
 
         // Determine the minimum required bid
         let minRequiredAmount = 1; // absolute minimum for a free bid

@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { getMobileUser } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import { logger } from '@/lib/logger';
 
 export async function PATCH(
     request: Request,
@@ -15,6 +16,7 @@ export async function PATCH(
 
         const resolvedParams = await params;
         const bidId = resolvedParams.id;
+        logger.info("PATCH /api/bids/[id]/cancel start", { bidId, userId: currentUser.id });
 
         const bid = await prisma.bid.findUnique({
             where: { id: bidId },
@@ -60,6 +62,8 @@ export async function PATCH(
                 select: { status: true }
             });
 
+            logger.info("Status recovery check", { adId: bid.adId, currentStatus: currentAd?.status });
+
             if (currentAd?.status === 'SOLD') {
                 const acceptedBidsCount = await tx.bid.count({
                     where: {
@@ -69,7 +73,10 @@ export async function PATCH(
                     }
                 });
 
+                logger.info("Accepted bids remaining", { adId: bid.adId, count: acceptedBidsCount });
+
                 if (acceptedBidsCount === 0) {
+                    logger.info("Reactivating ad", { adId: bid.adId });
                     await tx.ad.update({
                         where: { id: bid.adId },
                         data: { status: 'ACTIVE' }
