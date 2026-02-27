@@ -20,6 +20,8 @@ interface Message {
     createdAt: string;
     senderId: string;
     sender: User;
+    parentMessageId?: string | null;
+    parentMessage?: Message | null;
 }
 
 interface Conversation {
@@ -41,6 +43,7 @@ function MessagesContent() {
     const [activeConversationId, setActiveConversationId] = useState<string | null>(initialConversationId);
     const [messages, setMessages] = useState<Message[]>([]);
     const [newMessage, setNewMessage] = useState("");
+    const [replyTo, setReplyTo] = useState<Message | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [isSending, setIsSending] = useState(false);
 
@@ -54,6 +57,17 @@ function MessagesContent() {
             el.scrollTop = el.scrollHeight;
         } else {
             el.scrollTo({ top: el.scrollHeight, behavior });
+        }
+    };
+
+    const scrollToMessage = (id: string) => {
+        const el = document.getElementById(`msg-${id}`);
+        if (el) {
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            el.classList.add("highlight-message");
+            setTimeout(() => {
+                el.classList.remove("highlight-message");
+            }, 2000);
         }
     };
 
@@ -173,12 +187,14 @@ function MessagesContent() {
                 body: JSON.stringify({
                     conversationId: activeConversationId,
                     content: newMessage,
-                    recipientId
+                    recipientId,
+                    parentMessageId: replyTo?.id
                 }),
             });
 
             if (res.ok) {
                 setNewMessage("");
+                setReplyTo(null);
                 fetchMessages(activeConversationId);
 
                 // Refresh conversations list to update 'last message' and sorting internally if we wanted to
@@ -210,6 +226,15 @@ function MessagesContent() {
 
     return (
         <div className="container" style={{ padding: '2rem 0' }}>
+            <style jsx global>{`
+                .message-bubble-container:hover .reply-button {
+                    opacity: 1 !important;
+                }
+                .highlight-message > div:first-child {
+                    background-color: rgba(0, 180, 204, 0.2) !important;
+                    transition: background-color 0.3s ease;
+                }
+            `}</style>
             <h1 style={{ marginBottom: '1.5rem', fontSize: '1.75rem', fontWeight: 700 }}>Mesajlarım</h1>
 
             <div style={{
@@ -384,10 +409,16 @@ function MessagesContent() {
                                     {messages.map((msg) => {
                                         const isMine = msg.senderId === currentUserId;
                                         return (
-                                            <div key={msg.id} style={{
-                                                alignSelf: isMine ? 'flex-end' : 'flex-start',
-                                                maxWidth: '75%',
-                                            }}>
+                                            <div
+                                                key={msg.id}
+                                                id={`msg-${msg.id}`}
+                                                style={{
+                                                    alignSelf: isMine ? 'flex-end' : 'flex-start',
+                                                    maxWidth: '75%',
+                                                    position: 'relative'
+                                                }}
+                                                className="message-bubble-container"
+                                            >
                                                 <div style={{
                                                     background: isMine ? 'var(--primary)' : 'var(--bg-card)',
                                                     color: isMine ? 'white' : 'var(--text-primary)',
@@ -396,9 +427,66 @@ function MessagesContent() {
                                                     borderBottomRightRadius: isMine ? '0' : '1rem',
                                                     borderBottomLeftRadius: !isMine ? '0' : '1rem',
                                                     boxShadow: '0 2px 5px rgba(0,0,0,0.05)',
-                                                    border: isMine ? 'none' : '1px solid var(--border)'
+                                                    border: isMine ? 'none' : '1px solid var(--border)',
+                                                    position: 'relative',
+                                                    transition: 'background 0.3s ease'
                                                 }}>
-                                                    {msg.content}
+                                                    {msg.parentMessage && (
+                                                        <div
+                                                            onClick={() => scrollToMessage(msg.parentMessage!.id)}
+                                                            style={{
+                                                                background: isMine ? 'rgba(255,255,255,0.15)' : 'rgba(0,0,0,0.05)',
+                                                                padding: '8px',
+                                                                borderRadius: '8px',
+                                                                marginBottom: '8px',
+                                                                borderLeft: `3px solid ${isMine ? 'white' : 'var(--primary)'}`,
+                                                                cursor: 'pointer',
+                                                                fontSize: '0.8rem'
+                                                            }}
+                                                        >
+                                                            <div style={{ fontWeight: 700, opacity: 0.8 }}>
+                                                                {msg.parentMessage.sender.name}
+                                                            </div>
+                                                            <div style={{
+                                                                opacity: 0.7,
+                                                                whiteSpace: 'nowrap',
+                                                                overflow: 'hidden',
+                                                                textOverflow: 'ellipsis'
+                                                            }}>
+                                                                {msg.parentMessage.content}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '8px' }}>
+                                                        <div style={{ flex: 1 }}>{msg.content}</div>
+                                                    </div>
+
+                                                    {/* Hover Reply Button */}
+                                                    <button
+                                                        onClick={() => setReplyTo(msg)}
+                                                        className="reply-button"
+                                                        style={{
+                                                            position: 'absolute',
+                                                            top: '50%',
+                                                            [isMine ? 'left' : 'right']: '-40px',
+                                                            transform: 'translateY(-50%)',
+                                                            background: 'var(--bg-card)',
+                                                            border: '1px solid var(--border)',
+                                                            borderRadius: '50%',
+                                                            width: '32px',
+                                                            height: '32px',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                            cursor: 'pointer',
+                                                            color: 'var(--text-secondary)',
+                                                            boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+                                                            opacity: 0,
+                                                            transition: 'opacity 0.2s'
+                                                        }}
+                                                    >
+                                                        <Send size={14} style={{ transform: 'scaleX(-1)' }} />
+                                                    </button>
                                                 </div>
                                                 <div style={{
                                                     fontSize: '0.7rem',
@@ -445,45 +533,73 @@ function MessagesContent() {
                                             İlan satıldı. Mesajlaşma sadece alıcı ve satıcı için aktiftir.
                                         </div>
                                     ) : (
-                                        <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
-                                            <input
-                                                type="text"
-                                                value={newMessage}
-                                                onChange={(e) => setNewMessage(e.target.value)}
-                                                placeholder="Bir mesaj yazın..."
-                                                className="input"
-                                                style={{ flex: 1 }}
-                                            />
-                                            <button
-                                                type="submit"
-                                                className="btn btn-primary"
-                                                disabled={isSending || !newMessage.trim()}
-                                                style={{ padding: '0 1.5rem' }}
-                                            >
-                                                {isSending ? "..." : <Send size={18} />}
-                                            </button>
-                                        </form>
+                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                            {replyTo && (
+                                                <div style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    justifyContent: 'space-between',
+                                                    padding: '8px 12px',
+                                                    background: 'rgba(0,0,0,0.03)',
+                                                    borderLeft: '4px solid var(--primary)',
+                                                    borderRadius: '4px',
+                                                    marginBottom: '4px'
+                                                }}>
+                                                    <div style={{ overflow: 'hidden' }}>
+                                                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary)' }}>
+                                                            {replyTo.sender.name} kullanıcısına yanıt veriliyor
+                                                        </div>
+                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                            {replyTo.content}
+                                                        </div>
+                                                    </div>
+                                                    <button
+                                                        onClick={() => setReplyTo(null)}
+                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                                                    >
+                                                        ✕
+                                                    </button>
+                                                </div>
+                                            )}
+                                            <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
+                                                <input
+                                                    type="text"
+                                                    value={newMessage}
+                                                    onChange={(e) => setNewMessage(e.target.value)}
+                                                    placeholder="Bir mesaj yazın..."
+                                                    className="input"
+                                                    style={{ flex: 1 }}
+                                                />
+                                                <button
+                                                    type="submit"
+                                                    className="btn btn-primary"
+                                                    disabled={isSending || !newMessage.trim()}
+                                                    style={{ padding: '0 1.5rem' }}
+                                                >
+                                                    {isSending ? "..." : <Send size={18} />}
+                                                </button>
+                                            </form>
                                     )}
-                                </div>
+                                        </div>
                             </>
-                        ) : (
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: '1rem' }}>
-                                <div style={{ fontSize: '3rem', opacity: 0.2 }}>💬</div>
-                                <p>Sohbete başlamak için soldan bir kişi seçin.</p>
-                            </div>
+                                ) : (
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ fontSize: '3rem', opacity: 0.2 }}>💬</div>
+                                    <p>Sohbete başlamak için soldan bir kişi seçin.</p>
+                                </div>
                         )}
-                    </div>
-                )
+                            </div>
+                        )
                 }
-            </div >
+                    </div >
         </div >
-    );
+            );
 }
 
-export default function MessagesPage() {
+            export default function MessagesPage() {
     return (
-        <Suspense fallback={<div className="container" style={{ padding: '2rem 0', textAlign: 'center' }}>Yükleniyor...</div>}>
-            <MessagesContent />
-        </Suspense>
-    );
+            <Suspense fallback={<div className="container" style={{ padding: '2rem 0', textAlign: 'center' }}>Yükleniyor...</div>}>
+                <MessagesContent />
+            </Suspense>
+            );
 }
