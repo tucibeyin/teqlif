@@ -161,9 +161,12 @@ class AdModel {
 class BidUserModel {
   final String id;
   final String name;
-  const BidUserModel({required this.id, required this.name});
+  final String? phone;
+  const BidUserModel({required this.id, required this.name, this.phone});
   factory BidUserModel.fromJson(Map<String, dynamic>? json) => BidUserModel(
-      id: json?['id'] as String? ?? '', name: json?['name'] as String? ?? '');
+      id: json?['id'] as String? ?? '',
+      name: json?['name'] as String? ?? '',
+      phone: json?['phone'] as String?);
 }
 
 class BidModel {

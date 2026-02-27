@@ -892,13 +892,28 @@ class _BidTile extends StatelessWidget {
                       onPressed: onCancel,
                     ),
                   ],
-                  if (accepted)
+                  if (accepted) ...[
                     _ActionIconButton(
                       icon: Icons.cancel_outlined,
                       label: 'İptal Et',
                       color: Colors.red,
                       onPressed: onCancel,
                     ),
+                    if (bid.user?.phone != null) ...[
+                      const SizedBox(width: 8),
+                      _ActionIconButton(
+                        icon: Icons.phone_outlined,
+                        label: 'Ara',
+                        color: Colors.blueGrey,
+                        onPressed: () async {
+                          final url = Uri.parse('tel:${bid.user!.phone}');
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(url);
+                          }
+                        },
+                      ),
+                    ],
+                  ],
                   if (bid.status == 'PENDING' || accepted)
                     const SizedBox(width: 8),
                   _ActionIconButton(
