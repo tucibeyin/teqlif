@@ -772,7 +772,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                 fontWeight: FontWeight.w700, fontSize: 16)),
                         const SizedBox(height: 8),
                         Container(
-                          constraints: const BoxConstraints(maxHeight: 300),
+                          constraints: const BoxConstraints(maxHeight: 500),
                           decoration: BoxDecoration(
                             border: Border.all(color: const Color(0xFFE2EBF0)),
                             borderRadius: BorderRadius.circular(12),

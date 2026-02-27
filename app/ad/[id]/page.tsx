@@ -56,8 +56,8 @@ export default async function AdDetailPage({
             province: true,
             district: true,
             bids: {
-                orderBy: { amount: "desc" },
-                take: 10,
+                orderBy: [{ amount: "desc" }, { createdAt: "desc" }],
+                take: 50,
                 include: {
                     user: { select: { id: true, name: true, phone: true } },
                 },

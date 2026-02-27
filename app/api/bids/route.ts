@@ -143,6 +143,10 @@ export async function POST(req: NextRequest) {
             ).catch(err => console.error("FCM Send Error:", err));
         }
 
+        revalidatePath(`/ad/${adId}`);
+        revalidatePath("/");
+        revalidatePath("/dashboard");
+
         return NextResponse.json(bid, { status: 201 });
     } catch (err) {
         console.error("POST /api/bids error:", err);
