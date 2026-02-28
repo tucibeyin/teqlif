@@ -13,6 +13,7 @@ export default function ProfilePage() {
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
+    const [currentPassword, setCurrentPassword] = useState("");
     const [password, setPassword] = useState("");
     const [passwordConfirm, setPasswordConfirm] = useState("");
     const [loading, setLoading] = useState(true);
@@ -55,7 +56,7 @@ export default function ProfilePage() {
         setMessage({ text: "", type: "" });
 
         try {
-            const payload: any = { name, email, phone, password, passwordConfirm };
+            const payload: any = { name, email, phone, password, passwordConfirm, currentPassword };
             if (code) {
                 payload.verificationCode = code;
             }
@@ -176,6 +177,18 @@ export default function ProfilePage() {
                         </div>
 
                         <hr style={{ margin: "2rem 0", border: "none", borderTop: "1px solid var(--border)" }} />
+
+                        <div className="form-group">
+                            <label className="form-label" htmlFor="currentPassword">Mevcut Şifre</label>
+                            <input
+                                id="currentPassword"
+                                type="password"
+                                className="form-input"
+                                value={currentPassword}
+                                onChange={(e) => setCurrentPassword(e.target.value)}
+                                placeholder="Şifre değiştirmek için gereklidir"
+                            />
+                        </div>
 
                         <div className="form-group">
                             <label className="form-label" htmlFor="password">Yeni Şifre</label>

@@ -35,14 +35,34 @@ export async function PATCH(request: Request) {
         }
 
         const body = await request.json();
-        const { name, email, phone, password, passwordConfirm, verificationCode } = body;
+        const { name, email, phone, password, passwordConfirm, currentPassword, verificationCode } = body;
 
         if (!name || !email) {
             return NextResponse.json({ message: "Ad ve E-posta alanları zorunludur" }, { status: 400 });
         }
 
-        if (password && password !== passwordConfirm) {
-            return NextResponse.json({ message: "Şifreler birbiriyle eşleşmiyor" }, { status: 400 });
+        if (password) {
+            if (!currentPassword) {
+                return NextResponse.json({ message: "Şifre değişikliği için mevcut şifrenizi girmelisiniz" }, { status: 400 });
+            }
+
+            const dbUser = await prisma.user.findUnique({
+                where: { id: userSession.id },
+                select: { password: true }
+            });
+
+            if (!dbUser || !dbUser.password) {
+                return NextResponse.json({ message: "Kullanıcı kaydı hatalı" }, { status: 404 });
+            }
+
+            const isPasswordValid = await bcrypt.compare(currentPassword, dbUser.password);
+            if (!isPasswordValid) {
+                return NextResponse.json({ message: "Mevcut şifreniz hatalı" }, { status: 400 });
+            }
+
+            if (password !== passwordConfirm) {
+                return NextResponse.json({ message: "Şifreler birbiriyle eşleşmiyor" }, { status: 400 });
+            }
         }
 
         // 1. If verificationCode is missing, send a new code

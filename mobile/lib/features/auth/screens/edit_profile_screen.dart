@@ -18,6 +18,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _emailCtrl;
   late final TextEditingController _phoneCtrl;
+  late final TextEditingController _currentPasswordCtrl;
   late final TextEditingController _passwordCtrl;
   late final TextEditingController _passwordConfirmCtrl;
   
@@ -31,6 +32,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _nameCtrl = TextEditingController();
     _emailCtrl = TextEditingController();
     _phoneCtrl = TextEditingController();
+    _currentPasswordCtrl = TextEditingController();
     _passwordCtrl = TextEditingController();
     _passwordConfirmCtrl = TextEditingController();
     _fetchProfile();
@@ -84,6 +86,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
         'name': _nameCtrl.text.trim(),
         'email': _emailCtrl.text.trim(),
         'phone': _phoneCtrl.text.trim(),
+        'currentPassword': _currentPasswordCtrl.text,
         if (password.isNotEmpty) 'password': password,
         if (password.isNotEmpty) 'passwordConfirm': confirm,
       });
@@ -132,6 +135,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     _nameCtrl.dispose();
     _emailCtrl.dispose();
     _phoneCtrl.dispose();
+    _currentPasswordCtrl.dispose();
     _passwordCtrl.dispose();
     _passwordConfirmCtrl.dispose();
     super.dispose();
@@ -195,6 +199,14 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                       decoration: const InputDecoration(hintText: '05XX XXX XX XX (İsteğe bağlı)'),
                     ),
                     const Divider(height: 48, thickness: 1),
+                    const Text('Mevcut Şifre', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                    const SizedBox(height: 8),
+                    TextFormField(
+                      controller: _currentPasswordCtrl,
+                      obscureText: true,
+                      decoration: const InputDecoration(hintText: 'Şifre değiştirmek için gereklidir'),
+                    ),
+                    const SizedBox(height: 20),
                     const Text('Yeni Şifre', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
                     const SizedBox(height: 8),
                     TextFormField(
