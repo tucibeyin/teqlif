@@ -852,6 +852,15 @@ class _BidTile extends StatelessWidget {
     required this.formatPrice,
   });
 
+  String _formatNameInitials(String? name) {
+    if (name == null || name.isEmpty) return 'A.';
+    final parts = name.trim().split(RegExp(r'\s+'));
+    if (parts.length == 1) {
+      return '${parts[0][0].toUpperCase()}.';
+    }
+    return parts.map((p) => '${p[0].toUpperCase()}.').join('');
+  }
+
   @override
   Widget build(BuildContext context) {
     final accepted = bid.status == 'ACCEPTED';
@@ -876,7 +885,7 @@ class _BidTile extends StatelessWidget {
                   children: [
                     if (isTop)
                       const Text('🏆 ', style: TextStyle(fontSize: 16)),
-                    Text(bid.user?.name ?? 'Anonim',
+                    Text(_formatNameInitials(bid.user?.name),
                         style: const TextStyle(fontWeight: FontWeight.w600)),
                   ],
                 ),

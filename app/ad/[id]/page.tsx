@@ -27,6 +27,15 @@ function formatDate(date: Date) {
     }).format(new Date(date));
 }
 
+function formatNameInitials(name: string) {
+    if (!name) return "A.";
+    const parts = name.trim().split(/\s+/);
+    if (parts.length === 1) return `${parts[0].charAt(0).toUpperCase()}.`;
+    return parts
+        .map(p => `${p.charAt(0).toUpperCase()}.`)
+        .join("");
+}
+
 function timeAgo(date: Date) {
     const diff = Date.now() - new Date(date).getTime();
     const minutes = Math.floor(diff / 60000);
@@ -435,7 +444,7 @@ export default async function AdDetailPage({
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
                                                             <span className="bid-item-user" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                                                                 {i === 0 && "🏆 "}
-                                                                {bid.user.name}
+                                                                {formatNameInitials(bid.user.name)}
                                                             </span>
                                                             <span style={{ color: 'var(--primary)', fontWeight: 800, fontSize: '1rem' }}>
                                                                 {formatPrice(bid.amount)}
