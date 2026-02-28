@@ -92,7 +92,12 @@ async function getAds(categorySlug?: string, limit = 24) {
         province: true,
         district: true,
         _count: { select: { bids: true } },
-        bids: { orderBy: { amount: "desc" }, take: 1, select: { amount: true } },
+        bids: {
+          where: { status: { in: ['PENDING', 'ACCEPTED'] } },
+          orderBy: { amount: "desc" },
+          take: 1,
+          select: { amount: true }
+        },
       },
     });
   } catch {

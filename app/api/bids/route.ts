@@ -114,19 +114,32 @@ export async function POST(req: NextRequest) {
             );
         }
 
-        const bid = await prisma.bid.create({
-            data: {
-                amount: Number(amount),
-                userId: user.id,
-                adId,
-            },
-            include: { user: { select: { name: true } } },
+        const { bid, updatedAd } = await prisma.$transaction(async (tx) => {
+            const bid = await tx.bid.create({
+                data: {
+                    amount: Number(amount),
+                    userId: user.id,
+                    adId,
+                },
+                include: { user: { select: { name: true } } },
+            });
+
+            // Update the advertisement price to reflect the current highest bid
+            const updatedAd = await tx.ad.update({
+                where: { id: adId },
+                data: { price: Number(amount) },
+                include: {
+                    user: { select: { fcmToken: true } },
+                }
+            });
+
+            return { bid, updatedAd };
         });
 
         // 🎯 Notify the Ad Owner about the incoming bid
         await prisma.notification.create({
             data: {
-                userId: ad.userId, // Sending to ad owner
+                userId: ad.userId, // ad is still available from outer scope fetch
                 type: 'BID_RECEIVED',
                 message: `${bid.user.name} "${ad.title}" ilanınıza ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teklif verdi.`,
                 link: `/ad/${ad.id}`
@@ -134,10 +147,10 @@ export async function POST(req: NextRequest) {
         });
 
         // Send push notification
-        if (ad.user?.fcmToken) {
+        if (updatedAd.user?.fcmToken) {
             const badgeCount = await getUnreadCount(ad.userId);
             await sendPushNotification(
-                ad.user.fcmToken,
+                updatedAd.user.fcmToken,
                 'Yeni Teklif Var! 💰',
                 `${bid.user.name} "${ad.title}" ilanına ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teklif verdi.`,
                 { type: 'BID_RECEIVED', link: `/ad/${ad.id}` },

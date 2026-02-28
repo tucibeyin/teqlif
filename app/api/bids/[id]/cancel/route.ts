@@ -87,6 +87,40 @@ export async function PATCH(
                 }
             }
 
+            // Recalculate the current price (Ad.price)
+            // Fetch next highest PENDING or ACCEPTED bid for this ad
+            const nextHighestBid = await tx.bid.findFirst({
+                where: {
+                    adId: currentBid.adId,
+                    status: { in: ['PENDING', 'ACCEPTED'] },
+                    id: { not: bidId }
+                },
+                orderBy: { amount: 'desc' }
+            });
+
+            const ad = await tx.ad.findUnique({
+                where: { id: currentBid.adId },
+                select: { startingBid: true, isFixedPrice: true }
+            });
+
+            let newPrice = 1;
+            if (nextHighestBid) {
+                newPrice = nextHighestBid.amount;
+            } else if (ad?.startingBid !== null && ad?.startingBid !== undefined) {
+                newPrice = ad.startingBid;
+            }
+
+            logger.info("Recalculating ad price after cancellation", {
+                adId: currentBid.adId,
+                oldPrice: currentBid.amount,
+                newPrice
+            });
+
+            await tx.ad.update({
+                where: { id: currentBid.adId },
+                data: { price: newPrice }
+            });
+
             return updatedBid;
         });
 

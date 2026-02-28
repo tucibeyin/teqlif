@@ -56,6 +56,7 @@ export default async function AdDetailPage({
             province: true,
             district: true,
             bids: {
+                where: { status: { in: ['PENDING', 'ACCEPTED'] } },
                 orderBy: [{ amount: "desc" }, { createdAt: "desc" }],
                 take: 50,
                 include: {
