@@ -13,23 +13,54 @@ import '../../../core/providers/auth_provider.dart';
 import '../../notifications/providers/unread_counts_provider.dart';
 import 'conversations_screen.dart';
 
+class SingleConversationNotifier extends FamilyAsyncNotifier<ConversationModel, String> {
+  @override
+  FutureOr<ConversationModel> build(String arg) async {
+    return _fetch();
+  }
+
+  Future<ConversationModel> _fetch() async {
+    final res = await ApiClient().get('${Endpoints.conversations}/$arg');
+    return ConversationModel.fromJson(res.data as Map<String, dynamic>);
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading<ConversationModel>().copyWithPrevious(state);
+    state = await AsyncValue.guard(() => _fetch());
+  }
+}
+
 final singleConversationProvider =
-    FutureProvider.family<ConversationModel, String>((ref, id) async {
-  final res = await ApiClient().get('${Endpoints.conversations}/$id');
-  return ConversationModel.fromJson(res.data as Map<String, dynamic>);
+    AsyncNotifierProvider.family<SingleConversationNotifier, ConversationModel, String>(() {
+  return SingleConversationNotifier();
 });
 
+class ChatMessagesNotifier extends FamilyAsyncNotifier<List<MessageModel>, String> {
+  @override
+  FutureOr<List<MessageModel>> build(String arg) async {
+    return _fetch();
+  }
+
+  Future<List<MessageModel>> _fetch() async {
+    final res = await ApiClient().get(Endpoints.messages,
+        params: {'conversationId': arg, 'read': 'true'});
+    final list = res.data as List<dynamic>;
+    return list
+        .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
+        .toList()
+        .reversed
+        .toList();
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncLoading<List<MessageModel>>().copyWithPrevious(state);
+    state = await AsyncValue.guard(() => _fetch());
+  }
+}
+
 final chatMessagesProvider =
-    FutureProvider.family<List<MessageModel>, String>((ref, conversationId) async {
-  final res = await ApiClient().get(Endpoints.messages,
-      params: {'conversationId': conversationId, 'read': 'true'});
-  final list = res.data as List<dynamic>;
-  // Reverse the list so the latest messages (bottom) are at index 0
-  return list
-      .map((e) => MessageModel.fromJson(e as Map<String, dynamic>))
-      .toList()
-      .reversed
-      .toList();
+    AsyncNotifierProvider.family<ChatMessagesNotifier, List<MessageModel>, String>(() {
+  return ChatMessagesNotifier();
 });
 
 class ChatScreen extends ConsumerStatefulWidget {
@@ -70,14 +101,17 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         _activeChatNotifier.state = widget.conversationId;
-        // Immediate badge refresh when entering the chat
+        // Immediate background refresh when entering the chat 
+        // to catch up with any messages that arrived since the list was loaded.
+        ref.read(singleConversationProvider(widget.conversationId).notifier).refresh();
+        ref.read(chatMessagesProvider(widget.conversationId).notifier).refresh();
         _countsNotifier.refresh();
       }
     });
     // Poll for new incoming messages every 5 seconds
     _pollTimer = Timer.periodic(const Duration(seconds: 5), (_) {
       if (mounted && WidgetsBinding.instance.lifecycleState == AppLifecycleState.resumed) {
-        ref.invalidate(chatMessagesProvider(widget.conversationId));
+        ref.read(chatMessagesProvider(widget.conversationId).notifier).refresh();
       }
     });
   }
@@ -197,6 +231,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       body: Column(
         children: [
           convAsync.when(
+            skipLoadingOnReload: true,
             data: (conv) {
               if (conv.ad == null) {
                 return Container(
@@ -269,6 +304,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
           Expanded(
             child: messagesAsync.when(
+              skipLoadingOnReload: true,
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (e, _) => Center(child: Text('Hata: $e')),
               data: (messages) {
