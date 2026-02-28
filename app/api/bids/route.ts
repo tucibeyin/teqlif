@@ -124,14 +124,16 @@ export async function POST(req: NextRequest) {
                 include: { user: { select: { name: true } } },
             });
 
-            // Update the advertisement price to reflect the current highest bid
-            const updatedAd = await tx.ad.update({
+            // We no longer update Ad.price (Market Value) on bid creation.
+            // Current price is derived from the highest bid dynamically.
+            const updatedAd = await tx.ad.findUnique({
                 where: { id: adId },
-                data: { price: Number(amount) },
                 include: {
                     user: { select: { fcmToken: true } },
                 }
             });
+
+            if (!updatedAd) throw new Error("Ad not found during transaction");
 
             return { bid, updatedAd };
         });

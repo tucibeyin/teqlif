@@ -36,6 +36,12 @@ export default async function DashboardPage() {
                 category: true,
                 province: true,
                 _count: { select: { bids: true } },
+                bids: {
+                    where: { status: { in: ['PENDING', 'ACCEPTED'] } },
+                    orderBy: { amount: "desc" },
+                    take: 1,
+                    select: { amount: true }
+                }
             },
         }),
         prisma.bid.findMany({
@@ -154,7 +160,14 @@ export default async function DashboardPage() {
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
-                                                <div style={{ color: "var(--primary)", fontWeight: 700 }}>{formatPrice(ad.price)}</div>
+                                                <div style={{ color: "var(--primary)", fontWeight: 700 }}>
+                                                    {(() => {
+                                                        if (ad.isFixedPrice) return formatPrice(ad.price);
+                                                        const highestBid = ad.bids?.[0]?.amount;
+                                                        if (highestBid) return formatPrice(highestBid);
+                                                        return ad.startingBid ? formatPrice(ad.startingBid) : "Serbest Teklif";
+                                                    })()}
+                                                </div>
                                                 <span className={`badge badge-${isExpired ? 'expired' : ad.status.toLowerCase()}`}>
                                                     {isExpired ? "Süresi Dolmuş" : ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Pasif"}
                                                 </span>

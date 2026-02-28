@@ -17,6 +17,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
                 province: true,
                 district: true,
                 bids: {
+                    where: { status: { in: ['PENDING', 'ACCEPTED'] } },
                     include: { user: { select: { id: true, name: true } } },
                     orderBy: [{ amount: "desc" }, { createdAt: "desc" }],
                 },
