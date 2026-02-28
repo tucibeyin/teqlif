@@ -58,7 +58,11 @@ export async function POST(req: NextRequest) {
         const ad = await prisma.ad.findUnique({
             where: { id: adId },
             include: {
-                bids: { orderBy: { amount: "desc" }, take: 1 },
+                bids: {
+                    where: { status: { in: ['PENDING', 'ACCEPTED'] } },
+                    orderBy: { amount: "desc" },
+                    take: 1
+                },
                 user: { select: { fcmToken: true } },
             },
         });
