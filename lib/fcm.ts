@@ -114,6 +114,7 @@ export async function sendPushNotification(
                 notification: {
                     channelId: 'teqlif_channel', // Match this with your Flutter channel ID
                     sound: 'default',
+                    notificationCount: (badge !== undefined && badge !== null) ? badge : 1,
                 },
             },
             apns: {
