@@ -3,6 +3,7 @@ import { auth, signOut } from "@/auth";
 import { NotificationBell } from "./NotificationBell";
 import { MessageBell } from "./MessageBell";
 import { LiveSearch } from "./LiveSearch";
+import { LogoutButton } from "./LogoutButton";
 
 export async function Navbar() {
     const session = await auth();
@@ -28,14 +29,10 @@ export async function Navbar() {
                                     Hesabım
                                 </Link>
                                 <MessageBell />
-                                <form action={async () => {
+                                <LogoutButton onLogout={async () => {
                                     "use server";
                                     await signOut({ redirectTo: "/" });
-                                }}>
-                                    <button type="submit" className="btn btn-ghost btn-sm">
-                                        Çıkış
-                                    </button>
-                                </form>
+                                }} />
                             </>
                         ) : (
                             <>
