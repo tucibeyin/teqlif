@@ -3,6 +3,7 @@ import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { categoryTree, findPath } from "@/lib/categories";
 import type { CategoryNode } from "@/lib/categories";
+import { cache } from "react";
 
 export const dynamic = "force-dynamic";
 
@@ -10,13 +11,11 @@ export const dynamic = "force-dynamic";
 function renderSidebarNode(
   node: CategoryNode,
   activeCategory: string | undefined,
+  activePathSlugs: Set<string>,
   depth = 0
 ): React.ReactNode {
   const isActive = activeCategory === node.slug;
-  const hasActiveDescendant =
-    activeCategory !== undefined &&
-    !isActive &&
-    findPath(activeCategory, node.children) !== null;
+  const isPathToActive = activePathSlugs.has(node.slug);
 
   if (node.children.length === 0) {
     // Yaprak → link
@@ -45,7 +44,7 @@ function renderSidebarNode(
   return (
     <details
       key={node.slug}
-      open={isActive || hasActiveDescendant || undefined}
+      open={isPathToActive || isActive || undefined}
       style={{ marginBottom: "1px" }}
     >
       <summary style={{
@@ -64,16 +63,16 @@ function renderSidebarNode(
       </summary>
       <div>
         {node.children.map((child) =>
-          renderSidebarNode(child, activeCategory, depth + 1)
+          renderSidebarNode(child, activeCategory, activePathSlugs, depth + 1)
         )}
       </div>
     </details>
   );
 }
 
-async function getAds(categorySlug?: string, limit = 24) {
+const getAds = cache(async (categorySlug?: string, limit = 24) => {
   try {
-    const where: Record<string, unknown> = {
+    const where: Record<string, any> = {
       status: "ACTIVE",
       OR: [
         { expiresAt: null },
@@ -103,7 +102,7 @@ async function getAds(categorySlug?: string, limit = 24) {
   } catch {
     return [];
   }
-}
+});
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("tr-TR", {
@@ -139,13 +138,17 @@ export default async function HomePage({
 }) {
   const params = await searchParams;
   const activeCategory = params.category;
+
+  // Calculate path once O(N)
+  const path = activeCategory ? findPath(activeCategory, categoryTree) : null;
+  const activePathSlugs = new Set(path?.map(n => n.slug) || []);
+
   const ads = await getAds(activeCategory, 24);
   const latestAds = activeCategory ? [] : ads.slice(0, 8);
   const featuredAds = activeCategory ? ads : ads.slice(0, 16);
 
   return (
     <>
-      {/* Hero */}
       <section className="hero">
         <div className="container">
           <h1 className="hero-title">
@@ -169,7 +172,6 @@ export default async function HomePage({
       <div className="container" id="ilanlar" style={{ paddingTop: "2rem" }}>
         <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "2rem", alignItems: "start" }}>
 
-          {/* LEFT SIDEBAR: Categories */}
           <aside style={{
             position: "sticky",
             top: "80px",
@@ -182,7 +184,6 @@ export default async function HomePage({
             <div style={{ fontWeight: 700, fontSize: "0.8rem", textTransform: "uppercase", letterSpacing: "0.05em", color: "var(--text-muted)", marginBottom: "0.75rem", padding: "0 0.5rem" }}>
               Kategoriler
             </div>
-            {/* Tümü linki */}
             <Link
               href="/"
               style={{
@@ -204,21 +205,14 @@ export default async function HomePage({
               <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{ads.length}</span>
             </Link>
 
-            {/* Kategori listeleme: recursive — çocuklar accordion, yapraklar link */}
-            {categoryTree.map((node) => renderSidebarNode(node, activeCategory))}
+            {categoryTree.map((node) => renderSidebarNode(node, activeCategory, activePathSlugs))}
           </aside>
 
-          {/* MAIN CONTENT */}
           <div>
-            {/* Active Category title or Featured */}
             <div className="section-header" style={{ marginBottom: "1rem" }}>
               <h2 className="section-title" style={{ fontSize: "1.25rem" }}>
                 {activeCategory
-                  ? (() => {
-                    const path = findPath(activeCategory, categoryTree);
-                    if (!path) return "İlanlar";
-                    return path.map((n, i) => i === 0 ? `${n.icon ?? ""} ${n.name}`.trim() : n.name).join(" › ") + " İlanları";
-                  })()
+                  ? (path ? path.map((n, i) => i === 0 ? `${n.icon ?? ""} ${n.name}`.trim() : n.name).join(" › ") + " İlanları" : "İlanlar")
                   : "Öne Çıkan İlanlar"}
               </h2>
               <span className="text-sm text-muted">{featuredAds.length} ilan</span>
@@ -245,7 +239,6 @@ export default async function HomePage({
                         height: "100%",
                         overflow: "hidden"
                       }}>
-                        {/* Image */}
                         <div style={{ position: "relative", paddingTop: "60%", background: "var(--bg-secondary)" }}>
                           {ad.images && ad.images.length > 0 ? (
                             <Image src={ad.images[0]} alt={ad.title} fill style={{ objectFit: "cover" }} />
@@ -263,7 +256,6 @@ export default async function HomePage({
                             </span>
                           )}
                         </div>
-                        {/* Body */}
                         <div style={{ padding: "0.75rem", display: "flex", flexDirection: "column", flex: 1 }}>
                           <div style={{ fontWeight: 700, fontSize: "0.9rem", marginBottom: "0.25rem", display: "-webkit-box", WebkitLineClamp: 1, WebkitBoxOrient: "vertical", overflow: "hidden" }}>
                             {ad.title}
@@ -294,7 +286,6 @@ export default async function HomePage({
               </div>
             )}
 
-            {/* Latest Ads section - tylko jeśli nie filtrujemy po kategorii */}
             {!activeCategory && latestAds.length > 0 && (
               <section style={{ marginTop: "3rem" }}>
                 <div className="section-header" style={{ marginBottom: "1rem" }}>
@@ -341,7 +332,6 @@ export default async function HomePage({
         </div>
       </div>
 
-      {/* Bottom spacing */}
       <div style={{ height: "4rem" }} />
     </>
   );
