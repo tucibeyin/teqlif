@@ -42,3 +42,8 @@ next-env.d.ts
 
 /app/generated/prisma
 firebase-admin.json
+
+# Firebase Mobile Configs (Recommendation for public repos)
+google-services.json
+GoogleService-Info.plist
+firebase_options.dart # Optional but recommended for public repos
