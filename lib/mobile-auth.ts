@@ -2,7 +2,10 @@ import { auth } from "@/auth";
 import jwt from "jsonwebtoken";
 import { prisma } from "@/lib/prisma";
 
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET || "fallback-secret-change-me";
+const JWT_SECRET = process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET;
+if (!JWT_SECRET) {
+    console.error("FATAL: AUTH_SECRET or NEXTAUTH_SECRET is not defined in environment variables. Mobile auth will fail.");
+}
 
 interface MobileUser {
     id: string;
@@ -20,10 +23,10 @@ interface MobileUser {
 export async function getMobileUser(req: Request): Promise<MobileUser | null> {
     // 1. Try mobile JWT first to avoid next-auth concurrency blocking on parallel mobile api requests
     const authHeader = req.headers.get("authorization");
-    if (authHeader?.startsWith("Bearer ")) {
+    if (authHeader?.startsWith("Bearer ") && JWT_SECRET) {
         try {
-            const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as MobileUser;
-            if (payload?.id) return payload;
+            const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as any;
+            if (payload?.id) return payload as MobileUser;
         } catch (e) {
             // Do not return null here, fall back to NextAuth session checking
             console.warn("JWT verification failed, falling back to NextAuth", e);
