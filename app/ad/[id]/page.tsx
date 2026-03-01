@@ -476,8 +476,45 @@ export default async function AdDetailPage({
                                                             )}
                                                         </div>
                                                     </div>
+                                                </div>
 
-                                                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                {(isOwner || (session?.user?.id === bid.userId) || ad.status !== 'SOLD' && (bid.status === 'PENDING' || bid.status === 'ACCEPTED')) && (
+                                                    <div style={{
+                                                        display: 'flex',
+                                                        gap: '8px',
+                                                        alignItems: 'center',
+                                                        marginTop: '12px',
+                                                        paddingTop: '12px',
+                                                        borderTop: '1px dashed var(--border)',
+                                                        flexWrap: 'wrap'
+                                                    }}>
+                                                        {isOwner && ad.status !== 'SOLD' && bid.status === 'ACCEPTED' && (
+                                                            <AdActions actionType="FINALIZE_SALE" bidId={bid.id} currentUser={session?.user} />
+                                                        )}
+
+                                                        {isOwner && bid.status === 'ACCEPTED' && bid.user.phone && (
+                                                            <a
+                                                                href={`tel:${bid.user.phone}`}
+                                                                className="btn btn-secondary"
+                                                                title="Ara"
+                                                                style={{
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    padding: '6px 12px',
+                                                                    fontSize: '0.8rem',
+                                                                    fontWeight: 600,
+                                                                    gap: '6px',
+                                                                    borderRadius: '6px',
+                                                                    background: '#f1f5f9',
+                                                                    color: '#475569',
+                                                                    border: '1px solid #e2e8f0'
+                                                                }}
+                                                            >
+                                                                📞 Ara
+                                                            </a>
+                                                        )}
+
                                                         {(isOwner || (session?.user?.id === bid.userId)) && (
                                                             <AdActions
                                                                 actionType="MESSAGE"
@@ -491,47 +528,13 @@ export default async function AdDetailPage({
                                                                 }
                                                             />
                                                         )}
-                                                    </div>
-                                                </div>
 
-                                                {isOwner && ad.status !== 'SOLD' && (bid.status === 'PENDING' || bid.status === 'ACCEPTED') && (
-                                                    <div style={{
-                                                        display: 'flex',
-                                                        gap: '8px',
-                                                        alignItems: 'center',
-                                                        marginTop: '12px',
-                                                        paddingTop: '12px',
-                                                        borderTop: '1px border-dashed var(--border)'
-                                                    }}>
-                                                        {bid.status === 'ACCEPTED' && (
-                                                            <>
-                                                                <AdActions actionType="FINALIZE_SALE" bidId={bid.id} currentUser={session?.user} />
-                                                                {bid.user.phone && (
-                                                                    <a
-                                                                        href={`tel:${bid.user.phone}`}
-                                                                        className="btn btn-secondary"
-                                                                        title="Ara"
-                                                                        style={{
-                                                                            display: 'flex',
-                                                                            alignItems: 'center',
-                                                                            justifyContent: 'center',
-                                                                            padding: '6px 12px',
-                                                                            fontSize: '0.8rem',
-                                                                            gap: '6px'
-                                                                        }}
-                                                                    >
-                                                                        📞 Ara
-                                                                    </a>
-                                                                )}
-                                                                <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
-                                                            </>
+                                                        {isOwner && ad.status !== 'SOLD' && bid.status === 'PENDING' && (
+                                                            <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
                                                         )}
 
-                                                        {bid.status === 'PENDING' && (
-                                                            <>
-                                                                <AdActions actionType="ACCEPT_BID" bidId={bid.id} currentUser={session?.user} />
-                                                                <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
-                                                            </>
+                                                        {isOwner && ad.status !== 'SOLD' && (bid.status === 'PENDING' || bid.status === 'ACCEPTED') && (
+                                                            <AdActions actionType="CANCEL_BID" bidId={bid.id} currentUser={session?.user} />
                                                         )}
                                                     </div>
                                                 )}

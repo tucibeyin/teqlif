@@ -136,17 +136,17 @@ export function AdActions({
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
-                        width: '32px',
-                        height: '32px',
-                        padding: '0',
+                        padding: '6px 12px',
                         fontSize: '0.8rem',
+                        fontWeight: 600,
                         color: 'var(--primary)',
                         borderColor: 'transparent',
                         background: 'rgba(0, 180, 204, 0.08)',
-                        borderRadius: '50%',
+                        borderRadius: '6px',
                         cursor: 'pointer',
                         transition: 'all 0.2s ease',
-                        border: '1px solid transparent'
+                        border: '1px solid transparent',
+                        gap: '6px'
                     }}
                     onMouseEnter={(e) => {
                         e.currentTarget.style.background = 'rgba(0, 180, 204, 0.15)';
@@ -157,8 +157,8 @@ export function AdActions({
                         e.currentTarget.style.borderColor = 'transparent';
                     }}
                 >
-                    <MessageSquare size={16} style={{ minWidth: '16px' }} />
-                    {isLoading ? "..." : ""}
+                    <MessageSquare size={14} />
+                    {isLoading ? "..." : "Mesaj At"}
                 </button>
             );
         }
@@ -186,15 +186,17 @@ export function AdActions({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '4px 8px',
+                    padding: '6px 12px',
                     fontSize: '0.8rem',
-                    color: 'var(--success)',
-                    borderColor: 'var(--success)',
-                    background: 'rgba(76, 175, 80, 0.1)'
+                    fontWeight: 600,
+                    color: '#22c55e',
+                    borderColor: 'rgba(34, 197, 94, 0.3)',
+                    background: 'rgba(34, 197, 94, 0.08)',
+                    borderRadius: '6px'
                 }}
             >
                 <CheckCircle size={14} />
-                {isLoading ? "..." : "Kabul Et ve Konuş"}
+                {isLoading ? "..." : "Kabul Et"}
             </button>
         );
     }
@@ -209,11 +211,13 @@ export function AdActions({
                     display: 'flex',
                     alignItems: 'center',
                     gap: '4px',
-                    padding: '4px 8px',
+                    padding: '6px 12px',
                     fontSize: '0.8rem',
-                    color: 'var(--danger)',
-                    borderColor: 'var(--danger)',
-                    background: 'rgba(239, 68, 68, 0.1)'
+                    fontWeight: 600,
+                    color: '#ef4444',
+                    borderColor: 'rgba(239, 68, 68, 0.3)',
+                    background: 'rgba(239, 68, 68, 0.08)',
+                    borderRadius: '6px'
                 }}
             >
                 <XCircle size={14} />
@@ -231,14 +235,15 @@ export function AdActions({
                 style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '4px',
-                    padding: '4px 12px',
-                    fontSize: '0.8rem',
-                    fontWeight: 700,
-                    backgroundColor: 'var(--accent-green)',
+                    gap: '6px',
+                    padding: '6px 16px',
+                    fontSize: '0.8125rem',
+                    fontWeight: 800,
+                    backgroundColor: '#10b981',
                     color: 'white',
-                    borderColor: 'var(--accent-green)',
-                    boxShadow: '0 2px 4px rgba(34, 197, 94, 0.2)'
+                    borderColor: '#10b981',
+                    borderRadius: '6px',
+                    boxShadow: '0 2px 4px rgba(16, 185, 129, 0.2)'
                 }}
             >
                 <CheckCircle size={14} />
