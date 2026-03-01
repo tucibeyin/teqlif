@@ -706,10 +706,12 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             (() {
                               final double currentHighest = ad.bids.isNotEmpty
                                   ? ad.bids.first.amount
-                                  : (ad.startingBid ?? 0.0);
+                                  : 0.0;
                               final double minRequiredBid = ad.bids.isNotEmpty
                                   ? (currentHighest + ad.minBidStep)
-                                  : (ad.startingBid ?? 1.0);
+                                  : (ad.startingBid != null && ad.startingBid! > 0 
+                                      ? ad.startingBid! 
+                                      : ad.minBidStep.toDouble());
 
                               return Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,

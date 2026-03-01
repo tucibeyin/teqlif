@@ -396,8 +396,8 @@ export default async function AdDetailPage({
                                 {ad.status === 'ACTIVE' && !isOwner && session?.user && (
                                     <BidForm
                                         adId={ad.id}
-                                        currentHighest={highestBid?.amount ?? (ad.startingBid !== null ? ad.startingBid : 0)}
-                                        minStep={ad.bids.length > 0 ? ad.minBidStep : (ad.startingBid === null ? 1 : 0)}
+                                        currentHighest={highestBid?.amount ?? 0}
+                                        minStep={highestBid ? ad.minBidStep : Math.max(ad.startingBid ?? 0, ad.minBidStep)}
                                     />
                                 )}
 
