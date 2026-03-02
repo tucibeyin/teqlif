@@ -16,7 +16,7 @@ export async function PATCH(
 
         const resolvedParams = await params;
         const bidId = resolvedParams.id;
-        logger.info("BIDS", "PATCH /api/bids/[id]/cancel start", { bidId, userId: currentUser.id });
+        logger.info("PATCH /api/bids/[id]/cancel start", { bidId, userId: currentUser.id });
 
         const bid = await prisma.bid.findUnique({
             where: { id: bidId },
@@ -65,7 +65,7 @@ export async function PATCH(
             });
 
             // Status recovery check
-            logger.info("BIDS", "Status recovery check (Inside TS)", { adId: currentBid.adId, adStatus: currentBid.ad.status });
+            logger.info("Status recovery check (Inside TS)", { adId: currentBid.adId, adStatus: currentBid.ad.status });
 
             if (currentBid.ad.status === 'SOLD') {
                 const acceptedBidsCount = await tx.bid.count({
@@ -76,10 +76,10 @@ export async function PATCH(
                     }
                 });
 
-                logger.info("BIDS", "Accepted bids remaining", { adId: currentBid.adId, count: acceptedBidsCount });
+                logger.info("Accepted bids remaining", { adId: currentBid.adId, count: acceptedBidsCount });
 
                 if (acceptedBidsCount === 0) {
-                    logger.info("BIDS", "Reactivating ad", { adId: currentBid.adId });
+                    logger.info("Reactivating ad", { adId: currentBid.adId });
                     await tx.ad.update({
                         where: { id: currentBid.adId },
                         data: { status: 'ACTIVE' }

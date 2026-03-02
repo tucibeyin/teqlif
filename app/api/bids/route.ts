@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
         }
 
         const { adId, amount } = await req.json();
-        logger.info("BIDS", "POST /api/bids start", { adId, amount, userId: user.id });
+        logger.info("POST /api/bids start", { adId, amount, userId: user.id });
 
         if (!adId || !amount) {
             return NextResponse.json({ error: "İlan ve teklif miktarı zorunludur." }, { status: 400 });
@@ -82,7 +82,7 @@ export async function POST(req: NextRequest) {
             });
 
             if (ad.status === 'SOLD' && acceptedBidsCount === 0) {
-                logger.info("BIDS", "Self-healing: SOLD ad found with 0 accepted bids, resetting to ACTIVE", { adId });
+                logger.info("Self-healing: SOLD ad found with 0 accepted bids, resetting to ACTIVE", { adId });
                 await prisma.ad.update({
                     where: { id: adId },
                     data: { status: 'ACTIVE' }
@@ -93,12 +93,12 @@ export async function POST(req: NextRequest) {
                 // Refresh local ad object status for the rest of the function
                 ad.status = "ACTIVE";
             } else {
-                logger.warn("BIDS", "Bid rejected: Ad not active", { adId, adStatus: ad.status, userId: user.id });
+                logger.warn("Bid rejected: Ad not active", { adId, adStatus: ad.status, userId: user.id });
                 return NextResponse.json({ error: "Bu ilan artık aktif değil." }, { status: 400 });
             }
         }
 
-        logger.info("BIDS", "Processing bid", { adId, amount, userId: user.id });
+        logger.info("Processing bid", { adId, amount, userId: user.id });
 
         // Determine the minimum required bid
         let minRequiredAmount = 1; // absolute minimum for a free bid
