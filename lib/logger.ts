@@ -3,17 +3,17 @@
  * Designed to be as safe as possible for VPS environments.
  */
 export const logger = {
-    info: (m: string, c?: any) => {
+    info: function (m: string, c?: any) {
         console.log(`[INFO] ${m}`, c || '');
     },
 
-    warn: (m: string, c?: any) => {
+    warn: function (m: string, c?: any) {
         console.warn(`[WARN] ${m}`, c || '');
     },
 
-    error: (m: string, c?: any) => {
+    error: function (m: string, c?: any) {
         console.error(`[ERROR] ${m}`, c || '');
-        this?._writeFile('ERROR', m, c);
+        this._writeFile('ERROR', m, c);
     },
 
     /**
@@ -35,7 +35,7 @@ export const logger = {
     /**
      * Internal safe file writer (Async/Non-blocking)
      */
-    _writeFile: (level: string, m: string, c?: any) => {
+    _writeFile: function (level: string, m: string, c?: any) {
         try {
             const fs = require('fs');
             const path = require('path');

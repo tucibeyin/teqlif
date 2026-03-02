@@ -404,8 +404,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           }
         }
       }
-
-      }
     }
 
     return GestureDetector(
