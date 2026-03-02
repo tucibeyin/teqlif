@@ -49,23 +49,21 @@ export async function GET(req: NextRequest) {
       name: userName,
     });
 
-    // İzinler (Bouncer Logic)
-    // Sadece Host veya Davetli Guest yayın (kamera/mikrofon) açabilir
+    const isOwner = ad.userId === userId;
     const canPublish = isHost || isGuest;
-    // Herkes yayını izleyebilir
-    const canSubscribe = true;
-    // Herkes Data Channel kullanabilir (Teklif vermek ve Ephemeral Chat için KRİTİK)
-    const canPublishData = true;
 
     at.addGrant({
       roomJoin: true,
       room: room,
-      canPublish,
-      canSubscribe,
-      canPublishData,
+      canPublish: canPublish,
+      canPublishData: true,
+      canSubscribe: true,
     });
 
-    return NextResponse.json({ token: await at.toJwt() });
+    const token = await at.toJwt();
+    const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+
+    return NextResponse.json({ token, wsUrl });
   } catch (error: any) {
     console.error('[LiveKit Token API] Processing error:', error);
     return NextResponse.json({ error: 'Failed to generate token' }, { status: 500 });

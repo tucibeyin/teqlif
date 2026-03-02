@@ -1,0 +1,545 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:livekit_client/livekit_client.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:slider_button/slider_button.dart';
+import 'package:haptic_feedback/haptic_feedback.dart';
+import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
+import 'dart:async';
+
+import '../../../core/models/ad.dart';
+import '../../../core/providers/live_room_provider.dart';
+import '../../../core/api/api_client.dart';
+import '../../../core/api/endpoints.dart';
+import '../providers/ad_detail_provider.dart';
+import '../../dashboard/screens/dashboard_screen.dart';
+
+class LiveArenaViewer extends ConsumerStatefulWidget {
+  final AdModel ad;
+  const LiveArenaViewer({super.key, required this.ad});
+
+  @override
+  ConsumerState<LiveArenaViewer> createState() => _LiveArenaViewerState();
+}
+
+class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
+    with WidgetsBindingObserver {
+  bool _uiVisible = true;
+  Timer? _inactivityTimer;
+  VideoQuality _currentQuality = VideoQuality.HIGH;
+
+  // Ephemeral Chat
+  final List<_EphemeralMessage> _messages = [];
+  final TextEditingController _chatCtrl = TextEditingController();
+  final FocusNode _chatFocus = FocusNode();
+
+  // Bid
+  final _bidCtrl = TextEditingController();
+  final _bidFormatter = CurrencyTextInputFormatter.currency(
+    locale: 'tr_TR',
+    symbol: '',
+    decimalDigits: 0,
+  );
+  bool _bidLoading = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+    _resetInactivityTimer();
+    // Connect to room
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(liveRoomProvider(widget.ad.id).notifier).connect(false);
+    });
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _inactivityTimer?.cancel();
+    _chatCtrl.dispose();
+    _chatFocus.dispose();
+    _bidCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused) {
+      // In background, disable camera/audio? Viewer doesn't have it.
+      // LiveKit adaptive stream pauses video when view is hidden.
+    } else if (state == AppLifecycleState.resumed) {
+      // Resume
+    }
+  }
+
+  void _resetInactivityTimer() {
+    _inactivityTimer?.cancel();
+    _inactivityTimer = Timer(const Duration(seconds: 30), () {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Hareketsizlik modu aktif (AdaptiveStream).'),
+            duration: Duration(seconds: 2),
+            backgroundColor: Colors.black54,
+          ),
+        );
+      }
+    });
+  }
+
+  void _onInteraction() {
+    _resetInactivityTimer();
+  }
+
+  void _handleDataChannelMessage(List<int> data, RemoteParticipant? p) {
+    final message = String.fromCharCodes(data);
+    setState(() {
+      _messages.add(_EphemeralMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: message,
+        senderName: p?.name ?? 'Biri',
+        timestamp: DateTime.now(),
+      ));
+      if (_messages.length > 3) {
+        _messages.removeAt(0);
+      }
+    });
+    // Remove after 4 seconds
+    Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          if (_messages.isNotEmpty) {
+            _messages.removeAt(0);
+          }
+        });
+      }
+    });
+  }
+
+  Future<void> _sendChatMessage() async {
+    final text = _chatCtrl.text.trim();
+    if (text.isEmpty) return;
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    if (state.room != null) {
+      await state.room!.localParticipant?.publishData(text.codeUnits);
+      _handleDataChannelMessage(text.codeUnits, null); // Add my own
+    }
+    _chatCtrl.clear();
+    _chatFocus.unfocus();
+  }
+
+  Future<void> _placeBidSlide() async {
+    final rawText = _bidCtrl.text
+        .replaceAll('₺', '')
+        .replaceAll(' ', '')
+        .replaceAll('.', '')
+        .replaceAll(',', '.');
+    final amount = double.tryParse(rawText);
+    
+    if (amount == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Lütfen geçerli bir teklif girin')),
+      );
+      return;
+    }
+
+    setState(() => _bidLoading = true);
+    await Haptics.vibrate(HapticsType.heavy);
+
+    try {
+      await ApiClient().post(Endpoints.bids, data: {
+        'adId': widget.ad.id,
+        'amount': amount,
+      });
+      _bidCtrl.clear();
+      ref.invalidate(adDetailProvider(widget.ad.id));
+      ref.invalidate(myBidsProvider);
+      
+      // Broadcast bid to data channel for others to see instantly
+      final state = ref.read(liveRoomProvider(widget.ad.id));
+      if (state.room != null) {
+        state.room!.localParticipant?.publishData('🔥 Yeni Teklif: ₺$amount'.codeUnits);
+        _handleDataChannelMessage('🔥 Yeni Teklif: ₺$amount'.codeUnits, null);
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Teklifiniz verildi! 🎉'), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Teklif verilemedi.')),
+      );
+    } finally {
+      if (mounted) setState(() => _bidLoading = false);
+    }
+  }
+
+  void _showAdDetailsSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.3,
+        maxChildSize: 0.9,
+        builder: (_, controller) => Container(
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.95),
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: ListView(
+            controller: controller,
+            padding: const EdgeInsets.all(24),
+            children: [
+              Center(
+                child: Container(
+                  width: 40,
+                  height: 4,
+                  margin: const EdgeInsets.only(bottom: 24),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade300,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              Text(widget.ad.title,
+                  style: const TextStyle(
+                      fontSize: 22, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
+              if (widget.ad.startingBid != null)
+                Text('Başlangıç Fiyatı: ₺${widget.ad.startingBid}',
+                    style: const TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF00B4CC))),
+              const SizedBox(height: 24),
+              const Text('Açıklama',
+                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Text(widget.ad.description,
+                  style: const TextStyle(fontSize: 16, height: 1.5)),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final updatedAdAsync = ref.watch(adDetailProvider(widget.ad.id));
+    final currentAd = updatedAdAsync.value ?? widget.ad;
+    
+    final roomState = ref.watch(liveRoomProvider(widget.ad.id));
+    final room = roomState.room;
+
+    // We assume there's one host publishing video. Let's find the first remote video track.
+    VideoTrack? videoTrack;
+    if (room != null) {
+      for (var p in room.remoteParticipants.values) {
+        for (var pub in p.videoTrackPublications) {
+          if (pub.track != null) {
+            videoTrack = pub.track as VideoTrack;
+            break;
+          }
+        }
+      }
+      
+      // Listen to data channel
+      room.events.listen(_onRoomEvent);
+    }
+
+    return GestureDetector(
+      onTap: _onInteraction,
+      onPanUpdate: (details) {
+        _onInteraction();
+        if (details.delta.dx > 10) {
+          // Swipe Right: Ghost Screen
+          if (_uiVisible) setState(() => _uiVisible = false);
+        } else if (details.delta.dx < -10) {
+          // Swipe Left: Show UI
+          if (!_uiVisible) setState(() => _uiVisible = true);
+        }
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        body: Stack(
+          children: [
+            // 1. Video Player
+            if (roomState.isConnecting)
+              const Center(child: CircularProgressIndicator(color: Colors.white))
+            else if (videoTrack != null)
+              SizedBox.expand(
+                child: VideoTrackRenderer(
+                  videoTrack,
+                  fit: VideoViewFit.cover,
+                ),
+              )
+            else
+              const Center(
+                  child: Text('Yayın bekleniyor...',
+                      style: TextStyle(color: Colors.white))),
+
+            // 2. Ghost Screen Overlay (UI)
+            AnimatedOpacity(
+              opacity: _uiVisible ? 1.0 : 0.0,
+              duration: const Duration(milliseconds: 300),
+              child: SafeArea(
+                child: IgnorePointer(
+                  ignoring: !_uiVisible,
+                  child: Column(
+                    children: [
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.redAccent,
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(Icons.circle,
+                                      color: Colors.white, size: 10),
+                                  const SizedBox(width: 6),
+                                  const Text('CANLI MEZAT',
+                                      style: TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                          fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                            IconButton(
+                              icon: const Icon(Icons.close,
+                                  color: Colors.white, size: 28),
+                              onPressed: () {
+                                ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+                                context.pop();
+                              },
+                            )
+                          ],
+                        ),
+                      ),
+
+                      const Spacer(),
+
+                      // Ephemeral Chat & Info Drawer Button
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            // Chat flow
+                            Expanded(
+                              child: ShaderMask(
+                                shaderCallback: (Rect bounds) {
+                                  return LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.transparent,
+                                      Colors.white,
+                                      Colors.white,
+                                    ],
+                                    stops: const [0.0, 0.4, 1.0],
+                                  ).createShader(bounds);
+                                },
+                                blendMode: BlendMode.dstIn,
+                                child: SizedBox(
+                                  height: 200,
+                                  child: ListView.builder(
+                                    reverse: true,
+                                    itemCount: _messages.length,
+                                    itemBuilder: (context, index) {
+                                      // Because it's reversed, 0 is the newest, but we append to end. 
+                                      // Wait, we append to end. So reversed means we should read from end.
+                                      final msg = _messages[_messages.length - 1 - index];
+                                      return Padding(
+                                        padding: const EdgeInsets.only(bottom: 8),
+                                        child: Row(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${msg.senderName}:',
+                                              style: const TextStyle(
+                                                color: Colors.white70,
+                                                fontWeight: FontWeight.w600,
+                                                fontSize: 14,
+                                                shadows: [Shadow(color: Colors.black54, blurRadius: 2)],
+                                              ),
+                                            ),
+                                            const SizedBox(width: 8),
+                                            Expanded(
+                                              child: Text(
+                                                msg.text,
+                                                style: const TextStyle(
+                                                  color: Colors.white,
+                                                  fontSize: 14,
+                                                  fontWeight: FontWeight.w500,
+                                                  shadows: [Shadow(color: Colors.black54, blurRadius: 2)],
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ),
+                              ),
+                            ),
+                            // Details Button
+                            IconButton(
+                              onPressed: _showAdDetailsSheet,
+                              icon: const Icon(Icons.info_outline, color: Colors.white, size: 32),
+                              style: IconButton.styleFrom(
+                                backgroundColor: Colors.black45,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      // Bid input and Chat input
+                      Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: const BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [Colors.transparent, Colors.black87],
+                          ),
+                        ),
+                        child: Column(
+                          children: [
+                            // Chat Input
+                            Container(
+                              decoration: BoxDecoration(
+                                color: Colors.black45,
+                                borderRadius: BorderRadius.circular(24),
+                                border: Border.all(color: Colors.white24),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _chatCtrl,
+                                      focusNode: _chatFocus,
+                                      style: const TextStyle(color: Colors.white),
+                                      decoration: const InputDecoration(
+                                        hintText: 'Mesaj yaz...',
+                                        hintStyle: TextStyle(color: Colors.white54),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                                      ),
+                                      onSubmitted: (_) => _sendChatMessage(),
+                                    ),
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
+                                    onPressed: _sendChatMessage,
+                                  )
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            // Bid Section
+                            Row(
+                              children: [
+                                Expanded(
+                                  flex: 2,
+                                  child: Container(
+                                    height: 52,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(26),
+                                    ),
+                                    child: TextField(
+                                      controller: _bidCtrl,
+                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                      inputFormatters: [_bidFormatter],
+                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                      textAlign: TextAlign.center,
+                                      decoration: const InputDecoration(
+                                        hintText: 'Miktar (₺)',
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  flex: 3,
+                                  child: _bidLoading 
+                                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF00B4CC)))
+                                    : SliderButton(
+                                        action: () async {
+                                          await _placeBidSlide();
+                                          return true; // reset
+                                        },
+                                        label: const Text(
+                                          "Kaydırarak Teklif Ver",
+                                          style: TextStyle(
+                                              color: Colors.white, 
+                                              fontWeight: FontWeight.bold, 
+                                              fontSize: 14),
+                                        ),
+                                        icon: const Center(
+                                            child: Icon(Icons.gavel,
+                                                color: Color(0xFF00B4CC),
+                                                size: 24)),
+                                        width: 200,
+                                        radius: 26,
+                                        buttonColor: Colors.white,
+                                        backgroundColor: const Color(0xFF00B4CC),
+                                        highlightedColor: Colors.white,
+                                        baseColor: Colors.white,
+                                      ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  void _onRoomEvent(RoomEvent event) {
+    if (event is DataReceivedEvent) {
+      _handleDataChannelMessage(event.data, event.participant);
+    }
+  }
+}
+
+class _EphemeralMessage {
+  final String id;
+  final String text;
+  final String senderName;
+  final DateTime timestamp;
+
+  _EphemeralMessage({
+    required this.id,
+    required this.text,
+    required this.senderName,
+    required this.timestamp,
+  });
+}

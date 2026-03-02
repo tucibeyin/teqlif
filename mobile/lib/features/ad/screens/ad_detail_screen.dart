@@ -14,6 +14,8 @@ import 'package:intl/intl.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
 import 'fullscreen_image_viewer.dart';
+import 'live_arena_host.dart';
+import 'live_arena_viewer.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../core/constants/categories.dart';
 
@@ -185,6 +187,15 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
         ),
         data: (ad) {
           final isOwner = currentUser?.id == ad.userId;
+
+          if (ad.isLive == true && ad.status == 'ACTIVE') {
+            if (isOwner) {
+              return LiveArenaHost(ad: ad);
+            } else {
+              return LiveArenaViewer(ad: ad);
+            }
+          }
+
           return CustomScrollView(
             slivers: [
               // Image header

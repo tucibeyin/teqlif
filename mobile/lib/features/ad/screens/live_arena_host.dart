@@ -1,0 +1,341 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+import 'package:livekit_client/livekit_client.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'dart:async';
+
+import '../../../core/models/ad.dart';
+import '../../../core/providers/live_room_provider.dart';
+
+class LiveArenaHost extends ConsumerStatefulWidget {
+  final AdModel ad;
+  const LiveArenaHost({super.key, required this.ad});
+
+  @override
+  ConsumerState<LiveArenaHost> createState() => _LiveArenaHostState();
+}
+
+class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
+  // Ephemeral Chat
+  final List<_EphemeralMessage> _messages = [];
+  final TextEditingController _chatCtrl = TextEditingController();
+  final FocusNode _chatFocus = FocusNode();
+
+  bool _isCameraEnabled = true;
+  bool _isMicEnabled = true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Connect to room as Host
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(liveRoomProvider(widget.ad.id).notifier).connect(true);
+    });
+  }
+
+  @override
+  void dispose() {
+    _chatCtrl.dispose();
+    _chatFocus.dispose();
+    super.dispose();
+  }
+
+  void _handleDataChannelMessage(List<int> data, RemoteParticipant? p) {
+    final message = String.fromCharCodes(data);
+    setState(() {
+      _messages.add(_EphemeralMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        text: message,
+        senderName: p?.name ?? 'Biri',
+        timestamp: DateTime.now(),
+      ));
+      if (_messages.length > 5) { // Host sees maybe a bit more or 3 like viewer
+        _messages.removeAt(0);
+      }
+    });
+    // Remove after 4 seconds
+    Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          if (_messages.isNotEmpty) {
+            _messages.removeAt(0);
+          }
+        });
+      }
+    });
+  }
+
+  Future<void> _sendChatMessage() async {
+    final text = _chatCtrl.text.trim();
+    if (text.isEmpty) return;
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    if (state.room != null) {
+      await state.room!.localParticipant?.publishData(text.codeUnits);
+      _handleDataChannelMessage(text.codeUnits, null); // Add my own
+    }
+    _chatCtrl.clear();
+    _chatFocus.unfocus();
+  }
+
+  void _onRoomEvent(RoomEvent event) {
+    if (event is DataReceivedEvent) {
+      _handleDataChannelMessage(event.data, event.participant);
+    }
+  }
+
+  Future<void> _endLiveStream() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Yayını Bitir'),
+        content: const Text('Canlı mezatı bitirmek istediğinize emin misiniz? Yayın kapandıktan sonra teklifler onay için hesabınıza düşecektir.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('İptal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Yayını Bitir', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      // Disconnect from LiveKit. The LiveKit Webhook will trigger 'room_finished'
+      // and Sync bids to DB.
+      await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+      if (mounted) context.pop(); // Go back to normal ad detail
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final roomState = ref.watch(liveRoomProvider(widget.ad.id));
+    final room = roomState.room;
+
+    VideoTrack? localVideoTrack;
+    if (room != null) {
+      // Listen to data channel
+      room.events.listen(_onRoomEvent);
+
+      final trackPublication = room.localParticipant?.videoTrackPublications.firstOrNull;
+      if (trackPublication != null) {
+        localVideoTrack = trackPublication.track as VideoTrack?;
+      }
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.black,
+      body: Stack(
+        children: [
+          // 1. Camera Preview
+          if (roomState.isConnecting)
+            const Center(child: CircularProgressIndicator(color: Colors.white))
+          else if (localVideoTrack != null && _isCameraEnabled)
+            SizedBox.expand(
+              child: VideoTrackRenderer(
+                localVideoTrack,
+                fit: VideoViewFit.cover,
+              ),
+            )
+          else
+            const Center(child: Icon(Icons.videocam_off, size: 80, color: Colors.white54)),
+
+          // 2. UI Overlay
+          SafeArea(
+            child: Column(
+              children: [
+                // Header (Host Info)
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.sensors, color: Colors.white, size: 14),
+                            const SizedBox(width: 6),
+                            const Text('YAYINDASIN',
+                                style: TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12)),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                        onPressed: _endLiveStream,
+                      )
+                    ],
+                  ),
+                ),
+
+                const Spacer(),
+
+                // Ephemeral Chat & Info Drawer Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.end,
+                    children: [
+                      // Chat flow
+                      Expanded(
+                        child: ShaderMask(
+                          shaderCallback: (Rect bounds) {
+                            return LinearGradient(
+                              begin: Alignment.topCenter,
+                              end: Alignment.bottomCenter,
+                              colors: [
+                                Colors.transparent,
+                                Colors.white,
+                                Colors.white,
+                              ],
+                              stops: const [0.0, 0.4, 1.0],
+                            ).createShader(bounds);
+                          },
+                          blendMode: BlendMode.dstIn,
+                          child: SizedBox(
+                            height: 200,
+                            child: ListView.builder(
+                              reverse: true,
+                              itemCount: _messages.length,
+                              itemBuilder: (context, index) {
+                                final msg = _messages[_messages.length - 1 - index];
+                                return Padding(
+                                  padding: const EdgeInsets.only(bottom: 8),
+                                  child: Row(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${msg.senderName}:',
+                                        style: const TextStyle(
+                                          color: Colors.white70,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                          shadows: [Shadow(color: Colors.black54, blurRadius: 2)],
+                                        ),
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          msg.text,
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w500,
+                                            shadows: [Shadow(color: Colors.black54, blurRadius: 2)],
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                        ),
+                      ),
+                      // Controls
+                      Column(
+                        children: [
+                          IconButton(
+                            icon: Icon(_isCameraEnabled ? Icons.videocam : Icons.videocam_off, color: Colors.white),
+                            style: IconButton.styleFrom(backgroundColor: Colors.black45),
+                            onPressed: () async {
+                              final p = room?.localParticipant;
+                              if (p != null) {
+                                await p.setCameraEnabled(!_isCameraEnabled);
+                                setState(() => _isCameraEnabled = !_isCameraEnabled);
+                              }
+                            },
+                          ),
+                          const SizedBox(height: 8),
+                          IconButton(
+                            icon: Icon(_isMicEnabled ? Icons.mic : Icons.mic_off, color: Colors.white),
+                            style: IconButton.styleFrom(backgroundColor: Colors.black45),
+                            onPressed: () async {
+                              final p = room?.localParticipant;
+                              if (p != null) {
+                                await p.setMicrophoneEnabled(!_isMicEnabled);
+                                setState(() => _isMicEnabled = !_isMicEnabled);
+                              }
+                            },
+                          ),
+                        ],
+                      )
+                    ],
+                  ),
+                ),
+
+                // Chat Input box
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.black87],
+                    ),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            controller: _chatCtrl,
+                            focusNode: _chatFocus,
+                            style: const TextStyle(color: Colors.white),
+                            decoration: const InputDecoration(
+                              hintText: 'İzleyicilere yaz...',
+                              hintStyle: TextStyle(color: Colors.white54),
+                              border: InputBorder.none,
+                              contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                            ),
+                            onSubmitted: (_) => _sendChatMessage(),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
+                          onPressed: _sendChatMessage,
+                        )
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _EphemeralMessage {
+  final String id;
+  final String text;
+  final String senderName;
+  final DateTime timestamp;
+
+  _EphemeralMessage({
+    required this.id,
+    required this.text,
+    required this.senderName,
+    required this.timestamp,
+  });
+}
