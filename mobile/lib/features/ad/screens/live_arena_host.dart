@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'dart:ui';
 import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
@@ -325,13 +324,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                       }
                                     }
                                   },
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.green,
-                                    foregroundColor: Colors.white,
-                                    shape: RoundedRectangle_border: borderRadius: BorderRadius.circular(10)),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      foregroundColor: Colors.white,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    child: const Text('Onayla ve Sat'),
                                   ),
-                                  child: const Text('Onayla ve Sat'),
-                                ),
                               ],
                             ),
                           );
@@ -549,7 +548,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                               backgroundColor: Colors.greenAccent,
                               foregroundColor: Colors.black,
                               padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangle_border: borderRadius: BorderRadius.circular(15)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
                               elevation: 10,
                               shadowColor: Colors.greenAccent.withOpacity(0.5),
                             ),
@@ -806,20 +805,6 @@ class _CircularControlButton extends StatelessWidget {
       ],
     );
   }
-}
-
-class _EphemeralMessage {
-  final String id;
-  final String text;
-  final String senderName;
-  final DateTime timestamp;
-
-  _EphemeralMessage({
-    required this.id,
-    required this.text,
-    required this.senderName,
-    required this.timestamp,
-  });
 }
 
 class _LiveBid {
