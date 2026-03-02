@@ -141,40 +141,39 @@ export default async function AdDetailPage({
 
     return (
         <div className="container">
-            {adData.isLive && (
-                <div style={{ marginBottom: "2rem" }}>
-                    <div className="card" style={{ overflow: "hidden", border: "2px solid #ef4444" }}>
-                        <div style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                            <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
-                            {!adData.isLive && isOwner ? "YAYIN HAZIRLIK ODASI (Sadece Siz Görüyorsunuz)" : "CANLI MEZAT ARENASI"}
-                        </div>
-                        <LiveArenaWrapper roomId={adData.id} adId={adData.id} isOwner={isOwner} />
-                    </div>
-                </div>
-            )}
 
             <div className="ad-detail">
                 {/* Sol: Görsel ve Detay */}
                 <div>
                     <div className="ad-detail-images">
-                        {ad.images && ad.images.length > 0 ? (
-                            <ImageSlider images={ad.images} title={ad.title} />
-                        ) : (
-                            <div
-                                style={{
-                                    width: "100%",
-                                    height: "400px",
-                                    background: "linear-gradient(135deg, var(--bg-secondary), var(--bg-card-hover))",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: "6rem",
-                                    borderRadius: "var(--radius-lg)",
-                                    border: "1px solid var(--border)",
-                                }}
-                            >
-                                {ad.category.icon}
+                        {adData.isLive ? (
+                            <div className="card" style={{ overflow: "hidden", border: "2px solid #ef4444", borderRadius: "1.5rem" }}>
+                                <div style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                    <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
+                                    {!adData.isLive && isOwner ? "YAYIN HAZIRLIK ODASI (Sadece Siz Görüyorsunuz)" : "CANLI MEZAT ARENASI"}
+                                </div>
+                                <LiveArenaWrapper roomId={adData.id} adId={adData.id} isOwner={isOwner} />
                             </div>
+                        ) : (
+                            ad.images && ad.images.length > 0 ? (
+                                <ImageSlider images={ad.images} title={ad.title} />
+                            ) : (
+                                <div
+                                    style={{
+                                        width: "100%",
+                                        height: "400px",
+                                        background: "linear-gradient(135deg, var(--bg-secondary), var(--bg-card-hover))",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: "6rem",
+                                        borderRadius: "var(--radius-lg)",
+                                        border: "1px solid var(--border)",
+                                    }}
+                                >
+                                    {ad.category.icon}
+                                </div>
+                            )
                         )}
                     </div>
 

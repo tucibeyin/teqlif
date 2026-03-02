@@ -52,7 +52,7 @@ export default function LiveArena({ roomId, adId, isOwner }: LiveArenaProps) {
             token={token}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
-            style={{ height: "400px", borderRadius: "var(--radius-lg)", overflow: "hidden", position: "relative" }}
+            style={{ minHeight: "500px", borderRadius: "1.5rem", overflow: "hidden", position: "relative" }}
         >
             <CustomArenaLayout />
             <RoomAudioRenderer />
