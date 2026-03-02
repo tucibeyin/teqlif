@@ -132,6 +132,18 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     return NumberFormat.decimalPattern('tr').format(amount);
   }
 
+  void _resetMessageTimer() {
+    Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          if (_messages.isNotEmpty) {
+            _messages.removeAt(0);
+          }
+        });
+      }
+    });
+  }
+
   void _handleDataChannelMessage(List<int> data, RemoteParticipant? p) {
     String message;
     try {
@@ -159,6 +171,20 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           setState(() => _isAuctionActive = false);
           _showSystemMessage('📣 MEZAT DURDURULDU', Colors.orange);
           return;
+        } else if (type == 'CHAT') {
+           final chatText = decoded['text']?.toString() ?? '';
+           final chatSender = decoded['senderName']?.toString();
+           setState(() {
+             _messages.add(_EphemeralMessage(
+               id: DateTime.now().millisecondsSinceEpoch.toString(),
+               text: chatText,
+               senderName: _formatSenderName(chatSender),
+               timestamp: DateTime.now(),
+             ));
+             if (_messages.length > 5) _messages.removeAt(0);
+           });
+           _resetMessageTimer();
+           return;
         } else if (type == 'NEW_BID' || type == 'BID_ACCEPTED') {
           final amount = (decoded['amount'] as num).toDouble();
           
@@ -203,16 +229,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         _messages.removeAt(0);
       }
     });
-    // Remove after 4 seconds
-    Timer(const Duration(seconds: 4), () {
-      if (mounted) {
-        setState(() {
-          if (_messages.isNotEmpty) {
-            _messages.removeAt(0);
-          }
-        });
-      }
-    });
+    _resetMessageTimer();
   }
 
   void _showInviteDialog() {
@@ -292,11 +309,14 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     if (text.isEmpty) return;
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room != null) {
-      await state.room!.localParticipant?.publishData(text.codeUnits);
-      // For local message, we use the literal name if available or "Ben"
-      final myName = state.room!.localParticipant?.name;
-      _handleDataChannelMessage(text.codeUnits, null); 
-      // Note: _handleDataChannelMessage will call _formatSenderName
+      final name = state.room!.localParticipant?.name;
+      final payload = jsonEncode({
+        'type': 'CHAT',
+        'text': text,
+        'senderName': name,
+      });
+      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+      _handleDataChannelMessage(utf8.encode(payload), null); 
     }
     _chatCtrl.clear();
     _chatFocus.unfocus();
@@ -334,8 +354,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       // Broadcast bid to data channel for others to see instantly
       final state = ref.read(liveRoomProvider(widget.ad.id));
       if (state.room != null) {
-        state.room!.localParticipant?.publishData('🔥 Yeni Teklif: ₺$amount'.codeUnits);
-        _handleDataChannelMessage('🔥 Yeni Teklif: ₺$amount'.codeUnits, null);
+        final payload = jsonEncode({
+           'type': 'CHAT',
+           'text': '🔥 Yeni Teklif: ₺${_formatPrice(amount)}',
+           'senderName': state.room!.localParticipant?.name,
+        });
+        state.room!.localParticipant?.publishData(utf8.encode(payload));
+        _handleDataChannelMessage(utf8.encode(payload), null);
       }
       
       ScaffoldMessenger.of(context).showSnackBar(

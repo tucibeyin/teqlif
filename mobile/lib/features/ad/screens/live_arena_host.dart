@@ -97,6 +97,18 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     return NumberFormat.decimalPattern('tr').format(amount);
   }
 
+  void _resetMessageTimer() {
+    Timer(const Duration(seconds: 4), () {
+      if (mounted) {
+        setState(() {
+          if (_messages.isNotEmpty) {
+            _messages.removeAt(0);
+          }
+        });
+      }
+    });
+  }
+
   void _handleDataChannelMessage(List<int> data, RemoteParticipant? p, {String? customName}) {
     String message;
     try {
@@ -153,6 +165,20 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
           }
         });
         return;
+      } else if (dataObj['type'] == 'CHAT') {
+         final chatText = dataObj['text']?.toString() ?? '';
+         final chatSender = dataObj['senderName']?.toString();
+         setState(() {
+           _messages.add(_EphemeralMessage(
+             id: DateTime.now().millisecondsSinceEpoch.toString(),
+             text: chatText,
+             senderName: _formatSenderName(chatSender),
+             timestamp: DateTime.now(),
+           ));
+           if (_messages.length > 5) _messages.removeAt(0);
+         });
+         _resetMessageTimer();
+         return;
       } else if (dataObj['type'] == 'NEW_BID') {
         final amount = (dataObj['amount'] as num).toDouble();
         final bidId = dataObj['bidId']?.toString();
@@ -189,16 +215,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
         _messages.removeAt(0);
       }
     });
-    // Remove after 4 seconds
-    Timer(const Duration(seconds: 4), () {
-      if (mounted) {
-        setState(() {
-          if (_messages.isNotEmpty) {
-            _messages.removeAt(0);
-          }
-        });
-      }
-    });
+    _resetMessageTimer();
   }
 
   Future<void> _sendChatMessage() async {
@@ -206,8 +223,14 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     if (text.isEmpty) return;
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room != null) {
-      await state.room!.localParticipant?.publishData(text.codeUnits);
-      _handleDataChannelMessage(text.codeUnits, null, customName: state.room!.localParticipant?.name);
+      final name = state.room!.localParticipant?.name;
+      final payload = jsonEncode({
+        'type': 'CHAT',
+        'text': text,
+        'senderName': name,
+      });
+      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+      _handleDataChannelMessage(utf8.encode(payload), null, customName: name);
     }
     _chatCtrl.clear();
     _chatFocus.unfocus();
@@ -236,11 +259,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
         _isAuctionActive ? '📣 MEZAT BAŞLATILDI!' : '📣 MEZAT DURDURULDU',
         _isAuctionActive ? Colors.green : Colors.orange
       );
-      _handleDataChannelMessage(
-        (_isAuctionActive ? '📣 Mezat Başlatıldı!' : '📣 Mezat Durduruldu!').codeUnits, 
-        null,
-        customName: state.room!.localParticipant?.name
-      );
+      final signalName = state.room!.localParticipant?.name;
+      final signalPayload = jsonEncode({
+        'type': 'CHAT',
+        'text': _isAuctionActive ? '📣 Mezat Başlatıldı!' : '📣 Mezat Durduruldu!',
+        'senderName': signalName,
+      });
+      _handleDataChannelMessage(utf8.encode(signalPayload), null, customName: signalName);
     } catch (e) {
       debugPrint('Signal error: $e');
     }

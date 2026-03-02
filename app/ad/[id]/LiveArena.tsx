@@ -97,6 +97,7 @@ function CustomArenaLayout({
     const [lastAcceptedBidId, setLastAcceptedBidId] = useState<string | null>(null);
     const [auctionStatus, setAuctionStatus] = useState<"IDLE" | "ACTIVE">("IDLE");
     const [auctionNotification, setAuctionNotification] = useState<string | null>(null);
+    const [messages, setMessages] = useState<{ id: string, text: string, sender: string }[]>([]);
 
     useDataChannel((msg) => {
         try {
@@ -119,6 +120,16 @@ function CustomArenaLayout({
             } else if (dataObj.type === 'BID_ACCEPTED') {
                 setLiveHighestBid(dataObj.amount);
                 setLastAcceptedBidId(dataObj.bidId);
+            } else if (dataObj.type === 'CHAT') {
+                const newMessage = {
+                    id: Date.now().toString(),
+                    text: dataObj.text,
+                    sender: dataObj.senderName || "Katılımcı"
+                };
+                setMessages(prev => [...prev.slice(-4), newMessage]);
+                setTimeout(() => {
+                    setMessages(prev => prev.filter((m: any) => m.id !== newMessage.id));
+                }, 5000);
             } else if (dataObj.type === 'AUCTION_START') {
                 setAuctionStatus("ACTIVE");
                 setAuctionNotification("📣 MEZAT BAŞLADI!");
@@ -160,6 +171,7 @@ function CustomArenaLayout({
                 currentHighestBid={liveHighestBid}
                 lastAcceptedBidId={lastAcceptedBidId}
                 auctionStatus={auctionStatus}
+                setMessages={setMessages}
             />
 
             {/* Auction Status Notification Overlay */}
@@ -188,7 +200,7 @@ function CustomArenaLayout({
             {guestTrack && (
                 <div style={{
                     position: "absolute",
-                    bottom: "100px", // Moved up to not cover controls
+                    bottom: "100px",
                     right: "20px",
                     width: "100px",
                     height: "140px",
@@ -202,16 +214,57 @@ function CustomArenaLayout({
                     <VideoTrack trackRef={guestTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                 </div>
             )}
+
+            {/* Ephemeral Chat Overlay */}
+            <div style={{
+                position: "absolute",
+                bottom: "120px",
+                left: "20px",
+                width: "260px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "8px",
+                zIndex: 150,
+                pointerEvents: "none"
+            }}>
+                {messages.map((m) => (
+                    <div key={m.id} style={{
+                        background: "rgba(0,0,0,0.4)",
+                        backdropFilter: "blur(10px)",
+                        padding: "6px 14px",
+                        borderRadius: "12px",
+                        color: "white",
+                        fontSize: "0.85rem",
+                        animation: "fadeInUp 0.3s ease-out"
+                    }}>
+                        <strong style={{ color: "rgba(255,255,255,0.7)", marginRight: "6px" }}>{m.sender}:</strong>
+                        {m.text}
+                    </div>
+                ))}
+            </div>
+
+            <style jsx>{`
+                @keyframes fadeInUp {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
+                @keyframes slideDown {
+                    from { opacity: 0; transform: translate(-50%, -20px); }
+                    to { opacity: 1; transform: translate(-50%, 0); }
+                }
+            `}</style>
         </div>
     );
 }
 
-function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, auctionStatus }: any) {
+function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, auctionStatus, setMessages }: any) {
     const router = useRouter();
     const { data: session } = useSession();
     const [amount, setAmount] = useState("");
+    const [chatText, setChatText] = useState("");
     const [loading, setLoading] = useState(false);
     const [status, setStatus] = useState<any>(null);
+    const room = useRoomContext();
 
     const formattedPrice = (val: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(val);
 
@@ -339,6 +392,36 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
             alert("Bağlantı hatası.");
         } finally {
             setLoading(false);
+        }
+    }
+
+    async function handleSendChat(e: React.FormEvent) {
+        e.preventDefault();
+        if (!chatText.trim() || !room) return;
+
+        const payload = JSON.stringify({
+            type: "CHAT",
+            text: chatText.trim(),
+            senderName: session?.user?.name || "Web Katılımcı"
+        });
+
+        try {
+            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+
+            // Local echo
+            const newMessage = {
+                id: Date.now().toString(),
+                text: chatText.trim(),
+                sender: session?.user?.name || "Ben"
+            };
+            setMessages((prev: any) => [...prev.slice(-4), newMessage]);
+            setTimeout(() => {
+                setMessages((prev: any) => prev.filter((m: any) => m.id !== newMessage.id));
+            }, 5000);
+
+            setChatText("");
+        } catch (e) {
+            console.error("Chat error:", e);
         }
     }
 
@@ -496,6 +579,51 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                     {status.msg}
                 </div>
             )}
+
+            {/* Chat Input */}
+            <form onSubmit={handleSendChat} style={{
+                marginLeft: "8px",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px"
+            }}>
+                <input
+                    type="text"
+                    value={chatText}
+                    onChange={(e) => setChatText(e.target.value)}
+                    placeholder="Sohbete katıl..."
+                    style={{
+                        width: "140px",
+                        padding: "8px 16px",
+                        background: "rgba(255, 255, 255, 0.15)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        borderRadius: "100px",
+                        color: "white",
+                        fontSize: "0.85rem",
+                        outline: "none"
+                    }}
+                />
+                <button
+                    type="submit"
+                    style={{
+                        background: "#00B4CC",
+                        border: "none",
+                        width: "34px",
+                        height: "34px",
+                        borderRadius: "50%",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        cursor: "pointer",
+                        color: "white"
+                    }}
+                >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
+            </form>
         </div>
     );
 }
