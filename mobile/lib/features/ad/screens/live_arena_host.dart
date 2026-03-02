@@ -102,15 +102,68 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       
       setState(() {
         _unreadBids++;
+        final bidId = 'bid-${DateTime.now().millisecondsSinceEpoch}'; // Default ID
         _bids.insert(0, _LiveBid(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          id: bidId,
           amount: amount ?? 0,
           userLabel: _formatSenderName(customName ?? p?.name),
           timestamp: DateTime.now(),
         ));
         if (_bids.length > 50) _bids.removeLast();
       });
+      return;
     }
+
+    // Try parsing as JSON for structured events (BID_ACCEPTED, BID_REJECTED)
+    try {
+      final dataObj = jsonDecode(message);
+      if (dataObj['type'] == 'BID_ACCEPTED') {
+        final amount = (dataObj['amount'] as num).toDouble();
+        final bidId = dataObj['bidId']?.toString();
+        setState(() {
+          // If we already have this bid, update it, otherwise add
+          final existingIndex = _bids.indexWhere((b) => b.id == bidId);
+          if (existingIndex != -1) {
+            _bids[existingIndex] = _LiveBid(
+              id: bidId!,
+              amount: amount,
+              userLabel: dataObj['bidderName'] ?? _bids[existingIndex].userLabel,
+              timestamp: _bids[existingIndex].timestamp,
+              isAccepted: true,
+            );
+          } else {
+            _bids.insert(0, _LiveBid(
+              id: bidId ?? 'bid-${DateTime.now().millisecondsSinceEpoch}',
+              amount: amount,
+              userLabel: _formatSenderName(dataObj['bidderName']),
+              timestamp: DateTime.now(),
+              isAccepted: true,
+            ));
+          }
+        });
+        return;
+      } else if (dataObj['type'] == 'NEW_BID') {
+        final amount = (dataObj['amount'] as num).toDouble();
+        final bidId = dataObj['bidId']?.toString();
+        setState(() {
+          _unreadBids++;
+          _bids.insert(0, _LiveBid(
+            id: bidId ?? 'bid-${DateTime.now().millisecondsSinceEpoch}',
+            amount: amount,
+            userLabel: _formatSenderName(dataObj['bidderName']),
+            timestamp: DateTime.now(),
+          ));
+          if (_bids.length > 50) _bids.removeLast();
+        });
+        return;
+      } else if (dataObj['type'] == 'BID_REJECTED') {
+         final bidId = dataObj['bidId']?.toString();
+         setState(() {
+           _bids.removeWhere((b) => b.id == bidId);
+         });
+         return;
+      }
+    } catch (_) {}
 
     final senderName = customName ?? p?.name;
     
@@ -168,6 +221,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
 
     try {
       await state.room!.localParticipant?.publishData(signal.codeUnits);
+      _showSystemMessage(
+        _isAuctionActive ? '📣 MEZAT BAŞLATILDI!' : '📣 MEZAT DURDURULDU',
+        _isAuctionActive ? Colors.green : Colors.orange
+      );
       _handleDataChannelMessage(
         (_isAuctionActive ? '📣 Mezat Başlatıldı!' : '📣 Mezat Durduruldu!').codeUnits, 
         null,
@@ -176,6 +233,20 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     } catch (e) {
       debugPrint('Signal error: $e');
     }
+  }
+
+  void _showSystemMessage(String text, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Center(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white))),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: color.withOpacity(0.9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.7, left: 50, right: 50),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   Future<void> _endLiveStream() async {
@@ -227,6 +298,36 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
+      }
+    }
+  }
+
+  Future<void> _cancelBid(String bidId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Teklifi İptal Et'),
+        content: const Text('Bu teklifi reddetmek veya iptal etmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hayır')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text('İptal Et', style: TextStyle(color: Colors.red))
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ApiClient().patch('/api/bids/$bidId/cancel');
+        setState(() {
+          _bids.removeWhere((b) => b.id == bidId);
+        });
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İptal işlemi başarısız.')));
+        }
       }
     }
   }
@@ -514,6 +615,25 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                       _bids.isNotEmpty ? '₺${_bids.first.amount.toStringAsFixed(0)}' : 'Henüz Teklif Yok',
                                       style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
                                     ),
+                                    const SizedBox(height: 4),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: _isAuctionActive ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                                        borderRadius: BorderRadius.circular(4),
+                                        border: Border.all(color: _isAuctionActive ? Colors.green.withOpacity(0.5) : Colors.orange.withOpacity(0.5)),
+                                      ),
+                                      child: Text(
+                                        _isAuctionActive ? 'MEZAT AKTİF' : 'MEZAT DURDURULDU',
+                                        style: TextStyle(
+                                          color: _isAuctionActive ? Colors.greenAccent : Colors.orangeAccent,
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w900,
+                                          letterSpacing: 0.5
+                                        ),
+                                      ),
+                                    )
+                                  ],
                                     if (_bids.isNotEmpty)
                                       Text(_bids.first.userLabel, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
                                   ],
@@ -538,21 +658,40 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                     if (_bids.isNotEmpty && _isAuctionActive)
                       Padding(
                         padding: const EdgeInsets.only(top: 12),
-                        child: SizedBox(
-                          width: double.infinity,
-                          child: ElevatedButton.icon(
-                            onPressed: _acceptBidFromDashboard,
-                            icon: const Icon(Icons.check_circle_outline, color: Colors.black),
-                            label: const Text('BU TEKLİFİ ONAYLA VE SAT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.greenAccent,
-                              foregroundColor: Colors.black,
-                              padding: const EdgeInsets.symmetric(vertical: 14),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                              elevation: 10,
-                              shadowColor: Colors.greenAccent.withOpacity(0.5),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              flex: 3,
+                              child: OutlinedButton(
+                                onPressed: () => _cancelBid(_bids.first.id),
+                                style: OutlinedButton.styleFrom(
+                                  backgroundColor: Colors.redAccent.withOpacity(0.1),
+                                  side: BorderSide(color: Colors.redAccent.withOpacity(0.3)),
+                                  foregroundColor: Colors.redAccent,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                ),
+                                child: const Text('REDDET', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 7,
+                              child: ElevatedButton.icon(
+                                onPressed: _acceptBidFromDashboard,
+                                icon: const Icon(Icons.check_circle_outline, color: Colors.black, size: 18),
+                                label: const Text('ONAYLA VE SAT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.greenAccent,
+                                  foregroundColor: Colors.black,
+                                  padding: const EdgeInsets.symmetric(vertical: 14),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                                  elevation: 10,
+                                  shadowColor: Colors.greenAccent.withOpacity(0.5),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                   ],
@@ -813,11 +952,14 @@ class _LiveBid {
   final String userLabel;
   final DateTime timestamp;
 
+  final bool isAccepted;
+
   _LiveBid({
     required this.id,
     required this.amount,
     required this.userLabel,
     required this.timestamp,
+    this.isAccepted = false,
   });
 }
 

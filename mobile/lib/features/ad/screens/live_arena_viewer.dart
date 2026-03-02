@@ -133,26 +133,51 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     try {
       final decoded = jsonDecode(message);
       if (decoded is Map<String, dynamic> && decoded['type'] != null) {
-        if (decoded['type'] == 'INVITE_TO_STAGE') {
+        final type = decoded['type'];
+        if (type == 'INVITE_TO_STAGE') {
           _showInviteDialog();
           return;
-        } else if (decoded['type'] == 'KICK_FROM_STAGE') {
+        } else if (type == 'KICK_FROM_STAGE') {
           _handleKick();
           return;
-        } else if (decoded['type'] == 'AUCTION_START') {
+        } else if (type == 'AUCTION_START') {
           setState(() => _isAuctionActive = true);
+          _showSystemMessage('📣 MEZAT BAŞLADI!', Colors.green);
           return;
-        } else if (decoded['type'] == 'AUCTION_END') {
+        } else if (type == 'AUCTION_END') {
           setState(() => _isAuctionActive = false);
+          _showSystemMessage('📣 MEZAT DURDURULDU', Colors.orange);
           return;
+        } else if (type == 'NEW_BID' || type == 'BID_ACCEPTED') {
+          final amount = (decoded['amount'] as num).toDouble();
+          
+          // Auto-update bid controller for the user
+          final nextBid = amount + (widget.ad.minBidStep);
+          setState(() {
+            _bidCtrl.text = nextBid.toStringAsFixed(0);
+          });
+          
+          _recordBidVelocity();
+          // Also refresh ad details to show the latest bid in header
+          ref.invalidate(adDetailProvider(widget.ad.id));
+        } else if (type == 'BID_REJECTED') {
+           ref.invalidate(adDetailProvider(widget.ad.id));
         }
       }
     } catch (e) {
-      // Fallback to normal text chat
+      // Fallback to normal text chat or skip
     }
 
-    // Check if it's a bid broadcast to calculate velocity
+    // Legacy text-based bid detection (optional, for backward compatibility)
     if (message.startsWith('🔥 Yeni Teklif:')) {
+      final amountStr = message.replaceAll('🔥 Yeni Teklif: ₺', '').trim();
+      final amount = double.tryParse(amountStr.replaceAll('.', '').replaceAll(',', '.'));
+      if (amount != null) {
+        final nextBid = amount + (widget.ad.minBidStep);
+        setState(() {
+          _bidCtrl.text = nextBid.toStringAsFixed(0);
+        });
+      }
       _recordBidVelocity();
     }
 
@@ -312,6 +337,20 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     } finally {
       if (mounted) setState(() => _bidLoading = false);
     }
+  }
+
+  void _showSystemMessage(String text, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Center(child: Text(text, style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white))),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: color.withOpacity(0.9),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height * 0.7, left: 50, right: 50),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
   void _showAdDetailsSheet() {

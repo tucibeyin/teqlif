@@ -5,6 +5,7 @@ import { getMobileUser } from "@/lib/mobile-auth";
 import { sendPushNotification, getUnreadCount } from "@/lib/fcm";
 import { logger } from "@/lib/logger";
 import { revalidatePath } from "next/cache";
+import { broadcastToRoom } from "@/lib/livekit";
 
 export async function GET(req: NextRequest) {
     try {
@@ -167,6 +168,14 @@ export async function POST(req: NextRequest) {
         revalidatePath(`/ad/${adId}`);
         revalidatePath("/");
         revalidatePath("/dashboard");
+
+        // 📡 Broadcast to LiveKit Room
+        await broadcastToRoom(adId, JSON.stringify({
+            type: 'NEW_BID',
+            amount: Number(amount),
+            bidderName: bid.user.name,
+            bidId: bid.id
+        }));
 
         return NextResponse.json(bid, { status: 201 });
     } catch (err) {

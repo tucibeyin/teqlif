@@ -160,7 +160,7 @@ export default async function AdDetailPage({
                                     buyItNowPrice={ad.buyItNowPrice}
                                     startingBid={ad.startingBid}
                                     minBidStep={ad.minBidStep}
-                                    currentHighestBid={highestBid?.amount ?? 0}
+                                    initialHighestBid={highestBid?.amount ?? 0}
                                 />
                             </div>
                         ) : (

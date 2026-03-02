@@ -15,7 +15,7 @@ interface LiveArenaProps {
     buyItNowPrice?: number | null;
     startingBid?: number | null;
     minBidStep?: number;
-    currentHighestBid?: number;
+    initialHighestBid?: number;
 }
 
 export default function LiveArena({
@@ -26,11 +26,10 @@ export default function LiveArena({
     buyItNowPrice,
     startingBid,
     minBidStep = 1,
-    currentHighestBid = 0
+    initialHighestBid = 0
 }: LiveArenaProps) {
     const { data: session } = useSession();
     const [token, setToken] = useState("");
-
     const [role, setRole] = useState("viewer");
     const [wantsToPublish, setWantsToPublish] = useState(isOwner);
 
@@ -76,7 +75,7 @@ export default function LiveArena({
                 buyItNowPrice={buyItNowPrice}
                 startingBid={startingBid}
                 minBidStep={minBidStep}
-                currentHighestBid={currentHighestBid}
+                initialHighestBid={initialHighestBid}
             />
             <RoomAudioRenderer />
             {!isOwner && <CoHostListener setRole={setRole} setWantsToPublish={setWantsToPublish} />}
@@ -91,9 +90,48 @@ function CustomArenaLayout({
     buyItNowPrice,
     startingBid,
     minBidStep,
-    currentHighestBid
+    initialHighestBid
 }: any) {
     const tracks = useTracks([Track.Source.Camera]);
+    const [liveHighestBid, setLiveHighestBid] = useState(initialHighestBid);
+    const [lastAcceptedBidId, setLastAcceptedBidId] = useState<string | null>(null);
+    const [auctionStatus, setAuctionStatus] = useState<"IDLE" | "ACTIVE">("IDLE");
+    const [auctionNotification, setAuctionNotification] = useState<string | null>(null);
+
+    useDataChannel((msg) => {
+        try {
+            const dataStr = new TextDecoder().decode(msg.payload);
+
+            // Handle numeric "New Bid" message prefix text
+            if (dataStr.startsWith('🔥 Yeni Teklif: ₺')) {
+                const amount = parseInt(dataStr.replace('🔥 Yeni Teklif: ₺', '').replace(/\./g, ''), 10);
+                if (!isNaN(amount)) {
+                    setLiveHighestBid(amount);
+                    setLastAcceptedBidId(null); // Reset on new bid
+                }
+                return;
+            }
+
+            const dataObj = JSON.parse(dataStr);
+            if (dataObj.type === 'NEW_BID') {
+                setLiveHighestBid(dataObj.amount);
+                setLastAcceptedBidId(null);
+            } else if (dataObj.type === 'BID_ACCEPTED') {
+                setLiveHighestBid(dataObj.amount);
+                setLastAcceptedBidId(dataObj.bidId);
+            } else if (dataObj.type === 'AUCTION_START') {
+                setAuctionStatus("ACTIVE");
+                setAuctionNotification("📣 MEZAT BAŞLADI!");
+                setTimeout(() => setAuctionNotification(null), 5000);
+            } else if (dataObj.type === 'AUCTION_END') {
+                setAuctionStatus("IDLE");
+                setAuctionNotification("📣 MEZAT DURDURULDU");
+                setTimeout(() => setAuctionNotification(null), 5000);
+            }
+        } catch (e) {
+            // Ignore non-json
+        }
+    });
 
     if (tracks.length === 0) {
         return (
@@ -111,26 +149,49 @@ function CustomArenaLayout({
             {/* Host Full Screen */}
             <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
 
-            {/* Bidding Overlay */}
-            {!isOwner && (
-                <BiddingOverlay
-                    adId={adId}
-                    sellerId={sellerId}
-                    buyItNowPrice={buyItNowPrice}
-                    startingBid={startingBid}
-                    minBidStep={minBidStep}
-                    currentHighestBid={currentHighestBid}
-                />
+            {/* Bidding Overlay (Unified for Owner and Viewer) */}
+            <BiddingOverlay
+                adId={adId}
+                sellerId={sellerId}
+                isOwner={isOwner}
+                buyItNowPrice={buyItNowPrice}
+                startingBid={startingBid}
+                minBidStep={minBidStep}
+                currentHighestBid={liveHighestBid}
+                lastAcceptedBidId={lastAcceptedBidId}
+                auctionStatus={auctionStatus}
+            />
+
+            {/* Auction Status Notification Overlay */}
+            {auctionNotification && (
+                <div style={{
+                    position: "absolute",
+                    top: "120px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    background: "rgba(34, 197, 94, 0.95)",
+                    color: "white",
+                    padding: "16px 32px",
+                    borderRadius: "100px",
+                    fontWeight: 900,
+                    fontSize: "1.2rem",
+                    letterSpacing: "1px",
+                    boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
+                    zIndex: 200,
+                    animation: "slideDown 0.5s ease-out"
+                }}>
+                    {auctionNotification}
+                </div>
             )}
 
             {/* Guest PiP Screen */}
             {guestTrack && (
                 <div style={{
                     position: "absolute",
-                    bottom: "20px",
+                    bottom: "100px", // Moved up to not cover controls
                     right: "20px",
-                    width: "120px",
-                    height: "160px",
+                    width: "100px",
+                    height: "140px",
                     borderRadius: "12px",
                     overflow: "hidden",
                     border: "2px solid white",
@@ -145,17 +206,20 @@ function CustomArenaLayout({
     );
 }
 
-function BiddingOverlay({ adId, sellerId, buyItNowPrice, startingBid, minBidStep, currentHighestBid }: any) {
+function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, auctionStatus }: any) {
     const router = useRouter();
     const { data: session } = useSession();
-    const [amount, setAmount] = useState(() => {
-        const minAmount = currentHighestBid > 0 ? (currentHighestBid + minBidStep) : (startingBid ?? 1);
-        return new Intl.NumberFormat("tr-TR").format(minAmount);
-    });
+    const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState<any>(null); // { type: 'success' | 'error', msg: string }
+    const [status, setStatus] = useState<any>(null);
 
     const formattedPrice = (val: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(val);
+
+    // Auto-update bid amount when highest bid changes
+    useEffect(() => {
+        const nextMin = currentHighestBid > 0 ? (currentHighestBid + minBidStep) : (startingBid ?? 1);
+        setAmount(new Intl.NumberFormat("tr-TR").format(nextMin));
+    }, [currentHighestBid, minBidStep, startingBid]);
 
     async function handleBid(e: React.FormEvent) {
         e.preventDefault();
@@ -191,6 +255,70 @@ function BiddingOverlay({ adId, sellerId, buyItNowPrice, startingBid, minBidStep
         }
     }
 
+    async function handleAccept() {
+        if (!confirm("Bu teklifi kabul etmek istiyor musunuz?")) return;
+        setLoading(true);
+        try {
+            // Find the highest bid ID from the ad's recent state if needed, 
+            // but we usually need the bidId. For simplicity, let's assume 
+            // the backend can handle "accept current highest" or we fetch it.
+            // Actually, for better UX, we'd want the current bid ID.
+            // Since we don't have the ID easily in the broadcast right now (except in JSON),
+            // let's fetch the latest bid first or use a more robust sync.
+            // FOR NOW: Let's assume we fetch it or use the one from JSON if available.
+            // (Re-implementation note: In a real system, we'd include bidId in all broadcasts)
+
+            // Temporary: fetch latest bid to be safe
+            const resAd = await fetch(`/api/ads/${adId}`);
+            const ad = await resAd.json();
+            const topBid = ad.bids?.[0];
+
+            if (!topBid) {
+                alert("Teklif bulunamadı.");
+                return;
+            }
+
+            const res = await fetch(`/api/bids/${topBid.id}/accept`, { method: "PATCH" });
+            if (res.ok) {
+                alert("Teklif kabul edildi!");
+                router.refresh();
+            } else {
+                alert("İşlem başarısız.");
+            }
+        } catch (e) {
+            alert("Bağlantı hatası.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    async function handleCancel() {
+        if (!confirm("Bunu iptal etmek istediğinize emin misiniz?")) return;
+        setLoading(true);
+        try {
+            const resAd = await fetch(`/api/ads/${adId}`);
+            const ad = await resAd.json();
+            const topBid = ad.bids?.[0];
+
+            if (!topBid) {
+                alert("Teklif bulunamadı.");
+                return;
+            }
+
+            const res = await fetch(`/api/bids/${topBid.id}/cancel`, { method: "PATCH" });
+            if (res.ok) {
+                alert("Teklif iptal edildi.");
+                router.refresh();
+            } else {
+                alert("İşlem başarısız.");
+            }
+        } catch (e) {
+            alert("Bağlantı hatası.");
+        } finally {
+            setLoading(false);
+        }
+    }
+
     async function handleBuyNow() {
         if (!buyItNowPrice) return;
         if (!confirm(`${formattedPrice(buyItNowPrice)} fiyata hemen almak istiyor musunuz?`)) return;
@@ -203,23 +331,6 @@ function BiddingOverlay({ adId, sellerId, buyItNowPrice, startingBid, minBidStep
             });
             if (res.ok) {
                 const conversation = await res.json();
-                // Send initial message
-                try {
-                    const currentUserId = session?.user?.id;
-                    const recipientId = conversation.user1Id === currentUserId ? conversation.user2Id : conversation.user1Id;
-                    await fetch('/api/messages', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            conversationId: conversation.id,
-                            content: `Merhaba, bu ürünü Hemen Al fiyatı olan ${formattedPrice(buyItNowPrice)} üzerinden satın almak istiyorum.`,
-                            recipientId
-                        })
-                    });
-                } catch (e) {
-                    console.error("Initial message error", e);
-                }
-                alert("Satın alma isteği iletildi. Mesajlara yönlendiriliyorsunuz.");
                 router.push(`/dashboard/messages?id=${conversation.id}`);
             } else {
                 alert("İşlem başarısız.");
@@ -238,7 +349,7 @@ function BiddingOverlay({ adId, sellerId, buyItNowPrice, startingBid, minBidStep
             left: "50%",
             transform: "translateX(-50%)",
             width: "auto",
-            minWidth: "400px",
+            minWidth: isOwner ? "320px" : "400px",
             padding: "8px 16px",
             background: "rgba(0, 0, 0, 0.4)",
             backdropFilter: "blur(20px)",
@@ -258,49 +369,115 @@ function BiddingOverlay({ adId, sellerId, buyItNowPrice, startingBid, minBidStep
                 <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
             </div>
 
-            {/* Bid Form Integrated */}
-            <form onSubmit={handleBid} style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
-                <input
-                    type="text"
-                    value={amount}
-                    onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, "");
-                        setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
-                    }}
-                    placeholder="Miktar"
-                    style={{
-                        width: "100px",
-                        padding: "6px 12px",
-                        background: "rgba(255, 255, 255, 0.1)",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
-                        borderRadius: "100px",
-                        color: "white",
-                        fontSize: "0.9rem",
-                        textAlign: "center",
-                        outline: "none"
-                    }}
-                />
-                <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                        background: "var(--primary)",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "100px",
-                        padding: "8px 16px",
-                        fontSize: "0.85rem",
-                        fontWeight: 700,
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        transition: "transform 0.2s"
-                    }}
-                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
-                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
-                >
-                    {loading ? "..." : "Pey Ver"}
-                </button>
-            </form>
+            {isOwner ? (
+                /* Host Controls */
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
+                    <button
+                        onClick={handleCancel}
+                        disabled={loading || currentHighestBid === 0}
+                        style={{
+                            background: "rgba(239, 68, 68, 0.2)",
+                            color: "#ef4444",
+                            border: "1px solid rgba(239, 68, 68, 0.3)",
+                            borderRadius: "100px",
+                            padding: "6px 14px",
+                            fontSize: "0.75rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.2s"
+                        }}
+                    >
+                        Reddet
+                    </button>
+                    <button
+                        onClick={handleAccept}
+                        disabled={loading || currentHighestBid === 0}
+                        style={{
+                            background: "#22c55e",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "100px",
+                            padding: "8px 18px",
+                            fontSize: "0.8rem",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            transition: "transform 0.2s",
+                            boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)"
+                        }}
+                    >
+                        {loading ? "..." : "Kabul Et"}
+                    </button>
+                </div>
+            ) : (
+                /* Viewer Controls */
+                <>
+                    {auctionStatus === "ACTIVE" ? (
+                        <form onSubmit={handleBid} style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+                            <input
+                                type="text"
+                                value={amount}
+                                onChange={(e) => {
+                                    const val = e.target.value.replace(/[^0-9]/g, "");
+                                    setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
+                                }}
+                                placeholder="Miktar"
+                                style={{
+                                    width: "90px",
+                                    padding: "6px 12px",
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                                    borderRadius: "100px",
+                                    color: "white",
+                                    fontSize: "0.9rem",
+                                    textAlign: "center",
+                                    outline: "none"
+                                }}
+                            />
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                style={{
+                                    background: "var(--primary)",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "100px",
+                                    padding: "8px 16px",
+                                    fontSize: "0.85rem",
+                                    fontWeight: 700,
+                                    cursor: "pointer",
+                                    transition: "all 0.2s"
+                                }}
+                            >
+                                {loading ? "..." : "Pey Ver"}
+                            </button>
+                        </form>
+                    ) : (
+                        <div style={{ flex: 1, textAlign: "center", fontSize: "0.85rem", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>
+                            Mezat Bekleniyor...
+                        </div>
+                    )}
+
+                    {buyItNowPrice && (
+                        <button
+                            onClick={handleBuyNow}
+                            disabled={loading}
+                            style={{
+                                background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                                color: "black",
+                                border: "none",
+                                borderRadius: "100px",
+                                padding: "8px 16px",
+                                fontSize: "0.8rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
+                            }}
+                        >
+                            ⚡ Hemen Al
+                        </button>
+                    )}
+                </>
+            )}
 
             {/* Status Indicator */}
             {status && (
@@ -314,33 +491,10 @@ function BiddingOverlay({ adId, sellerId, buyItNowPrice, startingBid, minBidStep
                     padding: "4px 12px",
                     borderRadius: "10px",
                     fontSize: "0.75rem",
-                    fontWeight: 700,
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
+                    fontWeight: 700
                 }}>
                     {status.msg}
                 </div>
-            )}
-
-            {/* Buy Now Button (Sleek) */}
-            {buyItNowPrice && (
-                <button
-                    onClick={handleBuyNow}
-                    disabled={loading}
-                    style={{
-                        background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
-                        color: "black",
-                        border: "none",
-                        borderRadius: "100px",
-                        padding: "8px 16px",
-                        fontSize: "0.8rem",
-                        fontWeight: 800,
-                        cursor: "pointer",
-                        whiteSpace: "nowrap",
-                        boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
-                    }}
-                >
-                    ⚡ Hemen Al
-                </button>
             )}
         </div>
     );
@@ -358,14 +512,13 @@ function CoHostListener({ setRole, setWantsToPublish }: { setRole: any, setWants
             if (dataObj.type === "INVITE_TO_STAGE") {
                 setInviteVisible(true);
             } else if (dataObj.type === "KICK_FROM_STAGE") {
-                // Return to viewer
                 setWantsToPublish(false);
                 setRole("viewer");
                 alert("Sahneden alındınız.");
-                room.disconnect(); // Will prompt a reconnect with viewer token
+                room.disconnect();
             }
         } catch (e) {
-            console.error("Data channel parse error", e);
+            // console.error("Data channel parse error", e);
         }
     });
 
@@ -384,7 +537,7 @@ function CoHostListener({ setRole, setWantsToPublish }: { setRole: any, setWants
             <div style={{ background: "white", padding: "24px", borderRadius: "12px", maxWidth: "300px", textAlign: "center" }}>
                 <h3 style={{ marginTop: 0, color: "var(--primary-dark)" }}>Sahneye Davet!</h3>
                 <p style={{ fontSize: "0.9rem", color: "#666" }}>
-                    Yayıncı sizi sahneye davet ediyor. Kameranız ve mikrofonunuz açılacak. Kabul ediyor musunuz?
+                    Yayıncı sizi sahneye davet ediyor. Kabul ediyor musunuz?
                 </p>
                 <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "16px" }}>
                     <button
@@ -396,7 +549,6 @@ function CoHostListener({ setRole, setWantsToPublish }: { setRole: any, setWants
                     <button
                         onClick={async () => {
                             setInviteVisible(false);
-                            // Set role to guest, will trigger token refetch and reconnect
                             await room.disconnect();
                             setRole("guest");
                         }}

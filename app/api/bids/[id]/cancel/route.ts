@@ -3,6 +3,7 @@ import { getMobileUser } from '@/lib/mobile-auth';
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
 import { logger } from '@/lib/logger';
+import { broadcastToRoom } from '@/lib/livekit';
 
 export async function PATCH(
     request: Request,
@@ -95,6 +96,12 @@ export async function PATCH(
         // Revalidate cache for the ad and the home page
         revalidatePath('/');
         revalidatePath(`/ad/${bid.adId}`);
+
+        // 📡 Broadcast to LiveKit Room
+        await broadcastToRoom(bid.adId, JSON.stringify({
+            type: 'BID_REJECTED',
+            bidId: bidId
+        }));
 
         return NextResponse.json(result);
     } catch (error) {
