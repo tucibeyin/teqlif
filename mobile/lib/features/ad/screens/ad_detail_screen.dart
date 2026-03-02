@@ -73,6 +73,25 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     }
   }
 
+  Future<void> _inviteToStage(String targetUserId) async {
+    try {
+      final response = await ApiClient().post('/api/livekit/signal', data: {
+        'adId': widget.ad.id,
+        'targetUserId': targetUserId,
+        'signal': 'INVITE_TO_STAGE',
+      });
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Kullanıcı sahneye davet edildi!')));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Davet gönderilemedi!')));
+    }
+  }
+
   Future<void> _acceptBid(String bidId) async {
     try {
       await ApiClient().patch(Endpoints.acceptBid(bidId));
@@ -259,7 +278,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                   IconButton(
                     icon: const Icon(Icons.share, color: Colors.black87),
                     style: IconButton.styleFrom(
-                      backgroundColor: Colors.white.withValues(alpha: 0.8),
+                      backgroundColor: Colors.white.withOpacity(0.8),
                     ),
                     onPressed: () {
                       Share.share('Bana Teqlif ver! ${ad.title}\nhttps://teqlif.com/ad/${ad.id}');
@@ -748,6 +767,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                   onAccept: () => _acceptBid(bid.id),
                                   onCancel: () => _cancelBid(bid.id),
                                   onFinalize: () => _finalizeSale(bid.id),
+                                  onInviteToStage: () => _inviteToStage(bid.user!.id),
                                   onMessage: () => _messageBidder(bid.user!.id),
                                   formatPrice: _formatPrice,
                                 );
@@ -890,6 +910,7 @@ class _BidTile extends StatelessWidget {
   final VoidCallback onCancel;
   final VoidCallback onFinalize;
   final VoidCallback onMessage;
+  final VoidCallback onInviteToStage;
   final String Function(double) formatPrice; // Added dependency for correct price formatting
 
   const _BidTile({
@@ -901,6 +922,7 @@ class _BidTile extends StatelessWidget {
     required this.onCancel,
     required this.onMessage,
     required this.onFinalize,
+    required this.onInviteToStage,
     required this.formatPrice,
   });
 
@@ -1021,6 +1043,13 @@ class _BidTile extends StatelessWidget {
                     label: 'Mesaj',
                     color: const Color(0xFF00B4CC),
                     onPressed: onMessage,
+                  ),
+                  const SizedBox(width: 8),
+                  _ActionIconButton(
+                    icon: Icons.video_call,
+                    label: 'Sahne',
+                    color: Colors.deepPurple,
+                    onPressed: onInviteToStage,
                   ),
                 ],
               ),

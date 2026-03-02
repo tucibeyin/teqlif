@@ -7,6 +7,7 @@ import 'dart:async';
 
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
+import '../../../core/api/api_client.dart';
 
 class LiveArenaHost extends ConsumerStatefulWidget {
   final AdModel ad;
@@ -111,19 +112,56 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     }
   }
 
+  Future<void> _kickGuest(String targetUserId) async {
+    try {
+      await ApiClient().post('/api/livekit/signal', data: {
+        'adId': widget.ad.id,
+        'targetUserId': targetUserId,
+        'signal': 'KICK_FROM_STAGE',
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Konuk sahneden alındı.')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
 
     VideoTrack? localVideoTrack;
+    VideoTrack? guestTrack;
+    String? guestIdentity;
+
     if (room != null) {
       // Listen to data channel
       room.events.listen(_onRoomEvent);
 
-      final trackPublication = room.localParticipant?.videoTrackPublications.firstOrNull;
-      if (trackPublication != null) {
-        localVideoTrack = trackPublication.track as VideoTrack?;
+      if (room.localParticipant != null) {
+        for (var pub in room.localParticipant!.videoTrackPublications) {
+          if (pub.track != null) {
+            localVideoTrack = pub.track as VideoTrack?;
+            break;
+          }
+        }
+      }
+
+      // Guest logic
+      if (room.remoteParticipants.isNotEmpty) {
+        final firstGuest = room.remoteParticipants.values.first;
+        guestIdentity = firstGuest.identity;
+        
+        for (var pub in firstGuest.videoTrackPublications) {
+          if (pub.track != null) {
+            guestTrack = pub.track as VideoTrack?;
+            break;
+          }
+        }
       }
     }
 
@@ -143,6 +181,42 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
             )
           else
             const Center(child: Icon(Icons.videocam_off, size: 80, color: Colors.white54)),
+
+          if (guestTrack != null)
+            Positioned(
+              top: 80,
+              right: 16,
+              width: 100,
+              height: 140,
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(color: Colors.white, width: 2),
+                        borderRadius: BorderRadius.circular(12),
+                        color: Colors.black,
+                      ),
+                      child: VideoTrackRenderer(
+                        guestTrack,
+                        fit: VideoViewFit.cover,
+                      ),
+                    ),
+                  ),
+                  if (guestIdentity != null)
+                    Positioned(
+                      top: -12,
+                      right: -12,
+                      child: IconButton(
+                        icon: const Icon(Icons.cancel, color: Colors.redAccent, size: 28),
+                        onPressed: () => _kickGuest(guestIdentity!),
+                      ),
+                    ),
+                ],
+              ),
+            ),
 
           // 2. UI Overlay
           SafeArea(

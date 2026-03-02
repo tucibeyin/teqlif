@@ -2,13 +2,14 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { MessageSquare, CheckCircle, XCircle } from "lucide-react";
+import { MessageSquare, CheckCircle, XCircle, Video } from "lucide-react";
 
 interface AdActionsProps {
-    actionType: "MESSAGE" | "ACCEPT_BID" | "CANCEL_BID" | "FINALIZE_SALE";
+    actionType: "MESSAGE" | "ACCEPT_BID" | "CANCEL_BID" | "FINALIZE_SALE" | "INVITE_TO_STAGE";
     adId?: string;
     sellerId?: string;
     bidId?: string;
+    buyerId?: string;
     currentUser: any;
     isMessageBidder?: boolean;
     initialMessage?: string;
@@ -20,6 +21,7 @@ export function AdActions({
     adId,
     sellerId,
     bidId,
+    buyerId,
     currentUser,
     isMessageBidder,
     initialMessage,
@@ -115,6 +117,28 @@ export function AdActions({
                 } else {
                     const data = await res.json();
                     alert(data.message || "Satış tamamlanamadı.");
+                }
+            } else if (actionType === "INVITE_TO_STAGE" && adId && buyerId) {
+                if (!confirm("Bu kullanıcıyı sahneye davet etmek istediğinize emin misiniz? Kameraları açılacaktır.")) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                const res = await fetch("/api/livekit/signal", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        adId,
+                        targetUserId: buyerId,
+                        signal: "INVITE_TO_STAGE"
+                    })
+                });
+
+                if (res.ok) {
+                    alert("Sahne daveti başarıyla gönderildi! Kullanıcının kabul etmesi bekleniyor.");
+                } else {
+                    const data = await res.json();
+                    alert(data.error || "Davet gönderilemedi.");
                 }
             }
         } catch (error) {
@@ -248,6 +272,32 @@ export function AdActions({
             >
                 <CheckCircle size={14} />
                 {isLoading ? "..." : "SAT"}
+            </button>
+        );
+    }
+
+    if (actionType === "INVITE_TO_STAGE") {
+        return (
+            <button
+                onClick={handleAction}
+                disabled={isLoading}
+                className="btn btn-outline"
+                title="Sahneye Davet Et"
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    color: '#8b5cf6',
+                    borderColor: 'rgba(139, 92, 246, 0.3)',
+                    background: 'rgba(139, 92, 246, 0.08)',
+                    borderRadius: '6px'
+                }}
+            >
+                <Video size={14} />
+                {isLoading ? "..." : "Davet Et"}
             </button>
         );
     }

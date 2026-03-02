@@ -44,39 +44,44 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
 
   LiveRoomNotifier(this.roomId) : super(LiveRoomState());
 
-  Future<void> connect(bool isOwner) async {
+  Future<void> connect(bool isOwner, {bool isGuest = false}) async {
     if (state.isConnecting || state.room != null) return;
     
     state = state.copyWith(isConnecting: true, error: null);
 
     try {
-      // 1. Fetch Token from Next.js API
-      final response = await ApiClient().get('/api/livekit/token', queryParameters: {'room': roomId});
+      final response = await ApiClient().get('/api/livekit/token', queryParameters: {
+        'room': roomId,
+        if (isGuest) 'role': 'guest',
+      });
       final token = response.data['token'] as String;
+      final serverUrl = response.data['wsUrl'] as String;
       
       // 2. We need the LiveKit URL from env, or we can hardcode for now or fetch it from another endpoint.
       // Usually, it's better to fetch from a config endpoint or have it in a constants file. 
       // For this project, let's assume it's wss://teqlif.com or we can fetch it? 
       // In web it's process.env.NEXT_PUBLIC_LIVEKIT_URL. Let's use wss://live.teqlif.com or similar?
       // Actually we must fetch it or use a constant. Let's assume it's hardcoded to the VPS livekit url or we use a flutter env.
-      const livekitUrl = 'wss://teqlif-livekit-xxxx.livekit.cloud'; // We will replace this with correct URL. 
+      // const livekitUrl = 'wss://teqlif-livekit-xxxx.livekit.cloud'; // We will replace this with correct URL. 
       // Wait, user said Native Redis, Apache Reverse Proxy. It's probably wss://live.teqlif.com or wss://teqlif.com:7880
       // I will put a placeholder for URL and check if there's env. Let's use a generic relative or just wss://teqlif.com
       // Wait, in previous chats, the LiveKit URL was wss://... I'll just use a generic config class or we can ask.
       // Actually I see `NEXT_PUBLIC_LIVEKIT_URL` in web. Let's check environment variables if possible, or just use `wss://teqlif.com` since it's behind Apache proxy as he said.
       
-      const wsUrl = 'wss://teqlif.com'; // Adjust if needed
+      // const wsUrl = 'wss://teqlif.com'; // Adjust if needed
 
-      final roomOptions = const RoomOptions(
+      final connectOptions = ConnectOptions(); // No auto-subscribe needed, handled
+      final roomOptions = RoomOptions(
         adaptiveStream: true,
         dynacast: true,
       );
 
       _room = Room();
       
-      await _room!.connect(wsUrl, token, roomOptions: roomOptions);
+      await _room!.connect(serverUrl, token,
+          roomOptions: roomOptions, connectOptions: connectOptions);
       
-      if (isOwner) {
+      if (isOwner || isGuest) {
         // Publish camera and mic
         await _room!.localParticipant?.setCameraEnabled(true);
         await _room!.localParticipant?.setMicrophoneEnabled(true);
@@ -106,7 +111,7 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
       }
 
       // If Host, listen for network quality to send FREEZE signals
-      if (isHost) {
+      if (isOwner) {
         room.events.listen((event) {
           if (event is ConnectionQualityChangedEvent && event.participant == room.localParticipant) {
             if (event.quality == ConnectionQuality.poor || event.quality == ConnectionQuality.lost) {

@@ -8,6 +8,8 @@ import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
 import 'dart:async';
 
+import 'dart:convert';
+
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
 import '../../../core/api/api_client.dart';
@@ -50,6 +52,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   // Animation for Pulse
   late AnimationController _pulseController;
   late Animation<double> _pulseAnimation;
+
+  bool _isGuest = false;
 
   @override
   void initState() {
@@ -115,6 +119,21 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   void _handleDataChannelMessage(List<int> data, RemoteParticipant? p) {
     final message = String.fromCharCodes(data);
     
+    try {
+      final decoded = jsonDecode(message);
+      if (decoded is Map<String, dynamic> && decoded['type'] != null) {
+        if (decoded['type'] == 'INVITE_TO_STAGE') {
+          _showInviteDialog();
+          return;
+        } else if (decoded['type'] == 'KICK_FROM_STAGE') {
+          _handleKick();
+          return;
+        }
+      }
+    } catch (e) {
+      // Fallback to normal text chat
+    }
+
     // Check if it's a bid broadcast to calculate velocity
     if (message.startsWith('🔥 Yeni Teklif:')) {
       _recordBidVelocity();
@@ -141,6 +160,43 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         });
       }
     });
+  }
+
+  void _showInviteDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Sahneye Davet!'),
+        content: const Text('Yayıncı sizi sahneye davet ediyor. Kameranız ve mikrofonunuz açılacak. Kabul ediyor musunuz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Reddet', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(ctx);
+              final notifier = ref.read(liveRoomProvider(widget.ad.id).notifier);
+              await notifier.disconnect();
+              await notifier.connect(false, isGuest: true);
+              setState(() => _isGuest = true);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF00B4CC)),
+            child: const Text('Kabul Et', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _handleKick() async {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sahneden alındınız.')));
+    final notifier = ref.read(liveRoomProvider(widget.ad.id).notifier);
+    await notifier.disconnect();
+    await notifier.connect(false);
+    setState(() => _isGuest = false);
   }
 
   void _recordBidVelocity() {
@@ -296,18 +352,45 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
 
-    // We assume there's one host publishing video. Let's find the first remote video track.
-    VideoTrack? videoTrack;
+    VideoTrack? hostTrack;
+    VideoTrack? guestTrack;
+
     if (room != null) {
-      for (var p in room.remoteParticipants.values) {
+      final allRemote = room.remoteParticipants.values.toList();
+      for (var p in allRemote) {
+        VideoTrack? t;
         for (var pub in p.videoTrackPublications) {
           if (pub.track != null) {
-            videoTrack = pub.track as VideoTrack;
+            t = pub.track as VideoTrack;
             break;
+          }
+        }
+        if (t != null) {
+          if (p.identity == widget.ad.userId) {
+            hostTrack = t; // Found the host
+          } else {
+            guestTrack = t; // Found another guest
           }
         }
       }
       
+      // If no definitive host recognized but there is a track, fallback
+      if (hostTrack == null && allRemote.isNotEmpty) {
+        for (var pub in allRemote.first.videoTrackPublications) {
+           if (pub.track != null) { hostTrack = pub.track as VideoTrack; break; }
+        }
+      }
+
+      // If I am the guest, my local video is the guest track
+      if (_isGuest && room.localParticipant != null) {
+        for (var pub in room.localParticipant!.videoTrackPublications) {
+          if (pub.track != null) {
+            guestTrack = pub.track as VideoTrack;
+            break;
+          }
+        }
+      }
+
       // Listen to data channel
       room.events.listen(_onRoomEvent);
     }
@@ -331,10 +414,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
             // 1. Video Player
             if (roomState.isConnecting)
               const Center(child: CircularProgressIndicator(color: Colors.white))
-            else if (videoTrack != null)
+            else if (hostTrack != null)
               SizedBox.expand(
                 child: VideoTrackRenderer(
-                  videoTrack,
+                  hostTrack,
                   fit: VideoViewFit.cover,
                 ),
               )
@@ -342,6 +425,28 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               const Center(
                   child: Text('Yayın bekleniyor...',
                       style: TextStyle(color: Colors.white))),
+
+            if (guestTrack != null)
+              Positioned(
+                top: 80,
+                right: 16,
+                width: 100,
+                height: 140,
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.white, width: 2),
+                      borderRadius: BorderRadius.circular(12),
+                      color: Colors.black,
+                    ),
+                    child: VideoTrackRenderer(
+                      guestTrack,
+                      fit: VideoViewFit.cover,
+                    ),
+                  ),
+                ),
+              ),
 
             // 2. Ghost Screen Overlay (UI)
             AnimatedOpacity(
