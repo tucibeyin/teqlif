@@ -62,7 +62,7 @@ export async function POST(req: NextRequest) {
             console.log(`[LiveKit Webhook] Ad ${adId} is now LIVE.`);
 
             // Favorileyen kullanıcılara Push Notification atalım
-            const favoritedUsers = updatedAd.favorites.map(f => f.user).filter(u => u.fcmToken);
+            const favoritedUsers = (updatedAd as any).favorites?.map((f: any) => f.user).filter((u: any) => u.fcmToken) || [];
 
             if (favoritedUsers.length > 0) {
                 const title = '🔥 Canlı Yayın Başladı!';
@@ -84,6 +84,34 @@ export async function POST(req: NextRequest) {
                 data: { isLive: false }
             });
             console.log(`[LiveKit Webhook] Ad ${adId} is no longer live.`);
+
+            // Odanın (İlanın) biriken tekliflerini Redis'ten çek ve DB'ye toplu yaz (Bulk Insert)
+            try {
+                const { getAndClearRoomBids } = await import('@/lib/redis');
+                const rawBids = await getAndClearRoomBids(adId);
+
+                if (rawBids && rawBids.length > 0) {
+                    const { BidStatus } = await import('@prisma/client');
+                    const formattedBids = rawBids.map((b: any) => ({
+                        adId: adId,
+                        userId: b.userId,
+                        amount: b.amount,
+                        status: BidStatus.ACCEPTED, // TypeScript Enum
+                        createdAt: new Date(b.timestamp)
+                    }));
+
+                    const insertResult = await prisma.bid.createMany({
+                        data: formattedBids,
+                        skipDuplicates: true
+                    });
+
+                    console.log(`[LiveKit Webhook] Successfully bulk inserted ${insertResult.count} bids for Ad ${adId}.`);
+                } else {
+                    console.log(`[LiveKit Webhook] No bids found in Redis for Ad ${adId} to sync.`);
+                }
+            } catch (syncError) {
+                console.error(`[LiveKit Webhook] Error syncing bids for Ad ${adId}:`, syncError);
+            }
         }
 
         return NextResponse.json({ success: true }, { status: 200 });
