@@ -47,3 +47,13 @@ firebase-admin.json
 google-services.json
 GoogleService-Info.plist
 firebase_options.dart # Optional but recommended for public repos
+
+# Sensitive Keys & Logs
+AuthKey_*.p8
+firebase-admin.json
+*.log
+
+# Local test scripts
+test-*.js
+test-*.mjs
+test-*.ts
