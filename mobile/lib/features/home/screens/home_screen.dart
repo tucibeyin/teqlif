@@ -458,7 +458,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                               final price =
                                   int.tryParse(priceCtrl.text.trim()) ?? 1;
                               final res = await ApiClient().post(
-                                '/livekit/quick-start',
+                                '/api/livekit/quick-start',
                                 data: {
                                   'title': title,
                                   'startingBid': price,
