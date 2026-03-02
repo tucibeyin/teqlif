@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack, useDataChannel, useRoomContext } from "@livekit/components-react";
+import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack, useDataChannel, useRoomContext, TrackToggle } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import "@livekit/components-styles";
 import { useSession } from "next-auth/react";
@@ -95,6 +95,7 @@ function CustomArenaLayout({
     const tracks = useTracks([Track.Source.Camera]);
     const [liveHighestBid, setLiveHighestBid] = useState(initialHighestBid);
     const [lastAcceptedBidId, setLastAcceptedBidId] = useState<string | null>(null);
+    const [liveHighestBidId, setLiveHighestBidId] = useState<string | null>(null);
     const [auctionStatus, setAuctionStatus] = useState<"IDLE" | "ACTIVE">("IDLE");
     const [auctionNotification, setAuctionNotification] = useState<string | null>(null);
     const [messages, setMessages] = useState<{ id: string, text: string, sender: string }[]>([]);
@@ -116,9 +117,11 @@ function CustomArenaLayout({
             const dataObj = JSON.parse(dataStr);
             if (dataObj.type === 'NEW_BID') {
                 setLiveHighestBid(dataObj.amount);
+                setLiveHighestBidId(dataObj.bidId); // TRUTH: Save exact ID
                 setLastAcceptedBidId(null);
             } else if (dataObj.type === 'BID_ACCEPTED') {
                 setLiveHighestBid(dataObj.amount);
+                setLiveHighestBidId(dataObj.bidId);
                 setLastAcceptedBidId(dataObj.bidId);
             } else if (dataObj.type === 'CHAT') {
                 const newMessage = {
@@ -160,6 +163,49 @@ function CustomArenaLayout({
             {/* Host Full Screen */}
             <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
 
+            {/* Host Specific LiveKit Tools (Mic/Cam Toggle) */}
+            {isOwner && (
+                <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    left: "20px",
+                    display: "flex",
+                    gap: "10px",
+                    zIndex: 50
+                }}>
+                    <TrackToggle
+                        source={Track.Source.Microphone}
+                        style={{
+                            background: "rgba(0,0,0,0.5)",
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            borderRadius: "50%",
+                            width: "40px",
+                            height: "40px",
+                            color: "white",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer"
+                        }}
+                    />
+                    <TrackToggle
+                        source={Track.Source.Camera}
+                        style={{
+                            background: "rgba(0,0,0,0.5)",
+                            border: "1px solid rgba(255,255,255,0.2)",
+                            borderRadius: "50%",
+                            width: "40px",
+                            height: "40px",
+                            color: "white",
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            cursor: "pointer"
+                        }}
+                    />
+                </div>
+            )}
+
             {/* Bidding Overlay (Unified for Owner and Viewer) */}
             <BiddingOverlay
                 adId={adId}
@@ -170,6 +216,7 @@ function CustomArenaLayout({
                 minBidStep={minBidStep}
                 currentHighestBid={liveHighestBid}
                 lastAcceptedBidId={lastAcceptedBidId}
+                liveHighestBidId={liveHighestBidId} // NEW: Pass the tracked Bid ID
                 auctionStatus={auctionStatus}
                 setMessages={setMessages}
             />
@@ -257,7 +304,7 @@ function CustomArenaLayout({
     );
 }
 
-function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, auctionStatus, setMessages }: any) {
+function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, liveHighestBidId, auctionStatus, setMessages }: any) {
     const router = useRouter();
     const { data: session } = useSession();
     const [amount, setAmount] = useState("");
@@ -309,31 +356,44 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
     }
 
     async function handleAccept() {
-        if (!confirm("Bu teklifi kabul etmek istiyor musunuz?")) return;
+        if (!liveHighestBidId) {
+            alert("Kabul edilecek bir teklif bulunamadı.");
+            return;
+        }
+        if (!confirm("Dikkat! Bu teklifi kabul edip satışı tamamlıyorsunuz. İlan 'Satıldı' olarak işaretlenecek ve yayın kapanacaktır. Emin misiniz?")) return;
+
         setLoading(true);
         try {
-            // Find the highest bid ID from the ad's recent state if needed, 
-            // but we usually need the bidId. For simplicity, let's assume 
-            // the backend can handle "accept current highest" or we fetch it.
-            // Actually, for better UX, we'd want the current bid ID.
-            // Since we don't have the ID easily in the broadcast right now (except in JSON),
-            // let's fetch the latest bid first or use a more robust sync.
-            // FOR NOW: Let's assume we fetch it or use the one from JSON if available.
-            // (Re-implementation note: In a real system, we'd include bidId in all broadcasts)
-
-            // Temporary: fetch latest bid to be safe
-            const resAd = await fetch(`/api/ads/${adId}`);
-            const ad = await resAd.json();
-            const topBid = ad.bids?.[0];
-
-            if (!topBid) {
-                alert("Teklif bulunamadı.");
-                return;
+            // 1. Accept the bid
+            const resAccept = await fetch(`/api/bids/${liveHighestBidId}/accept`, { method: "PATCH" });
+            if (resAccept.ok) {
+                // 2. Finalize the sale
+                const resFinalize = await fetch(`/api/bids/${liveHighestBidId}/finalize`, { method: "POST" });
+                if (resFinalize.ok) {
+                    alert("Satış başarıyla tamamlandı! İlan yayından kaldırıldı.");
+                    await handleEndBroadcast(); // End stream
+                    return;
+                }
             }
+            alert("İşlem başarısız.");
+        } catch (e) {
+            alert("Bağlantı hatası.");
+        } finally {
+            setLoading(false);
+        }
+    }
 
-            const res = await fetch(`/api/bids/${topBid.id}/accept`, { method: "PATCH" });
+    async function handleCancel() {
+        if (!liveHighestBidId) {
+            alert("İptal edilecek bir teklif bulunamadı.");
+            return;
+        }
+        if (!confirm("Bunu iptal etmek istediğinize emin misiniz?")) return;
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/bids/${liveHighestBidId}/cancel`, { method: "PATCH" });
             if (res.ok) {
-                alert("Teklif kabul edildi!");
+                alert("Teklif iptal edildi.");
                 router.refresh();
             } else {
                 alert("İşlem başarısız.");
@@ -345,25 +405,44 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
         }
     }
 
-    async function handleCancel() {
-        if (!confirm("Bunu iptal etmek istediğinize emin misiniz?")) return;
+    async function handleStartAuction() {
+        if (!room) return;
         setLoading(true);
         try {
-            const resAd = await fetch(`/api/ads/${adId}`);
-            const ad = await resAd.json();
-            const topBid = ad.bids?.[0];
+            const payload = JSON.stringify({ type: "AUCTION_START" });
+            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+        } catch (e) {
+            console.error(e);
+        }
+        setLoading(false);
+    }
 
-            if (!topBid) {
-                alert("Teklif bulunamadı.");
-                return;
-            }
+    async function handleStopAuction() {
+        if (!room) return;
+        setLoading(true);
+        try {
+            const payload = JSON.stringify({ type: "AUCTION_END" });
+            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+        } catch (e) {
+            console.error(e);
+        }
+        setLoading(false);
+    }
 
-            const res = await fetch(`/api/bids/${topBid.id}/cancel`, { method: "PATCH" });
+    async function handleEndBroadcast() {
+        if (!confirm("Yayını bitirmek ve odadan çıkmak istediğinize emin misiniz?")) return;
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/ads/${adId}/live`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isLive: false }),
+            });
             if (res.ok) {
-                alert("Teklif iptal edildi.");
+                room?.disconnect();
                 router.refresh();
             } else {
-                alert("İşlem başarısız.");
+                alert("Yayın sonlandırılamadı.");
             }
         } catch (e) {
             alert("Bağlantı hatası.");
@@ -454,42 +533,80 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
 
             {isOwner ? (
                 /* Host Controls */
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1 }}>
-                    <button
-                        onClick={handleCancel}
-                        disabled={loading || currentHighestBid === 0}
-                        style={{
-                            background: "rgba(239, 68, 68, 0.2)",
-                            color: "#ef4444",
-                            border: "1px solid rgba(239, 68, 68, 0.3)",
-                            borderRadius: "100px",
-                            padding: "6px 14px",
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                            transition: "all 0.2s"
-                        }}
-                    >
-                        Reddet
-                    </button>
-                    <button
-                        onClick={handleAccept}
-                        disabled={loading || currentHighestBid === 0}
-                        style={{
-                            background: "#22c55e",
-                            color: "white",
-                            border: "none",
-                            borderRadius: "100px",
-                            padding: "8px 18px",
-                            fontSize: "0.8rem",
-                            fontWeight: 800,
-                            cursor: "pointer",
-                            transition: "transform 0.2s",
-                            boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)"
-                        }}
-                    >
-                        {loading ? "..." : "Kabul Et"}
-                    </button>
+                <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", gap: "6px" }}>
+                        {auctionStatus === "IDLE" ? (
+                            <button
+                                onClick={handleStartAuction}
+                                disabled={loading}
+                                style={{
+                                    background: "#3b82f6", color: "white", border: "none", borderRadius: "100px",
+                                    padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer"
+                                }}
+                            >
+                                Mezatı Başlat
+                            </button>
+                        ) : (
+                            <button
+                                onClick={handleStopAuction}
+                                disabled={loading}
+                                style={{
+                                    background: "#f59e0b", color: "white", border: "none", borderRadius: "100px",
+                                    padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer"
+                                }}
+                            >
+                                Mezatı Durdur
+                            </button>
+                        )}
+                        <button
+                            onClick={handleEndBroadcast}
+                            disabled={loading}
+                            style={{
+                                background: "rgba(255, 255, 255, 0.1)", color: "#f87171", border: "1px solid rgba(248, 113, 113, 0.3)", borderRadius: "100px",
+                                padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer"
+                            }}
+                        >
+                            Yayını Bitir
+                        </button>
+                    </div>
+
+                    <div style={{ display: "flex", gap: "6px" }}>
+                        <button
+                            onClick={handleCancel}
+                            disabled={loading || currentHighestBid === 0 || !liveHighestBidId}
+                            style={{
+                                background: "rgba(239, 68, 68, 0.2)",
+                                color: "#ef4444",
+                                border: "1px solid rgba(239, 68, 68, 0.3)",
+                                borderRadius: "100px",
+                                padding: "6px 14px",
+                                fontSize: "0.75rem",
+                                fontWeight: 700,
+                                cursor: "pointer",
+                                transition: "all 0.2s"
+                            }}
+                        >
+                            Reddet
+                        </button>
+                        <button
+                            onClick={handleAccept}
+                            disabled={loading || currentHighestBid === 0 || !liveHighestBidId}
+                            style={{
+                                background: "#22c55e",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "100px",
+                                padding: "8px 18px",
+                                fontSize: "0.8rem",
+                                fontWeight: 800,
+                                cursor: "pointer",
+                                transition: "transform 0.2s",
+                                boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)"
+                            }}
+                        >
+                            {loading ? "..." : "Onayla ve Sat"}
+                        </button>
+                    </div>
                 </div>
             ) : (
                 /* Viewer Controls */

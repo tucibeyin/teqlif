@@ -8,6 +8,7 @@ import { AdActions } from "./AdActions";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { findPath, categoryTree } from "@/lib/categories";
 import LiveArenaWrapper from "./LiveArenaWrapper";
+import StartBroadcastButton from "./StartBroadcastButton";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -303,6 +304,14 @@ export default async function AdDetailPage({
                             ) : (
                                 <div style={{ textAlign: "center", padding: "1rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
                                     <strong style={{ display: "block", fontSize: "0.9rem" }}>Bu ilan size ait</strong>
+                                </div>
+                            )}
+                            {isOwner && !adData.isLive && adData.status === 'ACTIVE' && (
+                                <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
+                                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.5rem", textAlign: "center" }}>
+                                        Canlı olarak ürününüzü tanıtıp, anlık peyler alabilirsiniz.
+                                    </div>
+                                    <StartBroadcastButton adId={ad.id} />
                                 </div>
                             )}
                         </div>
