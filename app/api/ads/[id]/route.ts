@@ -109,7 +109,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         if (!user) return NextResponse.json({ error: "Giriş yapmanız gerekiyor." }, { status: 401 });
 
         const { id } = await params;
-        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, showPhone, categorySlug, provinceId, districtId: rawDistrictId, images } = await req.json();
+        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, showPhone, categorySlug, provinceId, districtId: rawDistrictId, images, isAuction, auctionStartTime, startingPrice } = await req.json();
 
         if (!title || !description || !price || !categorySlug || !provinceId || !rawDistrictId) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
@@ -144,6 +144,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
                 minBidStep: isFixedPrice ? 1 : (minBidStep !== undefined ? Number(minBidStep) : undefined),
                 buyItNowPrice: isFixedPrice ? null : (buyItNowPrice !== undefined ? (buyItNowPrice ? Number(buyItNowPrice) : null) : undefined),
                 showPhone: showPhone !== undefined ? Boolean(showPhone) : undefined,
+                isAuction: isAuction !== undefined ? Boolean(isAuction) : undefined,
+                auctionStartTime: isAuction && auctionStartTime ? new Date(auctionStartTime) : null,
+                startingPrice: isAuction && startingPrice ? Number(startingPrice) : null,
                 categoryId: category.id,
                 provinceId, districtId,
                 images: images || [],

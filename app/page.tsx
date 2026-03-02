@@ -104,6 +104,34 @@ const getAds = cache(async (categorySlug?: string, limit = 24) => {
   }
 });
 
+const getLiveAuctions = cache(async () => {
+  try {
+    return await prisma.ad.findMany({
+      where: {
+        status: "ACTIVE",
+        isLive: true,
+        isAuction: true,
+      },
+      take: 10,
+      orderBy: { auctionStartTime: "desc" },
+      include: {
+        user: { select: { name: true, avatar: true } },
+        category: true,
+        province: true,
+        _count: { select: { bids: true } },
+        bids: {
+          where: { status: { in: ['PENDING', 'ACCEPTED'] } },
+          orderBy: { amount: "desc" },
+          take: 1,
+          select: { amount: true }
+        },
+      },
+    });
+  } catch {
+    return [];
+  }
+});
+
 function formatPrice(price: number) {
   return new Intl.NumberFormat("tr-TR", {
     style: "currency",
@@ -134,18 +162,29 @@ function daysLeft(expiresAt: Date | null) {
 export default async function HomePage({
   searchParams,
 }: {
-  searchParams: Promise<{ category?: string }>;
+  searchParams: Promise<{ category?: string; tab?: string }>;
 }) {
   const params = await searchParams;
   const activeCategory = params.category;
+  const activeTab = params.tab || "all"; // 'all' veya 'live'
 
   // Calculate path once O(N)
   const path = activeCategory ? findPath(activeCategory, categoryTree) : null;
   const activePathSlugs = new Set(path?.map(n => n.slug) || []);
 
-  const ads = await getAds(activeCategory, 24);
-  const latestAds = activeCategory ? [] : ads.slice(0, 8);
-  const featuredAds = activeCategory ? ads : ads.slice(0, 16);
+  const allAds = await getAds(activeCategory, 24);
+  const liveAuctions = await getLiveAuctions();
+
+  // Filter based on tab
+  let displayAds = allAds;
+  if (activeTab === "live") {
+    displayAds = allAds.filter(a => a.isAuction);
+  } else {
+    displayAds = allAds.filter(a => !a.isAuction || (a.isAuction && !a.isLive)); // Canlı olanlar tepede story'de
+  }
+
+  const latestAds = activeCategory ? [] : displayAds.slice(0, 8);
+  const featuredAds = activeCategory ? displayAds : displayAds.slice(0, 16);
 
   return (
     <>
@@ -168,6 +207,56 @@ export default async function HomePage({
           </div>
         </div>
       </section>
+
+      {/* CANLI YAYIN VİTRİNİ (STORIES) */}
+      {!activeCategory && liveAuctions.length > 0 && (
+        <div className="container" style={{ paddingTop: "2rem", paddingBottom: "1rem" }}>
+          <div className="section-header" style={{ marginBottom: "1rem" }}>
+            <h2 className="section-title" style={{ fontSize: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span style={{ display: "inline-block", width: "10px", height: "10px", borderRadius: "50%", background: "#ef4444", animation: "pulse 2s infinite" }}></span>
+              🔥 Şu An Canlı
+            </h2>
+          </div>
+          <div style={{
+            display: "flex", gap: "1rem", overflowX: "auto", paddingBottom: "1rem", scrollBehavior: "smooth",
+            scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", margin: "0 -1rem", padding: "0 1rem"
+          }}>
+            {liveAuctions.map((auction) => (
+              <Link key={auction.id} href={`/ad/${auction.id}`} style={{ textDecoration: "none", flexShrink: 0, width: "160px", scrollSnapAlign: "start" }}>
+                <div style={{
+                  position: "relative", width: "160px", height: "240px", borderRadius: "var(--radius-lg)", overflow: "hidden",
+                  boxShadow: "var(--shadow-md)", border: "2px solid #ef4444", background: "var(--bg-secondary)"
+                }}>
+                  {auction.images && auction.images.length > 0 ? (
+                    <Image src={auction.images[0]} alt={auction.title} fill style={{ objectFit: "cover" }} />
+                  ) : (
+                    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "3rem" }}>
+                      {auction.category.icon}
+                    </div>
+                  )}
+                  {/* Karanlık gradyan */}
+                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "60%", background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)" }}></div>
+
+                  {/* Canlı Badge */}
+                  <div style={{ position: "absolute", top: "8px", left: "8px", background: "#ef4444", color: "white", fontSize: "0.7rem", fontWeight: "bold", padding: "2px 6px", borderRadius: "100px", display: "flex", alignItems: "center", gap: "4px" }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span> CANLI
+                  </div>
+
+                  {/* Kategori Müşteri */}
+                  <div style={{ position: "absolute", bottom: "8px", left: "8px", right: "8px", color: "white" }}>
+                    <div style={{ fontSize: "0.85rem", fontWeight: 700, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.2, marginBottom: "4px", textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>
+                      {auction.title}
+                    </div>
+                    <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", gap: "4px" }}>
+                      👤 {auction.user.name.split(" ")[0]}
+                    </div>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="container" id="ilanlar" style={{ paddingTop: "2rem" }}>
         <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "2rem", alignItems: "start" }}>
@@ -202,20 +291,43 @@ export default async function HomePage({
               }}
             >
               <span>🏷️</span> Tümü
-              <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{ads.length}</span>
+              <span style={{ marginLeft: "auto", fontSize: "0.75rem", color: "var(--text-muted)" }}>{allAds.length}</span>
             </Link>
 
             {categoryTree.map((node) => renderSidebarNode(node, activeCategory, activePathSlugs))}
           </aside>
 
           <div>
-            <div className="section-header" style={{ marginBottom: "1rem" }}>
-              <h2 className="section-title" style={{ fontSize: "1.25rem" }}>
-                {activeCategory
-                  ? (path ? path.map((n, i) => i === 0 ? `${n.icon ?? ""} ${n.name}`.trim() : n.name).join(" › ") + " İlanları" : "İlanlar")
-                  : "Öne Çıkan İlanlar"}
-              </h2>
-              <span className="text-sm text-muted">{featuredAds.length} ilan</span>
+            <div className="section-header" style={{ marginBottom: "1rem", display: "flex", justifyContent: "space-between", alignItems: "flex-end", flexWrap: "wrap", gap: "1rem" }}>
+              <div>
+                <h2 className="section-title" style={{ fontSize: "1.25rem", marginBottom: "0.5rem" }}>
+                  {activeCategory
+                    ? (path ? path.map((n, i) => i === 0 ? `${n.icon ?? ""} ${n.name}`.trim() : n.name).join(" › ") + " İlanları" : "İlanlar")
+                    : "Keşfet"}
+                </h2>
+                {/* TABS */}
+                <div style={{ display: "flex", gap: "0.5rem", background: "var(--bg-secondary)", padding: "0.25rem", borderRadius: "100px", width: "fit-content" }}>
+                  <Link href={`/?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(params as any)), tab: "all" }).toString()}`} scroll={false} style={{
+                    padding: "0.4rem 1rem", borderRadius: "100px", fontSize: "0.85rem", fontWeight: activeTab === "all" ? 600 : 500, textDecoration: "none",
+                    background: activeTab === "all" ? "var(--bg-card)" : "transparent",
+                    color: activeTab === "all" ? "var(--text-primary)" : "var(--text-muted)",
+                    boxShadow: activeTab === "all" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                    transition: "all 0.2s"
+                  }}>
+                    Hepsi
+                  </Link>
+                  <Link href={`/?${new URLSearchParams({ ...Object.fromEntries(new URLSearchParams(params as any)), tab: "live" }).toString()}`} scroll={false} style={{
+                    padding: "0.4rem 1rem", borderRadius: "100px", fontSize: "0.85rem", fontWeight: activeTab === "live" ? 600 : 500, textDecoration: "none",
+                    background: activeTab === "live" ? "var(--bg-card)" : "transparent",
+                    color: activeTab === "live" ? "#ef4444" : "var(--text-muted)",
+                    boxShadow: activeTab === "live" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
+                    display: "flex", alignItems: "center", gap: "0.3rem", transition: "all 0.2s"
+                  }}>
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444" }}></span> Mezatlar
+                  </Link>
+                </div>
+              </div>
+              <span className="text-sm text-muted" style={{ paddingBottom: "0.5rem" }}>{featuredAds.length} ilan</span>
             </div>
 
             {featuredAds.length === 0 ? (

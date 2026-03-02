@@ -33,6 +33,15 @@ export default function EditAdForm({ ad }: { ad: any }) {
     const [isFixedPrice, setIsFixedPrice] = useState(ad.isFixedPrice || false);
     const [showPhone, setShowPhone] = useState(ad.showPhone || false);
 
+    // Canlı Mezat Alanları
+    const [isAuction, setIsAuction] = useState(ad.isAuction || false);
+    const [auctionStartTime, setAuctionStartTime] = useState(
+        ad.auctionStartTime ? new Date(ad.auctionStartTime).toISOString().slice(0, 16) : ""
+    );
+    const [displayStartingPrice, setDisplayStartingPrice] = useState(
+        ad.startingPrice ? new Intl.NumberFormat("tr-TR").format(ad.startingPrice) : ""
+    );
+
     useEffect(() => {
         let isMounted = true;
         if (selectedProvince) {
@@ -101,6 +110,9 @@ export default function EditAdForm({ ad }: { ad: any }) {
                     ? Number((document.getElementById("actualBuyItNowPrice") as HTMLInputElement).value)
                     : null,
                 showPhone,
+                isAuction,
+                auctionStartTime: isAuction ? auctionStartTime : null,
+                startingPrice: isAuction && displayStartingPrice ? Number(displayStartingPrice.replace(/\./g, "")) : null,
                 categorySlug: effectiveCategorySlug,
                 provinceId: fd.get("provinceId"),
                 districtId: fd.get("districtId"),
@@ -131,6 +143,47 @@ export default function EditAdForm({ ad }: { ad: any }) {
 
                     <form onSubmit={handleSubmit}>
                         {error && <div className="error-msg" style={{ marginBottom: "1rem" }}>{error}</div>}
+
+                        {/* Canlı Mezat / Standart İlan Toggle */}
+                        <div className="form-section" style={{ background: isAuction ? "rgba(239, 68, 68, 0.05)" : "var(--bg-secondary)", border: isAuction ? "1px solid rgba(239, 68, 68, 0.3)" : "1px solid var(--border)", padding: "1.5rem", borderRadius: "var(--radius-lg)", marginBottom: "2rem" }}>
+                            <h3 style={{ color: "var(--text-primary)", fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                {isAuction ? "🔴 Canlı Mezat İlanı" : "📄 Standart İlan"}
+                            </h3>
+                            <div style={{ display: "flex", gap: "1rem", background: "var(--bg-card)", padding: "0.5rem", borderRadius: "100px", border: "1px solid var(--border)", width: "fit-content" }}>
+                                <button
+                                    type="button"
+                                    onClick={() => { setIsAuction(false); setIsFixedPrice(ad.isFixedPrice || false); }}
+                                    style={{
+                                        padding: "0.5rem 1.5rem",
+                                        borderRadius: "100px",
+                                        fontWeight: 600,
+                                        transition: "all 0.2s",
+                                        background: !isAuction ? "var(--text-primary)" : "transparent",
+                                        color: !isAuction ? "var(--bg-card)" : "var(--text-muted)",
+                                        border: "none",
+                                        cursor: "pointer"
+                                    }}
+                                >
+                                    Standart İlan
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => { setIsAuction(true); setIsFixedPrice(false); }}
+                                    style={{
+                                        padding: "0.5rem 1.5rem",
+                                        borderRadius: "100px",
+                                        fontWeight: 600,
+                                        transition: "all 0.2s",
+                                        background: isAuction ? "#ef4444" : "transparent",
+                                        color: isAuction ? "white" : "var(--text-muted)",
+                                        border: "none",
+                                        cursor: "pointer"
+                                    }}
+                                >
+                                    🔴 Canlı Mezat (Auction)
+                                </button>
+                            </div>
+                        </div>
 
                         {/* Başlık & Kategori */}
                         <div className="form-section">
@@ -176,13 +229,13 @@ export default function EditAdForm({ ad }: { ad: any }) {
                             </div>
                         </div>
 
-                        {/* Fiyat & Teklif Tipi */}
+                        {/* Fiyat & Teklif Kuralları */}
                         <div className="form-section">
                             <h3 style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                Fiyat ve Teklif Kuralları
+                                {isAuction ? "Canlı Mezat Kuralları" : "Fiyat ve Teklif Kuralları"}
                             </h3>
 
-                            <div className="form-group" style={{ marginBottom: "1.5rem" }}>
+                            <div className="form-group" style={{ marginBottom: "1.5rem", display: isAuction ? "none" : "block" }}>
                                 <label style={{ display: "block", marginBottom: "0.5rem", fontWeight: 600 }}>İlan Tipi Seçin</label>
                                 <div style={{ display: "flex", gap: "1rem", flexDirection: "column" }}>
                                     <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
@@ -202,10 +255,44 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                 </div>
                             </div>
 
-                            {!isFixedPrice && (
+                            {!isFixedPrice && !isAuction && (
                                 <div className="form-group" style={{ marginBottom: "1.5rem" }}>
                                     <div style={{ fontSize: "0.875rem", color: "var(--text-muted)", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
                                         <strong>Nasıl İşler?</strong> İlanınıza teklif verilebilir durumdadır. İster bir başlangıç teklifi belirleyebilir (Örn: 5000 ₺), isterseniz boş bırakarak serbest pazar fiyatlamasına (1 ₺'den başlar) izin verebilirsiniz.
+                                    </div>
+                                </div>
+                            )}
+
+                            {isAuction && (
+                                <div className="form-row" style={{ animation: "fadeIn 0.3s ease-out", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px dashed var(--border)", marginBottom: "1.5rem" }}>
+                                    <div className="form-group" style={{ flex: 1 }}>
+                                        <label htmlFor="auctionStartTime" style={{ fontWeight: 600, color: "var(--text-primary)" }}>🔴 Mezat Başlama Zamanı *</label>
+                                        <input
+                                            type="datetime-local"
+                                            id="auctionStartTime"
+                                            className="input"
+                                            required={isAuction}
+                                            value={auctionStartTime}
+                                            onChange={(e) => setAuctionStartTime(e.target.value)}
+                                            style={{ marginTop: "0.5rem" }}
+                                        />
+                                    </div>
+                                    <div className="form-group" style={{ flex: 1 }}>
+                                        <label htmlFor="startingPriceInput" style={{ fontWeight: 600, color: "var(--text-primary)" }}>Başlangıç Fiyatı (Açılış ₺) *</label>
+                                        <input
+                                            type="text"
+                                            className="input"
+                                            id="startingPriceInput"
+                                            placeholder="Örn: 1000"
+                                            required={isAuction}
+                                            value={displayStartingPrice}
+                                            onChange={(e) => {
+                                                const val = e.target.value.replace(/[^0-9]/g, "");
+                                                if (!val) setDisplayStartingPrice("");
+                                                else setDisplayStartingPrice(new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)));
+                                            }}
+                                            style={{ marginTop: "0.5rem" }}
+                                        />
                                     </div>
                                 </div>
                             )}
@@ -232,7 +319,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                     <input type="hidden" name="price" value={displayPrice.replace(/\./g, "")} />
                                 </div>
 
-                                <div className="form-group" id="startingBidWrapper" style={{ display: isFixedPrice ? "none" : "block" }}>
+                                <div className="form-group" id="startingBidWrapper" style={{ display: (isFixedPrice || isAuction) ? "none" : "block" }}>
                                     <label htmlFor="startingBid">Açılış Teklifi (₺) <span className="text-muted">(İsteğe Bağlı)</span></label>
                                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                                         <input
@@ -290,7 +377,7 @@ export default function EditAdForm({ ad }: { ad: any }) {
                                         </div>
                                     </div>
 
-                                    <div className="form-group" style={{ marginTop: "1.5rem", padding: "1rem", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-secondary)" }}>
+                                    <div className="form-group" style={{ marginTop: "1.5rem", padding: "1rem", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-secondary)", display: isAuction ? "none" : "block" }}>
                                         <label htmlFor="buyItNowInput">Hemen Al Fiyatı (₺) <span className="text-muted">(Opsiyonel)</span></label>
                                         <div style={{ position: "relative", display: "flex", alignItems: "center", marginBottom: "0.25rem" }}>
                                             <input

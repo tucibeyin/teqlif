@@ -69,7 +69,7 @@ export async function POST(req: NextRequest) {
                 const bodyMsg = `${updatedAd.title} için canlı mezat şu an yayında! Hemen katılın.`;
 
                 // Asenkron olarak gönderelim, webhook'u bekletmeyelim
-                Promise.all(favoritedUsers.map(user =>
+                Promise.all(favoritedUsers.map((user: any) =>
                     sendPushNotification(user.fcmToken!, title, bodyMsg, { adId: updatedAd.id, type: 'LIVE_AUCTION_STARTED' })
                 )).catch(err => console.error('[LiveKit Webhook] Error sending FCM push:', err));
 

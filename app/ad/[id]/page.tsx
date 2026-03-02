@@ -7,6 +7,9 @@ import ImageSlider from "./ImageSlider";
 import { AdActions } from "./AdActions";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { findPath, categoryTree } from "@/lib/categories";
+import dynamic from "next/dynamic";
+
+const LiveArena = dynamic(() => import('./LiveArena'), { ssr: false });
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -140,6 +143,18 @@ export default async function AdDetailPage({
 
     return (
         <div className="container">
+            {adData.isLive && adData.isAuction && adData.liveKitRoomId && (
+                <div style={{ marginBottom: "2rem" }}>
+                    <div className="card" style={{ overflow: "hidden", border: "2px solid #ef4444" }}>
+                        <div style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                            <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
+                            CANLI MEZAT ARENASI
+                        </div>
+                        <LiveArena roomId={adData.liveKitRoomId} adId={adData.id} isOwner={isOwner} />
+                    </div>
+                </div>
+            )}
+
             <div className="ad-detail">
                 {/* Sol: Görsel ve Detay */}
                 <div>

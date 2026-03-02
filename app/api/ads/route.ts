@@ -71,7 +71,7 @@ export async function POST(req: NextRequest) {
             // Fail-open: allow the request to pass if Redis is unreachable
         }
 
-        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, showPhone, categorySlug, provinceId, districtId: rawDistrictId, images, durationDays, customExpiresAt } = await req.json();
+        const { title, description, price, startingBid, minBidStep, isFixedPrice, buyItNowPrice, showPhone, categorySlug, provinceId, districtId: rawDistrictId, images, durationDays, customExpiresAt, isAuction, auctionStartTime, startingPrice } = await req.json();
 
         if (!title || !description || !price || !categorySlug || !provinceId || !rawDistrictId) {
             return NextResponse.json({ error: "Tüm alanlar zorunludur." }, { status: 400 });
@@ -116,6 +116,9 @@ export async function POST(req: NextRequest) {
                 minBidStep: isFixedPrice ? 1 : (minBidStep !== undefined ? Number(minBidStep) : 1),
                 buyItNowPrice: isFixedPrice ? null : (buyItNowPrice ? Number(buyItNowPrice) : null),
                 showPhone: showPhone !== undefined ? Boolean(showPhone) : false,
+                isAuction: Boolean(isAuction),
+                auctionStartTime: isAuction && auctionStartTime ? new Date(auctionStartTime) : null,
+                startingPrice: isAuction && startingPrice ? Number(startingPrice) : null,
                 userId: currentUser.id,
                 categoryId: category.id,
                 provinceId,
