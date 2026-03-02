@@ -1,0 +1,25 @@
+# LiveKit Server Configuration
+# Documentation: https://docs.livekit.io/realtime/self-hosting/deploy-docker/
+
+port: 7880
+bind_addresses:
+  - ""
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 60000
+  # IMPORTANT: Set this to your VPS Public IP
+  external_ip: "51.81.34.27"
+
+# Logging configuration
+logging:
+  level: info
+
+# API Keys (You can add more later)
+keys:
+  # FORMAT: 
+  # API_KEY: API_SECRET
+  # You can generate these using the command:
+  # docker run --rm livekit/livekit-server:latest --generate-keys
+  devkey: secretsecret
