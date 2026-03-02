@@ -58,33 +58,40 @@ model District {
 }
 
 model Ad {
-  id            String         @id @default(cuid())
-  title         String
-  description   String
-  price         Float
-  minBidStep    Float          @default(1)
-  status        AdStatus       @default(ACTIVE)
-  images        String[]
-  expiresAt     DateTime?
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  userId        String
-  categoryId    String
-  provinceId    String
-  districtId    String
-  startingBid   Float?
-  views         Int            @default(0)
-  isFixedPrice  Boolean        @default(false)
-  buyItNowPrice Float?
-  showPhone     Boolean        @default(false)
-  winnerId      String?
-  category      Category       @relation(fields: [categoryId], references: [id])
-  district      District       @relation(fields: [districtId], references: [id])
-  province      Province       @relation(fields: [provinceId], references: [id])
-  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
-  bids          Bid[]
-  conversations Conversation[]
-  favorites     Favorite[]
+  id               String         @id @default(cuid())
+  title            String
+  description      String
+  price            Float
+  minBidStep       Float          @default(1)
+  status           AdStatus       @default(ACTIVE)
+  images           String[]
+  expiresAt        DateTime?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  userId           String
+  categoryId       String
+  provinceId       String
+  districtId       String
+  startingBid      Float? // MİNİMUM BAŞLANGIÇ TEKLİFİ VEYA SERBEST PİYASA
+  views            Int            @default(0)
+  isFixedPrice     Boolean        @default(false)
+  buyItNowPrice    Float?
+  showPhone        Boolean        @default(false)
+  winnerId         String?
+  // --- LIVEKIT & AUCTION FIELDS ---
+  isLive           Boolean        @default(false) // Yayın/Mezat aktif mi?
+  isAuction        Boolean        @default(false) // Bu ilan canlı mezat formatında mı?
+  auctionStartTime DateTime? // Mezat planlanan veya başlama zamanı
+  startingPrice    Float? // Mezatın açılış fiyatı (isteğe bağlı)
+  liveKitRoomId    String? // LiveKit odasının ID'si
+  // --------------------------------
+  category         Category       @relation(fields: [categoryId], references: [id])
+  district         District       @relation(fields: [districtId], references: [id])
+  province         Province       @relation(fields: [provinceId], references: [id])
+  user             User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bids             Bid[]
+  conversations    Conversation[]
+  favorites        Favorite[]
 
   @@index([status, categoryId, createdAt])
   @@index([userId])
