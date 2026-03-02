@@ -744,7 +744,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                 child: Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 4),
                                   decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.15),
+                                    color: Colors.white.withOpacity(0.85),
                                     borderRadius: BorderRadius.circular(30),
                                     border: Border.all(color: Colors.white30),
                                   ),
@@ -754,11 +754,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                         child: TextField(
                                           controller: _chatCtrl,
                                           focusNode: _chatFocus,
-                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
                                           cursorColor: const Color(0xFF00B4CC),
                                           decoration: const InputDecoration(
                                             hintText: 'Mesaj yaz...',
-                                            hintStyle: TextStyle(color: Colors.white60),
+                                            hintStyle: TextStyle(color: Colors.black54),
                                             border: InputBorder.none,
                                             contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                           ),

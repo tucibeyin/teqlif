@@ -423,10 +423,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                       Text(
                                         '${msg.senderName}:',
                                         style: const TextStyle(
-                                          color: Colors.white70,
-                                          fontWeight: FontWeight.w600,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w700,
                                           fontSize: 14,
-                                          shadows: [Shadow(color: Colors.black54, blurRadius: 2)],
+                                          shadows: [Shadow(color: Colors.black, blurRadius: 4)],
                                         ),
                                       ),
                                       const SizedBox(width: 8),
@@ -437,7 +437,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                             color: Colors.white,
                                             fontSize: 14,
                                             fontWeight: FontWeight.w500,
-                                            shadows: [Shadow(color: Colors.black54, blurRadius: 2)],
+                                            shadows: [Shadow(color: Colors.black, blurRadius: 4)],
                                           ),
                                         ),
                                       ),
@@ -540,7 +540,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.15),
+                              color: Colors.white.withOpacity(0.85),
                               borderRadius: BorderRadius.circular(30),
                               border: Border.all(color: Colors.white30),
                             ),
@@ -550,11 +550,11 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                   child: TextField(
                                     controller: _chatCtrl,
                                     focusNode: _chatFocus,
-                                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
                                     cursorColor: const Color(0xFF00B4CC),
                                     decoration: const InputDecoration(
                                       hintText: 'İzleyicilere yaz...',
-                                      hintStyle: TextStyle(color: Colors.white60),
+                                      hintStyle: TextStyle(color: Colors.black54),
                                       border: InputBorder.none,
                                       contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                                     ),
