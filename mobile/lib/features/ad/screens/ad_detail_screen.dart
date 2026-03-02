@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:share_plus/share_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
@@ -43,6 +45,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   @override
   void dispose() {
     _bidCtrl.dispose();
+    final notifier = ref.read(liveRoomProvider(widget.adId).notifier);
+    // Explicitly clean up any lingering connections when leaving ad detail
+    notifier.disconnect();
     super.dispose();
   }
 
@@ -115,6 +120,16 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     );
 
     if (confirm != true) return;
+
+    // Check Permissions Before Joining
+    final cameraStatus = await Permission.camera.request();
+    final micStatus = await Permission.microphone.request();
+
+    if (cameraStatus != PermissionStatus.granted || micStatus != PermissionStatus.granted) {
+      if (!mounted) return;
+      _snack('Kamera ve Mikrofon izni olmadan canlı yayın başlatılamaz!');
+      return;
+    }
 
     try {
       final liveKitRoomId = ad.id;

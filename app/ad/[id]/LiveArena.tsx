@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack, useDataChannel, useRoomContext, TrackToggle } from "@livekit/components-react";
-import { Track } from "livekit-client";
+import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack, useDataChannel, useRoomContext, TrackToggle, useConnectionState } from "@livekit/components-react";
+import { Track, ConnectionState } from "livekit-client";
 import "@livekit/components-styles";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -101,6 +101,10 @@ function CustomArenaLayout({
     const [auctionNotification, setAuctionNotification] = useState<string | null>(null);
     const [messages, setMessages] = useState<{ id: string, text: string, sender: string, senderId?: string }[]>([]);
     const [liveHighestBidderId, setLiveHighestBidderId] = useState<string | null>(null);
+    const connectionState = useConnectionState();
+    const [isRoomClosed, setIsRoomClosed] = useState(false);
+
+    const isBroadcastEnded = isRoomClosed || connectionState === ConnectionState.Disconnected;
 
     useDataChannel((msg) => {
         try {
@@ -146,6 +150,9 @@ function CustomArenaLayout({
                 setAuctionStatus("IDLE");
                 setAuctionNotification("📣 MEZAT DURDURULDU");
                 setTimeout(() => setAuctionNotification(null), 5000);
+            } else if (dataObj.type === 'ROOM_CLOSED') {
+                setIsRoomClosed(true);
+                room.disconnect();
             }
         } catch (e) {
             // Ignore non-json
@@ -165,8 +172,19 @@ function CustomArenaLayout({
 
     return (
         <div style={{ position: "relative", width: "100%", height: "100%", background: "black" }}>
-            {/* Host Full Screen */}
-            <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            {/* Broadcast Ended Overlay */}
+            {isBroadcastEnded ? (
+                <div style={{
+                    position: "absolute", inset: 0, display: "flex", flexDirection: "column",
+                    justifyContent: "center", alignItems: "center", background: "#000", zIndex: 10
+                }}>
+                    <div style={{ fontSize: "40px", marginBottom: "16px" }}>📡</div>
+                    <h2 style={{ color: "white", fontSize: "24px", fontWeight: "bold", margin: 0 }}>Yayın Sona Erdi</h2>
+                    <p style={{ color: "rgba(255,255,255,0.6)", marginTop: "8px" }}>Yayıncı canlı yayını kapattı.</p>
+                </div>
+            ) : (
+                <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+            )}
 
             {/* Host Specific LiveKit Tools (Mic/Cam Toggle) */}
             {isOwner && (
@@ -212,20 +230,22 @@ function CustomArenaLayout({
             )}
 
             {/* Bidding Overlay (Unified for Owner and Viewer) */}
-            <BiddingOverlay
-                adId={adId}
-                sellerId={sellerId}
-                isOwner={isOwner}
-                buyItNowPrice={buyItNowPrice}
-                startingBid={startingBid}
-                minBidStep={minBidStep}
-                currentHighestBid={liveHighestBid}
-                lastAcceptedBidId={lastAcceptedBidId}
-                liveHighestBidId={liveHighestBidId} // NEW: Pass the tracked Bid ID
-                liveHighestBidderId={liveHighestBidderId}
-                auctionStatus={auctionStatus}
-                setMessages={setMessages}
-            />
+            {!isBroadcastEnded && (
+                <BiddingOverlay
+                    adId={adId}
+                    sellerId={sellerId}
+                    isOwner={isOwner}
+                    buyItNowPrice={buyItNowPrice}
+                    startingBid={startingBid}
+                    minBidStep={minBidStep}
+                    currentHighestBid={liveHighestBid}
+                    lastAcceptedBidId={lastAcceptedBidId}
+                    liveHighestBidId={liveHighestBidId}
+                    liveHighestBidderId={liveHighestBidderId}
+                    auctionStatus={auctionStatus}
+                    setMessages={setMessages}
+                />
+            )}
 
             {/* Auction Status Notification Overlay */}
             {auctionNotification && (

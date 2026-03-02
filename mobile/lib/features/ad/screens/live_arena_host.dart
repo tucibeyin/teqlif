@@ -8,6 +8,7 @@ import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter/services.dart';
 import 'dart:async';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
@@ -40,6 +41,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     super.initState();
     // Hide system UI (FullScreen)
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    WakelockPlus.enable();
 
     // Connect to room as Host
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -88,6 +90,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
 
   @override
   void dispose() {
+    WakelockPlus.disable();
+    ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
     _chatCtrl.dispose();
     _chatFocus.dispose();
     // Restore system UI

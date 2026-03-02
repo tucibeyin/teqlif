@@ -8,6 +8,7 @@ import 'package:haptic_feedback/haptic_feedback.dart';
 import 'dart:ui';
 import 'dart:convert';
 import 'dart:async';
+import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
@@ -55,6 +56,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     super.initState();
     // Hide system UI (FullScreen)
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    WakelockPlus.enable();
     WidgetsBinding.instance.addObserver(this);
     _resetInactivityTimer();
     
@@ -78,6 +80,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   @override
   void dispose() {
+    WakelockPlus.disable();
+    ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
     WidgetsBinding.instance.removeObserver(this);
     _inactivityTimer?.cancel();
     _hypeTimer?.cancel();
@@ -158,9 +162,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       if (decoded is Map<String, dynamic> && decoded['type'] != null) {
         final type = decoded['type'];
         if (type == 'ROOM_CLOSED') {
-          _showSystemMessage('Yayın Sona Erdi', Colors.red);
+          // Instead of popping out instantly, cleanly display disconnected state.
           ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-          if (mounted) context.pop();
           return;
         } else if (type == 'INVITE_TO_STAGE') {
           final targetIdentity = decoded['targetIdentity'];
@@ -497,11 +500,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       }
     });
 
-    final updatedAdAsync = ref.watch(adDetailProvider(widget.ad.id));
     final currentAd = updatedAdAsync.value ?? widget.ad;
     
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
+    final isDisconnected = roomState.connectionState == ConnectionState.disconnected || (room == null && !roomState.isConnecting);
 
     VideoTrack? hostTrack;
     VideoTrack? guestTrack;
@@ -556,8 +559,21 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // 1. Video Player
-            if (roomState.isConnecting)
+            // 1. Video Player & Error State
+            if (isDisconnected)
+              Positioned.fill(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.videocam_off_outlined, color: Colors.white54, size: 64),
+                    const SizedBox(height: 16),
+                    const Text('Yayın Sona Erdi', style: TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    const Text('Yayıncı canlı yayını kapattı.', style: TextStyle(color: Colors.white54, fontSize: 16)),
+                  ],
+                ),
+              )
+            else if (roomState.isConnecting)
               Container(
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
@@ -603,9 +619,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
             AnimatedOpacity(
               opacity: _uiVisible ? 1.0 : 0.0,
               duration: const Duration(milliseconds: 300),
-              child: SafeArea(
-                child: IgnorePointer(
-                  ignoring: !_uiVisible,
+              child: IgnorePointer(
+                ignoring: !_uiVisible,
+                child: !isDisconnected ? SafeArea(
                   child: Column(
                     children: [
                       // Header Dashboard
@@ -627,7 +643,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                     ],
                                   ),
                                 ),
-                                IconButton(icon: const Icon(Icons.close, color: Colors.white, size: 28), onPressed: () => context.pop()),
+                                // IconButton(icon: const Icon(Icons.close, color: Colors.white, size: 28), onPressed: () => context.pop()), // Moved to a separate Positioned widget
                               ],
                             ),
                             const SizedBox(height: 8),
@@ -735,7 +751,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                         backgroundColor: Colors.white10,
                                         side: const BorderSide(color: Colors.white24),
                                         labelStyle: const TextStyle(color: Colors.white),
-                                        onPressed: () {
+                                        onPressed: isDisconnected ? null : () {
                                           _bidCtrl.text = inc.toString();
                                           _placeBidSlide();
                                         },
@@ -759,6 +775,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                       Expanded(
                                         child: TextField(
                                           controller: _bidCtrl,
+                                          enabled: !isDisconnected,
                                           keyboardType: TextInputType.number,
                                           style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
                                           decoration: InputDecoration(hintText: 'Pey...', hintStyle: TextStyle(color: Colors.white38, fontSize: 15), border: InputBorder.none),
@@ -766,7 +783,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                       ),
                                       if (_isAuctionActive)
                                         ElevatedButton(
-                                          onPressed: _placeBidSlide,
+                                          onPressed: isDisconnected ? null : _placeBidSlide,
                                           style: ElevatedButton.styleFrom(
                                             elevation: 8,
                                             shadowColor: const Color(0xFF00B4CC).withOpacity(0.5),
@@ -780,7 +797,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                       if (currentAd.buyItNowPrice != null) ...[
                                         const SizedBox(width: 8),
                                         ElevatedButton(
-                                          onPressed: () async {
+                                          onPressed: isDisconnected ? null : () async {
                                             // Handle Buy Now
                                             try {
                                               await ApiClient().post('/api/ads/${widget.ad.id}/buy-it-now');
@@ -811,8 +828,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                               decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), border: Border.all(color: Colors.white24), borderRadius: BorderRadius.circular(25)),
                               child: Row(
                                 children: [
-                                  Expanded(child: TextField(controller: _chatCtrl, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14), decoration: const InputDecoration(hintText: 'Mesaj gönder...', hintStyle: TextStyle(color: Colors.white54), border: InputBorder.none), onSubmitted: (_) => _sendChatMessage())),
-                                  IconButton(icon: const Icon(Icons.send, color: Color(0xFF00B4CC), size: 20), onPressed: _sendChatMessage),
+                                  Expanded(child: TextField(controller: _chatCtrl, enabled: !isDisconnected, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14), decoration: const InputDecoration(hintText: 'Mesaj gönder...', hintStyle: TextStyle(color: Colors.white54), border: InputBorder.none), onSubmitted: (_) => _sendChatMessage())),
+                                  IconButton(icon: const Icon(Icons.send, color: Color(0xFF00B4CC), size: 20), onPressed: isDisconnected ? null : _sendChatMessage),
                                 ],
                               ),
                             )
