@@ -141,7 +141,7 @@ export default async function AdDetailPage({
 
     return (
         <div className="container">
-            {adData.isAuction && (adData.isLive || isOwner) && (
+            {adData.isLive && (
                 <div style={{ marginBottom: "2rem" }}>
                     <div className="card" style={{ overflow: "hidden", border: "2px solid #ef4444" }}>
                         <div style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>

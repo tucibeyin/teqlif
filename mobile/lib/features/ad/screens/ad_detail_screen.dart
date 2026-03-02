@@ -127,6 +127,8 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
         if (!mounted) return;
         _snack('Canlı yayın başladı! Arena yükleniyor...');
         ref.invalidate(adDetailProvider(widget.adId));
+        // Direct navigation after success
+        Navigator.push(context, MaterialPageRoute(builder: (_) => LiveArenaHost(ad: ad)));
       }
     } catch (e) {
       if (!mounted) return;

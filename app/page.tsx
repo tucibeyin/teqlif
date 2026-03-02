@@ -110,7 +110,6 @@ const getLiveAuctions = cache(async () => {
       where: {
         status: "ACTIVE",
         isLive: true,
-        isAuction: true,
       },
       take: 10,
       orderBy: { auctionStartTime: "desc" },
