@@ -656,7 +656,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                                   color: Colors.white,
                                                   fontSize: 14,
                                                   fontWeight: FontWeight.w500,
-                                                  shadows: [Shadow(color: Colors.black54, blurRadius: 2)],
+                                                  shadows: [Shadow(color: Colors.black, blurRadius: 4)],
                                                 ),
                                               ),
                                             ),
