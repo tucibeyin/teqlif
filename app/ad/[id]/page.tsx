@@ -395,7 +395,7 @@ export default async function AdDetailPage({
                             </div>
 
                             {/* Hemen Al (Buy It Now) */}
-                            {ad.status === 'ACTIVE' && ad.buyItNowPrice !== null && (
+                            {ad.status === 'ACTIVE' && ad.buyItNowPrice !== null && !adData.isLive && (
                                 <div style={{ marginBottom: "1.25rem", padding: "1rem", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px dashed var(--primary)", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                         <div style={{ fontWeight: 600, color: "var(--text-secondary)" }}>Hemen Al Fiyatı</div>
@@ -423,7 +423,7 @@ export default async function AdDetailPage({
 
                             {/* Teklif Formu & Mesaj Butonu */}
                             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                                {ad.status === 'ACTIVE' && !isOwner && session?.user && (
+                                {ad.status === 'ACTIVE' && !isOwner && session?.user && !adData.isLive && (
                                     <BidForm
                                         adId={ad.id}
                                         currentHighest={highestBid?.amount ?? 0}
@@ -431,7 +431,7 @@ export default async function AdDetailPage({
                                     />
                                 )}
 
-                                {!session?.user && (
+                                {!session?.user && !adData.isLive && (
                                     <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
                                         <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
                                             Bu ilana teklif vermek için giriş yapmalısınız.

@@ -66,7 +66,8 @@ export default function LiveArena({
             token={token}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
-            style={{ height: "calc(100vh - 200px)", minHeight: "450px", maxHeight: "700px", borderRadius: "1.5rem", overflow: "hidden", position: "relative" }}
+            className="aspect-video bg-black relative rounded-xl overflow-hidden shadow-2xl"
+            style={{ width: "100%", maxHeight: "700px" }}
         >
             <CustomArenaLayout
                 adId={adId}
@@ -161,8 +162,10 @@ function CustomArenaLayout({
 
     if (tracks.length === 0) {
         return (
-            <div style={{ width: "100%", height: "100%", display: "flex", justifyContent: "center", alignItems: "center", background: "#111" }}>
-                <span style={{ color: "#aaa" }}>Yayın bekleniyor...</span>
+            <div className="absolute inset-0 flex flex-col justify-center items-center z-50 text-white" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+                <div className="animate-spin rounded-full h-14 w-14 border-4 mb-4" style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: 'var(--primary)' }}></div>
+                <h2 className="text-2xl font-bold tracking-wider">Yayıncı Bekleniyor...</h2>
+                <p className="opacity-70 mt-2">Lütfen ayrılmayın, mezat birazdan başlayacak.</p>
             </div>
         );
     }
@@ -244,6 +247,8 @@ function CustomArenaLayout({
                     liveHighestBidderId={liveHighestBidderId}
                     auctionStatus={auctionStatus}
                     setMessages={setMessages}
+                    messages={messages}
+                    isBroadcastEnded={isBroadcastEnded}
                 />
             )}
 
@@ -288,56 +293,8 @@ function CustomArenaLayout({
                 </div>
             )}
 
-            {/* Ephemeral Chat Overlay */}
-            <div style={{
-                position: "absolute",
-                bottom: "120px",
-                left: "20px",
-                width: "260px",
-                display: "flex",
-                flexDirection: "column",
-                gap: "8px",
-                zIndex: 150,
-                pointerEvents: "none"
-            }}>
-                {messages.map((m) => (
-                    <div key={m.id} style={{
-                        background: "rgba(0,0,0,0.4)",
-                        backdropFilter: "blur(10px)",
-                        padding: "6px 14px",
-                        borderRadius: "12px",
-                        color: "white",
-                        fontSize: "0.85rem",
-                        animation: "fadeInUp 0.3s ease-out"
-                    }}>
-                        <strong style={{ color: "rgba(255,255,255,0.7)", marginRight: "6px" }}>{m.sender}:</strong>
-                        {m.text}
-                        {isOwner && m.senderId && (
-                            <button
-                                onClick={() => {
-                                    if (room && m.senderId) {
-                                        const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: m.senderId });
-                                        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-                                        alert("Sahneye davet gönderildi!");
-                                    }
-                                }}
-                                style={{
-                                    marginLeft: '8px',
-                                    background: 'rgba(0, 180, 204, 0.3)',
-                                    border: '1px solid rgba(0, 180, 204, 0.6)',
-                                    borderRadius: '12px',
-                                    color: '#00B4CC',
-                                    fontSize: '0.7rem',
-                                    padding: '2px 8px',
-                                    cursor: 'pointer'
-                                }}
-                            >
-                                🎤 Davet
-                            </button>
-                        )}
-                    </div>
-                ))}
-            </div>
+
+
 
             <style jsx>{`
                 @keyframes fadeInUp {
@@ -348,12 +305,16 @@ function CustomArenaLayout({
                     from { opacity: 0; transform: translate(-50%, -20px); }
                     to { opacity: 1; transform: translate(-50%, 0); }
                 }
+                @keyframes slideUp {
+                    from { opacity: 0; transform: translateY(10px); }
+                    to { opacity: 1; transform: translateY(0); }
+                }
             `}</style>
         </div>
     );
 }
 
-function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, liveHighestBidId, liveHighestBidderId, auctionStatus, setMessages }: any) {
+function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, liveHighestBidId, liveHighestBidderId, auctionStatus, setMessages, messages, isBroadcastEnded }: any) {
     const router = useRouter();
     const { data: session } = useSession();
     const [amount, setAmount] = useState("");
@@ -563,12 +524,12 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
     return (
         <div style={{
             position: "absolute",
-            bottom: "20px",
+            top: "20px",
             left: "50%",
             transform: "translateX(-50%)",
             width: "auto",
-            minWidth: isOwner ? "320px" : "400px",
-            padding: "8px 16px",
+            minWidth: "320px",
+            padding: "10px 20px",
             background: "rgba(0, 0, 0, 0.4)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
@@ -578,7 +539,8 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
             zIndex: 100,
             display: "flex",
             alignItems: "center",
-            gap: "16px",
+            justifyContent: "space-between",
+            gap: "24px",
             color: "white"
         }}>
             {/* Current Price Info */}
@@ -767,6 +729,62 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                 </>
             )}
 
+            {/* Right Side Overlay (For Viewer only; Host has a separate panel below video) */}
+            {!isOwner && (
+                <div style={{
+                    position: "absolute",
+                    bottom: "100px",
+                    right: "20px",
+                    width: "320px",
+                    zIndex: 100
+                }}>
+                    {auctionStatus === "ACTIVE" ? (
+                        <BidForm
+                            adId={adId}
+                            currentHighest={currentHighestBid || (startingBid ?? 0)}
+                            minStep={minBidStep}
+                            startingBid={startingBid}
+                            formattedPrice={formattedPrice}
+                        />
+                    ) : (
+                        <div style={{
+                            background: "rgba(0,0,0,0.6)",
+                            backdropFilter: "blur(10px)",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            borderRadius: "1rem",
+                            padding: "1.5rem",
+                            color: "white",
+                            textAlign: "center",
+                            boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
+                        }}>
+                            <div style={{ fontSize: "2.5rem", marginBottom: "12px", animation: "pulse 2s infinite" }}>⏳</div>
+                            <h3 style={{ margin: "0 0 8px 0", fontSize: "1.2rem", fontWeight: 700 }}>Açık Artırma Bekleniyor</h3>
+                            <p style={{ margin: 0, opacity: 0.8, fontSize: "0.9rem", lineHeight: 1.5 }}>Yayıncı mezatı başlattığında buradan teklif verebileceksiniz.</p>
+                            {buyItNowPrice && (
+                                <button
+                                    onClick={handleBuyNow}
+                                    style={{
+                                        marginTop: "20px",
+                                        width: "100%",
+                                        background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                                        color: "black",
+                                        border: "none",
+                                        borderRadius: "0.75rem",
+                                        padding: "14px",
+                                        fontWeight: 800,
+                                        fontSize: "1rem",
+                                        cursor: "pointer",
+                                        boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
+                                    }}
+                                >
+                                    HEMEN AL: {formattedPrice(buyItNowPrice)}
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
+            )}
+
             {/* Status Indicator */}
             {status && (
                 <div style={{
@@ -784,51 +802,6 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                     {status.msg}
                 </div>
             )}
-
-            {/* Chat Input */}
-            <form onSubmit={handleSendChat} style={{
-                marginLeft: "8px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px"
-            }}>
-                <input
-                    type="text"
-                    value={chatText}
-                    onChange={(e) => setChatText(e.target.value)}
-                    placeholder="Sohbete katıl..."
-                    style={{
-                        width: "140px",
-                        padding: "8px 16px",
-                        background: "rgba(255, 255, 255, 0.15)",
-                        border: "1px solid rgba(255, 255, 255, 0.2)",
-                        borderRadius: "100px",
-                        color: "white",
-                        fontSize: "0.85rem",
-                        outline: "none"
-                    }}
-                />
-                <button
-                    type="submit"
-                    style={{
-                        background: "#00B4CC",
-                        border: "none",
-                        width: "34px",
-                        height: "34px",
-                        borderRadius: "50%",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        cursor: "pointer",
-                        color: "white"
-                    }}
-                >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-                    </svg>
-                </button>
-            </form>
         </div>
     );
 }
@@ -892,5 +865,128 @@ function CoHostListener({ setRole, setWantsToPublish }: { setRole: any, setWants
                 </div>
             </div>
         </div>
+    );
+}
+
+// New BidForm component for viewers
+function BidForm({ adId, currentHighest, minStep, startingBid, formattedPrice }: any) {
+    const router = useRouter();
+    const [amount, setAmount] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [status, setStatus] = useState<any>(null);
+
+    useEffect(() => {
+        const nextMin = currentHighest > 0 ? (currentHighest + minStep) : (startingBid ?? 1);
+        setAmount(new Intl.NumberFormat("tr-TR").format(nextMin));
+    }, [currentHighest, minStep, startingBid]);
+
+    async function handleBid(e: React.FormEvent) {
+        e.preventDefault();
+        setLoading(true);
+        setStatus(null);
+
+        const rawAmount = parseInt(amount.replace(/\./g, ""), 10);
+        const minReq = currentHighest > 0 ? (currentHighest + minStep) : (startingBid ?? 1);
+
+        if (!rawAmount || rawAmount < minReq) {
+            setStatus({ type: 'error', msg: `Min: ${formattedPrice(minReq)}` });
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/bids", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ adId, amount: rawAmount }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                setStatus({ type: 'success', msg: 'Teklif verildi!' });
+                router.refresh();
+            } else {
+                setStatus({ type: 'error', msg: data.error || 'Hata' });
+            }
+        } catch (e) {
+            setStatus({ type: 'error', msg: 'Bağlantı hatası' });
+        } finally {
+            setLoading(false);
+        }
+    }
+
+    return (
+        <form onSubmit={handleBid} style={{
+            background: "rgba(0,0,0,0.6)",
+            backdropFilter: "blur(10px)",
+            border: "1px solid rgba(255,255,255,0.1)",
+            borderRadius: "1rem",
+            padding: "1.5rem",
+            display: "flex",
+            flexDirection: "column",
+            gap: "1rem",
+            color: "white",
+            position: "relative"
+        }}>
+            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "bold", textAlign: "center" }}>Teklif Ver</h3>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
+                <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>Güncel:</span>
+                <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighest || (startingBid ?? 0))}</span>
+            </div>
+            <input
+                type="text"
+                value={amount}
+                onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
+                }}
+                placeholder="Miktar"
+                style={{
+                    width: "100%",
+                    padding: "12px 16px",
+                    background: "rgba(255, 255, 255, 0.1)",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    borderRadius: "0.75rem",
+                    color: "white",
+                    fontSize: "1rem",
+                    textAlign: "center",
+                    outline: "none"
+                }}
+            />
+            <button
+                type="submit"
+                disabled={loading}
+                style={{
+                    width: "100%",
+                    background: "var(--primary)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "0.75rem",
+                    padding: "12px",
+                    fontSize: "1rem",
+                    fontWeight: 700,
+                    cursor: "pointer",
+                    transition: "all 0.2s",
+                    boxShadow: "0 4px 15px rgba(0, 188, 212, 0.4)"
+                }}
+            >
+                {loading ? "..." : "Pey Ver"}
+            </button>
+            {status && (
+                <div style={{
+                    position: "absolute",
+                    top: "-35px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    whiteSpace: "nowrap",
+                    background: status.type === 'success' ? "rgba(34, 197, 94, 0.9)" : "rgba(239, 68, 68, 0.9)",
+                    padding: "4px 12px",
+                    borderRadius: "10px",
+                    fontSize: "0.75rem",
+                    fontWeight: 700
+                }}>
+                    {status.msg}
+                </div>
+            )}
+        </form>
     );
 }
