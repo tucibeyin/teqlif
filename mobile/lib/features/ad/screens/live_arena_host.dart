@@ -632,10 +632,12 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                           letterSpacing: 0.5
                                         ),
                                       ),
-                                    )
-                                  ],
+                                    ),
                                     if (_bids.isNotEmpty)
-                                      Text(_bids.first.userLabel, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      Padding(
+                                        padding: const EdgeInsets.only(top: 4),
+                                        child: Text(_bids.first.userLabel, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                                      ),
                                   ],
                                 ),
                               ),
