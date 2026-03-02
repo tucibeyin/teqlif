@@ -6,6 +6,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../../../core/constants/categories.dart';
+import '../widgets/live_stories.dart';
 
 // ── Static data ────────────────────────────────────────────────────────────
 // (categoryTree artık categories.dart'tan geliyor)
@@ -399,6 +400,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
+            // Live Stories
+            const LiveStories(),
             // Filter bar
             _buildFilterBar(),
             // Divider
