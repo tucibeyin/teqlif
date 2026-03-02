@@ -33,6 +33,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
   bool _isAuctionActive = false;
   int _unreadBids = 0;
 
+  bool _isFinalizing = false;
+
   @override
   void initState() {
     super.initState();
@@ -118,25 +120,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       message = String.fromCharCodes(data);
     }
     
-    // Check if it's a bid
-    if (message.startsWith('🔥 Yeni Teklif:')) {
-      final amountStr = message.replaceAll('🔥 Yeni Teklif: ₺', '').trim();
-      final amount = double.tryParse(amountStr.replaceAll('.', '').replaceAll(',', '.'));
-      
-      setState(() {
-        _unreadBids++;
-        final bidId = 'bid-${DateTime.now().millisecondsSinceEpoch}'; // Default ID
-        _bids.insert(0, _LiveBid(
-          id: bidId,
-          amount: amount ?? 0,
-          userLabel: _formatSenderName(customName ?? p?.name),
-          timestamp: DateTime.now(),
-        ));
-        if (_bids.length > 50) _bids.removeLast();
-      });
-      return;
-    }
-
     // Try parsing as JSON for structured events (BID_ACCEPTED, BID_REJECTED)
     try {
       final dataObj = jsonDecode(message);
@@ -443,23 +426,36 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                         ],
                                       ),
                                     );
-                                    if (confirmed == true) {
-                                      try {
-                                        // This is a placeholder for actual bid acceptance API
-                                        // Usually it requires bidId, but since we are handling dynamic bids from data channel
-                                        // we might need to find the latest valid bid id for this ad
-                                        await ApiClient().post('/api/ads/${widget.ad.id}/sell', data: {
-                                          'amount': bid.amount,
-                                          'buyerLabel': bid.userLabel,
-                                        });
-                                        if (mounted) {
-                                          Navigator.pop(context); // Close sheet
-                                          _endLiveStream(); // Offer to end live
+                                      if (confirmed == true) {
+                                        setState(() => _isFinalizing = true);
+                                        try {
+                                          // 1. Accept the bid
+                                          final acceptRes = await ApiClient().patch('/api/bids/${bid.id}/accept');
+                                          if (acceptRes.statusCode == 200) {
+                                            // 2. Finalize the sale
+                                            final finalizeRes = await ApiClient().post('/api/bids/${bid.id}/finalize');
+                                            if (finalizeRes.statusCode == 200) {
+                                              if (mounted) {
+                                                setState(() => _isFinalizing = false);
+                                                Navigator.pop(context); // Close sheet
+                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                                  content: Text('Satış başarıyla tamamlandı! İlan "Satıldı" olarak işaretlendi.', style: TextStyle(fontWeight: FontWeight.bold)),
+                                                  backgroundColor: Colors.green,
+                                                  duration: Duration(seconds: 4),
+                                                ));
+                                                _endLiveStream(); // Offer to end live
+                                              }
+                                              return;
+                                            }
+                                          }
+                                          throw Exception('Satış işlemleri sırasında bir hata oluştu');
+                                        } catch (e) {
+                                          if (mounted) {
+                                            setState(() => _isFinalizing = false);
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Satış işlemi başarısız oldu. Lütfen tekrar deneyin.')));
+                                          }
                                         }
-                                      } catch (e) {
-                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Satış işlemi başarısız.')));
                                       }
-                                    }
                                   },
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.green,
@@ -502,14 +498,32 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     );
 
     if (confirmed == true) {
+      setState(() => _isFinalizing = true);
       try {
-        await ApiClient().post('/api/ads/${widget.ad.id}/sell', data: {
-          'amount': latestBid.amount,
-          'buyerLabel': latestBid.userLabel,
-        });
-        if (mounted) _endLiveStream();
+        // 1. Accept the bid
+        final acceptRes = await ApiClient().patch('/api/bids/${latestBid.id}/accept');
+        if (acceptRes.statusCode == 200) {
+          // 2. Finalize the sale
+          final finalizeRes = await ApiClient().post('/api/bids/${latestBid.id}/finalize');
+          if (finalizeRes.statusCode == 200) {
+            if (mounted) {
+              setState(() => _isFinalizing = false);
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text('Satış başarıyla tamamlandı! İlan "Satıldı" olarak işaretlendi.', style: TextStyle(fontWeight: FontWeight.bold)),
+                backgroundColor: Colors.green,
+                duration: Duration(seconds: 4),
+              ));
+              _endLiveStream();
+            }
+            return;
+          }
+        }
+        throw Exception('API Hatası');
       } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Satış işlemi başarısız.')));
+        if (mounted) {
+          setState(() => _isFinalizing = false);
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Satış işlemi başarısız oldu. Lütfen tekrar deneyin.')));
+        }
       }
     }
   }
