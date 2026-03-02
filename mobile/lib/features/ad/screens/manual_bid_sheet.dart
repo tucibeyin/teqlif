@@ -9,7 +9,7 @@ class ManualBidSheet extends StatelessWidget {
   final dynamic bidFormatter;
   final Future<void> Function() onConfirm;
 
-  const _ManualBidSheet({
+  const ManualBidSheet({
     required this.ad,
     required this.bidCtrl,
     required this.bidFormatter,

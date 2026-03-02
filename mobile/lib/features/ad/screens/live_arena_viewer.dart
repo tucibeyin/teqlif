@@ -269,7 +269,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     
     // Get highest bid or starting price
     final bids = currentAd.bids ?? [];
-    final currentHighest = bids.isNotEmpty ? bids.first.amount : (currentAd.startingBid ?? currentAd.startingPrice ?? 0);
+    final currentHighest = bids.isNotEmpty ? bids.first.amount : (currentAd.startingBid ?? 0);
     final minStep = currentAd.minBidStep ?? 100;
     
     final bidAmount = currentHighest + minStep;
@@ -670,7 +670,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                             // Bid Section (Conditional)
                             if (_isAuctionActive)
                               Padding(
-                                padding: const EdgeInsets.bottom(16),
+                                padding: const EdgeInsets.only(bottom: 16),
                                 child: _bidLoading 
                                   ? const CircularProgressIndicator(color: Colors.white)
                                   : Row(

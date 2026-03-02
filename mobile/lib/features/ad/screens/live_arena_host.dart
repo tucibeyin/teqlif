@@ -483,7 +483,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                       // Auction Control Button (Premium)
                       if (widget.ad.isAuction)
                         Padding(
-                          padding: const EdgeInsets.bottom(16),
+                          padding: const EdgeInsets.only(bottom: 16),
                           child: ClipRRect(
                             borderRadius: BorderRadius.circular(16),
                             child: BackdropFilter(
