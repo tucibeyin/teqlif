@@ -157,7 +157,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       final decoded = jsonDecode(message);
       if (decoded is Map<String, dynamic> && decoded['type'] != null) {
         final type = decoded['type'];
-        if (type == 'INVITE_TO_STAGE') {
+        if (type == 'ROOM_CLOSED') {
+          _showSystemMessage('Yayın Sona Erdi', Colors.red);
+          ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+          if (mounted) context.pop();
+          return;
+        } else if (type == 'INVITE_TO_STAGE') {
           final targetIdentity = decoded['targetIdentity'];
           final currentUser = ref.read(authProvider).user;
           if (currentUser != null && targetIdentity == currentUser.id) {
@@ -165,7 +170,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           }
           return;
         } else if (type == 'KICK_FROM_STAGE') {
-          _handleKick();
+          final targetIdentity = decoded['targetIdentity'];
+          final currentUser = ref.read(authProvider).user;
+          if (currentUser != null && targetIdentity == currentUser.id) {
+            _handleKick();
+          }
           return;
         } else if (type == 'AUCTION_START') {
           setState(() => _isAuctionActive = true);
@@ -264,15 +273,47 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     );
   }
 
-  void _handleKick() async {
+  Future<void> _handleKick() async {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sahneden alındınız.')));
-    final notifier = ref.read(liveRoomProvider(widget.ad.id).notifier);
-    await notifier.disconnect();
-    await notifier.connect(false);
-    setState(() => _isGuest = false);
-  }
+    
+    // First notify the user
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Sahneden çıkarıldınız.'),
+        backgroundColor: Colors.orange,
+        duration: Duration(seconds: 3),
+      ),
+    );
 
+    // Turn off local tracks if they are on (just in case)
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    if (state.room != null && state.room!.localParticipant != null) {
+      await state.room!.localParticipant!.setCameraEnabled(false);
+      await state.room!.localParticipant!.setMicrophoneEnabled(false);
+    }
+    
+    // Switch state back to viewer only
+    final wasGuest = _isGuest;
+    setState(() {
+      _isGuest = false;
+    });
+
+    if (wasGuest) {
+      // Best approach to downgrade permissions is to reconnect with a standard token
+      // Because we can't tell the server to demote us from the client side without an API.
+      // Easiest reliable fallback: Disconnect and Reconnect.
+      try {
+        await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+        // Give it a tiny delay to ensure proper cleanup
+        await Future.delayed(const Duration(milliseconds: 500));
+        if (mounted) {
+          ref.read(liveRoomProvider(widget.ad.id).notifier).connect(widget.ad.id);
+        }
+      } catch (e) {
+        debugPrint('Error restoring viewer state: $e');
+      }
+    }
+  } 
   void _recordBidVelocity() {
     final now = DateTime.now();
     _recentBids.add(now);

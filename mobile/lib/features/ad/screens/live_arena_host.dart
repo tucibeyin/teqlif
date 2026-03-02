@@ -295,51 +295,43 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Yayını Bitir'),
-        content: const Text('Canlı mezatı bitirmek istediğinize emin misiniz? Yayın kapandıktan sonra teklifler onay için hesabınıza düşecektir.'),
+        content: const Text('Canlı yayını sonlandırmak ve odadan çıkmak istediğinize emin misiniz?'),
         actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
           TextButton(
-            onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('İptal'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Yayını Bitir', style: TextStyle(color: Colors.red)),
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text('Evet, Bitir', style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold))
           ),
         ],
       ),
     );
 
     if (confirmed == true) {
-      // 1. Tell backend that we are no longer live
-      // This ensures the isLive flag is cleared even if webhook takes a moment
-      try {
-        await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {
-          'isLive': false,
-        });
-      } catch (e) {
-        debugPrint('Failed to update isLive status: $e');
+      if (mounted) setState(() => _isFinalizing = true);
+      
+      final state = ref.read(liveRoomProvider(widget.ad.id));
+      if (state.room != null) {
+        final payload = jsonEncode({ 'type': 'ROOM_CLOSED' });
+        await state.room!.localParticipant?.publishData(utf8.encode(payload));
       }
 
-      // 2. Disconnect from LiveKit.
+      await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {'isLive': false});
       await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-      if (mounted) context.pop(); // Go back to normal ad detail
+      if (mounted) context.pop();
     }
   }
 
-  Future<void> _kickGuest(String targetUserId) async {
-    try {
-      await ApiClient().post('/api/livekit/signal', data: {
-        'adId': widget.ad.id,
-        'targetUserId': targetUserId,
-        'signal': 'KICK_FROM_STAGE',
+  void _kickGuest(String userId) async {
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    if (state.room != null) {
+      final payload = jsonEncode({
+        'type': 'KICK_FROM_STAGE',
+        'targetIdentity': userId,
       });
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Konuk sahneden alındı.')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
-      }
+      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Davetli çıkarıldı.'), backgroundColor: Colors.orange),
+      );
     }
   }
 
@@ -425,17 +417,24 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                             child: Row(
                               children: [
                                 Expanded(
+                                  flex: 2,
                                   child: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text(bid.userLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      Text(bid.userLabel, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13), overflow: TextOverflow.ellipsis),
                                       Text('₺${_formatPrice(bid.amount)}', 
-                                        style: const TextStyle(fontSize: 18, color: Color(0xFF00B4CC), fontWeight: FontWeight.bold)),
+                                        style: const TextStyle(fontSize: 16, color: Color(0xFF00B4CC), fontWeight: FontWeight.bold)),
                                     ],
                                   ),
                                 ),
-                                ElevatedButton(
-                                  onPressed: () async {
+                                Expanded(
+                                  flex: 3,
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      Expanded(
+                                        child: ElevatedButton(
+                                          onPressed: () async {
                                     // Accept Bid logic
                                     final confirmed = await showDialog<bool>(
                                       context: context,
@@ -482,13 +481,17 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: Colors.green,
                                       foregroundColor: Colors.white,
+                                      padding: const EdgeInsets.symmetric(horizontal: 4),
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                                     ),
-                                    child: const Text('Onayla ve Sat'),
+                                    child: const Text('Sat', style: TextStyle(fontSize: 12)),
                                   ),
+                                ),
                                 if (bid.userId != null)
                                   IconButton(
-                                    icon: const Icon(Icons.mic, color: Colors.blueAccent),
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                    icon: const Icon(Icons.mic, color: Colors.blueAccent, size: 22),
                                     onPressed: () => _inviteToStage(bid.userId!),
                                   ),
                               ],

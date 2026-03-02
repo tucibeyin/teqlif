@@ -462,6 +462,12 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
         if (!confirm("Yayını bitirmek ve odadan çıkmak istediğinize emin misiniz?")) return;
         setLoading(true);
         try {
+            // First send ROOM_CLOSED channel message to kick everyone else
+            if (room) {
+                const payload = JSON.stringify({ type: "ROOM_CLOSED" });
+                await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+            }
+
             const res = await fetch(`/api/ads/${adId}/live`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -556,10 +562,10 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
             color: "white"
         }}>
             {/* Current Price Info */}
-            <div style={{ whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+            <div style={{ whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                 <div>
-                    <span style={{ fontSize: "0.65rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Güncel</span>
-                    <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
+                    <span style={{ fontSize: "0.6rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Güncel</span>
+                    <span style={{ fontSize: "1rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
                 </div>
                 {isOwner && currentHighestBid > 0 && liveHighestBidderId && (
                     <button
@@ -575,13 +581,14 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                             color: "#00B4CC",
                             border: "1px solid rgba(0, 180, 204, 0.4)",
                             borderRadius: "100px",
-                            padding: "4px 10px",
-                            fontSize: "0.7rem",
+                            padding: "4px 8px",
+                            fontSize: "0.65rem",
                             fontWeight: 800,
                             cursor: "pointer",
                             display: "flex",
                             alignItems: "center",
-                            gap: "4px"
+                            gap: "4px",
+                            flexShrink: 0
                         }}
                     >
                         🎤 Davet Et
