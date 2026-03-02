@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageSquare, CheckCircle, XCircle, Video } from "lucide-react";
 
 interface AdActionsProps {
-    actionType: "MESSAGE" | "ACCEPT_BID" | "CANCEL_BID" | "FINALIZE_SALE" | "INVITE_TO_STAGE";
+    actionType: "MESSAGE" | "ACCEPT_BID" | "CANCEL_BID" | "FINALIZE_SALE" | "INVITE_TO_STAGE" | "START_LIVE";
     adId?: string;
     sellerId?: string;
     bidId?: string;
@@ -139,6 +139,28 @@ export function AdActions({
                 } else {
                     const data = await res.json();
                     alert(data.error || "Davet gönderilemedi.");
+                }
+            } else if (actionType === "START_LIVE" && adId) {
+                if (!confirm("Canlı yayını başlatmak istediğinize emin misiniz? İzleyiciler arenaya katılmaya başlayacak.")) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                // Call endpoint to set isLive = true, generating a room name if necessary (backend does this or we pass it)
+                const liveKitRoomId = `room_${adId}_${Date.now()}`;
+
+                const res = await fetch(`/api/ads/${adId}/live`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ isLive: true, liveKitRoomId }),
+                });
+
+                if (res.ok) {
+                    alert("Canlı yayın başladı! Arena yükleniyor...");
+                    router.refresh();
+                } else {
+                    const data = await res.json();
+                    alert(data.error || "Canlı yayın başlatılamadı.");
                 }
             }
         } catch (error) {
@@ -298,6 +320,38 @@ export function AdActions({
             >
                 <Video size={14} />
                 {isLoading ? "..." : "Davet Et"}
+            </button>
+        );
+    }
+
+    if (actionType === "START_LIVE") {
+        return (
+            <button
+                onClick={handleAction}
+                disabled={isLoading}
+                className="btn btn-primary"
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '12px',
+                    fontWeight: 700,
+                    fontSize: '1rem',
+                    boxShadow: '0 4px 12px rgba(239, 68, 68, 0.3)',
+                    background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                    border: 'none',
+                    color: 'white',
+                    borderRadius: 'var(--radius-md)'
+                }}
+            >
+                {isLoading ? "Başlatılıyor..." : (
+                    <>
+                        <Video size={20} className="animate-pulse" />
+                        {customLabel || "🔴 Canlı Yayını Başlat"}
+                    </>
+                )}
             </button>
         );
     }

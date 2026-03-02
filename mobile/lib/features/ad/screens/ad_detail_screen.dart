@@ -93,6 +93,47 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     }
   }
 
+  Future<void> _startLiveStream(AdModel ad) async {
+    final bool? confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Canlı Yayını Başlat'),
+        content: const Text(
+            'Canlı yayını başlatmak istediğinize emin misiniz? İzleyiciler arenaya katılmaya başlayacak.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Başlat'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    try {
+      final liveKitRoomId = 'room_${ad.id}_${DateTime.now().millisecondsSinceEpoch}';
+      final response = await ApiClient().post('/api/ads/${ad.id}/live', data: {
+        'isLive': true,
+        'liveKitRoomId': liveKitRoomId,
+      });
+
+      if (response.statusCode == 200) {
+        if (!mounted) return;
+        _snack('Canlı yayın başladı! Arena yükleniyor...');
+        ref.invalidate(adDetailProvider(widget.adId));
+      }
+    } catch (e) {
+      if (!mounted) return;
+      _snack('Canlı yayın başlatılamadı.');
+    }
+  }
+
   Future<void> _acceptBid(String bidId) async {
     try {
       await ApiClient().patch(Endpoints.acceptBid(bidId));
@@ -740,6 +781,26 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                           const SizedBox(height: 24),
                         ],
                       ],
+
+                      if (isOwner && ad.isAuction == true && ad.status == 'ACTIVE' && ad.isLive != true) ...[
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade600,
+                              foregroundColor: Colors.white,
+                              elevation: 4,
+                            ),
+                            onPressed: () => _startLiveStream(ad),
+                            icon: const Icon(Icons.videocam),
+                            label: const Text('🔴 Canlı Yayını Başlat',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                      ],
+
                       // Bid history
                       if (!ad.isFixedPrice && ad.bids.isNotEmpty) ...[
                         Text('Teklif Geçmişi (${ad.bids.length})',
