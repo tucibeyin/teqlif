@@ -142,7 +142,7 @@ export default async function AdDetailPage({
     return (
         <div className="container">
 
-            <div className="ad-detail">
+            <div className="ad-detail" style={adData.isLive ? { paddingTop: "0.5rem", marginTop: "-1rem" } : {}}>
                 {/* Sol: Görsel ve Detay */}
                 <div>
                     <div className="ad-detail-images">
@@ -178,7 +178,7 @@ export default async function AdDetailPage({
                     </div>
 
                     {/* İlan Detayları */}
-                    <div className="card" style={{ marginTop: "1.5rem" }}>
+                    <div className="card" style={{ marginTop: adData.isLive ? "1rem" : "1.5rem" }}>
                         <div className="card-body">
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                                 <div>
