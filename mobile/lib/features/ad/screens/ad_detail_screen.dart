@@ -20,6 +20,7 @@ import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../core/constants/categories.dart';
 
 import '../providers/ad_detail_provider.dart';
+import '../../../core/providers/live_room_provider.dart';
 
 class AdDetailScreen extends ConsumerStatefulWidget {
   final String adId;
@@ -76,7 +77,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   Future<void> _inviteToStage(String targetUserId) async {
     try {
       final response = await ApiClient().post('/api/livekit/signal', data: {
-        'adId': widget.ad.id,
+        'adId': widget.adId,
         'targetUserId': targetUserId,
         'signal': 'INVITE_TO_STAGE',
       });

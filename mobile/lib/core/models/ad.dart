@@ -75,6 +75,8 @@ class AdModel {
   final DistrictModel? district;
   final AdCountModel? count;
   final List<BidModel> bids;
+  final bool isLive;
+  final DateTime? auctionStartTime;
 
   const AdModel({
     required this.id,
@@ -98,10 +100,14 @@ class AdModel {
     this.district,
     this.count,
     this.bids = const [],
+    this.isLive = false,
+    this.auctionStartTime,
   });
 
   bool get isExpired =>
       expiresAt != null && expiresAt!.isBefore(DateTime.now());
+
+  bool get isAuction => !isFixedPrice;
 
   double? get highestBidAmount {
     if (bids.isNotEmpty) {
@@ -155,6 +161,10 @@ class AdModel {
                 ?.map((e) => BidModel.fromJson(e as Map<String, dynamic>))
                 .toList() ??
             [],
+        isLive: json['isLive'] as bool? ?? false,
+        auctionStartTime: json['auctionStartTime'] != null
+            ? DateTime.parse(json['auctionStartTime'] as String)
+            : null,
       );
 }
 

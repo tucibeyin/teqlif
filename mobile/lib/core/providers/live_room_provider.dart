@@ -50,7 +50,7 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
     state = state.copyWith(isConnecting: true, error: null);
 
     try {
-      final response = await ApiClient().get('/api/livekit/token', queryParameters: {
+      final response = await ApiClient().get('/api/livekit/token', params: {
         'room': roomId,
         if (isGuest) 'role': 'guest',
       });
@@ -112,18 +112,18 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
 
       // If Host, listen for network quality to send FREEZE signals
       if (isOwner) {
-        room.events.listen((event) {
-          if (event is ConnectionQualityChangedEvent && event.participant == room.localParticipant) {
-            if (event.quality == ConnectionQuality.poor || event.quality == ConnectionQuality.lost) {
+        _room!.events.listen((event) {
+          if (event is ParticipantConnectionQualityUpdatedEvent && event.participant == _room!.localParticipant) {
+            if (event.connectionQuality == ConnectionQuality.poor || event.connectionQuality == ConnectionQuality.lost) {
               _broadcastFreezeStatus(true);
-            } else if (event.quality == ConnectionQuality.excellent || event.quality == ConnectionQuality.good) {
+            } else if (event.connectionQuality == ConnectionQuality.excellent || event.connectionQuality == ConnectionQuality.good) {
               _broadcastFreezeStatus(false);
             }
           }
         });
       } else {
         // If Viewer, listen for FREEZE signals
-        room.events.listen((event) {
+        _room!.events.listen((event) {
           if (event is DataReceivedEvent) {
             final msg = String.fromCharCodes(event.data);
             if (msg == 'SYS:FREEZE') {
