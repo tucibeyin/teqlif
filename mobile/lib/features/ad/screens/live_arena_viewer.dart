@@ -310,7 +310,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         // Give it a tiny delay to ensure proper cleanup
         await Future.delayed(const Duration(milliseconds: 500));
         if (mounted) {
-          ref.read(liveRoomProvider(widget.ad.id).notifier).connect(widget.ad.id);
+          ref.read(liveRoomProvider(widget.ad.id).notifier).connect(false);
         }
       } catch (e) {
         debugPrint('Error restoring viewer state: $e');
@@ -500,13 +500,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       }
     });
 
-    final currentAd = updatedAdAsync.value ?? widget.ad;
+    final currentAd = adAsync.value ?? widget.ad;
     
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
-    final isDisconnected = roomState.connectionState == ConnectionState.disconnected || (room == null && !roomState.isConnecting);
+    final isDisconnected = roomState.room?.connectionState == lk.ConnectionState.disconnected || (room == null && !roomState.isConnecting);
 
-    VideoTrack? hostTrack;
+    lk.VideoTrack? hostTrack;
     VideoTrack? guestTrack;
 
     if (room != null) {
@@ -836,8 +836,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           ],
                         ),
                       ),
-                    ],
-                  ),
                 ),
               ),
             ),

@@ -500,8 +500,11 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                   ),
                               ],
                             ),
-                          );
-                        },
+                          ),
+                        ],
+                      ),
+                    );
+                  },
                       ),
                 ),
               ],
