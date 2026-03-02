@@ -6,6 +6,8 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:slider_button/slider_button.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:currency_text_input_formatter/currency_text_input_formatter.dart';
+import 'dart:ui';
+import 'dart:convert';
 import 'dart:async';
 
 import 'dart:convert';
@@ -16,6 +18,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../providers/ad_detail_provider.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
+import 'manual_bid_sheet.dart';
 
 class LiveArenaViewer extends ConsumerStatefulWidget {
   final AdModel ad;
@@ -54,6 +57,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   late Animation<double> _pulseAnimation;
 
   bool _isGuest = false;
+  bool _isAuctionActive = false;
 
   @override
   void initState() {
@@ -134,6 +138,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           return;
         } else if (decoded['type'] == 'KICK_FROM_STAGE') {
           _handleKick();
+          return;
+        } else if (decoded['type'] == 'AUCTION_START') {
+          setState(() => _isAuctionActive = true);
+          return;
+        } else if (decoded['type'] == 'AUCTION_END') {
+          setState(() => _isAuctionActive = false);
           return;
         }
       }
@@ -251,6 +261,40 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     }
     _chatCtrl.clear();
     _chatFocus.unfocus();
+  }
+
+  Future<void> _placeBidQuick() async {
+    final updatedAdAsync = ref.read(adDetailProvider(widget.ad.id));
+    final currentAd = updatedAdAsync.value ?? widget.ad;
+    
+    // Get highest bid or starting price
+    final bids = currentAd.bids ?? [];
+    final currentHighest = bids.isNotEmpty ? bids.first.amount : (currentAd.startingBid ?? currentAd.startingPrice ?? 0);
+    final minStep = currentAd.minBidStep ?? 100;
+    
+    final bidAmount = currentHighest + minStep;
+
+    setState(() => _bidLoading = true);
+    await Haptics.vibrate(HapticsType.heavy);
+
+    try {
+      await ApiClient().post(Endpoints.bids, data: {
+        'adId': widget.ad.id,
+        'amount': bidAmount,
+      });
+      ref.invalidate(adDetailProvider(widget.ad.id));
+      ref.invalidate(myBidsProvider);
+      
+      final state = ref.read(liveRoomProvider(widget.ad.id));
+      if (state.room != null) {
+        state.room!.localParticipant?.publishData('🔥 Yeni Teklif: ₺$bidAmount'.codeUnits);
+        _handleDataChannelMessage('🔥 Yeni Teklif: ₺$bidAmount'.codeUnits, null);
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Teklif verilemedi.')));
+    } finally {
+      if (mounted) setState(() => _bidLoading = false);
+    }
   }
 
   Future<void> _placeBidSlide() async {
@@ -618,137 +662,120 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         ),
                       ),
 
-                      // Bid input and Chat input
+                      // Bid and Chat controls
                       Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: const BoxDecoration(
-                          gradient: LinearGradient(
-                            begin: Alignment.topCenter,
-                            end: Alignment.bottomCenter,
-                            colors: [Colors.transparent, Colors.black87],
-                          ),
-                        ),
+                        padding: const EdgeInsets.all(20),
                         child: Column(
                           children: [
-                            // Chat Input
-                            Container(
-                              decoration: BoxDecoration(
-                                color: Colors.black45,
-                                borderRadius: BorderRadius.circular(24),
-                                border: Border.all(color: Colors.white24),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _chatCtrl,
-                                      focusNode: _chatFocus,
-                                      style: const TextStyle(color: Colors.white),
-                                      decoration: const InputDecoration(
-                                        hintText: 'Mesaj yaz...',
-                                        hintStyle: TextStyle(color: Colors.white54),
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                                      ),
-                                      onSubmitted: (_) => _sendChatMessage(),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
-                                    onPressed: _sendChatMessage,
-                                  )
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 16),
-                            // Bid Section
-                            if (roomState.isFrozen)
-                              Container(
-                                padding: const EdgeInsets.symmetric(vertical: 12),
-                                width: double.infinity,
-                                decoration: BoxDecoration(
-                                  color: Colors.black54,
-                                  borderRadius: BorderRadius.circular(26),
-                                  border: Border.all(color: Colors.orange.withOpacity(0.5)),
-                                ),
-                                child: const Center(
-                                  child: Text(
-                                    'Yayıncı bağlantısı bekleniyor...',
-                                    style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              )
-                            else
-                              ScaleTransition(
-                                scale: _pulseAnimation,
-                                child: Container(
-                                  decoration: _isHypeMode ? BoxDecoration(
-                                    borderRadius: BorderRadius.circular(26),
-                                    boxShadow: [
-                                      BoxShadow(
-                                        color: Colors.redAccent.withOpacity(0.6),
-                                        blurRadius: 15,
-                                        spreadRadius: 2,
-                                      )
-                                    ]
-                                  ) : null,
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        flex: 2,
-                                        child: Container(
-                                          height: 52,
-                                          decoration: BoxDecoration(
-                                            color: Colors.white,
-                                            borderRadius: BorderRadius.circular(26),
-                                          ),
-                                          child: TextField(
-                                            controller: _bidCtrl,
-                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                            inputFormatters: [_bidFormatter],
-                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                                            textAlign: TextAlign.center,
-                                            decoration: const InputDecoration(
-                                              hintText: 'Miktar (₺)',
-                                              border: InputBorder.none,
-                                              contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                            // Bid Section (Conditional)
+                            if (_isAuctionActive)
+                              Padding(
+                                padding: const EdgeInsets.bottom(16),
+                                child: _bidLoading 
+                                  ? const CircularProgressIndicator(color: Colors.white)
+                                  : Row(
+                                      children: [
+                                        // Quick Bid Button
+                                        Expanded(
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(16),
+                                            child: BackdropFilter(
+                                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                                              child: Container(
+                                                height: 60,
+                                                decoration: BoxDecoration(
+                                                  color: const Color(0xFF00B4CC).withOpacity(0.85),
+                                                  border: Border.all(color: Colors.white24),
+                                                ),
+                                                child: InkWell(
+                                                  onTap: _placeBidQuick,
+                                                  child: Center(
+                                                    child: Row(
+                                                      mainAxisAlignment: MainAxisAlignment.center,
+                                                      children: [
+                                                        const Icon(Icons.add_circle_outline, color: Colors.white),
+                                                        const SizedBox(width: 8),
+                                                        Text(
+                                                          '+ ₺${currentAd.minBidStep ?? 0} PEY VER',
+                                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
                                             ),
                                           ),
                                         ),
-                                      ),
-                                      const SizedBox(width: 12),
+                                        const SizedBox(width: 12),
+                                        // Info Button for manual entry if they want (optional)
+                                        IconButton(
+                                          onPressed: () {
+                                            _chatFocus.unfocus();
+                                            showModalBottomSheet(
+                                              context: context, 
+                                              isScrollControlled: true,
+                                              backgroundColor: Colors.transparent,
+                                              builder: (_) => ManualBidSheet(
+                                                ad: currentAd, 
+                                                bidCtrl: _bidCtrl, 
+                                                bidFormatter: _bidFormatter,
+                                                onConfirm: _placeBidSlide,
+                                              )
+                                            );
+                                          },
+                                          icon: const Icon(Icons.edit_note, color: Colors.white),
+                                          style: IconButton.styleFrom(backgroundColor: Colors.white24, padding: const EdgeInsets.all(12)),
+                                        )
+                                      ],
+                                    ),
+                              ),
+
+                            // Chat Input (Glassmorphism)
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(30),
+                              child: BackdropFilter(
+                                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withOpacity(0.15),
+                                    borderRadius: BorderRadius.circular(30),
+                                    border: Border.all(color: Colors.white30),
+                                  ),
+                                  child: Row(
+                                    children: [
                                       Expanded(
-                                        flex: 3,
-                                        child: _bidLoading 
-                                          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00B4CC)))
-                                          : SliderButton(
-                                              action: () async {
-                                                await _placeBidSlide();
-                                                return true; // reset
-                                              },
-                                              label: const Text(
-                                                "Kaydırarak Teklif Ver",
-                                                style: TextStyle(
-                                                    color: Colors.white, 
-                                                    fontWeight: FontWeight.bold, 
-                                                    fontSize: 14),
-                                              ),
-                                              icon: const Center(
-                                                  child: Icon(Icons.gavel,
-                                                      color: Color(0xFF00B4CC),
-                                                      size: 24)),
-                                              width: 200,
-                                              radius: 26,
-                                              buttonColor: Colors.white,
-                                              backgroundColor: _isHypeMode ? Colors.redAccent : const Color(0xFF00B4CC),
-                                              highlightedColor: Colors.white,
-                                              baseColor: Colors.white,
-                                            ),
+                                        child: TextField(
+                                          controller: _chatCtrl,
+                                          focusNode: _chatFocus,
+                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w500),
+                                          cursorColor: const Color(0xFF00B4CC),
+                                          decoration: const InputDecoration(
+                                            hintText: 'Mesaj yaz...',
+                                            hintStyle: TextStyle(color: Colors.white60),
+                                            border: InputBorder.none,
+                                            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                          ),
+                                          onSubmitted: (_) => _sendChatMessage(),
+                                        ),
                                       ),
+                                      Container(
+                                        margin: const EdgeInsets.all(4),
+                                        decoration: const BoxDecoration(
+                                          color: Color(0xFF00B4CC),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: IconButton(
+                                          icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                                          onPressed: _sendChatMessage,
+                                        ),
+                                      )
                                     ],
                                   ),
                                 ),
                               ),
+                            ),
                           ],
                         ),
                       ),
