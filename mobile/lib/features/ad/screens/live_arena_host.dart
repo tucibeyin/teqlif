@@ -212,9 +212,65 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. Camera Preview
-          if (roomState.isConnecting)
-            const Center(child: CircularProgressIndicator(color: Colors.white))
+          // 1. Camera Preview & Loading State
+          if (roomState.isConnecting || (room == null && roomState.error == null))
+            Container(
+              color: Colors.black,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const CircularProgressIndicator(color: Colors.red),
+                    const SizedBox(height: 24),
+                    const Text('Arena Hazırlanıyor...', 
+                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    const Text('Bağlantı kuruluyor, lütfen bekleyin.', 
+                      style: TextStyle(color: Colors.white70, fontSize: 14)),
+                    const SizedBox(height: 48),
+                    ElevatedButton(
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white24),
+                      onPressed: () async {
+                        // Emergency Exit
+                        await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+                        try {
+                           await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {'isLive': false});
+                        } catch(_) {}
+                        if (mounted) Navigator.pop(context);
+                      }, 
+                      child: const Text('İptal Et ve Geri Dön', style: TextStyle(color: Colors.white)),
+                    ),
+                  ],
+                ),
+              ),
+            )
+          else if (roomState.error != null)
+            Container(
+              color: Colors.black,
+              child: Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline, color: Colors.red, size: 64),
+                    const SizedBox(height: 16),
+                    Text('Hata: ${roomState.error}', 
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white, fontSize: 16)),
+                    const SizedBox(height: 32),
+                    ElevatedButton(
+                      onPressed: () async {
+                        await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+                        try {
+                           await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {'isLive': false});
+                        } catch(_) {}
+                        if (mounted) Navigator.pop(context);
+                      }, 
+                      child: const Text('İlan Detayına Dön'),
+                    ),
+                  ],
+                ),
+              ),
+            )
           else if (localVideoTrack != null && _isCameraEnabled)
             SizedBox.expand(
               child: VideoTrackRenderer(

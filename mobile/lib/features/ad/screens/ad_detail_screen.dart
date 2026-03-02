@@ -249,13 +249,8 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
         data: (ad) {
           final isOwner = currentUser?.id == ad.userId;
 
-          if (ad.isLive == true && ad.status == 'ACTIVE') {
-            if (isOwner) {
-              return LiveArenaHost(ad: ad);
-            } else {
-              return LiveArenaViewer(ad: ad);
-            }
-          }
+          // Note: Automatic navigation removed to prevent "Arena Trap"
+          // We will show a banner or button instead.
 
           final roomState = ref.watch(liveRoomProvider(widget.adId));
           final now = DateTime.now().add(roomState.serverTimeOffset);
@@ -780,6 +775,31 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                 isOwner: isOwner, adStatus: ad.status, isFrozen: roomState.isFrozen),
                           const SizedBox(height: 24),
                         ],
+                      ],
+
+                      if (ad.isLive == true && ad.status == 'ACTIVE') ...[
+                        SizedBox(
+                          width: double.infinity,
+                          height: 52,
+                          child: ElevatedButton.icon(
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red.shade600,
+                              foregroundColor: Colors.white,
+                              elevation: 4,
+                            ),
+                            onPressed: () {
+                              if (isOwner) {
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => LiveArenaHost(ad: ad)));
+                              } else {
+                                Navigator.push(context, MaterialPageRoute(builder: (_) => LiveArenaViewer(ad: ad)));
+                              }
+                            },
+                            icon: const Icon(Icons.sensors),
+                            label: const Text('🔴 Canlı Yayına Katıl',
+                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                          ),
+                        ),
+                        const SizedBox(height: 24),
                       ],
 
                       if (isOwner && ad.isAuction == true && ad.status == 'ACTIVE' && ad.isLive != true) ...[

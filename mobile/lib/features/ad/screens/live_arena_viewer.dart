@@ -422,9 +422,29 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // 1. Video Player
+            // 1. Video Player & Loading State
             if (roomState.isConnecting)
-              const Center(child: CircularProgressIndicator(color: Colors.white))
+              Container(
+                color: Colors.black,
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const CircularProgressIndicator(color: Colors.white),
+                      const SizedBox(height: 24),
+                      const Text('Arena\'ya Katılınıyor...', 
+                        style: TextStyle(color: Colors.white, fontSize: 18)),
+                      const SizedBox(height: 32),
+                      TextButton(
+                        onPressed: () {
+                           Navigator.pop(context);
+                        }, 
+                        child: const Text('İptal Et ve Geri Dön', style: TextStyle(color: Colors.white70)),
+                      ),
+                    ],
+                  ),
+                ),
+              )
             else if (hostTrack != null)
               SizedBox.expand(
                 child: VideoTrackRenderer(
@@ -433,9 +453,21 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 ),
               )
             else
-              const Center(
-                  child: Text('Yayın bekleniyor...',
-                      style: TextStyle(color: Colors.white))),
+              Center(
+                child: Column(
+                   mainAxisAlignment: MainAxisAlignment.center,
+                   children: [
+                      const Icon(Icons.videocam_off, color: Colors.white24, size: 64),
+                      const SizedBox(height: 16),
+                      const Text('Yayın bekleniyor...', style: TextStyle(color: Colors.white54)),
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Geri Dön'),
+                      ),
+                   ],
+                )
+              ),
 
             if (guestTrack != null)
               Positioned(
