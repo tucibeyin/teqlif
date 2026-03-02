@@ -2,17 +2,28 @@ import { NextRequest, NextResponse } from 'next/server';
 import { AccessToken } from 'livekit-server-sdk';
 import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { getMobileUser } from '@/lib/mobile-auth';
+import { logger } from '@/lib/logger';
 
 export async function GET(req: NextRequest) {
   try {
     const session = await auth();
-    // Kullanıcı oturumu kontrolü
-    if (!session || !session.user || !session.user.id) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    let userId = session?.user?.id;
+    let userName = session?.user?.name || 'Anonymous';
+
+    // Support Mobile Auth
+    if (!userId) {
+      const mobileUser = await getMobileUser(req);
+      if (mobileUser) {
+        userId = mobileUser.id;
+        userName = mobileUser.name || 'Mobile User';
+      }
     }
 
-    const userId = session.user.id;
-    const userName = session.user.name || 'Anonymous';
+    if (!userId) {
+      logger.liveKit("WARN", "TOKEN_API", "Unauthorized attempt to get token");
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
 
     // İstek parametrelerini al
     const room = req.nextUrl.searchParams.get('room');
@@ -37,6 +48,7 @@ export async function GET(req: NextRequest) {
     });
 
     if (!ad) {
+      logger.liveKit("WARN", "TOKEN_API", `Ad not found for room: ${room}`);
       return NextResponse.json({ error: 'Ad not found' }, { status: 404 });
     }
 
@@ -49,7 +61,6 @@ export async function GET(req: NextRequest) {
       name: userName,
     });
 
-    const isOwner = ad.userId === userId;
     const canPublish = isHost || isGuest;
 
     at.addGrant({
@@ -63,6 +74,7 @@ export async function GET(req: NextRequest) {
     const token = await at.toJwt();
     const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
+    logger.liveKit("INFO", "TOKEN_API", `Generated token for user ${userId} in room ${room} (isHost: ${isHost})`);
     return NextResponse.json({ token, wsUrl });
   } catch (error: any) {
     console.error('[LiveKit Token API] Processing error:', error);

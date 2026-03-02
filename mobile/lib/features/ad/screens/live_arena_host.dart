@@ -43,6 +43,16 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
         final room = ref.read(liveRoomProvider(widget.ad.id)).room;
         if (room != null) {
           room.events.listen(_onRoomEvent);
+          
+          // Signal backend that we are LIVE
+          try {
+            await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {
+              'isLive': true,
+              'liveKitRoomId': widget.ad.id,
+            });
+          } catch (e) {
+            debugPrint('Failed to set isLive to true: $e');
+          }
         }
       } else {
         if (mounted) {
