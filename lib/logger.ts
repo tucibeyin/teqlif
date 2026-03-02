@@ -13,15 +13,35 @@ export const logger = {
 
     error: (m: string, c?: any) => {
         console.error(`[ERROR] ${m}`, c || '');
+        this?._writeFile('ERROR', m, c);
+    },
 
-        // Asynchronous and safe file logging (only for errors)
+    /**
+     * Dedicated method for LiveKit events.
+     * Writes ALL levels (INFO/ERROR) to the physical log file for visibility.
+     */
+    liveKit: function (level: 'INFO' | 'WARN' | 'ERROR', context: string, message: string, meta?: any) {
+        const fullMsg = `[${context}] ${message}`;
+        if (level === 'ERROR') {
+            console.error(`[ERROR] ${fullMsg}`, meta || '');
+        } else {
+            console.log(`[${level}] ${fullMsg}`, meta || '');
+        }
+
+        // Write LiveKit activity to file regardless of level for monitoring
+        this._writeFile(level, fullMsg, meta);
+    },
+
+    /**
+     * Internal safe file writer (Async/Non-blocking)
+     */
+    _writeFile: (level: string, m: string, c?: any) => {
         try {
             const fs = require('fs');
             const path = require('path');
             const logDir = path.join(process.cwd(), 'logs');
             const logFile = path.join(logDir, 'livekit-error.log');
 
-            // Extract a simple message from error objects if present
             let contextStr = '';
             if (c) {
                 try {
@@ -31,24 +51,15 @@ export const logger = {
                 }
             }
 
-            const logLine = `[${new Date().toISOString()}] ERROR: ${m} ${contextStr}\n`;
+            const logLine = `[${new Date().toISOString()}] ${level}: ${m} ${contextStr}\n`;
 
-            // Use async mkdir and append to prevent blocking the event loop
             fs.mkdir(logDir, { recursive: true }, (err: any) => {
                 if (!err || err.code === 'EEXIST') {
                     fs.appendFile(logFile, logLine, () => { });
                 }
             });
         } catch (e) {
-            // Absolute silence on logger failure to prevent loops
-        }
-    },
-
-    liveKit: function (level: 'INFO' | 'WARN' | 'ERROR', context: string, message: string, meta?: any) {
-        if (level === 'ERROR') {
-            this.error(`[${context}] ${message}`, meta);
-        } else {
-            this.info(`[${context}] ${message}`, meta);
+            // Silence
         }
     }
 };
