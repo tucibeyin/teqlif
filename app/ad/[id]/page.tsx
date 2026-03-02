@@ -155,6 +155,7 @@ export default async function AdDetailPage({
                                 <LiveArenaWrapper
                                     roomId={adData.id}
                                     adId={adData.id}
+                                    sellerId={ad.userId}
                                     isOwner={isOwner}
                                     buyItNowPrice={ad.buyItNowPrice}
                                     startingBid={ad.startingBid}

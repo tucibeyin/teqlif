@@ -10,6 +10,7 @@ import { useRouter } from "next/navigation";
 interface LiveArenaProps {
     roomId: string;
     adId: string;
+    sellerId: string;
     isOwner: boolean;
     buyItNowPrice?: number | null;
     startingBid?: number | null;
@@ -20,6 +21,7 @@ interface LiveArenaProps {
 export default function LiveArena({
     roomId,
     adId,
+    sellerId,
     isOwner,
     buyItNowPrice,
     startingBid,
@@ -58,30 +60,33 @@ export default function LiveArena({
         );
     }
 
-    <LiveKitRoom
-        video={wantsToPublish}
-        audio={wantsToPublish}
-        token={token}
-        serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
-        data-lk-theme="default"
-        style={{ height: "calc(100vh - 200px)", minHeight: "450px", maxHeight: "700px", borderRadius: "1.5rem", overflow: "hidden", position: "relative" }}
-    >
-        <CustomArenaLayout
-            adId={adId}
-            isOwner={isOwner}
-            buyItNowPrice={buyItNowPrice}
-            startingBid={startingBid}
-            minBidStep={minBidStep}
-            currentHighestBid={currentHighestBid}
-        />
-        <RoomAudioRenderer />
-        {!isOwner && <CoHostListener setRole={setRole} setWantsToPublish={setWantsToPublish} />}
-    </LiveKitRoom>
+    return (
+        <LiveKitRoom
+            video={wantsToPublish}
+            audio={wantsToPublish}
+            token={token}
+            serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
+            data-lk-theme="default"
+            style={{ height: "calc(100vh - 200px)", minHeight: "450px", maxHeight: "700px", borderRadius: "1.5rem", overflow: "hidden", position: "relative" }}
+        >
+            <CustomArenaLayout
+                adId={adId}
+                sellerId={sellerId}
+                isOwner={isOwner}
+                buyItNowPrice={buyItNowPrice}
+                startingBid={startingBid}
+                minBidStep={minBidStep}
+                currentHighestBid={currentHighestBid}
+            />
+            <RoomAudioRenderer />
+            {!isOwner && <CoHostListener setRole={setRole} setWantsToPublish={setWantsToPublish} />}
+        </LiveKitRoom>
     );
 }
 
 function CustomArenaLayout({
     adId,
+    sellerId,
     isOwner,
     buyItNowPrice,
     startingBid,
@@ -110,6 +115,7 @@ function CustomArenaLayout({
             {!isOwner && (
                 <BiddingOverlay
                     adId={adId}
+                    sellerId={sellerId}
                     buyItNowPrice={buyItNowPrice}
                     startingBid={startingBid}
                     minBidStep={minBidStep}
@@ -139,8 +145,9 @@ function CustomArenaLayout({
     );
 }
 
-function BiddingOverlay({ adId, buyItNowPrice, startingBid, minBidStep, currentHighestBid }: any) {
+function BiddingOverlay({ adId, sellerId, buyItNowPrice, startingBid, minBidStep, currentHighestBid }: any) {
     const router = useRouter();
+    const { data: session } = useSession();
     const [amount, setAmount] = useState(() => {
         const minAmount = currentHighestBid > 0 ? (currentHighestBid + minBidStep) : (startingBid ?? 1);
         return new Intl.NumberFormat("tr-TR").format(minAmount);
@@ -192,11 +199,28 @@ function BiddingOverlay({ adId, buyItNowPrice, startingBid, minBidStep, currentH
             const res = await fetch("/api/conversations", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ adId, buyNow: true }),
+                body: JSON.stringify({ userId: sellerId, adId }),
             });
             if (res.ok) {
+                const conversation = await res.json();
+                // Send initial message
+                try {
+                    const currentUserId = session?.user?.id;
+                    const recipientId = conversation.user1Id === currentUserId ? conversation.user2Id : conversation.user1Id;
+                    await fetch('/api/messages', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            conversationId: conversation.id,
+                            content: `Merhaba, bu ürünü Hemen Al fiyatı olan ${formattedPrice(buyItNowPrice)} üzerinden satın almak istiyorum.`,
+                            recipientId
+                        })
+                    });
+                } catch (e) {
+                    console.error("Initial message error", e);
+                }
                 alert("Satın alma isteği iletildi. Mesajlara yönlendiriliyorsunuz.");
-                router.push("/dashboard/messages");
+                router.push(`/dashboard/messages?id=${conversation.id}`);
             } else {
                 alert("İşlem başarısız.");
             }
