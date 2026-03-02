@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -62,6 +63,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   @override
   void initState() {
     super.initState();
+    // Hide system UI (FullScreen)
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WidgetsBinding.instance.addObserver(this);
     _resetInactivityTimer();
     
@@ -95,6 +98,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     _chatCtrl.dispose();
     _chatFocus.dispose();
     _bidCtrl.dispose();
+    // Restore system UI
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 

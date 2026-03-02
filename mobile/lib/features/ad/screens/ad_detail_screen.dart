@@ -128,7 +128,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
         _snack('Canlı yayın başladı! Arena yükleniyor...');
         ref.invalidate(adDetailProvider(widget.adId));
         // Direct navigation after success
-        Navigator.push(context, MaterialPageRoute(builder: (_) => LiveArenaHost(ad: ad)));
+        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(builder: (_) => LiveArenaHost(ad: ad)));
       }
     } catch (e) {
       if (!mounted) return;
@@ -791,9 +791,21 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             ),
                             onPressed: () {
                               if (isOwner) {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => LiveArenaHost(ad: ad)));
+                                if (mounted) {
+                                  Navigator.of(context, rootNavigator: true).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => LiveArenaHost(ad: ad),
+                                    ),
+                                  );
+                                }
                               } else {
-                                Navigator.push(context, MaterialPageRoute(builder: (_) => LiveArenaViewer(ad: ad)));
+                                if (mounted) {
+                                  Navigator.of(context, rootNavigator: true).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => LiveArenaViewer(ad: ad),
+                                    ),
+                                  );
+                                }
                               }
                             },
                             icon: const Icon(Icons.sensors),

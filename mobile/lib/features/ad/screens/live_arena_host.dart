@@ -6,6 +6,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'dart:ui';
 import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/services.dart';
 import 'dart:async';
 
 import '../../../core/models/ad.dart';
@@ -33,6 +34,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
   @override
   void initState() {
     super.initState();
+    // Hide system UI (FullScreen)
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+
     // Connect to room as Host
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       // Request permissions first
@@ -72,6 +76,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
   void dispose() {
     _chatCtrl.dispose();
     _chatFocus.dispose();
+    // Restore system UI
+    SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
   }
 
