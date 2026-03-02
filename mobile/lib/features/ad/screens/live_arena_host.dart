@@ -91,16 +91,18 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     super.dispose();
   }
 
-  void _handleDataChannelMessage(List<int> data, RemoteParticipant? p) {
+  void _handleDataChannelMessage(List<int> data, RemoteParticipant? p, {String? customName}) {
     final message = String.fromCharCodes(data);
+    final senderName = customName ?? p?.name;
+    
     setState(() {
       _messages.add(_EphemeralMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         text: message,
-        senderName: _formatSenderName(p?.name),
+        senderName: _formatSenderName(senderName),
         timestamp: DateTime.now(),
       ));
-      if (_messages.length > 5) { // Host sees maybe a bit more or 3 like viewer
+      if (_messages.length > 5) {
         _messages.removeAt(0);
       }
     });
@@ -122,7 +124,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room != null) {
       await state.room!.localParticipant?.publishData(text.codeUnits);
-      _handleDataChannelMessage(text.codeUnits, null); // Add my own
+      _handleDataChannelMessage(text.codeUnits, null, customName: state.room!.localParticipant?.name);
     }
     _chatCtrl.clear();
     _chatFocus.unfocus();
@@ -149,7 +151,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       await state.room!.localParticipant?.publishData(signal.codeUnits);
       _handleDataChannelMessage(
         (_isAuctionActive ? '📣 Mezat Başlatıldı!' : '📣 Mezat Durduruldu!').codeUnits, 
-        null
+        null,
+        customName: state.room!.localParticipant?.name
       );
     } catch (e) {
       debugPrint('Signal error: $e');
@@ -494,95 +497,81 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                 // Auction & Chat Controls
                 Container(
                   padding: const EdgeInsets.all(20),
-                  child: Column(
+                  child: Row(
                     children: [
-                      // Auction Control Button (Premium)
                       if (widget.ad.isAuction)
                         Padding(
-                          padding: const EdgeInsets.only(bottom: 16),
+                          padding: const EdgeInsets.only(right: 12),
                           child: ClipRRect(
-                            borderRadius: BorderRadius.circular(16),
+                            borderRadius: BorderRadius.circular(30),
                             child: BackdropFilter(
                               filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                              child: Container(
-                                width: double.infinity,
-                                height: 60,
-                                decoration: BoxDecoration(
-                                  color: _isAuctionActive 
-                                      ? Colors.redAccent.withOpacity(0.8) 
-                                      : const Color(0xFF00B4CC).withOpacity(0.8),
-                                  border: Border.all(color: Colors.white24),
-                                ),
-                                child: InkWell(
-                                  onTap: _toggleAuction,
-                                  child: Center(
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(
-                                          _isAuctionActive ? Icons.stop_circle : Icons.gavel,
-                                          color: Colors.white,
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Text(
-                                          _isAuctionActive ? 'MEZATI DURDUR' : 'MEZATI BAŞLAT',
-                                          style: const TextStyle(
-                                            color: Colors.white, 
-                                            fontWeight: FontWeight.w900,
-                                            letterSpacing: 1.2,
-                                            fontSize: 16
-                                          ),
-                                        ),
-                                      ],
-                                    ),
+                              child: GestureDetector(
+                                onTap: _toggleAuction,
+                                child: AnimatedContainer(
+                                  duration: const Duration(milliseconds: 300),
+                                  width: 56,
+                                  height: 56,
+                                  decoration: BoxDecoration(
+                                    color: _isAuctionActive ? Colors.redAccent.withOpacity(0.85) : Colors.white.withOpacity(0.15),
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white30),
+                                    boxShadow: _isAuctionActive ? [
+                                      BoxShadow(color: Colors.redAccent.withOpacity(0.5), blurRadius: 15, spreadRadius: 2)
+                                    ] : null,
+                                  ),
+                                  child: Icon(
+                                    _isAuctionActive ? Icons.stop_circle : Icons.gavel,
+                                    color: Colors.white,
+                                    size: 28,
                                   ),
                                 ),
                               ),
                             ),
                           ),
                         ),
-
-                      // Chat Input box (Glassmorphism)
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.85),
-                              borderRadius: BorderRadius.circular(30),
-                              border: Border.all(color: Colors.white30),
-                            ),
-                            child: Row(
-                              children: [
-                                Expanded(
-                                  child: TextField(
-                                    controller: _chatCtrl,
-                                    focusNode: _chatFocus,
-                                    style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                                    cursorColor: const Color(0xFF00B4CC),
-                                    decoration: const InputDecoration(
-                                      hintText: 'İzleyicilere yaz...',
-                                      hintStyle: TextStyle(color: Colors.black54),
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                      Expanded(
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(30),
+                          child: BackdropFilter(
+                            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white.withOpacity(0.85),
+                                borderRadius: BorderRadius.circular(30),
+                                border: Border.all(color: Colors.white30),
+                              ),
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                    child: TextField(
+                                      controller: _chatCtrl,
+                                      focusNode: _chatFocus,
+                                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
+                                      cursorColor: const Color(0xFF00B4CC),
+                                      decoration: const InputDecoration(
+                                        hintText: 'İzleyicilere yaz...',
+                                        hintStyle: TextStyle(color: Colors.black54),
+                                        border: InputBorder.none,
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                      ),
+                                      onSubmitted: (_) => _sendChatMessage(),
                                     ),
-                                    onSubmitted: (_) => _sendChatMessage(),
                                   ),
-                                ),
-                                Container(
-                                  margin: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Color(0xFF00B4CC),
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: IconButton(
-                                    icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                                    onPressed: _sendChatMessage,
-                                  ),
-                                )
-                              ],
+                                  Container(
+                                    margin: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(
+                                      color: Color(0xFF00B4CC),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: IconButton(
+                                      icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                                      onPressed: _sendChatMessage,
+                                    ),
+                                  )
+                                ],
+                              ),
                             ),
                           ),
                         ),
