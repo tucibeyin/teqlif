@@ -57,3 +57,4 @@ firebase-admin.json
 test-*.js
 test-*.mjs
 test-*.ts
+public/uploads/
