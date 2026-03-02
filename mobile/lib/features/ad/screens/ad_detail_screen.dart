@@ -196,6 +196,12 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
             }
           }
 
+          final roomState = ref.watch(liveRoomProvider(widget.adId));
+          final now = DateTime.now().add(roomState.serverTimeOffset);
+          final isAuctionActive = ad.isAuction == true &&
+              ad.auctionStartTime != null &&
+              ad.auctionStartTime!.isBefore(now);
+
           return CustomScrollView(
             slivers: [
               // Image header
@@ -708,69 +714,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             ),
                             const SizedBox(height: 24),
                           ],
-                          const Text('Teklif Ver',
-                              style: TextStyle(
-                                  fontWeight: FontWeight.w700, fontSize: 16)),
-                          const SizedBox(height: 8),
-                          const SizedBox(height: 8),
-                          if (currentUser != null)
-                            (() {
-                              final double currentHighest = ad.bids.isNotEmpty
-                                  ? ad.bids.first.amount
-                                  : 0.0;
-                              final double minRequiredBid = ad.bids.isNotEmpty
-                                  ? (currentHighest + ad.minBidStep)
-                                  : (ad.startingBid != null && ad.startingBid! > 0 
-                                      ? ad.startingBid! 
-                                      : ad.minBidStep.toDouble());
-
-                              return Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  Row(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _bidCtrl,
-                                          keyboardType: const TextInputType
-                                              .numberWithOptions(decimal: true),
-                                          inputFormatters: [_bidFormatter],
-                                          decoration: InputDecoration(
-                                            hintText: 'Teklif miktarı (₺)',
-                                            prefixIcon: const Icon(Icons.gavel),
-                                            helperText:
-                                                'En az ${_formatPrice(minRequiredBid)}',
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 12),
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: SizedBox(
-                                          height: 48,
-                                          child: ElevatedButton(
-                                            onPressed: _bidLoading
-                                                ? null
-                                                : () => _placeBid(ad),
-                                            child: _bidLoading
-                                                ? const SizedBox(
-                                                    width: 20,
-                                                    height: 20,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                            color: Colors.white,
-                                                            strokeWidth: 2))
-                                                : const Text('Ver'),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ],
-                              );
-                            })(),
+                          if (isAuctionActive || ad.isAuction != true)
+                            _buildBidInputSection(context, ad,
+                                isOwner: isOwner, adStatus: ad.status, isFrozen: roomState.isFrozen),
                           const SizedBox(height: 24),
                         ],
                       ],
@@ -819,6 +765,99 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
           );
         },
       ),
+    );
+  }
+
+  Widget _buildBidInputSection(BuildContext context, AdModel ad,
+      {required bool isOwner, required String adStatus, bool isFrozen = false}) {
+    if (isOwner || adStatus != 'ACTIVE') {
+      return const SizedBox.shrink();
+    }
+
+    if (isFrozen) {
+      return Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(color: Colors.white, boxShadow: [
+          BoxShadow(
+              color: Colors.black.withOpacity(0.05),
+              blurRadius: 10,
+              offset: const Offset(0, -5))
+        ]),
+        child: const Center(
+          child: Text(
+            'Yayıncı bağlantısı bekleniyor...',
+            style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+
+    final currentUser = ref.watch(authProvider).user;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text('Teklif Ver',
+            style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        const SizedBox(height: 8),
+        if (currentUser != null)
+          (() {
+            final double currentHighest = ad.bids.isNotEmpty
+                ? ad.bids.first.amount
+                : 0.0;
+            final double minRequiredBid = ad.bids.isNotEmpty
+                ? (currentHighest + ad.minBidStep)
+                : (ad.startingBid != null && ad.startingBid! > 0
+                    ? ad.startingBid!
+                    : ad.minBidStep.toDouble());
+
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _bidCtrl,
+                        keyboardType: const TextInputType
+                            .numberWithOptions(decimal: true),
+                        inputFormatters: [_bidFormatter],
+                        decoration: InputDecoration(
+                          hintText: 'Teklif miktarı (₺)',
+                          prefixIcon: const Icon(Icons.gavel),
+                          helperText:
+                              'En az ${_formatPrice(minRequiredBid)}',
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Padding(
+                      padding: const EdgeInsets.only(top: 4),
+                      child: SizedBox(
+                        height: 48,
+                        child: ElevatedButton(
+                          onPressed: _bidLoading
+                              ? null
+                              : () => _placeBid(ad),
+                          child: _bidLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(
+                                          color: Colors.white,
+                                          strokeWidth: 2))
+                              : const Text('Ver'),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            );
+          })(),
+      ],
     );
   }
 }

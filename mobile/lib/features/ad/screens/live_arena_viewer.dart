@@ -24,7 +24,7 @@ class LiveArenaViewer extends ConsumerStatefulWidget {
 }
 
 class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
-    with WidgetsBindingObserver {
+    with TickerProviderStateMixin, WidgetsBindingObserver {
   bool _uiVisible = true;
   Timer? _inactivityTimer;
   VideoQuality _currentQuality = VideoQuality.HIGH;
@@ -43,11 +43,28 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   );
   bool _bidLoading = false;
 
+  final List<DateTime> _recentBids = [];
+  bool _isHypeMode = false;
+  Timer? _hypeTimer;
+
+  // Animation for Pulse
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _resetInactivityTimer();
+    
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.05).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+
     // Connect to room
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(liveRoomProvider(widget.ad.id).notifier).connect(false);
@@ -58,6 +75,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _inactivityTimer?.cancel();
+    _hypeTimer?.cancel();
+    _pulseController.dispose();
     _chatCtrl.dispose();
     _chatFocus.dispose();
     _bidCtrl.dispose();
@@ -95,6 +114,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   void _handleDataChannelMessage(List<int> data, RemoteParticipant? p) {
     final message = String.fromCharCodes(data);
+    
+    // Check if it's a bid broadcast to calculate velocity
+    if (message.startsWith('🔥 Yeni Teklif:')) {
+      _recordBidVelocity();
+    }
+
     setState(() {
       _messages.add(_EphemeralMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
@@ -116,6 +141,41 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         });
       }
     });
+  }
+
+  void _recordBidVelocity() {
+    final now = DateTime.now();
+    _recentBids.add(now);
+    
+    // Remove bids older than 5 seconds
+    _recentBids.removeWhere((t) => now.difference(t).inSeconds > 5);
+    
+    // Trigger Haptic
+    Haptics.vibrate(HapticsType.heavy);
+
+    if (_recentBids.length >= 3 && !_isHypeMode) {
+      setState(() => _isHypeMode = true);
+      _pulseController.repeat(reverse: true);
+      
+      _hypeTimer?.cancel();
+      _hypeTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() => _isHypeMode = false);
+          _pulseController.stop();
+          _pulseController.value = 1.0;
+        }
+      });
+    } else if (_isHypeMode) {
+      // Extend hype
+      _hypeTimer?.cancel();
+      _hypeTimer = Timer(const Duration(seconds: 5), () {
+        if (mounted) {
+          setState(() => _isHypeMode = false);
+          _pulseController.stop();
+          _pulseController.value = 1.0;
+        }
+      });
+    }
   }
 
   Future<void> _sendChatMessage() async {
@@ -454,61 +514,93 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                             ),
                             const SizedBox(height: 16),
                             // Bid Section
-                            Row(
-                              children: [
-                                Expanded(
-                                  flex: 2,
-                                  child: Container(
-                                    height: 52,
-                                    decoration: BoxDecoration(
-                                      color: Colors.white,
-                                      borderRadius: BorderRadius.circular(26),
-                                    ),
-                                    child: TextField(
-                                      controller: _bidCtrl,
-                                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                                      inputFormatters: [_bidFormatter],
-                                      style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                                      textAlign: TextAlign.center,
-                                      decoration: const InputDecoration(
-                                        hintText: 'Miktar (₺)',
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 16),
-                                      ),
-                                    ),
+                            if (roomState.isFrozen)
+                              Container(
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                width: double.infinity,
+                                decoration: BoxDecoration(
+                                  color: Colors.black54,
+                                  borderRadius: BorderRadius.circular(26),
+                                  border: Border.all(color: Colors.orange.withOpacity(0.5)),
+                                ),
+                                child: const Center(
+                                  child: Text(
+                                    'Yayıncı bağlantısı bekleniyor...',
+                                    style: TextStyle(color: Colors.orange, fontWeight: FontWeight.bold),
                                   ),
                                 ),
-                                const SizedBox(width: 12),
-                                Expanded(
-                                  flex: 3,
-                                  child: _bidLoading 
-                                    ? const Center(child: CircularProgressIndicator(color: Color(0xFF00B4CC)))
-                                    : SliderButton(
-                                        action: () async {
-                                          await _placeBidSlide();
-                                          return true; // reset
-                                        },
-                                        label: const Text(
-                                          "Kaydırarak Teklif Ver",
-                                          style: TextStyle(
-                                              color: Colors.white, 
-                                              fontWeight: FontWeight.bold, 
-                                              fontSize: 14),
+                              )
+                            else
+                              ScaleTransition(
+                                scale: _pulseAnimation,
+                                child: Container(
+                                  decoration: _isHypeMode ? BoxDecoration(
+                                    borderRadius: BorderRadius.circular(26),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.redAccent.withOpacity(0.6),
+                                        blurRadius: 15,
+                                        spreadRadius: 2,
+                                      )
+                                    ]
+                                  ) : null,
+                                  child: Row(
+                                    children: [
+                                      Expanded(
+                                        flex: 2,
+                                        child: Container(
+                                          height: 52,
+                                          decoration: BoxDecoration(
+                                            color: Colors.white,
+                                            borderRadius: BorderRadius.circular(26),
+                                          ),
+                                          child: TextField(
+                                            controller: _bidCtrl,
+                                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                                            inputFormatters: [_bidFormatter],
+                                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                                            textAlign: TextAlign.center,
+                                            decoration: const InputDecoration(
+                                              hintText: 'Miktar (₺)',
+                                              border: InputBorder.none,
+                                              contentPadding: EdgeInsets.symmetric(horizontal: 16),
+                                            ),
+                                          ),
                                         ),
-                                        icon: const Center(
-                                            child: Icon(Icons.gavel,
-                                                color: Color(0xFF00B4CC),
-                                                size: 24)),
-                                        width: 200,
-                                        radius: 26,
-                                        buttonColor: Colors.white,
-                                        backgroundColor: const Color(0xFF00B4CC),
-                                        highlightedColor: Colors.white,
-                                        baseColor: Colors.white,
                                       ),
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        flex: 3,
+                                        child: _bidLoading 
+                                          ? const Center(child: CircularProgressIndicator(color: Color(0xFF00B4CC)))
+                                          : SliderButton(
+                                              action: () async {
+                                                await _placeBidSlide();
+                                                return true; // reset
+                                              },
+                                              label: const Text(
+                                                "Kaydırarak Teklif Ver",
+                                                style: TextStyle(
+                                                    color: Colors.white, 
+                                                    fontWeight: FontWeight.bold, 
+                                                    fontSize: 14),
+                                              ),
+                                              icon: const Center(
+                                                  child: Icon(Icons.gavel,
+                                                      color: Color(0xFF00B4CC),
+                                                      size: 24)),
+                                              width: 200,
+                                              radius: 26,
+                                              buttonColor: Colors.white,
+                                              backgroundColor: _isHypeMode ? Colors.redAccent : const Color(0xFF00B4CC),
+                                              highlightedColor: Colors.white,
+                                              baseColor: Colors.white,
+                                            ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                              ],
-                            ),
+                              ),
                           ],
                         ),
                       ),

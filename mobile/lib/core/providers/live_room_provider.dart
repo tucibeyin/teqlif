@@ -10,14 +10,30 @@ class LiveRoomState {
   final Room? room;
   final bool isConnecting;
   final String? error;
+  final Duration serverTimeOffset;
+  final bool isFrozen;
 
-  LiveRoomState({this.room, this.isConnecting = false, this.error});
+  LiveRoomState({
+    this.room,
+    this.isConnecting = false,
+    this.error,
+    this.serverTimeOffset = Duration.zero,
+    this.isFrozen = false,
+  });
 
-  LiveRoomState copyWith({Room? room, bool? isConnecting, String? error}) {
+  LiveRoomState copyWith({
+    Room? room,
+    bool? isConnecting,
+    String? error,
+    Duration? serverTimeOffset,
+    bool? isFrozen,
+  }) {
     return LiveRoomState(
       room: room ?? this.room,
       isConnecting: isConnecting ?? this.isConnecting,
       error: error ?? this.error,
+      serverTimeOffset: serverTimeOffset ?? this.serverTimeOffset,
+      isFrozen: isFrozen ?? this.isFrozen,
     );
   }
 }
@@ -67,8 +83,63 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
       }
 
       state = state.copyWith(room: _room, isConnecting: false);
+      // NTP Sync (RTT Offset calculation)
+      // Ping a lightweight endpoint to get server time
+      try {
+        final sendTime = DateTime.now();
+        final response = await ApiClient().get('/api/livekit/sync'); // We will assume this returns { serverTime: timestamp }
+        final receiveTime = DateTime.now();
+        
+        if (response.statusCode == 200) {
+          final serverTimeMillis = response.data['serverTime'] as int;
+          final rtt = receiveTime.difference(sendTime);
+          final oneWayDelay = rtt.inMilliseconds ~/ 2;
+          
+          // Estimated server time at the moment 'receiveTime' happened
+          final estimatedServerTimeAtReceive = serverTimeMillis + oneWayDelay;
+          final offsetMillis = estimatedServerTimeAtReceive - receiveTime.millisecondsSinceEpoch;
+          
+          state = state.copyWith(serverTimeOffset: Duration(milliseconds: offsetMillis));
+        }
+      } catch (e) {
+        print("NTP Sync failed: $e");
+      }
+
+      // If Host, listen for network quality to send FREEZE signals
+      if (isHost) {
+        room.events.listen((event) {
+          if (event is ConnectionQualityChangedEvent && event.participant == room.localParticipant) {
+            if (event.quality == ConnectionQuality.poor || event.quality == ConnectionQuality.lost) {
+              _broadcastFreezeStatus(true);
+            } else if (event.quality == ConnectionQuality.excellent || event.quality == ConnectionQuality.good) {
+              _broadcastFreezeStatus(false);
+            }
+          }
+        });
+      } else {
+        // If Viewer, listen for FREEZE signals
+        room.events.listen((event) {
+          if (event is DataReceivedEvent) {
+            final msg = String.fromCharCodes(event.data);
+            if (msg == 'SYS:FREEZE') {
+              state = state.copyWith(isFrozen: true);
+            } else if (msg == 'SYS:UNFREEZE') {
+              state = state.copyWith(isFrozen: false);
+            }
+          }
+        });
+      }
+
     } catch (e) {
       state = state.copyWith(isConnecting: false, error: e.toString());
+    }
+  }
+
+  Future<void> _broadcastFreezeStatus(bool freeze) async {
+    final room = state.room;
+    if (room != null && room.localParticipant != null) {
+      final msg = freeze ? 'SYS:FREEZE' : 'SYS:UNFREEZE';
+      await room.localParticipant!.publishData(msg.codeUnits);
     }
   }
 
