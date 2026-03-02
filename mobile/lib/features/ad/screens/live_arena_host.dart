@@ -24,12 +24,14 @@ class LiveArenaHost extends ConsumerStatefulWidget {
 class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
   // Ephemeral Chat
   final List<_EphemeralMessage> _messages = [];
+  final List<_LiveBid> _bids = [];
   final TextEditingController _chatCtrl = TextEditingController();
   final FocusNode _chatFocus = FocusNode();
 
   bool _isCameraEnabled = true;
   bool _isMicEnabled = true;
   bool _isAuctionActive = false;
+  int _unreadBids = 0;
 
   @override
   void initState() {
@@ -93,6 +95,24 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
 
   void _handleDataChannelMessage(List<int> data, RemoteParticipant? p, {String? customName}) {
     final message = String.fromCharCodes(data);
+    
+    // Check if it's a bid
+    if (message.startsWith('🔥 Yeni Teklif:')) {
+      final amountStr = message.replaceAll('🔥 Yeni Teklif: ₺', '').trim();
+      final amount = double.tryParse(amountStr.replaceAll('.', '').replaceAll(',', '.'));
+      
+      setState(() {
+        _unreadBids++;
+        _bids.insert(0, _LiveBid(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          amount: amount ?? 0,
+          userLabel: _formatSenderName(customName ?? p?.name),
+          timestamp: DateTime.now(),
+        ));
+        if (_bids.length > 50) _bids.removeLast();
+      });
+    }
+
     final senderName = customName ?? p?.name;
     
     setState(() {
@@ -210,6 +230,120 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
       }
     }
+  }
+
+  void _showBidsBottomSheet() {
+    setState(() => _unreadBids = 0);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setInternalState) => DraggableScrollableSheet(
+          initialChildSize: 0.6,
+          maxChildSize: 0.9,
+          builder: (_, controller) => Container(
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: Column(
+              children: [
+                const SizedBox(height: 12),
+                Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(color: Colors.grey[300], borderRadius: BorderRadius.circular(2)),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(20),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.gavel, color: Color(0xFF00B4CC)),
+                      const SizedBox(width: 12),
+                      const Text('Gelen Teklifler', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: _bids.isEmpty 
+                    ? const Center(child: Text('Henüz teklif gelmedi.', style: TextStyle(color: Colors.grey)))
+                    : ListView.builder(
+                        controller: controller,
+                        itemCount: _bids.length,
+                        itemBuilder: (ctx, i) {
+                          final bid = _bids[i];
+                          return Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            padding: const EdgeInsets.all(16),
+                            decoration: BoxDecoration(
+                              color: Colors.grey[50],
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: Colors.grey[200]!),
+                            ),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(bid.userLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
+                                      Text('₺${bid.amount.toStringAsFixed(0)}', 
+                                        style: const TextStyle(fontSize: 18, color: Color(0xFF00B4CC), fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                                ElevatedButton(
+                                  onPressed: () async {
+                                    // Accept Bid logic
+                                    final confirmed = await showDialog<bool>(
+                                      context: context,
+                                      builder: (ctx) => AlertDialog(
+                                        title: const Text('Teklifi Onayla'),
+                                        content: Text('₺${bid.amount.toStringAsFixed(0)} tutarındaki teklifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
+                                        actions: [
+                                          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hayır')),
+                                          TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Evet, Sat')),
+                                        ],
+                                      ),
+                                    );
+                                    if (confirmed == true) {
+                                      try {
+                                        // This is a placeholder for actual bid acceptance API
+                                        // Usually it requires bidId, but since we are handling dynamic bids from data channel
+                                        // we might need to find the latest valid bid id for this ad
+                                        await ApiClient().post('/api/ads/${widget.ad.id}/sell', data: {
+                                          'amount': bid.amount,
+                                          'buyerLabel': bid.userLabel,
+                                        });
+                                        if (mounted) {
+                                          Navigator.pop(context); // Close sheet
+                                          _endLiveStream(); // Offer to end live
+                                        }
+                                      } catch (e) {
+                                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Satış işlemi başarısız.')));
+                                      }
+                                    }
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                    shape: RoundedRectangle_border: borderRadius: BorderRadius.circular(10)),
+                                  ),
+                                  child: const Text('Onayla ve Sat'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                      ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
   }
 
   @override
@@ -465,6 +599,26 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                       // Controls
                       Column(
                         children: [
+                          Stack(
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.gavel, color: Colors.white),
+                                style: IconButton.styleFrom(backgroundColor: Colors.black45),
+                                onPressed: _showBidsBottomSheet,
+                              ),
+                              if (_unreadBids > 0)
+                                Positioned(
+                                  right: 0,
+                                  top: 0,
+                                  child: Container(
+                                    padding: const EdgeInsets.all(4),
+                                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                                    child: Text('$_unreadBids', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                  ),
+                                ),
+                            ],
+                          ),
+                          const SizedBox(height: 8),
                           IconButton(
                             icon: Icon(_isCameraEnabled ? Icons.videocam : Icons.videocam_off, color: Colors.white),
                             style: IconButton.styleFrom(backgroundColor: Colors.black45),
@@ -586,6 +740,34 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       ),
     );
   }
+}
+
+class _EphemeralMessage {
+  final String id;
+  final String text;
+  final String senderName;
+  final DateTime timestamp;
+
+  _EphemeralMessage({
+    required this.id,
+    required this.text,
+    required this.senderName,
+    required this.timestamp,
+  });
+}
+
+class _LiveBid {
+  final String id;
+  final double amount;
+  final String userLabel;
+  final DateTime timestamp;
+
+  _LiveBid({
+    required this.id,
+    required this.amount,
+    required this.userLabel,
+    required this.timestamp,
+  });
 }
 
 class _EphemeralMessage {

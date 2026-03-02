@@ -234,72 +234,52 @@ function BiddingOverlay({ adId, sellerId, buyItNowPrice, startingBid, minBidStep
     return (
         <div style={{
             position: "absolute",
-            bottom: "30px",
+            bottom: "20px",
             left: "50%",
             transform: "translateX(-50%)",
             width: "auto",
-            minWidth: "300px",
-            padding: "16px",
-            background: "rgba(255, 255, 255, 0.15)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-            borderRadius: "20px",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
-            boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
+            minWidth: "400px",
+            padding: "8px 16px",
+            background: "rgba(0, 0, 0, 0.4)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            borderRadius: "100px",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
+            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.4)",
             zIndex: 100,
             display: "flex",
-            flexDirection: "column",
-            gap: "12px",
+            alignItems: "center",
+            gap: "16px",
             color: "white"
         }}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "20px" }}>
-                <div>
-                    <span style={{ fontSize: "0.75rem", opacity: 0.8, display: "block" }}>Güncel Teklif</span>
-                    <span style={{ fontSize: "1.1rem", fontWeight: 800 }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
-                </div>
-                {buyItNowPrice && (
-                    <button
-                        onClick={handleBuyNow}
-                        disabled={loading}
-                        style={{
-                            background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                            color: "black",
-                            border: "none",
-                            borderRadius: "10px",
-                            padding: "6px 12px",
-                            fontSize: "0.75rem",
-                            fontWeight: 800,
-                            cursor: "pointer",
-                            boxShadow: "0 4px 12px rgba(255, 165, 0, 0.3)"
-                        }}
-                    >
-                        ⚡ HEMEN AL: {formattedPrice(buyItNowPrice)}
-                    </button>
-                )}
+            {/* Current Price Info */}
+            <div style={{ whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "16px" }}>
+                <span style={{ fontSize: "0.65rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Güncel</span>
+                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
             </div>
 
-            <form onSubmit={handleBid} style={{ display: "flex", gap: "8px" }}>
-                <div style={{ position: "relative", flex: 1 }}>
-                    <input
-                        type="text"
-                        value={amount}
-                        onChange={(e) => {
-                            const val = e.target.value.replace(/[^0-9]/g, "");
-                            setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
-                        }}
-                        placeholder="Miktar"
-                        style={{
-                            width: "100%",
-                            padding: "10px 12px",
-                            background: "rgba(0, 0, 0, 0.3)",
-                            border: "1px solid rgba(255, 255, 255, 0.3)",
-                            borderRadius: "10px",
-                            color: "white",
-                            fontSize: "1rem",
-                            outline: "none"
-                        }}
-                    />
-                </div>
+            {/* Bid Form Integrated */}
+            <form onSubmit={handleBid} style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+                <input
+                    type="text"
+                    value={amount}
+                    onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
+                    }}
+                    placeholder="Miktar"
+                    style={{
+                        width: "100px",
+                        padding: "6px 12px",
+                        background: "rgba(255, 255, 255, 0.1)",
+                        border: "1px solid rgba(255, 255, 255, 0.2)",
+                        borderRadius: "100px",
+                        color: "white",
+                        fontSize: "0.9rem",
+                        textAlign: "center",
+                        outline: "none"
+                    }}
+                />
                 <button
                     type="submit"
                     disabled={loading}
@@ -307,27 +287,60 @@ function BiddingOverlay({ adId, sellerId, buyItNowPrice, startingBid, minBidStep
                         background: "var(--primary)",
                         color: "white",
                         border: "none",
-                        borderRadius: "10px",
-                        padding: "0 20px",
-                        fontSize: "0.9rem",
+                        borderRadius: "100px",
+                        padding: "8px 16px",
+                        fontSize: "0.85rem",
                         fontWeight: 700,
                         cursor: "pointer",
-                        whiteSpace: "nowrap"
+                        whiteSpace: "nowrap",
+                        transition: "transform 0.2s"
                     }}
+                    onMouseDown={(e) => e.currentTarget.style.transform = 'scale(0.95)'}
+                    onMouseUp={(e) => e.currentTarget.style.transform = 'scale(1)'}
                 >
-                    {loading ? "..." : "🔨 Teklif Ver"}
+                    {loading ? "..." : "Pey Ver"}
                 </button>
             </form>
 
+            {/* Status Indicator */}
             {status && (
                 <div style={{
+                    position: "absolute",
+                    top: "-35px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    whiteSpace: "nowrap",
+                    background: status.type === 'success' ? "rgba(34, 197, 94, 0.9)" : "rgba(239, 68, 68, 0.9)",
+                    padding: "4px 12px",
+                    borderRadius: "10px",
                     fontSize: "0.75rem",
-                    textAlign: "center",
-                    color: status.type === 'success' ? "#22c55e" : "#ef4444",
-                    fontWeight: 600
+                    fontWeight: 700,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.2)"
                 }}>
                     {status.msg}
                 </div>
+            )}
+
+            {/* Buy Now Button (Sleek) */}
+            {buyItNowPrice && (
+                <button
+                    onClick={handleBuyNow}
+                    disabled={loading}
+                    style={{
+                        background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                        color: "black",
+                        border: "none",
+                        borderRadius: "100px",
+                        padding: "8px 16px",
+                        fontSize: "0.8rem",
+                        fontWeight: 800,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
+                    }}
+                >
+                    ⚡ Hemen Al
+                </button>
             )}
         </div>
     );
