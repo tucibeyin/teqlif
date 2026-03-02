@@ -152,7 +152,15 @@ export default async function AdDetailPage({
                                     <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
                                     {!adData.isLive && isOwner ? "YAYIN HAZIRLIK ODASI (Sadece Siz Görüyorsunuz)" : "CANLI MEZAT ARENASI"}
                                 </div>
-                                <LiveArenaWrapper roomId={adData.id} adId={adData.id} isOwner={isOwner} />
+                                <LiveArenaWrapper
+                                    roomId={adData.id}
+                                    adId={adData.id}
+                                    isOwner={isOwner}
+                                    buyItNowPrice={ad.buyItNowPrice}
+                                    startingBid={ad.startingBid}
+                                    minBidStep={ad.minBidStep}
+                                    currentHighestBid={highestBid?.amount ?? 0}
+                                />
                             </div>
                         ) : (
                             ad.images && ad.images.length > 0 ? (
