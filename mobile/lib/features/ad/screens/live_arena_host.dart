@@ -346,6 +346,38 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     );
   }
 
+  Future<void> _acceptBidFromDashboard() async {
+    if (_bids.isEmpty) return;
+    final latestBid = _bids.first;
+    
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Satışı Onayla'),
+        content: Text('₺${latestBid.amount.toStringAsFixed(0)} tutarındaki son teklifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true), 
+            child: const Text('Onayla ve Sat', style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold))
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      try {
+        await ApiClient().post('/api/ads/${widget.ad.id}/sell', data: {
+          'amount': latestBid.amount,
+          'buyerLabel': latestBid.userLabel,
+        });
+        if (mounted) _endLiveStream();
+      } catch (e) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Satış işlemi başarısız.')));
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Auto-pop when room is disconnected or closed by host
@@ -390,10 +422,16 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       backgroundColor: Colors.black,
       body: Stack(
         children: [
-          // 1. Camera Preview & Loading State
+          // 1. Camera Preview & Loading State (Same as before but with better fit)
           if (roomState.isConnecting || (room == null && roomState.error == null))
             Container(
-              color: Colors.black,
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [Colors.black, Color(0xFF1a1a1a)],
+                ),
+              ),
               child: Center(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -405,46 +443,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                     const SizedBox(height: 8),
                     const Text('Bağlantı kuruluyor, lütfen bekleyin.', 
                       style: TextStyle(color: Colors.white70, fontSize: 14)),
-                    const SizedBox(height: 48),
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(backgroundColor: Colors.white24),
-                      onPressed: () async {
-                        // Emergency Exit
-                        await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-                        try {
-                           await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {'isLive': false});
-                        } catch(_) {}
-                        if (mounted) Navigator.pop(context);
-                      }, 
-                      child: const Text('İptal Et ve Geri Dön', style: TextStyle(color: Colors.white)),
-                    ),
-                  ],
-                ),
-              ),
-            )
-          else if (roomState.error != null)
-            Container(
-              color: Colors.black,
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline, color: Colors.red, size: 64),
-                    const SizedBox(height: 16),
-                    Text('Hata: ${roomState.error}', 
-                      textAlign: TextAlign.center,
-                      style: const TextStyle(color: Colors.white, fontSize: 16)),
-                    const SizedBox(height: 32),
-                    ElevatedButton(
-                      onPressed: () async {
-                        await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-                        try {
-                           await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {'isLive': false});
-                        } catch(_) {}
-                        if (mounted) Navigator.pop(context);
-                      }, 
-                      child: const Text('İlan Detayına Dön'),
-                    ),
                   ],
                 ),
               ),
@@ -459,9 +457,114 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
           else
             const Center(child: Icon(Icons.videocam_off, size: 80, color: Colors.white54)),
 
+          // 2. Premium Dashboard Header (NEW)
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topCenter,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Column(
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: Colors.redAccent.withOpacity(0.9),
+                            borderRadius: BorderRadius.circular(20),
+                            boxShadow: [BoxShadow(color: Colors.redAccent.withOpacity(0.5), blurRadius: 10)],
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.sensors, color: Colors.white, size: 14),
+                              const SizedBox(width: 6),
+                              const Text('YAYINDASIN',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                            ],
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                          onPressed: _endLiveStream,
+                        )
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    // Auction Stats Bar
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: BackdropFilter(
+                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.black.withOpacity(0.3),
+                            borderRadius: BorderRadius.circular(20),
+                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                          ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _bids.isNotEmpty ? '₺${_bids.first.amount.toStringAsFixed(0)}' : 'Henüz Teklif Yok',
+                                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                                    ),
+                                    if (_bids.isNotEmpty)
+                                      Text(_bids.first.userLabel, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                                  ],
+                                ),
+                              ),
+                              if (widget.ad.buyItNowPrice != null) ...[
+                                Container(width: 1, height: 40, color: Colors.white.withOpacity(0.1), margin: const EdgeInsets.symmetric(horizontal: 16)),
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.end,
+                                  children: [
+                                    Text('HEMEN AL', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                                    const SizedBox(height: 4),
+                                    Text('₺${widget.ad.buyItNowPrice?.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.w900)),
+                                  ],
+                                ),
+                              ]
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                    if (_bids.isNotEmpty && _isAuctionActive)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: ElevatedButton.icon(
+                            onPressed: _acceptBidFromDashboard,
+                            icon: const Icon(Icons.check_circle_outline, color: Colors.black),
+                            label: const Text('BU TEKLİFİ ONAYLA VE SAT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.greenAccent,
+                              foregroundColor: Colors.black,
+                              padding: const EdgeInsets.symmetric(vertical: 14),
+                              shape: RoundedRectangle_border: borderRadius: BorderRadius.circular(15)),
+                              elevation: 10,
+                              shadowColor: Colors.greenAccent.withOpacity(0.5),
+                            ),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
           if (guestTrack != null)
             Positioned(
-              top: 80,
+              top: 220,
               right: 16,
               width: 100,
               height: 140,
@@ -469,68 +572,37 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                 clipBehavior: Clip.none,
                 children: [
                   ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(16),
                     child: Container(
                       decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white, width: 2),
-                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+                        borderRadius: BorderRadius.circular(16),
                         color: Colors.black,
                       ),
-                      child: VideoTrackRenderer(
-                        guestTrack,
-                        fit: VideoViewFit.cover,
-                      ),
+                      child: VideoTrackRenderer(guestTrack, fit: VideoViewFit.cover),
                     ),
                   ),
                   if (guestIdentity != null)
                     Positioned(
-                      top: -12,
-                      right: -12,
-                      child: IconButton(
-                        icon: const Icon(Icons.cancel, color: Colors.redAccent, size: 28),
-                        onPressed: () => _kickGuest(guestIdentity!),
+                      top: -8,
+                      right: -8,
+                      child: GestureDetector(
+                        onTap: () => _kickGuest(guestIdentity!),
+                        child: Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                          child: const Icon(Icons.close, color: Colors.white, size: 16),
+                        ),
                       ),
                     ),
                 ],
               ),
             ),
 
-          // 2. UI Overlay
+          // 3. UI Overlay - Chat & Controls
           SafeArea(
             child: Column(
               children: [
-                // Header (Host Info)
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: Colors.redAccent,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.sensors, color: Colors.white, size: 14),
-                            const SizedBox(width: 6),
-                            const Text('YAYINDASIN',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12)),
-                          ],
-                        ),
-                      ),
-                      IconButton(
-                        icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                        onPressed: _endLiveStream,
-                      )
-                    ],
-                  ),
-                ),
-
                 const Spacer(),
 
                 // Ephemeral Chat & Info Drawer Button
@@ -543,52 +615,38 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                       Expanded(
                         child: ShaderMask(
                           shaderCallback: (Rect bounds) {
-                            return LinearGradient(
+                            return const LinearGradient(
                               begin: Alignment.topCenter,
                               end: Alignment.bottomCenter,
-                              colors: [
-                                Colors.transparent,
-                                Colors.white,
-                                Colors.white,
-                              ],
-                              stops: const [0.0, 0.4, 1.0],
+                              colors: [Colors.transparent, Colors.white, Colors.white],
+                              stops: [0.0, 0.4, 1.0],
                             ).createShader(bounds);
                           },
                           blendMode: BlendMode.dstIn,
                           child: SizedBox(
-                            height: 200,
+                            height: 150,
                             child: ListView.builder(
                               reverse: true,
                               itemCount: _messages.length,
                               itemBuilder: (context, index) {
                                 final msg = _messages[_messages.length - 1 - index];
                                 return Padding(
-                                  padding: const EdgeInsets.only(bottom: 8),
-                                  child: Row(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${msg.senderName}:',
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 14,
-                                          shadows: [Shadow(color: Colors.black, blurRadius: 4)],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 8),
-                                      Expanded(
-                                        child: Text(
-                                          msg.text,
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 14,
-                                            fontWeight: FontWeight.w500,
-                                            shadows: [Shadow(color: Colors.black, blurRadius: 4)],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
+                                  padding: const EdgeInsets.only(bottom: 6),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: Colors.black.withOpacity(0.2),
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('${msg.senderName}:', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w800, fontSize: 13)),
+                                        const SizedBox(width: 6),
+                                        Expanded(child: Text(msg.text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
+                                      ],
+                                    ),
                                   ),
                                 );
                               },
@@ -599,29 +657,14 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                       // Controls
                       Column(
                         children: [
-                          Stack(
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.gavel, color: Colors.white),
-                                style: IconButton.styleFrom(backgroundColor: Colors.black45),
-                                onPressed: _showBidsBottomSheet,
-                              ),
-                              if (_unreadBids > 0)
-                                Positioned(
-                                  right: 0,
-                                  top: 0,
-                                  child: Container(
-                                    padding: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                                    child: Text('$_unreadBids', style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                  ),
-                                ),
-                            ],
+                          _CircularControlButton(
+                            icon: Icons.gavel,
+                            onPressed: _showBidsBottomSheet,
+                            badge: _unreadBids > 0 ? '$_unreadBids' : null,
                           ),
-                          const SizedBox(height: 8),
-                          IconButton(
-                            icon: Icon(_isCameraEnabled ? Icons.videocam : Icons.videocam_off, color: Colors.white),
-                            style: IconButton.styleFrom(backgroundColor: Colors.black45),
+                          const SizedBox(height: 12),
+                          _CircularControlButton(
+                            icon: _isCameraEnabled ? Icons.videocam : Icons.videocam_off,
                             onPressed: () async {
                               final p = room?.localParticipant;
                               if (p != null) {
@@ -630,10 +673,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                               }
                             },
                           ),
-                          const SizedBox(height: 8),
-                          IconButton(
-                            icon: Icon(_isMicEnabled ? Icons.mic : Icons.mic_off, color: Colors.white),
-                            style: IconButton.styleFrom(backgroundColor: Colors.black45),
+                          const SizedBox(height: 12),
+                          _CircularControlButton(
+                            icon: _isMicEnabled ? Icons.mic : Icons.mic_off,
                             onPressed: () async {
                               final p = room?.localParticipant;
                               if (p != null) {
@@ -650,37 +692,25 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
 
                 // Auction & Chat Controls
                 Container(
-                  padding: const EdgeInsets.all(20),
+                  padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
                       if (widget.ad.isAuction)
                         Padding(
                           padding: const EdgeInsets.only(right: 12),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(30),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                              child: GestureDetector(
-                                onTap: _toggleAuction,
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 300),
-                                  width: 56,
-                                  height: 56,
-                                  decoration: BoxDecoration(
-                                    color: _isAuctionActive ? Colors.redAccent.withOpacity(0.85) : Colors.white.withOpacity(0.15),
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white30),
-                                    boxShadow: _isAuctionActive ? [
-                                      BoxShadow(color: Colors.redAccent.withOpacity(0.5), blurRadius: 15, spreadRadius: 2)
-                                    ] : null,
-                                  ),
-                                  child: Icon(
-                                    _isAuctionActive ? Icons.stop_circle : Icons.gavel,
-                                    color: Colors.white,
-                                    size: 28,
-                                  ),
-                                ),
+                          child: GestureDetector(
+                            onTap: _toggleAuction,
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 300),
+                              width: 56,
+                              height: 56,
+                              decoration: BoxDecoration(
+                                color: _isAuctionActive ? Colors.redAccent : Colors.white.withOpacity(0.2),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white30),
+                                boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.redAccent.withOpacity(0.4), blurRadius: 15)] : null,
                               ),
+                              child: Icon(_isAuctionActive ? Icons.stop : Icons.play_arrow, color: Colors.white, size: 30),
                             ),
                           ),
                         ),
@@ -688,13 +718,12 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(30),
                           child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                             child: Container(
                               padding: const EdgeInsets.symmetric(horizontal: 4),
                               decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.85),
+                                color: Colors.white.withOpacity(0.9),
                                 borderRadius: BorderRadius.circular(30),
-                                border: Border.all(color: Colors.white30),
                               ),
                               child: Row(
                                 children: [
@@ -702,27 +731,19 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                     child: TextField(
                                       controller: _chatCtrl,
                                       focusNode: _chatFocus,
-                                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600),
-                                      cursorColor: const Color(0xFF00B4CC),
+                                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
                                       decoration: const InputDecoration(
-                                        hintText: 'İzleyicilere yaz...',
-                                        hintStyle: TextStyle(color: Colors.black54),
+                                        hintText: 'Sohbete dahil ol...',
+                                        hintStyle: TextStyle(color: Colors.black54, fontSize: 13),
                                         border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                                        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                                       ),
                                       onSubmitted: (_) => _sendChatMessage(),
                                     ),
                                   ),
-                                  Container(
-                                    margin: const EdgeInsets.all(4),
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF00B4CC),
-                                      shape: BoxShape.circle,
-                                    ),
-                                    child: IconButton(
-                                      icon: const Icon(Icons.send, color: Colors.white, size: 20),
-                                      onPressed: _sendChatMessage,
-                                    ),
+                                  IconButton(
+                                    icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
+                                    onPressed: _sendChatMessage,
                                   )
                                 ],
                               ),
@@ -738,6 +759,51 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CircularControlButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String? badge;
+
+  const _CircularControlButton({required this.icon, required this.onPressed, this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: onPressed,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: Icon(icon, color: Colors.white, size: 24),
+              ),
+            ),
+          ),
+        ),
+        if (badge != null)
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+              child: Text(badge!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            ),
+          ),
+      ],
     );
   }
 }
