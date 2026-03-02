@@ -21,7 +21,7 @@ export async function PATCH(
 
         const resolvedParams = await params;
         const bidId = resolvedParams.id;
-        logger.info("PATCH /api/bids/[id]/accept start", { bidId, userId: currentUser.id });
+        logger.info("BIDS", "PATCH /api/bids/[id]/accept start", { bidId, userId: currentUser.id });
 
         // Get the bid and the associated ad
         const bid = await prisma.bid.findUnique({
@@ -67,7 +67,7 @@ export async function PATCH(
 
             /* 
             // 2.5 Automatically toggle Ad Status to SOLD (DECOUPLED - Now handled by /finalize)
-            logger.info("Setting ad to SOLD on bid acceptance", { adId: bid.adId, bidId });
+            logger.info("BIDS", "Setting ad to SOLD on bid acceptance", { adId: bid.adId, bidId });
             await tx.ad.update({
                 where: { id: bid.adId },
                 data: { status: 'SOLD' },

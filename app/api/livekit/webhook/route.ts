@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { WebhookReceiver } from 'livekit-server-sdk';
 import { prisma } from '@/lib/prisma';
 import { sendPushNotification } from '@/lib/fcm';
+import LiveKitLogger from '@/lib/logger';
 
 // Sadece bu eventleri dikkate alacağız
 const ALLOWED_EVENTS = ['room_started', 'room_finished'];
@@ -19,7 +20,7 @@ export async function POST(req: NextRequest) {
         const apiSecret = process.env.LIVEKIT_API_SECRET;
 
         if (!apiKey || !apiSecret) {
-            console.error('[LiveKit Webhook] Missing API keys in environment');
+            LiveKitLogger.error("WEBHOOK", "Missing API keys in environment");
             return NextResponse.json({ error: 'Server configuration error' }, { status: 500 });
         }
 
@@ -27,10 +28,11 @@ export async function POST(req: NextRequest) {
         const event = await receiver.receive(body, authHeader);
 
         if (!event || !event.event) {
+            LiveKitLogger.error("WEBHOOK", "Invalid webhook event format", { body });
             return NextResponse.json({ error: 'Invalid webhook event format' }, { status: 400 });
         }
 
-        console.log(`[LiveKit Webhook] Received event: ${event.event} for room: ${event.room?.name}`);
+        LiveKitLogger.info("WEBHOOK", `Received event: ${event.event} for room: ${event.room?.name}`);
 
         if (!ALLOWED_EVENTS.includes(event.event)) {
             return NextResponse.json({ message: 'Event ignored' }, { status: 200 });
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
         const adId = event.room?.name;
 
         if (!adId) {
-            console.error('[LiveKit Webhook] Room name (adId) is missing in the event');
+            LiveKitLogger.error("WEBHOOK", "Room name (adId) is missing in the event", { event });
             return NextResponse.json({ error: 'Room name missing' }, { status: 400 });
         }
 
@@ -59,7 +61,7 @@ export async function POST(req: NextRequest) {
                 }
             });
 
-            console.log(`[LiveKit Webhook] Ad ${adId} is now LIVE.`);
+            LiveKitLogger.info("WEBHOOK", `Ad ${adId} is now LIVE (room_started).`);
 
             // Favorileyen kullanıcılara Push Notification atalım
             const favoritedUsers = (updatedAd as any).favorites?.map((f: any) => f.user).filter((u: any) => u.fcmToken) || [];
@@ -71,9 +73,9 @@ export async function POST(req: NextRequest) {
                 // Asenkron olarak gönderelim, webhook'u bekletmeyelim
                 Promise.all(favoritedUsers.map((user: any) =>
                     sendPushNotification(user.fcmToken!, title, bodyMsg, { adId: updatedAd.id, type: 'LIVE_AUCTION_STARTED' })
-                )).catch(err => console.error('[LiveKit Webhook] Error sending FCM push:', err));
+                )).catch(err => LiveKitLogger.error("WEBHOOK", "Error sending FCM push for room_started", err));
 
-                console.log(`[LiveKit Webhook] Sent push notifications to ${favoritedUsers.length} users.`);
+                LiveKitLogger.info("WEBHOOK", `Sent push notifications to ${favoritedUsers.length} users.`);
             }
         }
 

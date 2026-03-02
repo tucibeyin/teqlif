@@ -21,7 +21,7 @@ export async function POST(
 
         const resolvedParams = await params;
         const bidId = resolvedParams.id;
-        logger.info("POST /api/bids/[id]/finalize start", { bidId, userId: currentUser.id });
+        logger.info("BIDS", "POST /api/bids/[id]/finalize start", { bidId, userId: currentUser.id });
 
         // Get the bid and the associated ad
         const bid = await prisma.bid.findUnique({

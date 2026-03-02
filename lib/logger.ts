@@ -1,70 +1,65 @@
 import fs from 'fs';
 import path from 'path';
 
-// Simple in-memory and file-based logger for VPS terminal visibility
-type LogEntry = {
-    timestamp: string;
-    level: 'INFO' | 'WARN' | 'ERROR';
-    message: string;
-    context?: any;
-};
-
-const MAX_LOGS = 100;
-let logs: LogEntry[] = [];
+// Logların kaydedileceği dosya yolu. Proje kök dizininde 'logs' klasöründe tutulacak.
 const LOG_DIR = path.join(process.cwd(), 'logs');
-const LOG_FILE = path.join(LOG_DIR, 'app.log');
+const LOG_FILE = path.join(LOG_DIR, 'livekit-error.log');
 
-// Ensure logs directory exists
+// Klasör yoksa oluştur
 if (!fs.existsSync(LOG_DIR)) {
-    fs.mkdirSync(LOG_DIR, { recursive: true });
+    try {
+        fs.mkdirSync(LOG_DIR, { recursive: true });
+    } catch (e) {
+        console.error("Log klasörü oluşturulamadı:", e);
+    }
 }
 
-export const logger = {
-    info(message: string, context?: any) {
-        this._log('INFO', message, context);
-    },
-    warn(message: string, context?: any) {
-        this._log('WARN', message, context);
-    },
-    error(message: string, context?: any) {
-        this._log('ERROR', message, context);
-    },
-    _log(level: LogEntry['level'], message: string, context?: any) {
-        const entry: LogEntry = {
-            timestamp: new Date().toISOString(),
-            level,
-            message,
-            context
-        };
+type LogLevel = 'INFO' | 'WARN' | 'ERROR';
 
-        const logLine = `[${entry.timestamp}] ${level}: ${message}${context ? ' ' + JSON.stringify(context) : ''}\n`;
-
-        // Write to stdout for process managers (like PM2)
-        process.stdout.write(logLine);
-
-        // Write to physical file for tail -f
-        try {
-            fs.appendFileSync(LOG_FILE, logLine);
-        } catch (e) {
-            console.error('Failed to write to log file', e);
-        }
-
-        logs.unshift(entry);
-        if (logs.length > MAX_LOGS) {
-            logs = logs.slice(0, MAX_LOGS);
-        }
-    },
-    getLogs() {
-        return logs;
-    },
-    clear() {
-        logs = [];
-        if (fs.existsSync(LOG_FILE)) {
-            try {
-                fs.writeFileSync(LOG_FILE, '');
-            } catch (e) {
-                console.error('Failed to clear log file', e);
+/**
+ * Merkezi LiveKit Loglama Sistemi
+ * Hataları ve önemli olayları VPS üzerindeki fiziksel bir dosyaya yazar.
+ */
+class LiveKitLogger {
+    private static _formatMessage(level: LogLevel, context: string, message: string, meta?: any): string {
+        const timestamp = new Date().toISOString();
+        let logLine = `[${timestamp}] [${level}] [${context}] ${message}`;
+        if (meta) {
+            if (meta instanceof Error) {
+                logLine += ` \n   -> Error: ${meta.message}\n   -> Stack: ${meta.stack}`;
+            } else {
+                logLine += ` \n   -> Meta: ${JSON.stringify(meta)}`;
             }
         }
+        return logLine + '\n';
     }
-};
+
+    private static _writeToFile(logLine: string) {
+        try {
+            fs.appendFileSync(LOG_FILE, logLine, 'utf8');
+        } catch (e) {
+            console.error("Log dosyasına yazılamadı:", e);
+        }
+    }
+
+    static info(context: string, message: string, meta?: any) {
+        const logLine = this._formatMessage('INFO', context, message, meta);
+        console.log(logLine.trim());
+        this._writeToFile(logLine);
+    }
+
+    static warn(context: string, message: string, meta?: any) {
+        const logLine = this._formatMessage('WARN', context, message, meta);
+        console.warn(logLine.trim());
+        this._writeToFile(logLine);
+    }
+
+    static error(context: string, message: string, meta?: any) {
+        const logLine = this._formatMessage('ERROR', context, message, meta);
+        console.error(logLine.trim());
+        this._writeToFile(logLine);
+    }
+}
+
+export const logger = LiveKitLogger;
+export default LiveKitLogger;

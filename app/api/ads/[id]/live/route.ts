@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getMobileUser } from "@/lib/mobile-auth";
+import LiveKitLogger from "@/lib/logger";
 
 export const dynamic = 'force-dynamic';
 
@@ -29,9 +30,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         revalidatePath(`/ad/${id}`);
         revalidatePath("/");
 
+        LiveKitLogger.info("API_LIVE", `Ad ${id} live status updated to ${isLive}`, { userId: user.id });
         return NextResponse.json(updatedAd, { status: 200 });
     } catch (err) {
-        console.error("POST /api/ads/[id]/live error:", err);
+        LiveKitLogger.error("API_LIVE", `POST /api/ads/${await params.then(p => p.id)}/live error`, err);
         return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
     }
 }
