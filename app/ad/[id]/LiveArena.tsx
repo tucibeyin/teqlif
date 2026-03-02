@@ -78,7 +78,7 @@ function CustomArenaLayout() {
     return (
         <div style={{ position: "relative", width: "100%", height: "100%", background: "black" }}>
             {/* Host Full Screen */}
-            <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+            <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
 
             {/* Guest PiP Screen */}
             {guestTrack && (
