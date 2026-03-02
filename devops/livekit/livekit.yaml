@@ -8,7 +8,7 @@ rtc:
   port_range_end: 60000
 
 keys:
-  devkey: bansqqpPGeq53Rcf9rZJ71PtDIR1O4VLtHpjgbgOIRy
+  APIRfjMdH2ANaz8: bansqqpPGeq53Rcf9rZJ71PtDIR1O4VLtHpjgbgOIRy
 
 logging:
   level: info
