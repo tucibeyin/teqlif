@@ -110,9 +110,13 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
         print("NTP Sync failed: $e");
       }
 
-      // If Host, listen for network quality to send FREEZE signals
-      if (isOwner) {
-        _room!.events.listen((event) {
+      // Universal Room Event Listener
+      _room!.events.listen((event) {
+        if (event is RoomDisconnectedEvent) {
+          state = LiveRoomState(); // Reset state when disconnected
+        }
+        
+        if (isOwner) {
           if (event is ParticipantConnectionQualityUpdatedEvent && event.participant == _room!.localParticipant) {
             if (event.connectionQuality == ConnectionQuality.poor || event.connectionQuality == ConnectionQuality.lost) {
               _broadcastFreezeStatus(true);
@@ -120,10 +124,7 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
               _broadcastFreezeStatus(false);
             }
           }
-        });
-      } else {
-        // If Viewer, listen for FREEZE signals
-        _room!.events.listen((event) {
+        } else {
           if (event is DataReceivedEvent) {
             final msg = String.fromCharCodes(event.data);
             if (msg == 'SYS:FREEZE') {
@@ -132,9 +133,8 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
               state = state.copyWith(isFrozen: false);
             }
           }
-        });
-      }
-
+        }
+      });
     } catch (e) {
       state = state.copyWith(isConnecting: false, error: e.toString());
     }

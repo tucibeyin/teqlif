@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'dart:async';
 
 import '../../../core/models/ad.dart';
@@ -30,8 +31,27 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
   void initState() {
     super.initState();
     // Connect to room as Host
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(liveRoomProvider(widget.ad.id).notifier).connect(true);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      // Request permissions first
+      final cameraStatus = await Permission.camera.request();
+      final micStatus = await Permission.microphone.request();
+
+      if (cameraStatus.isGranted && micStatus.isGranted) {
+        final notifier = ref.read(liveRoomProvider(widget.ad.id).notifier);
+        await notifier.connect(true);
+        
+        final room = ref.read(liveRoomProvider(widget.ad.id)).room;
+        if (room != null) {
+          room.events.listen(_onRoomEvent);
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Yayın başlatmak için kamera ve mikrofon izni gereklidir.')),
+          );
+          context.pop();
+        }
+      }
     });
   }
 
@@ -105,8 +125,17 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     );
 
     if (confirmed == true) {
-      // Disconnect from LiveKit. The LiveKit Webhook will trigger 'room_finished'
-      // and Sync bids to DB.
+      // 1. Tell backend that we are no longer live
+      // This ensures the isLive flag is cleared even if webhook takes a moment
+      try {
+        await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {
+          'isLive': false,
+        });
+      } catch (e) {
+        debugPrint('Failed to update isLive status: $e');
+      }
+
+      // 2. Disconnect from LiveKit.
       await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
       if (mounted) context.pop(); // Go back to normal ad detail
     }
@@ -131,6 +160,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
 
   @override
   Widget build(BuildContext context) {
+    // Auto-pop when room is disconnected or closed by host
+    ref.listen(liveRoomProvider(widget.ad.id), (previous, next) {
+      if (previous?.room != null && next.room == null && !next.isConnecting) {
+        if (mounted) context.pop();
+      }
+    });
+
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
 
@@ -139,9 +175,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     String? guestIdentity;
 
     if (room != null) {
-      // Listen to data channel
-      room.events.listen(_onRoomEvent);
-
       if (room.localParticipant != null) {
         for (var pub in room.localParticipant!.videoTrackPublications) {
           if (pub.track != null) {

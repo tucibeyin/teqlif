@@ -70,8 +70,15 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     );
 
     // Connect to room
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(liveRoomProvider(widget.ad.id).notifier).connect(false);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final notifier = ref.read(liveRoomProvider(widget.ad.id).notifier);
+      await notifier.connect(false);
+      
+      // Listen to events after connection
+      final room = ref.read(liveRoomProvider(widget.ad.id)).room;
+      if (room != null) {
+        room.events.listen(_onRoomEvent);
+      }
     });
   }
 
@@ -346,6 +353,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   @override
   Widget build(BuildContext context) {
+    // Auto-pop when room is disconnected or closed by host
+    ref.listen(liveRoomProvider(widget.ad.id), (previous, next) {
+      if (previous?.room != null && next.room == null && !next.isConnecting) {
+        if (mounted) context.pop();
+      }
+    });
+
     final updatedAdAsync = ref.watch(adDetailProvider(widget.ad.id));
     final currentAd = updatedAdAsync.value ?? widget.ad;
     
@@ -391,8 +405,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         }
       }
 
-      // Listen to data channel
-      room.events.listen(_onRoomEvent);
+      }
     }
 
     return GestureDetector(
