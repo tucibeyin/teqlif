@@ -500,13 +500,14 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       }
     });
 
+    final adAsync = ref.watch(adDetailProvider(widget.ad.id));
     final currentAd = adAsync.value ?? widget.ad;
     
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
-    final isDisconnected = roomState.room?.connectionState == lk.ConnectionState.disconnected || (room == null && !roomState.isConnecting);
+    final isDisconnected = room?.connectionState.name == 'disconnected' || (room == null && !roomState.isConnecting);
 
-    lk.VideoTrack? hostTrack;
+    VideoTrack? hostTrack;
     VideoTrack? guestTrack;
 
     if (room != null) {
@@ -836,7 +837,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           ],
                         ),
                       ),
-                ),
+                    ],
+                  ),
+                )
+              : const SizedBox.shrink(),
               ),
             ),
           ],
