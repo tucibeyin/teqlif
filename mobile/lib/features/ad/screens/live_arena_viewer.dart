@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'dart:ui';
@@ -127,8 +128,18 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     _resetInactivityTimer();
   }
 
+  String _formatPrice(double amount) {
+    return NumberFormat.decimalPattern('tr').format(amount);
+  }
+
   void _handleDataChannelMessage(List<int> data, RemoteParticipant? p) {
-    final message = String.fromCharCodes(data);
+    String message;
+    try {
+      message = utf8.decode(data);
+    } catch (e) {
+      debugPrint('UTF-8 Decode error: $e');
+      message = String.fromCharCodes(data);
+    }
     
     try {
       final decoded = jsonDecode(message);
@@ -154,7 +165,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           // Auto-update bid controller for the user
           final nextBid = amount + (widget.ad.minBidStep);
           setState(() {
-            _bidCtrl.text = nextBid.toStringAsFixed(0);
+            _bidCtrl.text = _formatPrice(nextBid);
           });
           
           _recordBidVelocity();
@@ -172,12 +183,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     if (message.startsWith('🔥 Yeni Teklif:')) {
       final amountStr = message.replaceAll('🔥 Yeni Teklif: ₺', '').trim();
       final amount = double.tryParse(amountStr.replaceAll('.', '').replaceAll(',', '.'));
-      if (amount != null) {
-        final nextBid = amount + (widget.ad.minBidStep);
-        setState(() {
-          _bidCtrl.text = nextBid.toStringAsFixed(0);
-        });
-      }
+        if (amount != null) {
+          final nextBid = amount + (widget.ad.minBidStep);
+          setState(() {
+            _bidCtrl.text = _formatPrice(nextBid);
+          });
+        }
       _recordBidVelocity();
     }
 
@@ -387,7 +398,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                       fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
               if (widget.ad.startingBid != null)
-                Text('Başlangıç Fiyatı: ₺${widget.ad.startingBid}',
+                Text('Başlangıç Fiyatı: ₺${_formatPrice(widget.ad.startingBid!)}',
                     style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -563,7 +574,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                           children: [
                                             Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
                                             const SizedBox(height: 4),
-                                            Text('₺${(currentAd.highestBidAmount ?? currentAd.startingBid ?? 0).toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFF22c55e), fontSize: 20, fontWeight: FontWeight.w900)),
+                                            Text('₺${_formatPrice(currentAd.highestBidAmount ?? currentAd.startingBid ?? 0)}', style: const TextStyle(color: Color(0xFF22c55e), fontSize: 20, fontWeight: FontWeight.w900)),
                                           ],
                                         ),
                                       ),
@@ -574,7 +585,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                           children: [
                                             Text('HEMEN AL', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
                                             const SizedBox(height: 4),
-                                            Text('₺${currentAd.buyItNowPrice?.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.w900)),
+                                            Text('₺${_formatPrice(currentAd.buyItNowPrice!)}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.w900)),
                                           ],
                                         ),
                                       ]
@@ -710,7 +721,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
                                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
                                           ),
-                                          child: Text('HEMEN AL: ₺${currentAd.buyItNowPrice?.toStringAsFixed(0)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                                          child: Text('HEMEN AL: ₺${_formatPrice(currentAd.buyItNowPrice!)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
                                         ),
                                       ]
                                     ],

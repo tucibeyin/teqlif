@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'dart:ui';
 import 'dart:convert';
@@ -92,8 +93,18 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     super.dispose();
   }
 
+  String _formatPrice(double amount) {
+    return NumberFormat.decimalPattern('tr').format(amount);
+  }
+
   void _handleDataChannelMessage(List<int> data, RemoteParticipant? p, {String? customName}) {
-    final message = String.fromCharCodes(data);
+    String message;
+    try {
+      message = utf8.decode(data);
+    } catch (e) {
+      debugPrint('UTF-8 Decode error: $e');
+      message = String.fromCharCodes(data);
+    }
     
     // Check if it's a bid
     if (message.startsWith('🔥 Yeni Teklif:')) {
@@ -388,7 +399,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
                                       Text(bid.userLabel, style: const TextStyle(fontWeight: FontWeight.bold)),
-                                      Text('₺${bid.amount.toStringAsFixed(0)}', 
+                                      Text('₺${_formatPrice(bid.amount)}', 
                                         style: const TextStyle(fontSize: 18, color: Color(0xFF00B4CC), fontWeight: FontWeight.bold)),
                                     ],
                                   ),
@@ -400,7 +411,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                       context: context,
                                       builder: (ctx) => AlertDialog(
                                         title: const Text('Teklifi Onayla'),
-                                        content: Text('₺${bid.amount.toStringAsFixed(0)} tutarındaki teklifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
+                                        content: Text('₺${_formatPrice(bid.amount)} tutarındaki teklifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
                                         actions: [
                                           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hayır')),
                                           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Evet, Sat')),
@@ -454,7 +465,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Satışı Onayla'),
-        content: Text('₺${latestBid.amount.toStringAsFixed(0)} tutarındaki son teklifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
+        content: Text('₺${_formatPrice(latestBid.amount)} tutarındaki son teklifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
           TextButton(
@@ -569,18 +580,19 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: [
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                           decoration: BoxDecoration(
                             color: Colors.redAccent.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(20),
-                            boxShadow: [BoxShadow(color: Colors.redAccent.withOpacity(0.5), blurRadius: 10)],
+                            borderRadius: BorderRadius.circular(15),
+                            boxShadow: [BoxShadow(color: Colors.redAccent.withOpacity(0.3), blurRadius: 8)],
                           ),
                           child: Row(
+                            mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(Icons.sensors, color: Colors.white, size: 14),
-                              const SizedBox(width: 6),
-                              const Text('YAYINDASIN',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                              const Icon(Icons.sensors, color: Colors.white, size: 12),
+                              const SizedBox(width: 4),
+                              const Text('CANLI',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 0.5)),
                             ],
                           ),
                         ),
@@ -597,11 +609,11 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                       child: BackdropFilter(
                         filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
                         child: Container(
-                          padding: const EdgeInsets.all(16),
+                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.3),
+                            color: Colors.black.withOpacity(0.4),
                             borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withOpacity(0.1)),
+                            border: Border.all(color: Colors.white.withOpacity(0.08)),
                           ),
                           child: Row(
                             children: [
@@ -609,11 +621,11 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                                    const SizedBox(height: 4),
+                                    Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                                    const SizedBox(height: 2),
                                     Text(
-                                      _bids.isNotEmpty ? '₺${_bids.first.amount.toStringAsFixed(0)}' : 'Henüz Teklif Yok',
-                                      style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.w900),
+                                      _bids.isNotEmpty ? '₺${_formatPrice(_bids.first.amount)}' : 'Henüz Teklif Yok',
+                                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
                                     ),
                                     const SizedBox(height: 4),
                                     Container(
@@ -646,9 +658,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                 Column(
                                   crossAxisAlignment: CrossAxisAlignment.end,
                                   children: [
-                                    Text('HEMEN AL', style: TextStyle(color: Colors.white.withOpacity(0.6), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                                    const SizedBox(height: 4),
-                                    Text('₺${widget.ad.buyItNowPrice?.toStringAsFixed(0)}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.w900)),
+                                    Text('HEMEN AL', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                                    const SizedBox(height: 2),
+                                    Text('₺${_formatPrice(widget.ad.buyItNowPrice!)}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 18, fontWeight: FontWeight.w900)),
                                   ],
                                 ),
                               ]
