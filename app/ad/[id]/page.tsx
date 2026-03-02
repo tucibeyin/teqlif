@@ -141,14 +141,14 @@ export default async function AdDetailPage({
 
     return (
         <div className="container">
-            {adData.isLive && adData.isAuction && adData.liveKitRoomId && (
+            {adData.isAuction && (adData.isLive || isOwner) && (
                 <div style={{ marginBottom: "2rem" }}>
                     <div className="card" style={{ overflow: "hidden", border: "2px solid #ef4444" }}>
                         <div style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                             <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
-                            CANLI MEZAT ARENASI
+                            {!adData.isLive && isOwner ? "YAYIN HAZIRLIK ODASI (Sadece Siz Görüyorsunuz)" : "CANLI MEZAT ARENASI"}
                         </div>
-                        <LiveArenaWrapper roomId={adData.liveKitRoomId} adId={adData.id} isOwner={isOwner} />
+                        <LiveArenaWrapper roomId={adData.id} adId={adData.id} isOwner={isOwner} />
                     </div>
                 </div>
             )}

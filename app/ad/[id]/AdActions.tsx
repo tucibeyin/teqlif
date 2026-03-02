@@ -147,7 +147,7 @@ export function AdActions({
                 }
 
                 // Call endpoint to set isLive = true, generating a room name if necessary (backend does this or we pass it)
-                const liveKitRoomId = `room_${adId}_${Date.now()}`;
+                const liveKitRoomId = adId;
 
                 const res = await fetch(`/api/ads/${adId}/live`, {
                     method: "POST",

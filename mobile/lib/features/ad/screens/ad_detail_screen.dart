@@ -117,7 +117,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     if (confirm != true) return;
 
     try {
-      final liveKitRoomId = 'room_${ad.id}_${DateTime.now().millisecondsSinceEpoch}';
+      final liveKitRoomId = ad.id;
       final response = await ApiClient().post('/api/ads/${ad.id}/live', data: {
         'isLive': true,
         'liveKitRoomId': liveKitRoomId,
