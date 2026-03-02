@@ -128,9 +128,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     _resetInactivityTimer();
   }
 
-  String _formatPrice(double amount) {
-    return NumberFormat.decimalPattern('tr').format(amount);
-  }
+  String _formatPrice(double p) =>
+      '₺${p.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   void _resetMessageTimer() {
     Timer(const Duration(seconds: 4), () {
@@ -599,7 +598,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                           children: [
                                             Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
                                             const SizedBox(height: 4),
-                                            Text('₺${_formatPrice(currentAd.highestBidAmount ?? currentAd.startingBid ?? 0)}', style: const TextStyle(color: Color(0xFF22c55e), fontSize: 20, fontWeight: FontWeight.w900)),
+                                            Text(_formatPrice(currentAd.highestBidAmount ?? currentAd.startingBid ?? 0), style: const TextStyle(color: Color(0xFF22c55e), fontSize: 20, fontWeight: FontWeight.w900)),
                                           ],
                                         ),
                                       ),
@@ -610,7 +609,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                           children: [
                                             Text('HEMEN AL', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
                                             const SizedBox(height: 4),
-                                            Text('₺${_formatPrice(currentAd.buyItNowPrice!)}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.w900)),
+                                            Text(_formatPrice(currentAd.buyItNowPrice!), style: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.w900)),
                                           ],
                                         ),
                                       ]
@@ -721,6 +720,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                         ElevatedButton(
                                           onPressed: _placeBidSlide,
                                           style: ElevatedButton.styleFrom(
+                                            elevation: 8,
+                                            shadowColor: const Color(0xFF00B4CC).withOpacity(0.5),
                                             backgroundColor: const Color(0xFF00B4CC), 
                                             foregroundColor: Colors.white, 
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
@@ -741,12 +742,14 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                             }
                                           },
                                           style: ElevatedButton.styleFrom(
+                                            elevation: 8,
+                                            shadowColor: const Color(0xFFFFD700).withOpacity(0.5),
                                             backgroundColor: const Color(0xFFFFD700), 
                                             foregroundColor: Colors.black, 
                                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
                                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
                                           ),
-                                          child: Text('HEMEN AL: ₺${_formatPrice(currentAd.buyItNowPrice!)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                                          child: Text('HEMEN AL: ${_formatPrice(currentAd.buyItNowPrice!)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
                                         ),
                                       ]
                                     ],
@@ -757,10 +760,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                             const SizedBox(height: 12),
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 20),
-                              decoration: BoxDecoration(color: Colors.white.withOpacity(0.9), borderRadius: BorderRadius.circular(25)),
+                              decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), border: Border.all(color: Colors.white24), borderRadius: BorderRadius.circular(25)),
                               child: Row(
                                 children: [
-                                  Expanded(child: TextField(controller: _chatCtrl, style: const TextStyle(color: Colors.black, fontWeight: FontWeight.w600, fontSize: 14), decoration: const InputDecoration(hintText: 'Mesaj gönder...', hintStyle: TextStyle(color: Colors.black54), border: InputBorder.none), onSubmitted: (_) => _sendChatMessage())),
+                                  Expanded(child: TextField(controller: _chatCtrl, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14), decoration: const InputDecoration(hintText: 'Mesaj gönder...', hintStyle: TextStyle(color: Colors.white54), border: InputBorder.none), onSubmitted: (_) => _sendChatMessage())),
                                   IconButton(icon: const Icon(Icons.send, color: Color(0xFF00B4CC), size: 20), onPressed: _sendChatMessage),
                                 ],
                               ),
