@@ -534,14 +534,15 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
             {isOwner ? (
                 /* Host Controls */
                 <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", gap: "6px" }}>
+                    <div style={{ display: "flex", gap: "8px" }}>
                         {auctionStatus === "IDLE" ? (
                             <button
                                 onClick={handleStartAuction}
                                 disabled={loading}
                                 style={{
-                                    background: "#3b82f6", color: "white", border: "none", borderRadius: "100px",
-                                    padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer"
+                                    background: "var(--primary)", color: "white", border: "none", borderRadius: "100px",
+                                    padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer",
+                                    boxShadow: "0 4px 12px rgba(0, 188, 212, 0.3)"
                                 }}
                             >
                                 Mezatı Başlat
@@ -552,36 +553,38 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                                 disabled={loading}
                                 style={{
                                     background: "#f59e0b", color: "white", border: "none", borderRadius: "100px",
-                                    padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer"
+                                    padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer",
+                                    boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)"
                                 }}
                             >
-                                Mezatı Durdur
+                                Mezatı Bitir
                             </button>
                         )}
                         <button
                             onClick={handleEndBroadcast}
                             disabled={loading}
                             style={{
-                                background: "rgba(255, 255, 255, 0.1)", color: "#f87171", border: "1px solid rgba(248, 113, 113, 0.3)", borderRadius: "100px",
-                                padding: "6px 14px", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer"
+                                background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.5)", borderRadius: "100px",
+                                padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer",
+                                transition: "all 0.2s"
                             }}
                         >
                             Yayını Bitir
                         </button>
                     </div>
 
-                    <div style={{ display: "flex", gap: "6px" }}>
+                    <div style={{ display: "flex", gap: "8px" }}>
                         <button
                             onClick={handleCancel}
                             disabled={loading || currentHighestBid === 0 || !liveHighestBidId}
                             style={{
-                                background: "rgba(239, 68, 68, 0.2)",
-                                color: "#ef4444",
-                                border: "1px solid rgba(239, 68, 68, 0.3)",
+                                background: "rgba(255, 255, 255, 0.15)",
+                                color: "white",
+                                border: "1px solid rgba(255, 255, 255, 0.3)",
                                 borderRadius: "100px",
-                                padding: "6px 14px",
-                                fontSize: "0.75rem",
-                                fontWeight: 700,
+                                padding: "8px 16px",
+                                fontSize: "0.8rem",
+                                fontWeight: 800,
                                 cursor: "pointer",
                                 transition: "all 0.2s"
                             }}
@@ -597,11 +600,11 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                                 border: "none",
                                 borderRadius: "100px",
                                 padding: "8px 18px",
-                                fontSize: "0.8rem",
+                                fontSize: "0.85rem",
                                 fontWeight: 800,
                                 cursor: "pointer",
                                 transition: "transform 0.2s",
-                                boxShadow: "0 4px 12px rgba(34, 197, 94, 0.3)"
+                                boxShadow: "0 4px 15px rgba(34, 197, 94, 0.4)"
                             }}
                         >
                             {loading ? "..." : "Onayla ve Sat"}

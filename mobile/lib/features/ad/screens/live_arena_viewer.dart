@@ -532,7 +532,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               )
             else if (hostTrack != null)
               SizedBox.expand(
-                child: VideoTrackRenderer(hostTrack, fit: VideoViewFit.cover),
+                child: VideoTrackRenderer(hostTrack, fit: VideoViewFit.contain),
               )
             else
               const Center(child: Text('Yayın bekleniyor...', style: TextStyle(color: Colors.white54))),
