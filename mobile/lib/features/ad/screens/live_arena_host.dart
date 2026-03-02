@@ -72,6 +72,16 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     });
   }
 
+  String _formatSenderName(String? name) {
+    if (name == null || name.isEmpty) return 'Katılımcı';
+    final parts = name.trim().split(' ');
+    if (parts.length == 1) return parts[0];
+    
+    final firstName = parts[0];
+    final otherParts = parts.skip(1).map((p) => p.isNotEmpty ? '${p[0]}.' : '').where((s) => s.isNotEmpty).join(' ');
+    return '$firstName $otherParts';
+  }
+
   @override
   void dispose() {
     _chatCtrl.dispose();
@@ -87,7 +97,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       _messages.add(_EphemeralMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         text: message,
-        senderName: p?.name ?? 'Biri',
+        senderName: _formatSenderName(p?.name),
         timestamp: DateTime.now(),
       ));
       if (_messages.length > 5) { // Host sees maybe a bit more or 3 like viewer

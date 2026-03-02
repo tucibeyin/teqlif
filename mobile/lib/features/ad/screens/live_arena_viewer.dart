@@ -103,6 +103,16 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     super.dispose();
   }
 
+  String _formatSenderName(String? name) {
+    if (name == null || name.isEmpty) return 'Katılımcı';
+    final parts = name.trim().split(' ');
+    if (parts.length == 1) return parts[0];
+    
+    final firstName = parts[0];
+    final otherParts = parts.skip(1).map((p) => p.isNotEmpty ? '${p[0]}.' : '').where((s) => s.isNotEmpty).join(' ');
+    return '$firstName $otherParts';
+  }
+
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
@@ -165,7 +175,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       _messages.add(_EphemeralMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
         text: message,
-        senderName: p?.name ?? 'Biri',
+        senderName: _formatSenderName(p?.name),
         timestamp: DateTime.now(),
       ));
       if (_messages.length > 3) {
@@ -262,7 +272,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room != null) {
       await state.room!.localParticipant?.publishData(text.codeUnits);
-      _handleDataChannelMessage(text.codeUnits, null); // Add my own
+      // For local message, we use the literal name if available or "Ben"
+      final myName = state.room!.localParticipant?.name;
+      _handleDataChannelMessage(text.codeUnits, null); 
+      // Note: _handleDataChannelMessage will call _formatSenderName
     }
     _chatCtrl.clear();
     _chatFocus.unfocus();
@@ -629,10 +642,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                             Text(
                                               '${msg.senderName}:',
                                               style: const TextStyle(
-                                                color: Colors.white70,
-                                                fontWeight: FontWeight.w600,
+                                                color: Colors.white,
+                                                fontWeight: FontWeight.w700,
                                                 fontSize: 14,
-                                                shadows: [Shadow(color: Colors.black54, blurRadius: 2)],
+                                                shadows: [Shadow(color: Colors.black, blurRadius: 4)],
                                               ),
                                             ),
                                             const SizedBox(width: 8),
