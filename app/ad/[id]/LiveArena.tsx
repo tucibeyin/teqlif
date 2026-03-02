@@ -92,13 +92,15 @@ function CustomArenaLayout({
     minBidStep,
     initialHighestBid
 }: any) {
+    const room = useRoomContext();
     const tracks = useTracks([Track.Source.Camera]);
     const [liveHighestBid, setLiveHighestBid] = useState(initialHighestBid);
     const [lastAcceptedBidId, setLastAcceptedBidId] = useState<string | null>(null);
     const [liveHighestBidId, setLiveHighestBidId] = useState<string | null>(null);
     const [auctionStatus, setAuctionStatus] = useState<"IDLE" | "ACTIVE">("IDLE");
     const [auctionNotification, setAuctionNotification] = useState<string | null>(null);
-    const [messages, setMessages] = useState<{ id: string, text: string, sender: string }[]>([]);
+    const [messages, setMessages] = useState<{ id: string, text: string, sender: string, senderId?: string }[]>([]);
+    const [liveHighestBidderId, setLiveHighestBidderId] = useState<string | null>(null);
 
     useDataChannel((msg) => {
         try {
@@ -118,16 +120,19 @@ function CustomArenaLayout({
             if (dataObj.type === 'NEW_BID') {
                 setLiveHighestBid(dataObj.amount);
                 setLiveHighestBidId(dataObj.bidId); // TRUTH: Save exact ID
+                setLiveHighestBidderId(dataObj.bidderId);
                 setLastAcceptedBidId(null);
             } else if (dataObj.type === 'BID_ACCEPTED') {
                 setLiveHighestBid(dataObj.amount);
                 setLiveHighestBidId(dataObj.bidId);
+                setLiveHighestBidderId(dataObj.bidderId);
                 setLastAcceptedBidId(dataObj.bidId);
             } else if (dataObj.type === 'CHAT') {
                 const newMessage = {
                     id: Date.now().toString(),
                     text: dataObj.text,
-                    sender: dataObj.senderName || "Katılımcı"
+                    sender: dataObj.senderName || "Katılımcı",
+                    senderId: dataObj.senderId
                 };
                 setMessages(prev => [...prev.slice(-4), newMessage]);
                 setTimeout(() => {
@@ -217,6 +222,7 @@ function CustomArenaLayout({
                 currentHighestBid={liveHighestBid}
                 lastAcceptedBidId={lastAcceptedBidId}
                 liveHighestBidId={liveHighestBidId} // NEW: Pass the tracked Bid ID
+                liveHighestBidderId={liveHighestBidderId}
                 auctionStatus={auctionStatus}
                 setMessages={setMessages}
             />
@@ -286,6 +292,29 @@ function CustomArenaLayout({
                     }}>
                         <strong style={{ color: "rgba(255,255,255,0.7)", marginRight: "6px" }}>{m.sender}:</strong>
                         {m.text}
+                        {isOwner && m.senderId && (
+                            <button
+                                onClick={() => {
+                                    if (room && m.senderId) {
+                                        const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: m.senderId });
+                                        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                        alert("Sahneye davet gönderildi!");
+                                    }
+                                }}
+                                style={{
+                                    marginLeft: '8px',
+                                    background: 'rgba(0, 180, 204, 0.3)',
+                                    border: '1px solid rgba(0, 180, 204, 0.6)',
+                                    borderRadius: '12px',
+                                    color: '#00B4CC',
+                                    fontSize: '0.7rem',
+                                    padding: '2px 8px',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                🎤 Davet
+                            </button>
+                        )}
                     </div>
                 ))}
             </div>
@@ -304,7 +333,7 @@ function CustomArenaLayout({
     );
 }
 
-function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, liveHighestBidId, auctionStatus, setMessages }: any) {
+function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, liveHighestBidId, liveHighestBidderId, auctionStatus, setMessages }: any) {
     const router = useRouter();
     const { data: session } = useSession();
     const [amount, setAmount] = useState("");
@@ -481,7 +510,8 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
         const payload = JSON.stringify({
             type: "CHAT",
             text: chatText.trim(),
-            senderName: session?.user?.name || "Web Katılımcı"
+            senderName: session?.user?.name || "Web Katılımcı",
+            senderId: session?.user?.id
         });
 
         try {
@@ -526,9 +556,37 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
             color: "white"
         }}>
             {/* Current Price Info */}
-            <div style={{ whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "16px" }}>
-                <span style={{ fontSize: "0.65rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Güncel</span>
-                <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
+            <div style={{ whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "16px", display: "flex", alignItems: "center", gap: "10px" }}>
+                <div>
+                    <span style={{ fontSize: "0.65rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Güncel</span>
+                    <span style={{ fontSize: "1.1rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
+                </div>
+                {isOwner && currentHighestBid > 0 && liveHighestBidderId && (
+                    <button
+                        onClick={() => {
+                            if (room && liveHighestBidderId) {
+                                const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId });
+                                room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                alert("Sahneye davet gönderildi!");
+                            }
+                        }}
+                        style={{
+                            background: "rgba(0, 180, 204, 0.2)",
+                            color: "#00B4CC",
+                            border: "1px solid rgba(0, 180, 204, 0.4)",
+                            borderRadius: "100px",
+                            padding: "4px 10px",
+                            fontSize: "0.7rem",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            display: "flex",
+                            alignItems: "center",
+                            gap: "4px"
+                        }}
+                    >
+                        🎤 Davet Et
+                    </button>
+                )}
             </div>
 
             {isOwner ? (

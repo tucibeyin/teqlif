@@ -136,6 +136,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
               userLabel: dataObj['bidderName'] ?? _bids[existingIndex].userLabel,
               timestamp: _bids[existingIndex].timestamp,
               isAccepted: true,
+              userId: dataObj['bidderId']?.toString() ?? _bids[existingIndex].userId,
             );
           } else {
             _bids.insert(0, _LiveBid(
@@ -144,6 +145,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
               userLabel: _formatSenderName(dataObj['bidderName']),
               timestamp: DateTime.now(),
               isAccepted: true,
+              userId: dataObj['bidderId']?.toString(),
             ));
           }
         });
@@ -151,12 +153,14 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       } else if (dataObj['type'] == 'CHAT') {
          final chatText = dataObj['text']?.toString() ?? '';
          final chatSender = dataObj['senderName']?.toString();
+         final senderId = dataObj['senderId']?.toString();
          setState(() {
            _messages.add(_EphemeralMessage(
              id: DateTime.now().millisecondsSinceEpoch.toString(),
              text: chatText,
              senderName: _formatSenderName(chatSender),
              timestamp: DateTime.now(),
+             senderId: senderId,
            ));
            if (_messages.length > 5) _messages.removeAt(0);
          });
@@ -165,6 +169,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       } else if (dataObj['type'] == 'NEW_BID') {
         final amount = (dataObj['amount'] as num).toDouble();
         final bidId = dataObj['bidId']?.toString();
+        final bidderId = dataObj['bidderId']?.toString();
         setState(() {
           _unreadBids++;
           _bids.insert(0, _LiveBid(
@@ -172,6 +177,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
             amount: amount,
             userLabel: _formatSenderName(dataObj['bidderName']),
             timestamp: DateTime.now(),
+            userId: bidderId,
           ));
           if (_bids.length > 50) _bids.removeLast();
         });
@@ -206,11 +212,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     if (text.isEmpty) return;
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room != null) {
+      final identity = state.room!.localParticipant?.identity;
       final name = state.room!.localParticipant?.name;
       final payload = jsonEncode({
         'type': 'CHAT',
         'text': text,
         'senderName': name,
+        'senderId': identity,
       });
       await state.room!.localParticipant?.publishData(utf8.encode(payload));
       _handleDataChannelMessage(utf8.encode(payload), null, customName: name);
@@ -222,6 +230,20 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
   void _onRoomEvent(RoomEvent event) {
     if (event is DataReceivedEvent) {
       _handleDataChannelMessage(event.data, event.participant);
+    }
+  }
+
+  void _inviteToStage(String userId) async {
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    if (state.room != null) {
+      final payload = jsonEncode({
+        'type': 'INVITE_TO_STAGE',
+        'targetIdentity': userId,
+      });
+      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sahneye davet gönderildi!'), backgroundColor: Colors.blue),
+      );
     }
   }
 
@@ -464,6 +486,11 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                     ),
                                     child: const Text('Onayla ve Sat'),
                                   ),
+                                if (bid.userId != null)
+                                  IconButton(
+                                    icon: const Icon(Icons.mic, color: Colors.blueAccent),
+                                    onPressed: () => _inviteToStage(bid.userId!),
+                                  ),
                               ],
                             ),
                           );
@@ -687,7 +714,28 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                     if (_bids.isNotEmpty)
                                       Padding(
                                         padding: const EdgeInsets.only(top: 4),
-                                        child: Text(_bids.first.userLabel, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                                        child: Row(
+                                          children: [
+                                            Text(_bids.first.userLabel, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                                            if (_bids.first.userId != null)
+                                              GestureDetector(
+                                                onTap: () => _inviteToStage(_bids.first.userId!),
+                                                child: Container(
+                                                  margin: const EdgeInsets.only(left: 6),
+                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.withOpacity(0.5))),
+                                                  child: const Row(
+                                                    mainAxisSize: MainAxisSize.min,
+                                                    children: [
+                                                      Icon(Icons.mic, color: Colors.blueAccent, size: 10),
+                                                      SizedBox(width: 2),
+                                                      Text('Davet Et', style: TextStyle(color: Colors.blueAccent, fontSize: 8, fontWeight: FontWeight.bold))
+                                                    ],
+                                                  ),
+                                                ),
+                                              )
+                                          ]
+                                        ),
                                       ),
                                   ],
                                 ),
@@ -836,6 +884,16 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                         Text('${msg.senderName}:', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w800, fontSize: 13)),
                                         const SizedBox(width: 6),
                                         Expanded(child: Text(msg.text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
+                                        if (msg.senderId != null)
+                                          GestureDetector(
+                                            onTap: () => _inviteToStage(msg.senderId!),
+                                            child: Container(
+                                              margin: const EdgeInsets.only(left: 4),
+                                              padding: const EdgeInsets.all(2),
+                                              decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), shape: BoxShape.circle),
+                                              child: const Icon(Icons.mic, color: Colors.blueAccent, size: 12),
+                                            ),
+                                          ),
                                       ],
                                     ),
                                   ),
@@ -1006,6 +1064,7 @@ class _LiveBid {
   final DateTime timestamp;
 
   final bool isAccepted;
+  final String? userId;
 
   _LiveBid({
     required this.id,
@@ -1013,6 +1072,7 @@ class _LiveBid {
     required this.userLabel,
     required this.timestamp,
     this.isAccepted = false,
+    this.userId,
   });
 }
 
@@ -1021,11 +1081,13 @@ class _EphemeralMessage {
   final String text;
   final String senderName;
   final DateTime timestamp;
+  final String? senderId;
 
   _EphemeralMessage({
     required this.id,
     required this.text,
     required this.senderName,
     required this.timestamp,
+    this.senderId,
   });
 }

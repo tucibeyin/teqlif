@@ -11,6 +11,7 @@ import 'dart:async';
 
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
+import '../../../core/providers/auth_provider.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../providers/ad_detail_provider.dart';
@@ -157,7 +158,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       if (decoded is Map<String, dynamic> && decoded['type'] != null) {
         final type = decoded['type'];
         if (type == 'INVITE_TO_STAGE') {
-          _showInviteDialog();
+          final targetIdentity = decoded['targetIdentity'];
+          final currentUser = ref.read(authProvider).user;
+          if (currentUser != null && targetIdentity == currentUser.id) {
+            _showInviteDialog();
+          }
           return;
         } else if (type == 'KICK_FROM_STAGE') {
           _handleKick();
@@ -306,6 +311,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   Future<void> _sendChatMessage() async {
     final text = _chatCtrl.text.trim();
     if (text.isEmpty) return;
+    final currentUser = ref.read(authProvider).user;
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room != null) {
       final name = state.room!.localParticipant?.name;
@@ -313,6 +319,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         'type': 'CHAT',
         'text': text,
         'senderName': name,
+        'senderId': currentUser?.id,
       });
       await state.room!.localParticipant?.publishData(utf8.encode(payload));
       _handleDataChannelMessage(utf8.encode(payload), null); 

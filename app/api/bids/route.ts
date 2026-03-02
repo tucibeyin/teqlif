@@ -174,7 +174,8 @@ export async function POST(req: NextRequest) {
             type: 'NEW_BID',
             amount: Number(amount),
             bidderName: bid.user.name,
-            bidId: bid.id
+            bidId: bid.id,
+            bidderId: bid.userId
         }));
 
         return NextResponse.json(bid, { status: 201 });
