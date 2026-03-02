@@ -400,62 +400,73 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 ],
               ),
             ),
-            // Live Stories
-            const LiveStories(),
             // Filter bar
             _buildFilterBar(),
             // Divider
             const Divider(height: 1, color: Color(0xFFE2EBF0)),
             // Content
             Expanded(
-              child: isSearchActive
-                  ? _SearchResultsList(results: _searchResults)
-                  : _isSearching
-                      ? const Center(child: CircularProgressIndicator())
-                      : adsAsync.when(
-                          loading: () =>
-                              const Center(child: CircularProgressIndicator()),
-                          error: (e, _) => Center(child: Text('Hata: $e')),
-                          data: (ads) => ads.isEmpty
-                              ? _EmptyState(
-                                  hasFilters: _hasFilters,
-                                  onClear: () => setState(() {
-                                    _selectedCategorySlug = null;
-                                    _selectedCategoryName = null;
-                                    _selectedProvinceId = null;
-                                    _selectedProvinceName = null;
-                                  }),
-                                )
-                              : RefreshIndicator(
-                                  onRefresh: () =>
-                                      ref.refresh(adsProvider(filter).future),
-                                  child: _isListView
-                                      ? ListView.separated(
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 8),
-                                          itemCount: ads.length,
-                                          separatorBuilder: (_, __) =>
-                                              const Divider(
-                                                  height: 1,
-                                                  color: Color(0xFFE2EBF0)),
-                                          itemBuilder: (ctx, i) =>
-                                              _AdListTile(ad: ads[i]),
+              child: RefreshIndicator(
+                onRefresh: () async {
+                  ref.invalidate(liveAdsProvider);
+                  return ref.refresh(adsProvider(filter).future);
+                },
+                child: isSearchActive
+                    ? _SearchResultsList(results: _searchResults)
+                    : _isSearching
+                        ? const Center(child: CircularProgressIndicator())
+                        : Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // Live Stories
+                              const LiveStories(),
+                              // Feed
+                              Expanded(
+                                child: adsAsync.when(
+                                  loading: () => const Center(
+                                      child: CircularProgressIndicator()),
+                                  error: (e, _) =>
+                                      Center(child: Text('Hata: $e')),
+                                  data: (ads) => ads.isEmpty
+                                      ? _EmptyState(
+                                          hasFilters: _hasFilters,
+                                          onClear: () => setState(() {
+                                            _selectedCategorySlug = null;
+                                            _selectedCategoryName = null;
+                                            _selectedProvinceId = null;
+                                            _selectedProvinceName = null;
+                                          }),
                                         )
-                                      : GridView.builder(
-                                          padding: const EdgeInsets.all(12),
-                                          gridDelegate:
-                                              const SliverGridDelegateWithFixedCrossAxisCount(
-                                            crossAxisCount: 2,
-                                            childAspectRatio: 0.72,
-                                            crossAxisSpacing: 10,
-                                            mainAxisSpacing: 10,
-                                          ),
-                                          itemCount: ads.length,
-                                          itemBuilder: (ctx, i) =>
-                                              _AdCard(ad: ads[i]),
-                                        ),
+                                      : _isListView
+                                          ? ListView.separated(
+                                              padding: const EdgeInsets.symmetric(
+                                                  vertical: 8),
+                                              itemCount: ads.length,
+                                              separatorBuilder: (_, __) =>
+                                                  const Divider(
+                                                      height: 1,
+                                                      color: Color(0xFFE2EBF0)),
+                                              itemBuilder: (ctx, i) =>
+                                                  _AdListTile(ad: ads[i]),
+                                            )
+                                          : GridView.builder(
+                                              padding: const EdgeInsets.all(12),
+                                              gridDelegate:
+                                                  const SliverGridDelegateWithFixedCrossAxisCount(
+                                                crossAxisCount: 2,
+                                                childAspectRatio: 0.72,
+                                                crossAxisSpacing: 10,
+                                                mainAxisSpacing: 10,
+                                              ),
+                                              itemCount: ads.length,
+                                              itemBuilder: (ctx, i) =>
+                                                  _AdCard(ad: ads[i]),
+                                            ),
                                 ),
-                        ),
+                              ),
+                            ],
+                          ),
+              ),
             ),
           ],
         ),

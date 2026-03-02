@@ -7,11 +7,15 @@ import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../screens/home_screen.dart';
 
-final liveAdsProvider = FutureProvider<List<AdModel>>((ref) async {
+final liveAdsProvider = FutureProvider.autoDispose<List<AdModel>>((ref) async {
   final params = <String, dynamic>{'status': 'ACTIVE', 'isLive': true};
   final res = await ApiClient().get(Endpoints.ads, params: params);
   final list = res.data as List<dynamic>;
-  return list.map((e) => AdModel.fromJson(e as Map<String, dynamic>)).toList();
+  // Hem API filtresini kullan hem de istemci tarafında isLive kontrolü yap (garanti olsun)
+  return list
+      .map((e) => AdModel.fromJson(e as Map<String, dynamic>))
+      .where((ad) => ad.isLive)
+      .toList();
 });
 
 class LiveStories extends ConsumerWidget {
