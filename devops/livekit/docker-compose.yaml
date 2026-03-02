@@ -1,13 +1,9 @@
-version: '3.9'
-
 services:
   livekit:
     image: livekit/livekit-server:latest
     container_name: livekit-server
-    restart: always
-    # Recommended for WebRTC to avoid NAT issues with the large UDP port range (50000-60000)
-    network_mode: "host"
+    restart: unless-stopped
+    network_mode: "host" # Kendi kurulu Redis'ine erişmek için en kolay yol budur
     volumes:
       - ./livekit.yaml:/livekit.yaml
     command: --config /livekit.yaml
-    # No port mapping needed due to network_mode: host
