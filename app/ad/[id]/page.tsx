@@ -7,9 +7,7 @@ import ImageSlider from "./ImageSlider";
 import { AdActions } from "./AdActions";
 import { FavoriteButton } from "@/components/FavoriteButton";
 import { findPath, categoryTree } from "@/lib/categories";
-import dynamic from "next/dynamic";
-
-const LiveArena = dynamic(() => import('./LiveArena'), { ssr: false });
+import LiveArenaWrapper from "./LiveArenaWrapper";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -150,7 +148,7 @@ export default async function AdDetailPage({
                             <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
                             CANLI MEZAT ARENASI
                         </div>
-                        <LiveArena roomId={adData.liveKitRoomId} adId={adData.id} isOwner={isOwner} />
+                        <LiveArenaWrapper roomId={adData.liveKitRoomId} adId={adData.id} isOwner={isOwner} />
                     </div>
                 </div>
             )}
