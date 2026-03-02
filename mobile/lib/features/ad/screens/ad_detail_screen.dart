@@ -320,11 +320,22 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             ),
                           ),
                         )
-                      : Container(
-                          color: const Color(0xFFF4F7FA),
-                          child: Center(
-                            child: Text(ad.category?.icon ?? '📦',
-                                style: const TextStyle(fontSize: 64)),
+                      : ad.isLive
+                          ? Container(
+                              color: Colors.black87,
+                              child: const Center(
+                                child: Text('🔴 CANLI YAYIN',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 24)),
+                              ),
+                            )
+                          : Container(
+                              color: const Color(0xFFF4F7FA),
+                              child: Center(
+                                child: Text(ad.category?.icon ?? '📦',
+                                    style: const TextStyle(fontSize: 64)),
                           ),
                         ),
                 ),

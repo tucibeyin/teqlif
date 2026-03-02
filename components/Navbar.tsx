@@ -4,6 +4,7 @@ import { NotificationBell } from "./NotificationBell";
 import { MessageBell } from "./MessageBell";
 import { LiveSearch } from "./LiveSearch";
 import { LogoutButton } from "./LogoutButton";
+import { QuickLiveButton } from "./QuickLiveButton";
 
 export async function Navbar() {
     const session = await auth();
@@ -21,6 +22,7 @@ export async function Navbar() {
                     <div className="navbar-actions">
                         {session?.user ? (
                             <>
+                                <QuickLiveButton />
                                 <Link href="/post-ad" className="btn btn-primary btn-sm">
                                     + İlan Ver
                                 </Link>

@@ -1,0 +1,149 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+
+export function QuickLiveButton() {
+    const [isOpen, setIsOpen] = useState(false);
+    const [title, setTitle] = useState("");
+    const [startingBid, setStartingBid] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+    const router = useRouter();
+
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        setError(null);
+
+        if (!title.trim()) {
+            setError("Yayın başlığı zorunludur.");
+            setLoading(false);
+            return;
+        }
+
+        try {
+            const res = await fetch("/api/livekit/quick-start", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ title, startingBid: Number(startingBid) || 1 })
+            });
+            const data = await res.json();
+
+            if (res.ok && data.id) {
+                setIsOpen(false);
+                router.push(`/ad/${data.id}`);
+            } else {
+                setError(data.error || "Bir hata oluştu.");
+            }
+        } catch (err) {
+            setError("Sunucuya bağlanılamadı.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <>
+            <button
+                onClick={() => setIsOpen(true)}
+                className="btn btn-sm"
+                style={{
+                    background: "var(--danger)",
+                    color: "white",
+                    fontWeight: 700,
+                    boxShadow: "0 0 10px rgba(239, 68, 68, 0.5)",
+                    border: "none",
+                    animation: "pulse 2s infinite"
+                }}
+            >
+                🔴 Canlı Yayın Aç
+            </button>
+
+            {isOpen && (
+                <div style={{
+                    position: "fixed",
+                    inset: 0,
+                    zIndex: 9999,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: "rgba(0,0,0,0.5)",
+                    backdropFilter: "blur(5px)",
+                }}>
+                    <div style={{
+                        background: "var(--bg-card)",
+                        border: "1px solid var(--border)",
+                        borderRadius: "1rem",
+                        padding: "2rem",
+                        width: "100%",
+                        maxWidth: "400px",
+                        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+                    }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
+                            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Hızlı Canlı Yayın Aç</h2>
+                            <button
+                                onClick={() => setIsOpen(false)}
+                                style={{ background: "transparent", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "var(--text-muted)" }}
+                            >
+                                &times;
+                            </button>
+                        </div>
+
+                        {error && (
+                            <div style={{ background: "rgba(239, 68, 68, 0.1)", color: "var(--danger)", padding: "0.75rem", borderRadius: "0.5rem", marginBottom: "1rem", fontSize: "0.875rem" }}>
+                                {error}
+                            </div>
+                        )}
+
+                        <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                            <div>
+                                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem", color: "var(--text-secondary)" }}>
+                                    Yayın Başlığı <span style={{ color: "var(--danger)" }}>*</span>
+                                </label>
+                                <input
+                                    type="text"
+                                    value={title}
+                                    onChange={(e) => setTitle(e.target.value)}
+                                    placeholder="Örn: Antika Saat Mezatı"
+                                    className="input-field"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem", color: "var(--text-secondary)" }}>
+                                    Başlangıç Fiyatı (₺)
+                                </label>
+                                <input
+                                    type="number"
+                                    value={startingBid}
+                                    onChange={(e) => setStartingBid(e.target.value)}
+                                    placeholder="Opsiyonel (Varsayılan: 1₺)"
+                                    className="input-field"
+                                    min="1"
+                                />
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="btn btn-primary btn-full"
+                                style={{
+                                    marginTop: "0.5rem",
+                                    padding: "0.875rem",
+                                    fontSize: "1rem",
+                                    background: "var(--danger)",
+                                    border: "none"
+                                }}
+                            >
+                                {loading ? "Hazırlanıyor..." : "🔴 Yayını Hemen Başlat"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+        </>
+    );
+}
+
