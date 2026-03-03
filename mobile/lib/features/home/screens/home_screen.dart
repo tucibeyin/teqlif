@@ -424,7 +424,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   TextField(
                     controller: titleCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Örn: Antika Saat Açık Artırması',
+                      hintText: 'Örn: Antika Saat Açık Arttırması',
                       filled: true,
                       fillColor: Colors.grey[100],
                       border: OutlineInputBorder(
@@ -1171,7 +1171,7 @@ class _AdListTile extends StatelessWidget {
                 ? _fmt(ad.highestBidAmount!)
                 : (ad.startingBid != null
                     ? _fmt(ad.startingBid!)
-                    : 'Serbest Teklif'),
+                    : 'Serbest Teqlif'),
             style: const TextStyle(
                 fontWeight: FontWeight.w700, color: Color(0xFF00B4CC)),
           ),

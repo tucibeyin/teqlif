@@ -34,7 +34,7 @@ export async function POST(
 
         if (!bid) {
             return NextResponse.json(
-                { message: 'Teklif bulunamadı' },
+                { message: 'Teqlif bulunamadı' },
                 { status: 404 }
             );
         }
@@ -56,7 +56,7 @@ export async function POST(
 
         if (bid.status !== 'ACCEPTED') {
             return NextResponse.json(
-                { message: 'Sadece kabul edilmiş teklifler için satış tamamlanabilir' },
+                { message: 'Sadece kabul edilmiş teqlifler için satış tamamlanabilir' },
                 { status: 400 }
             );
         }

@@ -110,11 +110,11 @@ export default async function DashboardPage() {
                     </Link>
                     <Link href="#ilanlarim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value">{totalBidsReceived}</div>
-                        <div className="stat-label">Gelen Teklif</div>
+                        <div className="stat-label">Gelen Teqlif</div>
                     </Link>
-                    <Link href="#tekliflerim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
+                    <Link href="#teqliflerim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value">{myBids.length}</div>
-                        <div className="stat-label">Verdiğim Teklif</div>
+                        <div className="stat-label">Verdiğim Teqlif</div>
                     </Link>
                     <Link href="#favorilerim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value" style={{ color: "var(--accent-red)" }}>{myFavorites.length}</div>
@@ -156,7 +156,7 @@ export default async function DashboardPage() {
                                                     {ad.title}
                                                 </Link>
                                                 <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                                    {ad.province.name} · {timeAgo(ad.createdAt)} · {ad._count.bids} teklif
+                                                    {ad.province.name} · {timeAgo(ad.createdAt)} · {ad._count.bids} teqlif
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
@@ -165,7 +165,7 @@ export default async function DashboardPage() {
                                                         if (ad.isFixedPrice) return formatPrice(ad.price);
                                                         const highestBid = ad.bids?.[0]?.amount;
                                                         if (highestBid) return formatPrice(highestBid);
-                                                        return ad.startingBid ? formatPrice(ad.startingBid) : "Serbest Teklif";
+                                                        return ad.startingBid ? formatPrice(ad.startingBid) : "Serbest Teqlif";
                                                     })()}
                                                 </div>
                                                 <span className={`badge badge-${isExpired ? 'expired' : ad.status.toLowerCase()}`}>
@@ -229,7 +229,7 @@ export default async function DashboardPage() {
                                                     {ad.title}
                                                 </Link>
                                                 <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                                    {ad.province.name} · {timeAgo(ad.createdAt)} · {ad._count.bids} teklif
+                                                    {ad.province.name} · {timeAgo(ad.createdAt)} · {ad._count.bids} teqlif
                                                 </div>
                                             </div>
                                             <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
@@ -246,13 +246,13 @@ export default async function DashboardPage() {
                     )}
                 </DashboardSection>
 
-                {/* Verdiğim Teklifler */}
-                <DashboardSection title="Verdiğim Teklifler" id="tekliflerim" count={myBids.length}>
+                {/* Verdiğim Teqlifler */}
+                <DashboardSection title="Verdiğim Teqlifler" id="teqliflerim" count={myBids.length}>
                     {myBids.length === 0 ? (
                         <div className="empty-state">
                             <div className="empty-state-icon">🔨</div>
-                            <div className="empty-state-title">Henüz teklif vermediniz</div>
-                            <p>İlanlara göz atın ve teklif verin!</p>
+                            <div className="empty-state-title">Henüz teqlif vermediniz</div>
+                            <p>İlanlara göz atın ve teqlif verin!</p>
                             <Link href="/" className="btn btn-outline" style={{ marginTop: "1rem" }}>
                                 İlanlara Bak
                             </Link>
@@ -277,7 +277,7 @@ export default async function DashboardPage() {
                                         </div>
                                         <div style={{ textAlign: "right" }}>
                                             <div style={{ color: "var(--primary)", fontWeight: 700 }}>
-                                                Teklifim: {formatPrice(bid.amount)}
+                                                Teqlifim: {formatPrice(bid.amount)}
                                             </div>
                                             <div className="text-muted text-sm">
                                                 İlan: {formatPrice(bid.ad.price)}

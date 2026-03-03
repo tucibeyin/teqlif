@@ -104,7 +104,7 @@ export default function RegisterPage() {
                         color: "var(--primary-dark)",
                         fontSize: "0.9rem",
                     }}>
-                        ✅ Hesabınız aktif! Artık ilan vermeye ve teklif yapmaya hazırsınız. Giriş yaparak işlemlere başlayabilirsiniz.
+                        ✅ Hesabınız aktif! Artık ilan vermeye ve teqlif yapmaya hazırsınız. Giriş yaparak işlemlere başlayabilirsiniz.
                     </div>
                     <div style={{ marginTop: "1.5rem", display: "flex", gap: "0.75rem", justifyContent: "center", flexWrap: "wrap" }}>
                         <Link href="/login" className="btn btn-primary">

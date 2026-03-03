@@ -194,7 +194,7 @@ export default async function HomePage({
             <span style={{ color: "var(--primary)" }}>İlan Platformu</span>
           </h1>
           <p className="hero-subtitle">
-            Kategori ve konum seçerek saniyeler içinde ilan ver. Açık artırmaya katıl, en iyi teklifleri ver.
+            Kategori ve konum seçerek saniyeler içinde ilan ver. Açık Arttırmaya katıl, en iyi teqlifleri ver.
           </p>
           <div className="hero-actions">
             <Link href="/post-ad" className="btn btn-primary btn-lg">
@@ -322,7 +322,7 @@ export default async function HomePage({
                     boxShadow: activeTab === "live" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
                     display: "flex", alignItems: "center", gap: "0.3rem", transition: "all 0.2s"
                   }}>
-                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444" }}></span> Açık Artırmalar
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444" }}></span> Açık Arttırmalar
                   </Link>
                 </div>
               </div>
@@ -363,7 +363,7 @@ export default async function HomePage({
                           </span>
                           {ad._count.bids > 0 && (
                             <span style={{ position: "absolute", top: "8px", right: "8px", background: "rgba(0,188,212,0.85)", backdropFilter: "blur(4px)", color: "white", fontSize: "0.7rem", padding: "2px 8px", borderRadius: "100px" }}>
-                              🔨 {ad._count.bids} teklif
+                              🔨 {ad._count.bids} teqlif
                             </span>
                           )}
                         </div>
@@ -421,7 +421,7 @@ export default async function HomePage({
                             </div>
                             <div style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "2px" }}>
                               📍 {ad.province.name} · {timeAgo(ad.createdAt)} önce
-                              {ad._count.bids > 0 && ` · 🔨 ${ad._count.bids} teklif`}
+                              {ad._count.bids > 0 && ` · 🔨 ${ad._count.bids} teqlif`}
                             </div>
                           </div>
                           <div style={{ textAlign: "right", flexShrink: 0 }}>

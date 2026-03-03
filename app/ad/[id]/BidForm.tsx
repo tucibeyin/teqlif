@@ -38,7 +38,7 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
 
         const rawAmount = parseInt(displayAmount.replace(/\./g, ""), 10);
         if (!rawAmount || rawAmount < currentHighest + minStep) {
-            setError(`Teklifiniz minimum ${formatted.format(currentHighest + minStep)} olmalıdır.`);
+            setError(`Teqlifiniz minimum ${formatted.format(currentHighest + minStep)} olmalıdır.`);
             setLoading(false);
             return;
         }
@@ -53,9 +53,9 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
         setLoading(false);
 
         if (!res.ok) {
-            setError(data.error || "Teklif verilemedi.");
+            setError(data.error || "Teqlif verilemedi.");
         } else {
-            setSuccess("🎉 Teklifiniz başarıyla verildi!");
+            setSuccess("🎉 Teqlifiniz başarıyla verildi!");
             router.refresh();
         }
     }
@@ -149,7 +149,7 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
                 onMouseUp={e => { if (!loading) e.currentTarget.style.transform = "scale(1)" }}
                 onMouseLeave={e => { if (!loading) e.currentTarget.style.transform = "scale(1)" }}
             >
-                {loading ? "GÖNDERİLİYOR..." : "🚀 PEY VER"}
+                {loading ? "GÖNDERİLİYOR..." : "🚀 teqlif ver"}
             </button>
         </form>
     );

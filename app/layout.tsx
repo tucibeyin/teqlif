@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   },
   description: "Türkiye'nin en hızlı büyüyen dijital ilan platformu. Araba, emlak, elektronik ve daha fazlasını doğrudan alıcı ve satıcılarla buluşturuyoruz. Hemen ücretsiz ilan ver!",
   applicationName: "teqlif",
-  keywords: ["ilan", "ikinci el", "araba", "emlak", "elektronik", "teklif ver", "açık artırma", "alışveriş"],
+  keywords: ["ilan", "ikinci el", "araba", "emlak", "elektronik", "teqlif ver", "açık arttırma", "alışveriş"],
   authors: [{ name: "teqlif" }],
   creator: "teqlif",
   publisher: "teqlif",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   },
   openGraph: {
     title: "teqlif - İstediğin fiyattan al ve sat",
-    description: "Türkiye'nin yeni nesil pazaryeri. Kategori ve konum seçerek kolayca ilan ver, teklif al, istediğin fiyattan ürün sahibi ol.",
+    description: "Türkiye'nin yeni nesil pazaryeri. Kategori ve konum seçerek kolayca ilan ver, teqlif al, istediğin fiyattan ürün sahibi ol.",
     url: "https://teqlif.com",
     siteName: "teqlif",
     images: [

@@ -19,7 +19,7 @@ export default function PostAdPage() {
     const [durationDays, setDurationDays] = useState<number | "custom">(30);
     const [customExpiresAt, setCustomExpiresAt] = useState("");
 
-    // YENİ: Canlı Açık Artırma Alanları
+    // YENİ: Canlı Açık Arttırma Alanları
     const [isAuction, setIsAuction] = useState(false);
     const [auctionStartTime, setAuctionStartTime] = useState("");
     const [displayStartingPrice, setDisplayStartingPrice] = useState("");
@@ -146,10 +146,10 @@ export default function PostAdPage() {
                     <form onSubmit={handleSubmit}>
                         {error && <div className="error-msg" style={{ marginBottom: "1rem" }}>{error}</div>}
 
-                        {/* Canlı Açık Artırma / Standart İlan Toggle */}
+                        {/* Canlı Açık Arttırma / Standart İlan Toggle */}
                         <div className="form-section" style={{ background: isAuction ? "rgba(239, 68, 68, 0.05)" : "var(--bg-secondary)", border: isAuction ? "1px solid rgba(239, 68, 68, 0.3)" : "1px solid var(--border)", padding: "1.5rem", borderRadius: "var(--radius-lg)", marginBottom: "2rem" }}>
                             <h3 style={{ color: "var(--text-primary)", fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                {isAuction ? "🔴 Canlı Açık Artırma İlanı" : "📄 Standart İlan"}
+                                {isAuction ? "🔴 Canlı Açık Arttırma İlanı" : "📄 Standart İlan"}
                             </h3>
                             <div style={{ display: "flex", gap: "1rem", background: "var(--bg-card)", padding: "0.5rem", borderRadius: "100px", border: "1px solid var(--border)", width: "fit-content" }}>
                                 <button
@@ -182,13 +182,13 @@ export default function PostAdPage() {
                                         cursor: "pointer"
                                     }}
                                 >
-                                    🔴 Canlı Açık Artırma (Auction)
+                                    🔴 Canlı Açık Arttırma (Auction)
                                 </button>
                             </div>
                             <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-muted)" }}>
                                 {isAuction
-                                    ? "İlanınız belirlediğiniz tarihte canlı yayına girer. Arena Modunda gerçek zamanlı açık artırma düzenleyerek izleyicilerden anında teklif alabilirsiniz."
-                                    : "İlanınız hemen yayınlanır. Kendi belirlediğiniz kurallarla teklif toplayabilir veya sabit fiyatla satabilirsiniz."}
+                                    ? "İlanınız belirlediğiniz tarihte canlı yayına girer. Arena Modunda gerçek zamanlı açık arttırma düzenleyerek izleyicilerden anında teqlif alabilirsiniz."
+                                    : "İlanınız hemen yayınlanır. Kendi belirlediğiniz kurallarla teqlif toplayabilir veya sabit fiyatla satabilirsiniz."}
                             </p>
                         </div>
 
@@ -300,10 +300,10 @@ export default function PostAdPage() {
                             </div>
                         </div>
 
-                        {/* Fiyat & Teklif Kuralları */}
+                        {/* Fiyat & Teqlif Kuralları */}
                         <div className="form-section">
                             <h3 style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                {isAuction ? "Canlı Açık Artırma Kuralları" : "Fiyat ve Teklif Kuralları"}
+                                {isAuction ? "Canlı Açık Arttırma Kuralları" : "Fiyat ve Teqlif Kuralları"}
                             </h3>
 
                             <div className="form-group" style={{ marginBottom: "1.5rem", display: isAuction ? "none" : "block" }}>
@@ -312,15 +312,15 @@ export default function PostAdPage() {
                                     <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
                                         <input type="radio" name="mainAdStyle" value="auction" checked={!isFixedPrice} onChange={() => setIsFixedPrice(false)} />
                                         <span>
-                                            <strong style={{ display: "block", marginBottom: "0.25rem" }}>Açık Artırma İlanı</strong>
-                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>İlanınız tekliflere açık olur ve ürün en yüksek teklifi verene satılır.</span>
+                                            <strong style={{ display: "block", marginBottom: "0.25rem" }}>Açık Arttırma İlanı</strong>
+                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>İlanınız teqliflere açık olur ve ürün en yüksek teqlifi verene satılır.</span>
                                         </span>
                                     </label>
                                     <label style={{ display: "flex", alignItems: "center", gap: "0.5rem", cursor: "pointer", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
                                         <input type="radio" name="mainAdStyle" value="fixed" checked={isFixedPrice} onChange={() => setIsFixedPrice(true)} />
                                         <span>
                                             <strong style={{ display: "block", marginBottom: "0.25rem" }}>Sabit Fiyatlı İlan</strong>
-                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>Tekliflere kapalıdır, doğrudan belirlediğiniz fiyattan listeleyip satabilirsiniz.</span>
+                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>Teqliflere kapalıdır, doğrudan belirlediğiniz fiyattan listeleyip satabilirsiniz.</span>
                                         </span>
                                     </label>
                                 </div>
@@ -329,7 +329,7 @@ export default function PostAdPage() {
                             {!isFixedPrice && !isAuction && (
                                 <div className="form-group" style={{ marginBottom: "1.5rem" }}>
                                     <div style={{ fontSize: "0.875rem", color: "var(--text-muted)", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px solid var(--border)" }}>
-                                        <strong>Nasıl İşler?</strong> İlanınıza teklif verilebilir durumdadır. İster bir başlangıç teklifi belirleyebilir (Örn: 5000 ₺), isterseniz boş bırakarak serbest pazar fiyatlamasına (1 ₺'den başlar) izin verebilirsiniz.
+                                        <strong>Nasıl İşler?</strong> İlanınıza teqlif verilebilir durumdadır. İster bir başlangıç teqlifi belirleyebilir (Örn: 5000 ₺), isterseniz boş bırakarak serbest pazar fiyatlamasına (1 ₺'den başlar) izin verebilirsiniz.
                                     </div>
                                 </div>
                             )}
@@ -337,7 +337,7 @@ export default function PostAdPage() {
                             {isAuction && (
                                 <div className="form-row" style={{ animation: "fadeIn 0.3s ease-out", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px dashed var(--border)", marginBottom: "1.5rem" }}>
                                     <div className="form-group" style={{ flex: 1 }}>
-                                        <label htmlFor="auctionStartTime" style={{ fontWeight: 600, color: "var(--text-primary)" }}>🔴 Açık Artırma Başlama Zamanı *</label>
+                                        <label htmlFor="auctionStartTime" style={{ fontWeight: 600, color: "var(--text-primary)" }}>🔴 Açık Arttırma Başlama Zamanı *</label>
                                         <input
                                             type="datetime-local"
                                             id="auctionStartTime"
@@ -392,7 +392,7 @@ export default function PostAdPage() {
                                 </div>
 
                                 <div className="form-group" id="startingBidWrapper" style={{ display: (isFixedPrice || isAuction) ? "none" : "block" }}>
-                                    <label htmlFor="startingBid">Açılış Teklifi (₺) <span className="text-muted">(İsteğe Bağlı)</span></label>
+                                    <label htmlFor="startingBid">Açılış Teqlifi (₺) <span className="text-muted">(İsteğe Bağlı)</span></label>
                                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                                         <input
                                             type="text"
@@ -417,7 +417,7 @@ export default function PostAdPage() {
                             {!isFixedPrice && (
                                 <>
                                     <div className="form-group" style={{ marginTop: "1rem" }}>
-                                        <label htmlFor="minBidStepInput">Pey Aralığı (Minimum Artış) (₺) *</label>
+                                        <label htmlFor="minBidStepInput">teqlif Aralığı (Minimum Artış) (₺) *</label>
                                         <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                                             <input
                                                 type="text"
@@ -438,7 +438,7 @@ export default function PostAdPage() {
                                         </div>
                                         <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
                                         <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
-                                            Teklif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
+                                            Teqlif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
                                         </div>
                                     </div>
 
@@ -463,7 +463,7 @@ export default function PostAdPage() {
                                         </div>
                                         <input type="hidden" name="buyItNowPrice" value={displayBuyItNowPrice.replace(/\./g, "")} />
                                         <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
-                                            Açık artırma bitmeden bu fiyata hemen alıcı bulabilirsiniz. Açılış teklifinden büyük olmalıdır.
+                                            Açık artırma bitmeden bu fiyata hemen alıcı bulabilirsiniz. Açılış teqlifinden büyük olmalıdır.
                                         </div>
                                     </div>
                                 </>

@@ -619,7 +619,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                       onChanged: (v) => setState(() => _isFixedPrice = v),
                       title: const Text('🛍️ Sabit Fiyatlı İlan'),
                       subtitle: const Text(
-                          'Ürün direkt belirlenen satış fiyatından tekliflere kapalı listelenir.'),
+                          'Ürün direkt belirlenen satış fiyatından teqliflere kapalı listelenir.'),
                       contentPadding: EdgeInsets.zero,
                     ),
                     if (!_isFixedPrice) ...[
@@ -631,7 +631,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: const Text(
-                          'Nasıl İşler? İlanınıza teklif verilebilir durumdadır. İster bir başlangıç açılış teklifi belirleyebilir (Örn: 5000 ₺), isterseniz boş bırakarak serbest pazar fiyatlamasına (1 ₺\'den başlar) izin verebilirsiniz.',
+                          'Nasıl İşler? İlanınıza teqlif verilebilir durumdadır. İster bir başlangıç açılış teqlifi belirleyebilir (Örn: 5000 ₺), isterseniz boş bırakarak serbest pazar fiyatlamasına (1 ₺\'den başlar) izin verebilirsiniz.',
                           style: TextStyle(fontSize: 13, color: Color(0xFF4A5568)),
                         ),
                       ),
@@ -645,8 +645,8 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                               locale: 'tr_TR', symbol: '', decimalDigits: 0)
                         ],
                         decoration: const InputDecoration(
-                            labelText: 'Açılış Teklifi (₺) (İsteğe Bağlı)',
-                            helperText: 'Boş bırakırsanız 1 ₺\'den açık artırma başlar.'),
+                            labelText: 'Açılış Teqlifi (₺) (İsteğe Bağlı)',
+                            helperText: 'Boş bırakırsanız 1 ₺\'den açık arttırma başlar.'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -658,9 +658,9 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                               locale: 'tr_TR', symbol: '', decimalDigits: 0)
                         ],
                         decoration: const InputDecoration(
-                            labelText: 'Pey Aralığı (Minimum Artış) (₺)',
+                            labelText: 'teqlif Aralığı (Minimum Artış) (₺)',
                             helperText:
-                                'Teklif verenlerin en az ne kadar artırması gerektiğini belirler.'),
+                                'Teqlif verenlerin en az ne kadar artırması gerektiğini belirler.'),
                       ),
                       const SizedBox(height: 12),
                       TextField(
@@ -674,7 +674,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                         decoration: const InputDecoration(
                             labelText: 'Hemen Al Fiyatı (₺) (Opsiyonel)',
                             helperText:
-                                'Açık artırma bitmeden bu fiyata hemen satabilirsiniz.'),
+                                'Açık arttırma bitmeden bu fiyata hemen satabilirsiniz.'),
                       ),
                     ],
                     const Divider(),

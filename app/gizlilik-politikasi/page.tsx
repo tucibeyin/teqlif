@@ -3,7 +3,7 @@ import Link from "next/link";
 
 export const metadata: Metadata = {
     title: "Gizlilik Politikası | teqlif",
-    description: "teqlif ilan ve açık artırma platformunun gizlilik politikası ve kişisel verilerin korunması hakkında bilgilendirme.",
+    description: "teqlif ilan ve açık arttırma platformunun gizlilik politikası ve kişisel verilerin korunması hakkında bilgilendirme.",
 };
 
 export default function PrivacyPolicyPage() {
@@ -33,7 +33,7 @@ export default function PrivacyPolicyPage() {
                     <p className="mb-4">Topladığımız bilgileri aşağıdaki amaçlarla kullanırız:</p>
                     <ul className="list-disc pl-6 mb-6">
                         <li>Kullanıcı hesaplarını oluşturmak, doğrulamak ve yönetmek,</li>
-                        <li>İlan verme, teklif sunma, açık artırma ve mesajlaşma gibi temel işlevleri sorunsuz bir şekilde yerine getirmek,</li>
+                        <li>İlan verme, teqlif sunma, açık arttırma ve mesajlaşma gibi temel işlevleri sorunsuz bir şekilde yerine getirmek,</li>
                         <li>Müşteri desteği sunmak ve karşılaştığınız sorunları gidermek,</li>
                         <li>Platform güvenliğini sağlamak ve dolandırıcılık/spam faaliyetlerini engellemek,</li>
                         <li>Yasal yükümlülüklerimizi yerine getirmek.</li>

@@ -150,7 +150,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 segments: const [
                   ButtonSegment(value: 0, label: Text('İlanlarım')),
                   ButtonSegment(value: 1, label: Text('Favorilerim')),
-                  ButtonSegment(value: 2, label: Text('Tekliflerim')),
+                  ButtonSegment(value: 2, label: Text('Teqliflerim')),
                 ],
                 selected: {_tabIndex},
                 onSelectionChanged: (set) =>
@@ -194,7 +194,7 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                     ? const Center(
                         child: Padding(
                             padding: EdgeInsets.all(32),
-                            child: Text('Henüz teklifiniz yok.')))
+                            child: Text('Henüz teqlifiniz yok.')))
                     : Column(
                         children: bids.map((bid) => _MyBidTile(bid: bid)).toList(),
                       ),
@@ -423,7 +423,7 @@ class _MyBidTile extends StatelessWidget {
             Text(timeStr, style: const TextStyle(fontSize: 12, color: Colors.grey)),
             const SizedBox(height: 4),
             Text(
-              'Teklifim: ${NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0).format(amount)}',
+              'Teqlifim: ${NumberFormat.currency(locale: 'tr_TR', symbol: '₺', decimalDigits: 0).format(amount)}',
               style: const TextStyle(
                   color: Color(0xFF00B4CC), fontWeight: FontWeight.bold),
             ),

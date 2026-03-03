@@ -68,7 +68,7 @@ export function AdActions({
                     alert(data.message || "Mesajlaşma başlatılamadı.");
                 }
             } else if (actionType === "ACCEPT_BID" && bidId) {
-                if (!confirm("Bu teklifi kabul etmek istediğinize emin misiniz? (Sadece sohbet başlatılacaktır, ilan hala aktif kalacaktır)")) {
+                if (!confirm("Bu teqlifi kabul etmek istediğinize emin misiniz? (Sadece sohbet başlatılacaktır, ilan hala aktif kalacaktır)")) {
                     setIsLoading(false);
                     return;
                 }
@@ -78,14 +78,14 @@ export function AdActions({
                 });
 
                 if (res.ok) {
-                    alert("Teklif kabul edildi! Şimdi alıcı ile iletişime geçebilirsiniz.");
+                    alert("Teqlif kabul edildi! Şimdi alıcı ile iletişime geçebilirsiniz.");
                     router.refresh();
                 } else {
                     const data = await res.json();
-                    alert(data.message || "Teklif kabul edilemedi.");
+                    alert(data.message || "Teqlif kabul edilemedi.");
                 }
             } else if (actionType === "CANCEL_BID" && bidId) {
-                if (!confirm("Kabul edilen bu teklifi iptal etmek istediğinize emin misiniz?")) {
+                if (!confirm("Kabul edilen bu teqlifi iptal etmek istediğinize emin misiniz?")) {
                     setIsLoading(false);
                     return;
                 }
@@ -95,11 +95,11 @@ export function AdActions({
                 });
 
                 if (res.ok) {
-                    alert("Teklif iptal edildi.");
+                    alert("Teqlif iptal edildi.");
                     router.refresh();
                 } else {
                     const data = await res.json();
-                    alert(data.message || "Teklif iptal edilemedi.");
+                    alert(data.message || "Teqlif iptal edilemedi.");
                 }
             } else if (actionType === "FINALIZE_SALE" && bidId) {
                 if (!confirm("Dikkat! Satışın gerçekleştiğini onaylıyorsunuz. Bu işlemden sonra ilan PASİF (Satıldı) durumuna düşecektir. Emin misiniz?")) {

@@ -99,7 +99,7 @@ export function MobileGate() {
                     color: "var(--text-secondary)",
                     padding: "0 1rem"
                 }}>
-                    Kategori ve konum seçerek saniyeler içinde ilan ver. Açık artırmaya katıl, en iyi teklifleri ver.
+                    Kategori ve konum seçerek saniyeler içinde ilan ver. Açık artırmaya katıl, en iyi teqlifleri ver.
                 </p>
 
                 <p style={{

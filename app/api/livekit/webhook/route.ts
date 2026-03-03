@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
             if (favoritedUsers.length > 0) {
                 const title = '🔥 Canlı Yayın Başladı!';
-                const bodyMsg = `${updatedAd.title} için canlı açık artırma şu an yayında! Hemen katılın.`;
+                const bodyMsg = `${updatedAd.title} için canlı açık arttırma şu an yayında! Hemen katılın.`;
 
                 // Asenkron olarak gönderelim, webhook'u bekletmeyelim
                 Promise.all(favoritedUsers.map((user: any) =>
@@ -87,7 +87,7 @@ export async function POST(req: NextRequest) {
             });
             console.log(`[LiveKit Webhook] Ad ${adId} is no longer live.`);
 
-            // Odanın (İlanın) biriken tekliflerini Redis'ten çek ve DB'ye toplu yaz (Bulk Insert)
+            // Odanın (İlanın) biriken teqliflerini Redis'ten çek ve DB'ye toplu yaz (Bulk Insert)
             try {
                 const { getAndClearRoomBids } = await import('@/lib/redis');
                 const rawBids = await getAndClearRoomBids(adId);

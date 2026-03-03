@@ -253,11 +253,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           return;
         } else if (type == 'AUCTION_START') {
           setState(() => _isAuctionActive = true);
-          _showSystemMessage('📣 MEZAT BAŞLADI!', Colors.green);
+          _showSystemMessage('📣 AÇIK ARTTIRMA BAŞLADI!', Colors.green);
           return;
         } else if (type == 'AUCTION_END') {
           setState(() => _isAuctionActive = false);
-          _showSystemMessage('📣 MEZAT DURDURULDU', Colors.orange);
+          _showSystemMessage('📣 AÇIK ARTTIRMA DURDURULDU', Colors.orange);
           return;
         } else if (type == 'REACTION') {
           _addReaction(decoded['emoji']?.toString() ?? '❤️');
@@ -448,7 +448,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     
     if (amount == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen geçerli bir teklif girin')),
+        const SnackBar(content: Text('Lütfen geçerli bir teqlif girin')),
       );
       return;
     }
@@ -468,11 +468,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       // DO NOT broadcast manually via CHAT. The Backend API handles publishing NO_BID via webhook/LiveKit API
       
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Teklifiniz verildi! 🎉'), backgroundColor: Colors.green),
+        const SnackBar(content: Text('Teqlifiniz verildi! 🎉'), backgroundColor: Colors.green),
       );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Teklif verilemedi.')),
+        const SnackBar(content: Text('Teqlif verilemedi.')),
       );
     } finally {
       if (mounted) setState(() => _bidLoading = false);
@@ -869,7 +869,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                   enabled: !isDisconnected && _isAuctionActive,
                                   keyboardType: TextInputType.number,
                                   style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, fontFeatures: [FontFeature.tabularFigures()]),
-                                  decoration: const InputDecoration(hintText: 'Özel Teklif', hintStyle: TextStyle(color: Colors.white38, fontSize: 14), border: InputBorder.none),
+                                  decoration: const InputDecoration(hintText: 'Özel Teqlif', hintStyle: TextStyle(color: Colors.white38, fontSize: 14), border: InputBorder.none),
                                 ),
                               ),
                             ],
@@ -888,7 +888,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                               borderRadius: BorderRadius.circular(25),
                               boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.5), blurRadius: 15, spreadRadius: 1)],
                             ),
-                            child: const Center(child: Text('PEY VER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14))),
+                            child: const Center(child: Text('teqlif ver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14))),
                           ),
                         ),
                       if (currentAd.buyItNowPrice != null && !_isAuctionActive) ...[
@@ -1092,7 +1092,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                             enabled: !isDisconnected && _isAuctionActive,
                             keyboardType: TextInputType.number,
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16, fontFeatures: [FontFeature.tabularFigures()]),
-                            decoration: const InputDecoration(hintText: 'Özel Teklif', hintStyle: TextStyle(color: Colors.white38, fontSize: 14), border: InputBorder.none),
+                            decoration: const InputDecoration(hintText: 'Özel Teqlif', hintStyle: TextStyle(color: Colors.white38, fontSize: 14), border: InputBorder.none),
                           ),
                         ),
                       ],
@@ -1112,7 +1112,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           borderRadius: BorderRadius.circular(25),
                           boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.5), blurRadius: 15, spreadRadius: 1)],
                         ),
-                        child: const Center(child: Text('PEY VER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14))),
+                        child: const Center(child: Text('teqlif ver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14))),
                       ),
                     ),
                   if (currentAd.buyItNowPrice != null && !_isAuctionActive) ...[

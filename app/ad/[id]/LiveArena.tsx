@@ -175,11 +175,11 @@ function CustomArenaLayout({
                 addReaction(dataObj.emoji);
             } else if (dataObj.type === 'AUCTION_START') {
                 setAuctionStatus("ACTIVE");
-                setAuctionNotification("📣 MEZAT BAŞLADI!");
+                setAuctionNotification("📣 AÇIK ARTTIRMA BAŞLADI!");
                 setTimeout(() => setAuctionNotification(null), 4000);
             } else if (dataObj.type === 'AUCTION_END') {
                 setAuctionStatus("IDLE");
-                setAuctionNotification("📣 MEZAT DURDURULDU");
+                setAuctionNotification("📣 AÇIK ARTTIRMA DURDURULDU");
                 setTimeout(() => setAuctionNotification(null), 4000);
             } else if (dataObj.type === 'ROOM_CLOSED') {
                 setIsRoomClosed(true);
@@ -216,7 +216,7 @@ function CustomArenaLayout({
         return (
             <div className="absolute inset-0 flex flex-col justify-center items-center z-50 bg-gradient-to-br from-gray-900 to-black animate-pulse transition-all duration-1000" style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
                 <h2 className="text-3xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 drop-shadow-2xl" style={{ letterSpacing: "0.15em", fontWeight: 900 }}>Yayıncı bekleniyor...</h2>
-                <p className="opacity-50 mt-4 font-medium tracking-wide text-sm">Lütfen ayrılmayın, açık artırma birazdan başlayacak.</p>
+                <p className="opacity-50 mt-4 font-medium tracking-wide text-sm">Lütfen ayrılmayın, açık arttırma birazdan başlayacak.</p>
             </div>
         );
     }
@@ -506,7 +506,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
             });
             const data = await res.json();
             if (res.ok) {
-                setStatus({ type: 'success', msg: 'Teklif verildi!' });
+                setStatus({ type: 'success', msg: 'Teqlif verildi!' });
                 router.refresh();
             } else {
                 setStatus({ type: 'error', msg: data.error || 'Hata' });
@@ -520,10 +520,10 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
 
     async function handleAccept() {
         if (!liveHighestBidId) {
-            alert("Kabul edilecek bir teklif bulunamadı.");
+            alert("Kabul edilecek bir teqlif bulunamadı.");
             return;
         }
-        if (!confirm("Dikkat! Bu teklifi kabul edip satışı tamamlıyorsunuz. İlan 'Satıldı' olarak işaretlenecek ve yayın kapanacaktır. Emin misiniz?")) return;
+        if (!confirm("Dikkat! Bu teqlifi kabul edip satışı tamamlıyorsunuz. İlan 'Satıldı' olarak işaretlenecek ve yayın kapanacaktır. Emin misiniz?")) return;
 
         setLoading(true);
         try {
@@ -548,7 +548,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
 
     async function handleCancel() {
         if (!liveHighestBidId) {
-            alert("İptal edilecek bir teklif bulunamadı.");
+            alert("İptal edilecek bir teqlif bulunamadı.");
             return;
         }
         if (!confirm("Bunu iptal etmek istediğinize emin misiniz?")) return;
@@ -556,7 +556,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
         try {
             const res = await fetch(`/api/bids/${liveHighestBidId}/cancel`, { method: "PATCH" });
             if (res.ok) {
-                alert("Teklif iptal edildi.");
+                alert("Teqlif iptal edildi.");
                 router.refresh();
             } else {
                 alert("İşlem başarısız.");
@@ -748,7 +748,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                                     boxShadow: "0 4px 12px rgba(0, 188, 212, 0.3)"
                                 }}
                             >
-                                Açık Artırmayı Başlat
+                                Açık Arttırmayı Başlat
                             </button>
                         ) : (
                             <button
@@ -760,7 +760,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                                     boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)"
                                 }}
                             >
-                                Açık Artırmayı Bitir
+                                Açık Arttırmayı Bitir
                             </button>
                         )}
                         {auctionStatus === "ACTIVE" && (
@@ -832,10 +832,10 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                     {auctionStatus === "ACTIVE" ? (
                         <span className="flex items-center gap-2">
                             <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            AÇIK ARTIRMA CANLI
+                            AÇIK ARTTIRMA CANLI
                         </span>
                     ) : (
-                        "Yayıncı Açık Artırmayı Başlatmadı"
+                        "Yayıncı Açık Arttırmayı Başlatmadı"
                     )}
                 </div>
             )}
@@ -944,8 +944,8 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                                 boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
                             }}>
                                 <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>⏳</div>
-                                <h3 style={{ margin: "0 0 8px 0", fontSize: "1.2rem", fontWeight: 700 }}>Açık Artırma Bekleniyor</h3>
-                                <p style={{ margin: 0, opacity: 0.8, fontSize: "0.9rem", lineHeight: 1.5 }}>Yayıncı açık artırmayı başlattığında buradan teklif verebileceksiniz.</p>
+                                <h3 style={{ margin: "0 0 8px 0", fontSize: "1.2rem", fontWeight: 700 }}>Açık Arttırma Bekleniyor</h3>
+                                <p style={{ margin: 0, opacity: 0.8, fontSize: "0.9rem", lineHeight: 1.5 }}>Yayıncı açık arttırmayı başlattığında buradan teqlif verebileceksiniz.</p>
                                 {buyItNowPrice && (
                                     <button
                                         onClick={handleBuyNow}
@@ -1150,7 +1150,7 @@ function BidForm({ adId, currentHighest, minStep, startingBid, formattedPrice }:
             });
             const data = await res.json();
             if (res.ok) {
-                setStatus({ type: 'success', msg: 'Teklif verildi!' });
+                setStatus({ type: 'success', msg: 'Teqlif verildi!' });
                 router.refresh();
             } else {
                 setStatus({ type: 'error', msg: data.error || 'Hata' });
@@ -1175,7 +1175,7 @@ function BidForm({ adId, currentHighest, minStep, startingBid, formattedPrice }:
             color: "white",
             position: "relative"
         }}>
-            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "bold", textAlign: "center" }}>Teklif Ver</h3>
+            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "bold", textAlign: "center" }}>Teqlif Ver</h3>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                 <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>Güncel:</span>
                 <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighest || (startingBid ?? 0))}</span>
@@ -1217,7 +1217,7 @@ function BidForm({ adId, currentHighest, minStep, startingBid, formattedPrice }:
                     boxShadow: "0 4px 15px rgba(0, 188, 212, 0.4)"
                 }}
             >
-                {loading ? "..." : "Pey Ver"}
+                {loading ? "..." : "teqlif ver"}
             </button>
             {status && (
                 <div style={{

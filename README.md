@@ -1,11 +1,11 @@
 # Teqlif Platformu
 
-Teqlif, kullanıcıların hem **Açık Artırma (Müzayede)** usulüyle hem de **Sabit Fiyatlı** olarak ürünlerini listeleyebildiği ve teklif verip/satın alabildiği yeni nesil bir e-ticaret platformudur. Proje, modern web teknolojileri (Next.js) ve çapraz platform mobil uygulama (Flutter) altyapısını bir arada sunar.
+Teqlif, kullanıcıların hem **Açık Arttırma (Müzayede)** usulüyle hem de **Sabit Fiyatlı** olarak ürünlerini listeleyebildiği ve teqlif verip/satın alabildiği yeni nesil bir e-ticaret platformudur. Proje, modern web teknolojileri (Next.js) ve çapraz platform mobil uygulama (Flutter) altyapısını bir arada sunar.
 
 ## 🚀 Temel Özellikler
 
 - **Çoklu İlan Modelleri:**
-  - **Açık Artırma:** Satıcılar ürünlerine başlangıç fiyatı (`startingBid`) ve minimum artış miktarı / pey aralığı (`minBidStep`) belirleyebilirler. Alıcılar bu kurallara göre teklif verir.
+  - **Açık Arttırma:** Satıcılar ürünlerine başlangıç fiyatı (`startingBid`) ve minimum artış miktarı / teqlif aralığı (`minBidStep`) belirleyebilirler. Alıcılar bu kurallara göre teqlif verir.
   - **Sabit Fiyat (Fixed Price):** Teklif mekanizmasının kapalı olduğu, satıcının belirlediği net fiyattan listelenen ve doğrudan iletişime geçilerek satılan ürün modeli.
 - **Gelişmiş Teklif Yönetimi:** Satıcılar, ilanlarına gelen teklifleri görebilir, kabul edebilir (`ACCEPTED`) veya reddedebilir (`REJECTED`). Teklif kabul edildiğinde kazanan dışındaki rezerve teklifler iptal edilir.
 - **Gerçek Zamanlıya Yakın Mesajlaşma:**

@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
         try {
             const { success } = await actionRatelimiter.limit(ip);
             if (!success) {
-                return NextResponse.json({ error: "Çok hızlı teklif veriyorsunuz. Lütfen biraz yavaşlayın." }, { status: 429 });
+                return NextResponse.json({ error: "Çok hızlı teqlif veriyorsunuz. Lütfen biraz yavaşlayın." }, { status: 429 });
             }
         } catch (ratelimitError) {
             console.error("Rate limit check failed (Bid):", ratelimitError);
@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
         logger.info("POST /api/bids start", { adId, amount, userId: user.id });
 
         if (!adId || !amount) {
-            return NextResponse.json({ error: "İlan ve teklif miktarı zorunludur." }, { status: 400 });
+            return NextResponse.json({ error: "İlan ve teqlif miktarı zorunludur." }, { status: 400 });
         }
 
         const ad = await prisma.ad.findUnique({
@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (ad.userId === user.id) {
-            return NextResponse.json({ error: "Kendi ilanınıza teklif veremezsiniz." }, { status: 403 });
+            return NextResponse.json({ error: "Kendi ilanınıza teqlif veremezsiniz." }, { status: 403 });
         }
 
         if (ad.status !== "ACTIVE") {
@@ -114,7 +114,7 @@ export async function POST(req: NextRequest) {
 
         if (Number(amount) < minRequiredAmount) {
             return NextResponse.json(
-                { error: `Teklifiniz minimum ${new Intl.NumberFormat("tr-TR").format(minRequiredAmount)} ₺ olmalıdır.` },
+                { error: `Teqlifiniz minimum ${new Intl.NumberFormat("tr-TR").format(minRequiredAmount)} ₺ olmalıdır.` },
                 { status: 400 }
             );
         }
@@ -148,7 +148,7 @@ export async function POST(req: NextRequest) {
             data: {
                 userId: ad.userId, // ad is still available from outer scope fetch
                 type: 'BID_RECEIVED',
-                message: `${bid.user.name} "${ad.title}" ilanınıza ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teklif verdi.`,
+                message: `${bid.user.name} "${ad.title}" ilanınıza ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teqlif verdi.`,
                 link: `/ad/${ad.id}`
             },
         });
@@ -158,8 +158,8 @@ export async function POST(req: NextRequest) {
             const badgeCount = await getUnreadCount(ad.userId);
             await sendPushNotification(
                 updatedAd.user.fcmToken,
-                'Yeni Teklif Var! 💰',
-                `${bid.user.name} "${ad.title}" ilanına ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teklif verdi.`,
+                'Yeni Teqlif Var! 💰',
+                `${bid.user.name} "${ad.title}" ilanına ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teqlif verdi.`,
                 { type: 'BID_RECEIVED', link: `/ad/${ad.id}` },
                 badgeCount
             ).catch(err => console.error("FCM Send Error:", err));

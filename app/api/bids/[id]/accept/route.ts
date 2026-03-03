@@ -35,7 +35,7 @@ export async function PATCH(
 
         if (!bid) {
             return NextResponse.json(
-                { message: 'Teklif bulunamadı' },
+                { message: 'Teqlif bulunamadı' },
                 { status: 404 }
             );
         }
@@ -80,7 +80,7 @@ export async function PATCH(
                 data: {
                     userId: bid.userId,
                     type: 'BID_ACCEPTED',
-                    message: `${bid.ad.title} ilanınız için verdiğiniz ${bid.amount} TL teklif kabul edildi! Satıcı ile iletişime geçebilirsiniz.`,
+                    message: `${bid.ad.title} ilanınız için verdiğiniz ${bid.amount} TL teqlif kabul edildi! Satıcı ile iletişime geçebilirsiniz.`,
                     link: `/ad/${bid.adId}`,
                 },
             });
@@ -128,8 +128,8 @@ export async function PATCH(
             const badgeCount = await getUnreadCount(bid.userId);
             await sendPushNotification(
                 bid.user.fcmToken,
-                'Teklifin Kabul Edildi! 🎉',
-                `${bid.ad.title} ilanı için verdiğin ${bid.amount} ₺ teklif kabul edildi! Satıcı ile hemen iletişime geçebilirsin.`,
+                'Teqlifin Kabul Edildi! 🎉',
+                `${bid.ad.title} ilanı için verdiğin ${bid.amount} ₺ teqlif kabul edildi! Satıcı ile hemen iletişime geçebilirsin.`,
                 { type: 'BID_ACCEPTED', link: `/ad/${bid.adId}` },
                 badgeCount
             ).catch(err => console.error("FCM Send Error:", err));
@@ -151,7 +151,7 @@ export async function PATCH(
     } catch (error) {
         console.error('Bid Accept Error:', error);
         return NextResponse.json(
-            { message: 'Teklif kabul edilirken bir hata oluştu' },
+            { message: 'Teqlif kabul edilirken bir hata oluştu' },
             { status: 500 }
         );
     }

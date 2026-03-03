@@ -59,7 +59,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
         .replaceAll(',', '.');
     final amount = double.tryParse(rawText);
     if (amount == null) {
-      _snack('Geçerli bir teklif miktarı girin.');
+      _snack('Geçerli bir teqlif miktarı girin.');
       return;
     }
     setState(() => _bidLoading = true);
@@ -71,9 +71,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
       _bidCtrl.clear();
       ref.invalidate(adDetailProvider(widget.adId));
       ref.invalidate(myBidsProvider);
-      _snack('Teklifiniz verildi! 🎉');
+      _snack('Teqlifiniz verildi! 🎉');
     } catch (e) {
-      _snack('Teklif verilemedi.');
+      _snack('Teqlif verilemedi.');
     } finally {
       setState(() => _bidLoading = false);
     }
@@ -155,7 +155,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     try {
       await ApiClient().patch(Endpoints.acceptBid(bidId));
       ref.invalidate(adDetailProvider(widget.adId));
-      _snack('Teklif kabul edildi. ✅');
+      _snack('Teqlif kabul edildi. ✅');
     } catch (_) {
       _snack('İşlem başarısız.');
     }
@@ -165,7 +165,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     try {
       await ApiClient().patch(Endpoints.cancelBid(bidId));
       ref.invalidate(adDetailProvider(widget.adId));
-      _snack('Teklif iptali başarılı.');
+      _snack('Teqlif iptali başarılı.');
     } catch (_) {
       _snack('İşlem başarısız.');
     }
@@ -588,7 +588,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                     ad.bids.isNotEmpty
                                         ? _formatPrice(ad.bids.first.amount)
                                         : (ad.startingBid == null
-                                            ? '🔥 Serbest Teklif'
+                                            ? '🔥 Serbest Teqlif'
                                             : _formatPrice(ad.startingBid!)),
                                     style: const TextStyle(
                                         fontWeight: FontWeight.w800,
@@ -614,7 +614,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                         color: Color(0xFF4A5568)),
                                   ),
                                   const SizedBox(height: 4),
-                                  const Text('Pey Aralığı',
+                                  const Text('teqlif Aralığı',
                                       style: TextStyle(
                                           color: Color(0xFF9AAAB8),
                                           fontSize: 12)),
@@ -863,7 +863,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
 
                       // Bid history
                       if (!ad.isFixedPrice && ad.bids.isNotEmpty) ...[
-                        Text('Teklif Geçmişi (${ad.bids.length})',
+                        Text('Teqlif Geçmişi (${ad.bids.length})',
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700, fontSize: 16)),
                         const SizedBox(height: 8),
@@ -939,7 +939,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Teklif Ver',
+        const Text('Teqlif Ver',
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
         const SizedBox(height: 8),
         if (currentUser != null)
@@ -966,7 +966,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             .numberWithOptions(decimal: true),
                         inputFormatters: [_bidFormatter],
                         decoration: InputDecoration(
-                          hintText: 'Teklif miktarı (₺)',
+                          hintText: 'Teqlif miktarı (₺)',
                           prefixIcon: const Icon(Icons.gavel),
                           helperText:
                               'En az ${_formatPrice(minRequiredBid)}',

@@ -338,13 +338,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
     try {
       await state.room!.localParticipant?.publishData(signal.codeUnits);
       _showSystemMessage(
-        _isAuctionActive ? '📣 AÇIK ARTIRMA BAŞLATILDI!' : '📣 AÇIK ARTIRMA DURDURULDU',
+        _isAuctionActive ? '📣 AÇIK ARTTIRMA BAŞLATILDI!' : '📣 AÇIK ARTTIRMA DURDURULDU',
         _isAuctionActive ? Colors.green : Colors.orange
       );
       final signalName = state.room!.localParticipant?.name;
       final signalPayload = jsonEncode({
         'type': 'CHAT',
-        'text': _isAuctionActive ? '📣 Açık Artırma Başlatıldı!' : '📣 Açık Artırma Durduruldu!',
+        'text': _isAuctionActive ? '📣 Açık Arttırma Başlatıldı!' : '📣 Açık Arttırma Durduruldu!',
         'senderName': signalName,
       });
       _handleDataChannelMessage(utf8.encode(signalPayload), null, customName: signalName);
@@ -472,8 +472,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Teklifi İptal Et'),
-        content: const Text('Bu teklifi reddetmek veya iptal etmek istediğinize emin misiniz?'),
+        title: const Text('Teqlifi İptal Et'),
+        content: const Text('Bu teqlifi reddetmek veya iptal etmek istediğinize emin misiniz?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hayır')),
           TextButton(
@@ -527,13 +527,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                     children: [
                       const Icon(Icons.gavel, color: Color(0xFF00B4CC)),
                       const SizedBox(width: 12),
-                      const Text('Gelen Teklifler', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                      const Text('Gelen Teqlifler', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                     ],
                   ),
                 ),
                 Expanded(
                   child: _bids.isEmpty 
-                    ? const Center(child: Text('Henüz teklif gelmedi.', style: TextStyle(color: Colors.grey)))
+                    ? const Center(child: Text('Henüz teqlif gelmedi.', style: TextStyle(color: Colors.grey)))
                     : ListView.builder(
                         controller: controller,
                         itemCount: _bids.length,
@@ -572,8 +572,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                                     final confirmed = await showDialog<bool>(
                                       context: context,
                                       builder: (ctx) => AlertDialog(
-                                        title: const Text('Teklifi Onayla'),
-                                        content: Text('₺${_formatPrice(bid.amount)} tutarındaki teklifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
+                                        title: const Text('Teqlifi Onayla'),
+                                        content: Text('₺${_formatPrice(bid.amount)} tutarındaki teqlifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
                                         actions: [
                                           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hayır')),
                                           TextButton(onPressed: () => Navigator.pop(ctx, true), child: const Text('Evet, Sat')),
@@ -652,7 +652,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
       context: context,
       builder: (ctx) => AlertDialog(
         title: const Text('Satışı Onayla'),
-        content: Text('₺${_formatPrice(latestBid.amount)} tutarındaki son teklifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
+        content: Text('₺${_formatPrice(latestBid.amount)} tutarındaki son teqlifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('İptal')),
           TextButton(
@@ -914,10 +914,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+              Text('GÜNCEL TEQLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
               const SizedBox(height: 2),
               Text(
-                _bids.isNotEmpty ? '₺${_formatPrice(_bids.first.amount)}' : 'Henüz Teklif Yok',
+                _bids.isNotEmpty ? '₺${_formatPrice(_bids.first.amount)}' : 'Henüz Teqlif Yok',
                 style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, fontFeatures: [FontFeature.tabularFigures()]),
               ),
               const SizedBox(height: 4),
@@ -929,7 +929,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                   border: Border.all(color: _isAuctionActive ? Colors.green.withOpacity(0.5) : Colors.orange.withOpacity(0.5)),
                 ),
                 child: Text(
-                  _isAuctionActive ? 'MEZAT AKTİF' : 'MEZAT DURDURULDU',
+                  _isAuctionActive ? 'AÇIK ARTTIRMA AKTİF' : 'AÇIK ARTTIRMA DURDURULDU',
                   style: TextStyle(
                     color: _isAuctionActive ? Colors.greenAccent : Colors.orangeAccent,
                     fontSize: 9,
@@ -993,9 +993,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                 crossAxisAlignment: CrossAxisAlignment.start,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                  Text('GÜNCEL TEQLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1)),
                   Text(
-                    _bids.isNotEmpty ? '₺${_formatPrice(_bids.first.amount)}' : 'Henüz Teklif Yok',
+                    _bids.isNotEmpty ? '₺${_formatPrice(_bids.first.amount)}' : 'Henüz Teqlif Yok',
                     style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, fontFeatures: [FontFeature.tabularFigures()]),
                   ),
                 ],
@@ -1009,7 +1009,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                   border: Border.all(color: _isAuctionActive ? Colors.green.withOpacity(0.5) : Colors.orange.withOpacity(0.5)),
                 ),
                 child: Text(
-                  _isAuctionActive ? 'MEZAT AKTİF' : 'MEZAT DURDURULDU',
+                  _isAuctionActive ? 'AÇIK ARTTIRMA AKTİF' : 'AÇIK ARTTIRMA DURDURULDU',
                   style: TextStyle(
                     color: _isAuctionActive ? Colors.greenAccent : Colors.orangeAccent,
                     fontSize: 8,

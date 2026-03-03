@@ -131,7 +131,7 @@ export function QuickLiveButton() {
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Örn: Antika Saat Mezatı"
+                                    placeholder="Örn: Antika Saat Açık Arttırması"
                                     className="input-field"
                                     required
                                 />

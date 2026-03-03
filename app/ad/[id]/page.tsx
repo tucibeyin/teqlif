@@ -151,7 +151,7 @@ export default async function AdDetailPage({
                             <div className="card" style={{ overflow: "hidden", border: "2px solid #ef4444", borderRadius: "1.5rem" }}>
                                 <div style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
                                     <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
-                                    {!adData.isLive && isOwner ? "YAYIN HAZIRLIK ODASI (Sadece Siz Görüyorsunuz)" : "CANLI MEZAT ARENASI"}
+                                    {!adData.isLive && isOwner ? "YAYIN HAZIRLIK ODASI (Sadece Siz Görüyorsunuz)" : "CANLI AÇIK ARTTIRMA ARENASI"}
                                 </div>
                                 <LiveArenaWrapper
                                     roomId={adData.id}
@@ -244,7 +244,7 @@ export default async function AdDetailPage({
                     </div>
                 </div>
 
-                {/* Sağ: Açık Artırma veya Sabit Fiyat */}
+                {/* Sağ: Açık Arttırma veya Sabit Fiyat */}
                 <div>
                     {/* Satıcı İletişim Kartı */}
                     <div className="card" style={{ marginBottom: "1.5rem" }}>
@@ -309,7 +309,7 @@ export default async function AdDetailPage({
                             {isOwner && !adData.isLive && adData.status === 'ACTIVE' && (
                                 <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
                                     <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.5rem", textAlign: "center" }}>
-                                        Canlı olarak ürününüzü tanıtıp, anlık peyler alabilirsiniz.
+                                        Canlı olarak ürününüzü tanıtıp, anlık teqlifler alabilirsiniz.
                                     </div>
                                     <StartBroadcastButton adId={ad.id} />
                                 </div>
@@ -352,18 +352,18 @@ export default async function AdDetailPage({
                         <div className="auction-card">
                             <div style={{ marginBottom: "1.25rem" }}>
                                 <div className="auction-label">
-                                    {highestBid ? "Güncel Fiyat (En Yüksek Teklif)" : (ad.startingBid === null ? "Açılış (Serbest Teklif)" : "Minimum Açılış Teklifi")}
+                                    {highestBid ? "Güncel Fiyat (En Yüksek Teqlif)" : (ad.startingBid === null ? "Açılış (Serbest Teqlif)" : "Minimum Açılış Teqlifi")}
                                 </div>
                                 <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-secondary)" }}>
                                     {highestBid ? formatPrice(highestBid.amount) : (ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid))}
                                 </div>
                                 <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.25rem", display: "flex", justifyContent: "space-between" }}>
                                     <span>Piyasa Değeri: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span></span>
-                                    <span style={{ color: "var(--primary)", fontWeight: 500 }}>➕ Pey Aralığı: {formatPrice(ad.minBidStep)}</span>
+                                    <span style={{ color: "var(--primary)", fontWeight: 500 }}>➕ teqlif Aralığı: {formatPrice(ad.minBidStep)}</span>
                                 </div>
                                 {highestBid && (
                                     <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                        Son teklif: {highestBid.user.name} tarafından verildi
+                                        Son teqlif: {highestBid.user.name} tarafından verildi
                                     </div>
                                 )}
                             </div>
@@ -378,7 +378,7 @@ export default async function AdDetailPage({
                                     textAlign: "center",
                                 }}>
                                     <div style={{ fontWeight: 700, color: "var(--primary)" }}>{ad.bids.length}</div>
-                                    <div className="text-muted" style={{ fontSize: "0.75rem" }}>Teklif</div>
+                                    <div className="text-muted" style={{ fontSize: "0.75rem" }}>Teqlif</div>
                                 </div>
                                 <div style={{
                                     background: "rgba(0, 188, 212, 0.08)",
@@ -421,7 +421,7 @@ export default async function AdDetailPage({
                                 </div>
                             )}
 
-                            {/* Teklif Formu & Mesaj Butonu */}
+                            {/* Teqlif Formu & Mesaj Butonu */}
                             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                 {ad.status === 'ACTIVE' && !isOwner && session?.user && !adData.isLive && (
                                     <BidForm
@@ -434,7 +434,7 @@ export default async function AdDetailPage({
                                 {!session?.user && !adData.isLive && (
                                     <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
                                         <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
-                                            Bu ilana teklif vermek için giriş yapmalısınız.
+                                            Bu ilana teqlif vermek için giriş yapmalısınız.
                                         </p>
                                         <Link href="/login" className="btn btn-primary btn-full">
                                             Giriş Yap
@@ -445,16 +445,16 @@ export default async function AdDetailPage({
                                 {isOwner && (
                                     <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
                                         <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
-                                        {ad.status === 'ACTIVE' ? "Kendi ilanınıza teklif veremezsiniz." : "İlan satış işlemi tamamlandı."}
+                                        {ad.status === 'ACTIVE' ? "Kendi ilanınıza teqlif veremezsiniz." : "İlan satış işlemi tamamlandı."}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Teklif Geçmişi */}
+                            {/* Teqlif Geçmişi */}
                             {ad.bids.length > 0 && (
                                 <div className="bid-history" style={{ marginTop: "1.5rem" }}>
                                     <div style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                                        Teklif Geçmişi ({ad.bids.length})
+                                        Teqlif Geçmişi ({ad.bids.length})
                                     </div>
                                     <div style={{ maxHeight: "350px", overflowY: "auto", paddingRight: "0.5rem" }}>
                                         {ad.bids.map((bid: any, i: number) => (
@@ -553,8 +553,8 @@ export default async function AdDetailPage({
                                                                 currentUser={session?.user}
                                                                 isMessageBidder={true}
                                                                 initialMessage={isOwner
-                                                                    ? `"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teklif hakkında iletişime geçiyorum.`
-                                                                    : `"${ad.title}" (İlan No: ${ad.id}) ilanına verdiğim teklif hakkında iletişime geçmek istiyorum.`
+                                                                    ? `"${ad.title}" (İlan No: ${ad.id}) ilanınızla ilgili yazdığınız teqlif hakkında iletişime geçiyorum.`
+                                                                    : `"${ad.title}" (İlan No: ${ad.id}) ilanına verdiğim teqlif hakkında iletişime geçmek istiyorum.`
                                                                 }
                                                             />
                                                         )}
