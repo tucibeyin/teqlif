@@ -636,7 +636,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           padding: const EdgeInsets.only(right: 8),
           child: GestureDetector(
             onTap: () {
-              final currentPrice = currentAd.highestBidAmount ?? currentAd.startingBid ?? 0;
+              final currentPrice = currentAd.highestBidAmount 
+                                   ?? currentAd.startingBid 
+                                   ?? (currentAd.isFixedPrice ? currentAd.price : 0);
               _bidCtrl.text = _formatPrice(currentPrice + amount);
               _placeBidSlide();
             },
@@ -710,6 +712,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
     final isDisconnected = room?.connectionState.name == 'disconnected' || (room == null && !roomState.isConnecting);
+
+    // Sync isAuctionActive from currentAd (initial state or polling updates)
+    if (currentAd.isAuctionActive != _isAuctionActive) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _isAuctionActive = currentAd.isAuctionActive);
+      });
+    }
 
     VideoTrack? hostTrack;
     VideoTrack? guestTrack;

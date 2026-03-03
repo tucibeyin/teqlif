@@ -76,6 +76,7 @@ class AdModel {
   final AdCountModel? count;
   final List<BidModel> bids;
   final bool isLive;
+  final bool isAuctionActive;
   final DateTime? auctionStartTime;
 
   const AdModel({
@@ -101,6 +102,7 @@ class AdModel {
     this.count,
     this.bids = const [],
     this.isLive = false,
+    this.isAuctionActive = false,
     this.auctionStartTime,
   });
 
@@ -162,6 +164,7 @@ class AdModel {
                 .toList() ??
             [],
         isLive: json['isLive'] as bool? ?? false,
+        isAuctionActive: json['isAuctionActive'] as bool? ?? false,
         auctionStartTime: json['auctionStartTime'] != null
             ? DateTime.parse(json['auctionStartTime'] as String)
             : null,

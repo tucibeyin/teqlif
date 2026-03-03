@@ -101,6 +101,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
 
     // Connect to room as Host
     WidgetsBinding.instance.addPostFrameCallback((_) async {
+      _isAuctionActive = widget.ad.isAuctionActive; // Initial state from DB
+
       // Request permissions first
       final cameraStatus = await Permission.camera.request();
       final micStatus = await Permission.microphone.request();
@@ -340,6 +342,12 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
 
     try {
       await state.room!.localParticipant?.publishData(signal.codeUnits);
+      
+      // Persist state to DB
+      await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {
+        'isAuctionActive': _isAuctionActive,
+      });
+
       _showSystemMessage(
         _isAuctionActive ? '📣 AÇIK ARTTIRMA BAŞLATILDI!' : '📣 AÇIK ARTTIRMA DURDURULDU',
         _isAuctionActive ? Colors.green : Colors.orange
@@ -1154,26 +1162,26 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
       padding: const EdgeInsets.all(16),
       child: Row(
         children: [
-          if (widget.ad.isAuction)
-            Padding(
-              padding: const EdgeInsets.only(right: 12),
-              child: GestureDetector(
-                onTap: _toggleAuction,
-                child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 300),
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: _isAuctionActive ? Colors.redAccent : Colors.white.withOpacity(0.2),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white30),
-                    boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.redAccent.withOpacity(0.4), blurRadius: 15)] : null,
-                  ),
-                  child: Icon(_isAuctionActive ? Icons.stop : Icons.play_arrow, color: Colors.white, size: 30),
+          // Remove strict widget.ad.isAuction check to allow hybrid auctions on fixed-price ads
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: _toggleAuction,
+              child: AnimatedContainer(
+                duration: const Duration(milliseconds: 300),
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: _isAuctionActive ? Colors.redAccent : Colors.white.withOpacity(0.2),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white30),
+                  boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.redAccent.withOpacity(0.4), blurRadius: 15)] : null,
                 ),
+                child: Icon(_isAuctionActive ? Icons.stop : Icons.play_arrow, color: Colors.white, size: 30),
               ),
             ),
-          if (widget.ad.isAuction && _isAuctionActive)
+          ),
+          if (_isAuctionActive) // Show countdown for any active auction
             Padding(
               padding: const EdgeInsets.only(right: 12),
               child: GestureDetector(

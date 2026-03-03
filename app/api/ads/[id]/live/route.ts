@@ -13,7 +13,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         const { id } = await params;
         const body = await req.json();
-        const { isLive, liveKitRoomId } = body;
+        const { isLive, liveKitRoomId, isAuctionActive } = body;
 
         const ad = await prisma.ad.findUnique({ where: { id } });
         if (!ad) return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
@@ -24,6 +24,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             data: {
                 isLive: isLive !== undefined ? Boolean(isLive) : ad.isLive,
                 liveKitRoomId: liveKitRoomId !== undefined ? String(liveKitRoomId) : ad.liveKitRoomId,
+                isAuctionActive: isAuctionActive !== undefined ? Boolean(isAuctionActive) : ad.isAuctionActive,
             },
         });
 

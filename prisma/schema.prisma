@@ -83,7 +83,8 @@ model Ad {
   isAuction        Boolean        @default(false) // Bu ilan canlı Açık Arttırma formatında mı?
   auctionStartTime DateTime? // Açık Arttırma planlanan veya başlama zamanı
   startingPrice    Float? // Açık Arttırmanın açılış fiyatı (isteğe bağlı)
-  liveKitRoomId    String? // LiveKit odasının ID'si
+  isAuctionActive  Boolean        @default(false) // Açık Arttırma şu an aktif mi? (Canlı yayın sırasında)
+  liveKitRoomId    String?        // LiveKit odasının ID'si
   // --------------------------------
   category         Category       @relation(fields: [categoryId], references: [id])
   district         District       @relation(fields: [districtId], references: [id])
