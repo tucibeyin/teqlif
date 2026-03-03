@@ -49,6 +49,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
   final List<FloatingReaction> _reactions = [];
   int _lastReactionTime = 0;
 
+  // Draggable PiP (Guest Window)
+  Offset? _pipOffset;
+
   void _addReaction(String emoji) {
     if (!mounted) return;
     final id = DateTime.now().millisecondsSinceEpoch.toString() + Random().nextInt(1000).toString();
@@ -1258,14 +1261,29 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
           ),
         ),
 
-        if (guestTrack != null)
-          Positioned(
-            top: 220,
-            right: 16,
+        if (guestTrack != null) {
+          final screenSize = MediaQuery.of(context).size;
+          // Initial position (Top-Right-ish)
+          _pipOffset ??= Offset(screenSize.width - 116, 220);
+
+          return Positioned(
+            top: _pipOffset!.dy,
+            left: _pipOffset!.dx,
             width: 100,
             height: 140,
-            child: _buildGuestTrackView(guestTrack, guestIdentity),
-          ),
+            child: GestureDetector(
+              onPanUpdate: (details) {
+                setState(() {
+                  _pipOffset = Offset(
+                    (_pipOffset!.dx + details.delta.dx).clamp(0.0, screenSize.width - 100.0),
+                    (_pipOffset!.dy + details.delta.dy).clamp(0.0, screenSize.height - 140.0),
+                  );
+                });
+              },
+              child: _buildGuestTrackView(guestTrack, guestIdentity),
+            ),
+          );
+        }
 
         FloatingReactionsOverlay(reactions: _reactions),
 
