@@ -162,15 +162,15 @@ function CustomArenaLayout({
                 setTimeout(() => setFlashBid(false), 300);
             } else if (dataObj.type === 'CHAT') {
                 const newMessage = {
-                    id: Date.now().toString(),
+                    id: Date.now().toString() + Math.random(),
                     text: dataObj.text,
                     sender: dataObj.senderName || "Katılımcı",
                     senderId: dataObj.senderId
                 };
-                setMessages(prev => [...prev.slice(-4), newMessage]);
+                setMessages(prev => [...prev.slice(-10), newMessage]); // Keep more messages
                 setTimeout(() => {
                     setMessages(prev => prev.filter((m: any) => m.id !== newMessage.id));
-                }, 5000);
+                }, 8000); // Show longer
             } else if (dataObj.type === 'REACTION') {
                 addReaction(dataObj.emoji);
             } else if (dataObj.type === 'AUCTION_START') {
@@ -659,14 +659,14 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
 
             // Local echo
             const newMessage = {
-                id: Date.now().toString(),
+                id: Date.now().toString() + Math.random(),
                 text: chatText.trim(),
                 sender: session?.user?.name || "Ben"
             };
-            setMessages((prev: any) => [...prev.slice(-4), newMessage]);
+            setMessages((prev: any) => [...prev.slice(-10), newMessage]);
             setTimeout(() => {
                 setMessages((prev: any) => prev.filter((m: any) => m.id !== newMessage.id));
-            }, 5000);
+            }, 8000);
 
             setChatText("");
         } catch (e) {
@@ -827,129 +827,167 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                     </div>
                 </div>
             ) : (
-                /* Viewer Controls */
-                <>
+                /* Viewer Top Bar Info */
+                <div style={{ flex: 1, textAlign: "left", fontSize: "0.85rem", fontWeight: 700, color: "rgba(255,255,255,0.8)" }}>
                     {auctionStatus === "ACTIVE" ? (
-                        <form onSubmit={handleBid} style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
+                        <span className="flex items-center gap-2">
+                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                            AÇIK ARTIRMA CANLI
+                        </span>
+                    ) : (
+                        "Yayıncı Açık Artırmayı Başlatmadı"
+                    )}
+                </div>
+            )}
+
+            {/* Chat & Interaction Overlay for Viewer */}
+            {!isOwner && (
+                <div style={{
+                    position: "absolute",
+                    bottom: "20px",
+                    left: "20px",
+                    right: "20px",
+                    display: "flex",
+                    alignItems: "flex-end",
+                    justifyContent: "space-between",
+                    gap: "20px",
+                    zIndex: 100
+                }}>
+                    {/* Chat Messages */}
+                    <div style={{
+                        flex: 1,
+                        maxWidth: "400px",
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                    }}>
+                        {messages.map((msg: any) => (
+                            <div key={msg.id} style={{
+                                background: "rgba(0,0,0,0.4)",
+                                backdropFilter: "blur(12px)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: "12px",
+                                padding: "8px 12px",
+                                maxWidth: "fit-content",
+                                animation: "slideUp 0.3s ease-out"
+                            }}>
+                                <span style={{ color: "#00B4CC", fontWeight: 800, fontSize: "0.85rem", marginRight: "8px" }}>{msg.sender}:</span>
+                                <span style={{ color: "white", fontSize: "0.85rem" }}>{msg.text}</span>
+                            </div>
+                        ))}
+
+                        {/* Chat Input */}
+                        <form onSubmit={handleSendChat} style={{
+                            display: "flex",
+                            gap: "8px",
+                            marginTop: "8px",
+                            background: "rgba(0,0,0,0.4)",
+                            backdropFilter: "blur(12px)",
+                            border: "1px solid rgba(255,255,255,0.15)",
+                            borderRadius: "100px",
+                            padding: "4px 4px 4px 16px",
+                            width: "100%"
+                        }}>
                             <input
                                 type="text"
-                                value={amount}
-                                onChange={(e) => {
-                                    const val = e.target.value.replace(/[^0-9]/g, "");
-                                    setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
-                                }}
-                                placeholder="Miktar"
+                                value={chatText}
+                                onChange={(e) => setChatText(e.target.value)}
+                                placeholder="Sohbet..."
                                 style={{
-                                    width: "90px",
-                                    padding: "6px 12px",
-                                    background: "rgba(255, 255, 255, 0.1)",
-                                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                                    borderRadius: "100px",
+                                    background: "transparent",
+                                    border: "none",
+                                    outline: "none",
                                     color: "white",
                                     fontSize: "0.9rem",
-                                    textAlign: "center",
-                                    outline: "none"
+                                    flex: 1
                                 }}
                             />
                             <button
                                 type="submit"
-                                disabled={loading}
                                 style={{
-                                    background: "var(--primary)",
+                                    background: "#00B4CC",
                                     color: "white",
                                     border: "none",
                                     borderRadius: "100px",
-                                    padding: "8px 16px",
-                                    fontSize: "0.85rem",
-                                    fontWeight: 700,
-                                    cursor: "pointer",
-                                    transition: "all 0.2s"
+                                    width: "36px",
+                                    height: "36px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer"
                                 }}
                             >
-                                {loading ? "..." : "Pey Ver"}
+                                ➔
                             </button>
                         </form>
-                    ) : (
-                        <div style={{ flex: 1, textAlign: "center", fontSize: "0.85rem", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>
-                            Açık Artırma Bekleniyor...
-                        </div>
-                    )}
+                    </div>
 
-                    {buyItNowPrice && (
-                        <button
-                            onClick={handleBuyNow}
-                            disabled={loading}
-                            style={{
-                                background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
-                                color: "black",
-                                border: "none",
-                                borderRadius: "100px",
-                                padding: "8px 16px",
-                                fontSize: "0.8rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
-                            }}
-                        >
-                            ⚡ Hemen Al
-                        </button>
-                    )}
-                </>
-            )}
-
-            {/* Right Side Overlay (For Viewer only; Host has a separate panel below video) */}
-            {!isOwner && (
-                <div style={{
-                    position: "absolute",
-                    bottom: "100px",
-                    right: "20px",
-                    width: "320px",
-                    zIndex: 100
-                }}>
-                    {auctionStatus === "ACTIVE" ? (
-                        <BidForm
-                            adId={adId}
-                            currentHighest={currentHighestBid || (startingBid ?? 0)}
-                            minStep={minBidStep}
-                            startingBid={startingBid}
-                            formattedPrice={formattedPrice}
-                        />
-                    ) : (
-                        <div style={{
-                            background: "rgba(0,0,0,0.6)",
-                            backdropFilter: "blur(10px)",
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: "1rem",
-                            padding: "1.5rem",
-                            color: "white",
-                            textAlign: "center",
-                            boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
-                        }}>
-                            <div style={{ fontSize: "2.5rem", marginBottom: "12px", animation: "pulse 2s infinite" }}>⏳</div>
-                            <h3 style={{ margin: "0 0 8px 0", fontSize: "1.2rem", fontWeight: 700 }}>Açık Artırma Bekleniyor</h3>
-                            <p style={{ margin: 0, opacity: 0.8, fontSize: "0.9rem", lineHeight: 1.5 }}>Yayıncı açık artırmayı başlattığında buradan teklif verebileceksiniz.</p>
-                            {buyItNowPrice && (
-                                <button
-                                    onClick={handleBuyNow}
-                                    style={{
-                                        marginTop: "20px",
-                                        width: "100%",
-                                        background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
-                                        color: "black",
-                                        border: "none",
-                                        borderRadius: "0.75rem",
-                                        padding: "14px",
-                                        fontWeight: 800,
-                                        fontSize: "1rem",
-                                        cursor: "pointer",
-                                        boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
-                                    }}
-                                >
-                                    HEMEN AL: {formattedPrice(buyItNowPrice)}
-                                </button>
-                            )}
-                        </div>
-                    )}
+                    {/* Right Side: Bid Form or Buy Now */}
+                    <div style={{ width: "320px", display: "flex", flexDirection: "column", gap: "10px" }}>
+                        {auctionStatus === "ACTIVE" ? (
+                            <BidForm
+                                adId={adId}
+                                currentHighest={currentHighestBid || (startingBid ?? 0)}
+                                minStep={minBidStep}
+                                startingBid={startingBid}
+                                formattedPrice={formattedPrice}
+                            />
+                        ) : (
+                            <div style={{
+                                background: "rgba(0,0,0,0.6)",
+                                backdropFilter: "blur(10px)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: "1rem",
+                                padding: "1.5rem",
+                                color: "white",
+                                textAlign: "center",
+                                boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
+                            }}>
+                                <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>⏳</div>
+                                <h3 style={{ margin: "0 0 8px 0", fontSize: "1.2rem", fontWeight: 700 }}>Açık Artırma Bekleniyor</h3>
+                                <p style={{ margin: 0, opacity: 0.8, fontSize: "0.9rem", lineHeight: 1.5 }}>Yayıncı açık artırmayı başlattığında buradan teklif verebileceksiniz.</p>
+                                {buyItNowPrice && (
+                                    <button
+                                        onClick={handleBuyNow}
+                                        style={{
+                                            marginTop: "20px",
+                                            width: "100%",
+                                            background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                                            color: "black",
+                                            border: "none",
+                                            borderRadius: "0.75rem",
+                                            padding: "14px",
+                                            fontWeight: 800,
+                                            fontSize: "1rem",
+                                            cursor: "pointer",
+                                            boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
+                                        }}
+                                    >
+                                        HEMEN AL: {formattedPrice(buyItNowPrice)}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                        {buyItNowPrice && auctionStatus === "ACTIVE" && (
+                            <button
+                                onClick={handleBuyNow}
+                                style={{
+                                    width: "100%",
+                                    background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                                    color: "black",
+                                    border: "none",
+                                    borderRadius: "1rem",
+                                    padding: "14px",
+                                    fontWeight: 800,
+                                    fontSize: "1rem",
+                                    cursor: "pointer",
+                                    boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
+                                }}
+                            >
+                                HEMEN AL: {formattedPrice(buyItNowPrice)}
+                            </button>
+                        )}
+                    </div>
                 </div>
             )}
 
@@ -1082,6 +1120,13 @@ function BidForm({ adId, currentHighest, minStep, startingBid, formattedPrice }:
         const nextMin = currentHighest > 0 ? (currentHighest + minStep) : (startingBid ?? 1);
         setAmount(new Intl.NumberFormat("tr-TR").format(nextMin));
     }, [currentHighest, minStep, startingBid]);
+
+    useEffect(() => {
+        if (status) {
+            const timer = setTimeout(() => setStatus(null), 4000);
+            return () => clearTimeout(timer);
+        }
+    }, [status]);
 
     async function handleBid(e: React.FormEvent) {
         e.preventDefault();
