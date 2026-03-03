@@ -13,6 +13,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
+import '../../../core/providers/auth_provider.dart';
 import 'dart:math';
 import '../widgets/floating_reactions.dart';
 import '../../../core/api/api_client.dart';
@@ -301,6 +302,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
   }
 
   void _onRoomEvent(RoomEvent event) {
+    if (event is TrackSubscribedEvent || event is TrackUnsubscribedEvent || event is ParticipantConnectedEvent || event is ParticipantDisconnectedEvent) {
+      if (mounted) setState(() {});
+    }
     if (event is DataReceivedEvent) {
       _handleDataChannelMessage(event.data, event.participant);
     }
@@ -1035,7 +1039,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
     );
   }
 
-  Widget _buildChatFlow({required double height}) {
+  Widget _buildChatFlow({required double height, String? currentUserId}) {
     return ShaderMask(
       shaderCallback: (Rect bounds) {
         return const LinearGradient(
@@ -1068,7 +1072,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                     Text('${msg.senderName}:', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w800, fontSize: 13)),
                     const SizedBox(width: 6),
                     Expanded(child: Text(msg.text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
-                    if (msg.senderId != null)
+                    if (msg.senderId != null && msg.senderId != currentUserId)
                       GestureDetector(
                         onTap: () => _inviteToStage(msg.senderId!),
                         child: Container(
@@ -1269,21 +1273,28 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
           child: Column(
             children: [
               const Spacer(),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.end,
-                  children: [
-                    Expanded(child: _buildChatFlow(height: 150)),
-                    _buildHostControls(room: room),
-                  ],
-                ),
-              ),
-              // Place the ReactionButtons directly above the chat box in Flow
-              Container(
-                alignment: Alignment.centerRight,
-                padding: const EdgeInsets.only(right: 16, bottom: 8),
-                child: ReactionButtons(onReact: _sendReaction),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: 16, bottom: 8),
+                      child: _buildChatFlow(height: 150, currentUserId: ref.read(authProvider).user?.id),
+                    ),
+                  ),
+                  Padding(
+                    padding: const EdgeInsets.only(right: 16, bottom: 8),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        _buildHostControls(room: room),
+                        const SizedBox(height: 12),
+                        ReactionButtons(onReact: _sendReaction),
+                      ],
+                    ),
+                  ),
+                ],
               ),
               _buildAuctionAndChatInput(),
             ],
@@ -1296,67 +1307,71 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
   Widget _buildLandscapeLayout(dynamic roomState, Room? room, VideoTrack? localVideoTrack, VideoTrack? guestTrack, String? guestIdentity) {
     return Row(
       children: [
-        // LEFT side: Video, Badges, Chat
+        // LEFT side: Video constraints completely clean
         Expanded(
           flex: 6,
           child: Stack(
             children: [
               _buildLoadingOrCamera(roomState, room, localVideoTrack),
-              SafeArea(
-                child: Align(
-                  alignment: Alignment.topCenter,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 16, right: 8, top: 4),
-                    child: _buildTopDashboard(true),
-                  ),
-                ),
-              ),
               FloatingReactionsOverlay(reactions: _reactions),
-              SafeArea(
-                child: Align(
-                  alignment: Alignment.bottomLeft,
-                  child: Padding(
-                    padding: const EdgeInsets.only(left: 16, bottom: 8),
-                    child: SizedBox(
-                      width: 300,
-                      child: _buildChatFlow(height: 120),
-                    ),
-                  ),
-                ),
-              ),
             ],
           ),
         ),
         
-        // RIGHT side: Controls, Guest, Emojis, Input
+        // RIGHT side: All interactions compacted
         Container(
-          width: 350,
-          color: Colors.black.withOpacity(0.5), // Semi-transparent overlay to distinct section
+          width: 380,
+          color: Colors.black.withOpacity(0.5), // Distinct dashboard section
           child: SafeArea(
+            left: false,
             child: Column(
               children: [
-                if (guestTrack != null)
-                  Padding(
-                    padding: const EdgeInsets.all(8.0),
-                    child: SizedBox(
-                      width: 120,
-                      height: 80,
-                      child: _buildGuestTrackView(guestTrack, guestIdentity),
-                    ),
-                  )
-                else
-                  const Spacer(),
-                
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+                  child: _buildTopDashboard(true),
+                ),
+                
+                Expanded(
+                  child: Stack(
                     children: [
-                      ReactionButtons(onReact: _sendReaction),
-                      const Spacer(),
-                      _buildHostControls(room: room),
+                       if (guestTrack != null)
+                         Align(
+                           alignment: Alignment.topRight,
+                           child: Padding(
+                             padding: const EdgeInsets.all(16.0),
+                             child: SizedBox(
+                               width: 100,
+                               height: 140,
+                               child: _buildGuestTrackView(guestTrack, guestIdentity),
+                             ),
+                           ),
+                         ),
+                       
+                       Align(
+                         alignment: Alignment.bottomRight,
+                         child: Padding(
+                           padding: const EdgeInsets.only(right: 16, bottom: 8),
+                           child: Column(
+                             mainAxisSize: MainAxisSize.min,
+                             crossAxisAlignment: CrossAxisAlignment.end,
+                             children: [
+                               _buildHostControls(room: room),
+                               const SizedBox(height: 12),
+                               ReactionButtons(onReact: _sendReaction),
+                             ],
+                           ),
+                         ),
+                       ),
+
+                       Align(
+                         alignment: Alignment.bottomLeft,
+                         child: Padding(
+                           padding: const EdgeInsets.only(left: 16, right: 80, bottom: 8),
+                           child: _buildChatFlow(height: 120, currentUserId: ref.read(authProvider).user?.id),
+                         ),
+                       ),
                     ],
-                  ),
+                  )
                 ),
                 _buildAuctionAndChatInput(),
               ],
