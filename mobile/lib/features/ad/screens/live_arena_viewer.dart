@@ -547,6 +547,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   }
 
   Widget _buildTopHeader(AdModel currentAd) {
+    // Show current auction price if active, otherwise show ad price
+    final displayPrice = _isAuctionActive 
+      ? (currentAd.highestBidAmount ?? currentAd.startingBid ?? 0)
+      : (currentAd.isAuction ? (currentAd.highestBidAmount ?? currentAd.startingBid ?? 0) : (currentAd.buyItNowPrice ?? 0));
+    
+    final label = _isAuctionActive ? 'GÜNCEL TEKLİF: ' : (currentAd.isAuction ? 'BAŞLANGIÇ: ' : 'FİYAT: ');
+
     return SafeArea(
       child: Align(
         alignment: Alignment.topCenter,
@@ -602,16 +609,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          currentAd.isAuction ? 'GÜNCEL TEKLİF: ' : 'FİYAT: ', 
-                          style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)
-                        ),
-                        Text(
-                          _formatPrice(currentAd.isAuction 
-                            ? (currentAd.highestBidAmount ?? currentAd.startingBid ?? 0) 
-                            : (currentAd.buyItNowPrice ?? 0)), 
-                          style: const TextStyle(color: Color(0xFF00B4CC), fontWeight: FontWeight.w900, fontSize: 16)
-                        ),
+                        Text(label, style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
+                        Text(_formatPrice(displayPrice), style: const TextStyle(color: Color(0xFF00B4CC), fontWeight: FontWeight.w900, fontSize: 16)),
                       ],
                     ),
                   ),
@@ -620,6 +619,46 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildQuickBidButtons(AdModel currentAd) {
+    if (!_isAuctionActive) return const SizedBox.shrink();
+    
+    return Container(
+      height: 40,
+      margin: const EdgeInsets.only(bottom: 8),
+      child: ListView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        children: [100, 200, 500, 1000].map((amount) => Padding(
+          padding: const EdgeInsets.only(right: 8),
+          child: GestureDetector(
+            onTap: () {
+              final currentPrice = currentAd.highestBidAmount ?? currentAd.startingBid ?? 0;
+              _bidCtrl.text = _formatPrice(currentPrice + amount);
+              _placeBidSlide();
+            },
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.black.withOpacity(0.5),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFF00B4CC).withOpacity(0.3)),
+                  ),
+                  child: Center(
+                    child: Text('+$amount ₺', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13)),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        )).toList(),
       ),
     );
   }
@@ -843,7 +882,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                   ).createShader(bounds),
                   blendMode: BlendMode.dstIn,
                   child: SizedBox(
-                    height: 180,
+                    height: 140, // Reduced slightly to accommodate quick bids
                     child: ListView.builder(
                       reverse: true,
                       itemCount: _messages.length,
@@ -865,6 +904,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                   ),
                 ),
               ),
+
+              // Quick Bid Buttons (Above Console)
+              _buildQuickBidButtons(currentAd),
               
               // Bottom Console
               _buildBottomInteractionConsole(currentAd, isDisconnected),
@@ -878,7 +920,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   Widget _buildBottomInteractionConsole(AdModel currentAd, bool isDisconnected) {
     // Primary Action Button (Teqlif Ver or Hemen Al)
     Widget buildPrimaryAction() {
-      if (currentAd.isAuction) {
+      // Prioritize Bid if auction is active, regardless of ad type
+      if (currentAd.isAuction || _isAuctionActive) {
         return GestureDetector(
           onTap: (isDisconnected || !_isAuctionActive) ? null : _placeBidSlide,
           child: AnimatedContainer(
@@ -903,7 +946,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           ),
         );
       } else {
-        // Fixed Price "Hemen Al"
+        // Fixed Price "Hemen Al" (Only if no auction active)
         return GestureDetector(
           onTap: isDisconnected ? null : () async {
             try {
@@ -966,7 +1009,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           onSubmitted: (_) => _sendChatMessage(),
                         ),
                       ),
-                      if (currentAd.isAuction && _isAuctionActive)
+                      if ((currentAd.isAuction || _isAuctionActive) && _isAuctionActive)
                         IconButton(
                           icon: const Icon(Icons.edit_note, color: Color(0xFF00B4CC)),
                           onPressed: () => _showBidInputSheet(currentAd),
@@ -995,30 +1038,69 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         // Sidebar Actions & Reactions
         _buildSidebar(isDisconnected),
 
-        // Bottom Chat (Floating Left)
+        // Bottom Chat & Quick Bids (Floating Left)
         Positioned(
           left: 16,
           bottom: 16,
           width: 300,
           child: SafeArea(
             top: false,
-            child: ShaderMask(
-              shaderCallback: (bounds) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white, Colors.white], stops: [0.0, 0.4, 1.0]).createShader(bounds),
-              blendMode: BlendMode.dstIn,
-              child: SizedBox(
-                height: 120,
-                child: ListView.builder(
-                  reverse: true,
-                  itemCount: _messages.length,
-                  itemBuilder: (context, index) {
-                    final msg = _messages[_messages.length - 1 - index];
-                    return Padding(
-                      padding: const EdgeInsets.only(bottom: 6),
-                      child: RichText(text: TextSpan(children: [TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 12)), TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 12))])),
-                    );
-                  },
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Quick Bids
+                if (_isAuctionActive)
+                  Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: SizedBox(
+                      height: 36,
+                      child: ListView(
+                        scrollDirection: Axis.horizontal,
+                        children: [100, 200, 500, 1000].map((amount) => Padding(
+                          padding: const EdgeInsets.only(right: 8),
+                          child: GestureDetector(
+                            onTap: () {
+                              final currentPrice = currentAd.highestBidAmount ?? currentAd.startingBid ?? 0;
+                              _bidCtrl.text = _formatPrice(currentPrice + amount);
+                              _placeBidSlide();
+                            },
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12),
+                              decoration: BoxDecoration(
+                                color: Colors.black.withOpacity(0.6),
+                                borderRadius: BorderRadius.circular(18),
+                                border: Border.all(color: const Color(0xFF00B4CC).withOpacity(0.4)),
+                              ),
+                              child: Center(
+                                child: Text('+$amount ₺', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                              ),
+                            ),
+                          ),
+                        )).toList(),
+                      ),
+                    ),
+                  ),
+
+                // Chat
+                ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white, Colors.white], stops: [0.0, 0.4, 1.0]).createShader(bounds),
+                  blendMode: BlendMode.dstIn,
+                  child: SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      reverse: true,
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _messages[_messages.length - 1 - index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: RichText(text: TextSpan(children: [TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 12)), TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 12))])),
+                        );
+                      },
+                    ),
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
         ),
