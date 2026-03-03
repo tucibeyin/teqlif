@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Radio } from "lucide-react";
 
 export function QuickLiveButton() {
     const [isOpen, setIsOpen] = useState(false);
@@ -12,7 +13,6 @@ export function QuickLiveButton() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
-
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
@@ -78,12 +78,15 @@ export function QuickLiveButton() {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-full px-4 py-2 transition-all shadow-lg animate-[pulse_2s_infinite] border border-red-500/50"
+                className="btn btn-primary btn-sm"
+                title="Canlı Yayın Aç"
                 style={{
-                    boxShadow: "0 0 15px rgba(220, 38, 38, 0.6)",
+                    padding: "0.375rem 0.5rem", // Narrower for icon only
+                    background: "linear-gradient(135deg, #ef4444, #dc2626)", // Red for live
+                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)"
                 }}
             >
-                🔴 Canlı Yayın Aç
+                <Radio size={18} />
             </button>
 
             {isOpen && (
