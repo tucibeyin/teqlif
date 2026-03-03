@@ -81,12 +81,12 @@ export function QuickLiveButton() {
                 className="btn btn-primary btn-sm"
                 title="Canlı Yayın Aç"
                 style={{
-                    padding: "0.375rem 0.5rem", // Narrower for icon only
                     background: "linear-gradient(135deg, #ef4444, #dc2626)", // Red for live
                     boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)"
                 }}
             >
                 <Radio size={18} />
+                <span>Canlı Yayın Aç</span>
             </button>
 
             {isOpen && (
