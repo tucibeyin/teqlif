@@ -176,11 +176,11 @@ function CustomArenaLayout({
             } else if (dataObj.type === 'AUCTION_START') {
                 setAuctionStatus("ACTIVE");
                 setAuctionNotification("📣 MEZAT BAŞLADI!");
-                setTimeout(() => setAuctionNotification(null), 5000);
+                setTimeout(() => setAuctionNotification(null), 4000);
             } else if (dataObj.type === 'AUCTION_END') {
                 setAuctionStatus("IDLE");
                 setAuctionNotification("📣 MEZAT DURDURULDU");
-                setTimeout(() => setAuctionNotification(null), 5000);
+                setTimeout(() => setAuctionNotification(null), 4000);
             } else if (dataObj.type === 'ROOM_CLOSED') {
                 setIsRoomClosed(true);
                 room.disconnect();
@@ -349,25 +349,34 @@ function CustomArenaLayout({
                 />
             )}
 
-            {/* Auction Status Notification Overlay */}
+            {/* Huge Auction Status Notification Overlay */}
             {auctionNotification && (
                 <div style={{
                     position: "absolute",
-                    top: "120px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    background: "rgba(34, 197, 94, 0.95)",
-                    color: "white",
-                    padding: "16px 32px",
-                    borderRadius: "100px",
-                    fontWeight: 900,
-                    fontSize: "1.2rem",
-                    letterSpacing: "1px",
-                    boxShadow: "0 10px 30px rgba(0,0,0,0.5)",
-                    zIndex: 200,
-                    animation: "slideDown 0.5s ease-out"
+                    inset: 0,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    background: auctionNotification.includes("BAŞLADI") ? "rgba(34, 197, 94, 0.3)" : "rgba(249, 115, 22, 0.3)",
+                    backdropFilter: "blur(8px)",
+                    WebkitBackdropFilter: "blur(8px)",
+                    zIndex: 300,
+                    animation: "zoomFadeOut 4s ease-in-out forwards"
                 }}>
-                    {auctionNotification}
+                    <div style={{
+                        background: auctionNotification.includes("BAŞLADI") ? "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)" : "linear-gradient(135deg, #ea580c 0%, #f97316 100%)",
+                        color: "white",
+                        padding: "30px 60px",
+                        borderRadius: "30px",
+                        fontWeight: 900,
+                        fontSize: "2.5rem",
+                        letterSpacing: "2px",
+                        boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+                        border: "4px solid rgba(255,255,255,0.4)",
+                        textAlign: "center"
+                    }}>
+                        {auctionNotification}
+                    </div>
                 </div>
             )}
 
@@ -441,6 +450,13 @@ function CustomArenaLayout({
                     0% { transform: scale(1); color: #22c55e; }
                     50% { transform: scale(1.15); color: #4ade80; text-shadow: 0 0 15px rgba(74, 222, 128, 0.8); }
                     100% { transform: scale(1); color: #22c55e; }
+                }
+                @keyframes zoomFadeOut {
+                    0% { opacity: 0; transform: scale(0.5); }
+                    10% { opacity: 1; transform: scale(1.1); }
+                    20% { transform: scale(1); }
+                    80% { opacity: 1; transform: scale(1); }
+                    100% { opacity: 0; transform: scale(0.9); }
                 }
                 @keyframes zoomIn {
                     from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }

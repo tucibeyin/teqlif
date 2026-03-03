@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'dart:ui';
 import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
@@ -731,476 +732,638 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: Stack(
-        children: [
-          // 1. Camera Preview & Loading State (Same as before but with better fit)
-          if (roomState.isConnecting || (room == null && roomState.error == null))
-            Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.black, Color(0xFF1a1a1a)],
-                ),
-              ),
-              child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const CircularProgressIndicator(color: Colors.red),
-                    const SizedBox(height: 24),
-                    const Text('Arena Hazırlanıyor...', 
-                      style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    const Text('Bağlantı kuruluyor, lütfen bekleyin.', 
-                      style: TextStyle(color: Colors.white70, fontSize: 14)),
-                  ],
-                ),
-              ),
-            )
-          else if (localVideoTrack != null && _isCameraEnabled)
-            SizedBox.expand(
-              child: VideoTrackRenderer(
-                localVideoTrack,
-                fit: VideoViewFit.cover,
-              ),
-            )
-          else
-            const Center(child: Icon(Icons.videocam_off, size: 80, color: Colors.white54)),
+      body: OrientationBuilder(
+        builder: (context, orientation) {
+          if (orientation == Orientation.portrait) {
+            return _buildPortraitLayout(roomState, room, localVideoTrack, guestTrack, guestIdentity);
+          } else {
+            return _buildLandscapeLayout(roomState, room, localVideoTrack, guestTrack, guestIdentity);
+          }
+        },
+      ),
+    );
+  }
 
-          // 2. Premium Dashboard Header (NEW)
-          SafeArea(
-            child: Align(
-              alignment: Alignment.topCenter,
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: Column(
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: Colors.redAccent.withOpacity(0.9),
-                            borderRadius: BorderRadius.circular(15),
-                            boxShadow: [BoxShadow(color: Colors.redAccent.withOpacity(0.3), blurRadius: 8)],
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.sensors, color: Colors.white, size: 12),
-                              const SizedBox(width: 4),
-                              const Text('CANLI',
-                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 0.5)),
-                            ],
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                          onPressed: _endLiveStream,
-                        )
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    // Auction Stats Bar
-                    ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.4),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: Colors.white.withOpacity(0.08)),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                                    const SizedBox(height: 2),
-                                    Text(
-                                      _bids.isNotEmpty ? '₺${_formatPrice(_bids.first.amount)}' : 'Henüz Teklif Yok',
-                                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, fontFeatures: [FontFeature.tabularFigures()]),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                      decoration: BoxDecoration(
-                                        color: _isAuctionActive ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
-                                        borderRadius: BorderRadius.circular(4),
-                                        border: Border.all(color: _isAuctionActive ? Colors.green.withOpacity(0.5) : Colors.orange.withOpacity(0.5)),
-                                      ),
-                                      child: Text(
-                                        _isAuctionActive ? 'MEZAT AKTİF' : 'MEZAT DURDURULDU',
-                                        style: TextStyle(
-                                          color: _isAuctionActive ? Colors.greenAccent : Colors.orangeAccent,
-                                          fontSize: 9,
-                                          fontWeight: FontWeight.w900,
-                                          letterSpacing: 0.5
-                                        ),
-                                      ),
-                                    ),
-                                    if (_bids.isNotEmpty)
-                                      Padding(
-                                        padding: const EdgeInsets.only(top: 4),
-                                        child: Row(
-                                          children: [
-                                            Text(_bids.first.userLabel, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
-                                            if (_bids.first.userId != null)
-                                              GestureDetector(
-                                                onTap: () => _inviteToStage(_bids.first.userId!),
-                                                child: Container(
-                                                  margin: const EdgeInsets.only(left: 6),
-                                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                                  decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.withOpacity(0.5))),
-                                                  child: const Row(
-                                                    mainAxisSize: MainAxisSize.min,
-                                                    children: [
-                                                      Icon(Icons.mic, color: Colors.blueAccent, size: 10),
-                                                      SizedBox(width: 2),
-                                                      Text('Davet Et', style: TextStyle(color: Colors.blueAccent, fontSize: 8, fontWeight: FontWeight.bold))
-                                                    ],
-                                                  ),
-                                                ),
-                                              )
-                                          ]
-                                        ),
-                                      ),
-                                  ],
-                                ),
-                              ),
-                              if (widget.ad.buyItNowPrice != null) ...[
-                                Container(width: 1, height: 40, color: Colors.white.withOpacity(0.1), margin: const EdgeInsets.symmetric(horizontal: 16)),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: [
-                                    Text('HEMEN AL', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                                    const SizedBox(height: 2),
-                                    Text('₺${_formatPrice(widget.ad.buyItNowPrice!)}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 18, fontWeight: FontWeight.w900)),
-                                  ],
-                                ),
-                              ]
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                    if (_bids.isNotEmpty && _isAuctionActive)
-                      Padding(
-                        padding: const EdgeInsets.only(top: 12),
-                        child: Row(
-                          children: [
-                            Expanded(
-                              flex: 3,
-                              child: OutlinedButton(
-                                onPressed: () => _cancelBid(_bids.first.id),
-                                style: OutlinedButton.styleFrom(
-                                  backgroundColor: Colors.redAccent.withOpacity(0.1),
-                                  side: BorderSide(color: Colors.redAccent.withOpacity(0.3)),
-                                  foregroundColor: Colors.redAccent,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                ),
-                                child: const Text('REDDET', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 7,
-                              child: ElevatedButton.icon(
-                                onPressed: _acceptBidFromDashboard,
-                                icon: const Icon(Icons.check_circle_outline, color: Colors.black, size: 18),
-                                label: const Text('ONAYLA VE SAT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.greenAccent,
-                                  foregroundColor: Colors.black,
-                                  padding: const EdgeInsets.symmetric(vertical: 14),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
-                                  elevation: 10,
-                                  shadowColor: Colors.greenAccent.withOpacity(0.5),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                  ],
-                ),
+  Widget _buildLoadingOrCamera(dynamic roomState, Room? room, VideoTrack? localVideoTrack) {
+    if (roomState.isConnecting || (room == null && roomState.error == null)) {
+      return Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.black, Color(0xFF1a1a1a)],
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const CircularProgressIndicator(color: Colors.red),
+              const SizedBox(height: 24),
+              const Text('Arena Hazırlanıyor...', 
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              const Text('Bağlantı kuruluyor, lütfen bekleyin.', 
+                style: TextStyle(color: Colors.white70, fontSize: 14)),
+            ],
+          ),
+        ),
+      );
+    } else if (localVideoTrack != null && _isCameraEnabled) {
+      return SizedBox.expand(
+        child: VideoTrackRenderer(
+          localVideoTrack,
+          fit: VideoViewFit.cover,
+        ),
+      );
+    } else {
+      return const Center(child: Icon(Icons.videocam_off, size: 80, color: Colors.white54));
+    }
+  }
+
+  Widget _buildGuestTrackView(VideoTrack? guestTrack, String? guestIdentity) {
+    if (guestTrack == null) return const SizedBox.shrink();
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
+              borderRadius: BorderRadius.circular(16),
+              color: Colors.black,
+            ),
+            child: VideoTrackRenderer(guestTrack, fit: VideoViewFit.cover),
+          ),
+        ),
+        if (guestIdentity != null)
+          Positioned(
+            top: -8,
+            right: -8,
+            child: GestureDetector(
+              onTap: () => _kickGuest(guestIdentity),
+              child: Container(
+                padding: const EdgeInsets.all(4),
+                decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+                child: const Icon(Icons.close, color: Colors.white, size: 16),
               ),
             ),
           ),
+      ],
+    );
+  }
 
-          if (guestTrack != null)
-            Positioned(
-              top: 220,
-              right: 16,
-              width: 100,
-              height: 140,
-              child: Stack(
-                clipBehavior: Clip.none,
+  Widget _buildTopDashboard(bool isLandscape) {
+    return Column(
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.redAccent.withOpacity(0.9),
+                borderRadius: BorderRadius.circular(15),
+                boxShadow: [BoxShadow(color: Colors.redAccent.withOpacity(0.3), blurRadius: 8)],
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(16),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.white.withOpacity(0.5), width: 2),
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.black,
-                      ),
-                      child: VideoTrackRenderer(guestTrack, fit: VideoViewFit.cover),
-                    ),
-                  ),
-                  if (guestIdentity != null)
-                    Positioned(
-                      top: -8,
-                      right: -8,
-                      child: GestureDetector(
-                        onTap: () => _kickGuest(guestIdentity!),
-                        child: Container(
-                          padding: const EdgeInsets.all(4),
-                          decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-                          child: const Icon(Icons.close, color: Colors.white, size: 16),
-                        ),
-                      ),
-                    ),
+                  const Icon(Icons.sensors, color: Colors.white, size: 12),
+                  const SizedBox(width: 4),
+                  const Text('CANLI',
+                      style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 0.5)),
                 ],
               ),
             ),
-
-          // Floating Reactions
-          FloatingReactionsOverlay(reactions: _reactions),
-
-          // Reaction Buttons
-          Positioned(
-            bottom: 250,
-            right: 16,
-            child: ReactionButtons(onReact: _sendReaction),
+            IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 28),
+              onPressed: _endLiveStream,
+            )
+          ],
+        ),
+        const SizedBox(height: 8),
+        // Auction Stats Bar
+        ClipRRect(
+          borderRadius: BorderRadius.circular(20),
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: EdgeInsets.symmetric(horizontal: isLandscape ? 12 : 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.4),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: Colors.white.withOpacity(0.08)),
+              ),
+              child: isLandscape ? _buildLandscapeStatsInner() : _buildPortraitStatsInner(),
+            ),
           ),
-
-          // 3. UI Overlay - Chat & Controls
-          SafeArea(
-            child: Column(
+        ),
+        if (_bids.isNotEmpty && _isAuctionActive)
+          Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: Row(
               children: [
-                const Spacer(),
-
-                // Ephemeral Chat & Info Drawer Button
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      // Chat flow
-                      Expanded(
-                        child: ShaderMask(
-                          shaderCallback: (Rect bounds) {
-                            return const LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Colors.transparent, Colors.white, Colors.white],
-                              stops: [0.0, 0.4, 1.0],
-                            ).createShader(bounds);
-                          },
-                          blendMode: BlendMode.dstIn,
-                          child: SizedBox(
-                            height: 150,
-                            child: ListView.builder(
-                              reverse: true,
-                              itemCount: _messages.length,
-                              itemBuilder: (context, index) {
-                                final msg = _messages[_messages.length - 1 - index];
-                                return Padding(
-                                  padding: const EdgeInsets.only(bottom: 6),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                    decoration: BoxDecoration(
-                                      color: Colors.black.withOpacity(0.2),
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Text('${msg.senderName}:', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w800, fontSize: 13)),
-                                        const SizedBox(width: 6),
-                                        Expanded(child: Text(msg.text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
-                                        if (msg.senderId != null)
-                                          GestureDetector(
-                                            onTap: () => _inviteToStage(msg.senderId!),
-                                            child: Container(
-                                              margin: const EdgeInsets.only(left: 4),
-                                              padding: const EdgeInsets.all(2),
-                                              decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), shape: BoxShape.circle),
-                                              child: const Icon(Icons.mic, color: Colors.blueAccent, size: 12),
-                                            ),
-                                          ),
-                                      ],
-                                    ),
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                      ),
-                      // Controls
-                      Column(
-                        children: [
-                          _CircularControlButton(
-                            icon: Icons.gavel,
-                            onPressed: _showBidsBottomSheet,
-                            badge: _unreadBids > 0 ? '$_unreadBids' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          _CircularControlButton(
-                            icon: Icons.switch_camera,
-                            onPressed: () async {
-                              final p = room?.localParticipant;
-                              if (p != null) {
-                                final trackPub = p.videoTrackPublications.firstOrNull;
-                                if (trackPub != null && trackPub.track != null) {
-                                  try {
-                                    // Use dynamic for forward compatibility if LocalVideoTrack isn't accurately typed
-                                    await (trackPub.track as dynamic).switchCamera();
-                                  } catch (e) {
-                                    debugPrint("Error switching camera: $e");
-                                  }
-                                }
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          _CircularControlButton(
-                            icon: _isCameraEnabled ? Icons.videocam : Icons.videocam_off,
-                            onPressed: () async {
-                              final p = room?.localParticipant;
-                              if (p != null) {
-                                await p.setCameraEnabled(!_isCameraEnabled);
-                                setState(() => _isCameraEnabled = !_isCameraEnabled);
-                              }
-                            },
-                          ),
-                          const SizedBox(height: 12),
-                          _CircularControlButton(
-                            icon: _isMicEnabled ? Icons.mic : Icons.mic_off,
-                            onPressed: () async {
-                              final p = room?.localParticipant;
-                              if (p != null) {
-                                await p.setMicrophoneEnabled(!_isMicEnabled);
-                                setState(() => _isMicEnabled = !_isMicEnabled);
-                              }
-                            },
-                          ),
-                        ],
-                      )
-                    ],
+                Expanded(
+                  flex: 3,
+                  child: OutlinedButton(
+                    onPressed: () => _cancelBid(_bids.first.id),
+                    style: OutlinedButton.styleFrom(
+                      backgroundColor: Colors.redAccent.withOpacity(0.1),
+                      side: BorderSide(color: Colors.redAccent.withOpacity(0.3)),
+                      foregroundColor: Colors.redAccent,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    ),
+                    child: const Text('REDDET', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
                   ),
                 ),
-
-                // Auction & Chat Controls
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      if (widget.ad.isAuction)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: GestureDetector(
-                            onTap: _toggleAuction,
-                            child: AnimatedContainer(
-                              duration: const Duration(milliseconds: 300),
-                              width: 56,
-                              height: 56,
-                              decoration: BoxDecoration(
-                                color: _isAuctionActive ? Colors.redAccent : Colors.white.withOpacity(0.2),
-                                shape: BoxShape.circle,
-                                border: Border.all(color: Colors.white30),
-                                boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.redAccent.withOpacity(0.4), blurRadius: 15)] : null,
-                              ),
-                              child: Icon(_isAuctionActive ? Icons.stop : Icons.play_arrow, color: Colors.white, size: 30),
-                            ),
-                          ),
-                        ),
-                      if (widget.ad.isAuction && _isAuctionActive)
-                        Padding(
-                          padding: const EdgeInsets.only(right: 12),
-                          child: GestureDetector(
-                            onTap: _startCountdown,
-                            child: AnimatedBuilder(
-                              animation: _pulseController,
-                              builder: (context, child) {
-                                return Transform.scale(
-                                  scale: _countdown > 0 && _countdown <= 10 ? 1.0 + (_pulseController.value * 0.15) : 1.0,
-                                  child: Container(
-                                    width: 56,
-                                    height: 56,
-                                    decoration: BoxDecoration(
-                                      color: _countdown > 0 ? Colors.red : Colors.orange,
-                                      shape: BoxShape.circle,
-                                      boxShadow: [
-                                        BoxShadow(color: (_countdown > 0 ? Colors.red : Colors.orange).withOpacity(0.5), blurRadius: 15)
-                                      ],
-                                    ),
-                                    child: Center(
-                                      child: _countdown > 0 
-                                        ? Text('$_countdown', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24))
-                                        : const Icon(Icons.timer, color: Colors.white, size: 28),
-                                    ),
-                                  ),
-                                );
-                              }
-                            ),
-                          ),
-                        ),
-                      Expanded(
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(30),
-                          child: BackdropFilter(
-                            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 4),
-                              decoration: BoxDecoration(
-                                color: Colors.white.withOpacity(0.9),
-                                borderRadius: BorderRadius.circular(30),
-                              ),
-                              child: Row(
-                                children: [
-                                  Expanded(
-                                    child: TextField(
-                                      controller: _chatCtrl,
-                                      focusNode: _chatFocus,
-                                      style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                                      decoration: const InputDecoration(
-                                        hintText: 'Sohbete dahil ol...',
-                                        hintStyle: TextStyle(color: Colors.black54, fontSize: 13),
-                                        border: InputBorder.none,
-                                        contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                                      ),
-                                      onSubmitted: (_) => _sendChatMessage(),
-                                    ),
-                                  ),
-                                  IconButton(
-                                    icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
-                                    onPressed: _sendChatMessage,
-                                  )
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
+                const SizedBox(width: 12),
+                Expanded(
+                  flex: 7,
+                  child: ElevatedButton.icon(
+                    onPressed: _acceptBidFromDashboard,
+                    icon: const Icon(Icons.check_circle_outline, color: Colors.black, size: 18),
+                    label: const Text('ONAYLA VE SAT', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.greenAccent,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                      elevation: 10,
+                      shadowColor: Colors.greenAccent.withOpacity(0.5),
+                    ),
                   ),
                 ),
               ],
             ),
           ),
+      ],
+    );
+  }
+
+  Widget _buildPortraitStatsInner() {
+    return Row(
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+              const SizedBox(height: 2),
+              Text(
+                _bids.isNotEmpty ? '₺${_formatPrice(_bids.first.amount)}' : 'Henüz Teklif Yok',
+                style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, fontFeatures: [FontFeature.tabularFigures()]),
+              ),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _isAuctionActive ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: _isAuctionActive ? Colors.green.withOpacity(0.5) : Colors.orange.withOpacity(0.5)),
+                ),
+                child: Text(
+                  _isAuctionActive ? 'MEZAT AKTİF' : 'MEZAT DURDURULDU',
+                  style: TextStyle(
+                    color: _isAuctionActive ? Colors.greenAccent : Colors.orangeAccent,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: 0.5
+                  ),
+                ),
+              ),
+              if (_bids.isNotEmpty)
+                Padding(
+                  padding: const EdgeInsets.only(top: 4),
+                  child: Row(
+                    children: [
+                      Text(_bids.first.userLabel, style: const TextStyle(color: Colors.greenAccent, fontSize: 11, fontWeight: FontWeight.bold)),
+                      if (_bids.first.userId != null)
+                        GestureDetector(
+                          onTap: () => _inviteToStage(_bids.first.userId!),
+                          child: Container(
+                            margin: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), borderRadius: BorderRadius.circular(8), border: Border.all(color: Colors.blue.withOpacity(0.5))),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.mic, color: Colors.blueAccent, size: 10),
+                                SizedBox(width: 2),
+                                Text('Davet Et', style: TextStyle(color: Colors.blueAccent, fontSize: 8, fontWeight: FontWeight.bold))
+                              ],
+                            ),
+                          ),
+                        )
+                    ]
+                  ),
+                ),
+            ],
+          ),
+        ),
+        if (widget.ad.buyItNowPrice != null) ...[
+          Container(width: 1, height: 40, color: Colors.white.withOpacity(0.1), margin: const EdgeInsets.symmetric(horizontal: 16)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text('HEMEN AL', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+              const SizedBox(height: 2),
+              Text('₺${_formatPrice(widget.ad.buyItNowPrice!)}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 18, fontWeight: FontWeight.w900)),
+            ],
+          ),
+        ]
+      ],
+    );
+  }
+
+  Widget _buildLandscapeStatsInner() {
+    return Row(
+      children: [
+        Expanded(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                  Text(
+                    _bids.isNotEmpty ? '₺${_formatPrice(_bids.first.amount)}' : 'Henüz Teklif Yok',
+                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w900, fontFeatures: [FontFeature.tabularFigures()]),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: _isAuctionActive ? Colors.green.withOpacity(0.2) : Colors.orange.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(4),
+                  border: Border.all(color: _isAuctionActive ? Colors.green.withOpacity(0.5) : Colors.orange.withOpacity(0.5)),
+                ),
+                child: Text(
+                  _isAuctionActive ? 'MEZAT AKTİF' : 'MEZAT DURDURULDU',
+                  style: TextStyle(
+                    color: _isAuctionActive ? Colors.greenAccent : Colors.orangeAccent,
+                    fontSize: 8,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              if (_bids.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(_bids.first.userLabel, style: const TextStyle(color: Colors.greenAccent, fontSize: 10, fontWeight: FontWeight.bold)),
+              ]
+            ],
+          ),
+        ),
+        if (widget.ad.buyItNowPrice != null) ...[
+          Container(width: 1, height: 30, color: Colors.white.withOpacity(0.1), margin: const EdgeInsets.symmetric(horizontal: 12)),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text('HEMEN AL', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 8, fontWeight: FontWeight.w800, letterSpacing: 1)),
+              Text('₺${_formatPrice(widget.ad.buyItNowPrice!)}', style: const TextStyle(color: Color(0xFFFFD700), fontSize: 16, fontWeight: FontWeight.w900)),
+            ],
+          ),
+        ]
+      ],
+    );
+  }
+
+  Widget _buildChatFlow({required double height}) {
+    return ShaderMask(
+      shaderCallback: (Rect bounds) {
+        return const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Colors.white, Colors.white],
+          stops: [0.0, 0.4, 1.0],
+        ).createShader(bounds);
+      },
+      blendMode: BlendMode.dstIn,
+      child: SizedBox(
+        height: height,
+        child: ListView.builder(
+          reverse: true,
+          itemCount: _messages.length,
+          itemBuilder: (context, index) {
+            final msg = _messages[_messages.length - 1 - index];
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('${msg.senderName}:', style: const TextStyle(color: Colors.white70, fontWeight: FontWeight.w800, fontSize: 13)),
+                    const SizedBox(width: 6),
+                    Expanded(child: Text(msg.text, style: const TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w500))),
+                    if (msg.senderId != null)
+                      GestureDetector(
+                        onTap: () => _inviteToStage(msg.senderId!),
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 4),
+                          padding: const EdgeInsets.all(2),
+                          decoration: BoxDecoration(color: Colors.blue.withOpacity(0.2), shape: BoxShape.circle),
+                          child: const Icon(Icons.mic, color: Colors.blueAccent, size: 12),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHostControls({required Room? room}) {
+    return Column(
+      children: [
+        _CircularControlButton(
+          icon: Icons.gavel,
+          onPressed: _showBidsBottomSheet,
+          badge: _unreadBids > 0 ? '$_unreadBids' : null,
+        ),
+        const SizedBox(height: 12),
+        _CircularControlButton(
+          icon: Icons.switch_camera,
+          onPressed: () async {
+            final p = room?.localParticipant;
+            if (p != null) {
+              final trackPub = p.videoTrackPublications.firstOrNull;
+              if (trackPub != null && trackPub.track != null) {
+                try {
+                  final mediaTrack = trackPub.track!.mediaStreamTrack;
+                  if (mediaTrack != null) {
+                    await webrtc.Helper.switchCamera(mediaTrack);
+                  }
+                } catch (e) {
+                  debugPrint("Error switching camera: $e");
+                }
+              }
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        _CircularControlButton(
+          icon: _isCameraEnabled ? Icons.videocam : Icons.videocam_off,
+          onPressed: () async {
+            final p = room?.localParticipant;
+            if (p != null) {
+              await p.setCameraEnabled(!_isCameraEnabled);
+              setState(() => _isCameraEnabled = !_isCameraEnabled);
+            }
+          },
+        ),
+        const SizedBox(height: 12),
+        _CircularControlButton(
+          icon: _isMicEnabled ? Icons.mic : Icons.mic_off,
+          onPressed: () async {
+            final p = room?.localParticipant;
+            if (p != null) {
+              await p.setMicrophoneEnabled(!_isMicEnabled);
+              setState(() => _isMicEnabled = !_isMicEnabled);
+            }
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAuctionAndChatInput() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        children: [
+          if (widget.ad.isAuction)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: GestureDetector(
+                onTap: _toggleAuction,
+                child: AnimatedContainer(
+                  duration: const Duration(milliseconds: 300),
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: _isAuctionActive ? Colors.redAccent : Colors.white.withOpacity(0.2),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white30),
+                    boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.redAccent.withOpacity(0.4), blurRadius: 15)] : null,
+                  ),
+                  child: Icon(_isAuctionActive ? Icons.stop : Icons.play_arrow, color: Colors.white, size: 30),
+                ),
+              ),
+            ),
+          if (widget.ad.isAuction && _isAuctionActive)
+            Padding(
+              padding: const EdgeInsets.only(right: 12),
+              child: GestureDetector(
+                onTap: _startCountdown,
+                child: AnimatedBuilder(
+                  animation: _pulseController,
+                  builder: (context, child) {
+                    return Transform.scale(
+                      scale: _countdown > 0 && _countdown <= 10 ? 1.0 + (_pulseController.value * 0.15) : 1.0,
+                      child: Container(
+                        width: 56,
+                        height: 56,
+                        decoration: BoxDecoration(
+                          color: _countdown > 0 ? Colors.red : Colors.orange,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: (_countdown > 0 ? Colors.red : Colors.orange).withOpacity(0.5), blurRadius: 15)
+                          ],
+                        ),
+                        child: Center(
+                          child: _countdown > 0 
+                            ? Text('$_countdown', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24))
+                            : const Icon(Icons.timer, color: Colors.white, size: 28),
+                        ),
+                      ),
+                    );
+                  }
+                ),
+              ),
+            ),
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _chatCtrl,
+                          focusNode: _chatFocus,
+                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                          decoration: const InputDecoration(
+                            hintText: 'Sohbete dahil ol...',
+                            hintStyle: TextStyle(color: Colors.black54, fontSize: 13),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
+                          onSubmitted: (_) => _sendChatMessage(),
+                        ),
+                      ),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
+                        onPressed: _sendChatMessage,
+                      )
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
         ],
       ),
+    );
+  }
+
+  Widget _buildPortraitLayout(dynamic roomState, Room? room, VideoTrack? localVideoTrack, VideoTrack? guestTrack, String? guestIdentity) {
+    return Stack(
+      children: [
+        _buildLoadingOrCamera(roomState, room, localVideoTrack),
+        
+        SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: _buildTopDashboard(false),
+            ),
+          ),
+        ),
+
+        if (guestTrack != null)
+          Positioned(
+            top: 220,
+            right: 16,
+            width: 100,
+            height: 140,
+            child: _buildGuestTrackView(guestTrack, guestIdentity),
+          ),
+
+        FloatingReactionsOverlay(reactions: _reactions),
+
+        SafeArea(
+          child: Column(
+            children: [
+              const Spacer(),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(child: _buildChatFlow(height: 150)),
+                    _buildHostControls(room: room),
+                  ],
+                ),
+              ),
+              // Place the ReactionButtons directly above the chat box in Flow
+              Container(
+                alignment: Alignment.centerRight,
+                padding: const EdgeInsets.only(right: 16, bottom: 8),
+                child: ReactionButtons(onReact: _sendReaction),
+              ),
+              _buildAuctionAndChatInput(),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeLayout(dynamic roomState, Room? room, VideoTrack? localVideoTrack, VideoTrack? guestTrack, String? guestIdentity) {
+    return Row(
+      children: [
+        // LEFT side: Video, Badges, Chat
+        Expanded(
+          flex: 6,
+          child: Stack(
+            children: [
+              _buildLoadingOrCamera(roomState, room, localVideoTrack),
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16, right: 8, top: 4),
+                    child: _buildTopDashboard(true),
+                  ),
+                ),
+              ),
+              FloatingReactionsOverlay(reactions: _reactions),
+              SafeArea(
+                child: Align(
+                  alignment: Alignment.bottomLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 16, bottom: 8),
+                    child: SizedBox(
+                      width: 300,
+                      child: _buildChatFlow(height: 120),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // RIGHT side: Controls, Guest, Emojis, Input
+        Container(
+          width: 350,
+          color: Colors.black.withOpacity(0.5), // Semi-transparent overlay to distinct section
+          child: SafeArea(
+            child: Column(
+              children: [
+                if (guestTrack != null)
+                  Padding(
+                    padding: const EdgeInsets.all(8.0),
+                    child: SizedBox(
+                      width: 120,
+                      height: 80,
+                      child: _buildGuestTrackView(guestTrack, guestIdentity),
+                    ),
+                  )
+                else
+                  const Spacer(),
+                
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      ReactionButtons(onReact: _sendReaction),
+                      const Spacer(),
+                      _buildHostControls(room: room),
+                    ],
+                  ),
+                ),
+                _buildAuctionAndChatInput(),
+              ],
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

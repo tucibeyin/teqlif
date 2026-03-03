@@ -97,6 +97,32 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     }
   }
 
+  void _requestStage() {
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    final room = state.room;
+    if (room?.localParticipant == null) return;
+    final currentUser = ref.read(authProvider).user;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kullanıcı girişi gerekli.')));
+      return;
+    }
+
+    final payload = jsonEncode({
+      'type': 'REQUEST_STAGE',
+      'userId': currentUser.id,
+      'userName': currentUser.name,
+    });
+
+    try {
+      room!.localParticipant!.publishData(utf8.encode(payload));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sahneye katılma isteği gönderildi!', style: TextStyle(fontWeight: FontWeight.bold)), backgroundColor: Colors.green),
+      );
+    } catch (e) {
+      debugPrint('Stage request error: $e');
+    }
+  }
+
   @override
   void initState() {
     super.initState();
@@ -898,6 +924,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                       children: [
                         Expanded(child: TextField(controller: _chatCtrl, enabled: !isDisconnected, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13), decoration: const InputDecoration(hintText: 'Mesaj gönder...', hintStyle: TextStyle(color: Colors.white54), border: InputBorder.none), onSubmitted: (_) => _sendChatMessage())),
                         IconButton(icon: const Icon(Icons.send, color: Colors.white, size: 18), onPressed: isDisconnected ? null : _sendChatMessage, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                        const SizedBox(width: 8),
+                        IconButton(icon: const Icon(Icons.record_voice_over, color: Colors.white70, size: 18), onPressed: isDisconnected ? null : _requestStage, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
                       ],
                     ),
                   )
@@ -905,6 +933,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               ),
             ),
           ),
+        ),
+
+        // ReactionButtons floating above the chat in portrait
+        Positioned(
+          bottom: 230,
+          right: 16,
+          child: ReactionButtons(onReact: _sendReaction),
         ),
       ],
     );
@@ -1110,6 +1145,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                       children: [
                         Expanded(child: TextField(controller: _chatCtrl, enabled: !isDisconnected, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13), decoration: const InputDecoration(hintText: 'Mesaj...', hintStyle: TextStyle(color: Colors.white54), border: InputBorder.none), onSubmitted: (_) => _sendChatMessage())),
                         IconButton(icon: const Icon(Icons.send, color: Colors.white, size: 18), onPressed: isDisconnected ? null : _sendChatMessage, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
+                        const SizedBox(width: 8),
+                        IconButton(icon: const Icon(Icons.record_voice_over, color: Colors.white70, size: 18), onPressed: isDisconnected ? null : _requestStage, padding: EdgeInsets.zero, constraints: const BoxConstraints()),
                       ],
                     ),
                   )
@@ -1117,6 +1154,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               ),
             ),
           ),
+        ),
+
+        // ReactionButtons placed for landscape on the left side video area
+        Positioned(
+          bottom: 120,
+          left: 16,
+          child: ReactionButtons(onReact: _sendReaction),
         ),
       ],
     );
