@@ -235,9 +235,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       '₺${p.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   double _getNextBidAmount(AdModel currentAd) {
-    final currentPrice =
-        _liveHighestBid ?? currentAd.highestBidAmount ?? currentAd.startingBid ?? 0;
-    return currentPrice + (currentAd.minBidStep);
+    if (_liveHighestBid != null) return _liveHighestBid! + currentAd.minBidStep;
+    if (!currentAd.isAuction && !_isAuctionActive) return currentAd.price;
+    final base =
+        currentAd.highestBidAmount ?? currentAd.startingBid ?? currentAd.price;
+    return base + currentAd.minBidStep;
   }
 
   void _resetMessageTimer() {
@@ -760,7 +762,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   }
 
   Widget _buildQuickBidButtons(AdModel currentAd) {
-    if (!_isAuctionActive) return const SizedBox.shrink();
+    if (!currentAd.isAuction && !_isAuctionActive) return const SizedBox.shrink();
 
     // Create dynamic quick bid list, starting with minBidStep
     final minStep = currentAd.minBidStep.toInt();
@@ -815,8 +817,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   Widget _buildSidebar(bool isDisconnected, {bool isPortrait = true}) {
     return Positioned(
-      right: isPortrait ? 16 : null,
-      left: !isPortrait ? 16 : null,
+      right: 16, // Always strictly on the right side
       top: 0,
       bottom: 120, // Avoid overlapping with bottom console
       child: Center(
@@ -1251,15 +1252,14 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           child: GestureDetector(
             onTap: isDisconnected
                 ? null
-                : () async {
-                    try {
-                      await ApiClient()
-                          .post('/api/ads/${widget.ad.id}/buy-it-now');
-                      if (mounted) context.pop();
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('İşlem başarısız.')));
-                    }
+                : () {
+                    // Navigate back to Ad Detail screen to use the actual Hemen Al button
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                          content: Text("Hemen satın almak için ilan detayından işleme devam ediniz."),
+                          duration: Duration(seconds: 3)),
+                    );
+                    context.pop();
                   },
             child: Container(
               height: 56,
