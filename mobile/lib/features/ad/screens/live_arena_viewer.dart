@@ -73,12 +73,15 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   }
 
   void _sendReaction(String emoji) {
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    final room = state.room;
+    final isDisconnected = room?.connectionState.name == 'disconnected' || (room == null && !state.isConnecting);
     if (isDisconnected) return;
+    
     final now = DateTime.now().millisecondsSinceEpoch;
     if (now - _lastReactionTime < 500) return;
     _lastReactionTime = now;
 
-    final room = ref.read(liveRoomProvider(widget.ad.id)).room;
     if (room?.localParticipant == null) return;
     
     final payload = jsonEncode({
