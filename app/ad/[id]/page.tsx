@@ -164,6 +164,7 @@ export default async function AdDetailPage({
                                     minBidStep={ad.minBidStep}
                                     initialHighestBid={highestBid?.amount ?? 0}
                                     initialIsAuctionActive={adData.isAuctionActive}
+                                    adOwnerName={displayName}
                                 />
                             </div>
                         ) : (

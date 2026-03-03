@@ -17,6 +17,7 @@ interface LiveArenaProps {
     minBidStep?: number;
     initialHighestBid?: number;
     initialIsAuctionActive?: boolean;
+    adOwnerName?: string;
 }
 
 export default function LiveArena({
@@ -28,7 +29,8 @@ export default function LiveArena({
     startingBid,
     minBidStep = 1,
     initialHighestBid = 0,
-    initialIsAuctionActive = false
+    initialIsAuctionActive = false,
+    adOwnerName = "Satıcı"
 }: LiveArenaProps) {
     const { data: session } = useSession();
     const [token, setToken] = useState("");
@@ -82,6 +84,7 @@ export default function LiveArena({
                 initialIsAuctionActive={initialIsAuctionActive}
                 role={role}
                 wantsToPublish={wantsToPublish}
+                adOwnerName={adOwnerName}
             />
             <RoomAudioRenderer />
             {!isOwner && <CoHostListener setRole={setRole} setWantsToPublish={setWantsToPublish} />}
@@ -99,7 +102,8 @@ function CustomArenaLayout({
     initialHighestBid,
     initialIsAuctionActive,
     role,
-    wantsToPublish
+    wantsToPublish,
+    adOwnerName
 }: any) {
     const room = useRoomContext();
     const router = useRouter();
@@ -427,78 +431,162 @@ function CustomArenaLayout({
                 </>
             )}
 
-            {/* Host Specific LiveKit Tools (Mic/Cam Toggle) */}
-            {isOwner && (
-                <div style={{
-                    position: "absolute",
-                    top: "20px",
-                    left: "20px",
-                    display: "flex",
-                    gap: "10px",
-                    zIndex: 50
-                }}>
-                    <TrackToggle
-                        source={Track.Source.Microphone}
-                        className="backdrop-blur-lg bg-white/10 hover:bg-white/20 transition-all shadow-lg"
-                        style={{
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: "50%",
-                            width: "48px",
-                            height: "48px",
-                            color: "white",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer"
-                        }}
-                    />
-                    <TrackToggle
-                        source={Track.Source.Camera}
-                        className="backdrop-blur-lg bg-white/10 hover:bg-white/20 transition-all shadow-lg"
-                        style={{
-                            border: "1px solid rgba(255,255,255,0.1)",
-                            borderRadius: "50%",
-                            width: "48px",
-                            height: "48px",
-                            color: "white",
-                            display: "flex",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            cursor: "pointer"
-                        }}
-                    />
-                </div>
-            )}
-
-            {/* Flying Emojis */}
-            {reactions.map((reaction) => (
-                <div key={reaction.id} className="floating-emoji" style={{ bottom: "80px", left: `${reaction.left}%`, fontSize: "32px", pointerEvents: "none" }}>
-                    {reaction.emoji}
-                </div>
-            ))}
-
-            {/* Reaction Buttons */}
+            {/* Unified UI Controls - Active only when broadcast is alive */}
             {!isBroadcastEnded && (
-                <div style={{
-                    position: "absolute",
-                    bottom: isOwner ? "100px" : "440px",
-                    right: "20px",
-                    display: "flex",
-                    flexDirection: "column",
-                    gap: "12px",
-                    zIndex: 150
-                }}>
-                    {/* Guest Controls (Mic/Cam) when on Stage */}
-                    {!isOwner && role === "guest" && (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "10px" }}>
+                <>
+                    {/* Top HUD (Mobile Style) */}
+                    <div style={{
+                        position: "absolute",
+                        top: "20px",
+                        left: "16px",
+                        right: "16px",
+                        zIndex: 200,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "flex-start",
+                        pointerEvents: "none"
+                    }}>
+                        {/* Left Side: Avatar & Badges */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "8px", pointerEvents: "auto" }}>
+                            <div style={{
+                                display: "flex",
+                                alignItems: "center",
+                                background: "rgba(0,0,0,0.5)",
+                                backdropFilter: "blur(10px)",
+                                borderRadius: "100px",
+                                padding: "4px",
+                                paddingRight: "16px",
+                                border: "1px solid rgba(255,255,255,0.1)"
+                            }}>
+                                <div style={{ width: "36px", height: "36px", borderRadius: "50%", background: "#ef4444", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "16px", fontWeight: "bold", color: "white" }}>
+                                    {adOwnerName.charAt(0).toUpperCase()}
+                                </div>
+                                <div style={{ marginLeft: "10px", display: "flex", flexDirection: "column" }}>
+                                    <span style={{ color: "white", fontSize: "0.85rem", fontWeight: 800 }}>{adOwnerName}</span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <span style={{ color: "white", fontSize: "0.6rem", background: "#ef4444", padding: "2px 6px", borderRadius: "4px", fontWeight: 900 }}>TEQLİF CANLI</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(10px)", padding: "4px 12px", borderRadius: "100px", width: "max-content", border: "1px solid rgba(255,255,255,0.1)" }}>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                                <span style={{ color: "white", fontSize: "0.8rem", fontWeight: 700 }}>{participantCount}</span>
+                            </div>
+                        </div>
+
+                        {/* Right Side: Close / Leave */}
+                        <div style={{ pointerEvents: "auto" }}>
+                            {isOwner ? (
+                                <button onClick={() => handleEndBroadcast()} style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "50%", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", cursor: "pointer", backdropFilter: "blur(10px)" }}>
+                                    ✕
+                                </button>
+                            ) : (
+                                <button onClick={() => window.location.href = "/"} style={{ background: "rgba(0,0,0,0.4)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "50%", width: "40px", height: "40px", display: "flex", alignItems: "center", justifyContent: "center", color: "white", cursor: "pointer", backdropFilter: "blur(10px)" }}>
+                                    ✕
+                                </button>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Top Dashboard: Mobile Parity Price & Bidding Info (Below HUD) */}
+                    <div style={{
+                        position: "absolute",
+                        top: "100px",
+                        left: "16px",
+                        right: "16px",
+                        zIndex: 200,
+                        display: "flex",
+                        flexDirection: "column",
+                        gap: "8px",
+                        pointerEvents: "auto"
+                    }}>
+                        {/* Stats Bar */}
+                        <div style={{
+                            background: "rgba(0,0,0,0.4)",
+                            backdropFilter: "blur(15px)",
+                            borderRadius: "20px",
+                            border: "1px solid rgba(255,255,255,0.1)",
+                            padding: "12px 16px",
+                            display: "flex",
+                            justifyContent: "space-between",
+                            alignItems: "center"
+                        }}>
+                            <div style={{ display: "flex", flexDirection: "column" }}>
+                                <span style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.6)", fontWeight: 800, letterSpacing: "1px" }}>
+                                    {auctionStatus === "ACTIVE" ? "GÜNCEL FİYAT" : "BAŞLANGIÇ FİYATI"}
+                                </span>
+                                <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
+                                    <span className={`tabular-nums tracking-tighter ${flashBid ? 'text-green-400 scale-110' : 'text-white'} transition-all duration-300`} style={{ fontSize: "1.5rem", fontWeight: 900 }}>
+                                        {new Intl.NumberFormat("tr-TR").format(liveHighestBid || (startingBid ?? 0))}
+                                    </span>
+                                    <span style={{ fontSize: "1rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>₺</span>
+                                </div>
+                            </div>
+
+                            <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                                {liveHighestBidderName ? (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                                            <span style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.6)", fontWeight: 800 }}>LİDER</span>
+                                            <span style={{ fontSize: "0.85rem", color: "#4ade80", fontWeight: 900 }}>{liveHighestBidderName}</span>
+                                        </div>
+                                        {isOwner && liveHighestBidderId && (
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm(`${liveHighestBidderName} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
+                                                        const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId });
+                                                        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                                        alert("Davet gönderildi!");
+                                                    }
+                                                }}
+                                                title="Sahneye Davet Et"
+                                                style={{ background: "rgba(59, 130, 246, 0.2)", border: "1px solid rgba(59, 130, 246, 0.5)", borderRadius: "8px", padding: "6px", cursor: "pointer", marginLeft: "4px" }}
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                            </button>
+                                        )}
+                                    </div>
+                                ) : (
+                                    <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+                                        <span style={{ width: "8px", height: "8px", borderRadius: "50%", background: auctionStatus === "ACTIVE" ? "#22c55e" : "#f59e0b", animation: auctionStatus === "ACTIVE" ? "pulse 1.5s infinite" : "none" }} />
+                                        <span style={{ fontSize: "0.75rem", color: "white", fontWeight: 800 }}>{auctionStatus === "ACTIVE" ? "TEKLİF BEKLENİYOR" : "BAŞLAMASI BEKLENİYOR"}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Host Quick Action Bar under Stats */}
+                        {isOwner && auctionStatus === "ACTIVE" && (
+                            <div style={{ display: "flex", gap: "8px" }}>
+                                <button onClick={handleAccept} style={{ flex: 1, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "white", border: "none", borderRadius: "12px", padding: "10px", fontSize: "0.8rem", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)" }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                    ONAYLA VE SAT
+                                </button>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Center Controls Side Bar (Host specific Actions) */}
+                    {isOwner && (
+                        <div style={{
+                            position: "absolute",
+                            right: "16px",
+                            bottom: "280px", // Just above the bottom console
+                            zIndex: 200,
+                            display: "flex",
+                            flexDirection: "column",
+                            gap: "12px",
+                            pointerEvents: "auto"
+                        }}>
                             <TrackToggle
                                 source={Track.Source.Microphone}
-                                className="backdrop-blur-lg bg-white/10 hover:bg-white/20 transition-all shadow-lg"
+                                className="backdrop-blur-lg bg-black/40 hover:bg-black/60 transition-all shadow-lg"
                                 style={{
                                     border: "1px solid rgba(255,255,255,0.1)",
                                     borderRadius: "50%",
-                                    width: "45px",
-                                    height: "45px",
+                                    width: "48px",
+                                    height: "48px",
                                     color: "white",
                                     display: "flex",
                                     alignItems: "center",
@@ -508,12 +596,12 @@ function CustomArenaLayout({
                             />
                             <TrackToggle
                                 source={Track.Source.Camera}
-                                className="backdrop-blur-lg bg-white/10 hover:bg-white/20 transition-all shadow-lg"
+                                className="backdrop-blur-lg bg-black/40 hover:bg-black/60 transition-all shadow-lg"
                                 style={{
                                     border: "1px solid rgba(255,255,255,0.1)",
                                     borderRadius: "50%",
-                                    width: "45px",
-                                    height: "45px",
+                                    width: "48px",
+                                    height: "48px",
                                     color: "white",
                                     display: "flex",
                                     alignItems: "center",
@@ -535,13 +623,13 @@ function CustomArenaLayout({
                                     }
                                 }}
                                 style={{
-                                    width: "45px",
-                                    height: "45px",
+                                    width: "48px",
+                                    height: "48px",
                                     borderRadius: "50%",
-                                    background: "rgba(0,180,204,0.3)",
+                                    background: "rgba(0,0,0,0.4)",
                                     backdropFilter: "blur(12px)",
-                                    border: "1px solid rgba(0,180,204,0.4)",
-                                    fontSize: "18px",
+                                    border: "1px solid rgba(255,255,255,0.1)",
+                                    fontSize: "20px",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
@@ -552,395 +640,264 @@ function CustomArenaLayout({
                             >
                                 🔄
                             </button>
+                            {/* Stage Requests Pulse Icon */}
+                            {stageRequests.length > 0 && (
+                                <div style={{ position: "relative" }}>
+                                    <button
+                                        onClick={() => {
+                                            const req = stageRequests[0];
+                                            if (confirm(`${req.name} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
+                                                const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: req.id });
+                                                room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                                setStageRequests(prev => prev.filter(r => r.id !== req.id));
+                                            } else {
+                                                setStageRequests(prev => prev.filter(r => r.id !== req.id));
+                                            }
+                                        }}
+                                        style={{
+                                            width: "48px", height: "48px", borderRadius: "50%",
+                                            background: "rgba(59, 130, 246, 0.8)", border: "2px solid rgba(255,255,255,0.5)",
+                                            display: "flex", alignItems: "center", justifyContent: "center", color: "white",
+                                            cursor: "pointer", boxShadow: "0 0 15px rgba(59, 130, 246, 0.8)", animation: "pulse 1.5s infinite"
+                                        }}
+                                    >
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                    </button>
+                                    <span style={{ position: "absolute", top: "-5px", right: "-5px", background: "red", color: "white", fontSize: "10px", fontWeight: "bold", padding: "2px 6px", borderRadius: "10px" }}>{stageRequests.length}</span>
+                                </div>
+                            )}
                         </div>
                     )}
 
-                    {['❤️', '👍', '👏'].map(emoji => (
-                        <button
-                            key={emoji}
-                            onClick={() => handleReaction(emoji)}
-                            className="hover:scale-110 active:scale-90 transition-transform"
+                    {/* Flying Emojis */}
+                    {reactions.map((reaction) => (
+                        <div key={reaction.id} className="floating-emoji" style={{ bottom: "80px", left: `${reaction.left}%`, fontSize: "32px", pointerEvents: "none" }}>
+                            {reaction.emoji}
+                        </div>
+                    ))}
+
+                    {/* Bottom Gradient for Chat & Console */}
+                    <div style={{
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: "60%",
+                        background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.4) 70%, transparent 100%)",
+                        pointerEvents: "none",
+                        zIndex: 100
+                    }} />
+
+                    {/* Huge Auction Status Notification Overlay */}
+                    {auctionNotification && (
+                        <div style={{
+                            position: "absolute",
+                            inset: 0,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            background: auctionNotification.includes("BAŞLADI") ? "rgba(34, 197, 94, 0.3)" : "rgba(249, 115, 22, 0.3)",
+                            backdropFilter: "blur(8px)",
+                            WebkitBackdropFilter: "blur(8px)",
+                            zIndex: 300,
+                            animation: "zoomFadeOut 4s ease-in-out forwards"
+                        }}>
+                            <div style={{
+                                background: auctionNotification.includes("BAŞLADI") ? "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)" : "linear-gradient(135deg, #ea580c 0%, #f97316 100%)",
+                                color: "white",
+                                padding: "30px 60px",
+                                borderRadius: "30px",
+                                fontWeight: 900,
+                                fontSize: "2.5rem",
+                                letterSpacing: "2px",
+                                boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
+                                border: "4px solid rgba(255,255,255,0.4)",
+                                textAlign: "center"
+                            }}>
+                                {auctionNotification}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Countdown Gamification Overlay */}
+                    {countdown > 0 && (
+                        <div
+                            className={countdown <= 10 ? "animate-pulse" : ""}
                             style={{
-                                width: "45px",
-                                height: "45px",
-                                borderRadius: "50%",
-                                background: "rgba(0,0,0,0.3)",
-                                backdropFilter: "blur(12px)",
-                                border: "1px solid rgba(255,255,255,0.15)",
-                                fontSize: "20px",
+                                position: "absolute",
+                                top: "35%",
+                                left: "50%",
+                                transform: "translate(-50%, -50%)",
+                                background: countdown <= 10 ? "rgba(239, 68, 68, 0.9)" : "rgba(245, 158, 11, 0.9)",
+                                color: "white",
+                                width: "120px",
+                                height: "120px",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                cursor: "pointer",
-                                boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
+                                borderRadius: "50%",
+                                fontWeight: 900,
+                                fontSize: "4rem",
+                                boxShadow: `0 0 50px ${countdown <= 10 ? 'rgba(239, 68, 68, 0.6)' : 'rgba(245, 158, 11, 0.6)'}`,
+                                zIndex: 150,
+                                animation: "zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
                             }}
                         >
-                            {emoji}
-                        </button>
-                    ))}
-
-                    {/* Web Viewer Specific Actions (Mobile Parity) */}
-                    {!isOwner && (
-                        <>
-                            <div style={{ width: "30px", height: "1px", background: "rgba(255,255,255,0.2)", margin: "8px 0" }} />
-
-                            {/* Request Stage */}
-                            <button
-                                onClick={() => {
-                                    if (confirm("Sahneye katılma isteği göndermek istiyor musunuz?")) {
-                                        const payload = JSON.stringify({ type: "REQUEST_STAGE", userId: session?.user?.id, userName: session?.user?.name });
-                                        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-                                        alert("İstek gönderildi!");
-                                    }
-                                }}
-                                title="Sahneye Katıl İstediği Gönder"
-                                className="hover:scale-110 active:scale-90 transition-transform"
-                                style={{
-                                    width: "45px",
-                                    height: "45px",
-                                    borderRadius: "50%",
-                                    background: "rgba(0,180,204,0.2)",
-                                    backdropFilter: "blur(12px)",
-                                    border: "1px solid rgba(0,180,204,0.5)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    cursor: "pointer",
-                                    boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
-                                }}
-                            >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                            </button>
-
-                            {/* Ad Details toggle */}
-                            <button
-                                onClick={() => {
-                                    // Normally we would pop a modal or sheet.
-                                    // Since we are in the ad page, we could scroll down or alert.
-                                    alert("Detaylar sayfanın altında yer almaktadır.");
-                                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                                }}
-                                title="İlan Detayı"
-                                className="hover:scale-110 active:scale-90 transition-transform"
-                                style={{
-                                    width: "45px",
-                                    height: "45px",
-                                    borderRadius: "50%",
-                                    background: "rgba(255,255,255,0.1)",
-                                    backdropFilter: "blur(12px)",
-                                    border: "1px solid rgba(255,255,255,0.2)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    cursor: "pointer",
-                                    boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
-                                }}
-                            >
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                            </button>
-                        </>
-                    )}
-                </div>
-            )}
-
-            {/* Top Unified Dashboard (Consolidated Bidding & Info) */}
-            {!isBroadcastEnded && (
-                <div style={{
-                    position: "absolute",
-                    top: "20px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    width: "auto",
-                    minWidth: "320px",
-                    padding: "8px 16px",
-                    background: "rgba(0, 0, 0, 0.4)",
-                    backdropFilter: "blur(25px)",
-                    WebkitBackdropFilter: "blur(25px)",
-                    borderRadius: "100px",
-                    border: "1px solid rgba(255, 255, 255, 0.2)",
-                    boxShadow: "0 10px 40px rgba(0, 0, 0, 0.5)",
-                    zIndex: 200,
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "20px",
-                    color: "white"
-                }}>
-                    {/* Status & Price Section */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "16px", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "16px" }}>
-                        <div>
-                            <span style={{ fontSize: "0.6rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>
-                                {auctionStatus === "ACTIVE" ? "CANLI TEQLİF" : "BAŞLANGIÇ"}
-                            </span>
-                            <span className={`tabular-nums font-extrabold tracking-tighter ${flashBid ? 'bid-flash' : ''}`} style={{ fontSize: "1.2rem", color: "#22c55e", display: "flex", alignItems: "baseline", gap: "2px" }}>
-                                {new Intl.NumberFormat("tr-TR").format(liveHighestBid || (startingBid ?? 0))}
-                                <span style={{ fontSize: "0.85rem", opacity: 0.6 }}>₺</span>
-                            </span>
+                            {countdown}
                         </div>
+                    )}
 
-                        {!isOwner && auctionStatus === "IDLE" && (
-                            <div style={{ fontSize: "0.75rem", fontWeight: 700, opacity: 0.8, background: "rgba(255,255,255,0.1)", padding: "4px 12px", borderRadius: "100px" }}>
-                                ⏳ Bekleniyor
+                    {/* Guest PiP Screen */}
+                    {guestTrack && (
+                        <div style={{
+                            position: "absolute",
+                            bottom: "100px",
+                            right: "20px",
+                            width: "100px",
+                            height: "140px",
+                            borderRadius: "12px",
+                            overflow: "hidden",
+                            border: "2px solid white",
+                            boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
+                            zIndex: 10,
+                            background: "black"
+                        }}>
+                            <VideoTrack trackRef={guestTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                        </div>
+                    )}
+
+                    {/* Bottom Interaction Area (Matches Mobile Console) */}
+                    <div style={{
+                        position: "absolute",
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        height: "260px",
+                        display: "flex",
+                        flexDirection: "column",
+                        padding: "16px",
+                        zIndex: 200,
+                        pointerEvents: "none"
+                    }}>
+                        {/* Chat Area & Reactions Tray (Flex row so chat takes left, emojis take right) */}
+                        <div style={{ flex: 1, display: "flex", overflow: "hidden", pointerEvents: "auto", marginBottom: "8px" }}>
+                            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px", paddingRight: "10px" }}>
+                                {messages.map((msg: any) => (
+                                    <div key={msg.id} style={{
+                                        background: "rgba(0,0,0,0.4)",
+                                        backdropFilter: "blur(6px)",
+                                        padding: "6px 14px",
+                                        borderRadius: "16px",
+                                        maxWidth: "85%",
+                                        fontSize: "0.85rem",
+                                        animation: "slideUp 0.3s ease-out",
+                                        border: "1px solid rgba(255,255,255,0.05)",
+                                        width: "max-content"
+                                    }}>
+                                        <span style={{ color: "#4ade80", fontWeight: 900, marginRight: "8px" }}>{msg.sender}:</span>
+                                        <span style={{ color: "white" }}>{msg.text}</span>
+                                    </div>
+                                ))}
                             </div>
-                        )}
 
-                        {auctionStatus === "ACTIVE" && (
-                            <div className="flex items-center gap-2" style={{ fontSize: "0.7rem", fontWeight: 900, color: "#22c55e", background: "rgba(34, 197, 94, 0.1)", padding: "4px 10px", borderRadius: "100px", border: "1px solid rgba(34, 197, 94, 0.2)" }}>
-                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
-                                CANLI
-                            </div>
-                        )}
+                            {/* Viewer Emojis and Stage Requests Panel */}
+                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end", justifyContent: "flex-end" }}>
+                                {!isOwner && (
+                                    <>
+                                        <button
+                                            onClick={() => {
+                                                if (confirm("Sahneye katılma isteği göndermek istiyor musunuz?")) {
+                                                    const payload = JSON.stringify({ type: "REQUEST_STAGE", userId: session?.user?.id, userName: session?.user?.name });
+                                                    room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                                    alert("İstek gönderildi!");
+                                                }
+                                            }}
+                                            className="hover:scale-110 active:scale-90 transition-transform"
+                                            style={{ width: "45px", height: "45px", borderRadius: "50%", background: "rgba(0,180,204,0.4)", backdropFilter: "blur(12px)", border: "1px solid rgba(0,180,204,0.8)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                                        >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                        </button>
 
-                        {/* Highest Bidder Details (Mobile Parity) */}
-                        {liveHighestBidderName && (
-                            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "8px", borderLeft: "1px solid rgba(255,255,255,0.1)", paddingLeft: "16px" }}>
-                                <span style={{ color: "#4ade80", fontSize: "0.75rem", fontWeight: 900 }}>{liveHighestBidderName}</span>
-                                {isOwner && liveHighestBidderId && (
-                                    <button
-                                        onClick={() => {
-                                            if (confirm(`${liveHighestBidderName} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
-                                                const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId });
-                                                room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-                                                alert("Davet gönderildi!");
-                                            }
-                                        }}
-                                        title="Sahneye Davet Et"
-                                        style={{ background: "rgba(59, 130, 246, 0.2)", border: "1px solid rgba(59, 130, 246, 0.5)", borderRadius: "8px", padding: "4px 8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
-                                    >
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                                        <span style={{ color: "#60a5fa", fontSize: "0.6rem", fontWeight: 900, marginLeft: "4px" }}>DAVET ET</span>
-                                    </button>
+                                        <button
+                                            onClick={() => {
+                                                alert("Detaylar sayfanın altında yer almaktadır.");
+                                                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                                            }}
+                                            className="hover:scale-110 active:scale-90 transition-transform"
+                                            style={{ width: "45px", height: "45px", borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                                        >
+                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                        </button>
+                                    </>
                                 )}
+                                {['❤️', '👏', '🔥'].map(emoji => (
+                                    <button
+                                        key={emoji}
+                                        onClick={() => handleReaction(emoji)}
+                                        className="hover:scale-110 active:scale-90 transition-transform"
+                                        style={{ width: "45px", height: "45px", borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.2)", fontSize: "20px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
+                                    >
+                                        {emoji}
+                                    </button>
+                                ))}
                             </div>
-                        )}
-                    </div>
-                    {/* Viewer count pill */}
-                    <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(255,255,255,0.1)", padding: "4px 12px", borderRadius: "20px" }}>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
-                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
-                            <circle cx="12" cy="12" r="3"></circle>
-                        </svg>
-                        <span style={{ fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.5px" }}>{participantCount}</span>
-                    </div>
-
-                    {/* Stage Requests (Host Only) */}
-                    {isOwner && stageRequests.length > 0 && (
-                        <div style={{ position: "relative" }}>
-                            <button
-                                onClick={() => {
-                                    const req = stageRequests[0];
-                                    if (confirm(`${req.name} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
-                                        const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: req.id });
-                                        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-                                        setStageRequests(prev => prev.filter(r => r.id !== req.id));
-                                    } else {
-                                        setStageRequests(prev => prev.filter(r => r.id !== req.id));
-                                    }
-                                }}
-                                style={{
-                                    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
-                                    color: "white",
-                                    border: "none",
-                                    borderRadius: "100px",
-                                    padding: "6px 12px",
-                                    fontSize: "0.75rem",
-                                    fontWeight: 900,
-                                    cursor: "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: "6px",
-                                    boxShadow: "0 4px 15px rgba(59, 130, 246, 0.4)",
-                                    animation: "pulse 2s infinite"
-                                }}
-                            >
-                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                                {stageRequests.length} İSTEK
-                            </button>
                         </div>
-                    )}
 
-                    {/* Action Controls Section */}
-                    {isOwner ? (
-                        <div style={{ display: "flex", gap: "8px" }}>
-                            {auctionStatus === "IDLE" ? (
-                                <button onClick={startCountdown} disabled={countdown > 0} style={{ background: "var(--primary)", color: "white", border: "none", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
-                                    Açık Arttırmayı Başlat
+                        {/* Bottom Console (Chat Input & Action Button) */}
+                        <div style={{ pointerEvents: "auto", display: "flex", gap: "10px", alignItems: "center" }}>
+                            <form onSubmit={handleSendChat} style={{
+                                flex: 1,
+                                display: "flex",
+                                gap: "8px",
+                                background: "rgba(0,0,0,0.5)",
+                                backdropFilter: "blur(10px)",
+                                border: "1px solid rgba(255,255,255,0.1)",
+                                borderRadius: "100px",
+                                padding: "6px 8px 6px 16px",
+                                height: "50px"
+                            }}>
+                                <input
+                                    type="text"
+                                    value={chatText}
+                                    onChange={(e) => setChatText(e.target.value)}
+                                    placeholder="Sohbet et..."
+                                    style={{ background: "transparent", border: "none", outline: "none", color: "white", flex: 1, fontSize: "0.95rem" }}
+                                />
+                                <button type="submit" style={{ background: "#4ade80", color: "black", border: "none", borderRadius: "100px", width: "38px", height: "38px", fontWeight: "bold", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                                 </button>
-                            ) : (
-                                <>
-                                    <button onClick={startCountdown} style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
-                                        ⏳ Sayaç
-                                    </button>
-                                    <button onClick={handleAccept} style={{ background: "#22c55e", color: "white", border: "none", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
-                                        Onayla ve Sat
-                                    </button>
-                                </>
-                            )}
-                            <button onClick={() => handleEndBroadcast()} style={{ background: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
-                                Yayını Bitir
-                            </button>
-                        </div>
-                    ) : (
-                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                            {auctionStatus === "ACTIVE" && (
-                                <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
-                            )}
-                            {buyItNowPrice && (
+                            </form>
+
+                            {/* Primary Action Button (Host: Start/End, Viewer: Bid) */}
+                            {isOwner ? (
                                 <button
-                                    onClick={() => {
-                                        if (confirm(`${new Intl.NumberFormat("tr-TR").format(buyItNowPrice)} ₺ fiyata hemen almak istetliyor musunuz?`)) {
-                                            handleBuyNow();
-                                        }
-                                    }}
+                                    onClick={auctionStatus === "IDLE" ? startCountdown : () => handleEndBroadcast()}
                                     style={{
-                                        background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
-                                        color: "black",
-                                        border: "none",
-                                        borderRadius: "100px",
-                                        padding: "8px 16px",
-                                        fontSize: "0.8rem",
-                                        fontWeight: 900,
-                                        cursor: "pointer",
-                                        boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)",
-                                        whiteSpace: "nowrap"
+                                        height: "50px",
+                                        padding: "0 24px",
+                                        background: auctionStatus === "IDLE" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                                        color: "white", border: "none", borderRadius: "100px", fontWeight: 900,
+                                        display: "flex", alignItems: "center", gap: "8px", cursor: "pointer",
+                                        boxShadow: auctionStatus === "IDLE" ? "0 4px 15px rgba(16, 185, 129, 0.4)" : "0 4px 15px rgba(239, 68, 68, 0.4)"
                                     }}
                                 >
-                                    HEMEN AL: {new Intl.NumberFormat("tr-TR").format(buyItNowPrice)} ₺
+                                    {auctionStatus === "IDLE" ? "BAŞLAT" : "BİTİR"}
                                 </button>
+                            ) : (
+                                // Use the customized BidMiniForm which acts as a primary button for viewers
+                                <div style={{ display: "flex", alignItems: "center" }}>
+                                    {auctionStatus === "ACTIVE" ? (
+                                        <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
+                                    ) : (
+                                        <div style={{ height: "50px", padding: "0 24px", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "100px", color: "rgba(255,255,255,0.5)", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            BEKLENİYOR
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
-                    )}
-                </div>
-            )}
-
-            {/* Huge Auction Status Notification Overlay */}
-            {auctionNotification && (
-                <div style={{
-                    position: "absolute",
-                    inset: 0,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: auctionNotification.includes("BAŞLADI") ? "rgba(34, 197, 94, 0.3)" : "rgba(249, 115, 22, 0.3)",
-                    backdropFilter: "blur(8px)",
-                    WebkitBackdropFilter: "blur(8px)",
-                    zIndex: 300,
-                    animation: "zoomFadeOut 4s ease-in-out forwards"
-                }}>
-                    <div style={{
-                        background: auctionNotification.includes("BAŞLADI") ? "linear-gradient(135deg, #16a34a 0%, #22c55e 100%)" : "linear-gradient(135deg, #ea580c 0%, #f97316 100%)",
-                        color: "white",
-                        padding: "30px 60px",
-                        borderRadius: "30px",
-                        fontWeight: 900,
-                        fontSize: "2.5rem",
-                        letterSpacing: "2px",
-                        boxShadow: "0 20px 40px rgba(0,0,0,0.5)",
-                        border: "4px solid rgba(255,255,255,0.4)",
-                        textAlign: "center"
-                    }}>
-                        {auctionNotification}
                     </div>
-                </div>
-            )}
-
-            {/* Countdown Gamification Overlay */}
-            {countdown > 0 && (
-                <div
-                    className={countdown <= 10 ? "animate-pulse" : ""}
-                    style={{
-                        position: "absolute",
-                        top: "35%",
-                        left: "50%",
-                        transform: "translate(-50%, -50%)",
-                        background: countdown <= 10 ? "rgba(239, 68, 68, 0.9)" : "rgba(245, 158, 11, 0.9)",
-                        color: "white",
-                        width: "120px",
-                        height: "120px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        borderRadius: "50%",
-                        fontWeight: 900,
-                        fontSize: "4rem",
-                        boxShadow: `0 0 50px ${countdown <= 10 ? 'rgba(239, 68, 68, 0.6)' : 'rgba(245, 158, 11, 0.6)'}`,
-                        zIndex: 150,
-                        animation: "zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
-                    }}
-                >
-                    {countdown}
-                </div>
-            )}
-
-            {/* Guest PiP Screen */}
-            {guestTrack && (
-                <div style={{
-                    position: "absolute",
-                    bottom: "100px",
-                    right: "20px",
-                    width: "100px",
-                    height: "140px",
-                    borderRadius: "12px",
-                    overflow: "hidden",
-                    border: "2px solid white",
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
-                    zIndex: 10,
-                    background: "black"
-                }}>
-                    <VideoTrack trackRef={guestTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
-                </div>
-            )}
-
-            {/* Repositioned Chat Area (Below Video) */}
-            {!isBroadcastEnded && (
-                <div style={{
-                    position: "absolute",
-                    bottom: 0,
-                    left: 0,
-                    right: 0,
-                    height: "180px",
-                    background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)",
-                    display: "flex",
-                    flexDirection: "column",
-                    padding: "10px 20px",
-                    zIndex: 100
-                }}>
-                    <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px", paddingBottom: "10px" }}>
-                        {messages.map((msg: any) => (
-                            <div key={msg.id} style={{
-                                background: "rgba(255,255,255,0.08)",
-                                backdropFilter: "blur(4px)",
-                                padding: "4px 12px",
-                                borderRadius: "8px",
-                                maxWidth: "max-content",
-                                fontSize: "0.85rem",
-                                animation: "slideUp 0.3s ease-out"
-                            }}>
-                                <span style={{ color: "#00B4CC", fontWeight: 800, marginRight: "8px" }}>{msg.sender}:</span>
-                                <span style={{ color: "white" }}>{msg.text}</span>
-                            </div>
-                        ))}
-                    </div>
-
-                    <form onSubmit={handleSendChat} style={{
-                        display: "flex",
-                        gap: "10px",
-                        background: "rgba(255,255,255,0.1)",
-                        backdropFilter: "blur(10px)",
-                        border: "1px solid rgba(255,255,255,0.1)",
-                        borderRadius: "100px",
-                        padding: "4px 4px 4px 16px",
-                        marginBottom: "10px"
-                    }}>
-                        <input
-                            type="text"
-                            value={chatText}
-                            onChange={(e) => setChatText(e.target.value)}
-                            placeholder="Sohbet et..."
-                            style={{ background: "transparent", border: "none", outline: "none", color: "white", flex: 1, fontSize: "0.9rem" }}
-                        />
-                        <button type="submit" style={{ background: "#00B4CC", color: "white", border: "none", borderRadius: "100px", width: "36px", height: "36px", fontWeight: "bold" }}>➔</button>
-                    </form>
-                </div>
+                </>
             )}
         </div>
     );
@@ -982,16 +939,17 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                     setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
                 }}
                 style={{
-                    width: "100px",
-                    height: "38px", // Explicit height for alignment
-                    background: "rgba(255,255,255,0.15)",
-                    border: "1px solid rgba(255,255,255,0.2)",
+                    width: "110px",
+                    height: "50px", // Increased height for bottom console parity
+                    background: "rgba(0,0,0,0.5)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
                     borderRadius: "100px",
-                    padding: "0 12px",
+                    padding: "0 16px",
                     color: "white",
-                    fontSize: "0.85rem",
+                    fontSize: "0.95rem",
                     textAlign: "center",
-                    fontWeight: 700,
+                    fontWeight: 800,
                     outline: "none"
                 }}
             />
@@ -999,23 +957,24 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                 type="submit"
                 disabled={loading}
                 style={{
-                    height: "38px", // Exact same height as input
-                    background: "var(--primary)",
+                    height: "50px",
+                    background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
                     color: "white",
                     border: "none",
                     borderRadius: "100px",
-                    padding: "0 16px",
-                    fontSize: "0.8rem",
-                    fontWeight: 800,
-                    cursor: "pointer",
-                    boxShadow: "0 4px 15px rgba(0, 188, 212, 0.4)",
+                    padding: "0 20px",
+                    fontSize: "0.9rem",
+                    fontWeight: 900,
+                    cursor: loading ? "not-allowed" : "pointer",
                     display: "flex",
                     alignItems: "center",
-                    justifyContent: "center",
-                    whiteSpace: "nowrap" // Prevent word wrap
+                    gap: "8px",
+                    boxShadow: "0 4px 15px rgba(239, 68, 68, 0.4)",
+                    opacity: loading ? 0.7 : 1
                 }}
             >
-                {loading ? "..." : "teqlif ver"}
+                {loading ? "BEKLEYİN" : "TEKLİF VER"}
+                {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9l6 6-6 6"></path><path d="M4 4v7a4 4 0 0 0 4 4h11"></path></svg>}
             </button>
         </form>
     );
