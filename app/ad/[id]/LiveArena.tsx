@@ -77,6 +77,8 @@ export default function LiveArena({
                 startingBid={startingBid}
                 minBidStep={minBidStep}
                 initialHighestBid={initialHighestBid}
+                role={role}
+                wantsToPublish={wantsToPublish}
             />
             <RoomAudioRenderer />
             {!isOwner && <CoHostListener setRole={setRole} setWantsToPublish={setWantsToPublish} />}
@@ -91,7 +93,9 @@ function CustomArenaLayout({
     buyItNowPrice,
     startingBid,
     minBidStep,
-    initialHighestBid
+    initialHighestBid,
+    role,
+    wantsToPublish
 }: any) {
     const room = useRoomContext();
     const router = useRouter();
@@ -412,6 +416,73 @@ function CustomArenaLayout({
                     gap: "12px",
                     zIndex: 150
                 }}>
+                    {/* Guest Controls (Mic/Cam) when on Stage */}
+                    {!isOwner && role === "guest" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", marginBottom: "10px" }}>
+                            <TrackToggle
+                                source={Track.Source.Microphone}
+                                className="backdrop-blur-lg bg-white/10 hover:bg-white/20 transition-all shadow-lg"
+                                style={{
+                                    border: "1px solid rgba(255,255,255,0.1)",
+                                    borderRadius: "50%",
+                                    width: "45px",
+                                    height: "45px",
+                                    color: "white",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer"
+                                }}
+                            />
+                            <TrackToggle
+                                source={Track.Source.Camera}
+                                className="backdrop-blur-lg bg-white/10 hover:bg-white/20 transition-all shadow-lg"
+                                style={{
+                                    border: "1px solid rgba(255,255,255,0.1)",
+                                    borderRadius: "50%",
+                                    width: "45px",
+                                    height: "45px",
+                                    color: "white",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer"
+                                }}
+                            />
+                            <button
+                                onClick={async () => {
+                                    try {
+                                        const publications = Array.from(room.localParticipant.videoTrackPublications.values());
+                                        const videoPub = publications.find(p => p.source === Track.Source.Camera);
+                                        if (videoPub?.videoTrack) {
+                                            // @ts-ignore
+                                            await videoPub.videoTrack.switchCamera();
+                                        }
+                                    } catch (e) {
+                                        console.error("Kamera değiştirme hatası:", e);
+                                    }
+                                }}
+                                style={{
+                                    width: "45px",
+                                    height: "45px",
+                                    borderRadius: "50%",
+                                    background: "rgba(0,180,204,0.3)",
+                                    backdropFilter: "blur(12px)",
+                                    border: "1px solid rgba(0,180,204,0.4)",
+                                    fontSize: "18px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "white",
+                                    cursor: "pointer"
+                                }}
+                                title="Kamera Değiştir"
+                            >
+                                🔄
+                            </button>
+                        </div>
+                    )}
+
                     {['❤️', '👍', '👏'].map(emoji => (
                         <button
                             key={emoji}
@@ -711,10 +782,11 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                 }}
                 style={{
                     width: "100px",
+                    height: "38px", // Explicit height for alignment
                     background: "rgba(255,255,255,0.15)",
                     border: "1px solid rgba(255,255,255,0.2)",
                     borderRadius: "100px",
-                    padding: "6px 12px",
+                    padding: "0 12px",
                     color: "white",
                     fontSize: "0.85rem",
                     textAlign: "center",
@@ -726,15 +798,20 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                 type="submit"
                 disabled={loading}
                 style={{
+                    height: "38px", // Exact same height as input
                     background: "var(--primary)",
                     color: "white",
                     border: "none",
                     borderRadius: "100px",
-                    padding: "8px 16px",
+                    padding: "0 16px",
                     fontSize: "0.8rem",
                     fontWeight: 800,
                     cursor: "pointer",
-                    boxShadow: "0 4px 15px rgba(0, 188, 212, 0.4)"
+                    boxShadow: "0 4px 15px rgba(0, 188, 212, 0.4)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    whiteSpace: "nowrap" // Prevent word wrap
                 }}
             >
                 {loading ? "..." : "teqlif ver"}
