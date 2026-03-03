@@ -411,7 +411,7 @@ function CustomArenaLayout({
                 </div>
             ) : (
                 <>
-                    <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                    <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
 
                     {/* SALE FINALIZATION OVERLAY */}
                     {showFinalization && (
