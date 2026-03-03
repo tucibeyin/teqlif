@@ -697,7 +697,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
               
               // Inform participants via DataChannel that auction is over
               final signal = jsonEncode({'type': 'AUCTION_END'});
-              state.room!.localParticipant?.publishData(signal.codeUnits);
+              final room = ref.read(liveRoomProvider(widget.ad.id)).room;
+              room?.localParticipant?.publishData(signal.codeUnits);
             }
             return;
           }
