@@ -221,18 +221,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       // Fallback to normal text chat or skip
     }
 
-    // Legacy text-based bid detection (optional, for backward compatibility)
-    if (message.startsWith('🔥 Yeni Teklif:')) {
-      final amountStr = message.replaceAll('🔥 Yeni Teklif: ₺', '').trim();
-      final amount = double.tryParse(amountStr.replaceAll('.', '').replaceAll(',', '.'));
-        if (amount != null) {
-          final nextBid = amount + (widget.ad.minBidStep);
-          setState(() {
-            _bidCtrl.text = _formatPrice(nextBid);
-          });
-        }
-      _recordBidVelocity();
-    }
+    // Removed legacy text-based bid detection to enforce JSON payloads
 
     setState(() {
       _messages.add(_EphemeralMessage(
@@ -401,17 +390,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       ref.invalidate(adDetailProvider(widget.ad.id));
       ref.invalidate(myBidsProvider);
       
-      // Broadcast bid to data channel for others to see instantly
-      final state = ref.read(liveRoomProvider(widget.ad.id));
-      if (state.room != null) {
-        final payload = jsonEncode({
-           'type': 'CHAT',
-           'text': '🔥 Yeni Teklif: ₺${_formatPrice(amount)}',
-           'senderName': state.room!.localParticipant?.name,
-        });
-        state.room!.localParticipant?.publishData(utf8.encode(payload));
-        _handleDataChannelMessage(utf8.encode(payload), null);
-      }
+      // DO NOT broadcast manually via CHAT. The Backend API handles publishing NO_BID via webhook/LiveKit API
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Teklifiniz verildi! 🎉'), backgroundColor: Colors.green),
@@ -779,8 +758,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           backgroundColor: Colors.white10,
                           side: const BorderSide(color: Colors.white24),
                           labelStyle: const TextStyle(color: Colors.white),
-                          onPressed: isDisconnected ? null : () {
-                            _bidCtrl.text = inc.toString();
+                          onPressed: (isDisconnected || _bidLoading) ? null : () {
+                            final rawText = _bidCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
+                            final currentVal = double.tryParse(rawText) ?? 0;
+                            final newVal = currentVal + inc;
+                            _bidCtrl.text = _formatPrice(newVal);
                             _placeBidSlide();
                           },
                         ),
@@ -802,7 +784,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         Expanded(
                           child: TextField(
                             controller: _bidCtrl,
-                            enabled: !isDisconnected,
+                            enabled: !isDisconnected && _isAuctionActive,
                             keyboardType: TextInputType.number,
                             style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
                             decoration: const InputDecoration(hintText: 'Pey...', hintStyle: TextStyle(color: Colors.white38, fontSize: 15), border: InputBorder.none),
@@ -1021,7 +1003,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           Expanded(
                             child: TextField(
                               controller: _bidCtrl,
-                              enabled: !isDisconnected,
+                              enabled: !isDisconnected && _isAuctionActive,
                               keyboardType: TextInputType.number,
                               style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
                               decoration: const InputDecoration(hintText: 'Pey...', hintStyle: TextStyle(color: Colors.white38, fontSize: 13), border: InputBorder.none, isDense: true),

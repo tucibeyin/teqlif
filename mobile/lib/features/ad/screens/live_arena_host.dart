@@ -358,6 +358,22 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     );
   }
 
+  Future<void> _closeLiveStreamSilently() async {
+    if (mounted) setState(() => _isFinalizing = true);
+    
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    if (state.room != null) {
+      final payload = jsonEncode({ 'type': 'ROOM_CLOSED' });
+      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+    }
+
+    await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {'isLive': false});
+    await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+    if (mounted) {
+      Navigator.of(context).popUntil((route) => route.isFirst);
+    }
+  }
+
   Future<void> _endLiveStream() async {
     final confirmed = await showDialog<bool>(
       context: context,
@@ -532,7 +548,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                                   backgroundColor: Colors.green,
                                                   duration: Duration(seconds: 4),
                                                 ));
-                                                _endLiveStream(); // Offer to end live
+                                                _closeLiveStreamSilently(); // End live quietly after sale
                                               }
                                               return;
                                             }
@@ -614,7 +630,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 4),
               ));
-              _endLiveStream();
+              _closeLiveStreamSilently();
             }
             return;
           }
@@ -984,6 +1000,24 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                             icon: Icons.gavel,
                             onPressed: _showBidsBottomSheet,
                             badge: _unreadBids > 0 ? '$_unreadBids' : null,
+                          ),
+                          const SizedBox(height: 12),
+                          _CircularControlButton(
+                            icon: Icons.switch_camera,
+                            onPressed: () async {
+                              final p = room?.localParticipant;
+                              if (p != null) {
+                                final trackPub = p.videoTrackPublications.firstOrNull;
+                                if (trackPub != null && trackPub.track != null) {
+                                  try {
+                                    // Use dynamic for forward compatibility if LocalVideoTrack isn't accurately typed
+                                    await (trackPub.track as dynamic).switchCamera();
+                                  } catch (e) {
+                                    debugPrint("Error switching camera: $e");
+                                  }
+                                }
+                              }
+                            },
                           ),
                           const SizedBox(height: 12),
                           _CircularControlButton(

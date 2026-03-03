@@ -115,15 +115,7 @@ function CustomArenaLayout({
         try {
             const dataStr = new TextDecoder().decode(msg.payload);
 
-            // Handle numeric "New Bid" message prefix text
-            if (dataStr.startsWith('🔥 Yeni Teklif: ₺')) {
-                const amount = parseInt(dataStr.replace('🔥 Yeni Teklif: ₺', '').replace(/\./g, ''), 10);
-                if (!isNaN(amount)) {
-                    setLiveHighestBid(amount);
-                    setLastAcceptedBidId(null); // Reset on new bid
-                }
-                return;
-            }
+            // Enforcing JSON standard payloads (legacy string parsing removed)
 
             const dataObj = JSON.parse(dataStr);
             if (dataObj.type === 'NEW_BID') {
