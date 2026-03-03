@@ -114,6 +114,8 @@ function CustomArenaLayout({
     const [auctionNotification, setAuctionNotification] = useState<string | null>(null);
     const [messages, setMessages] = useState<{ id: string, text: string, sender: string, senderId?: string }[]>([]);
     const [liveHighestBidderId, setLiveHighestBidderId] = useState<string | null>(null);
+    const [liveHighestBidderName, setLiveHighestBidderName] = useState<string | null>(null);
+    const [stageRequests, setStageRequests] = useState<{ id: string; name: string }[]>([]);
     const connectionState = useConnectionState();
     const [isRoomClosed, setIsRoomClosed] = useState(false);
     const [flashBid, setFlashBid] = useState(false);
@@ -290,6 +292,7 @@ function CustomArenaLayout({
                 setLiveHighestBid(dataObj.amount);
                 setLiveHighestBidId(dataObj.bidId); // TRUTH: Save exact ID
                 setLiveHighestBidderId(dataObj.bidderId);
+                if (dataObj.bidderName) setLiveHighestBidderName(dataObj.bidderName);
                 setLastAcceptedBidId(null);
                 setFlashBid(true);
                 setTimeout(() => setFlashBid(false), 300);
@@ -297,9 +300,14 @@ function CustomArenaLayout({
                 setLiveHighestBid(dataObj.amount);
                 setLiveHighestBidId(dataObj.bidId);
                 setLiveHighestBidderId(dataObj.bidderId);
+                if (dataObj.bidderName) setLiveHighestBidderName(dataObj.bidderName);
                 setLastAcceptedBidId(dataObj.bidId);
                 setFlashBid(true);
                 setTimeout(() => setFlashBid(false), 300);
+            } else if (dataObj.type === 'SYNC_STATE_RESPONSE') {
+                if (dataObj.auctionStatus) setAuctionStatus(dataObj.auctionStatus);
+                if (dataObj.liveHighestBid) setLiveHighestBid(dataObj.liveHighestBid);
+                if (dataObj.liveHighestBidderName) setLiveHighestBidderName(dataObj.liveHighestBidderName);
             } else if (dataObj.type === 'CHAT') {
                 const newMessage = {
                     id: Date.now().toString() + Math.random(),
@@ -326,16 +334,12 @@ function CustomArenaLayout({
             } else if (dataObj.type === 'COUNTDOWN') {
                 setCountdown(dataObj.value);
             } else if (dataObj.type === 'REQUEST_STAGE') {
-                const msg = {
-                    id: Date.now().toString() + Math.random(),
-                    text: `🎤 ${dataObj.userName || "Katılımcı"} sahneye katılmak istiyor!`,
-                    sender: "SİSTEM",
-                    senderId: "system"
-                };
-                setMessages(prev => [...prev.slice(-10), msg]);
-                setTimeout(() => {
-                    setMessages(prev => prev.filter((m: any) => m.id !== msg.id));
-                }, 10000); // Show for 10 seconds
+                if (dataObj.userId) {
+                    setStageRequests(prev => {
+                        if (prev.find(r => r.id === dataObj.userId)) return prev;
+                        return [...prev, { id: dataObj.userId, name: dataObj.userName || "Katılımcı" }];
+                    });
+                }
             } else if (dataObj.type === 'SALE_FINALIZED') {
                 setFinalizedWinner(dataObj.winnerName || "Katılımcı");
                 setFinalizedAmount(dataObj.amount);
@@ -574,6 +578,68 @@ function CustomArenaLayout({
                             {emoji}
                         </button>
                     ))}
+
+                    {/* Web Viewer Specific Actions (Mobile Parity) */}
+                    {!isOwner && (
+                        <>
+                            <div style={{ width: "30px", height: "1px", background: "rgba(255,255,255,0.2)", margin: "8px 0" }} />
+
+                            {/* Request Stage */}
+                            <button
+                                onClick={() => {
+                                    if (confirm("Sahneye katılma isteği göndermek istiyor musunuz?")) {
+                                        const payload = JSON.stringify({ type: "REQUEST_STAGE", userId: session?.user?.id, userName: session?.user?.name });
+                                        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                        alert("İstek gönderildi!");
+                                    }
+                                }}
+                                title="Sahneye Katıl İstediği Gönder"
+                                className="hover:scale-110 active:scale-90 transition-transform"
+                                style={{
+                                    width: "45px",
+                                    height: "45px",
+                                    borderRadius: "50%",
+                                    background: "rgba(0,180,204,0.2)",
+                                    backdropFilter: "blur(12px)",
+                                    border: "1px solid rgba(0,180,204,0.5)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
+                                }}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                            </button>
+
+                            {/* Ad Details toggle */}
+                            <button
+                                onClick={() => {
+                                    // Normally we would pop a modal or sheet.
+                                    // Since we are in the ad page, we could scroll down or alert.
+                                    alert("Detaylar sayfanın altında yer almaktadır.");
+                                    window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                                }}
+                                title="İlan Detayı"
+                                className="hover:scale-110 active:scale-90 transition-transform"
+                                style={{
+                                    width: "45px",
+                                    height: "45px",
+                                    borderRadius: "50%",
+                                    background: "rgba(255,255,255,0.1)",
+                                    backdropFilter: "blur(12px)",
+                                    border: "1px solid rgba(255,255,255,0.2)",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    cursor: "pointer",
+                                    boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
+                                }}
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                            </button>
+                        </>
+                    )}
                 </div>
             )}
 
@@ -623,6 +689,29 @@ function CustomArenaLayout({
                                 CANLI
                             </div>
                         )}
+
+                        {/* Highest Bidder Details (Mobile Parity) */}
+                        {liveHighestBidderName && (
+                            <div style={{ display: "flex", alignItems: "center", gap: "6px", marginLeft: "8px", borderLeft: "1px solid rgba(255,255,255,0.1)", paddingLeft: "16px" }}>
+                                <span style={{ color: "#4ade80", fontSize: "0.75rem", fontWeight: 900 }}>{liveHighestBidderName}</span>
+                                {isOwner && liveHighestBidderId && (
+                                    <button
+                                        onClick={() => {
+                                            if (confirm(`${liveHighestBidderName} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
+                                                const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId });
+                                                room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                                alert("Davet gönderildi!");
+                                            }
+                                        }}
+                                        title="Sahneye Davet Et"
+                                        style={{ background: "rgba(59, 130, 246, 0.2)", border: "1px solid rgba(59, 130, 246, 0.5)", borderRadius: "8px", padding: "4px 8px", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" }}
+                                    >
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                        <span style={{ color: "#60a5fa", fontSize: "0.6rem", fontWeight: 900, marginLeft: "4px" }}>DAVET ET</span>
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     </div>
                     {/* Viewer count pill */}
                     <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(255,255,255,0.1)", padding: "4px 12px", borderRadius: "20px" }}>
@@ -632,6 +721,42 @@ function CustomArenaLayout({
                         </svg>
                         <span style={{ fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.5px" }}>{participantCount}</span>
                     </div>
+
+                    {/* Stage Requests (Host Only) */}
+                    {isOwner && stageRequests.length > 0 && (
+                        <div style={{ position: "relative" }}>
+                            <button
+                                onClick={() => {
+                                    const req = stageRequests[0];
+                                    if (confirm(`${req.name} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
+                                        const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: req.id });
+                                        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                        setStageRequests(prev => prev.filter(r => r.id !== req.id));
+                                    } else {
+                                        setStageRequests(prev => prev.filter(r => r.id !== req.id));
+                                    }
+                                }}
+                                style={{
+                                    background: "linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)",
+                                    color: "white",
+                                    border: "none",
+                                    borderRadius: "100px",
+                                    padding: "6px 12px",
+                                    fontSize: "0.75rem",
+                                    fontWeight: 900,
+                                    cursor: "pointer",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: "6px",
+                                    boxShadow: "0 4px 15px rgba(59, 130, 246, 0.4)",
+                                    animation: "pulse 2s infinite"
+                                }}
+                            >
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                {stageRequests.length} İSTEK
+                            </button>
+                        </div>
+                    )}
 
                     {/* Action Controls Section */}
                     {isOwner ? (
