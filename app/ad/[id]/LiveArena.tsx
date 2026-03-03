@@ -327,26 +327,106 @@ function CustomArenaLayout({
                 </div>
             )}
 
-            {/* Bidding Overlay (Unified for Owner and Viewer) */}
+            {/* Top Unified Dashboard (Consolidated Bidding & Info) */}
             {!isBroadcastEnded && (
-                <BiddingOverlay
-                    adId={adId}
-                    sellerId={sellerId}
-                    isOwner={isOwner}
-                    buyItNowPrice={buyItNowPrice}
-                    startingBid={startingBid}
-                    minBidStep={minBidStep}
-                    currentHighestBid={liveHighestBid}
-                    lastAcceptedBidId={lastAcceptedBidId}
-                    liveHighestBidId={liveHighestBidId}
-                    liveHighestBidderId={liveHighestBidderId}
-                    auctionStatus={auctionStatus}
-                    setMessages={setMessages}
-                    messages={messages}
-                    isBroadcastEnded={isBroadcastEnded}
-                    flashBid={flashBid}
-                    startCountdown={startCountdown}
-                />
+                <div style={{
+                    position: "absolute",
+                    top: "20px",
+                    left: "50%",
+                    transform: "translateX(-50%)",
+                    width: "auto",
+                    minWidth: "320px",
+                    padding: "8px 16px",
+                    background: "rgba(0, 0, 0, 0.4)",
+                    backdropFilter: "blur(25px)",
+                    WebkitBackdropFilter: "blur(25px)",
+                    borderRadius: "100px",
+                    border: "1px solid rgba(255, 255, 255, 0.2)",
+                    boxShadow: "0 10px 40px rgba(0, 0, 0, 0.5)",
+                    zIndex: 200,
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "20px",
+                    color: "white"
+                }}>
+                    {/* Status & Price Section */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "16px", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "16px" }}>
+                        <div>
+                            <span style={{ fontSize: "0.6rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>
+                                {auctionStatus === "ACTIVE" ? "CANLI TEQLİF" : "BAŞLANGIÇ"}
+                            </span>
+                            <span className={`tabular-nums font-extrabold tracking-tighter ${flashBid ? 'bid-flash' : ''}`} style={{ fontSize: "1.2rem", color: "#22c55e", display: "flex", alignItems: "baseline", gap: "2px" }}>
+                                {new Intl.NumberFormat("tr-TR").format(liveHighestBid || (startingBid ?? 0))}
+                                <span style={{ fontSize: "0.85rem", opacity: 0.6 }}>₺</span>
+                            </span>
+                        </div>
+
+                        {!isOwner && auctionStatus === "IDLE" && (
+                            <div style={{ fontSize: "0.75rem", fontWeight: 700, opacity: 0.8, background: "rgba(255,255,255,0.1)", padding: "4px 12px", borderRadius: "100px" }}>
+                                ⏳ Bekleniyor
+                            </div>
+                        )}
+
+                        {auctionStatus === "ACTIVE" && (
+                            <div className="flex items-center gap-2" style={{ fontSize: "0.7rem", fontWeight: 900, color: "#22c55e", background: "rgba(34, 197, 94, 0.1)", padding: "4px 10px", borderRadius: "100px", border: "1px solid rgba(34, 197, 94, 0.2)" }}>
+                                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                                CANLI
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Action Controls Section */}
+                    {isOwner ? (
+                        <div style={{ display: "flex", gap: "8px" }}>
+                            {auctionStatus === "IDLE" ? (
+                                <button onClick={startCountdown} disabled={countdown > 0} style={{ background: "var(--primary)", color: "white", border: "none", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
+                                    Açık Arttırmayı Başlat
+                                </button>
+                            ) : (
+                                <>
+                                    <button onClick={startCountdown} style={{ background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
+                                        ⏳ Sayaç
+                                    </button>
+                                    <button onClick={handleAccept} style={{ background: "#22c55e", color: "white", border: "none", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
+                                        Onayla ve Sat
+                                    </button>
+                                </>
+                            )}
+                            <button onClick={handleEndBroadcast} style={{ background: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
+                                Yayını Bitir
+                            </button>
+                        </div>
+                    ) : (
+                        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+                            {auctionStatus === "ACTIVE" && (
+                                <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
+                            )}
+                            {buyItNowPrice && (
+                                <button
+                                    onClick={() => {
+                                        if (confirm(`${new Intl.NumberFormat("tr-TR").format(buyItNowPrice)} ₺ fiyata hemen almak istetliyor musunuz?`)) {
+                                            handleBuyNow();
+                                        }
+                                    }}
+                                    style={{
+                                        background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
+                                        color: "black",
+                                        border: "none",
+                                        borderRadius: "100px",
+                                        padding: "8px 16px",
+                                        fontSize: "0.8rem",
+                                        fontWeight: 900,
+                                        cursor: "pointer",
+                                        boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)",
+                                        whiteSpace: "nowrap"
+                                    }}
+                                >
+                                    HEMEN AL: {new Intl.NumberFormat("tr-TR").format(buyItNowPrice)} ₺
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
             )}
 
             {/* Huge Auction Status Notification Overlay */}
@@ -386,7 +466,7 @@ function CustomArenaLayout({
                     className={countdown <= 10 ? "animate-pulse" : ""}
                     style={{
                         position: "absolute",
-                        top: "30%",
+                        top: "35%",
                         left: "50%",
                         transform: "translate(-50%, -50%)",
                         background: countdown <= 10 ? "rgba(239, 68, 68, 0.9)" : "rgba(245, 158, 11, 0.9)",
@@ -427,585 +507,56 @@ function CustomArenaLayout({
                 </div>
             )}
 
-
-
-
-            <style jsx>{`
-                @keyframes fadeInUp {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                @keyframes slideDown {
-                    from { opacity: 0; transform: translate(-50%, -20px); }
-                    to { opacity: 1; transform: translate(-50%, 0); }
-                }
-                @keyframes slideUp {
-                    from { opacity: 0; transform: translateY(10px); }
-                    to { opacity: 1; transform: translateY(0); }
-                }
-                .bid-flash {
-                    animation: flashBidAnim 0.3s ease-out;
-                }
-                @keyframes flashBidAnim {
-                    0% { transform: scale(1); color: #22c55e; }
-                    50% { transform: scale(1.15); color: #4ade80; text-shadow: 0 0 15px rgba(74, 222, 128, 0.8); }
-                    100% { transform: scale(1); color: #22c55e; }
-                }
-                @keyframes zoomFadeOut {
-                    0% { opacity: 0; transform: scale(0.5); }
-                    10% { opacity: 1; transform: scale(1.1); }
-                    20% { transform: scale(1); }
-                    80% { opacity: 1; transform: scale(1); }
-                    100% { opacity: 0; transform: scale(0.9); }
-                }
-                @keyframes zoomIn {
-                    from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
-                    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
-                }
-            `}</style>
-        </div>
-    );
-}
-
-function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, liveHighestBidId, liveHighestBidderId, auctionStatus, setMessages, messages, isBroadcastEnded, flashBid, startCountdown }: any) {
-    const router = useRouter();
-    const { data: session } = useSession();
-    const [amount, setAmount] = useState("");
-    const [chatText, setChatText] = useState("");
-    const [loading, setLoading] = useState(false);
-    const [status, setStatus] = useState<any>(null);
-    const room = useRoomContext();
-
-    const formattedPrice = (val: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(val);
-
-    // Auto-update bid amount when highest bid changes
-    useEffect(() => {
-        const nextMin = currentHighestBid > 0 ? (currentHighestBid + minBidStep) : (startingBid ?? 1);
-        setAmount(new Intl.NumberFormat("tr-TR").format(nextMin));
-    }, [currentHighestBid, minBidStep, startingBid]);
-
-    async function handleBid(e: React.FormEvent) {
-        e.preventDefault();
-        setLoading(true);
-        setStatus(null);
-
-        const rawAmount = parseInt(amount.replace(/\./g, ""), 10);
-        const minReq = currentHighestBid > 0 ? (currentHighestBid + minBidStep) : (startingBid ?? 1);
-
-        if (!rawAmount || rawAmount < minReq) {
-            setStatus({ type: 'error', msg: `Min: ${formattedPrice(minReq)}` });
-            setLoading(false);
-            return;
-        }
-
-        try {
-            const res = await fetch("/api/bids", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ adId, amount: rawAmount }),
-            });
-            const data = await res.json();
-            if (res.ok) {
-                setStatus({ type: 'success', msg: 'Teqlif verildi!' });
-                router.refresh();
-            } else {
-                setStatus({ type: 'error', msg: data.error || 'Hata' });
-            }
-        } catch (e) {
-            setStatus({ type: 'error', msg: 'Bağlantı hatası' });
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function handleAccept() {
-        if (!liveHighestBidId) {
-            alert("Kabul edilecek bir teqlif bulunamadı.");
-            return;
-        }
-        if (!confirm("Dikkat! Bu teqlifi kabul edip satışı tamamlıyorsunuz. İlan 'Satıldı' olarak işaretlenecek ve yayın kapanacaktır. Emin misiniz?")) return;
-
-        setLoading(true);
-        try {
-            // 1. Accept the bid
-            const resAccept = await fetch(`/api/bids/${liveHighestBidId}/accept`, { method: "PATCH" });
-            if (resAccept.ok) {
-                // 2. Finalize the sale
-                const resFinalize = await fetch(`/api/bids/${liveHighestBidId}/finalize`, { method: "POST" });
-                if (resFinalize.ok) {
-                    alert("Satış başarıyla tamamlandı! İlan yayından kaldırıldı.");
-                    await handleEndBroadcast(); // End stream
-                    return;
-                }
-            }
-            alert("İşlem başarısız.");
-        } catch (e) {
-            alert("Bağlantı hatası.");
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function handleCancel() {
-        if (!liveHighestBidId) {
-            alert("İptal edilecek bir teqlif bulunamadı.");
-            return;
-        }
-        if (!confirm("Bunu iptal etmek istediğinize emin misiniz?")) return;
-        setLoading(true);
-        try {
-            const res = await fetch(`/api/bids/${liveHighestBidId}/cancel`, { method: "PATCH" });
-            if (res.ok) {
-                alert("Teqlif iptal edildi.");
-                router.refresh();
-            } else {
-                alert("İşlem başarısız.");
-            }
-        } catch (e) {
-            alert("Bağlantı hatası.");
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function handleStartAuction() {
-        if (!room) return;
-        setLoading(true);
-        try {
-            const payload = JSON.stringify({ type: "AUCTION_START" });
-            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-        } catch (e) {
-            console.error(e);
-        }
-        setLoading(false);
-    }
-
-    async function handleStopAuction() {
-        if (!room) return;
-        setLoading(true);
-        try {
-            const payload = JSON.stringify({ type: "AUCTION_END" });
-            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-        } catch (e) {
-            console.error(e);
-        }
-        setLoading(false);
-    }
-
-    async function handleEndBroadcast() {
-        if (!confirm("Yayını bitirmek ve odadan çıkmak istediğinize emin misiniz?")) return;
-        setLoading(true);
-        try {
-            // First send ROOM_CLOSED channel message to kick everyone else
-            if (room) {
-                const payload = JSON.stringify({ type: "ROOM_CLOSED" });
-                await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-            }
-
-            const res = await fetch(`/api/ads/${adId}/live`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ isLive: false }),
-            });
-            if (res.ok) {
-                room?.disconnect();
-                router.refresh();
-            } else {
-                alert("Yayın sonlandırılamadı.");
-            }
-        } catch (e) {
-            alert("Bağlantı hatası.");
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function handleBuyNow() {
-        if (!buyItNowPrice) return;
-        if (!confirm(`${formattedPrice(buyItNowPrice)} fiyata hemen almak istiyor musunuz?`)) return;
-        setLoading(true);
-        try {
-            const res = await fetch("/api/conversations", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId: sellerId, adId }),
-            });
-            if (res.ok) {
-                const conversation = await res.json();
-                router.push(`/dashboard/messages?id=${conversation.id}`);
-            } else {
-                alert("İşlem başarısız.");
-            }
-        } catch (e) {
-            alert("Bağlantı hatası.");
-        } finally {
-            setLoading(false);
-        }
-    }
-
-    async function handleSendChat(e: React.FormEvent) {
-        e.preventDefault();
-        if (!chatText.trim() || !room) return;
-
-        const payload = JSON.stringify({
-            type: "CHAT",
-            text: chatText.trim(),
-            senderName: session?.user?.name || "Web Katılımcı",
-            senderId: session?.user?.id
-        });
-
-        try {
-            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-
-            // Local echo
-            const newMessage = {
-                id: Date.now().toString() + Math.random(),
-                text: chatText.trim(),
-                sender: session?.user?.name || "Ben"
-            };
-            setMessages((prev: any) => [...prev.slice(-10), newMessage]);
-            setTimeout(() => {
-                setMessages((prev: any) => prev.filter((m: any) => m.id !== newMessage.id));
-            }, 8000);
-
-            setChatText("");
-        } catch (e) {
-            console.error("Chat error:", e);
-        }
-    }
-
-    return (
-        <div style={{
-            position: "absolute",
-            top: "20px",
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: "auto",
-            minWidth: "320px",
-            padding: "10px 20px",
-            background: "rgba(0, 0, 0, 0.4)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            borderRadius: "100px",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
-            boxShadow: "0 10px 40px rgba(0, 0, 0, 0.4)",
-            zIndex: 100,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            gap: "24px",
-            color: "white"
-        }}>
-            {/* Current Price Info */}
-            <div style={{ whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
-                <div>
-                    <span style={{ fontSize: "0.6rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Güncel</span>
-                    <span className={`tabular-nums font-extrabold tracking-tighter transition-all duration-300 ${flashBid ? 'bid-flash' : ''}`} style={{ fontSize: "1.2rem", color: "#22c55e", display: "flex", alignItems: "baseline", gap: "2px" }}>
-                        {new Intl.NumberFormat("tr-TR").format(currentHighestBid || (startingBid ?? 0))}
-                        <span className="text-gray-400 font-medium" style={{ fontSize: "0.85rem" }}>₺</span>
-                    </span>
-                </div>
-                {isOwner && currentHighestBid > 0 && liveHighestBidderId && (
-                    <button
-                        onClick={() => {
-                            if (room && liveHighestBidderId) {
-                                const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId });
-                                room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-                                alert("Sahneye davet gönderildi!");
-                            }
-                        }}
-                        style={{
-                            background: "rgba(0, 180, 204, 0.2)",
-                            color: "#00B4CC",
-                            border: "1px solid rgba(0, 180, 204, 0.4)",
-                            borderRadius: "100px",
-                            padding: "4px 8px",
-                            fontSize: "0.65rem",
-                            fontWeight: 800,
-                            cursor: "pointer",
-                            display: "flex",
-                            alignItems: "center",
-                            gap: "4px",
-                            flexShrink: 0
-                        }}
-                    >
-                        🎤 Davet Et
-                    </button>
-                )}
-            </div>
-
-            {isOwner ? (
-                /* Host Controls */
-                <div style={{ display: "flex", alignItems: "center", gap: "10px", flex: 1, justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", gap: "8px" }}>
-                        {auctionStatus === "IDLE" ? (
-                            <button
-                                onClick={handleStartAuction}
-                                disabled={loading}
-                                style={{
-                                    background: "var(--primary)", color: "white", border: "none", borderRadius: "100px",
-                                    padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer",
-                                    boxShadow: "0 4px 12px rgba(0, 188, 212, 0.3)"
-                                }}
-                            >
-                                Açık Arttırmayı Başlat
-                            </button>
-                        ) : (
-                            <button
-                                onClick={handleStopAuction}
-                                disabled={loading}
-                                style={{
-                                    background: "#f59e0b", color: "white", border: "none", borderRadius: "100px",
-                                    padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer",
-                                    boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)"
-                                }}
-                            >
-                                Açık Arttırmayı Bitir
-                            </button>
-                        )}
-                        {auctionStatus === "ACTIVE" && (
-                            <button
-                                onClick={startCountdown}
-                                style={{
-                                    background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.5)", borderRadius: "100px",
-                                    padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer",
-                                    transition: "all 0.2s"
-                                }}
-                            >
-                                ⏳ Sayacı Başlat
-                            </button>
-                        )}
-                        <button
-                            onClick={handleEndBroadcast}
-                            disabled={loading}
-                            style={{
-                                background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.5)", borderRadius: "100px",
-                                padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer",
-                                transition: "all 0.2s"
-                            }}
-                        >
-                            Yayını Bitir
-                        </button>
-                    </div>
-
-                    <div style={{ display: "flex", gap: "8px" }}>
-                        <button
-                            onClick={handleCancel}
-                            disabled={loading || currentHighestBid === 0 || !liveHighestBidId}
-                            style={{
-                                background: "rgba(255, 255, 255, 0.15)",
-                                color: "white",
-                                border: "1px solid rgba(255, 255, 255, 0.3)",
-                                borderRadius: "100px",
-                                padding: "8px 16px",
-                                fontSize: "0.8rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                transition: "all 0.2s"
-                            }}
-                        >
-                            Reddet
-                        </button>
-                        <button
-                            onClick={handleAccept}
-                            disabled={loading || currentHighestBid === 0 || !liveHighestBidId}
-                            style={{
-                                background: "#22c55e",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "100px",
-                                padding: "8px 18px",
-                                fontSize: "0.85rem",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                                transition: "transform 0.2s",
-                                boxShadow: "0 4px 15px rgba(34, 197, 94, 0.4)"
-                            }}
-                        >
-                            {loading ? "..." : "Onayla ve Sat"}
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                /* Viewer Top Bar Info */
-                <div style={{ flex: 1, textAlign: "left", fontSize: "0.85rem", fontWeight: 700, color: "rgba(255,255,255,0.8)" }}>
-                    {auctionStatus === "ACTIVE" ? (
-                        <span className="flex items-center gap-2">
-                            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-                            AÇIK ARTTIRMA CANLI
-                        </span>
-                    ) : (
-                        "Yayıncı Açık Arttırmayı Başlatmadı"
-                    )}
-                </div>
-            )}
-
-            {/* Chat & Interaction Overlay for Viewer */}
-            {!isOwner && (
+            {/* Repositioned Chat Area (Below Video) */}
+            {!isBroadcastEnded && (
                 <div style={{
                     position: "absolute",
-                    bottom: "20px",
-                    left: "20px",
-                    right: "20px",
+                    bottom: 0,
+                    left: 0,
+                    right: 0,
+                    height: "180px",
+                    background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.4) 60%, transparent 100%)",
                     display: "flex",
-                    alignItems: "flex-end",
-                    justifyContent: "space-between",
-                    gap: "20px",
+                    flexDirection: "column",
+                    padding: "10px 20px",
                     zIndex: 100
                 }}>
-                    {/* Chat Messages */}
-                    <div style={{
-                        flex: 1,
-                        maxWidth: "400px",
-                        display: "flex",
-                        flexDirection: "column",
-                        gap: "8px",
-                    }}>
+                    <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px", paddingBottom: "10px" }}>
                         {messages.map((msg: any) => (
                             <div key={msg.id} style={{
-                                background: "rgba(0,0,0,0.4)",
-                                backdropFilter: "blur(12px)",
-                                border: "1px solid rgba(255,255,255,0.1)",
-                                borderRadius: "12px",
-                                padding: "8px 12px",
-                                maxWidth: "fit-content",
+                                background: "rgba(255,255,255,0.08)",
+                                backdropFilter: "blur(4px)",
+                                padding: "4px 12px",
+                                borderRadius: "8px",
+                                maxWidth: "max-content",
+                                fontSize: "0.85rem",
                                 animation: "slideUp 0.3s ease-out"
                             }}>
-                                <span style={{ color: "#00B4CC", fontWeight: 800, fontSize: "0.85rem", marginRight: "8px" }}>{msg.sender}:</span>
-                                <span style={{ color: "white", fontSize: "0.85rem" }}>{msg.text}</span>
+                                <span style={{ color: "#00B4CC", fontWeight: 800, marginRight: "8px" }}>{msg.sender}:</span>
+                                <span style={{ color: "white" }}>{msg.text}</span>
                             </div>
                         ))}
-
-                        {/* Chat Input */}
-                        <form onSubmit={handleSendChat} style={{
-                            display: "flex",
-                            gap: "8px",
-                            marginTop: "8px",
-                            background: "rgba(0,0,0,0.4)",
-                            backdropFilter: "blur(12px)",
-                            border: "1px solid rgba(255,255,255,0.15)",
-                            borderRadius: "100px",
-                            padding: "4px 4px 4px 16px",
-                            width: "100%"
-                        }}>
-                            <input
-                                type="text"
-                                value={chatText}
-                                onChange={(e) => setChatText(e.target.value)}
-                                placeholder="Sohbet..."
-                                style={{
-                                    background: "transparent",
-                                    border: "none",
-                                    outline: "none",
-                                    color: "white",
-                                    fontSize: "0.9rem",
-                                    flex: 1
-                                }}
-                            />
-                            <button
-                                type="submit"
-                                style={{
-                                    background: "#00B4CC",
-                                    color: "white",
-                                    border: "none",
-                                    borderRadius: "100px",
-                                    width: "36px",
-                                    height: "36px",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    cursor: "pointer"
-                                }}
-                            >
-                                ➔
-                            </button>
-                        </form>
                     </div>
 
-                    {/* Right Side: Bid Form or Buy Now */}
-                    <div style={{ width: "320px", display: "flex", flexDirection: "column", gap: "10px" }}>
-                        {auctionStatus === "ACTIVE" ? (
-                            <BidForm
-                                adId={adId}
-                                currentHighest={currentHighestBid || (startingBid ?? 0)}
-                                minStep={minBidStep}
-                                startingBid={startingBid}
-                                formattedPrice={formattedPrice}
-                            />
-                        ) : (
-                            <div style={{
-                                background: "rgba(0,0,0,0.6)",
-                                backdropFilter: "blur(10px)",
-                                border: "1px solid rgba(255,255,255,0.1)",
-                                borderRadius: "1rem",
-                                padding: "1.5rem",
-                                color: "white",
-                                textAlign: "center",
-                                boxShadow: "0 10px 30px rgba(0,0,0,0.5)"
-                            }}>
-                                <div style={{ fontSize: "2.5rem", marginBottom: "12px" }}>⏳</div>
-                                <h3 style={{ margin: "0 0 8px 0", fontSize: "1.2rem", fontWeight: 700 }}>Açık Arttırma Bekleniyor</h3>
-                                <p style={{ margin: 0, opacity: 0.8, fontSize: "0.9rem", lineHeight: 1.5 }}>Yayıncı açık arttırmayı başlattığında buradan teqlif verebileceksiniz.</p>
-                                {buyItNowPrice && (
-                                    <button
-                                        onClick={handleBuyNow}
-                                        style={{
-                                            marginTop: "20px",
-                                            width: "100%",
-                                            background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
-                                            color: "black",
-                                            border: "none",
-                                            borderRadius: "0.75rem",
-                                            padding: "14px",
-                                            fontWeight: 800,
-                                            fontSize: "1rem",
-                                            cursor: "pointer",
-                                            boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
-                                        }}
-                                    >
-                                        HEMEN AL: {formattedPrice(buyItNowPrice)}
-                                    </button>
-                                )}
-                            </div>
-                        )}
-                        {buyItNowPrice && auctionStatus === "ACTIVE" && (
-                            <button
-                                onClick={handleBuyNow}
-                                style={{
-                                    width: "100%",
-                                    background: "linear-gradient(135deg, #FFD700 0%, #FFA500 100%)",
-                                    color: "black",
-                                    border: "none",
-                                    borderRadius: "1rem",
-                                    padding: "14px",
-                                    fontWeight: 800,
-                                    fontSize: "1rem",
-                                    cursor: "pointer",
-                                    boxShadow: "0 4px 15px rgba(255, 165, 0, 0.3)"
-                                }}
-                            >
-                                HEMEN AL: {formattedPrice(buyItNowPrice)}
-                            </button>
-                        )}
-                    </div>
-                </div>
-            )}
-
-            {/* Status Indicator */}
-            {status && (
-                <div style={{
-                    position: "absolute",
-                    top: "-35px",
-                    left: "50%",
-                    transform: "translateX(-50%)",
-                    whiteSpace: "nowrap",
-                    background: status.type === 'success' ? "rgba(34, 197, 94, 0.9)" : "rgba(239, 68, 68, 0.9)",
-                    padding: "4px 12px",
-                    borderRadius: "10px",
-                    fontSize: "0.75rem",
-                    fontWeight: 700
-                }}>
-                    {status.msg}
+                    <form onSubmit={handleSendChat} style={{
+                        display: "flex",
+                        gap: "10px",
+                        background: "rgba(255,255,255,0.1)",
+                        backdropFilter: "blur(10px)",
+                        border: "1px solid rgba(255,255,255,0.1)",
+                        borderRadius: "100px",
+                        padding: "4px 4px 4px 16px",
+                        marginBottom: "10px"
+                    }}>
+                        <input
+                            type="text"
+                            value={chatText}
+                            onChange={(e) => setChatText(e.target.value)}
+                            placeholder="Sohbet et..."
+                            style={{ background: "transparent", border: "none", outline: "none", color: "white", flex: 1, fontSize: "0.9rem" }}
+                        />
+                        <button type="submit" style={{ background: "#00B4CC", color: "white", border: "none", borderRadius: "100px", width: "36px", height: "36px", fontWeight: "bold" }}>➔</button>
+                    </form>
                 </div>
             )}
         </div>
