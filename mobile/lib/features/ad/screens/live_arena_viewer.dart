@@ -623,221 +623,14 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               child: IgnorePointer(
                 ignoring: !_uiVisible,
                 child: !isDisconnected ? SafeArea(
-                  child: Column(
-                    children: [
-                      // Header Dashboard
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: Column(
-                          children: [
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                              children: [
-                                Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                  decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
-                                  child: Row(
-                                    children: [
-                                      CircleAvatar(radius: 5, backgroundColor: Colors.redAccent, child: Container(width: 3, height: 3, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
-                                      const SizedBox(width: 8),
-                                      const Text('CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                                    ],
-                                  ),
-                                ),
-                                // IconButton(icon: const Icon(Icons.close, color: Colors.white, size: 28), onPressed: () => context.pop()), // Moved to a separate Positioned widget
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                                child: Container(
-                                  padding: const EdgeInsets.all(16),
-                                  decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
-                                  child: Row(
-                                    children: [
-                                      Expanded(
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                                            const SizedBox(height: 4),
-                                            Text(_formatPrice(currentAd.highestBidAmount ?? currentAd.startingBid ?? 0), style: const TextStyle(color: Color(0xFF22c55e), fontSize: 20, fontWeight: FontWeight.w900)),
-                                          ],
-                                        ),
-                                      ),
-                                      if (currentAd.buyItNowPrice != null) ...[
-                                        Container(width: 1, height: 40, color: Colors.white12, margin: const EdgeInsets.all(12)),
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.end,
-                                          children: [
-                                            Text('HEMEN AL', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
-                                            const SizedBox(height: 4),
-                                            Text(_formatPrice(currentAd.buyItNowPrice!), style: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.w900)),
-                                          ],
-                                        ),
-                                      ]
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      const Spacer(),
-
-                      // Chat Flow
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            Expanded(
-                              child: ShaderMask(
-                                shaderCallback: (bounds) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white, Colors.white], stops: [0.0, 0.4, 1.0]).createShader(bounds),
-                                blendMode: BlendMode.dstIn,
-                                child: SizedBox(
-                                  height: 150,
-                                  child: ListView.builder(
-                                    reverse: true,
-                                    itemCount: _messages.length,
-                                    itemBuilder: (context, index) {
-                                      final msg = _messages[_messages.length - 1 - index];
-                                      return Padding(
-                                        padding: const EdgeInsets.only(bottom: 6),
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                          decoration: BoxDecoration(color: Colors.black.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
-                                          child: RichText(text: TextSpan(children: [TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 13)), TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 13))])),
-                                        ),
-                                      );
-                                    },
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Column(
-                              children: [
-                                _CircularControlButton(icon: Icons.info_outline, onPressed: _showAdDetailsSheet),
-                                const SizedBox(height: 12),
-                                _CircularControlButton(icon: Icons.camera_alt, onPressed: () {
-                                  // Request to join stage logic
-                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sahneye katılma isteği gönderildi.')));
-                                }),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-
-                      // Bidding & Chat Column
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        child: Column(
-                          children: [
-                            if (_isAuctionActive) ...[
-                              Padding(
-                                padding: const EdgeInsets.only(bottom: 12),
-                                child: SingleChildScrollView(
-                                  scrollDirection: Axis.horizontal,
-                                  child: Row(
-                                    children: [50, 100, 250, 500, 1000].map((inc) => Padding(
-                                      padding: const EdgeInsets.only(right: 8),
-                                      child: ActionChip(
-                                        label: Text('+₺$inc', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
-                                        backgroundColor: Colors.white10,
-                                        side: const BorderSide(color: Colors.white24),
-                                        labelStyle: const TextStyle(color: Colors.white),
-                                        onPressed: isDisconnected ? null : () {
-                                          _bidCtrl.text = inc.toString();
-                                          _placeBidSlide();
-                                        },
-                                      ),
-                                    )).toList(),
-                                  ),
-                                ),
-                              ),
-                            ],
-                            
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(35),
-                              child: BackdropFilter(
-                                filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
-                                child: Container(
-                                  padding: const EdgeInsets.all(6),
-                                  decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(35), border: Border.all(color: Colors.white12)),
-                                  child: Row(
-                                    children: [
-                                      const SizedBox(width: 12),
-                                      Expanded(
-                                        child: TextField(
-                                          controller: _bidCtrl,
-                                          enabled: !isDisconnected,
-                                          keyboardType: TextInputType.number,
-                                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
-                                          decoration: InputDecoration(hintText: 'Pey...', hintStyle: TextStyle(color: Colors.white38, fontSize: 15), border: InputBorder.none),
-                                        ),
-                                      ),
-                                      if (_isAuctionActive)
-                                        ElevatedButton(
-                                          onPressed: isDisconnected ? null : _placeBidSlide,
-                                          style: ElevatedButton.styleFrom(
-                                            elevation: 8,
-                                            shadowColor: const Color(0xFF00B4CC).withOpacity(0.5),
-                                            backgroundColor: const Color(0xFF00B4CC), 
-                                            foregroundColor: Colors.white, 
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
-                                            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
-                                          ),
-                                          child: const Text('PEY VER', style: TextStyle(fontWeight: FontWeight.w900)),
-                                        ),
-                                      if (currentAd.buyItNowPrice != null) ...[
-                                        const SizedBox(width: 8),
-                                        ElevatedButton(
-                                          onPressed: isDisconnected ? null : () async {
-                                            // Handle Buy Now
-                                            try {
-                                              await ApiClient().post('/api/ads/${widget.ad.id}/buy-it-now');
-                                              if (mounted) context.pop();
-                                            } catch (e) {
-                                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
-                                            }
-                                          },
-                                          style: ElevatedButton.styleFrom(
-                                            elevation: 8,
-                                            shadowColor: const Color(0xFFFFD700).withOpacity(0.5),
-                                            backgroundColor: const Color(0xFFFFD700), 
-                                            foregroundColor: Colors.black, 
-                                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
-                                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
-                                          ),
-                                          child: Text('HEMEN AL: ${_formatPrice(currentAd.buyItNowPrice!)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
-                                        ),
-                                      ]
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 20),
-                              decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), border: Border.all(color: Colors.white24), borderRadius: BorderRadius.circular(25)),
-                              child: Row(
-                                children: [
-                                  Expanded(child: TextField(controller: _chatCtrl, enabled: !isDisconnected, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14), decoration: const InputDecoration(hintText: 'Mesaj gönder...', hintStyle: TextStyle(color: Colors.white54), border: InputBorder.none), onSubmitted: (_) => _sendChatMessage())),
-                                  IconButton(icon: const Icon(Icons.send, color: Color(0xFF00B4CC), size: 20), onPressed: isDisconnected ? null : _sendChatMessage),
-                                ],
-                              ),
-                            )
-                          ],
-                        ),
-                      ),
-                    ],
+                  child: OrientationBuilder(
+                    builder: (context, orientation) {
+                      if (orientation == Orientation.portrait) {
+                        return _buildPortraitLayout(currentAd, isDisconnected);
+                      } else {
+                        return _buildLandscapeLayout(currentAd, isDisconnected);
+                      }
+                    },
                   ),
                 )
               : const SizedBox.shrink(),
@@ -846,6 +639,439 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildPortraitLayout(AdModel currentAd, bool isDisconnected) {
+    return Column(
+      children: [
+        // Header Dashboard
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
+                    child: Row(
+                      children: [
+                        CircleAvatar(radius: 5, backgroundColor: Colors.redAccent, child: Container(width: 3, height: 3, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
+                        const SizedBox(width: 8),
+                        const Text('CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(color: Colors.black38, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white10)),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                              const SizedBox(height: 4),
+                              Text(_formatPrice(currentAd.highestBidAmount ?? currentAd.startingBid ?? 0), style: const TextStyle(color: Color(0xFF22c55e), fontSize: 20, fontWeight: FontWeight.w900)),
+                            ],
+                          ),
+                        ),
+                        if (currentAd.buyItNowPrice != null) ...[
+                          Container(width: 1, height: 40, color: Colors.white12, margin: const EdgeInsets.all(12)),
+                          Column(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              const Text('HEMEN AL', style: TextStyle(color: Colors.white60, fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                              const SizedBox(height: 4),
+                              Text(_formatPrice(currentAd.buyItNowPrice!), style: const TextStyle(color: Color(0xFFFFD700), fontSize: 20, fontWeight: FontWeight.w900)),
+                            ],
+                          ),
+                        ]
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        const Spacer(),
+
+        // Chat Flow
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white, Colors.white], stops: [0.0, 0.4, 1.0]).createShader(bounds),
+                  blendMode: BlendMode.dstIn,
+                  child: SizedBox(
+                    height: 150,
+                    child: ListView.builder(
+                      reverse: true,
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _messages[_messages.length - 1 - index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(color: Colors.black.withOpacity(0.2), borderRadius: BorderRadius.circular(8)),
+                            child: RichText(text: TextSpan(children: [TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 13)), TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 13))])),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Column(
+                children: [
+                  _CircularControlButton(icon: Icons.info_outline, onPressed: _showAdDetailsSheet),
+                  const SizedBox(height: 12),
+                  _CircularControlButton(icon: Icons.camera_alt, onPressed: () {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sahneye katılma isteği gönderildi.')));
+                  }),
+                ],
+              ),
+            ],
+          ),
+        ),
+
+        // Bidding & Chat Column
+        Container(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              if (_isAuctionActive) ...[
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: SingleChildScrollView(
+                    scrollDirection: Axis.horizontal,
+                    child: Row(
+                      children: [50, 100, 250, 500, 1000].map((inc) => Padding(
+                        padding: const EdgeInsets.only(right: 8),
+                        child: ActionChip(
+                          label: Text('+₺$inc', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+                          backgroundColor: Colors.white10,
+                          side: const BorderSide(color: Colors.white24),
+                          labelStyle: const TextStyle(color: Colors.white),
+                          onPressed: isDisconnected ? null : () {
+                            _bidCtrl.text = inc.toString();
+                            _placeBidSlide();
+                          },
+                        ),
+                      )).toList(),
+                    ),
+                  ),
+                ),
+              ],
+              ClipRRect(
+                borderRadius: BorderRadius.circular(35),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 15, sigmaY: 15),
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(35), border: Border.all(color: Colors.white12)),
+                    child: Row(
+                      children: [
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: TextField(
+                            controller: _bidCtrl,
+                            enabled: !isDisconnected,
+                            keyboardType: TextInputType.number,
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
+                            decoration: const InputDecoration(hintText: 'Pey...', hintStyle: TextStyle(color: Colors.white38, fontSize: 15), border: InputBorder.none),
+                          ),
+                        ),
+                        if (_isAuctionActive)
+                          ElevatedButton(
+                            onPressed: isDisconnected ? null : _placeBidSlide,
+                            style: ElevatedButton.styleFrom(
+                              elevation: 8,
+                              shadowColor: const Color(0xFF00B4CC).withOpacity(0.5),
+                              backgroundColor: const Color(0xFF00B4CC), 
+                              foregroundColor: Colors.white, 
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
+                            ),
+                            child: const Text('PEY VER', style: TextStyle(fontWeight: FontWeight.w900)),
+                          ),
+                        if (currentAd.buyItNowPrice != null) ...[
+                          const SizedBox(width: 8),
+                          ElevatedButton(
+                            onPressed: isDisconnected ? null : () async {
+                              try {
+                                await ApiClient().post('/api/ads/${widget.ad.id}/buy-it-now');
+                                if (mounted) context.pop();
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              elevation: 8,
+                              shadowColor: const Color(0xFFFFD700).withOpacity(0.5),
+                              backgroundColor: const Color(0xFFFFD700), 
+                              foregroundColor: Colors.black, 
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
+                            ),
+                            child: Text('HEMEN AL: ${_formatPrice(currentAd.buyItNowPrice!)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                          ),
+                        ]
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), border: Border.all(color: Colors.white24), borderRadius: BorderRadius.circular(25)),
+                child: Row(
+                  children: [
+                    Expanded(child: TextField(controller: _chatCtrl, enabled: !isDisconnected, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 14), decoration: const InputDecoration(hintText: 'Mesaj gönder...', hintStyle: TextStyle(color: Colors.white54), border: InputBorder.none), onSubmitted: (_) => _sendChatMessage())),
+                    IconButton(icon: const Icon(Icons.send, color: Color(0xFF00B4CC), size: 20), onPressed: isDisconnected ? null : _sendChatMessage),
+                  ],
+                ),
+              )
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildLandscapeLayout(AdModel currentAd, bool isDisconnected) {
+    return Row(
+      children: [
+        // LEFT: Flexible Video Space with a small 'Live' badge on top
+        Expanded(
+          flex: 5,
+          child: Stack(
+            children: [
+              Positioned(
+                top: 8,
+                left: 16,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                  decoration: BoxDecoration(color: Colors.black45, borderRadius: BorderRadius.circular(20)),
+                  child: Row(
+                    children: [
+                      CircleAvatar(radius: 5, backgroundColor: Colors.redAccent, child: Container(width: 3, height: 3, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
+                      const SizedBox(width: 8),
+                      const Text('CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
+                    ],
+                  ),
+                ),
+              ),
+              // Optional: Add Chat feed floating at the bottom left here instead of putting it on the right to save space
+              Positioned(
+                bottom: 8,
+                left: 16,
+                right: 16,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Expanded(
+                      child: ShaderMask(
+                        shaderCallback: (bounds) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white, Colors.white], stops: [0.0, 0.4, 1.0]).createShader(bounds),
+                        blendMode: BlendMode.dstIn,
+                        child: SizedBox(
+                          height: 120, // Smaller chat area in landscape
+                          child: ListView.builder(
+                            reverse: true,
+                            itemCount: _messages.length,
+                            itemBuilder: (context, index) {
+                              final msg = _messages[_messages.length - 1 - index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(color: Colors.black.withOpacity(0.3), borderRadius: BorderRadius.circular(8)),
+                                    child: RichText(text: TextSpan(children: [TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 12)), TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 12))])),
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        _CircularControlButton(icon: Icons.info_outline, onPressed: _showAdDetailsSheet),
+                        const SizedBox(height: 12),
+                        _CircularControlButton(icon: Icons.camera_alt, onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sahneye katılma isteği gönderildi.')));
+                        }),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        
+        // RIGHT: Controls Panel
+        Container(
+          width: 320, // Fixed width panel on the right
+          decoration: BoxDecoration(
+            color: Colors.black54,
+            border: const Border(left: BorderSide(color: Colors.white10)),
+          ),
+          child: Column(
+            children: [
+              // Bidding Status
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                color: Colors.black26,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('GÜNCEL TEKLİF', style: TextStyle(color: Colors.white60, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                          const SizedBox(height: 2),
+                          Text(_formatPrice(currentAd.highestBidAmount ?? currentAd.startingBid ?? 0), style: const TextStyle(color: Color(0xFF22c55e), fontSize: 18, fontWeight: FontWeight.w900)),
+                        ],
+                      ),
+                    ),
+                    if (currentAd.buyItNowPrice != null) ...[
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.end,
+                        children: [
+                          const Text('HEMEN AL', style: TextStyle(color: Colors.white60, fontSize: 9, fontWeight: FontWeight.w800, letterSpacing: 1)),
+                          const SizedBox(height: 2),
+                          Text(_formatPrice(currentAd.buyItNowPrice!), style: const TextStyle(color: Color(0xFFFFD700), fontSize: 16, fontWeight: FontWeight.w900)),
+                        ],
+                      ),
+                    ]
+                  ],
+                ),
+              ),
+              
+              const Spacer(),
+              
+              // Bidding actions
+              Padding(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    if (_isAuctionActive) ...[
+                      SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: Row(
+                          children: [50, 100, 250, 500].map((inc) => Padding(
+                            padding: const EdgeInsets.only(right: 6),
+                            child: ActionChip(
+                              label: Text('+₺$inc', style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 11)),
+                              backgroundColor: Colors.white10,
+                              side: const BorderSide(color: Colors.white24),
+                              labelStyle: const TextStyle(color: Colors.white),
+                              onPressed: isDisconnected ? null : () {
+                                _bidCtrl.text = inc.toString();
+                                _placeBidSlide();
+                              },
+                            ),
+                          )).toList(),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    
+                    Container(
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(color: Colors.black54, borderRadius: BorderRadius.circular(20), border: Border.all(color: Colors.white12)),
+                      child: Row(
+                        children: [
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _bidCtrl,
+                              enabled: !isDisconnected,
+                              keyboardType: TextInputType.number,
+                              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 16),
+                              decoration: const InputDecoration(hintText: 'Pey...', hintStyle: TextStyle(color: Colors.white38, fontSize: 13), border: InputBorder.none, isDense: true),
+                            ),
+                          ),
+                          if (_isAuctionActive)
+                            ElevatedButton(
+                              onPressed: isDisconnected ? null : _placeBidSlide,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF00B4CC), 
+                                foregroundColor: Colors.white, 
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                minimumSize: Size.zero,
+                              ),
+                              child: const Text('PEY VER', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
+                            ),
+                          if (currentAd.buyItNowPrice != null) ...[
+                            const SizedBox(width: 4),
+                            ElevatedButton(
+                              onPressed: isDisconnected ? null : () async {
+                                try {
+                                  await ApiClient().post('/api/ads/${widget.ad.id}/buy-it-now');
+                                  if (mounted) context.pop();
+                                } catch (e) {
+                                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
+                                }
+                              },
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFFFFD700), 
+                                foregroundColor: Colors.black, 
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
+                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                                minimumSize: Size.zero,
+                              ),
+                              child: const Text('HEMEN AL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 10)),
+                            ),
+                          ]
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 8),
+                    
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
+                      decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), border: Border.all(color: Colors.white24), borderRadius: BorderRadius.circular(20)),
+                      child: Row(
+                        children: [
+                          Expanded(child: TextField(controller: _chatCtrl, enabled: !isDisconnected, style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w600, fontSize: 13), decoration: const InputDecoration(hintText: 'Mesaj...', hintStyle: TextStyle(color: Colors.white54), border: InputBorder.none, isDense: true), onSubmitted: (_) => _sendChatMessage())),
+                          IconButton(padding: EdgeInsets.zero, constraints: const BoxConstraints(), icon: const Icon(Icons.send, color: Color(0xFF00B4CC), size: 18), onPressed: isDisconnected ? null : _sendChatMessage),
+                        ],
+                      ),
+                    )
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
     );
   }
 
