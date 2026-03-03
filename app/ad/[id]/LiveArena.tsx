@@ -94,6 +94,7 @@ function CustomArenaLayout({
     initialHighestBid
 }: any) {
     const room = useRoomContext();
+    const router = useRouter();
     const { data: session } = useSession();
     const tracks = useTracks([Track.Source.Camera]);
     const [liveHighestBid, setLiveHighestBid] = useState(initialHighestBid);
@@ -112,7 +113,86 @@ function CustomArenaLayout({
 
     // Reactions State
     const [reactions, setReactions] = useState<{ id: string, emoji: string, left: number }[]>([]);
+    // Bidding & Interaction State
+    const [chatText, setChatText] = useState("");
     const [lastReactionTime, setLastReactionTime] = useState(0);
+    const [loading, setLoading] = useState(false);
+
+    const formattedPrice = (val: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(val);
+
+    const handleAccept = async () => {
+        if (!liveHighestBidId) return;
+        if (!confirm("Dikkat! Bu teqlifi kabul edip satışı tamamlıyorsunuz?")) return;
+        setLoading(true);
+        try {
+            const resAccept = await fetch(`/api/bids/${liveHighestBidId}/accept`, { method: "PATCH" });
+            if (resAccept.ok) {
+                const resFinalize = await fetch(`/api/bids/${liveHighestBidId}/finalize`, { method: "POST" });
+                if (resFinalize.ok) {
+                    alert("Satış tamamlandı!");
+                    await handleEndBroadcast(true);
+                }
+            }
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    const handleEndBroadcast = async (skipConfirm = false) => {
+        if (!skipConfirm && !confirm("Yayını bitirmek istiyor musunuz?")) return;
+        setLoading(true);
+        try {
+            if (room) {
+                const payload = JSON.stringify({ type: "ROOM_CLOSED" });
+                await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+            }
+            const res = await fetch(`/api/ads/${adId}/live`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isLive: false }),
+            });
+            if (res.ok) {
+                room?.disconnect();
+                router.refresh();
+            }
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    const handleBuyNow = async () => {
+        if (!buyItNowPrice) return;
+        setLoading(true);
+        try {
+            const res = await fetch("/api/conversations", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ userId: sellerId, adId }),
+            });
+            if (res.ok) {
+                const conversation = await res.json();
+                router.push(`/dashboard/messages?id=${conversation.id}`);
+            }
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    const handleSendChat = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!chatText.trim() || !room) return;
+        const payload = JSON.stringify({
+            type: "CHAT",
+            text: chatText.trim(),
+            senderName: session?.user?.name || "Web Katılımcı",
+            senderId: session?.user?.id
+        });
+        try {
+            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+            const newMessage = { id: Date.now().toString(), text: chatText.trim(), sender: session?.user?.name || "Ben" };
+            setMessages(prev => [...prev.slice(-10), newMessage]);
+            setTimeout(() => setMessages(prev => prev.filter(m => m.id !== newMessage.id)), 8000);
+            setChatText("");
+        } catch (e) { console.error(e); }
+    };
+
 
     const isBroadcastEnded = isRoomClosed || connectionState === ConnectionState.Disconnected;
 
@@ -139,7 +219,38 @@ function CustomArenaLayout({
         }
     }, [room, lastReactionTime, session, addReaction]);
 
+    const handleStartAuction = async () => {
+        if (!room) return;
+        setLoading(true);
+        try {
+            const payload = JSON.stringify({ type: "AUCTION_START" });
+            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+            setAuctionStatus("ACTIVE");
+            setAuctionNotification("📣 AÇIK ARTTIRMA BAŞLADI!");
+            setTimeout(() => setAuctionNotification(null), 4000);
+        } catch (e) {
+            console.error(e);
+        }
+        setLoading(false);
+    };
+
+    const handleStopAuction = async () => {
+        if (!room) return;
+        setLoading(true);
+        try {
+            const payload = JSON.stringify({ type: "AUCTION_END" });
+            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+            setAuctionStatus("IDLE");
+            setAuctionNotification("📣 AÇIK ARTTIRMA DURDURULDU");
+            setTimeout(() => setAuctionNotification(null), 4000);
+        } catch (e) {
+            console.error(e);
+        }
+        setLoading(false);
+    };
+
     useDataChannel((msg) => {
+
         try {
             const dataStr = new TextDecoder().decode(msg.payload);
 
@@ -392,7 +503,7 @@ function CustomArenaLayout({
                                     </button>
                                 </>
                             )}
-                            <button onClick={handleEndBroadcast} style={{ background: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
+                            <button onClick={() => handleEndBroadcast()} style={{ background: "rgba(255,255,255,0.1)", color: "white", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "100px", padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer" }}>
                                 Yayını Bitir
                             </button>
                         </div>
@@ -563,7 +674,77 @@ function CustomArenaLayout({
     );
 }
 
+// Mini bid form for consolidated dashboard
+function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
+    const router = useRouter();
+    const [amount, setAmount] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        const nextMin = currentHighest > 0 ? (currentHighest + minStep) : (startingBid ?? 1);
+        setAmount(new Intl.NumberFormat("tr-TR").format(nextMin));
+    }, [currentHighest, minStep, startingBid]);
+
+    const handleBid = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+        const rawAmount = parseInt(amount.replace(/\./g, ""), 10);
+        try {
+            const res = await fetch("/api/bids", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ adId, amount: rawAmount }),
+            });
+            if (res.ok) router.refresh();
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    };
+
+    return (
+        <form onSubmit={handleBid} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <input
+                type="text"
+                value={amount}
+                onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
+                }}
+                style={{
+                    width: "100px",
+                    background: "rgba(255,255,255,0.15)",
+                    border: "1px solid rgba(255,255,255,0.2)",
+                    borderRadius: "100px",
+                    padding: "6px 12px",
+                    color: "white",
+                    fontSize: "0.85rem",
+                    textAlign: "center",
+                    fontWeight: 700,
+                    outline: "none"
+                }}
+            />
+            <button
+                type="submit"
+                disabled={loading}
+                style={{
+                    background: "var(--primary)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "100px",
+                    padding: "8px 16px",
+                    fontSize: "0.8rem",
+                    fontWeight: 800,
+                    cursor: "pointer",
+                    boxShadow: "0 4px 15px rgba(0, 188, 212, 0.4)"
+                }}
+            >
+                {loading ? "..." : "teqlif ver"}
+            </button>
+        </form>
+    );
+}
+
 function CoHostListener({ setRole, setWantsToPublish }: { setRole: any, setWantsToPublish: any }) {
+
     const [inviteVisible, setInviteVisible] = useState(false);
     const room = useRoomContext();
 
