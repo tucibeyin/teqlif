@@ -107,6 +107,7 @@ model Bid {
   status    BidStatus @default(PENDING)
   ad        Ad        @relation(fields: [adId], references: [id], onDelete: Cascade)
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isArchived Boolean  @default(false)
 }
 
 model Conversation {

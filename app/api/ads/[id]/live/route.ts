@@ -19,14 +19,42 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         if (!ad) return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
         if (ad.userId !== user.id) return NextResponse.json({ error: "Bu ilanı yönetme yetkiniz yok." }, { status: 403 });
 
+        let updateData: any = {
+            isLive: isLive !== undefined ? Boolean(isLive) : ad.isLive,
+            liveKitRoomId: liveKitRoomId !== undefined ? String(liveKitRoomId) : ad.liveKitRoomId,
+            isAuctionActive: isAuctionActive !== undefined ? Boolean(isAuctionActive) : ad.isAuctionActive,
+        };
+
+        // If restarting an auction, reset status and archive old bids
+        if (isAuctionActive === true && ad.isAuctionActive === false) {
+            updateData.status = 'ACTIVE';
+
+            // Archive existing pending or accepted bids to start fresh
+            await prisma.bid.updateMany({
+                where: { adId: id },
+                data: { isArchived: true, status: 'REJECTED' }
+            });
+        }
+
         const updatedAd = await prisma.ad.update({
             where: { id },
-            data: {
-                isLive: isLive !== undefined ? Boolean(isLive) : ad.isLive,
-                liveKitRoomId: liveKitRoomId !== undefined ? String(liveKitRoomId) : ad.liveKitRoomId,
-                isAuctionActive: isAuctionActive !== undefined ? Boolean(isAuctionActive) : ad.isAuctionActive,
-            },
+            data: updateData,
         });
+
+        // Ghost Ad Cleanup: If stream is ending and it is a ghost ad
+        if (isLive === false && ad.description === 'Hızlı Canlı Yayın (Ghost Ad)') {
+            logger.info("Ghost ad cleanup triggered", { adId: id });
+
+            // Detach conversations before deleting to avoid foreign key constraints
+            await prisma.conversation.updateMany({
+                where: { adId: id },
+                data: { adId: null }
+            });
+
+            await prisma.ad.delete({ where: { id } });
+            revalidatePath("/");
+            return NextResponse.json({ message: "Ghost ad cleaned up." }, { status: 200 });
+        }
 
         revalidatePath(`/ad/${id}`);
         revalidatePath("/");

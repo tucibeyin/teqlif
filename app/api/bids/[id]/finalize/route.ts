@@ -111,7 +111,7 @@ export async function POST(
                 data: {
                     conversationId: conversation.id,
                     senderId: currentUser.id,
-                    content: `Tebrikler! "${bid.ad.title}" ilanının açık arttırmasını kazandınız. Sizinle iletişime geçeceğim.`,
+                    content: `Tebrikler! "${bid.ad.title}" ilanının açık arttırmasını ${bid.amount} ₺ bedelle kazandınız. Sizinle iletişime geçeceğim.`,
                 }
             });
 

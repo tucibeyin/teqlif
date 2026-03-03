@@ -67,6 +67,11 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
     });
   }
 
+  // Sale Finalized Overlay State
+  String? _finalizedWinnerName;
+  double? _finalizedAmount;
+  bool _showFinalizationOverlay = false;
+
   void _sendReaction(String emoji) {
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room == null) return;
@@ -245,6 +250,11 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
           ));
           if (_bids.length > 50) _bids.removeLast();
         });
+        return;
+      } else if (dataObj['type'] == 'SALE_FINALIZED') {
+        final winnerName = dataObj['winnerName']?.toString();
+        final amount = dataObj['amount'] != null ? (dataObj['amount'] as num).toDouble() : null;
+        _showFinalizationOverlayAlert(winnerName, amount);
         return;
       } else if (dataObj['type'] == 'BID_REJECTED') {
          final bidId = dataObj['bidId']?.toString();
@@ -693,12 +703,18 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 4),
               ));
-              // _closeLiveStreamSilently(); // Removed: Keep stream open as per user request
               
-              // Inform participants via DataChannel that auction is over
-              final signal = jsonEncode({'type': 'AUCTION_END'});
+              // Inform participants via DataChannel that the sale is finalized and auction is over
               final room = ref.read(liveRoomProvider(widget.ad.id)).room;
-              room?.localParticipant?.publishData(signal.codeUnits);
+              final endSignal = jsonEncode({'type': 'AUCTION_END'});
+              room?.localParticipant?.publishData(endSignal.codeUnits);
+              
+              final saleSignal = jsonEncode({
+                'type': 'SALE_FINALIZED',
+                'winnerName': latestBid.userLabel,
+                'amount': latestBid.amount,
+              });
+              room?.localParticipant?.publishData(saleSignal.codeUnits);
             }
             return;
           }
@@ -755,14 +771,19 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
 
     return Scaffold(
       backgroundColor: Colors.black,
-      body: OrientationBuilder(
-        builder: (context, orientation) {
-          if (orientation == Orientation.portrait) {
-            return _buildPortraitLayout(roomState, room, localVideoTrack, guestTrack, guestIdentity);
-          } else {
-            return _buildLandscapeLayout(roomState, room, localVideoTrack, guestTrack, guestIdentity);
-          }
-        },
+      body: Stack(
+        children: [
+          OrientationBuilder(
+            builder: (context, orientation) {
+              if (orientation == Orientation.portrait) {
+                return _buildPortraitLayout(roomState, room, localVideoTrack, guestTrack, guestIdentity);
+              } else {
+                return _buildLandscapeLayout(roomState, room, localVideoTrack, guestTrack, guestIdentity);
+              }
+            },
+          ),
+          _buildFinalizationOverlay(),
+        ],
       ),
     );
   }
@@ -1404,7 +1425,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                            child: _buildChatFlow(height: 120, currentUserId: ref.read(authProvider).user?.id),
                          ),
                        ),
-                    ],
+                      ],
+                    ),
                   )
                 ),
                 _buildAuctionAndChatInput(),
@@ -1413,6 +1435,91 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
           ),
         ),
       ],
+    );
+  }
+
+  void _showFinalizationOverlayAlert(String? winnerName, double? amount) {
+    if (!mounted) return;
+    setState(() {
+      _finalizedWinnerName = winnerName ?? 'Katılımcı';
+      _finalizedAmount = amount;
+      _showFinalizationOverlay = true;
+    });
+
+    // Optionally add a chat message about the sale
+    final chatPayload = jsonEncode({
+       'type': 'CHAT',
+       'text': '🎉 Tebrikler! ${_formatSenderName(winnerName)} bu ürünü ${NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(amount)} bedel ile kazandı!',
+       'senderName': 'SİSTEM',
+    });
+    _handleDataChannelMessage(utf8.encode(chatPayload), null, customName: 'SİSTEM');
+
+    // Auto-hide the overlay after 10 seconds
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted) {
+        setState(() {
+          _showFinalizationOverlay = false;
+        });
+      }
+    });
+  }
+
+  Widget _buildFinalizationOverlay() {
+    if (!_showFinalizationOverlay) return const SizedBox.shrink();
+
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withOpacity(0.7),
+        child: Center(
+          child: TweenAnimationBuilder<double>(
+             tween: Tween(begin: 0.5, end: 1.0),
+             duration: const Duration(milliseconds: 600),
+             curve: Curves.elasticOut,
+             builder: (context, scale, child) {
+               return Transform.scale(
+                 scale: scale,
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     const Icon(Icons.celebration, color: Colors.amber, size: 80),
+                     const SizedBox(height: 16),
+                     const Text(
+                       'SATILDI!',
+                       style: TextStyle(
+                         color: Colors.white,
+                         fontSize: 36,
+                         fontWeight: FontWeight.bold,
+                         letterSpacing: 2,
+                         shadows: [Shadow(blurRadius: 10, color: Colors.amber)],
+                       ),
+                     ),
+                     const SizedBox(height: 16),
+                     Text(
+                       'Tebrikler ${_formatSenderName(_finalizedWinnerName)}!',
+                       style: const TextStyle(
+                         color: Colors.white,
+                         fontSize: 24,
+                         fontWeight: FontWeight.w600,
+                       ),
+                     ),
+                     if (_finalizedAmount != null) ...[
+                       const SizedBox(height: 8),
+                       Text(
+                         '${NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(_finalizedAmount)}',
+                         style: const TextStyle(
+                           color: Colors.greenAccent,
+                           fontSize: 28,
+                           fontWeight: FontWeight.bold,
+                         ),
+                       ),
+                     ],
+                   ],
+                 ),
+               );
+             },
+          ),
+        ),
+      ),
     );
   }
 }

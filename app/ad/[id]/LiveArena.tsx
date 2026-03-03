@@ -112,6 +112,11 @@ function CustomArenaLayout({
     const [isRoomClosed, setIsRoomClosed] = useState(false);
     const [flashBid, setFlashBid] = useState(false);
 
+    // Finalization overlay state
+    const [finalizedWinner, setFinalizedWinner] = useState<string | null>(null);
+    const [finalizedAmount, setFinalizedAmount] = useState<number | null>(null);
+    const [showFinalization, setShowFinalization] = useState(false);
+
     // Countdown Gamification
     const [countdown, setCountdown] = useState(0);
 
@@ -136,10 +141,17 @@ function CustomArenaLayout({
                     alert("Satış tamamlandı!");
                     // await handleEndBroadcast(true); // Removed: Keep stream open
 
-                    // Signal auction end
+                    // Signal auction end and sale finalized
                     if (room) {
-                        const payload = JSON.stringify({ type: "AUCTION_END" });
-                        await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                        const payloadEnd = JSON.stringify({ type: "AUCTION_END" });
+                        room.localParticipant.publishData(new TextEncoder().encode(payloadEnd), { reliable: true });
+
+                        const payloadFinalized = JSON.stringify({
+                            type: "SALE_FINALIZED",
+                            winnerName: liveHighestBidderId, // Optionally pass actual name if available
+                            amount: liveHighestBid
+                        });
+                        room.localParticipant.publishData(new TextEncoder().encode(payloadFinalized), { reliable: true });
                     }
                     setCountdown(0);
                 }
@@ -305,9 +317,23 @@ function CustomArenaLayout({
                 setTimeout(() => setAuctionNotification(null), 4000);
             } else if (dataObj.type === 'ROOM_CLOSED') {
                 setIsRoomClosed(true);
-                room.disconnect();
             } else if (dataObj.type === 'COUNTDOWN') {
                 setCountdown(dataObj.value);
+            } else if (dataObj.type === 'SALE_FINALIZED') {
+                setFinalizedWinner(dataObj.winnerName || "Katılımcı");
+                setFinalizedAmount(dataObj.amount);
+                setShowFinalization(true);
+
+                // Add automated system message
+                const msg = {
+                    id: Date.now().toString(),
+                    text: `🎉 Tebrikler! Ürün ${new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(dataObj.amount || 0)} bedel ile satıldı!`,
+                    sender: "SİSTEM"
+                };
+                setMessages(prev => [...prev.slice(-10), msg]);
+                setTimeout(() => {
+                    setShowFinalization(false);
+                }, 10000); // hide overlay after 10s
             }
         } catch (e) {
             // Ignore non-json
@@ -359,7 +385,25 @@ function CustomArenaLayout({
                     <p style={{ color: "rgba(255,255,255,0.6)", marginTop: "8px" }}>Yayıncı canlı yayını kapattı.</p>
                 </div>
             ) : (
-                <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                <>
+                    <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+
+                    {/* SALE FINALIZATION OVERLAY */}
+                    {showFinalization && (
+                        <div className="absolute inset-0 flex items-center justify-center z-[100] bg-black/80 backdrop-blur-sm pointer-events-none transition-all duration-500">
+                            <div className="flex flex-col items-center bg-gradient-to-tr from-yellow-600/20 to-yellow-400/20 px-8 py-10 rounded-3xl border border-yellow-500/50 shadow-[0_0_60px_rgba(234,179,8,0.3)] transform scale-100 animate-[pulse_2s_ease-in-out_infinite]">
+                                <span className="text-6xl mb-4 drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]">🎉</span>
+                                <h2 className="text-4xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-600 drop-shadow-md tracking-widest mb-2">SATILDI!</h2>
+                                <p className="text-xl md:text-2xl text-white font-semibold mb-4">Tebrikler {finalizedWinner}!</p>
+                                {finalizedAmount != null && (
+                                    <p className="text-3xl md:text-4xl text-green-400 font-extrabold drop-shadow-[0_0_10px_rgba(74,222,128,0.5)]">
+                                        {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(finalizedAmount)}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+                    )}
+                </>
             )}
 
             {/* Host Specific LiveKit Tools (Mic/Cam Toggle) */}

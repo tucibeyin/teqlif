@@ -98,6 +98,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     }
   }
 
+  // Sale Finalized Overlay State
+  String? _finalizedWinnerName;
+  double? _finalizedAmount;
+  bool _showFinalizationOverlay = false;
+
   void _requestStage() {
     final state = ref.read(liveRoomProvider(widget.ad.id));
     final room = state.room;
@@ -262,6 +267,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           return;
         } else if (type == 'REACTION') {
           _addReaction(decoded['emoji']?.toString() ?? '❤️');
+          return;
+        } else if (type == 'SALE_FINALIZED') {
+          final winnerName = decoded['winnerName']?.toString();
+          final amount = decoded['amount'] != null ? (decoded['amount'] as num).toDouble() : null;
+          _showFinalizationOverlayAlert(winnerName, amount);
           return;
         } else if (type == 'CHAT') {
            final chatText = decoded['text']?.toString() ?? '';
@@ -1232,6 +1242,91 @@ class _CircularControlButton extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  void _showFinalizationOverlayAlert(String? winnerName, double? amount) {
+    if (!mounted) return;
+    setState(() {
+      _finalizedWinnerName = winnerName ?? 'Katılımcı';
+      _finalizedAmount = amount;
+      _showFinalizationOverlay = true;
+    });
+
+    // Optionally add a chat message about the sale
+    final chatPayload = jsonEncode({
+       'type': 'CHAT',
+       'text': '🎉 Tebrikler! ${_formatSenderName(winnerName)} bu ürünü ${NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(amount)} bedel ile kazandı!',
+       'senderName': 'SİSTEM',
+    });
+    _handleDataChannelMessage(utf8.encode(chatPayload), null);
+
+    // Auto-hide the overlay after 10 seconds
+    Future.delayed(const Duration(seconds: 10), () {
+      if (mounted) {
+        setState(() {
+          _showFinalizationOverlay = false;
+        });
+      }
+    });
+  }
+
+  Widget _buildFinalizationOverlay() {
+    if (!_showFinalizationOverlay) return const SizedBox.shrink();
+
+    return Positioned.fill(
+      child: Container(
+        color: Colors.black.withOpacity(0.7),
+        child: Center(
+          child: TweenAnimationBuilder<double>(
+             tween: Tween(begin: 0.5, end: 1.0),
+             duration: const Duration(milliseconds: 600),
+             curve: Curves.elasticOut,
+             builder: (context, scale, child) {
+               return Transform.scale(
+                 scale: scale,
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   children: [
+                     const Icon(Icons.celebration, color: Colors.amber, size: 80),
+                     const SizedBox(height: 16),
+                     const Text(
+                       'SATILDI!',
+                       style: TextStyle(
+                         color: Colors.white,
+                         fontSize: 36,
+                         fontWeight: FontWeight.bold,
+                         letterSpacing: 2,
+                         shadows: [Shadow(blurRadius: 10, color: Colors.amber)],
+                       ),
+                     ),
+                     const SizedBox(height: 16),
+                     Text(
+                       'Tebrikler ${_formatSenderName(_finalizedWinnerName)}!',
+                       style: const TextStyle(
+                         color: Colors.white,
+                         fontSize: 24,
+                         fontWeight: FontWeight.w600,
+                       ),
+                     ),
+                     if (_finalizedAmount != null) ...[
+                       const SizedBox(height: 8),
+                       Text(
+                         '${NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(_finalizedAmount)}',
+                         style: const TextStyle(
+                           color: Colors.greenAccent,
+                           fontSize: 28,
+                           fontWeight: FontWeight.bold,
+                         ),
+                       ),
+                     ],
+                   ],
+                 ),
+               );
+             },
+          ),
+        ),
+      ),
     );
   }
 }
