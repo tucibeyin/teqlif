@@ -14,6 +14,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../providers/ad_detail_provider.dart';
 import 'dart:math';
 import '../widgets/floating_reactions.dart';
 import '../../../core/api/api_client.dart';
@@ -173,6 +174,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
   void dispose() {
     WakelockPlus.disable();
     ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+    
+    // Invalidate provider to refresh ad status on return
+    ref.invalidate(adDetailProvider(widget.ad.id));
+    
     _chatCtrl.dispose();
     _chatFocus.dispose();
     _countdownTimer?.cancel();

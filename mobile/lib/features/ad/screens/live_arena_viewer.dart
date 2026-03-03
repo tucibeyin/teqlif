@@ -52,6 +52,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   bool _isGuest = false;
   bool _isAuctionActive = false;
+  double? _liveHighestBid;
 
   // Reactions State
   final List<FloatingReaction> _reactions = [];
@@ -152,6 +153,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
     // Initial sync for late joiners
     _isAuctionActive = widget.ad.isAuctionActive;
+    _liveHighestBid = widget.ad.highestBidAmount;
 
     // Connect to room
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -170,6 +172,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   void dispose() {
     WakelockPlus.disable();
     ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+    
+    // Invalidate providers to remove ghost "live" buttons on previous screens
+    ref.invalidate(adDetailProvider(widget.ad.id));
+    
     WidgetsBinding.instance.removeObserver(this);
     _inactivityTimer?.cancel();
     _hypeTimer?.cancel();
@@ -230,7 +236,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   double _getNextBidAmount(AdModel currentAd) {
     final currentPrice =
-        currentAd.highestBidAmount ?? currentAd.startingBid ?? 0;
+        _liveHighestBid ?? currentAd.highestBidAmount ?? currentAd.startingBid ?? 0;
     return currentPrice + (currentAd.minBidStep);
   }
 
@@ -316,6 +322,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           if (mounted) {
             final nextBid = amount + (widget.ad.minBidStep);
             setState(() {
+              _liveHighestBid = amount;
               _bidCtrl.text = _formatPrice(nextBid);
             });
             // If the user's bid was accepted, vibrate success
@@ -620,9 +627,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   Widget _buildTopHeader(AdModel currentAd) {
     // Show current auction price if active, otherwise show ad price
     final displayPrice = _isAuctionActive
-        ? (currentAd.highestBidAmount ?? currentAd.startingBid ?? 0)
+        ? (_liveHighestBid ?? currentAd.highestBidAmount ?? currentAd.startingBid ?? 0)
         : (currentAd.isAuction
-            ? (currentAd.highestBidAmount ?? currentAd.startingBid ?? 0)
+            ? (_liveHighestBid ?? currentAd.highestBidAmount ?? currentAd.startingBid ?? 0)
             : (currentAd.buyItNowPrice ?? 0));
 
     final label = _isAuctionActive
@@ -755,44 +762,48 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   Widget _buildQuickBidButtons(AdModel currentAd) {
     if (!_isAuctionActive) return const SizedBox.shrink();
 
+    // Create dynamic quick bid list, starting with minBidStep
+    final minStep = currentAd.minBidStep.toInt();
+    final quickBids = {minStep, 100, 250, 500, 1000, 5000}.toList()..sort();
+
     return Container(
-      height: 40,
+      height: 48,
       margin: const EdgeInsets.only(bottom: 8),
       child: ListView(
         scrollDirection: Axis.horizontal,
         padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: [100, 200, 500, 1000]
+        children: quickBids
             .map((amount) => Padding(
                   padding: const EdgeInsets.only(right: 8),
                   child: GestureDetector(
                     onTap: () {
-                      final currentPrice = currentAd.highestBidAmount ??
+                      final currentPrice = _liveHighestBid ??
+                          currentAd.highestBidAmount ??
                           currentAd.startingBid ??
-                          (currentAd.isFixedPrice ? currentAd.price : 0);
+                          0;
                       _bidCtrl.text = _formatPrice(currentPrice + amount);
                       _placeBidSlide();
                     },
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(20),
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.black.withOpacity(0.5),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                                color:
-                                    const Color(0xFF00B4CC).withOpacity(0.3)),
-                          ),
-                          child: Center(
-                            child: Text('+$amount ₺',
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 13)),
-                          ),
-                        ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                            colors: [Color(0xFF00B4CC), Color(0xFF008D9E)]),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: [
+                          BoxShadow(
+                              color: const Color(0xFF00B4CC).withOpacity(0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4))
+                        ],
+                      ),
+                      child: Center(
+                        child: Text('+$amount ₺',
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w900,
+                                fontSize: 13,
+                                letterSpacing: 0.5)),
                       ),
                     ),
                   ),
@@ -1432,16 +1443,19 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         const SizedBox(height: 12),
                         // Quick Increment Bids
                         Row(
-                          children: [100, 250, 500]
+                          children: [currentAd.minBidStep.toInt(), 250, 500, 1000]
                               .map((inc) => Expanded(
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 4),
                                       child: OutlinedButton(
                                         onPressed: () {
-                                          _bidCtrl.text = _formatPrice(nextBid +
-                                              inc -
-                                              (currentAd.minBidStep));
+                                          final currentPrice = _liveHighestBid ??
+                                              currentAd.highestBidAmount ??
+                                              currentAd.startingBid ??
+                                              0;
+                                          _bidCtrl.text =
+                                              _formatPrice(currentPrice + inc);
                                           _placeBidSlide();
                                         },
                                         style: OutlinedButton.styleFrom(
@@ -1601,9 +1615,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                   style: TextStyle(color: Colors.white60, fontSize: 13)),
               const SizedBox(height: 24),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
                 decoration: BoxDecoration(
-                    color: Colors.white10,
+                    color: Colors.white,
                     borderRadius: BorderRadius.circular(15),
                     border: Border.all(color: Colors.white10)),
                 child: TextField(
@@ -1611,43 +1625,54 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                   autofocus: true,
                   keyboardType: TextInputType.number,
                   style: const TextStyle(
-                      color: Colors.white,
+                      color: Colors.black, // Set text color to black as requested
                       fontSize: 24,
                       fontWeight: FontWeight.bold),
                   decoration: const InputDecoration(
                       border: InputBorder.none,
                       prefixText: '₺ ',
-                      prefixStyle: TextStyle(color: Color(0xFF00B4CC))),
+                      prefixStyle: TextStyle(
+                          color: Colors.black87, fontWeight: FontWeight.bold)),
                 ),
               ),
               const SizedBox(height: 24),
               Row(
-                children: [50, 100, 250, 500]
-                    .map((inc) => Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 4),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                final raw = _bidCtrl.text
-                                    .replaceAll(RegExp(r'[^0-9]'), '');
-                                final val = (double.tryParse(raw) ??
-                                        (currentAd.highestBidAmount ??
-                                            currentAd.startingBid ??
-                                            0)) +
-                                    inc;
-                                _bidCtrl.text = _formatPrice(val);
-                              },
-                              style: ElevatedButton.styleFrom(
-                                  backgroundColor:
-                                      Colors.white.withOpacity(0.05),
-                                  foregroundColor: Colors.white,
-                                  shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12))),
-                              child: Text('+$inc'),
-                            ),
-                          ),
-                        ))
-                    .toList(),
+                children: [
+                  currentAd.minBidStep.toInt(),
+                  100,
+                  250,
+                  500,
+                  1000
+                ].toSet().toList()..sort() // Ensure uniqueness and order
+                .map((inc) => Expanded(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 2),
+                                child: ElevatedButton(
+                                  onPressed: () {
+                                    final currentPrice = _liveHighestBid ??
+                                        currentAd.highestBidAmount ??
+                                        currentAd.startingBid ??
+                                        0;
+                                    _bidCtrl.text =
+                                        _formatPrice(currentPrice + inc);
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                      backgroundColor:
+                                          const Color(0xFF00B4CC),
+                                      foregroundColor: Colors.white,
+                                      padding: EdgeInsets.zero,
+                                      shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(12))),
+                                  child: Text('+$inc',
+                                      style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.bold)),
+                                ),
+                              ),
+                            ))
+                        .toList(),
               ),
               const SizedBox(height: 24),
               ElevatedButton(
