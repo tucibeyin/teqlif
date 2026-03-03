@@ -650,7 +650,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               )
             else if (hostTrack != null)
               SizedBox.expand(
-                child: VideoTrackRenderer(hostTrack, fit: VideoViewFit.contain),
+                child: VideoTrackRenderer(
+                  hostTrack, 
+                  fit: MediaQuery.of(context).orientation == Orientation.portrait 
+                    ? VideoViewFit.cover 
+                    : VideoViewFit.contain
+                ),
               )
             else
               const Center(child: Text('Yayın bekleniyor...', style: TextStyle(color: Colors.white54))),
@@ -721,19 +726,26 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Publisher Info / Live Badge
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.5),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: Colors.redAccent.withOpacity(0.8), width: 1.5),
-                ),
-                child: Row(
-                  children: [
-                    CircleAvatar(radius: 5, backgroundColor: Colors.redAccent, child: Container(width: 3, height: 3, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
-                    const SizedBox(width: 8),
-                    const Text('CANLI YAYIN', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 11)),
-                  ],
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.3),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.redAccent.withOpacity(0.5), width: 1),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        CircleAvatar(radius: 4, backgroundColor: Colors.redAccent, child: Container(width: 2, height: 2, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
+                        const SizedBox(width: 8),
+                        const Text('CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1)),
+                      ],
+                    ),
+                  ),
                 ),
               ),
               const Spacer(),
@@ -742,64 +754,53 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           ),
         ),
         const Spacer(),
-        // Chat & Info Area
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16),
-          child: Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              Expanded(
-                child: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.white, Colors.white],
-                    stops: [0.0, 0.25, 1.0], 
-                  ).createShader(bounds),
-                  blendMode: BlendMode.dstIn,
-                  child: SizedBox(
-                    height: 150,
-                    child: ListView.builder(
-                      reverse: true,
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = _messages[_messages.length - 1 - index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(12),
-                            child: BackdropFilter(
-                              filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                              child: Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(color: Colors.black.withOpacity(0.4), borderRadius: BorderRadius.circular(12)),
-                                child: RichText(text: TextSpan(children: [TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 13)), TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 13))])),
-                              ),
-                            ),
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 60), 
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
         // THE BIDDING CONSOLE (Glassmorphism Bottom Panel)
         ClipRRect(
           borderRadius: const BorderRadius.vertical(top: Radius.circular(30)),
           child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+            filter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
             child: Container(
               width: double.infinity,
-              padding: const EdgeInsets.fromLTRB(20, 20, 20, 30),
-              decoration: BoxDecoration(color: Colors.black.withOpacity(0.55), border: const Border(top: BorderSide(color: Colors.white24, width: 1))),
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 20),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.35),
+                border: const Border(top: BorderSide(color: Colors.white10, width: 0.5))
+              ),
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
+                  // Chat flow integrated at the bottom
+                  ShaderMask(
+                    shaderCallback: (bounds) => const LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [Colors.transparent, Colors.white, Colors.white],
+                      stops: [0.0, 0.3, 1.0], 
+                    ).createShader(bounds),
+                    blendMode: BlendMode.dstIn,
+                    child: SizedBox(
+                      height: 120,
+                      child: ListView.builder(
+                        reverse: true,
+                        itemCount: _messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = _messages[_messages.length - 1 - index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 4),
+                            child: RichText(
+                              text: TextSpan(
+                                children: [
+                                  TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 12)),
+                                  TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 12)),
+                                ]
+                              )
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
                   // Price Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -824,7 +825,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                     ],
                   ),
                   const SizedBox(height: 16),
-                  if (_isAuctionActive) ...[
+                  if (currentAd.isAuction) ...[
                     SingleChildScrollView(
                       scrollDirection: Axis.horizontal,
                       child: Row(
@@ -835,17 +836,17 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                               backgroundColor: Colors.white.withOpacity(0.1),
                               foregroundColor: Colors.white,
                               shadowColor: Colors.transparent,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.white24)),
+                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Colors.white10)),
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                               minimumSize: Size.zero,
                             ),
-                            onPressed: (isDisconnected || _bidLoading) ? null : () {
+                            onPressed: (isDisconnected || _bidLoading || !_isAuctionActive) ? null : () {
                               final rawText = _bidCtrl.text.replaceAll(RegExp(r'[^0-9]'), '');
                               final currentVal = double.tryParse(rawText) ?? 0;
                               final newVal = currentVal + inc;
                               _bidCtrl.text = _formatPrice(newVal);
                             },
-                            child: Text('+₺$inc', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 13)),
+                            child: Text('+₺$inc', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 13, color: !_isAuctionActive ? Colors.white24 : Colors.white)),
                           ),
                         )).toList(),
                       ),
@@ -858,7 +859,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         child: Container(
                           height: 50,
                           padding: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.white24)),
+                          decoration: BoxDecoration(color: Colors.black.withOpacity(0.6), borderRadius: BorderRadius.circular(25), border: Border.all(color: Colors.white10)),
                           child: Row(
                             children: [
                               const Icon(Icons.edit, color: Colors.white38, size: 18),
@@ -877,18 +878,30 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         ),
                       ),
                       const SizedBox(width: 12),
-                      if (_isAuctionActive)
+                      if (currentAd.isAuction)
                         GestureDetector(
-                          onTap: isDisconnected ? null : _placeBidSlide,
-                          child: Container(
+                          onTap: (isDisconnected || !_isAuctionActive) ? null : _placeBidSlide,
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 300),
                             height: 50,
                             padding: const EdgeInsets.symmetric(horizontal: 24),
                             decoration: BoxDecoration(
-                              gradient: const LinearGradient(colors: [Color(0xFFE50914), Color(0xFFB81D24)]),
+                              gradient: _isAuctionActive 
+                                ? const LinearGradient(colors: [Color(0xFFE50914), Color(0xFFB81D24)])
+                                : LinearGradient(colors: [Colors.grey.shade800, Colors.grey.shade900]),
                               borderRadius: BorderRadius.circular(25),
-                              boxShadow: [BoxShadow(color: Colors.red.withOpacity(0.5), blurRadius: 15, spreadRadius: 1)],
+                              boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.red.withOpacity(0.3), blurRadius: 10, spreadRadius: 1)] : null,
                             ),
-                            child: const Center(child: Text('teqlif ver', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 14))),
+                            child: Center(
+                              child: Text(
+                                _isAuctionActive ? 'teqlif ver' : 'Bekleniyor', 
+                                style: TextStyle(
+                                  color: _isAuctionActive ? Colors.white : Colors.white38, 
+                                  fontWeight: FontWeight.w900, 
+                                  fontSize: 14
+                                )
+                              )
+                            ),
                           ),
                         ),
                       if (currentAd.buyItNowPrice != null && !_isAuctionActive) ...[
@@ -933,13 +946,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               ),
             ),
           ),
-        ),
-
-        // ReactionButtons floating above the chat in portrait
-        Positioned(
-          bottom: 230,
-          right: 16,
-          child: ReactionButtons(onReact: _sendReaction),
         ),
       ],
     );
