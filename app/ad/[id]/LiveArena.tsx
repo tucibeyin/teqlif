@@ -411,7 +411,7 @@ function CustomArenaLayout({
                 </div>
             ) : (
                 <>
-                    <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                    <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
 
                     {/* SALE FINALIZATION OVERLAY */}
                     {showFinalization && (
@@ -682,8 +682,8 @@ function CustomArenaLayout({
                         bottom: 0,
                         left: 0,
                         right: 0,
-                        height: "60%",
-                        background: "linear-gradient(to top, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.8) 30%, rgba(0,0,0,0.4) 70%, transparent 100%)",
+                        height: "40%",
+                        background: "linear-gradient(to top, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.4) 40%, transparent 100%)",
                         pointerEvents: "none",
                         zIndex: 100
                     }} />
