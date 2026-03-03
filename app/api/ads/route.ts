@@ -15,7 +15,12 @@ export async function GET(req: NextRequest) {
         const q = searchParams.get("q");
         const isMine = searchParams.get("mine") === "true";
 
-        const where: Record<string, unknown> = { status: "ACTIVE" };
+        const where: Record<string, any> = {
+            OR: [
+                { status: "ACTIVE" },
+                { isLive: true }
+            ]
+        };
         if (category) where.category = { slug: category };
         if (province) where.provinceId = province;
         if (q) where.title = { contains: q, mode: "insensitive" };

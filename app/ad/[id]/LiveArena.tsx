@@ -16,6 +16,7 @@ interface LiveArenaProps {
     startingBid?: number | null;
     minBidStep?: number;
     initialHighestBid?: number;
+    initialIsAuctionActive?: boolean;
 }
 
 export default function LiveArena({
@@ -26,7 +27,8 @@ export default function LiveArena({
     buyItNowPrice,
     startingBid,
     minBidStep = 1,
-    initialHighestBid = 0
+    initialHighestBid = 0,
+    initialIsAuctionActive = false
 }: LiveArenaProps) {
     const { data: session } = useSession();
     const [token, setToken] = useState("");
@@ -77,6 +79,7 @@ export default function LiveArena({
                 startingBid={startingBid}
                 minBidStep={minBidStep}
                 initialHighestBid={initialHighestBid}
+                initialIsAuctionActive={initialIsAuctionActive}
                 role={role}
                 wantsToPublish={wantsToPublish}
             />
@@ -94,6 +97,7 @@ function CustomArenaLayout({
     startingBid,
     minBidStep,
     initialHighestBid,
+    initialIsAuctionActive,
     role,
     wantsToPublish
 }: any) {
@@ -104,7 +108,7 @@ function CustomArenaLayout({
     const [liveHighestBid, setLiveHighestBid] = useState(initialHighestBid);
     const [lastAcceptedBidId, setLastAcceptedBidId] = useState<string | null>(null);
     const [liveHighestBidId, setLiveHighestBidId] = useState<string | null>(null);
-    const [auctionStatus, setAuctionStatus] = useState<"IDLE" | "ACTIVE">("IDLE");
+    const [auctionStatus, setAuctionStatus] = useState<"IDLE" | "ACTIVE">(initialIsAuctionActive ? "ACTIVE" : "IDLE");
     const [auctionNotification, setAuctionNotification] = useState<string | null>(null);
     const [messages, setMessages] = useState<{ id: string, text: string, sender: string, senderId?: string }[]>([]);
     const [liveHighestBidderId, setLiveHighestBidderId] = useState<string | null>(null);

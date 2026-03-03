@@ -9,7 +9,7 @@ import '../../../core/models/ad.dart';
 import '../screens/home_screen.dart';
 
 final liveAdsProvider = FutureProvider.autoDispose<List<AdModel>>((ref) async {
-  final params = <String, dynamic>{'status': 'ACTIVE', 'isLive': true};
+  final params = <String, dynamic>{'isLive': true};
   final res = await ApiClient().get(Endpoints.ads, params: params);
   final list = res.data as List<dynamic>;
   // Hem API filtresini kullan hem de istemci tarafında isLive kontrolü yap (garanti olsun)

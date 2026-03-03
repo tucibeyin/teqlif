@@ -142,6 +142,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
+    
+    // Initial sync for late joiners
+    _isAuctionActive = widget.ad.isAuctionActive;
 
     // Connect to room
     WidgetsBinding.instance.addPostFrameCallback((_) async {
