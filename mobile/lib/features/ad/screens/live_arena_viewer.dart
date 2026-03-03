@@ -616,10 +616,14 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 ),
               ),
 
-            // 2. Premium Overlay (UI)
-            AnimatedOpacity(
-              opacity: _uiVisible ? 1.0 : 0.0,
-              duration: const Duration(milliseconds: 300),
+            // 2. Premium Overlay (UI) with Smooth Swipe Animation
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 400),
+              curve: Curves.easeOutCubic,
+              left: _uiVisible ? 0 : MediaQuery.of(context).size.width,
+              right: _uiVisible ? 0 : -MediaQuery.of(context).size.width,
+              top: 0,
+              bottom: 0,
               child: IgnorePointer(
                 ignoring: !_uiVisible,
                 child: !isDisconnected ? SafeArea(
@@ -716,7 +720,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
             children: [
               Expanded(
                 child: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white, Colors.white], stops: [0.0, 0.4, 1.0]).createShader(bounds),
+                  shaderCallback: (bounds) => const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.white, Colors.white],
+                    stops: [0.0, 0.25, 1.0], // Smoother evaporation
+                  ).createShader(bounds),
                   blendMode: BlendMode.dstIn,
                   child: SizedBox(
                     height: 150,
@@ -800,17 +809,19 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           ),
                         ),
                         if (_isAuctionActive)
-                          ElevatedButton(
-                            onPressed: isDisconnected ? null : _placeBidSlide,
-                            style: ElevatedButton.styleFrom(
-                              elevation: 8,
-                              shadowColor: const Color(0xFF00B4CC).withOpacity(0.5),
-                              backgroundColor: const Color(0xFF00B4CC), 
-                              foregroundColor: Colors.white, 
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
-                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12)
+                          GestureDetector(
+                            onTap: isDisconnected ? null : _placeBidSlide,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+                              decoration: BoxDecoration(
+                                gradient: const LinearGradient(colors: [Color(0xFF00B4CC), Color(0xFF008da1)]),
+                                borderRadius: BorderRadius.circular(30),
+                                boxShadow: [
+                                  BoxShadow(color: const Color(0xFF00B4CC).withOpacity(0.5), blurRadius: 15, spreadRadius: 1),
+                                ],
+                              ),
+                              child: const Text('PEY VER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900)),
                             ),
-                            child: const Text('PEY VER', style: TextStyle(fontWeight: FontWeight.w900)),
                           ),
                         if (currentAd.buyItNowPrice != null) ...[
                           const SizedBox(width: 8),
@@ -1017,16 +1028,19 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                             ),
                           ),
                           if (_isAuctionActive)
-                            ElevatedButton(
-                              onPressed: isDisconnected ? null : _placeBidSlide,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF00B4CC), 
-                                foregroundColor: Colors.white, 
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)), 
+                            GestureDetector(
+                              onTap: isDisconnected ? null : _placeBidSlide,
+                              child: Container(
                                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                minimumSize: Size.zero,
+                                decoration: BoxDecoration(
+                                  gradient: const LinearGradient(colors: [Color(0xFF00B4CC), Color(0xFF008da1)]),
+                                  borderRadius: BorderRadius.circular(20),
+                                  boxShadow: [
+                                    BoxShadow(color: const Color(0xFF00B4CC).withOpacity(0.5), blurRadius: 15, spreadRadius: 1),
+                                  ],
+                                ),
+                                child: const Text('PEY VER', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 12)),
                               ),
-                              child: const Text('PEY VER', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 12)),
                             ),
                           if (currentAd.buyItNowPrice != null) ...[
                             const SizedBox(width: 4),

@@ -71,10 +71,10 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
 
     return (
         <form onSubmit={handleBid} style={{
-            background: "rgba(255, 255, 255, 0.1)",
-            backdropFilter: "blur(16px)",
-            WebkitBackdropFilter: "blur(16px)",
-            border: "1px solid rgba(255, 255, 255, 0.2)",
+            background: "rgba(0, 0, 0, 0.4)",
+            backdropFilter: "blur(20px)",
+            WebkitBackdropFilter: "blur(20px)",
+            border: "1px solid rgba(255, 255, 255, 0.15)",
             borderRadius: "1rem",
             padding: "1.25rem",
             color: "white",
@@ -93,7 +93,7 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
 
             <div style={{ textAlign: "center", marginBottom: "1rem" }}>
                 <div style={{ fontSize: "0.85rem", opacity: 0.8, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>GÜNCEL FİYAT</div>
-                <div className={pulse ? "animate-pulse" : ""} style={{ fontSize: "2rem", fontWeight: 900, color: "#4ade80", textShadow: "0 2px 10px rgba(74, 222, 128, 0.4)" }}>
+                <div className={`tabular-nums tracking-tight ${pulse ? "animate-pulse" : ""}`} style={{ fontSize: "2rem", fontWeight: 900, color: "#4ade80", textShadow: "0 2px 10px rgba(74, 222, 128, 0.4)" }}>
                     {formatted.format(currentHighest)}
                 </div>
             </div>

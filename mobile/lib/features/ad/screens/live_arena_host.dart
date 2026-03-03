@@ -36,12 +36,22 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
 
   bool _isFinalizing = false;
 
+  // Countdown Gamification
+  int _countdown = 0;
+  Timer? _countdownTimer;
+  late AnimationController _pulseController;
+
   @override
   void initState() {
     super.initState();
     // Hide system UI (FullScreen)
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
 
     // Connect to room as Host
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -94,6 +104,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
     ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
     _chatCtrl.dispose();
     _chatFocus.dispose();
+    _countdownTimer?.cancel();
+    _pulseController.dispose();
     // Restore system UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
@@ -192,6 +204,18 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
            _bids.removeWhere((b) => b.id == bidId);
          });
          return;
+      } else if (dataObj['type'] == 'COUNTDOWN') {
+         final count = dataObj['value'] as int;
+         setState(() {
+           _countdown = count;
+           if (count > 0 && count <= 10) {
+             _pulseController.repeat(reverse: true);
+           } else {
+             _pulseController.stop();
+             _pulseController.value = 1.0;
+           }
+         });
+         return;
       }
     } catch (_) {}
 
@@ -277,6 +301,46 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
       _handleDataChannelMessage(utf8.encode(signalPayload), null, customName: signalName);
     } catch (e) {
       debugPrint('Signal error: $e');
+    }
+  }
+
+  void _startCountdown() {
+    if (_countdownTimer != null && _countdownTimer!.isActive) return;
+    
+    setState(() {
+      _countdown = 10;
+      _pulseController.repeat(reverse: true);
+    });
+    
+    _broadcastCountdown(_countdown);
+
+    _countdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (!mounted) {
+        timer.cancel();
+        return;
+      }
+      
+      setState(() {
+        if (_countdown > 0) {
+          _countdown--;
+          _broadcastCountdown(_countdown);
+        } else {
+          timer.cancel();
+          _pulseController.stop();
+          _pulseController.value = 1.0;
+        }
+      });
+    });
+  }
+
+  void _broadcastCountdown(int value) async {
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    if (state.room != null) {
+      final payload = jsonEncode({
+        'type': 'COUNTDOWN',
+        'value': value,
+      });
+      await state.room!.localParticipant?.publishData(utf8.encode(payload));
     }
   }
 
@@ -970,6 +1034,37 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
                                 boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.redAccent.withOpacity(0.4), blurRadius: 15)] : null,
                               ),
                               child: Icon(_isAuctionActive ? Icons.stop : Icons.play_arrow, color: Colors.white, size: 30),
+                            ),
+                          ),
+                        ),
+                      if (widget.ad.isAuction && _isAuctionActive)
+                        Padding(
+                          padding: const EdgeInsets.only(right: 12),
+                          child: GestureDetector(
+                            onTap: _startCountdown,
+                            child: AnimatedBuilder(
+                              animation: _pulseController,
+                              builder: (context, child) {
+                                return Transform.scale(
+                                  scale: _countdown > 0 && _countdown <= 10 ? 1.0 + (_pulseController.value * 0.15) : 1.0,
+                                  child: Container(
+                                    width: 56,
+                                    height: 56,
+                                    decoration: BoxDecoration(
+                                      color: _countdown > 0 ? Colors.red : Colors.orange,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(color: (_countdown > 0 ? Colors.red : Colors.orange).withOpacity(0.5), blurRadius: 15)
+                                      ],
+                                    ),
+                                    child: Center(
+                                      child: _countdown > 0 
+                                        ? Text('$_countdown', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 24))
+                                        : const Icon(Icons.timer, color: Colors.white, size: 28),
+                                    ),
+                                  ),
+                                );
+                              }
                             ),
                           ),
                         ),

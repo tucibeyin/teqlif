@@ -104,6 +104,10 @@ function CustomArenaLayout({
     const [liveHighestBidderId, setLiveHighestBidderId] = useState<string | null>(null);
     const connectionState = useConnectionState();
     const [isRoomClosed, setIsRoomClosed] = useState(false);
+    const [flashBid, setFlashBid] = useState(false);
+
+    // Countdown Gamification
+    const [countdown, setCountdown] = useState(0);
 
     const isBroadcastEnded = isRoomClosed || connectionState === ConnectionState.Disconnected;
 
@@ -127,11 +131,15 @@ function CustomArenaLayout({
                 setLiveHighestBidId(dataObj.bidId); // TRUTH: Save exact ID
                 setLiveHighestBidderId(dataObj.bidderId);
                 setLastAcceptedBidId(null);
+                setFlashBid(true);
+                setTimeout(() => setFlashBid(false), 300);
             } else if (dataObj.type === 'BID_ACCEPTED') {
                 setLiveHighestBid(dataObj.amount);
                 setLiveHighestBidId(dataObj.bidId);
                 setLiveHighestBidderId(dataObj.bidderId);
                 setLastAcceptedBidId(dataObj.bidId);
+                setFlashBid(true);
+                setTimeout(() => setFlashBid(false), 300);
             } else if (dataObj.type === 'CHAT') {
                 const newMessage = {
                     id: Date.now().toString(),
@@ -154,11 +162,33 @@ function CustomArenaLayout({
             } else if (dataObj.type === 'ROOM_CLOSED') {
                 setIsRoomClosed(true);
                 room.disconnect();
+            } else if (dataObj.type === 'COUNTDOWN') {
+                setCountdown(dataObj.value);
             }
         } catch (e) {
             // Ignore non-json
         }
     });
+
+    const startCountdown = useCallback(() => {
+        if (!room) return;
+
+        let counter = 10;
+        setCountdown(counter);
+
+        // Broadcast initial
+        room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "COUNTDOWN", value: counter })), { reliable: true });
+
+        const timer = setInterval(() => {
+            counter--;
+            if (counter >= 0) {
+                setCountdown(counter);
+                room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "COUNTDOWN", value: counter })), { reliable: true });
+            } else {
+                clearInterval(timer);
+            }
+        }, 1000);
+    }, [room]);
 
     if (tracks.length === 0) {
         return (
@@ -249,6 +279,8 @@ function CustomArenaLayout({
                     setMessages={setMessages}
                     messages={messages}
                     isBroadcastEnded={isBroadcastEnded}
+                    flashBid={flashBid}
+                    startCountdown={startCountdown}
                 />
             )}
 
@@ -271,6 +303,34 @@ function CustomArenaLayout({
                     animation: "slideDown 0.5s ease-out"
                 }}>
                     {auctionNotification}
+                </div>
+            )}
+
+            {/* Countdown Gamification Overlay */}
+            {countdown > 0 && (
+                <div
+                    className={countdown <= 10 ? "animate-pulse" : ""}
+                    style={{
+                        position: "absolute",
+                        top: "30%",
+                        left: "50%",
+                        transform: "translate(-50%, -50%)",
+                        background: countdown <= 10 ? "rgba(239, 68, 68, 0.9)" : "rgba(245, 158, 11, 0.9)",
+                        color: "white",
+                        width: "120px",
+                        height: "120px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        borderRadius: "50%",
+                        fontWeight: 900,
+                        fontSize: "4rem",
+                        boxShadow: `0 0 50px ${countdown <= 10 ? 'rgba(239, 68, 68, 0.6)' : 'rgba(245, 158, 11, 0.6)'}`,
+                        zIndex: 150,
+                        animation: "zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)"
+                    }}
+                >
+                    {countdown}
                 </div>
             )}
 
@@ -309,12 +369,24 @@ function CustomArenaLayout({
                     from { opacity: 0; transform: translateY(10px); }
                     to { opacity: 1; transform: translateY(0); }
                 }
+                .bid-flash {
+                    animation: flashBidAnim 0.3s ease-out;
+                }
+                @keyframes flashBidAnim {
+                    0% { transform: scale(1); color: #22c55e; }
+                    50% { transform: scale(1.15); color: #4ade80; text-shadow: 0 0 15px rgba(74, 222, 128, 0.8); }
+                    100% { transform: scale(1); color: #22c55e; }
+                }
+                @keyframes zoomIn {
+                    from { opacity: 0; transform: translate(-50%, -50%) scale(0.5); }
+                    to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                }
             `}</style>
         </div>
     );
 }
 
-function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, liveHighestBidId, liveHighestBidderId, auctionStatus, setMessages, messages, isBroadcastEnded }: any) {
+function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, minBidStep, currentHighestBid, lastAcceptedBidId, liveHighestBidId, liveHighestBidderId, auctionStatus, setMessages, messages, isBroadcastEnded, flashBid, startCountdown }: any) {
     const router = useRouter();
     const { data: session } = useSession();
     const [amount, setAmount] = useState("");
@@ -547,7 +619,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
             <div style={{ whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                 <div>
                     <span style={{ fontSize: "0.6rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Güncel</span>
-                    <span style={{ fontSize: "1rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
+                    <span className={`tabular-nums tracking-tight transition-all duration-300 ${flashBid ? 'bid-flash' : ''}`} style={{ fontSize: "1rem", fontWeight: 800, color: "#22c55e", display: "inline-block" }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
                 </div>
                 {isOwner && currentHighestBid > 0 && liveHighestBidderId && (
                     <button
@@ -605,6 +677,18 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                                 }}
                             >
                                 Mezatı Bitir
+                            </button>
+                        )}
+                        {auctionStatus === "ACTIVE" && (
+                            <button
+                                onClick={startCountdown}
+                                style={{
+                                    background: "rgba(239, 68, 68, 0.1)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.5)", borderRadius: "100px",
+                                    padding: "8px 16px", fontSize: "0.8rem", fontWeight: 800, cursor: "pointer",
+                                    transition: "all 0.2s"
+                                }}
+                            >
+                                ⏳ Sayacı Başlat
                             </button>
                         )}
                         <button
@@ -835,20 +919,44 @@ function CoHostListener({ setRole, setWantsToPublish }: { setRole: any, setWants
             position: "absolute",
             top: 0, left: 0, right: 0, bottom: 0,
             background: "rgba(0,0,0,0.8)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            zIndex: 50,
+            zIndex: 9999,
         }}>
-            <div style={{ background: "white", padding: "24px", borderRadius: "12px", maxWidth: "300px", textAlign: "center" }}>
-                <h3 style={{ marginTop: 0, color: "var(--primary-dark)" }}>Sahneye Davet!</h3>
-                <p style={{ fontSize: "0.9rem", color: "#666" }}>
-                    Yayıncı sizi sahneye davet ediyor. Kabul ediyor musunuz?
+            <div style={{
+                background: "rgba(255, 255, 255, 0.05)",
+                padding: "32px",
+                borderRadius: "24px",
+                maxWidth: "340px",
+                textAlign: "center",
+                border: "1px solid rgba(255, 255, 255, 0.2)",
+                boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.7)",
+                animation: "fadeInUp 0.4s ease-out forwards"
+            }}>
+                <div style={{ fontSize: "3rem", marginBottom: "16px" }}>🎤</div>
+                <h3 style={{ marginTop: 0, color: "white", fontSize: "1.5rem", fontWeight: 900 }}>Sahneye Davet!</h3>
+                <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>
+                    Yayıncı sizinle beraber yayına katılmanızı istiyor. <b>Kameranız açılacaktır.</b> Kabul ediyor musunuz?
                 </p>
-                <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "16px" }}>
+                <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "24px" }}>
                     <button
                         onClick={() => setInviteVisible(false)}
-                        style={{ padding: "8px 16px", background: "#ccc", border: "none", borderRadius: "6px", cursor: "pointer" }}
+                        style={{
+                            background: "rgba(255, 255, 255, 0.1)",
+                            color: "white",
+                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            borderRadius: "100px",
+                            padding: "12px 24px",
+                            fontSize: "0.9rem",
+                            fontWeight: 700,
+                            cursor: "pointer",
+                            transition: "all 0.2s"
+                        }}
+                        onMouseOver={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)"}
+                        onMouseOut={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)"}
                     >
                         Reddet
                     </button>
@@ -858,7 +966,18 @@ function CoHostListener({ setRole, setWantsToPublish }: { setRole: any, setWants
                             await room.disconnect();
                             setRole("guest");
                         }}
-                        style={{ padding: "8px 16px", background: "var(--primary)", color: "white", border: "none", borderRadius: "6px", cursor: "pointer", fontWeight: "bold" }}
+                        style={{
+                            background: "linear-gradient(135deg, #00B4CC, #008da1)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "100px",
+                            padding: "12px 24px",
+                            fontSize: "0.9rem",
+                            fontWeight: 800,
+                            cursor: "pointer",
+                            boxShadow: "0 8px 20px rgba(0, 180, 204, 0.4)",
+                            transition: "all 0.2s"
+                        }}
                     >
                         Kabul Et
                     </button>
