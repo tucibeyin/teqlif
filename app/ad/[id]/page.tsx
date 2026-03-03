@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+export const revalidate = 0;
 import { auth } from "@/auth";
 import { notFound } from "next/navigation";
 import Link from "next/link";

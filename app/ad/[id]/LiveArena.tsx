@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack, useDataChannel, useRoomContext, TrackToggle, useConnectionState } from "@livekit/components-react";
+import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack, useDataChannel, useRoomContext, TrackToggle, useConnectionState, useParticipants } from "@livekit/components-react";
 import { Track, ConnectionState } from "livekit-client";
 import "@livekit/components-styles";
 import { useSession } from "next-auth/react";
@@ -105,6 +105,8 @@ function CustomArenaLayout({
     const router = useRouter();
     const { data: session } = useSession();
     const tracks = useTracks([Track.Source.Camera]);
+    const participants = useParticipants();
+    const participantCount = participants.length;
     const [liveHighestBid, setLiveHighestBid] = useState(initialHighestBid);
     const [lastAcceptedBidId, setLastAcceptedBidId] = useState<string | null>(null);
     const [liveHighestBidId, setLiveHighestBidId] = useState<string | null>(null);
@@ -610,6 +612,14 @@ function CustomArenaLayout({
                                 CANLI
                             </div>
                         )}
+                    </div>
+                    {/* Viewer count pill */}
+                    <div style={{ display: "flex", alignItems: "center", gap: "6px", background: "rgba(255,255,255,0.1)", padding: "4px 12px", borderRadius: "20px" }}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.8 }}>
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                            <circle cx="12" cy="12" r="3"></circle>
+                        </svg>
+                        <span style={{ fontSize: "0.85rem", fontWeight: 700, letterSpacing: "0.5px" }}>{participantCount}</span>
                     </div>
 
                     {/* Action Controls Section */}

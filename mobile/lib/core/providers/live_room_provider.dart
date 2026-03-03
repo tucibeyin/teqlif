@@ -12,6 +12,7 @@ class LiveRoomState {
   final String? error;
   final Duration serverTimeOffset;
   final bool isFrozen;
+  final int viewerCount;
 
   LiveRoomState({
     this.room,
@@ -19,6 +20,7 @@ class LiveRoomState {
     this.error,
     this.serverTimeOffset = Duration.zero,
     this.isFrozen = false,
+    this.viewerCount = 0,
   });
 
   LiveRoomState copyWith({
@@ -27,6 +29,7 @@ class LiveRoomState {
     String? error,
     Duration? serverTimeOffset,
     bool? isFrozen,
+    int? viewerCount,
   }) {
     return LiveRoomState(
       room: room ?? this.room,
@@ -34,6 +37,7 @@ class LiveRoomState {
       error: error ?? this.error,
       serverTimeOffset: serverTimeOffset ?? this.serverTimeOffset,
       isFrozen: isFrozen ?? this.isFrozen,
+      viewerCount: viewerCount ?? this.viewerCount,
     );
   }
 }
@@ -88,6 +92,8 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
       }
 
       state = state.copyWith(room: _room, isConnecting: false);
+      _updateParticipantCount(); // Initial count
+      
       // NTP Sync (RTT Offset calculation)
       // Ping a lightweight endpoint to get server time
       try {
@@ -116,6 +122,11 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
           state = LiveRoomState(); // Reset state when disconnected
         }
         
+        // Update participant count
+        if (event is ParticipantConnectedEvent || event is ParticipantDisconnectedEvent || event is RoomDisconnectedEvent) {
+           _updateParticipantCount();
+        }
+
         if (isOwner) {
           if (event is ParticipantConnectionQualityUpdatedEvent && event.participant == _room!.localParticipant) {
             if (event.connectionQuality == ConnectionQuality.poor || event.connectionQuality == ConnectionQuality.lost) {
@@ -138,6 +149,13 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
     } catch (e) {
       state = state.copyWith(isConnecting: false, error: e.toString());
     }
+  }
+
+  void _updateParticipantCount() {
+    if (_room == null) return;
+    // remote participants + local
+    final count = _room!.remoteParticipants.length + 1;
+    state = state.copyWith(viewerCount: count);
   }
 
   Future<void> _broadcastFreezeStatus(bool freeze) async {
