@@ -5,10 +5,12 @@ import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:dio/dio.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:permission_handler/permission_handler.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../../../core/constants/categories.dart';
+import '../../ad/screens/live_arena_host.dart';
 import '../widgets/live_stories.dart';
 
 // ── Static data ────────────────────────────────────────────────────────────
@@ -559,7 +561,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 final adId = res.data['id'];
                                 if (mounted) {
                                   Navigator.pop(ctx);
-                                  context.push('/ad/$adId');
+                                  
+                                  final ad = AdModel.fromJson(res.data);
+
+                                  // Request permissions before jumping to Arena
+                                  final cameraStatus = await Permission.camera.request();
+                                  final micStatus = await Permission.microphone.request();
+
+                                  if (cameraStatus != PermissionStatus.granted || micStatus != PermissionStatus.granted) {
+                                    if (mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(content: Text('Kamera ve Mikrofon izni olmadan canlı yayın başlatılamaz!')),
+                                      );
+                                      context.push('/ad/${ad.id}');
+                                    }
+                                    return;
+                                  }
+
+                                  // Direct navigation to Host Arena
+                                  Navigator.of(context, rootNavigator: true).push(
+                                    MaterialPageRoute(builder: (_) => LiveArenaHost(ad: ad))
+                                  );
+
+                                  // Invalidate providers to show the new live ad
+                                  ref.invalidate(adsProvider);
                                 }
                               } else {
                                 throw Exception('Sunucu hatası');
