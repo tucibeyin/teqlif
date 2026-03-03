@@ -1274,3 +1274,21 @@ textarea.input {
 .scrollable-list::-webkit-scrollbar-thumb:hover {
   background: var(--primary-100);
 }
+
+/* ========================
+   Floating Emojis (Reactions)
+   ======================== */
+@keyframes floatUp {
+  0% { transform: translateY(0) scale(0.8); opacity: 0; }
+  10% { opacity: 1; transform: translateY(-10px) scale(1.1); }
+  50% { transform: translateY(-50px) scale(1) translateX(15px); }
+  100% { transform: translateY(-120px) scale(0.9) translateX(-15px); opacity: 0; }
+}
+
+.floating-emoji {
+  position: absolute;
+  pointer-events: none;
+  animation: floatUp 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+  z-index: 9999;
+  filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+}

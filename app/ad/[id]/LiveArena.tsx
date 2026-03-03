@@ -66,8 +66,8 @@ export default function LiveArena({
             token={token}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
-            className="aspect-video bg-black relative rounded-xl overflow-hidden shadow-2xl"
-            style={{ width: "100%", maxHeight: "700px" }}
+            className="w-full bg-black relative rounded-xl overflow-hidden shadow-2xl"
+            style={{ height: "calc(100vh - 120px)", minHeight: "500px", maxHeight: "800px" }}
         >
             <CustomArenaLayout
                 adId={adId}
@@ -94,6 +94,7 @@ function CustomArenaLayout({
     initialHighestBid
 }: any) {
     const room = useRoomContext();
+    const { data: session } = useSession();
     const tracks = useTracks([Track.Source.Camera]);
     const [liveHighestBid, setLiveHighestBid] = useState(initialHighestBid);
     const [lastAcceptedBidId, setLastAcceptedBidId] = useState<string | null>(null);
@@ -109,7 +110,34 @@ function CustomArenaLayout({
     // Countdown Gamification
     const [countdown, setCountdown] = useState(0);
 
+    // Reactions State
+    const [reactions, setReactions] = useState<{ id: string, emoji: string, left: number }[]>([]);
+    const [lastReactionTime, setLastReactionTime] = useState(0);
+
     const isBroadcastEnded = isRoomClosed || connectionState === ConnectionState.Disconnected;
+
+    const addReaction = useCallback((emoji: string) => {
+        const newReaction = { id: Date.now().toString() + Math.random(), emoji, left: Math.random() * 15 + 75 }; // Between 75% and 90%
+        setReactions(prev => [...prev.slice(-15), newReaction]); // Max 15 emojis simultaneously
+        setTimeout(() => {
+            setReactions(prev => prev.filter(r => r.id !== newReaction.id));
+        }, 2500);
+    }, []);
+
+    const handleReaction = useCallback(async (emoji: string) => {
+        const now = Date.now();
+        if (now - lastReactionTime < 500) return; // Rate limit: max 2 clicks per sec
+        setLastReactionTime(now);
+
+        if (!room) return;
+        const payload = JSON.stringify({ type: "REACTION", emoji, userId: session?.user?.id });
+        try {
+            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+            addReaction(emoji); // Local echo
+        } catch (e) {
+            console.error("Reaction send error:", e);
+        }
+    }, [room, lastReactionTime, session, addReaction]);
 
     useDataChannel((msg) => {
         try {
@@ -143,6 +171,8 @@ function CustomArenaLayout({
                 setTimeout(() => {
                     setMessages(prev => prev.filter((m: any) => m.id !== newMessage.id));
                 }, 5000);
+            } else if (dataObj.type === 'REACTION') {
+                addReaction(dataObj.emoji);
             } else if (dataObj.type === 'AUCTION_START') {
                 setAuctionStatus("ACTIVE");
                 setAuctionNotification("📣 MEZAT BAŞLADI!");
@@ -250,6 +280,50 @@ function CustomArenaLayout({
                             cursor: "pointer"
                         }}
                     />
+                </div>
+            )}
+
+            {/* Flying Emojis */}
+            {reactions.map((reaction) => (
+                <div key={reaction.id} className="floating-emoji" style={{ bottom: "80px", left: `${reaction.left}%`, fontSize: "32px", pointerEvents: "none" }}>
+                    {reaction.emoji}
+                </div>
+            ))}
+
+            {/* Reaction Buttons */}
+            {!isBroadcastEnded && (
+                <div style={{
+                    position: "absolute",
+                    bottom: isOwner ? "100px" : "440px",
+                    right: "20px",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: "12px",
+                    zIndex: 150
+                }}>
+                    {['❤️', '👍', '👏'].map(emoji => (
+                        <button
+                            key={emoji}
+                            onClick={() => handleReaction(emoji)}
+                            className="hover:scale-110 active:scale-90 transition-transform"
+                            style={{
+                                width: "45px",
+                                height: "45px",
+                                borderRadius: "50%",
+                                background: "rgba(0,0,0,0.3)",
+                                backdropFilter: "blur(12px)",
+                                border: "1px solid rgba(255,255,255,0.15)",
+                                fontSize: "20px",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                cursor: "pointer",
+                                boxShadow: "0 4px 10px rgba(0,0,0,0.3)"
+                            }}
+                        >
+                            {emoji}
+                        </button>
+                    ))}
                 </div>
             )}
 

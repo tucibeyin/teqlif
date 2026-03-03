@@ -78,14 +78,9 @@ export function QuickLiveButton() {
         <>
             <button
                 onClick={() => setIsOpen(true)}
-                className="btn btn-sm"
+                className="bg-red-600 hover:bg-red-700 text-white font-bold rounded-full px-4 py-2 transition-all shadow-lg animate-[pulse_2s_infinite] border border-red-500/50"
                 style={{
-                    background: "var(--danger)",
-                    color: "white",
-                    fontWeight: 700,
-                    boxShadow: "0 0 10px rgba(239, 68, 68, 0.5)",
-                    border: "none",
-                    animation: "pulse 2s infinite"
+                    boxShadow: "0 0 15px rgba(220, 38, 38, 0.6)",
                 }}
             >
                 🔴 Canlı Yayın Aç

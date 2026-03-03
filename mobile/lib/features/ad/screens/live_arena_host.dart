@@ -12,6 +12,8 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
+import 'dart:math';
+import '../widgets/floating_reactions.dart';
 import '../../../core/api/api_client.dart';
 
 class LiveArenaHost extends ConsumerStatefulWidget {
@@ -40,6 +42,45 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
   int _countdown = 0;
   Timer? _countdownTimer;
   late AnimationController _pulseController;
+
+  // Reactions State
+  final List<FloatingReaction> _reactions = [];
+  int _lastReactionTime = 0;
+
+  void _addReaction(String emoji) {
+    if (!mounted) return;
+    final id = DateTime.now().millisecondsSinceEpoch.toString() + Random().nextInt(1000).toString();
+    setState(() {
+      _reactions.add(FloatingReaction(id: id, emoji: emoji));
+      if (_reactions.length > 20) _reactions.removeAt(0);
+    });
+    Future.delayed(const Duration(milliseconds: 2500), () {
+      if (!mounted) return;
+      setState(() {
+        _reactions.removeWhere((r) => r.id == id);
+      });
+    });
+  }
+
+  void _sendReaction(String emoji) {
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    if (state.room == null) return;
+    final now = DateTime.now().millisecondsSinceEpoch;
+    if (now - _lastReactionTime < 500) return;
+    _lastReactionTime = now;
+
+    final payload = jsonEncode({
+      'type': 'REACTION',
+      'emoji': emoji,
+    });
+    
+    try {
+      state.room!.localParticipant!.publishData(utf8.encode(payload));
+      _addReaction(emoji);
+    } catch (e) {
+      debugPrint('Reaction send error: $e');
+    }
+  }
 
   @override
   void initState() {
@@ -204,7 +245,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
            _bids.removeWhere((b) => b.id == bidId);
          });
          return;
-      } else if (dataObj['type'] == 'COUNTDOWN') {
+       } else if (dataObj['type'] == 'COUNTDOWN') {
          final count = dataObj['value'] as int;
          setState(() {
            _countdown = count;
@@ -215,6 +256,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
              _pulseController.value = 1.0;
            }
          });
+         return;
+      } else if (dataObj['type'] == 'REACTION') {
+         _addReaction(dataObj['emoji']?.toString() ?? '❤️');
          return;
       }
     } catch (_) {}
@@ -927,6 +971,16 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                 ],
               ),
             ),
+
+          // Floating Reactions
+          FloatingReactionsOverlay(reactions: _reactions),
+
+          // Reaction Buttons
+          Positioned(
+            bottom: 250,
+            right: 16,
+            child: ReactionButtons(onReact: _sendReaction),
+          ),
 
           // 3. UI Overlay - Chat & Controls
           SafeArea(
