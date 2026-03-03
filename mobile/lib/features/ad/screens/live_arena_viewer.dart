@@ -679,28 +679,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 right: 16,
                 child: ReactionButtons(onReact: _sendReaction),
               ),
-              duration: const Duration(milliseconds: 400),
-              curve: Curves.easeOutCubic,
-              left: _uiVisible ? 0 : MediaQuery.of(context).size.width,
-              right: _uiVisible ? 0 : -MediaQuery.of(context).size.width,
-              top: 0,
-              bottom: 0,
-              child: IgnorePointer(
-                ignoring: !_uiVisible,
-                child: !isDisconnected ? SafeArea(
-                  child: OrientationBuilder(
-                    builder: (context, orientation) {
-                      if (orientation == Orientation.portrait) {
-                        return _buildPortraitLayout(currentAd, isDisconnected);
-                      } else {
-                        return _buildLandscapeLayout(currentAd, isDisconnected);
-                      }
-                    },
-                  ),
-                )
-              : const SizedBox.shrink(),
-              ),
-            ),
           ],
         ),
       ),
