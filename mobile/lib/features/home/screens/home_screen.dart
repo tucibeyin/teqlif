@@ -624,7 +624,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         backgroundColor: Colors.redAccent,
         icon: const Icon(Icons.sensors, color: Colors.white),
         label: const Text(
-          'Canlı Aç',
+          'Canlı Yayın Aç',
           style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
         ),
         elevation: 4,
