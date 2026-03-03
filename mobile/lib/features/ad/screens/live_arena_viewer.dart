@@ -1009,7 +1009,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           onSubmitted: (_) => _sendChatMessage(),
                         ),
                       ),
-                      if ((currentAd.isAuction || _isAuctionActive) && _isAuctionActive)
+                      if (_isAuctionActive)
                         IconButton(
                           icon: const Icon(Icons.edit_note, color: Color(0xFF00B4CC)),
                           onPressed: () => _showBidInputSheet(currentAd),
