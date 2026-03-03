@@ -1199,51 +1199,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       _handleDataChannelMessage(event.data, event.participant);
     }
   }
-}
-
-class _CircularControlButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onPressed;
-  final String? badge;
-
-  const _CircularControlButton({required this.icon, required this.onPressed, this.badge});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        GestureDetector(
-          onTap: onPressed,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
-                ),
-                child: Icon(icon, color: Colors.white, size: 24),
-              ),
-            ),
-          ),
-        ),
-        if (badge != null)
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
-              child: Text(badge!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-            ),
-          ),
-      ],
-    );
-  }
 
   void _showFinalizationOverlayAlert(String? winnerName, double? amount) {
     if (!mounted) return;
@@ -1256,7 +1211,7 @@ class _CircularControlButton extends StatelessWidget {
     // Optionally add a chat message about the sale
     final chatPayload = jsonEncode({
        'type': 'CHAT',
-       'text': '🎉 Tebrikler! ${_formatSenderName(winnerName)} bu ürünü ${NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(amount)} bedel ile kazandı!',
+       'text': '🎉 Tebrikler! ${_formatSenderName(winnerName)} bu ürünü ${NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(amount ?? 0)} bedel ile kazandı!',
        'senderName': 'SİSTEM',
     });
     _handleDataChannelMessage(utf8.encode(chatPayload), null);
@@ -1327,6 +1282,51 @@ class _CircularControlButton extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _CircularControlButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onPressed;
+  final String? badge;
+
+  const _CircularControlButton({required this.icon, required this.onPressed, this.badge});
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        GestureDetector(
+          onTap: onPressed,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white.withOpacity(0.2)),
+                ),
+                child: Icon(icon, color: Colors.white, size: 24),
+              ),
+            ),
+          ),
+        ),
+        if (badge != null)
+          Positioned(
+            right: 0,
+            top: 0,
+            child: Container(
+              padding: const EdgeInsets.all(6),
+              decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle),
+              child: Text(badge!, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+            ),
+          ),
+      ],
     );
   }
 }

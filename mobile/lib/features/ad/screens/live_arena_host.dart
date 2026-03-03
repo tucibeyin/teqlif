@@ -1389,45 +1389,44 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                 Expanded(
                   child: Stack(
                     children: [
-                       if (guestTrack != null)
-                         Align(
-                           alignment: Alignment.topRight,
-                           child: Padding(
-                             padding: const EdgeInsets.all(16.0),
-                             child: SizedBox(
-                               width: 100,
-                               height: 140,
-                               child: _buildGuestTrackView(guestTrack, guestIdentity),
-                             ),
-                           ),
-                         ),
-                       
-                       Align(
-                         alignment: Alignment.bottomRight,
-                         child: Padding(
-                           padding: const EdgeInsets.only(right: 16, bottom: 8),
-                           child: Column(
-                             mainAxisSize: MainAxisSize.min,
-                             crossAxisAlignment: CrossAxisAlignment.end,
-                             children: [
-                               _buildHostControls(room: room),
-                               const SizedBox(height: 12),
-                               ReactionButtons(onReact: _sendReaction),
-                             ],
-                           ),
-                         ),
-                       ),
+                      if (guestTrack != null)
+                        Align(
+                          alignment: Alignment.topRight,
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: SizedBox(
+                              width: 100,
+                              height: 140,
+                              child: _buildGuestTrackView(guestTrack, guestIdentity),
+                            ),
+                          ),
+                        ),
+                      
+                      Align(
+                        alignment: Alignment.bottomRight,
+                        child: Padding(
+                          padding: const EdgeInsets.only(right: 16, bottom: 8),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              _buildHostControls(room: room),
+                              const SizedBox(height: 12),
+                              ReactionButtons(onReact: _sendReaction),
+                            ],
+                          ),
+                        ),
+                      ),
 
-                       Align(
-                         alignment: Alignment.bottomLeft,
-                         child: Padding(
-                           padding: const EdgeInsets.only(left: 16, right: 80, bottom: 8),
-                           child: _buildChatFlow(height: 120, currentUserId: ref.read(authProvider).user?.id),
-                         ),
-                       ),
-                      ],
-                    ),
-                  )
+                      Align(
+                        alignment: Alignment.bottomLeft,
+                        child: Padding(
+                          padding: const EdgeInsets.only(left: 16, right: 80, bottom: 8),
+                          child: _buildChatFlow(height: 120, currentUserId: ref.read(authProvider).user?.id),
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 _buildAuctionAndChatInput(),
               ],
