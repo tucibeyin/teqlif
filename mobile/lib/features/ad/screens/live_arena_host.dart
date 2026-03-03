@@ -289,13 +289,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
     try {
       await state.room!.localParticipant?.publishData(signal.codeUnits);
       _showSystemMessage(
-        _isAuctionActive ? '📣 MEZAT BAŞLATILDI!' : '📣 MEZAT DURDURULDU',
+        _isAuctionActive ? '📣 AÇIK ARTIRMA BAŞLATILDI!' : '📣 AÇIK ARTIRMA DURDURULDU',
         _isAuctionActive ? Colors.green : Colors.orange
       );
       final signalName = state.room!.localParticipant?.name;
       final signalPayload = jsonEncode({
         'type': 'CHAT',
-        'text': _isAuctionActive ? '📣 Mezat Başlatıldı!' : '📣 Mezat Durduruldu!',
+        'text': _isAuctionActive ? '📣 Açık Artırma Başlatıldı!' : '📣 Açık Artırma Durduruldu!',
         'senderName': signalName,
       });
       _handleDataChannelMessage(utf8.encode(signalPayload), null, customName: signalName);
@@ -781,7 +781,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
                                     const SizedBox(height: 2),
                                     Text(
                                       _bids.isNotEmpty ? '₺${_formatPrice(_bids.first.amount)}' : 'Henüz Teklif Yok',
-                                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900),
+                                      style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w900, fontFeatures: [FontFeature.tabularFigures()]),
                                     ),
                                     const SizedBox(height: 4),
                                     Container(

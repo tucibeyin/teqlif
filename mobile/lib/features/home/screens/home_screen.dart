@@ -387,6 +387,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  Center(
+                    child: Container(
+                      width: 40,
+                      height: 4,
+                      margin: const EdgeInsets.only(bottom: 16),
+                      decoration: BoxDecoration(
+                        color: Colors.grey[300],
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -413,7 +424,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   TextField(
                     controller: titleCtrl,
                     decoration: InputDecoration(
-                      hintText: 'Örn: Antika Saat Mezatı',
+                      hintText: 'Örn: Antika Saat Açık Artırması',
                       filled: true,
                       fillColor: Colors.grey[100],
                       border: OutlineInputBorder(

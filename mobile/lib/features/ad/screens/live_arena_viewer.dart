@@ -786,7 +786,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                             controller: _bidCtrl,
                             enabled: !isDisconnected && _isAuctionActive,
                             keyboardType: TextInputType.number,
-                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18),
+                            style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 18, fontFeatures: [FontFeature.tabularFigures()]),
                             decoration: const InputDecoration(hintText: 'Pey...', hintStyle: TextStyle(color: Colors.white38, fontSize: 15), border: InputBorder.none),
                           ),
                         ),
@@ -824,7 +824,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), 
                               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12)
                             ),
-                            child: Text('HEMEN AL: ${_formatPrice(currentAd.buyItNowPrice!)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
+                            child: Text('HEMEN AL: ${_formatPrice(currentAd.buyItNowPrice!)}', style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 11, fontFeatures: [FontFeature.tabularFigures()])),
                           ),
                         ]
                       ],

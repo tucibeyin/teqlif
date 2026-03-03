@@ -322,7 +322,7 @@ export default async function HomePage({
                     boxShadow: activeTab === "live" ? "0 1px 3px rgba(0,0,0,0.1)" : "none",
                     display: "flex", alignItems: "center", gap: "0.3rem", transition: "all 0.2s"
                   }}>
-                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444" }}></span> Mezatlar
+                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "#ef4444" }}></span> Açık Artırmalar
                   </Link>
                 </div>
               </div>

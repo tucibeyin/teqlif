@@ -19,7 +19,7 @@ export default function PostAdPage() {
     const [durationDays, setDurationDays] = useState<number | "custom">(30);
     const [customExpiresAt, setCustomExpiresAt] = useState("");
 
-    // YENİ: Canlı Mezat Alanları
+    // YENİ: Canlı Açık Artırma Alanları
     const [isAuction, setIsAuction] = useState(false);
     const [auctionStartTime, setAuctionStartTime] = useState("");
     const [displayStartingPrice, setDisplayStartingPrice] = useState("");
@@ -146,10 +146,10 @@ export default function PostAdPage() {
                     <form onSubmit={handleSubmit}>
                         {error && <div className="error-msg" style={{ marginBottom: "1rem" }}>{error}</div>}
 
-                        {/* Canlı Mezat / Standart İlan Toggle */}
+                        {/* Canlı Açık Artırma / Standart İlan Toggle */}
                         <div className="form-section" style={{ background: isAuction ? "rgba(239, 68, 68, 0.05)" : "var(--bg-secondary)", border: isAuction ? "1px solid rgba(239, 68, 68, 0.3)" : "1px solid var(--border)", padding: "1.5rem", borderRadius: "var(--radius-lg)", marginBottom: "2rem" }}>
                             <h3 style={{ color: "var(--text-primary)", fontSize: "1.1rem", fontWeight: 700, marginBottom: "1rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                {isAuction ? "🔴 Canlı Mezat İlanı" : "📄 Standart İlan"}
+                                {isAuction ? "🔴 Canlı Açık Artırma İlanı" : "📄 Standart İlan"}
                             </h3>
                             <div style={{ display: "flex", gap: "1rem", background: "var(--bg-card)", padding: "0.5rem", borderRadius: "100px", border: "1px solid var(--border)", width: "fit-content" }}>
                                 <button
@@ -182,7 +182,7 @@ export default function PostAdPage() {
                                         cursor: "pointer"
                                     }}
                                 >
-                                    🔴 Canlı Mezat (Auction)
+                                    🔴 Canlı Açık Artırma (Auction)
                                 </button>
                             </div>
                             <p style={{ marginTop: "1rem", fontSize: "0.875rem", color: "var(--text-muted)" }}>
@@ -303,7 +303,7 @@ export default function PostAdPage() {
                         {/* Fiyat & Teklif Kuralları */}
                         <div className="form-section">
                             <h3 style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                {isAuction ? "Canlı Mezat Kuralları" : "Fiyat ve Teklif Kuralları"}
+                                {isAuction ? "Canlı Açık Artırma Kuralları" : "Fiyat ve Teklif Kuralları"}
                             </h3>
 
                             <div className="form-group" style={{ marginBottom: "1.5rem", display: isAuction ? "none" : "block" }}>
@@ -337,7 +337,7 @@ export default function PostAdPage() {
                             {isAuction && (
                                 <div className="form-row" style={{ animation: "fadeIn 0.3s ease-out", background: "var(--bg-secondary)", padding: "1rem", borderRadius: "var(--radius-md)", border: "1px dashed var(--border)", marginBottom: "1.5rem" }}>
                                     <div className="form-group" style={{ flex: 1 }}>
-                                        <label htmlFor="auctionStartTime" style={{ fontWeight: 600, color: "var(--text-primary)" }}>🔴 Mezat Başlama Zamanı *</label>
+                                        <label htmlFor="auctionStartTime" style={{ fontWeight: 600, color: "var(--text-primary)" }}>🔴 Açık Artırma Başlama Zamanı *</label>
                                         <input
                                             type="datetime-local"
                                             id="auctionStartTime"

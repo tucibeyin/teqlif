@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
 
             if (favoritedUsers.length > 0) {
                 const title = '🔥 Canlı Yayın Başladı!';
-                const bodyMsg = `${updatedAd.title} için canlı mezat şu an yayında! Hemen katılın.`;
+                const bodyMsg = `${updatedAd.title} için canlı açık artırma şu an yayında! Hemen katılın.`;
 
                 // Asenkron olarak gönderelim, webhook'u bekletmeyelim
                 Promise.all(favoritedUsers.map((user: any) =>

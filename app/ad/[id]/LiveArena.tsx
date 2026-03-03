@@ -184,10 +184,9 @@ function CustomArenaLayout({
 
     if (tracks.length === 0) {
         return (
-            <div className="absolute inset-0 flex flex-col justify-center items-center z-50 text-white" style={{ background: "rgba(0,0,0,0.7)", backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
-                <div className="animate-spin rounded-full h-14 w-14 border-4 mb-4" style={{ borderColor: 'rgba(255,255,255,0.2)', borderTopColor: 'var(--primary)' }}></div>
-                <h2 className="text-2xl font-bold tracking-wider">Yayıncı Bekleniyor...</h2>
-                <p className="opacity-70 mt-2">Lütfen ayrılmayın, mezat birazdan başlayacak.</p>
+            <div className="absolute inset-0 flex flex-col justify-center items-center z-50 bg-gradient-to-br from-gray-900 to-black animate-pulse transition-all duration-1000" style={{ backdropFilter: "blur(12px)", WebkitBackdropFilter: "blur(12px)" }}>
+                <h2 className="text-3xl font-extrabold tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-gray-200 to-gray-500 drop-shadow-2xl" style={{ letterSpacing: "0.15em", fontWeight: 900 }}>Yayıncı bekleniyor...</h2>
+                <p className="opacity-50 mt-4 font-medium tracking-wide text-sm">Lütfen ayrılmayın, açık artırma birazdan başlayacak.</p>
             </div>
         );
     }
@@ -223,12 +222,12 @@ function CustomArenaLayout({
                 }}>
                     <TrackToggle
                         source={Track.Source.Microphone}
+                        className="backdrop-blur-lg bg-white/10 hover:bg-white/20 transition-all shadow-lg"
                         style={{
-                            background: "rgba(0,0,0,0.5)",
-                            border: "1px solid rgba(255,255,255,0.2)",
+                            border: "1px solid rgba(255,255,255,0.1)",
                             borderRadius: "50%",
-                            width: "40px",
-                            height: "40px",
+                            width: "48px",
+                            height: "48px",
                             color: "white",
                             display: "flex",
                             alignItems: "center",
@@ -238,12 +237,12 @@ function CustomArenaLayout({
                     />
                     <TrackToggle
                         source={Track.Source.Camera}
+                        className="backdrop-blur-lg bg-white/10 hover:bg-white/20 transition-all shadow-lg"
                         style={{
-                            background: "rgba(0,0,0,0.5)",
-                            border: "1px solid rgba(255,255,255,0.2)",
+                            border: "1px solid rgba(255,255,255,0.1)",
                             borderRadius: "50%",
-                            width: "40px",
-                            height: "40px",
+                            width: "48px",
+                            height: "48px",
                             color: "white",
                             display: "flex",
                             alignItems: "center",
@@ -611,7 +610,10 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
             <div style={{ whiteSpace: "nowrap", borderRight: "1px solid rgba(255,255,255,0.1)", paddingRight: "10px", display: "flex", alignItems: "center", gap: "6px" }}>
                 <div>
                     <span style={{ fontSize: "0.6rem", opacity: 0.7, display: "block", textTransform: "uppercase", letterSpacing: "1px" }}>Güncel</span>
-                    <span className={`tabular-nums tracking-tight transition-all duration-300 ${flashBid ? 'bid-flash' : ''}`} style={{ fontSize: "1rem", fontWeight: 800, color: "#22c55e", display: "inline-block" }}>{formattedPrice(currentHighestBid || (startingBid ?? 0))}</span>
+                    <span className={`tabular-nums font-extrabold tracking-tighter transition-all duration-300 ${flashBid ? 'bid-flash' : ''}`} style={{ fontSize: "1.2rem", color: "#22c55e", display: "flex", alignItems: "baseline", gap: "2px" }}>
+                        {new Intl.NumberFormat("tr-TR").format(currentHighestBid || (startingBid ?? 0))}
+                        <span className="text-gray-400 font-medium" style={{ fontSize: "0.85rem" }}>₺</span>
+                    </span>
                 </div>
                 {isOwner && currentHighestBid > 0 && liveHighestBidderId && (
                     <button
@@ -656,7 +658,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                                     boxShadow: "0 4px 12px rgba(0, 188, 212, 0.3)"
                                 }}
                             >
-                                Mezatı Başlat
+                                Açık Artırmayı Başlat
                             </button>
                         ) : (
                             <button
@@ -668,7 +670,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                                     boxShadow: "0 4px 12px rgba(245, 158, 11, 0.3)"
                                 }}
                             >
-                                Mezatı Bitir
+                                Açık Artırmayı Bitir
                             </button>
                         )}
                         {auctionStatus === "ACTIVE" && (
@@ -779,7 +781,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                         </form>
                     ) : (
                         <div style={{ flex: 1, textAlign: "center", fontSize: "0.85rem", fontWeight: 700, color: "rgba(255,255,255,0.6)" }}>
-                            Mezat Bekleniyor...
+                            Açık Artırma Bekleniyor...
                         </div>
                     )}
 
@@ -835,7 +837,7 @@ function BiddingOverlay({ adId, sellerId, isOwner, buyItNowPrice, startingBid, m
                         }}>
                             <div style={{ fontSize: "2.5rem", marginBottom: "12px", animation: "pulse 2s infinite" }}>⏳</div>
                             <h3 style={{ margin: "0 0 8px 0", fontSize: "1.2rem", fontWeight: 700 }}>Açık Artırma Bekleniyor</h3>
-                            <p style={{ margin: 0, opacity: 0.8, fontSize: "0.9rem", lineHeight: 1.5 }}>Yayıncı mezatı başlattığında buradan teklif verebileceksiniz.</p>
+                            <p style={{ margin: 0, opacity: 0.8, fontSize: "0.9rem", lineHeight: 1.5 }}>Yayıncı açık artırmayı başlattığında buradan teklif verebileceksiniz.</p>
                             {buyItNowPrice && (
                                 <button
                                     onClick={handleBuyNow}
