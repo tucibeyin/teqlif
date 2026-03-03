@@ -1039,7 +1039,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         const SizedBox(width: 8),
                         Text(
                           _isAuctionActive ? 'TEKLİF VER: ${_formatPrice(nextBid)}' : 'BEKLENİYOR',
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.black, fontSize: 13, letterSpacing: 0.5),
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w900, fontSize: 13, letterSpacing: 0.5),
                         ),
                       ],
                     ),
@@ -1073,7 +1073,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 children: [
                   Icon(Icons.shopping_cart, color: Colors.black, size: 22),
                   SizedBox(width: 8),
-                  Text('HEMEN AL', style: TextStyle(color: Colors.black, fontWeight: FontWeight.black, fontSize: 13)),
+                  Text('HEMEN AL', style: TextStyle(color: Colors.black, fontWeight: FontWeight.w900, fontSize: 13)),
                 ],
               ),
             ),
@@ -1184,7 +1184,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                       children: [
                         Text('SIRADAKİ TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
                         const SizedBox(height: 4),
-                        Text(_formatPrice(nextBid), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.black)),
+                        Text(_formatPrice(nextBid), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.w900)),
                         const SizedBox(height: 12),
                         ElevatedButton(
                           onPressed: (isDisconnected || !_isAuctionActive || _bidLoading) ? null : () {
