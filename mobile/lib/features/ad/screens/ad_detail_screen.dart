@@ -842,7 +842,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                         const SizedBox(height: 24),
                       ],
 
-                      if (isOwner && ad.isAuction == true && ad.status == 'ACTIVE' && ad.isLive != true) ...[
+                      if (isOwner && ad.status == 'ACTIVE' && ad.isLive != true) ...[
                         SizedBox(
                           width: double.infinity,
                           height: 52,
