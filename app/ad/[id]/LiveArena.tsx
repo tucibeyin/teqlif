@@ -325,6 +325,17 @@ function CustomArenaLayout({
                 setIsRoomClosed(true);
             } else if (dataObj.type === 'COUNTDOWN') {
                 setCountdown(dataObj.value);
+            } else if (dataObj.type === 'REQUEST_STAGE') {
+                const msg = {
+                    id: Date.now().toString() + Math.random(),
+                    text: `🎤 ${dataObj.userName || "Katılımcı"} sahneye katılmak istiyor!`,
+                    sender: "SİSTEM",
+                    senderId: "system"
+                };
+                setMessages(prev => [...prev.slice(-10), msg]);
+                setTimeout(() => {
+                    setMessages(prev => prev.filter((m: any) => m.id !== msg.id));
+                }, 10000); // Show for 10 seconds
             } else if (dataObj.type === 'SALE_FINALIZED') {
                 setFinalizedWinner(dataObj.winnerName || "Katılımcı");
                 setFinalizedAmount(dataObj.amount);

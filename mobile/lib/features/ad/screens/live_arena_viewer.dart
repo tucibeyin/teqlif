@@ -57,6 +57,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   final List<FloatingReaction> _reactions = [];
   int _lastReactionTime = 0;
   bool _isMuted = false;
+  int? _countdownValue;
 
   void _addReaction(String emoji) {
     if (!mounted) return;
@@ -312,11 +313,26 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           
           _recordBidVelocity();
           ref.invalidate(adDetailProvider(widget.ad.id));
+          return;
         } else if (type == 'BID_REJECTED') {
            if (decoded['bidderId'] == ref.read(authProvider).user?.id) {
              Haptics.vibrate(HapticsType.error);
            }
            ref.invalidate(adDetailProvider(widget.ad.id));
+           return;
+        } else if (type == 'COUNTDOWN') {
+          final value = int.tryParse(decoded['value']?.toString() ?? '');
+          if (mounted && value != null) {
+            setState(() {
+              _countdownValue = value;
+              if (value == 0) {
+                Future.delayed(const Duration(seconds: 2), () {
+                  if (mounted) setState(() => _countdownValue = null);
+                });
+              }
+            });
+          }
+          return;
         }
       }
     } catch (e) {
@@ -721,9 +737,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     );
   }
 
-  Widget _buildSidebar(bool isDisconnected) {
+  Widget _buildSidebar(bool isDisconnected, {bool isPortrait = true}) {
     return Positioned(
-      right: 16,
+      right: isPortrait ? 16 : null,
+      left: !isPortrait ? 16 : null,
       top: 0,
       bottom: 120, // Avoid overlapping with bottom console
       child: Center(
@@ -902,6 +919,48 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 ),
               ),
 
+            // Countdown Overlay
+            if (_countdownValue != null && _countdownValue! > 0)
+              Positioned.fill(
+                child: Center(
+                  child: TweenAnimationBuilder<double>(
+                    key: ValueKey(_countdownValue),
+                    tween: Tween(begin: 0.5, end: 1.0),
+                    duration: const Duration(milliseconds: 300),
+                    curve: Curves.easeOutBack,
+                    builder: (context, scale, child) {
+                      return Transform.scale(
+                        scale: scale,
+                        child: Container(
+                          width: 120,
+                          height: 120,
+                          decoration: BoxDecoration(
+                            color: _countdownValue! <= 10 ? Colors.red.withOpacity(0.9) : Colors.orange.withOpacity(0.9),
+                            shape: BoxShape.circle,
+                            boxShadow: [
+                              BoxShadow(
+                                color: _countdownValue! <= 10 ? Colors.red.withOpacity(0.6) : Colors.orange.withOpacity(0.6),
+                                blurRadius: 50,
+                              )
+                            ]
+                          ),
+                          child: Center(
+                            child: Text(
+                              '$_countdownValue',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 64,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }
+                  ),
+                ),
+              ),
+
             // 2. Premium Overlay (UI) with Smooth Swipe Animation
             AnimatedPositioned(
               duration: const Duration(milliseconds: 400),
@@ -939,7 +998,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         _buildTopHeader(currentAd),
 
         // Sidebar Actions & Reactions
-        _buildSidebar(isDisconnected),
+        _buildSidebar(isDisconnected, isPortrait: true),
 
         // Floating Reactions Animation Layer
         Positioned.fill(child: IgnorePointer(child: FloatingReactionsOverlay(reactions: _reactions))),
@@ -1159,6 +1218,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           child: Stack(
             children: [
               _buildTopHeader(currentAd),
+              _buildSidebar(isDisconnected, isPortrait: false),
               Positioned.fill(child: IgnorePointer(child: FloatingReactionsOverlay(reactions: _reactions))),
             ],
           ),
