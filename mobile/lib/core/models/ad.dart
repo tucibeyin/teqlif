@@ -120,10 +120,10 @@ class AdModel {
   }
 
   factory AdModel.fromJson(Map<String, dynamic> json) => AdModel(
-        id: json['id'] as String,
-        title: json['title'] as String,
-        description: json['description'] as String,
-        price: (json['price'] as num).toDouble(),
+        id: json['id'] as String? ?? '',
+        title: json['title'] as String? ?? 'İsimsiz İlan',
+        description: json['description'] as String? ?? '',
+        price: (json['price'] as num?)?.toDouble() ?? 0.0,
         startingBid: json['startingBid'] != null
             ? (json['startingBid'] as num).toDouble()
             : null,
@@ -135,14 +135,17 @@ class AdModel {
         showPhone: json['showPhone'] as bool? ?? false,
         status: json['status'] as String? ?? 'ACTIVE',
         images: (json['images'] as List<dynamic>?)
-                ?.map((e) => e as String)
+                ?.where((e) => e != null)
+                .map((e) => e as String)
                 .toList() ??
             [],
         views: json['views'] as int? ?? 0,
         expiresAt: json['expiresAt'] != null
-            ? DateTime.parse(json['expiresAt'] as String)
+            ? DateTime.tryParse(json['expiresAt'] as String)
             : null,
-        createdAt: DateTime.parse(json['createdAt'] as String),
+        createdAt: json['createdAt'] != null 
+            ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
+            : DateTime.now(),
         userId: json['userId'] as String? ?? '',
         user: json['user'] != null
             ? AdUserModel.fromJson(json['user'] as Map<String, dynamic>)
@@ -203,12 +206,12 @@ class BidModel {
 
   factory BidModel.fromJson(Map<String, dynamic> json) => BidModel(
         id: json['id'] as String? ?? '',
-        amount: (json['amount'] as num).toDouble(),
+        amount: (json['amount'] as num?)?.toDouble() ?? 0.0,
         status: json['status'] as String? ?? 'PENDING',
         userId: json['userId'] as String? ?? '',
         adId: json['adId'] as String? ?? '',
         createdAt: json['createdAt'] != null
-            ? DateTime.parse(json['createdAt'] as String)
+            ? DateTime.tryParse(json['createdAt'] as String) ?? DateTime.now()
             : DateTime.now(),
         user: json['user'] != null
             ? BidUserModel.fromJson(json['user'] as Map<String, dynamic>)
