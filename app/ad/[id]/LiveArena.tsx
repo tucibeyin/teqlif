@@ -141,7 +141,7 @@ function CustomArenaLayout({
 
     const formattedPrice = (val: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(val);
 
-    const handleAccept = async () => {
+    const handleAccept = useCallback(async () => {
         if (!liveHighestBidId) return;
         if (!confirm("Dikkat! Bu teqlifi kabul edip satışı tamamlıyorsunuz?")) return;
         setLoading(true);
@@ -151,8 +151,6 @@ function CustomArenaLayout({
                 const resFinalize = await fetch(`/api/bids/${liveHighestBidId}/finalize`, { method: "POST" });
                 if (resFinalize.ok) {
                     alert("Satış tamamlandı!");
-                    // await handleEndBroadcast(true); // Removed: Keep stream open
-
                     // Signal auction end and sale finalized
                     if (room) {
                         const payloadEnd = JSON.stringify({ type: "AUCTION_END" });
@@ -160,17 +158,48 @@ function CustomArenaLayout({
 
                         const payloadFinalized = JSON.stringify({
                             type: "SALE_FINALIZED",
-                            winnerName: liveHighestBidderId, // Optionally pass actual name if available
+                            winnerName: liveHighestBidderName || liveHighestBidderId || "Katılımcı",
                             amount: liveHighestBid
                         });
                         room.localParticipant.publishData(new TextEncoder().encode(payloadFinalized), { reliable: true });
                     }
                     setCountdown(0);
+                    setAuctionStatus("IDLE");
                 }
             }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    };
+    }, [liveHighestBidId, liveHighestBidderId, liveHighestBidderName, liveHighestBid, room]);
+
+    const handleReject = useCallback(async () => {
+        if (!liveHighestBidId) return;
+        if (!confirm("Bu teqlifi reddetmek istediğinize emin misiniz?")) return;
+        setLoading(true);
+        try {
+            const res = await fetch(`/api/bids/${liveHighestBidId}/reject`, { method: "PATCH" });
+            if (res.ok) {
+                // Clear state locally
+                setLiveHighestBid(initialHighestBid);
+                setLiveHighestBidId(null);
+                setLiveHighestBidderId(null);
+                setLiveHighestBidderName(null);
+
+                // Broadcast update to others
+                if (room) {
+                    const payload = JSON.stringify({
+                        type: "NEW_BID",
+                        amount: initialHighestBid,
+                        bidId: null,
+                        bidderId: null,
+                        bidderName: null
+                    });
+                    room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                }
+                alert("Teqlif reddedildi.");
+            }
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
+    }, [liveHighestBidId, room, initialHighestBid]);
 
     const handleEndBroadcast = async (skipConfirm = false) => {
         if (!skipConfirm && !confirm("Yayını bitirmek istiyor musunuz?")) return;
@@ -558,11 +587,15 @@ function CustomArenaLayout({
                         </div>
 
                         {/* Host Quick Action Bar under Stats */}
-                        {isOwner && auctionStatus === "ACTIVE" && (
+                        {isOwner && auctionStatus === "ACTIVE" && liveHighestBidId && (
                             <div style={{ display: "flex", gap: "8px" }}>
                                 <button onClick={handleAccept} style={{ flex: 1, background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", color: "white", border: "none", borderRadius: "12px", padding: "10px", fontSize: "0.8rem", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px", boxShadow: "0 4px 15px rgba(16, 185, 129, 0.3)" }}>
                                     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
                                     ONAYLA VE SAT
+                                </button>
+                                <button onClick={handleReject} style={{ flex: 1, background: "rgba(239, 68, 68, 0.15)", color: "#ef4444", border: "1px solid rgba(239, 68, 68, 0.3)", borderRadius: "12px", padding: "10px", fontSize: "0.8rem", fontWeight: 900, cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: "6px" }}>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                    REDDET
                                 </button>
                             </div>
                         )}
@@ -872,17 +905,17 @@ function CustomArenaLayout({
                             {/* Primary Action Button (Host: Start/End, Viewer: Bid) */}
                             {isOwner ? (
                                 <button
-                                    onClick={auctionStatus === "IDLE" ? startCountdown : () => handleEndBroadcast()}
+                                    onClick={auctionStatus === "IDLE" ? startCountdown : () => handleStopAuction()}
                                     style={{
                                         height: "50px",
                                         padding: "0 24px",
-                                        background: auctionStatus === "IDLE" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "linear-gradient(135deg, #ef4444 0%, #dc2626 100%)",
+                                        background: auctionStatus === "IDLE" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
                                         color: "white", border: "none", borderRadius: "100px", fontWeight: 900,
                                         display: "flex", alignItems: "center", gap: "8px", cursor: "pointer",
-                                        boxShadow: auctionStatus === "IDLE" ? "0 4px 15px rgba(16, 185, 129, 0.4)" : "0 4px 15px rgba(239, 68, 68, 0.4)"
+                                        boxShadow: auctionStatus === "IDLE" ? "0 4px 15px rgba(16, 185, 129, 0.4)" : "0 4px 15px rgba(249, 115, 22, 0.4)"
                                     }}
                                 >
-                                    {auctionStatus === "IDLE" ? "BAŞLAT" : "BİTİR"}
+                                    {auctionStatus === "IDLE" ? "BAŞLAT" : "DURDUR"}
                                 </button>
                             ) : (
                                 // Use the customized BidMiniForm which acts as a primary button for viewers
