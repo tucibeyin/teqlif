@@ -65,7 +65,7 @@ export async function POST(req: NextRequest) {
 
         revalidatePath("/");
 
-        return NextResponse.json({ id: ghostAd.id, message: "Hızlı yayın ilan oluşturuldu" }, { status: 201 });
+        return NextResponse.json(ghostAd, { status: 201 });
 
     } catch (err) {
         console.error("POST /api/livekit/quick-start error:", err);
