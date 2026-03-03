@@ -1247,6 +1247,11 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
   }
 
   Widget _buildPortraitLayout(dynamic roomState, Room? room, VideoTrack? localVideoTrack, VideoTrack? guestTrack, String? guestIdentity) {
+    final screenSize = MediaQuery.of(context).size;
+    if (guestTrack != null) {
+      _pipOffset ??= Offset(screenSize.width - 116, 220);
+    }
+
     return Stack(
       children: [
         _buildLoadingOrCamera(roomState, room, localVideoTrack),
@@ -1261,12 +1266,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
           ),
         ),
 
-        if (guestTrack != null) {
-          final screenSize = MediaQuery.of(context).size;
-          // Initial position (Top-Right-ish)
-          _pipOffset ??= Offset(screenSize.width - 116, 220);
-
-          return Positioned(
+        if (guestTrack != null)
+          Positioned(
             top: _pipOffset!.dy,
             left: _pipOffset!.dx,
             width: 100,
@@ -1282,8 +1283,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
               },
               child: _buildGuestTrackView(guestTrack, guestIdentity),
             ),
-          );
-        }
+          ),
 
         FloatingReactionsOverlay(reactions: _reactions),
 
