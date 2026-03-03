@@ -56,6 +56,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   // Reactions State
   final List<FloatingReaction> _reactions = [];
   int _lastReactionTime = 0;
+  bool _isMuted = false;
 
   void _addReaction(String emoji) {
     if (!mounted) return;
@@ -545,6 +546,116 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     );
   }
 
+  Widget _buildTopHeader(AdModel currentAd) {
+    return SafeArea(
+      child: Align(
+        alignment: Alignment.topCenter,
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(20),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.3),
+                          borderRadius: BorderRadius.circular(20),
+                          border: Border.all(color: Colors.redAccent.withOpacity(0.5), width: 1),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            CircleAvatar(
+                              radius: 4, 
+                              backgroundColor: Colors.redAccent, 
+                              child: Container(width: 2, height: 2, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))
+                            ),
+                            const SizedBox(width: 8),
+                            const Text('CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1)),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              // Price Info Bar
+              ClipRRect(
+                borderRadius: BorderRadius.circular(20),
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withOpacity(0.4),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white10),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          currentAd.isAuction ? 'GÜNCEL TEKLİF: ' : 'FİYAT: ', 
+                          style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)
+                        ),
+                        Text(
+                          _formatPrice(currentAd.isAuction 
+                            ? (currentAd.highestBidAmount ?? currentAd.startingBid ?? 0) 
+                            : (currentAd.buyItNowPrice ?? 0)), 
+                          style: const TextStyle(color: Color(0xFF00B4CC), fontWeight: FontWeight.w900, fontSize: 16)
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSidebar(bool isDisconnected) {
+    return Positioned(
+      right: 16,
+      top: 0,
+      bottom: 120, // Avoid overlapping with bottom console
+      child: Center(
+        child: SingleChildScrollView(
+          clipBehavior: Clip.none,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              _CircularControlButton(icon: Icons.info_outline, onPressed: _showAdDetailsSheet),
+              const SizedBox(height: 16),
+              _CircularControlButton(
+                icon: _isMuted ? Icons.volume_off : Icons.volume_up, 
+                onPressed: () {
+                  setState(() => _isMuted = !_isMuted);
+                }
+              ),
+              const SizedBox(height: 16),
+              _CircularControlButton(icon: Icons.mic_none, onPressed: _requestStage),
+              const SizedBox(height: 16),
+              _CircularControlButton(icon: Icons.cameraswitch_outlined, onPressed: () {}), // Ghosted
+              const SizedBox(height: 24),
+              ReactionButtons(onReact: _sendReaction, isVertical: true),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Auto-pop when room is disconnected or closed by host
@@ -697,17 +808,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               : const SizedBox.shrink(),
               ),
             ),
-
-            // Floating Reactions
-            FloatingReactionsOverlay(reactions: _reactions),
-
-            // Reaction Buttons
-            if (!isDisconnected && _uiVisible)
-              Positioned(
-                bottom: 250,
-                right: 16,
-                child: ReactionButtons(onReact: _sendReaction),
-              ),
           ],
         ),
       ),
@@ -717,105 +817,56 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   Widget _buildPortraitLayout(AdModel currentAd, bool isDisconnected) {
     return Stack(
       children: [
-        // Header
-        SafeArea(
-          child: Align(
-            alignment: Alignment.topCenter,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Row(
-                children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Colors.redAccent.withOpacity(0.5), width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircleAvatar(radius: 4, backgroundColor: Colors.redAccent, child: Container(width: 2, height: 2, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
-                            const SizedBox(width: 8),
-                            const Text('CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10, letterSpacing: 1)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const Spacer(),
-                  _CircularControlButton(icon: Icons.info_outline, onPressed: _showAdDetailsSheet),
-                ],
-              ),
-            ),
-          ),
-        ),
+        // Header (Status & Price)
+        _buildTopHeader(currentAd),
 
-        // Floating Reactions
+        // Sidebar Actions & Reactions
+        _buildSidebar(isDisconnected),
+
+        // Floating Reactions Animation Layer
         Positioned.fill(child: IgnorePointer(child: FloatingReactionsOverlay(reactions: _reactions))),
 
-        // Interaction Layer
+        // Interaction Layer (Bottom)
         SafeArea(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Chat Flow (Floating Left) & Reactions (Floating Right)
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: [
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.only(left: 16, bottom: 8),
-                      child: ShaderMask(
-                        shaderCallback: (bounds) => const LinearGradient(
-                          begin: Alignment.topCenter,
-                          end: Alignment.bottomCenter,
-                          colors: [Colors.transparent, Colors.white, Colors.white],
-                          stops: [0.0, 0.3, 1.0], 
-                        ).createShader(bounds),
-                        blendMode: BlendMode.dstIn,
-                        child: SizedBox(
-                          height: 180,
-                          child: ListView.builder(
-                            reverse: true,
-                            itemCount: _messages.length,
-                            itemBuilder: (context, index) {
-                              final msg = _messages[_messages.length - 1 - index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 6),
-                                child: Row(
-                                  children: [
-                                    Expanded(
-                                      child: RichText(
-                                        text: TextSpan(
-                                          children: [
-                                            TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 13)),
-                                            TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 13)),
-                                          ]
-                                        )
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
+              // Chat Flow (Floating Left)
+              Padding(
+                padding: const EdgeInsets.only(left: 16, bottom: 8, right: 80), // Keep space from sidebar
+                child: ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.white, Colors.white],
+                    stops: [0.0, 0.3, 1.0], 
+                  ).createShader(bounds),
+                  blendMode: BlendMode.dstIn,
+                  child: SizedBox(
+                    height: 180,
+                    child: ListView.builder(
+                      reverse: true,
+                      itemCount: _messages.length,
+                      itemBuilder: (context, index) {
+                        final msg = _messages[_messages.length - 1 - index];
+                        return Padding(
+                          padding: const EdgeInsets.only(bottom: 6),
+                          child: RichText(
+                            text: TextSpan(
+                              children: [
+                                TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 13)),
+                                TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 13)),
+                              ]
+                            )
                           ),
-                        ),
-                      ),
+                        );
+                      },
                     ),
                   ),
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16, bottom: 8),
-                    child: ReactionButtons(onReact: _sendReaction),
-                  ),
-                ],
+                ),
               ),
               
-              // Host-style Bottom Console
+              // Bottom Console
               _buildBottomInteractionConsole(currentAd, isDisconnected),
             ],
           ),
@@ -825,140 +876,111 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   }
 
   Widget _buildBottomInteractionConsole(AdModel currentAd, bool isDisconnected) {
+    // Primary Action Button (Teqlif Ver or Hemen Al)
+    Widget buildPrimaryAction() {
+      if (currentAd.isAuction) {
+        return GestureDetector(
+          onTap: (isDisconnected || !_isAuctionActive) ? null : _placeBidSlide,
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 300),
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: _isAuctionActive 
+                ? const LinearGradient(colors: [Color(0xFFE50914), Color(0xFFB81D24)])
+                : LinearGradient(colors: [Colors.grey.shade800, Colors.grey.shade900]),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white30),
+              boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 15)] : null,
+            ),
+            child: Center(
+              child: Icon(
+                _isAuctionActive ? Icons.gavel : Icons.hourglass_empty, 
+                color: _isAuctionActive ? Colors.white : Colors.white38, 
+                size: 26
+              )
+            ),
+          ),
+        );
+      } else {
+        // Fixed Price "Hemen Al"
+        return GestureDetector(
+          onTap: isDisconnected ? null : () async {
+            try {
+              await ApiClient().post('/api/ads/${widget.ad.id}/buy-it-now');
+              if (mounted) context.pop();
+            } catch (e) {
+              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
+            }
+          },
+          child: Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA500)]),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white30),
+              boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.3), blurRadius: 10)],
+            ),
+            child: const Center(
+              child: Icon(Icons.shopping_cart, color: Colors.black, size: 24),
+            ),
+          ),
+        );
+      }
+    }
+
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
+      child: Row(
         children: [
-          // Price Info Floating Bar (Only if auction)
-          if (currentAd.isAuction)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.3),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('GÜNCEL FİYAT: ', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                        Text(_formatPrice(currentAd.highestBidAmount ?? currentAd.startingBid ?? 0), style: const TextStyle(color: Color(0xFF00B4CC), fontWeight: FontWeight.w900, fontSize: 14)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-
-          Row(
-            children: [
-              // Play-style "teqlif ver" button
-              if (currentAd.isAuction)
-                Padding(
-                  padding: const EdgeInsets.only(right: 12),
-                  child: GestureDetector(
-                    onTap: (isDisconnected || !_isAuctionActive) ? null : _placeBidSlide,
-                    child: AnimatedContainer(
-                      duration: const Duration(milliseconds: 300),
-                      width: 56,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        gradient: _isAuctionActive 
-                          ? const LinearGradient(colors: [Color(0xFFE50914), Color(0xFFB81D24)])
-                          : LinearGradient(colors: [Colors.grey.shade800, Colors.grey.shade900]),
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white30),
-                        boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 15)] : null,
-                      ),
-                      child: Center(
-                        child: Icon(
-                          _isAuctionActive ? Icons.gavel : Icons.hourglass_empty, 
-                          color: _isAuctionActive ? Colors.white : Colors.white38, 
-                          size: 26
-                        )
-                      ),
-                    ),
-                  ),
-                ),
-              
-              // White Host-Style Chat/Bid Input
-              Expanded(
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(30),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.95),
-                        borderRadius: BorderRadius.circular(30),
-                      ),
-                      child: Row(
-                        children: [
-                          Expanded(
-                            child: TextField(
-                              controller: _chatCtrl,
-                              enabled: !isDisconnected,
-                              style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                              decoration: const InputDecoration(
-                                hintText: 'Mesaj gönder...',
-                                hintStyle: TextStyle(color: Colors.black54, fontSize: 13),
-                                border: InputBorder.none,
-                                contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                              ),
-                              onSubmitted: (_) => _sendChatMessage(),
-                            ),
-                          ),
-                          if (currentAd.isAuction && _isAuctionActive)
-                            IconButton(
-                              icon: const Icon(Icons.edit_note, color: Color(0xFF00B4CC)),
-                              onPressed: () {
-                                // Show manual bid entry bottom sheet or similar
-                                _showBidInputSheet(currentAd);
-                              },
-                            ),
-                          IconButton(
-                            icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
-                            onPressed: isDisconnected ? null : _sendChatMessage,
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-            ],
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: buildPrimaryAction(),
           ),
-
-          // Hemen Al Button (Floating if available)
-          if (currentAd.buyItNowPrice != null && !_isAuctionActive)
-            Padding(
-              padding: const EdgeInsets.only(top: 12),
-              child: ElevatedButton(
-                onPressed: isDisconnected ? null : () async {
-                  try {
-                    await ApiClient().post('/api/ads/${widget.ad.id}/buy-it-now');
-                    if (mounted) context.pop();
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFFFFD700), 
-                  foregroundColor: Colors.black, 
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(25)), 
-                  minimumSize: const Size(double.infinity, 45),
+          
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(30),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.95),
+                    borderRadius: BorderRadius.circular(30),
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _chatCtrl,
+                          enabled: !isDisconnected,
+                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                          decoration: const InputDecoration(
+                            hintText: 'Mesaj gönder...',
+                            hintStyle: TextStyle(color: Colors.black54, fontSize: 13),
+                            border: InputBorder.none,
+                            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                          ),
+                          onSubmitted: (_) => _sendChatMessage(),
+                        ),
+                      ),
+                      if (currentAd.isAuction && _isAuctionActive)
+                        IconButton(
+                          icon: const Icon(Icons.edit_note, color: Color(0xFF00B4CC)),
+                          onPressed: () => _showBidInputSheet(currentAd),
+                        ),
+                      IconButton(
+                        icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
+                        onPressed: isDisconnected ? null : _sendChatMessage,
+                      )
+                    ],
+                  ),
                 ),
-                child: const Text('HEMEN AL', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 14)),
               ),
             ),
+          ),
         ],
       ),
     );
@@ -967,39 +989,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   Widget _buildLandscapeLayout(AdModel currentAd, bool isDisconnected) {
     return Stack(
       children: [
-        // Top Layout (Live Badge / Info)
-        SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              children: [
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(20),
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.black.withOpacity(0.35),
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.redAccent.withOpacity(0.5), width: 1),
-                      ),
-                      child: Row(
-                        children: [
-                          CircleAvatar(radius: 4, backgroundColor: Colors.redAccent, child: Container(width: 2, height: 2, decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle))),
-                          const SizedBox(width: 8),
-                          const Text('CANLI', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 10)),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                const Spacer(),
-                _CircularControlButton(icon: Icons.info_outline, onPressed: _showAdDetailsSheet),
-              ],
-            ),
-          ),
-        ),
+        // Header (Status & Price)
+        _buildTopHeader(currentAd),
+
+        // Sidebar Actions & Reactions
+        _buildSidebar(isDisconnected),
 
         // Bottom Chat (Floating Left)
         Positioned(
@@ -1029,74 +1023,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           ),
         ),
 
-        // Right Sidebar (Buttons & Interactions)
-        Positioned(
-          right: 16,
-          top: 80,
-          bottom: 100,
-          child: SafeArea(
-            left: false,
-            child: SizedBox(
-              width: 60,
-              child: SingleChildScrollView(
-                clipBehavior: Clip.none,
-                child: Column(
-                  children: [
-                    _CircularControlButton(icon: Icons.info_outline, onPressed: _showAdDetailsSheet),
-                    const SizedBox(height: 16),
-                    if (currentAd.isAuction) ...[
-                      _CircularControlButton(
-                        icon: Icons.gavel, 
-                        onPressed: (isDisconnected || !_isAuctionActive) ? () {} : _placeBidSlide,
-                        badge: _isAuctionActive ? '!' : null,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    ReactionButtons(onReact: _sendReaction, isVertical: true),
-                    const SizedBox(height: 16),
-                    _CircularControlButton(
-                      icon: Icons.mic_none, 
-                      onPressed: _requestStage,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ),
-
-        // Landscape Price Bar (Floating Top Center)
-        if (currentAd.isAuction)
-          Positioned(
-            top: 16,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 10),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Text('GÜNCEL FİYAT: ', style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold)),
-                        Text(_formatPrice(currentAd.highestBidAmount ?? currentAd.startingBid ?? 0), style: const TextStyle(color: Color(0xFF00B4CC), fontWeight: FontWeight.w900, fontSize: 16)),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ),
-          ),
-
-        // Floating Reaction Overlay
+        // Floating Reaction Animation Layer
         Positioned.fill(child: IgnorePointer(child: FloatingReactionsOverlay(reactions: _reactions))),
       ],
     );
