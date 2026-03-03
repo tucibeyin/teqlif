@@ -217,6 +217,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   String _formatPrice(double p) =>
       '₺${p.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
+  double _getNextBidAmount(AdModel currentAd) {
+    final currentPrice = currentAd.highestBidAmount ?? currentAd.startingBid ?? 0;
+    return currentPrice + (currentAd.minBidStep);
+  }
+
   void _resetMessageTimer() {
     Timer(const Duration(seconds: 4), () {
       if (mounted) {
@@ -293,16 +298,24 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         } else if (type == 'NEW_BID' || type == 'BID_ACCEPTED') {
           final amount = (decoded['amount'] as num).toDouble();
           
-          // Auto-update bid controller for the user
-          final nextBid = amount + (widget.ad.minBidStep);
-          setState(() {
-            _bidCtrl.text = _formatPrice(nextBid);
-          });
+          // Auto-update bid controller for the user to the NEXT valid step
+          if (mounted) {
+            final nextBid = amount + (widget.ad.minBidStep);
+            setState(() {
+              _bidCtrl.text = _formatPrice(nextBid);
+            });
+            // If the user's bid was accepted, vibrate success
+            if (type == 'BID_ACCEPTED' && decoded['bidderId'] == ref.read(authProvider).user?.id) {
+               Haptics.vibrate(HapticsType.success);
+            }
+          }
           
           _recordBidVelocity();
-          // Also refresh ad details to show the latest bid in header
           ref.invalidate(adDetailProvider(widget.ad.id));
         } else if (type == 'BID_REJECTED') {
+           if (decoded['bidderId'] == ref.read(authProvider).user?.id) {
+             Haptics.vibrate(HapticsType.error);
+           }
            ref.invalidate(adDetailProvider(widget.ad.id));
         }
       }
@@ -461,6 +474,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     final amount = double.tryParse(rawText);
     
     if (amount == null) {
+      await Haptics.vibrate(HapticsType.error);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Lütfen geçerli bir teqlif girin')),
       );
@@ -468,7 +482,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     }
 
     setState(() => _bidLoading = true);
-    await Haptics.vibrate(HapticsType.heavy);
+    await Haptics.vibrate(HapticsType.medium);
 
     try {
       await ApiClient().post(Endpoints.bids, data: {
@@ -479,12 +493,14 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       ref.invalidate(adDetailProvider(widget.ad.id));
       ref.invalidate(myBidsProvider);
       
-      // DO NOT broadcast manually via CHAT. The Backend API handles publishing NO_BID via webhook/LiveKit API
+      // Success feedback
+      await Haptics.vibrate(HapticsType.success);
       
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Teqlifiniz verildi! 🎉'), backgroundColor: Colors.green),
       );
     } catch (e) {
+      await Haptics.vibrate(HapticsType.error);
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Teqlif verilemedi.')),
       );
@@ -737,6 +753,20 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     );
   }
 
+  Widget _buildSidebarItem(IconData icon, VoidCallback? onTap, {String? label}) {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: Icon(icon, color: Colors.white, size: 24),
+          onPressed: onTap,
+        ),
+        if (label != null)
+          Text(label, style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Auto-pop when room is disconnected or closed by host
@@ -971,51 +1001,81 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     Widget buildPrimaryAction() {
       // Prioritize Bid if auction is active, regardless of ad type
       if (currentAd.isAuction || _isAuctionActive) {
-        return GestureDetector(
-          onTap: (isDisconnected || !_isAuctionActive) ? null : _placeBidSlide,
-          child: AnimatedContainer(
-            duration: const Duration(milliseconds: 300),
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: _isAuctionActive 
-                ? const LinearGradient(colors: [Color(0xFFE50914), Color(0xFFB81D24)])
-                : LinearGradient(colors: [Colors.grey.shade800, Colors.grey.shade900]),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white30),
-              boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 15)] : null,
-            ),
-            child: Center(
-              child: Icon(
-                _isAuctionActive ? Icons.gavel : Icons.hourglass_empty, 
-                color: _isAuctionActive ? Colors.white : Colors.white38, 
-                size: 26
-              )
+        final nextBid = _getNextBidAmount(currentAd);
+        return Expanded(
+          child: GestureDetector(
+            onTap: (isDisconnected || !_isAuctionActive || _bidLoading) ? null : () {
+              // Directly use the pre-synced _bidCtrl or calculate it
+              if (_bidCtrl.text.isEmpty) {
+                _bidCtrl.text = _formatPrice(nextBid);
+              }
+              _placeBidSlide();
+            },
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 300),
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: _isAuctionActive 
+                  ? const LinearGradient(colors: [Color(0xFFE50914), Color(0xFFB81D24)])
+                  : LinearGradient(colors: [Colors.grey.shade800, Colors.grey.shade900]),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: Colors.white30),
+                boxShadow: _isAuctionActive ? [BoxShadow(color: Colors.red.withOpacity(0.4), blurRadius: 15)] : null,
+              ),
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  if (_bidLoading)
+                    const SizedBox(width: 24, height: 24, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                  else
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          _isAuctionActive ? Icons.gavel : Icons.hourglass_empty, 
+                          color: _isAuctionActive ? Colors.white : Colors.white38, 
+                          size: 22
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          _isAuctionActive ? 'TEKLİF VER: ${_formatPrice(nextBid)}' : 'BEKLENİYOR',
+                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.black, fontSize: 13, letterSpacing: 0.5),
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
         );
       } else {
-        // Fixed Price "Hemen Al" (Only if no auction active)
-        return GestureDetector(
-          onTap: isDisconnected ? null : () async {
-            try {
-              await ApiClient().post('/api/ads/${widget.ad.id}/buy-it-now');
-              if (mounted) context.pop();
-            } catch (e) {
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
-            }
-          },
-          child: Container(
-            width: 56,
-            height: 56,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA500)]),
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white30),
-              boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.3), blurRadius: 10)],
-            ),
-            child: const Center(
-              child: Icon(Icons.shopping_cart, color: Colors.black, size: 24),
+        // Fixed Price "Hemen Al"
+        return Expanded(
+          child: GestureDetector(
+            onTap: isDisconnected ? null : () async {
+              try {
+                await ApiClient().post('/api/ads/${widget.ad.id}/buy-it-now');
+                if (mounted) context.pop();
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
+              }
+            },
+            child: Container(
+              height: 56,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(colors: [Color(0xFFFFD700), Color(0xFFFFA500)]),
+                borderRadius: BorderRadius.circular(28),
+                border: Border.all(color: Colors.white30),
+                boxShadow: [BoxShadow(color: Colors.amber.withOpacity(0.3), blurRadius: 10)],
+              ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.shopping_cart, color: Colors.black, size: 22),
+                  SizedBox(width: 8),
+                  Text('HEMEN AL', style: TextStyle(color: Colors.black, fontWeight: FontWeight.black, fontSize: 13)),
+                ],
+              ),
             ),
           ),
         );
@@ -1024,51 +1084,61 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Row(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: buildPrimaryAction(),
-          ),
-          
-          Expanded(
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(30),
-              child: BackdropFilter(
-                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          Row(
+            children: [
+              buildPrimaryAction(),
+              const SizedBox(width: 12),
+              // Message / More Toggle
+              GestureDetector(
+                onTap: () => _showBidInputSheet(currentAd),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                  width: 56,
+                  height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.95),
-                    borderRadius: BorderRadius.circular(30),
+                    color: Colors.white.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white24),
                   ),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _chatCtrl,
-                          enabled: !isDisconnected,
-                          style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
-                          decoration: const InputDecoration(
-                            hintText: 'Mesaj gönder...',
-                            hintStyle: TextStyle(color: Colors.black54, fontSize: 13),
-                            border: InputBorder.none,
-                            contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
-                          ),
-                          onSubmitted: (_) => _sendChatMessage(),
+                  child: const Icon(Icons.add, color: Colors.white, size: 24),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(30),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.95),
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _chatCtrl,
+                        enabled: !isDisconnected,
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
+                        decoration: const InputDecoration(
+                          hintText: 'Mesaj gönder...',
+                          hintStyle: TextStyle(color: Colors.black54, fontSize: 13),
+                          border: InputBorder.none,
+                          contentPadding: EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                         ),
+                        onSubmitted: (_) => _sendChatMessage(),
                       ),
-                      if (_isAuctionActive)
-                        IconButton(
-                          icon: const Icon(Icons.edit_note, color: Color(0xFF00B4CC)),
-                          onPressed: () => _showBidInputSheet(currentAd),
-                        ),
-                      IconButton(
-                        icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
-                        onPressed: isDisconnected ? null : _sendChatMessage,
-                      )
-                    ],
-                  ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
+                      onPressed: isDisconnected ? null : _sendChatMessage,
+                    )
+                  ],
                 ),
               ),
             ),
@@ -1079,83 +1149,141 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   }
 
   Widget _buildLandscapeLayout(AdModel currentAd, bool isDisconnected) {
-    return Stack(
+    final nextBid = _getNextBidAmount(currentAd);
+    
+    return Row(
       children: [
-        // Header (Status & Price)
-        _buildTopHeader(currentAd),
-
-        // Sidebar Actions & Reactions
-        _buildSidebar(isDisconnected),
-
-        // Bottom Chat & Quick Bids (Floating Left)
-        Positioned(
-          left: 16,
-          bottom: 16,
+        // Main View (Video & Reactions)
+        Expanded(
+          flex: 7,
+          child: Stack(
+            children: [
+              _buildTopHeader(currentAd),
+              Positioned.fill(child: IgnorePointer(child: FloatingReactionsOverlay(reactions: _reactions))),
+            ],
+          ),
+        ),
+        
+        // Premium Auction Sidebar
+        Container(
           width: 300,
+          color: Colors.black.withOpacity(0.4),
           child: SafeArea(
-            top: false,
+            left: false,
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Quick Bids
+                // Auction Dashboard (Compact)
                 if (_isAuctionActive)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: SizedBox(
-                      height: 36,
-                      child: ListView(
-                        scrollDirection: Axis.horizontal,
-                        children: [100, 200, 500, 1000].map((amount) => Padding(
-                          padding: const EdgeInsets.only(right: 8),
-                          child: GestureDetector(
-                            onTap: () {
-                              final currentPrice = currentAd.highestBidAmount ?? currentAd.startingBid ?? 0;
-                              _bidCtrl.text = _formatPrice(currentPrice + amount);
-                              _placeBidSlide();
-                            },
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12),
-                              decoration: BoxDecoration(
-                                color: Colors.black.withOpacity(0.6),
-                                borderRadius: BorderRadius.circular(18),
-                                border: Border.all(color: const Color(0xFF00B4CC).withOpacity(0.4)),
-                              ),
-                              child: Center(
-                                child: Text('+$amount ₺', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      border: Border(bottom: BorderSide(color: Colors.white.withOpacity(0.05))),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text('SIRADAKİ TEKLİF', style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 10, fontWeight: FontWeight.w800, letterSpacing: 1.2)),
+                        const SizedBox(height: 4),
+                        Text(_formatPrice(nextBid), style: const TextStyle(color: Colors.white, fontSize: 24, fontWeight: FontWeight.black)),
+                        const SizedBox(height: 12),
+                        ElevatedButton(
+                          onPressed: (isDisconnected || !_isAuctionActive || _bidLoading) ? null : () {
+                            _bidCtrl.text = _formatPrice(nextBid);
+                            _placeBidSlide();
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFE50914),
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            elevation: 8,
+                          ),
+                          child: _bidLoading 
+                            ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                            : const Text('TEKLİF VER', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 1)),
+                        ),
+                        const SizedBox(height: 12),
+                        // Quick Increment Bids
+                        Row(
+                          children: [100, 250, 500].map((inc) => Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 4),
+                              child: OutlinedButton(
+                                onPressed: () {
+                                  _bidCtrl.text = _formatPrice(nextBid + inc - (currentAd.minBidStep));
+                                  _placeBidSlide();
+                                },
+                                style: OutlinedButton.styleFrom(
+                                  side: BorderSide(color: Colors.white.withOpacity(0.2)),
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                                ),
+                                child: Text('+$inc', style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
                               ),
                             ),
-                          ),
-                        )).toList(),
-                      ),
+                          )).toList(),
+                        ),
+                      ],
                     ),
                   ),
 
-                // Chat
-                ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white, Colors.white], stops: [0.0, 0.4, 1.0]).createShader(bounds),
-                  blendMode: BlendMode.dstIn,
-                  child: SizedBox(
-                    height: 100,
-                    child: ListView.builder(
-                      reverse: true,
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = _messages[_messages.length - 1 - index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: RichText(text: TextSpan(children: [TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 12)), TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 12))])),
-                        );
-                      },
-                    ),
+                // Chat Area
+                Expanded(
+                  child: Column(
+                    children: [
+                      Expanded(
+                        child: ShaderMask(
+                          shaderCallback: (bounds) => const LinearGradient(begin: Alignment.topCenter, end: Alignment.bottomCenter, colors: [Colors.transparent, Colors.white, Colors.white], stops: [0.0, 0.4, 1.0]).createShader(bounds),
+                          blendMode: BlendMode.dstIn,
+                          child: ListView.builder(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                            reverse: true,
+                            itemCount: _messages.length,
+                            itemBuilder: (context, index) {
+                              final msg = _messages[_messages.length - 1 - index];
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 8),
+                                child: RichText(text: TextSpan(children: [TextSpan(text: '${msg.senderName}: ', style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white70, fontSize: 13)), TextSpan(text: msg.text, style: const TextStyle(color: Colors.white, fontSize: 13))])),
+                              );
+                            },
+                          ),
+                        ),
+                      ),
+                      // Sidebar Bottom Actions
+                      Padding(
+                        padding: const EdgeInsets.all(12),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Container(
+                                height: 44,
+                                decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(22)),
+                                child: TextField(
+                                  controller: _chatCtrl,
+                                  style: const TextStyle(color: Colors.white, fontSize: 13),
+                                  decoration: const InputDecoration(hintText: 'Mesaj...', hintStyle: TextStyle(color: Colors.white54), border: InputBorder.none, contentPadding: EdgeInsets.symmetric(horizontal: 16)),
+                                  onSubmitted: (_) => _sendChatMessage(),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 8),
+                            _isAuctionActive 
+                              ? IconButton(
+                                  icon: const Icon(Icons.edit_note, color: Colors.white70),
+                                  onPressed: () => _showBidInputSheet(currentAd),
+                                )
+                              : _buildSidebarItem(Icons.favorite_border, () => _sendReaction('❤️'), label: 'Beğen'),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
           ),
         ),
-
-        // Floating Reaction Animation Layer
-        Positioned.fill(child: IgnorePointer(child: FloatingReactionsOverlay(reactions: _reactions))),
       ],
     );
   }
