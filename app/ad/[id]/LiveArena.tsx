@@ -254,7 +254,7 @@ function CustomArenaLayout({
         }
     }, [room, lastReactionTime, session, addReaction]);
 
-    const handleStartAuction = async () => {
+    const handleStartAuction = useCallback(async () => {
         if (!room) return;
         setLoading(true);
         try {
@@ -267,9 +267,9 @@ function CustomArenaLayout({
             console.error(e);
         }
         setLoading(false);
-    };
+    }, [room]);
 
-    const handleStopAuction = async () => {
+    const handleStopAuction = useCallback(async () => {
         if (!room) return;
         setLoading(true);
         try {
@@ -282,7 +282,7 @@ function CustomArenaLayout({
             console.error(e);
         }
         setLoading(false);
-    };
+    }, [room]);
 
     useDataChannel((msg) => {
 
@@ -381,9 +381,10 @@ function CustomArenaLayout({
                 room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "COUNTDOWN", value: counter })), { reliable: true });
             } else {
                 clearInterval(timer);
+                handleStartAuction();
             }
         }, 1000);
-    }, [room]);
+    }, [room, handleStartAuction]);
 
     if (tracks.length === 0) {
         return (
