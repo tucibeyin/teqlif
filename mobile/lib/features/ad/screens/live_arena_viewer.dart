@@ -1637,14 +1637,15 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               ),
               const SizedBox(height: 24),
               Row(
-                children: [
+                children: ([
                   currentAd.minBidStep.toInt(),
                   100,
                   250,
                   500,
                   1000
-                ].toSet().toList()..sort() // Ensure uniqueness and order
-                .map((inc) => Expanded(
+                ].toSet().toList()
+                      ..sort()) // Ensure uniqueness and order
+                    .map((inc) => Expanded(
                               child: Padding(
                                 padding:
                                     const EdgeInsets.symmetric(horizontal: 2),
