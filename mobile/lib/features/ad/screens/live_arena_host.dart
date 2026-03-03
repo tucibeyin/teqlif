@@ -22,7 +22,7 @@ class LiveArenaHost extends ConsumerStatefulWidget {
   ConsumerState<LiveArenaHost> createState() => _LiveArenaHostState();
 }
 
-class _LiveArenaHostState extends ConsumerState<LiveArenaHost> {
+class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProviderStateMixin {
   // Ephemeral Chat
   final List<_EphemeralMessage> _messages = [];
   final List<_LiveBid> _bids = [];

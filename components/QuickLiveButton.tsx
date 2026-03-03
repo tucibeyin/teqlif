@@ -7,9 +7,19 @@ export function QuickLiveButton() {
     const [isOpen, setIsOpen] = useState(false);
     const [title, setTitle] = useState("");
     const [startingBid, setStartingBid] = useState("");
+    const [image, setImage] = useState<File | null>(null);
+    const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+
+    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (e.target.files && e.target.files[0]) {
+            const file = e.target.files[0];
+            setImage(file);
+            setImagePreview(URL.createObjectURL(file));
+        }
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -23,10 +33,31 @@ export function QuickLiveButton() {
         }
 
         try {
+            let uploadedImageUrl = null;
+            if (image) {
+                const formData = new FormData();
+                formData.append("file", image);
+                const uploadRes = await fetch("/api/upload", {
+                    method: "POST",
+                    body: formData,
+                });
+
+                if (uploadRes.ok) {
+                    const uploadData = await uploadRes.json();
+                    uploadedImageUrl = uploadData.url;
+                } else {
+                    throw new Error("Resim yüklenemedi.");
+                }
+            }
+
             const res = await fetch("/api/livekit/quick-start", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title, startingBid: Number(startingBid) || 1 })
+                body: JSON.stringify({
+                    title,
+                    startingBid: Number(startingBid) || 1,
+                    images: uploadedImageUrl ? [uploadedImageUrl] : []
+                })
             });
             const data = await res.json();
 
@@ -123,6 +154,47 @@ export function QuickLiveButton() {
                                     className="input-field"
                                     min="1"
                                 />
+                            </div>
+
+                            <div>
+                                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem", color: "var(--text-secondary)" }}>
+                                    Kapak Fotoğrafı (İsteğe Bağlı)
+                                </label>
+                                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                                    <label style={{
+                                        display: "inline-block",
+                                        padding: "0.5rem 1rem",
+                                        background: "var(--bg-secondary)",
+                                        border: "1px dashed var(--border)",
+                                        borderRadius: "0.5rem",
+                                        cursor: "pointer",
+                                        color: "var(--text-secondary)",
+                                        fontSize: "0.875rem",
+                                        textAlign: "center",
+                                        flex: 1
+                                    }}>
+                                        {image ? "Değiştir" : "📁 Fotoğraf Seç"}
+                                        <input
+                                            type="file"
+                                            accept="image/*"
+                                            onChange={handleImageChange}
+                                            style={{ display: "none" }}
+                                        />
+                                    </label>
+
+                                    {imagePreview && (
+                                        <div style={{
+                                            width: "60px",
+                                            height: "60px",
+                                            borderRadius: "0.5rem",
+                                            overflow: "hidden",
+                                            border: "1px solid var(--border)",
+                                            flexShrink: 0
+                                        }}>
+                                            <img src={imagePreview} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                        </div>
+                                    )}
+                                </div>
                             </div>
 
                             <button

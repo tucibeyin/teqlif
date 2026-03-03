@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { title, startingBid } = body;
+        const { title, startingBid, images } = body;
 
         if (!title) {
             return NextResponse.json({ error: "Yayın başlığı zorunludur." }, { status: 400 });
@@ -58,7 +58,7 @@ export async function POST(req: NextRequest) {
                 categoryId: defaultCategory.id,
                 provinceId: defaultProvince.id,
                 districtId: defaultDistrict.id,
-                images: [], // No images for ghost ads
+                images: images || [], // Supports passed images from mobile and web QuickLive
                 expiresAt: new Date(Date.now() + 1 * 24 * 60 * 60 * 1000), // Expires in 1 day
             },
         });

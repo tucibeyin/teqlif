@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:dio/dio.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
@@ -360,7 +363,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   Future<void> _showQuickLiveBottomSheet() async {
     final titleCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
+    File? selectedImage;
     bool isLoading = false;
+    final picker = ImagePicker();
 
     await showModalBottomSheet(
       context: context,
@@ -437,6 +442,65 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(height: 16),
+                  const Text('Kapak Fotoğrafı (İsteğe Bağlı)',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black54)),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: () async {
+                            final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
+                            if (picked != null) {
+                              setModalState(() => selectedImage = File(picked.path));
+                            }
+                          },
+                          icon: const Icon(Icons.photo_library),
+                          label: Text(selectedImage != null ? 'Değiştir' : 'Fotoğraf Seç'),
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          ),
+                        ),
+                      ),
+                      if (selectedImage != null) ...[
+                        const SizedBox(width: 12),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                selectedImage!,
+                                width: 50,
+                                height: 50,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: -8,
+                              right: -8,
+                              child: GestureDetector(
+                                onTap: () => setModalState(() => selectedImage = null),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.black54,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.close, size: 12, color: Colors.white),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ]
+                    ],
+                  ),
                   const SizedBox(height: 24),
                   ElevatedButton(
                     onPressed: isLoading
@@ -455,6 +519,20 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             setModalState(() => isLoading = true);
 
                             try {
+                              String? uploadedImageUrl;
+
+                              // 1. Upload the image if selected
+                              if (selectedImage != null) {
+                                final form = FormData.fromMap({
+                                  'file': await MultipartFile.fromFile(
+                                    selectedImage!.path,
+                                    filename: selectedImage!.path.split('/').last,
+                                  ),
+                                });
+                                final uploadRes = await ApiClient().uploadFile('/api/upload', form);
+                                uploadedImageUrl = uploadRes.data['url'] as String;
+                              }
+
                               final price =
                                   int.tryParse(priceCtrl.text.trim()) ?? 1;
                               final res = await ApiClient().post(
@@ -462,6 +540,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 data: {
                                   'title': title,
                                   'startingBid': price,
+                                  if (uploadedImageUrl != null) 'images': [uploadedImageUrl],
                                 },
                               );
 
