@@ -89,15 +89,20 @@ class _FloatingEmojiWidgetState extends State<_FloatingEmojiWidget> with SingleT
 
 class ReactionButtons extends StatelessWidget {
   final Function(String) onReact;
+  final bool isVertical;
   
-  const ReactionButtons({Key? key, required this.onReact}) : super(key: key);
+  const ReactionButtons({Key? key, required this.onReact, this.isVertical = false}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return Flex(
+      direction: isVertical ? Axis.vertical : Axis.horizontal,
       mainAxisSize: MainAxisSize.min,
       children: ['❤️', '👍', '👏'].map((emoji) => Padding(
-        padding: const EdgeInsets.only(bottom: 12),
+        padding: EdgeInsets.only(
+          bottom: isVertical ? 12 : 0,
+          right: isVertical ? 0 : 12,
+        ),
         child: GestureDetector(
           onTap: () => onReact(emoji),
           child: Container(

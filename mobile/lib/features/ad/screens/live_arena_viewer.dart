@@ -963,7 +963,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       ),
     );
   }
-  }
 
   Widget _buildLandscapeLayout(AdModel currentAd, bool isDisconnected) {
     return Stack(
