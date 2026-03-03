@@ -134,7 +134,14 @@ function CustomArenaLayout({
                 const resFinalize = await fetch(`/api/bids/${liveHighestBidId}/finalize`, { method: "POST" });
                 if (resFinalize.ok) {
                     alert("Satış tamamlandı!");
-                    await handleEndBroadcast(true);
+                    // await handleEndBroadcast(true); // Removed: Keep stream open
+
+                    // Signal auction end
+                    if (room) {
+                        const payload = JSON.stringify({ type: "AUCTION_END" });
+                        await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                    }
+                    setCountdown(0);
                 }
             }
         } catch (e) { console.error(e); }

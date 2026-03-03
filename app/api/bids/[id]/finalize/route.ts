@@ -63,21 +63,64 @@ export async function POST(
 
         // Finalize the sale
         const result = await prisma.$transaction(async (tx) => {
-            // 1. Mark ad as SOLD
+            // 1. Mark ad as SOLD and stop auction
             const updatedAd = await tx.ad.update({
                 where: { id: bid.adId },
                 data: {
                     status: 'SOLD',
-                    winnerId: bid.userId
+                    winnerId: bid.userId,
+                    isAuctionActive: false,
                 },
             });
 
-            // 2. Create a notification for the buyer
+            // 2. Find or Create conversation
+            let conversation = await tx.conversation.findUnique({
+                where: {
+                    user1Id_user2Id_adId: {
+                        user1Id: currentUser.id,
+                        user2Id: bid.userId,
+                        adId: bid.adId,
+                    }
+                }
+            });
+
+            if (!conversation) {
+                conversation = await tx.conversation.findUnique({
+                    where: {
+                        user1Id_user2Id_adId: {
+                            user1Id: bid.userId,
+                            user2Id: currentUser.id,
+                            adId: bid.adId,
+                        }
+                    }
+                });
+            }
+
+            if (!conversation) {
+                conversation = await tx.conversation.create({
+                    data: {
+                        user1Id: currentUser.id,
+                        user2Id: bid.userId,
+                        adId: bid.adId,
+                    }
+                });
+            }
+
+            // 3. Create Automated "Congratulations" Message
+            await tx.message.create({
+                data: {
+                    conversationId: conversation.id,
+                    senderId: currentUser.id,
+                    content: `Tebrikler! "${bid.ad.title}" ilanının açık arttırmasını kazandınız. Sizinle iletişime geçeceğim.`,
+                }
+            });
+
+            // 4. Create a notification for the buyer
             await tx.notification.create({
                 data: {
                     userId: bid.userId,
                     type: 'SYSTEM',
-                    message: `${bid.ad.title} ilanındaki satış, satıcı tarafından onaylanıp tamamlandı. Hayırlı olsun!`,
+                    message: `${bid.ad.title} ilanındaki satış, satıcı tarafından onaylanıp tamamlandı. Hayırlı olsun! Mesaj kutunuzu kontrol edin.`,
                     link: `/ad/${bid.adId}`,
                 },
             });

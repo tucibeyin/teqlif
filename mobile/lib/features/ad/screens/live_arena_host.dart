@@ -684,13 +684,20 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost> with TickerProvid
           final finalizeRes = await ApiClient().post('/api/bids/${latestBid.id}/finalize');
           if (finalizeRes.statusCode == 200) {
             if (mounted) {
-              setState(() => _isFinalizing = false);
+              setState(() {
+                _isFinalizing = false;
+                _isAuctionActive = false;
+              });
               ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                 content: Text('Satış başarıyla tamamlandı! İlan "Satıldı" olarak işaretlendi.', style: TextStyle(fontWeight: FontWeight.bold)),
                 backgroundColor: Colors.green,
                 duration: Duration(seconds: 4),
               ));
-              _closeLiveStreamSilently();
+              // _closeLiveStreamSilently(); // Removed: Keep stream open as per user request
+              
+              // Inform participants via DataChannel that auction is over
+              final signal = jsonEncode({'type': 'AUCTION_END'});
+              state.room!.localParticipant?.publishData(signal.codeUnits);
             }
             return;
           }
