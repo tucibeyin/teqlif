@@ -124,6 +124,10 @@ export default async function DashboardPage() {
                         <div className="stat-value" style={{ color: "var(--primary)" }}>👥</div>
                         <div className="stat-label">Arkadaşlarım</div>
                     </Link>
+                    <Link href="/dashboard/auctions" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
+                        <div className="stat-value">🏆</div>
+                        <div className="stat-label">Müzayede Geçmişim</div>
+                    </Link>
                     <Link href="/support" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value" style={{ color: "var(--primary)" }}>🎧</div>
                         <div className="stat-label">Destek</div>

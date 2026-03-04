@@ -167,6 +167,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               ),
             ),
             const SizedBox(height: 12),
+            // Müzayede Geçmişim Link Card
+            Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.12),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.emoji_events_outlined, color: Colors.amber),
+                ),
+                title: const Text('Müzayede Geçmişim', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Kazandıklarım ve sattıklarım', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                onTap: () => context.push('/auction-history'),
+              ),
+            ),
+            const SizedBox(height: 12),
             // Support Link Card
             Card(
               elevation: 0,

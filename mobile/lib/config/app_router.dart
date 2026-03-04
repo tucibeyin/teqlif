@@ -18,6 +18,7 @@ import '../features/auth/screens/verify_profile_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
 import '../features/profile/screens/public_profile_screen.dart';
 import '../features/profile/screens/friends_screen.dart';
+import '../features/profile/screens/auction_history_screen.dart';
 import '../widgets/main_shell.dart';
 
 // ── Pending Route ───────────────────────────────────────────────────────────
@@ -133,6 +134,10 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
               path: '/dashboard/friends',
               builder: (_, __) => const FriendsScreen(),
+          ),
+          GoRoute(
+              path: '/auction-history',
+              builder: (_, __) => const AuctionHistoryScreen(),
           ),
           GoRoute(
             path: '/profile/verify',
