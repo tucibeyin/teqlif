@@ -60,14 +60,7 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
         }
     }
 
-    const getRaw = (val: string) => parseInt(val.replace(/\./g, ""), 10) || 0;
 
-    function addFastBid(amount: number) {
-        if (loading) return;
-        const currentRaw = getRaw(displayAmount);
-        const newDisplay = currentRaw + amount;
-        setDisplayAmount(new Intl.NumberFormat("tr-TR").format(newDisplay));
-    }
 
     return (
         <form onSubmit={handleBid} style={{
@@ -98,11 +91,7 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
                 </div>
             </div>
 
-            <div style={{ display: "flex", gap: "8px", marginBottom: "1rem" }}>
-                <button type="button" onClick={() => addFastBid(50)} disabled={loading} style={{ flex: 1, background: "rgba(0, 180, 204, 0.05)", border: "1px solid rgba(0, 180, 204, 0.15)", borderRadius: "20px", padding: "8px 0", color: "var(--primary)", fontWeight: 700, transition: "0.2s", cursor: loading ? "not-allowed" : "pointer" }} onMouseOver={e => e.currentTarget.style.background = "rgba(0, 180, 204, 0.1)"} onMouseOut={e => e.currentTarget.style.background = "rgba(0, 180, 204, 0.05)"}>+50 ₺</button>
-                <button type="button" onClick={() => addFastBid(100)} disabled={loading} style={{ flex: 1, background: "rgba(0, 180, 204, 0.05)", border: "1px solid rgba(0, 180, 204, 0.15)", borderRadius: "20px", padding: "8px 0", color: "var(--primary)", fontWeight: 700, transition: "0.2s", cursor: loading ? "not-allowed" : "pointer" }} onMouseOver={e => e.currentTarget.style.background = "rgba(0, 180, 204, 0.1)"} onMouseOut={e => e.currentTarget.style.background = "rgba(0, 180, 204, 0.05)"}>+100 ₺</button>
-                <button type="button" onClick={() => addFastBid(250)} disabled={loading} style={{ flex: 1, background: "rgba(0, 180, 204, 0.05)", border: "1px solid rgba(0, 180, 204, 0.15)", borderRadius: "20px", padding: "8px 0", color: "var(--primary)", fontWeight: 700, transition: "0.2s", cursor: loading ? "not-allowed" : "pointer" }} onMouseOver={e => e.currentTarget.style.background = "rgba(0, 180, 204, 0.1)"} onMouseOut={e => e.currentTarget.style.background = "rgba(0, 180, 204, 0.05)"}>+250 ₺</button>
-            </div>
+
 
             <div style={{ marginBottom: "1rem", position: "relative" }}>
                 <input
