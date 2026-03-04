@@ -690,6 +690,32 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                 ),
               ),
             ),
+            Card(
+              color: const Color(0xFFFEF2F2),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: const BorderSide(color: Color(0xFFFCA5A5)),
+              ),
+              child: const Padding(
+                padding: EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Color(0xFFEF4444)),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        'İçeriğiniz denetlenecektir. Apple UGC kuralları gereği sakıncalı içerik veya taciz edici davranışlar hesabınızın 24 saat içinde kapatılmasına neden olabilir.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Color(0xFFB91C1C),
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             const SizedBox(height: 24),
             SizedBox(
               height: 52,

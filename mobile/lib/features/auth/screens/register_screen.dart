@@ -20,6 +20,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _passwordCtrl = TextEditingController();
   final _codeCtrl = TextEditingController();
   bool _obscure = true;
+  bool _eulaAccepted = false;
 
   @override
   void dispose() {
@@ -171,11 +172,22 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             ),
           ),
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
+        CheckboxListTile(
+          value: _eulaAccepted,
+          onChanged: (v) => setState(() => _eulaAccepted = v ?? false),
+          title: const Text(
+            'Kullanım Koşullarını ve EULA\'yı kabul ediyorum. Sakıncalı içerik ve taciz edici davranışlara tolerans gösterilmeyeceğini, ihlal durumunda hesabımın 24 saat içinde kapatılabileceğini biliyorum.',
+            style: TextStyle(fontSize: 12, color: Color(0xFF4A5568)),
+          ),
+          contentPadding: EdgeInsets.zero,
+          controlAffinity: ListTileControlAffinity.leading,
+        ),
+        const SizedBox(height: 16),
         SizedBox(
           height: 52,
           child: ElevatedButton(
-            onPressed: isLoading ? null : _register,
+            onPressed: (isLoading || !_eulaAccepted) ? null : _register,
             child: isLoading
                 ? const SizedBox(
                     width: 22,
