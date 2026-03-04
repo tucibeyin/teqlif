@@ -19,9 +19,9 @@ export default function TermsPage() {
                 </div>
             </section>
 
-            <div className="container" style={{ marginTop: "-2rem", position: "relative", zIndex: 10 }}>
-                <div className="card mx-auto" style={{ maxWidth: "800px" }}>
-                    <div className="card-body" style={{ padding: "2rem sm:3rem" }}>
+            <div style={{ marginTop: "-2rem", position: "relative", zIndex: 10, padding: "0 1rem" }}>
+                <div className="card" style={{ maxWidth: "800px", margin: "0 auto" }}>
+                    <div className="card-body" style={{ padding: "2rem" }}>
 
                         <div className="prose prose-gray max-w-none text-gray-600 space-y-10">
 
