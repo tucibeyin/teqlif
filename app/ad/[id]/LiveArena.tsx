@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import confetti from "canvas-confetti";
 import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack, useDataChannel, useRoomContext, TrackToggle, useConnectionState, useParticipants } from "@livekit/components-react";
 import { Track, ConnectionState } from "livekit-client";
 import "@livekit/components-styles";
@@ -128,6 +129,27 @@ function CustomArenaLayout({
     const [finalizedWinner, setFinalizedWinner] = useState<string | null>(null);
     const [finalizedAmount, setFinalizedAmount] = useState<number | null>(null);
     const [showFinalization, setShowFinalization] = useState(false);
+
+    // Permanent auction result state (set on AUCTION_SOLD, never cleared)
+    const [auctionResult, setAuctionResult] = useState<{ winnerName: string; price: number } | null>(null);
+
+    // Confetti cannon — fires from both bottom corners toward center
+    const fireConfetti = useCallback(() => {
+        const opts = {
+            particleCount: 140,
+            spread: 75,
+            startVelocity: 55,
+            gravity: 0.8,
+            colors: ['#FFD700', '#FFA500', '#FF6B35', '#00B4CC', '#FFFFFF', '#22c55e'],
+        };
+        confetti({ ...opts, origin: { x: 0.05, y: 1 }, angle: 65 });
+        confetti({ ...opts, origin: { x: 0.95, y: 1 }, angle: 115 });
+        // Second wave for more drama
+        setTimeout(() => {
+            confetti({ ...opts, particleCount: 80, origin: { x: 0.2, y: 0.8 }, angle: 80 });
+            confetti({ ...opts, particleCount: 80, origin: { x: 0.8, y: 0.8 }, angle: 100 });
+        }, 400);
+    }, []);
 
     // Countdown Gamification
     const [countdown, setCountdown] = useState(0);
@@ -438,6 +460,13 @@ function CustomArenaLayout({
                 setTimeout(() => {
                     setShowFinalization(false);
                 }, 10000); // hide overlay after 10s
+            } else if (dataObj.type === 'AUCTION_SOLD') {
+                // 🎊 Permanent auction result — sets the SATILDI overlay and fires confetti
+                const winner = dataObj.winnerName || "Katılımcı";
+                const price = Number(dataObj.price) || 0;
+                setAuctionResult({ winnerName: winner, price });
+                setAuctionStatus("IDLE");
+                fireConfetti();
             }
         } catch (e) {
             // Ignore non-json
@@ -500,7 +529,61 @@ function CustomArenaLayout({
                         <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
                     )}
 
-                    {/* SALE FINALIZATION OVERLAY */}
+                    {/* =============================================
+                        AUCTION_SOLD — PERMANENT SATILDI OVERLAY
+                        Covers the video; locks all bidding interaction.
+                    ============================================= */}
+                    {auctionResult && (
+                        <div className="absolute inset-0 flex flex-col items-center justify-center z-[200] bg-black/70 backdrop-blur-md">
+                            <div className="flex flex-col items-center gap-6 px-8 py-12 rounded-3xl border border-yellow-400/40"
+                                style={{
+                                    background: "linear-gradient(135deg, rgba(0,0,0,0.7) 0%, rgba(30,20,0,0.85) 100%)",
+                                    boxShadow: "0 0 80px rgba(234,179,8,0.35), 0 0 20px rgba(0,0,0,0.8)",
+                                }}>
+                                {/* Sold badge */}
+                                <div className="flex flex-col items-center">
+                                    <span className="text-8xl mb-2 drop-shadow-[0_0_25px_rgba(255,215,0,0.9)] animate-pulse">🏆</span>
+                                    <h1
+                                        className="text-6xl md:text-7xl font-black tracking-widest animate-pulse"
+                                        style={{
+                                            background: "linear-gradient(90deg, #FFD700 0%, #FFA500 40%, #FFD700 80%, #FFA500 100%)",
+                                            backgroundSize: "200% auto",
+                                            WebkitBackgroundClip: "text",
+                                            WebkitTextFillColor: "transparent",
+                                            textShadow: "none",
+                                            filter: "drop-shadow(0 0 20px rgba(255,165,0,0.7))",
+                                            animation: "shine 2s linear infinite, pulse 2s ease-in-out infinite",
+                                        }}
+                                    >
+                                        SATILDI!
+                                    </h1>
+                                </div>
+
+                                {/* Winner info */}
+                                <div className="flex flex-col items-center gap-2 mt-2">
+                                    <p className="text-white/70 text-sm font-semibold tracking-widest uppercase">Kazanan</p>
+                                    <p className="text-white text-2xl md:text-3xl font-black">{auctionResult.winnerName}</p>
+                                    <div
+                                        className="mt-2 px-6 py-2 rounded-2xl font-black text-3xl md:text-4xl"
+                                        style={{
+                                            background: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+                                            boxShadow: "0 0 30px rgba(16,185,129,0.5)",
+                                            color: "white",
+                                        }}
+                                    >
+                                        {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(auctionResult.price)}
+                                    </div>
+                                    <p className="text-white/50 text-sm text-center mt-1">
+                                        Bu ürün&nbsp;
+                                        <span className="text-white font-semibold">{auctionResult.winnerName}</span>
+                                        &nbsp;adlı kullanıcıya satılmıştır.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* SALE FINALIZATION OVERLAY (transient 10s animation) */}
                     {showFinalization && (
                         <div className="absolute inset-0 flex items-center justify-center z-[100] bg-black/80 backdrop-blur-sm pointer-events-none transition-all duration-500">
                             <div className="flex flex-col items-center bg-gradient-to-tr from-yellow-600/20 to-yellow-400/20 px-8 py-10 rounded-3xl border border-yellow-500/50 shadow-[0_0_60px_rgba(234,179,8,0.3)] transform scale-100 animate-[pulse_2s_ease-in-out_infinite]">
