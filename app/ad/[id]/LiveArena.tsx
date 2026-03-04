@@ -150,9 +150,16 @@ function CustomArenaLayout({
             if (resAccept.ok) {
                 const resFinalize = await fetch(`/api/bids/${liveHighestBidId}/finalize`, { method: "POST" });
                 if (resFinalize.ok) {
-                    alert("Satış tamamlandı!");
-                    // Signal auction end and sale finalized
+                    // 1️⃣ Broadcast AUCTION_SOLD signal to all room participants (DataChannel)
                     if (room) {
+                        const soldPayload = JSON.stringify({
+                            type: "AUCTION_SOLD",
+                            winnerId: liveHighestBidderId,
+                            winnerName: liveHighestBidderName || liveHighestBidderId || "Katılımcı",
+                            price: liveHighestBid,
+                        });
+                        room.localParticipant.publishData(new TextEncoder().encode(soldPayload), { reliable: true });
+
                         const payloadEnd = JSON.stringify({ type: "AUCTION_END" });
                         room.localParticipant.publishData(new TextEncoder().encode(payloadEnd), { reliable: true });
 
@@ -163,13 +170,28 @@ function CustomArenaLayout({
                         });
                         room.localParticipant.publishData(new TextEncoder().encode(payloadFinalized), { reliable: true });
                     }
+
+                    // 2️⃣ Call the secure finalize endpoint (marks Ad as SOLD, sends winner FCM)
+                    if (liveHighestBidderId) {
+                        fetch("/api/livekit/finalize", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                adId,
+                                winnerId: liveHighestBidderId,
+                                finalPrice: liveHighestBid,
+                            }),
+                        }).catch((e) => console.error("[FINALIZE] Error:", e));
+                    }
+
                     setCountdown(0);
                     setAuctionStatus("IDLE");
                 }
             }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
-    }, [liveHighestBidId, liveHighestBidderId, liveHighestBidderName, liveHighestBid, room]);
+    }, [liveHighestBidId, liveHighestBidderId, liveHighestBidderName, liveHighestBid, room, adId]);
+
 
     const handleReject = useCallback(async () => {
         if (!liveHighestBidId) return;

@@ -203,3 +203,57 @@ export async function notifyFollowersOfLive(
         console.error('[LIVE_NOTIFY] Failed to notify followers:', err);
     }
 }
+
+/**
+ * Sends an AUCTION_WON FCM push notification and in-app notification to the auction winner.
+ * Fire-and-forget friendly — catches all errors internally.
+ *
+ * @param winnerId   The userId of the winning bidder
+ * @param adId       The ad ID (for deep-link navigation)
+ * @param finalPrice The final sale price (for the notification message)
+ */
+export async function notifyAuctionWinner(
+    winnerId: string,
+    adId: string,
+    finalPrice: number
+): Promise<void> {
+    try {
+        const { prisma } = await import('./prisma');
+
+        // 1. Fetch the winner's FCM token
+        const winner = await prisma.user.findUnique({
+            where: { id: winnerId },
+            select: { fcmToken: true },
+        });
+
+        const formattedPrice = new Intl.NumberFormat('tr-TR', {
+            style: 'currency', currency: 'TRY', minimumFractionDigits: 0,
+        }).format(finalPrice);
+
+        const message = `Tebrikler! Açık artırmayı ${formattedPrice} fiyatla kazandınız! Ürün sizin oldu.`;
+
+        // 2. Create in-app notification
+        await prisma.notification.create({
+            data: {
+                userId: winnerId,
+                type: 'AUCTION_WON',
+                message,
+                link: `/ad/${adId}`,
+            },
+        });
+
+        // 3. Send FCM push if token available
+        if (winner?.fcmToken) {
+            await sendPushNotification(
+                winner.fcmToken,
+                'Tebrikler! 🎉',
+                message,
+                { type: 'AUCTION_WON', adId },
+            );
+        }
+
+        console.log(`[AUCTION_WON] Winner ${winnerId} notified for ad ${adId}`);
+    } catch (err) {
+        console.error('[AUCTION_WON] Failed to notify winner:', err);
+    }
+}

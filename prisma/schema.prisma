@@ -204,6 +204,7 @@ enum NotificationType {
   NEW_MESSAGE
   SYSTEM
   LIVE_STARTED
+  AUCTION_WON
 }
 
 enum AdStatus {
