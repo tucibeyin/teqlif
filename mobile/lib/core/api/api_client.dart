@@ -21,7 +21,9 @@ class ApiClient {
     // Log all requests/responses in debug mode
     if (kDebugMode) {
       _dio.interceptors.add(LogInterceptor(
+        requestHeader: true,
         requestBody: true,
+        responseHeader: false,
         responseBody: true,
         error: true,
         logPrint: (o) => debugPrint('[API] $o'),

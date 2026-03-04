@@ -7,6 +7,18 @@ if (!JWT_SECRET) {
     console.error("FATAL: NEXTAUTH_SECRET or AUTH_SECRET is not defined. Mobile auth will fail.");
 }
 
+function debugLog(line: string) {
+    const fs = require('fs');
+    const path = require('path');
+    const LOG_DIR = '/var/www/teqlif.com/logs';
+    const logFile = path.join(LOG_DIR, 'be_errors.log');
+    const fullLine = `[${new Date().toISOString()}] DEBUG | ${line}`;
+    console.log(fullLine);
+    try {
+        fs.appendFileSync(logFile, fullLine + '\n');
+    } catch (e) { }
+}
+
 interface MobileUser {
     id: string;
     email: string;
