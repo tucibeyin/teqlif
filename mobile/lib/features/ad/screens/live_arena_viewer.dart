@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
+import 'package:confetti/confetti.dart';
 import 'dart:ui';
 import 'dart:convert';
 import 'dart:async';
@@ -59,6 +60,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   int _lastReactionTime = 0;
   bool _isMuted = false;
   int? _countdownValue;
+
+  // 🎊 AUCTION_SOLD — permanent sold state
+  bool _isSold = false;
+  String? _soldWinnerName;
+  double? _soldFinalPrice;
+  late ConfettiController _confettiController;
 
   void _addReaction(String emoji) {
     if (!mounted) return;
@@ -153,6 +160,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       duration: const Duration(milliseconds: 600),
     );
 
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 5),
+    );
+
     // Initial sync for late joiners
     _isAuctionActive = widget.ad.isAuctionActive;
     _liveHighestBid = widget.ad.highestBidAmount;
@@ -182,6 +193,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     _inactivityTimer?.cancel();
     _hypeTimer?.cancel();
     _pulseController.dispose();
+    _confettiController.dispose();
     _chatCtrl.dispose();
     _chatFocus.dispose();
     _bidCtrl.dispose();
@@ -310,6 +322,22 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               ? (decoded['amount'] as num).toDouble()
               : null;
           _showFinalizationOverlayAlert(winnerName, amount);
+          return;
+        } else if (type == 'AUCTION_SOLD') {
+          // 🎊 Permanent SATILDI overlay — fires confetti and locks all bidding
+          final winner = decoded['winnerName']?.toString() ?? 'Katılımcı';
+          final price = decoded['price'] != null
+              ? (decoded['price'] as num).toDouble()
+              : 0.0;
+          if (mounted) {
+            setState(() {
+              _isSold = true;
+              _soldWinnerName = winner;
+              _soldFinalPrice = price;
+              _isAuctionActive = false;
+            });
+            _confettiController.play();
+          }
           return;
         } else if (type == 'CHAT') {
           final chatText = decoded['text']?.toString() ?? '';
@@ -1120,7 +1148,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               top: 0,
               bottom: 0,
               child: IgnorePointer(
-                ignoring: !_uiVisible,
+                ignoring: !_uiVisible || _isSold, // Lock UI when sold
                 child: !isDisconnected
                     ? SafeArea(
                         child: OrientationBuilder(
@@ -1138,6 +1166,125 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                     : const SizedBox.shrink(),
               ),
             ),
+
+            // 🎊 AUCTION_SOLD — Permanent SATILDI Full-Screen Overlay
+            if (_isSold)
+              Positioned.fill(
+                child: ClipRect(
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                    child: Container(
+                      color: Colors.black.withOpacity(0.72),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          // Confetti fires from top-center
+                          Align(
+                            alignment: Alignment.topCenter,
+                            child: ConfettiWidget(
+                              confettiController: _confettiController,
+                              blastDirectionality: BlastDirectionality.explosive,
+                              shouldLoop: false,
+                              numberOfParticles: 60,
+                              maxBlastForce: 55,
+                              minBlastForce: 25,
+                              emissionFrequency: 0.06,
+                              colors: const [
+                                Colors.amber, Color(0xFFFFA500),
+                                Color(0xFF00B4CC), Colors.white,
+                                Color(0xFF22c55e), Color(0xFFFF6B35),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          // Trophy
+                          const Text('🏆', style: TextStyle(fontSize: 72)),
+                          const SizedBox(height: 12),
+                          // SATILDI! text with golden glow
+                          ShaderMask(
+                            shaderCallback: (bounds) => const LinearGradient(
+                              colors: [Color(0xFFFFD700), Color(0xFFFFA500), Color(0xFFFFD700)],
+                            ).createShader(bounds),
+                            child: const Text(
+                              'SATILDI!',
+                              style: TextStyle(
+                                fontSize: 64,
+                                fontWeight: FontWeight.w900,
+                                color: Colors.white,
+                                letterSpacing: 4,
+                                shadows: [
+                                  Shadow(color: Color(0xFFFF8C00), blurRadius: 30),
+                                  Shadow(color: Color(0xFFFFD700), blurRadius: 50),
+                                ],
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Winner label
+                          const Text(
+                            'KAZANAN',
+                            style: TextStyle(
+                              color: Colors.white54,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 3,
+                            ),
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            _soldWinnerName ?? 'Katılımcı',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 26,
+                              fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          // Price badge
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                colors: [Color(0xFF10b981), Color(0xFF059669)],
+                              ),
+                              borderRadius: BorderRadius.circular(30),
+                              boxShadow: const [
+                                BoxShadow(
+                                  color: Color(0x5010b981),
+                                  blurRadius: 24,
+                                  spreadRadius: 4,
+                                ),
+                              ],
+                            ),
+                            child: Text(
+                              '₺${_soldFinalPrice?.toStringAsFixed(0) ?? '-'}',
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 36,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 32),
+                            child: Text(
+                              'Bu ürün ${_soldWinnerName ?? 'Katılımcı'} adlı kullanıcıya '
+                              '₺${_soldFinalPrice?.toStringAsFixed(0) ?? '-'}\'ye satılmıştır.',
+                              style: const TextStyle(
+                                color: Colors.white60,
+                                fontSize: 14,
+                                height: 1.5,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
           ],
         ),
       ),

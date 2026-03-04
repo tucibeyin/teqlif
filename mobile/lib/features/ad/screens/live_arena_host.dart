@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
+import 'package:confetti/confetti.dart';
 import 'dart:ui';
 import 'dart:convert';
 import 'package:permission_handler/permission_handler.dart';
@@ -84,6 +85,12 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
   double? _finalizedAmount;
   bool _showFinalizationOverlay = false;
 
+  // 🎊 AUCTION_SOLD — permanent sold state
+  bool _isSold = false;
+  String? _soldWinnerName;
+  double? _soldFinalPrice;
+  late ConfettiController _confettiController;
+
   void _sendReaction(String emoji) {
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room == null) return;
@@ -115,6 +122,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 500),
+    );
+
+    _confettiController = ConfettiController(
+      duration: const Duration(seconds: 5),
     );
 
     // Connect to room as Host
@@ -175,6 +186,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
     ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+    _pulseController.dispose();
+    _confettiController.dispose();
     // Restore system UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
@@ -289,6 +302,22 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
             ? (dataObj['amount'] as num).toDouble()
             : null;
         _showFinalizationOverlayAlert(winnerName, amount);
+        return;
+      } else if (dataObj['type'] == 'AUCTION_SOLD') {
+        // 🎊 Host sees the SATILDI overlay too (reflects the finalized sale)
+        final winner = dataObj['winnerName']?.toString() ?? 'Katılımcı';
+        final price = dataObj['price'] != null
+            ? (dataObj['price'] as num).toDouble()
+            : 0.0;
+        if (mounted) {
+          setState(() {
+            _isSold = true;
+            _soldWinnerName = winner;
+            _soldFinalPrice = price;
+            _isAuctionActive = false;
+          });
+          _confettiController.play();
+        }
         return;
       } else if (dataObj['type'] == 'BID_REJECTED') {
         final bidId = dataObj['bidId']?.toString();
@@ -977,6 +1006,111 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
             },
           ),
           _buildFinalizationOverlay(),
+
+          // 🎊 AUCTION_SOLD — Permanent SATILDI Full-Screen Overlay (Host)
+          if (_isSold)
+            Positioned.fill(
+              child: ClipRect(
+                child: BackdropFilter(
+                  filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+                  child: Container(
+                    color: Colors.black.withOpacity(0.72),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Align(
+                          alignment: Alignment.topCenter,
+                          child: ConfettiWidget(
+                            confettiController: _confettiController,
+                            blastDirectionality: BlastDirectionality.explosive,
+                            shouldLoop: false,
+                            numberOfParticles: 60,
+                            maxBlastForce: 55,
+                            minBlastForce: 25,
+                            emissionFrequency: 0.06,
+                            colors: const [
+                              Colors.amber, Color(0xFFFFA500),
+                              Color(0xFF00B4CC), Colors.white,
+                              Color(0xFF22c55e), Color(0xFFFF6B35),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 24),
+                        const Text('🏆', style: TextStyle(fontSize: 72)),
+                        const SizedBox(height: 12),
+                        ShaderMask(
+                          shaderCallback: (bounds) => const LinearGradient(
+                            colors: [Color(0xFFFFD700), Color(0xFFFFA500), Color(0xFFFFD700)],
+                          ).createShader(bounds),
+                          child: const Text(
+                            'SATILDI!',
+                            style: TextStyle(
+                              fontSize: 64,
+                              fontWeight: FontWeight.w900,
+                              color: Colors.white,
+                              letterSpacing: 4,
+                              shadows: [
+                                Shadow(color: Color(0xFFFF8C00), blurRadius: 30),
+                                Shadow(color: Color(0xFFFFD700), blurRadius: 50),
+                              ],
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        const Text(
+                          'KAZANAN',
+                          style: TextStyle(
+                            color: Colors.white54, fontSize: 12,
+                            fontWeight: FontWeight.w800, letterSpacing: 3,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          _soldWinnerName ?? 'Katılımcı',
+                          style: const TextStyle(
+                            color: Colors.white, fontSize: 26,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                        const SizedBox(height: 16),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              colors: [Color(0xFF10b981), Color(0xFF059669)],
+                            ),
+                            borderRadius: BorderRadius.circular(30),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x5010b981), blurRadius: 24, spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          child: Text(
+                            '₺${_soldFinalPrice?.toStringAsFixed(0) ?? '-'}',
+                            style: const TextStyle(
+                              color: Colors.white, fontSize: 36, fontWeight: FontWeight.w900,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(height: 20),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 32),
+                          child: Text(
+                            'Bu ürün ${_soldWinnerName ?? 'Katılımcı'} adlı kullanıcıya '
+                            '₺${_soldFinalPrice?.toStringAsFixed(0) ?? '-'}\'ye satılmıştır.',
+                            style: const TextStyle(
+                              color: Colors.white60, fontSize: 14, height: 1.5,
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
         ],
       ),
     );
