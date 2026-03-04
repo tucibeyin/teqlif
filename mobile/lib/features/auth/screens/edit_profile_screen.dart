@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/api/api_client.dart';
+import '../../../core/api/endpoints.dart';
 import '../../../core/models/user.dart';
 import '../../../core/providers/auth_provider.dart';
+import '../../../core/services/app_logger.dart';
 
 class EditProfileScreen extends ConsumerStatefulWidget {
   const EditProfileScreen({super.key});
@@ -24,6 +26,7 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
   
   bool _isLoading = false;
   bool _isSaving = false;
+  bool _isDeleting = false;
   String? _error;
 
   @override
@@ -130,6 +133,102 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
     }
   }
 
+  Future<void> _deleteAccount() async {
+    // Show confirmation dialog
+    final confirmed = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) {
+        final confirmCtrl = TextEditingController();
+        bool canDelete = false;
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) => AlertDialog(
+            title: const Row(
+              children: [
+                Icon(Icons.warning_amber_rounded, color: Colors.red, size: 28),
+                SizedBox(width: 8),
+                Text('Hesabı Sil', style: TextStyle(color: Colors.red, fontWeight: FontWeight.w700)),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Bu işlem geri alınamaz. Hesabınız, tüm ilanlarınız, teklifleriniz ve mesajlarınız kalıcı olarak silinecektir.',
+                  style: TextStyle(fontSize: 13, height: 1.5),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Onaylamak için aşağıya SİL yazın:',
+                  style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                ),
+                const SizedBox(height: 8),
+                TextField(
+                  controller: confirmCtrl,
+                  autofocus: true,
+                  decoration: const InputDecoration(
+                    hintText: 'SİL',
+                    border: OutlineInputBorder(),
+                    contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                  ),
+                  onChanged: (v) => setDialogState(() => canDelete = v == 'SİL'),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(false),
+                child: const Text('Vazgeç'),
+              ),
+              ElevatedButton(
+                onPressed: canDelete ? () => Navigator.of(ctx).pop(true) : null,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  disabledBackgroundColor: Colors.red.shade200,
+                ),
+                child: const Text('Hesabımı Sil', style: TextStyle(fontWeight: FontWeight.w700)),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isDeleting = true);
+    try {
+      final res = await ApiClient().delete(Endpoints.deleteAccount);
+      if (res.statusCode == 200) {
+        await ref.read(authProvider.notifier).logout();
+        if (mounted) context.go('/login');
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hesap silinemedi. Lütfen tekrar deneyin.'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      AppLogger.error('Delete account failed', error: e, context: 'EditProfileScreen');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Bir hata oluştu. Lütfen tekrar deneyin.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isDeleting = false);
+    }
+  }
+
   @override
   void dispose() {
     _nameCtrl.dispose();
@@ -231,13 +330,38 @@ class _EditProfileScreenState extends ConsumerState<EditProfileScreen> {
                         foregroundColor: Colors.white,
                       ),
                       child: _isSaving
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
-                            )
+                          ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                           : const Text('Değişiklikleri Kaydet', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
                     ),
+                    const SizedBox(height: 24),
+                    const Divider(thickness: 1),
+                    const SizedBox(height: 8),
+                    const Text(
+                      '⚠️ Tehlikeli Bölge',
+                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w700, color: Colors.red),
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Bu işlem geri alınamaz. Hesabınız ve tüm verileriniz kalıcı olarak silinir.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                    const SizedBox(height: 12),
+                    OutlinedButton.icon(
+                      onPressed: _isDeleting ? null : _deleteAccount,
+                      icon: _isDeleting
+                          ? const SizedBox(width: 16, height: 16, child: CircularProgressIndicator(color: Colors.red, strokeWidth: 2))
+                          : const Icon(Icons.delete_forever_outlined, color: Colors.red, size: 20),
+                      label: Text(
+                        _isDeleting ? 'Siliniyor...' : 'Hesabımı Sil',
+                        style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600),
+                      ),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(color: Colors.red),
+                        padding: const EdgeInsets.symmetric(vertical: 14),
+                        minimumSize: const Size(double.infinity, 0),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
                   ],
                 ),
               ),

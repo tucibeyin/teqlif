@@ -2,8 +2,8 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useSession } from "next-auth/react";
-import { ArrowLeft, X } from "lucide-react";
+import { useSession, signOut } from "next-auth/react";
+import { ArrowLeft, X, Trash2 } from "lucide-react";
 import Link from "next/link";
 
 export default function ProfilePage() {
@@ -19,6 +19,11 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [message, setMessage] = useState({ text: "", type: "" });
+
+    // Delete account states
+    const [showDeleteModal, setShowDeleteModal] = useState(false);
+    const [deleteConfirmText, setDeleteConfirmText] = useState("");
+    const [deleting, setDeleting] = useState(false);
 
     // 2FA Verification States
     const [showVerificationModal, setShowVerificationModal] = useState(false);
@@ -99,6 +104,26 @@ export default function ProfilePage() {
             return;
         }
         handleSubmit(undefined, verificationCode);
+    };
+
+    const handleDeleteAccount = async () => {
+        if (deleteConfirmText !== "SİL") return;
+        setDeleting(true);
+        try {
+            const res = await fetch("/api/profile/delete", { method: "DELETE" });
+            if (res.ok) {
+                await signOut({ redirect: false });
+                router.push("/");
+            } else {
+                setMessage({ text: "Hesap silinemedi. Lütfen tekrar deneyin.", type: "error" });
+                setShowDeleteModal(false);
+            }
+        } catch {
+            setMessage({ text: "Bir ağ hatası oluştu.", type: "error" });
+            setShowDeleteModal(false);
+        } finally {
+            setDeleting(false);
+        }
     };
 
     if (loading) {
@@ -225,6 +250,33 @@ export default function ProfilePage() {
                             {saving ? "Kod Gönderiliyor..." : "Değişiklikleri Kaydet"}
                         </button>
                     </form>
+
+                    {/* Danger Zone */}
+                    <div style={{ marginTop: "2rem", paddingTop: "1.5rem", borderTop: "1px solid var(--border)" }}>
+                        <p style={{ fontSize: "0.8rem", color: "var(--text-secondary)", marginBottom: "0.75rem" }}>
+                            ⚠️ Bu işlem geri alınamaz. Hesabınız ve tüm verileriniz kalıcı olarak silinir.
+                        </p>
+                        <button
+                            type="button"
+                            onClick={() => { setShowDeleteModal(true); setDeleteConfirmText(""); }}
+                            style={{
+                                display: "flex",
+                                alignItems: "center",
+                                gap: "0.5rem",
+                                padding: "0.6rem 1.2rem",
+                                background: "transparent",
+                                border: "1px solid #ef4444",
+                                borderRadius: "var(--radius-md)",
+                                color: "#ef4444",
+                                fontWeight: 600,
+                                fontSize: "0.875rem",
+                                cursor: "pointer",
+                            }}
+                        >
+                            <Trash2 size={16} />
+                            Hesabımı Sil
+                        </button>
+                    </div>
                 </div>
             </div>
 
@@ -232,16 +284,10 @@ export default function ProfilePage() {
             {showVerificationModal && (
                 <div style={{
                     position: "fixed",
-                    top: 0,
-                    left: 0,
-                    right: 0,
-                    bottom: 0,
+                    top: 0, left: 0, right: 0, bottom: 0,
                     backgroundColor: "rgba(0,0,0,0.5)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    zIndex: 1000,
-                    padding: "1rem"
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    zIndex: 1000, padding: "1rem"
                 }}>
                     <div className="auth-card" style={{ maxWidth: "400px", width: "100%", padding: "2rem", background: "white", borderRadius: "var(--radius-lg)", position: "relative" }}>
                         <button
@@ -258,14 +304,10 @@ export default function ProfilePage() {
 
                         {message.text && (
                             <div style={{
-                                padding: "0.75rem",
-                                borderRadius: "var(--radius-md)",
-                                marginBottom: "1.5rem",
+                                padding: "0.75rem", borderRadius: "var(--radius-md)", marginBottom: "1.5rem",
                                 backgroundColor: message.type === "error" ? "rgba(239, 68, 68, 0.1)" : "rgba(34, 197, 94, 0.1)",
                                 color: message.type === "error" ? "var(--error)" : "var(--success)",
-                                fontWeight: 500,
-                                fontSize: "0.875rem",
-                                textAlign: "center"
+                                fontWeight: 500, fontSize: "0.875rem", textAlign: "center"
                             }}>
                                 {message.text}
                             </div>
@@ -274,26 +316,83 @@ export default function ProfilePage() {
                         <form onSubmit={handleVerify}>
                             <div className="form-group" style={{ textAlign: "center" }}>
                                 <input
-                                    type="text"
-                                    maxLength={6}
-                                    className="form-input"
+                                    type="text" maxLength={6} className="form-input"
                                     style={{ textAlign: "center", fontSize: "1.5rem", letterSpacing: "8px", fontWeight: 700 }}
                                     value={verificationCode}
                                     onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, ""))}
-                                    placeholder="000000"
-                                    required
-                                    autoFocus
+                                    placeholder="000000" required autoFocus
                                 />
                             </div>
-                            <button
-                                type="submit"
-                                className="btn btn-primary"
-                                style={{ width: "100%", marginTop: "1rem" }}
-                                disabled={verifying}
-                            >
+                            <button type="submit" className="btn btn-primary"
+                                style={{ width: "100%", marginTop: "1rem" }} disabled={verifying}>
                                 {verifying ? "Doğrulanıyor..." : "Onayla ve Kaydet"}
                             </button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Delete Account Modal */}
+            {showDeleteModal && (
+                <div style={{
+                    position: "fixed",
+                    top: 0, left: 0, right: 0, bottom: 0,
+                    backgroundColor: "rgba(0,0,0,0.6)",
+                    display: "flex", alignItems: "center", justifyContent: "center",
+                    zIndex: 1000, padding: "1rem"
+                }}>
+                    <div style={{
+                        maxWidth: "420px", width: "100%", padding: "2rem",
+                        background: "white", borderRadius: "var(--radius-lg)",
+                        position: "relative", boxShadow: "0 20px 60px rgba(0,0,0,0.2)"
+                    }}>
+                        <button
+                            onClick={() => setShowDeleteModal(false)}
+                            style={{ position: "absolute", top: "1rem", right: "1rem", border: "none", background: "none", cursor: "pointer", color: "var(--text-secondary)" }}
+                        >
+                            <X size={20} />
+                        </button>
+
+                        <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+                            <div style={{ fontSize: "3rem", marginBottom: "0.5rem" }}>⚠️</div>
+                            <h2 style={{ fontSize: "1.3rem", fontWeight: 700, color: "#ef4444", marginBottom: "0.5rem" }}>Hesabı Sil</h2>
+                            <p style={{ fontSize: "0.875rem", color: "var(--text-secondary)", lineHeight: 1.6 }}>
+                                Bu işlem <strong>geri alınamaz</strong>. Hesabınız, tüm ilanlarınız, teklifleriniz ve mesajlarınız kalıcı olarak silinecektir.
+                            </p>
+                        </div>
+
+                        <div style={{ marginBottom: "1.5rem" }}>
+                            <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.5rem", color: "#374151" }}>
+                                Onaylamak için aşağıya <strong style={{ color: "#ef4444" }}>SİL</strong> yazın:
+                            </label>
+                            <input
+                                type="text"
+                                className="form-input"
+                                value={deleteConfirmText}
+                                onChange={(e) => setDeleteConfirmText(e.target.value)}
+                                placeholder="SİL"
+                                autoFocus
+                            />
+                        </div>
+
+                        <button
+                            onClick={handleDeleteAccount}
+                            disabled={deleteConfirmText !== "SİL" || deleting}
+                            style={{
+                                width: "100%",
+                                padding: "0.75rem",
+                                background: deleteConfirmText === "SİL" ? "#ef4444" : "#fca5a5",
+                                color: "white",
+                                border: "none",
+                                borderRadius: "var(--radius-md)",
+                                fontWeight: 700,
+                                fontSize: "0.95rem",
+                                cursor: deleteConfirmText === "SİL" ? "pointer" : "not-allowed",
+                                transition: "background 0.2s"
+                            }}
+                        >
+                            {deleting ? "Siliniyor..." : "Hesabımı Kalıcı Olarak Sil"}
+                        </button>
                     </div>
                 </div>
             )}
