@@ -13,6 +13,7 @@ export default function RegisterPage() {
     const [verifyCode, setVerifyCode] = useState("");
     const [loading, setLoading] = useState(false);
     const [userName, setUserName] = useState("");
+    const [eulaAccepted, setEulaAccepted] = useState(false);
 
     async function handleRegister(e: React.FormEvent<HTMLFormElement>) {
         e.preventDefault();
@@ -185,7 +186,21 @@ export default function RegisterPage() {
                         <label htmlFor="confirm">Şifre Tekrar</label>
                         <input id="confirm" name="confirm" type="password" className="input" placeholder="Şifrenizi tekrar girin" required />
                     </div>
-                    <button type="submit" id="register-btn" className="btn btn-primary btn-full btn-lg" disabled={loading}>
+                    <div className="form-group" style={{ display: "flex", alignItems: "flex-start", gap: "0.5rem", marginTop: "1rem" }}>
+                        <input
+                            id="eula"
+                            name="eula"
+                            type="checkbox"
+                            checked={eulaAccepted}
+                            onChange={(e) => setEulaAccepted(e.target.checked)}
+                            style={{ marginTop: "0.25rem", width: "1.25rem", height: "1.25rem", cursor: "pointer" }}
+                            required
+                        />
+                        <label htmlFor="eula" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", cursor: "pointer", lineHeight: "1.4" }}>
+                            Kullanım Koşullarını ve EULA&apos;yı kabul ediyorum. Sakıncalı içerik ve taciz edici davranışlara tolerans gösterilmeyeceğini, ihlal durumunda hesabımın 24 saat içinde kapatılabileceğini biliyorum.
+                        </label>
+                    </div>
+                    <button type="submit" id="register-btn" className="btn btn-primary btn-full btn-lg" disabled={loading || !eulaAccepted} style={{ marginTop: "1.5rem" }}>
                         {loading ? "Hesap oluşturuluyor..." : "🚀 Üye Ol"}
                     </button>
                 </form>

@@ -704,7 +704,7 @@ class _PostAdScreenState extends ConsumerState<PostAdScreen> {
                     SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        'İçeriğiniz denetlenecektir. Apple UGC kuralları gereği sakıncalı içerik veya taciz edici davranışlar hesabınızın 24 saat içinde kapatılmasına neden olabilir.',
+                        'İçeriğiniz denetlenecektir. Kurallar gereği sakıncalı içerik veya taciz edici davranışlar hesabınızın 24 saat içinde kapatılmasına neden olabilir.',
                         style: TextStyle(
                           fontSize: 12,
                           color: Color(0xFFB91C1C),

@@ -558,6 +558,23 @@ export default function PostAdPage() {
                             </div>
                         </div>
 
+                        <div style={{
+                            marginBottom: "1.5rem",
+                            padding: "1rem",
+                            background: "#fef2f2",
+                            border: "1px solid #fca5a5",
+                            borderRadius: "var(--radius-md)",
+                            display: "flex",
+                            gap: "0.75rem",
+                            alignItems: "center",
+                            color: "#b91c1c"
+                        }}>
+                            <span style={{ fontSize: "1.5rem" }}>⚠️</span>
+                            <p style={{ fontSize: "0.875rem", fontWeight: 500, margin: 0 }}>
+                                İçeriğiniz denetlenecektir. Kurallar gereği sakıncalı içerik veya taciz edici davranışlar hesabınızın 24 saat içinde kapatılmasına neden olabilir.
+                            </p>
+                        </div>
+
                         <button type="submit" className="btn btn-primary btn-full btn-lg" disabled={loading}>
                             {loading ? "İlan yayınlanıyor..." : "🚀 İlanı Yayınla"}
                         </button>
