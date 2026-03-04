@@ -28,25 +28,25 @@ export async function Navbar() {
                                     + İlan Ver
                                 </Link>
                                 <NotificationBell />
-                                <Link href="/support" className="btn btn-ghost btn-sm hidden md:flex text-[var(--primary)]">
-                                    Destek
-                                </Link>
                                 <Link href="/dashboard" className="btn btn-ghost btn-sm">
                                     Hesabım
                                 </Link>
                                 <MessageBell />
                                 <LogoutButton onLogout={handleSignOut} />
+                                <Link href="/support" className="btn btn-ghost btn-sm hidden md:flex text-[var(--primary)]">
+                                    Destek
+                                </Link>
                             </>
                         ) : (
                             <>
-                                <Link href="/support" className="btn btn-ghost btn-sm hidden md:flex">
-                                    Destek
-                                </Link>
                                 <Link href="/login" className="btn btn-ghost btn-sm">
                                     Giriş Yap
                                 </Link>
                                 <Link href="/register" className="btn btn-primary btn-sm">
                                     Üye Ol
+                                </Link>
+                                <Link href="/support" className="btn btn-ghost btn-sm hidden md:flex">
+                                    Destek
                                 </Link>
                             </>
                         )}
