@@ -14,6 +14,7 @@ import 'config/theme.dart';
 import 'core/api/api_client.dart';
 import 'core/api/endpoints.dart';
 import 'core/providers/auth_provider.dart';
+import 'core/services/app_logger.dart';
 import 'features/notifications/providers/unread_counts_provider.dart';
 import 'features/notifications/providers/notifications_provider.dart';
 import 'features/ad/providers/ad_detail_provider.dart';
@@ -274,7 +275,41 @@ void main() async {
   // Background handler
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-  runApp(const ProviderScope(child: TeqlifApp()));
+  // ─── Global Error Logging ────────────────────────────────────────────────
+  // 1. Flutter framework errors (widget build, layout, rendering)
+  FlutterError.onError = (FlutterErrorDetails details) {
+    AppLogger.error(
+      details.exceptionAsString(),
+      stackTrace: details.stack,
+      context: 'FlutterError',
+    );
+    FlutterError.presentError(details); // still show red screen in debug
+  };
+
+  // 2. Dart async / platform channel errors
+  PlatformDispatcher.instance.onError = (Object error, StackTrace stack) {
+    AppLogger.error(
+      error.toString(),
+      error: error,
+      stackTrace: stack,
+      context: 'PlatformDispatcher',
+    );
+    return true;
+  };
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // 3. All remaining uncaught Dart exceptions via zone
+  runZonedGuarded(
+    () => runApp(const ProviderScope(child: TeqlifApp())),
+    (Object error, StackTrace stack) {
+      AppLogger.error(
+        error.toString(),
+        error: error,
+        stackTrace: stack,
+        context: 'ZonedGuarded',
+      );
+    },
+  );
 }
 
 class TeqlifApp extends ConsumerStatefulWidget {

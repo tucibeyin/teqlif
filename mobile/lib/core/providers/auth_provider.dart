@@ -2,11 +2,12 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:dio/dio.dart';
-import 'package:firebase_messaging/firebase_messaging.dart'; // Yeni import
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'dart:convert';
 import '../models/user.dart';
 import '../api/api_client.dart';
 import '../api/endpoints.dart';
+import '../services/app_logger.dart';
 
 class AuthState {
   final bool isLoading;
@@ -54,6 +55,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
         final user =
             UserModel.fromJson(json.decode(userJson) as Map<String, dynamic>);
         state = AuthState(isLoading: false, user: user);
+        AppLogger.setUserId(user.id); // Attach user to error logs
         
         // Oturum varsa FCM Token'ı alıp sunucuya gönderelim
         _refreshPushToken();
@@ -105,6 +107,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
       await _storage.write(key: 'user_data', value: json.encode(user.toJson()));
 
       state = AuthState(isLoading: false, user: user);
+      AppLogger.setUserId(user.id); // Attach user to error logs
       
       // Giriş başarılı olduktan hemen sonra token'ı kaydet
       _refreshPushToken();
@@ -220,6 +223,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
     // 5. Clear Dio auth header
     await _api.clearToken();
+    AppLogger.setUserId(null); // Clear user from error logs
   }
 
   Future<void> updateUserState(UserModel user) async {

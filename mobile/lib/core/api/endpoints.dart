@@ -17,6 +17,7 @@ class Endpoints {
   static const verifyEmail = '/api/auth/verify-email';
   static const forgotPassword = '/api/auth/forgot-password';
   static const resetPassword = '/api/auth/reset-password';
+  static const logError = '/api/log-error';
 
   // Ads
   static const ads = '/api/ads';
