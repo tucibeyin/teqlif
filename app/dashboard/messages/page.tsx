@@ -509,38 +509,8 @@ function MessagesContent() {
                                     })}
                                 </div>
 
-                                {/* Mesaj Gönderme Formu or Disabled Message */}
+                                {/* Mesaj Gönderme Formu */}
                                 <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                                    {!activeConversation.ad ? (
-                                        <div style={{
-                                            textAlign: 'center',
-                                            padding: '0.5rem',
-                                            background: '#F9FAFB',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-muted)',
-                                            fontSize: '0.9rem',
-                                            fontWeight: 500,
-                                            fontStyle: 'italic',
-                                            border: '1px dashed var(--border)'
-                                        }}>
-                                            Bu ilan yayından kaldırıldığı için yeni mesaj gönderilemez.
-                                        </div>
-                                    ) : activeConversation.ad.status === 'SOLD' &&
-                                        activeConversation.ad.winnerId !== currentUserId &&
-                                        activeConversation.ad.userId !== currentUserId ? (
-                                        <div style={{
-                                            textAlign: 'center',
-                                            padding: '0.75rem',
-                                            background: 'var(--bg-secondary)',
-                                            borderRadius: 'var(--radius-md)',
-                                            color: 'var(--text-muted)',
-                                            fontSize: '0.9rem',
-                                            fontWeight: 600,
-                                            border: '1px solid var(--border)'
-                                        }}>
-                                            İlan satıldı. Mesajlaşma sadece alıcı ve satıcı için aktiftir.
-                                        </div>
-                                    ) : (
                                         <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                             {replyTo && (
                                                 <div style={{
@@ -588,26 +558,25 @@ function MessagesContent() {
                                                 </button>
                                             </form>
                                         </div>
-                                    )}
+                                    </div>
+                                </>
+                                ) : (
+                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: '1rem' }}>
+                                    <div style={{ fontSize: '3rem', opacity: 0.2 }}>💬</div>
+                                    <p>Sohbete başlamak için soldan bir kişi seçin.</p>
                                 </div>
-                            </>
-                        ) : (
-                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: '1rem' }}>
-                                <div style={{ fontSize: '3rem', opacity: 0.2 }}>💬</div>
-                                <p>Sohbete başlamak için soldan bir kişi seçin.</p>
-                            </div>
                         )}
-                    </div>
+                            </div>
                 )}
-            </div>
+                    </div>
         </div>
-    );
+            );
 }
 
-export default function MessagesPage() {
+            export default function MessagesPage() {
     return (
-        <Suspense fallback={<div className="container" style={{ padding: '2rem 0', textAlign: 'center' }}>Yükleniyor...</div>}>
-            <MessagesContent />
-        </Suspense>
-    );
+            <Suspense fallback={<div className="container" style={{ padding: '2rem 0', textAlign: 'center' }}>Yükleniyor...</div>}>
+                <MessagesContent />
+            </Suspense>
+            );
 }

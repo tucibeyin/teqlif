@@ -233,37 +233,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           convAsync.when(
             skipLoadingOnReload: true,
             data: (conv) {
-              if (conv.ad == null) {
-                return Container(
-                  width: double.infinity,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF9FAFB),
-                    border:
-                        Border(bottom: BorderSide(color: Color(0xFFE2EBF0))),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.info_outline,
-                          size: 18, color: Color(0xFF9AAAB8)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Bu ilan yayından kaldırılmıştır.',
-                          style: const TextStyle(
-                            color: Color(0xFF9AAAB8),
-                            fontStyle: FontStyle.italic,
-                            fontSize: 13,
-                          ),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                      ),
-                    ],
-                  ),
-                );
-              }
+              if (conv.ad == null) return const SizedBox();
+
               return GestureDetector(
                 onTap: () => context.push('/ad/${conv.ad!.id}'),
                 child: Container(
@@ -335,58 +306,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ...[
             convAsync.when(
               data: (conv) {
-              final isSold = conv.ad?.status == 'SOLD';
-              final isWinner = conv.ad?.winnerId == currentUserId;
-              final isSeller = conv.ad?.userId == currentUserId;
-              final isRestricted = isSold && !isWinner && !isSeller;
 
-              if (conv.ad == null) {
-                return Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.only(
-                      left: 12,
-                      right: 12,
-                      bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-                      top: 12),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF9FAFB),
-                    border: Border(top: BorderSide(color: Color(0xFFE2EBF0))),
-                  ),
-                  child: const Text(
-                    'Bu ilan yayından kaldırıldığı için mesaj gönderilemez.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF9AAAB8),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                );
-              }
-
-              if (isRestricted) {
-                return Container(
-                  width: double.infinity,
-                  padding: EdgeInsets.only(
-                      left: 12,
-                      right: 12,
-                      bottom: MediaQuery.of(context).viewInsets.bottom + 12,
-                      top: 12),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFF9FAFB),
-                    border: Border(top: BorderSide(color: Color(0xFFE2EBF0))),
-                  ),
-                  child: const Text(
-                    'İlan satıldı. Mesajlaşma sadece alıcı ve satıcı için aktiftir.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Color(0xFF9AAAB8),
-                      fontSize: 13,
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
-                );
-              }
 
               return Container(
                 padding: EdgeInsets.only(
