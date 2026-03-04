@@ -89,6 +89,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
   bool _isSold = false;
   String? _soldWinnerName;
   double? _soldFinalPrice;
+  bool _showSoldOverlay = false;
   late ConfettiController _confettiController;
 
   void _sendReaction(String emoji) {
@@ -326,6 +327,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         if (mounted) {
           setState(() {
             _isSold = true;
+            _showSoldOverlay = true;
             _soldWinnerName = winner;
             _soldFinalPrice = price;
             _isAuctionActive = false;
@@ -1022,7 +1024,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
           _buildFinalizationOverlay(),
 
           // 🎊 AUCTION_SOLD — Permanent SATILDI Full-Screen Overlay (Host)
-          if (_isSold)
+          if (_isSold && _showSoldOverlay)
             Positioned.fill(
               child: ClipRect(
                 child: BackdropFilter(
@@ -1122,17 +1124,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                         const SizedBox(height: 32),
                         ElevatedButton.icon(
                           onPressed: () {
-                            // Explicit cleanup — disconnect first, then delay nav so invalidate fires cleanly
-                            final router = GoRouter.of(context);
-                            ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-                            Future.delayed(const Duration(milliseconds: 100), () {
-                              try { ref.invalidate(adDetailProvider(widget.ad.id)); } catch (_) {}
-                              router.go('/home');
-                            });
+                            if (mounted) {
+                              setState(() => _showSoldOverlay = false);
+                            }
                           },
-                          icon: const Icon(Icons.home_outlined, color: Colors.white),
+                          icon: const Icon(Icons.close, color: Colors.white),
                           label: const Text(
-                            'Ana Sayfaya Dön',
+                            'Yayına Dön / Kapat',
                             style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                           ),
                           style: ElevatedButton.styleFrom(

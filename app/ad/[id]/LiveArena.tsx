@@ -132,6 +132,7 @@ function CustomArenaLayout({
 
     // Permanent auction result state (set on AUCTION_SOLD, never cleared)
     const [auctionResult, setAuctionResult] = useState<{ winnerName: string; price: number } | null>(null);
+    const [showSoldOverlay, setShowSoldOverlay] = useState<boolean>(true);
 
     // Confetti cannon — fires from both bottom corners toward center
     const fireConfetti = useCallback(() => {
@@ -465,6 +466,7 @@ function CustomArenaLayout({
                 const winner = dataObj.winnerName || "Katılımcı";
                 const price = Number(dataObj.price) || 0;
                 setAuctionResult({ winnerName: winner, price });
+                setShowSoldOverlay(true);
                 setAuctionStatus("IDLE");
                 fireConfetti();
             }
@@ -533,7 +535,7 @@ function CustomArenaLayout({
                         AUCTION_SOLD — PERMANENT SATILDI OVERLAY
                         Covers the video; locks all bidding interaction.
                     ============================================= */}
-                    {auctionResult && (
+                    {auctionResult && showSoldOverlay && (
                         <div className="absolute inset-0 flex flex-col items-center justify-center z-[200] bg-black/70 backdrop-blur-md">
                             <div className="flex flex-col items-center gap-6 px-8 py-12 rounded-3xl border border-yellow-400/40"
                                 style={{
@@ -580,13 +582,10 @@ function CustomArenaLayout({
                                     </p>
                                     <div className="mt-8">
                                         <button
-                                            onClick={async () => {
-                                                try { await room?.disconnect(); } catch (_) { }
-                                                router.push("/");
-                                            }}
+                                            onClick={() => setShowSoldOverlay(false)}
                                             className="px-8 py-3 rounded-full font-bold text-white border border-white/50 bg-white/15 hover:bg-white/30 active:scale-95 transition-all duration-200 backdrop-blur-sm text-base tracking-wide"
                                         >
-                                            Ana Sayfaya Dön
+                                            Yayına Dön / Kapat
                                         </button>
                                     </div>
                                 </div>
@@ -1115,9 +1114,13 @@ function CustomArenaLayout({
                                     {auctionStatus === "IDLE" ? "BAŞLAT" : "DURDUR"}
                                 </button>
                             ) : (
-                                // Use the customized BidMiniForm which acts as a primary button for viewers
+                                // Viewer Bidding or Sold Status
                                 <div style={{ display: "flex", alignItems: "center" }}>
-                                    {auctionStatus === "ACTIVE" ? (
+                                    {auctionResult ? (
+                                        <div style={{ height: "50px", padding: "0 24px", background: "rgba(16, 185, 129, 0.2)", backdropFilter: "blur(10px)", border: "1px solid rgba(16, 185, 129, 0.4)", borderRadius: "100px", color: "#10b981", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                            BU ÜRÜN SATILMIŞTIR
+                                        </div>
+                                    ) : auctionStatus === "ACTIVE" ? (
                                         <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
                                     ) : (
                                         <div style={{ height: "50px", padding: "0 24px", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "100px", color: "rgba(255,255,255,0.5)", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>

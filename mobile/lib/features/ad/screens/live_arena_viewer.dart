@@ -65,6 +65,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   bool _isSold = false;
   String? _soldWinnerName;
   double? _soldFinalPrice;
+  bool _showSoldOverlay = false;
   late ConfettiController _confettiController;
 
   void _addReaction(String emoji) {
@@ -342,6 +343,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           if (mounted) {
             setState(() {
               _isSold = true;
+              _showSoldOverlay = true;
               _soldWinnerName = winner;
               _soldFinalPrice = price;
               _isAuctionActive = false;
@@ -1158,7 +1160,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               top: 0,
               bottom: 0,
               child: IgnorePointer(
-                ignoring: !_uiVisible || _isSold, // Lock UI when sold
+                ignoring: !_uiVisible, // Allow UI interactions even when sold (chat)
                 child: !isDisconnected
                     ? SafeArea(
                         child: OrientationBuilder(
@@ -1178,7 +1180,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
             ),
 
             // 🎊 AUCTION_SOLD — Permanent SATILDI Full-Screen Overlay
-            if (_isSold)
+            if (_isSold && _showSoldOverlay)
               Positioned.fill(
                 child: ClipRect(
                   child: BackdropFilter(
@@ -1292,17 +1294,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           const SizedBox(height: 32),
                           ElevatedButton.icon(
                             onPressed: () {
-                              // Explicit cleanup — disconnect first, then delay nav so invalidate fires cleanly
-                              final router = GoRouter.of(context);
-                              ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-                              Future.delayed(const Duration(milliseconds: 100), () {
-                                try { ref.invalidate(adDetailProvider(widget.ad.id)); } catch (_) {}
-                                router.go('/home');
-                              });
+                              if (mounted) {
+                                setState(() => _showSoldOverlay = false);
+                              }
                             },
-                            icon: const Icon(Icons.home_outlined, color: Colors.white),
+                            icon: const Icon(Icons.close, color: Colors.white),
                             label: const Text(
-                              'Ana Sayfaya Dön',
+                              'Yayına Dön / Kapat',
                               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(
@@ -1403,8 +1401,22 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       AdModel currentAd, bool isDisconnected) {
     // Primary Action Button (teqlif Ver or Hemen Al)
     Widget buildPrimaryAction() {
-      // Prioritize Bid if auction is active, regardless of ad type
-      if (currentAd.isAuction || _isAuctionActive) {
+      if (_isSold) {
+        return Expanded(
+          child: Container(
+            height: 56,
+            decoration: BoxDecoration(
+              color: Colors.green.withOpacity(0.2),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.green.withOpacity(0.4)),
+            ),
+            child: const Center(
+              child: Text('BU ÜRÜN SATILMIŞTIR',
+                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.w900, fontSize: 13)),
+            ),
+          ),
+        );
+      } else if (currentAd.isAuction || _isAuctionActive) {
         final nextBid = _getNextBidAmount(currentAd);
         return Expanded(
           child: GestureDetector(

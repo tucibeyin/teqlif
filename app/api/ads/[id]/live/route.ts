@@ -57,19 +57,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             );
         }
 
-        // Ghost Ad Cleanup: If stream is ending and it is a ghost ad
-        if (isLive === false && ad.description === 'Hızlı Canlı Yayın (Ghost Ad)') {
-            logger.info("Ghost ad cleanup triggered", { adId: id });
-
-            // Detach conversations before deleting to avoid foreign key constraints
-            await prisma.conversation.updateMany({
-                where: { adId: id },
-                data: { adId: null }
+        // ⛔ Müzayede/Yayın bittiğinde fiziksel silme (delete) KURALLARA AYKIRI! Sadece bayrakları indiriyoruz.
+        if (isLive === false) {
+            await prisma.ad.update({
+                where: { id },
+                data: { isLive: false, isAuctionActive: false }
             });
-
-            await prisma.ad.delete({ where: { id } });
-            revalidatePath("/");
-            return NextResponse.json({ message: "Ghost ad cleaned up." }, { status: 200 });
         }
 
         revalidatePath(`/ad/${id}`);
