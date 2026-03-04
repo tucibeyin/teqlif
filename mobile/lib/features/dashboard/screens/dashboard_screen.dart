@@ -269,14 +269,10 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
               myAdsAsync.when(
                 loading: () => const Center(child: CircularProgressIndicator()),
                 error: (e, _) => Text('Hata: $e'),
-                data: (ads) => ads.isEmpty
-                    ? const Center(
-                        child: Padding(
-                            padding: EdgeInsets.all(32),
-                            child: Text('Henüz ilan yok.')))
-                    : Column(
-                        children: ads.map((ad) => _MyAdTile(ad: ad)).toList(),
-                      ),
+                data: (ads) => _MyAdsSubTabs(
+                  activeAds: ads.where((ad) => ad.status == 'ACTIVE' && !ad.isExpired).toList(),
+                  passiveAds: ads.where((ad) => ad.status != 'ACTIVE' || ad.isExpired).toList(),
+                ),
               )
             else if (_tabIndex == 1)
               favsAsync.when(
@@ -347,7 +343,8 @@ class _StatCard extends StatelessWidget {
 class _MyAdTile extends ConsumerWidget {
   final AdModel ad;
   final bool isFavorite;
-  const _MyAdTile({required this.ad, this.isFavorite = false});
+  final bool isPassive;
+  const _MyAdTile({required this.ad, this.isFavorite = false, this.isPassive = false});
 
   Future<void> _republish(BuildContext context, WidgetRef ref) async {
     try {
@@ -383,9 +380,13 @@ class _MyAdTile extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return Card(
-      margin: const EdgeInsets.only(bottom: 10),
-      child: ListTile(
+    return Opacity(
+      opacity: isPassive ? 0.6 : 1.0,
+      child: Stack(
+        children: [
+          Card(
+            margin: const EdgeInsets.only(bottom: 10),
+            child: ListTile(
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
@@ -467,6 +468,25 @@ class _MyAdTile extends ConsumerWidget {
                 ],
               ),
         onTap: () => context.push('/ad/${ad.id}'),
+            ),
+          ),
+          if (isPassive)
+            Positioned(
+              top: 12,
+              left: -16,
+              child: Transform.rotate(
+                angle: -0.785398,
+                child: Container(
+                  color: Colors.red.withOpacity(0.8),
+                  padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 4),
+                  child: Text(
+                    ad.status == 'SOLD' ? 'SATILDI' : 'PASİF',
+                    style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
@@ -553,6 +573,63 @@ class _MyBidTile extends StatelessWidget {
       color: const Color(0xFFF4F7FA),
       alignment: Alignment.center,
       child: Text(iconString, style: const TextStyle(fontSize: 24)),
+    );
+  }
+}
+
+class _MyAdsSubTabs extends StatefulWidget {
+  final List<AdModel> activeAds;
+  final List<AdModel> passiveAds;
+  const _MyAdsSubTabs({required this.activeAds, required this.passiveAds});
+
+  @override
+  State<_MyAdsSubTabs> createState() => _MyAdsSubTabsState();
+}
+
+class _MyAdsSubTabsState extends State<_MyAdsSubTabs>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabCtrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabCtrl = TabController(length: 2, vsync: this);
+    _tabCtrl.addListener(() => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _tabCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final showActive = _tabCtrl.index == 0;
+    final currentAds = showActive ? widget.activeAds : widget.passiveAds;
+
+    return Column(
+      children: [
+        TabBar(
+          controller: _tabCtrl,
+          labelColor: const Color(0xFF00B4CC),
+          unselectedLabelColor: Colors.grey,
+          indicatorColor: const Color(0xFF00B4CC),
+          dividerColor: Colors.transparent,
+          tabs: const [
+            Tab(text: 'Aktif İlanlarım'),
+            Tab(text: 'Pasif İlanlarım'),
+          ],
+        ),
+        const SizedBox(height: 16),
+        if (currentAds.isEmpty)
+          const Padding(
+            padding: EdgeInsets.all(32),
+            child: Text('Bu sekmede ilan bulunmuyor.', textAlign: TextAlign.center),
+          )
+        else
+          ...currentAds.map((ad) => _MyAdTile(ad: ad, isPassive: !showActive)),
+      ],
     );
   }
 }

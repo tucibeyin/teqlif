@@ -35,10 +35,7 @@ export async function GET(req: NextRequest) {
         }
 
         const where: Record<string, any> = {
-            OR: [
-                { status: "ACTIVE" },
-                { isLive: true }
-            ],
+            status: "ACTIVE",
             ...(blockedUserIds.length > 0 && { userId: { notIn: blockedUserIds } })
         };
         if (category) where.category = { slug: category };

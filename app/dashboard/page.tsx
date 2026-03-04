@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import DeleteAdButton from "./DeleteAdButton";
 import RepublishAdButton from "./RepublishAdButton";
 import DashboardSection from "./DashboardSection";
+import UserAdsTabs from "./UserAdsTabs";
 
 function formatPrice(price: number) {
     return new Intl.NumberFormat("tr-TR", {
@@ -140,74 +141,7 @@ export default async function DashboardPage() {
 
                 {/* İlanlarım */}
                 <DashboardSection title="İlanlarım" id="ilanlarim" count={myAds.length} defaultExpanded={true}>
-                    {myAds.length === 0 ? (
-                        <div className="empty-state">
-                            <div className="empty-state-icon">📭</div>
-                            <div className="empty-state-title">Henüz ilan vermediniz</div>
-                            <p>İlk ilanınızı hemen ekleyin!</p>
-                            <Link href="/post-ad" className="btn btn-primary" style={{ marginTop: "1rem" }}>
-                                İlan Ver
-                            </Link>
-                        </div>
-                    ) : (
-                        <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                            {myAds.map((ad: any) => {
-                                const isExpired = ad.expiresAt ? new Date(ad.expiresAt) < new Date() : false;
-                                return (
-                                    <div key={ad.id} className="card">
-                                        <div className="card-body" style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
-                                            {ad.images && ad.images.length > 0 ? (
-                                                <Image src={ad.images[0]} alt={ad.title} width={48} height={48} style={{ objectFit: "cover", borderRadius: "10px" }} />
-                                            ) : (
-                                                <span style={{ fontSize: "2rem" }}>{ad.category.icon}</span>
-                                            )}
-                                            <div style={{ flex: 1 }}>
-                                                <Link href={`/ad/${ad.id}`} style={{ color: "var(--text-primary)", fontWeight: 600, fontSize: "0.9375rem" }}>
-                                                    {ad.title}
-                                                </Link>
-                                                <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                                    {ad.province.name} · {timeAgo(ad.createdAt)} · {ad._count.bids} teqlif
-                                                </div>
-                                            </div>
-                                            <div style={{ textAlign: "right", display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "0.5rem" }}>
-                                                <div style={{ color: "var(--primary)", fontWeight: 700 }}>
-                                                    {(() => {
-                                                        if (ad.isFixedPrice) return formatPrice(ad.price);
-                                                        const highestBid = ad.bids?.[0]?.amount;
-                                                        if (highestBid) return formatPrice(highestBid);
-                                                        return ad.startingBid ? formatPrice(ad.startingBid) : "Serbest teqlif";
-                                                    })()}
-                                                </div>
-                                                <span className={`badge badge-${isExpired ? 'expired' : ad.status.toLowerCase()}`}>
-                                                    {isExpired ? "Süresi Dolmuş" : ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Pasif"}
-                                                </span>
-                                                <div style={{ display: "flex", gap: "0.5rem", marginTop: "0.5rem" }}>
-                                                    {isExpired && <RepublishAdButton id={ad.id} />}
-                                                    {ad.status !== 'SOLD' && (
-                                                        <Link
-                                                            href={`/edit-ad/${ad.id}`}
-                                                            style={{
-                                                                padding: "0.25rem 0.5rem",
-                                                                borderRadius: "var(--radius-sm)",
-                                                                fontSize: "0.875rem",
-                                                                fontWeight: 600,
-                                                                color: "var(--text-secondary)",
-                                                                background: "var(--bg-secondary)",
-                                                                textDecoration: "none"
-                                                            }}
-                                                        >
-                                                            Düzenle
-                                                        </Link>
-                                                    )}
-                                                    <DeleteAdButton id={ad.id} />
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    )}
+                    <UserAdsTabs ads={myAds} />
                 </DashboardSection>
 
                 {/* Favorilerim */}
