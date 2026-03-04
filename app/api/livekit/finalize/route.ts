@@ -29,10 +29,11 @@ export async function POST(req: NextRequest) {
         const callerId = caller.id;
 
         const body = await req.json();
-        const { adId, winnerId, finalPrice } = body as {
+        const { adId, winnerId, finalPrice, isQuickLive } = body as {
             adId: string;
             winnerId: string;
             finalPrice: number;
+            isQuickLive?: boolean;
         };
 
         if (!adId || !winnerId || finalPrice == null) {
@@ -46,17 +47,52 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "Bu işlemi gerçekleştirme yetkiniz yok." }, { status: 403 });
         }
 
-        // Update the ad atomically
-        const updatedAd = await prisma.ad.update({
-            where: { id: adId },
-            data: {
-                status: "SOLD",
-                isLive: false,
-                isAuctionActive: false,
-                winnerId,
-                price: finalPrice,
-            },
-        });
+        let updatedAd;
+
+        if (isQuickLive) {
+            // [Phase 24.3] Clone receipt logic
+            updatedAd = await prisma.ad.update({
+                where: { id: adId },
+                data: {
+                    isAuctionActive: false, // temporarily suspend auctioning for UI climax
+                },
+            });
+
+            // Create clone receipt
+            const receipt = await prisma.ad.create({
+                data: {
+                    title: "Canlı Yayından Alınan Ürün",
+                    description: "Hızlı Canlı Yayın Makbuzu",
+                    price: finalPrice,
+                    isFixedPrice: false,
+                    isAuction: true,
+                    status: "SOLD",
+                    userId: ad.userId,
+                    categoryId: ad.categoryId,
+                    provinceId: ad.provinceId,
+                    districtId: ad.districtId,
+                    winnerId: winnerId,
+                }
+            });
+
+            // Clean up bids for the next round
+            await prisma.bid.deleteMany({
+                where: { adId: adId }
+            });
+
+        } else {
+            // Standard finalized procedure
+            updatedAd = await prisma.ad.update({
+                where: { id: adId },
+                data: {
+                    status: "SOLD",
+                    isLive: false,
+                    isAuctionActive: false,
+                    winnerId,
+                    price: finalPrice,
+                },
+            });
+        }
 
         revalidatePath(`/ad/${adId}`);
         revalidatePath("/");

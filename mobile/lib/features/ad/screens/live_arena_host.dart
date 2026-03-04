@@ -335,6 +335,21 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
           _confettiController.play();
         }
         return;
+      } else if (dataObj['type'] == 'AUCTION_RESET') {
+        if (mounted) {
+          setState(() {
+            _isSold = false;
+            _showSoldOverlay = false;
+            _soldWinnerName = null;
+            _soldFinalPrice = null;
+            _isAuctionActive = true;
+            _bids.clear();
+            _unreadBids = 0;
+            _countdown = 0;
+          });
+          _showSystemMessage('📣 Yeni Ürün Açık Arttırmada!', Colors.orange);
+        }
+        return;
       } else if (dataObj['type'] == 'BID_REJECTED') {
         final bidId = dataObj['bidId']?.toString();
         setState(() {
@@ -794,42 +809,58 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                                               if (confirmed == true) {
                                                 setState(
                                                     () => _isFinalizing = true);
-                                                try {
+                                                  try {
                                                   // 1. Accept the bid
                                                   final acceptRes =
                                                       await ApiClient().patch(
                                                           '/api/bids/${bid.id}/accept');
                                                   if (acceptRes.statusCode ==
                                                       200) {
-                                                    // 2. Finalize the sale
-                                                    final finalizeRes =
-                                                        await ApiClient().post(
-                                                            '/api/bids/${bid.id}/finalize');
-                                                    if (finalizeRes
-                                                            .statusCode ==
-                                                        200) {
+                                                    bool finalizeSuccess = false;
+                                                    final isQuickLive = widget.ad.description == 'Hızlı Canlı Yayın (Ghost Ad)';
+
+                                                    if (!isQuickLive) {
+                                                      final finalizeRes = await ApiClient().post('/api/bids/${bid.id}/finalize');
+                                                      finalizeSuccess = finalizeRes.statusCode == 200;
+                                                    } else {
+                                                      finalizeSuccess = true;
+                                                    }
+
+                                                    if (finalizeSuccess) {
+                                                      await ApiClient().post('/api/livekit/finalize', data: {
+                                                        'adId': widget.ad.id,
+                                                        'winnerId': bid.userId,
+                                                        'finalPrice': bid.amount,
+                                                        'isQuickLive': isQuickLive,
+                                                      });
+
                                                       if (mounted) {
                                                         setState(() =>
                                                             _isFinalizing =
                                                                 false);
                                                         Navigator.pop(
                                                             context); // Close sheet
-                                                        ScaffoldMessenger.of(
-                                                                context)
-                                                            .showSnackBar(
-                                                                const SnackBar(
-                                                          content: Text(
-                                                              'Satış başarıyla tamamlandı! İlan "Satıldı" olarak işaretlendi.',
-                                                              style: TextStyle(
-                                                                  fontWeight:
-                                                                      FontWeight
-                                                                          .bold)),
-                                                          backgroundColor:
-                                                              Colors.green,
-                                                          duration: Duration(
-                                                              seconds: 4),
-                                                        ));
-                                                        _closeLiveStreamSilently(); // End live quietly after sale
+                                                        
+                                                        // Inform participants via DataChannel
+                                                        final room = ref.read(liveRoomProvider(widget.ad.id)).room;
+                                                        
+                                                        final soldSignal = jsonEncode({
+                                                          'type': 'AUCTION_SOLD',
+                                                          'winnerId': bid.userId,
+                                                          'winnerName': bid.userLabel,
+                                                          'price': bid.amount,
+                                                        });
+                                                        room?.localParticipant?.publishData(utf8.encode(soldSignal));
+
+                                                        final endSignal = jsonEncode({'type': 'AUCTION_END'});
+                                                        room?.localParticipant?.publishData(utf8.encode(endSignal));
+
+                                                        final saleSignal = jsonEncode({
+                                                          'type': 'SALE_FINALIZED',
+                                                          'winnerName': bid.userLabel,
+                                                          'amount': bid.amount,
+                                                        });
+                                                        room?.localParticipant?.publishData(utf8.encode(saleSignal));
                                                       }
                                                       return;
                                                     }
@@ -922,34 +953,50 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         final acceptRes =
             await ApiClient().patch('/api/bids/${latestBid.id}/accept');
         if (acceptRes.statusCode == 200) {
-          // 2. Finalize the sale
-          final finalizeRes =
-              await ApiClient().post('/api/bids/${latestBid.id}/finalize');
-          if (finalizeRes.statusCode == 200) {
+          bool finalizeSuccess = false;
+          final isQuickLive = widget.ad.description == 'Hızlı Canlı Yayın (Ghost Ad)';
+          
+          if (!isQuickLive) {
+            final finalizeRes = await ApiClient().post('/api/bids/${latestBid.id}/finalize');
+            finalizeSuccess = finalizeRes.statusCode == 200;
+          } else {
+            finalizeSuccess = true;
+          }
+
+          if (finalizeSuccess) {
+            await ApiClient().post('/api/livekit/finalize', data: {
+              'adId': widget.ad.id,
+              'winnerId': latestBid.userId,
+              'finalPrice': latestBid.amount,
+              'isQuickLive': isQuickLive,
+            });
+
             if (mounted) {
               setState(() {
                 _isFinalizing = false;
                 _isAuctionActive = false;
               });
-              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                content: Text(
-                    'Satış başarıyla tamamlandı! İlan "Satıldı" olarak işaretlendi.',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
-                backgroundColor: Colors.green,
-                duration: Duration(seconds: 4),
-              ));
 
-              // Inform participants via DataChannel that the sale is finalized and auction is over
+              // Inform participants via DataChannel
               final room = ref.read(liveRoomProvider(widget.ad.id)).room;
+              
+              final soldSignal = jsonEncode({
+                'type': 'AUCTION_SOLD',
+                'winnerId': latestBid.userId,
+                'winnerName': latestBid.userLabel,
+                'price': latestBid.amount,
+              });
+              room?.localParticipant?.publishData(utf8.encode(soldSignal));
+
               final endSignal = jsonEncode({'type': 'AUCTION_END'});
-              room?.localParticipant?.publishData(endSignal.codeUnits);
+              room?.localParticipant?.publishData(utf8.encode(endSignal));
 
               final saleSignal = jsonEncode({
                 'type': 'SALE_FINALIZED',
                 'winnerName': latestBid.userLabel,
                 'amount': latestBid.amount,
               });
-              room?.localParticipant?.publishData(saleSignal.codeUnits);
+              room?.localParticipant?.publishData(utf8.encode(saleSignal));
             }
             return;
           }
@@ -1122,26 +1169,50 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                           ),
                         ),
                         const SizedBox(height: 32),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            if (mounted) {
-                              setState(() => _showSoldOverlay = false);
-                            }
-                          },
-                          icon: const Icon(Icons.close, color: Colors.white),
-                          label: const Text(
-                            'Yayına Dön / Kapat',
-                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.white.withOpacity(0.15),
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                            shape: const StadiumBorder(
-                              side: BorderSide(color: Colors.white54, width: 1.5),
+                        Wrap(
+                          spacing: 16,
+                          runSpacing: 16,
+                          alignment: WrapAlignment.center,
+                          children: [
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                if (mounted) {
+                                  setState(() => _showSoldOverlay = false);
+                                }
+                              },
+                              icon: const Icon(Icons.close, color: Colors.white),
+                              label: const Text(
+                                'Sohbete Dön / Kapat',
+                                style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                              ),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.white.withOpacity(0.15),
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                                shape: const StadiumBorder(
+                                  side: BorderSide(color: Colors.white54, width: 1.5),
+                                ),
+                                elevation: 0,
+                              ),
                             ),
-                            elevation: 0,
-                          ),
+                            if (widget.ad.description == 'Hızlı Canlı Yayın (Ghost Ad)')
+                              ElevatedButton.icon(
+                                onPressed: _resetAuction,
+                                icon: const Icon(Icons.refresh, color: Colors.white),
+                                label: const Text(
+                                  'Yeni Ürüne Geç',
+                                  style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                                ),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.green,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                                  shape: const StadiumBorder(),
+                                  elevation: 8,
+                                  shadowColor: Colors.greenAccent,
+                                ),
+                              ),
+                          ],
                         ),
                       ],
                     ),

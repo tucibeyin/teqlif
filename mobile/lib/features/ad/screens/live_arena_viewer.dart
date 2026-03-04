@@ -317,8 +317,20 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         } else if (type == 'AUCTION_RESET') {
           setState(() {
             _liveHighestBid = widget.ad.highestBidAmount ?? widget.ad.startingBid ?? widget.ad.price;
+            _isSold = false;
+            _showSoldOverlay = false;
+            _soldWinnerName = null;
+            _soldFinalPrice = null;
+            _isAuctionActive = true;
+            _countdownValue = null;
+            _messages.add(_EphemeralMessage(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              text: '📣 Yeni Ürün Açık Arttırmada!',
+              senderName: 'Sistem',
+              timestamp: DateTime.now(),
+            ));
           });
-          _showSystemMessage('📣 AÇIK ARTTIRMA SIFIRLANDI!', Colors.orange);
+          _showSystemMessage('📣 Yeni Ürün Açık Arttırmada!', Colors.orange);
           return;
         } else if (type == 'AUCTION_END') {
           setState(() => _isAuctionActive = false);
@@ -1300,7 +1312,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                             },
                             icon: const Icon(Icons.close, color: Colors.white),
                             label: const Text(
-                              'Yayına Dön / Kapat',
+                              'Sohbete Dön / Kapat',
                               style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
                             ),
                             style: ElevatedButton.styleFrom(

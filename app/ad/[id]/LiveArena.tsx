@@ -19,6 +19,7 @@ interface LiveArenaProps {
     initialHighestBid?: number;
     initialIsAuctionActive?: boolean;
     adOwnerName?: string;
+    isQuickLive?: boolean;
 }
 
 export default function LiveArena({
@@ -31,7 +32,8 @@ export default function LiveArena({
     minBidStep = 1,
     initialHighestBid = 0,
     initialIsAuctionActive = false,
-    adOwnerName = "Satıcı"
+    adOwnerName = "Satıcı",
+    isQuickLive = false
 }: LiveArenaProps) {
     const { data: session } = useSession();
     const [token, setToken] = useState("");
@@ -104,7 +106,8 @@ function CustomArenaLayout({
     initialIsAuctionActive,
     role,
     wantsToPublish,
-    adOwnerName
+    adOwnerName,
+    isQuickLive
 }: any) {
     const room = useRoomContext();
     const router = useRouter();
@@ -171,8 +174,15 @@ function CustomArenaLayout({
         try {
             const resAccept = await fetch(`/api/bids/${liveHighestBidId}/accept`, { method: "PATCH" });
             if (resAccept.ok) {
-                const resFinalize = await fetch(`/api/bids/${liveHighestBidId}/finalize`, { method: "POST" });
-                if (resFinalize.ok) {
+                let finalizeSuccess = false;
+                if (!isQuickLive) {
+                    const resFinalize = await fetch(`/api/bids/${liveHighestBidId}/finalize`, { method: "POST" });
+                    finalizeSuccess = resFinalize.ok;
+                } else {
+                    finalizeSuccess = true;
+                }
+
+                if (finalizeSuccess) {
                     // 1️⃣ Broadcast AUCTION_SOLD signal to all room participants (DataChannel)
                     if (room) {
                         const soldPayload = JSON.stringify({
@@ -203,6 +213,7 @@ function CustomArenaLayout({
                                 adId,
                                 winnerId: liveHighestBidderId,
                                 finalPrice: liveHighestBid,
+                                isQuickLive
                             }),
                         }).catch((e) => console.error("[FINALIZE] Error:", e));
                     }
@@ -263,6 +274,26 @@ function CustomArenaLayout({
             }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
+    };
+
+    const handleResetAuction = async () => {
+        if (!room) return;
+        setLoading(true);
+        try {
+            const res = await fetch('/api/livekit/reset', {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ adId })
+            });
+            if (res.ok) {
+                const payload = JSON.stringify({ type: "AUCTION_RESET" });
+                await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+            }
+        } catch (err) {
+            console.error("Reset Auction Error:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     const handleBuyNow = async () => {
@@ -427,9 +458,16 @@ function CustomArenaLayout({
                 setLiveHighestBidId(null);
                 setLiveHighestBidderId(null);
                 setLiveHighestBidderName(null);
-                setAuctionStatus("ACTIVE");
+                setAuctionStatus("IDLE");
+                setAuctionResult(null);
+                setShowSoldOverlay(false);
+                setFinalizedWinner(null);
+                setFinalizedAmount(null);
+                setShowFinalization(false);
+                setCountdown(0);
+
                 // Optional: show a notification that bids were reset
-                setAuctionNotification("📣 Açık Arttırma Sıfırlandı!");
+                setAuctionNotification("📣 Yeni Ürüne Geçildi! Teklif Bekleniyor...");
                 setTimeout(() => setAuctionNotification(null), 4000);
             } else if (dataObj.type === 'AUCTION_END') {
                 setAuctionStatus("IDLE");
@@ -580,13 +618,23 @@ function CustomArenaLayout({
                                         <span className="text-white font-semibold">{auctionResult.winnerName}</span>
                                         &nbsp;adlı kullanıcıya satılmıştır.
                                     </p>
-                                    <div className="mt-8">
+                                    <div className="mt-8 flex flex-wrap justify-center gap-4">
                                         <button
                                             onClick={() => setShowSoldOverlay(false)}
                                             className="px-8 py-3 rounded-full font-bold text-white border border-white/50 bg-white/15 hover:bg-white/30 active:scale-95 transition-all duration-200 backdrop-blur-sm text-base tracking-wide"
                                         >
-                                            Yayına Dön / Kapat
+                                            Sohbete Dön / Kapat
                                         </button>
+
+                                        {isOwner && isQuickLive && (
+                                            <button
+                                                onClick={handleResetAuction}
+                                                disabled={loading}
+                                                className="px-8 py-3 rounded-full font-bold text-white border-2 border-green-500 bg-green-500 hover:bg-green-400 active:scale-95 transition-all duration-200 shadow-[0_0_20px_rgba(34,197,94,0.6)] text-base tracking-wide flex items-center gap-2 disabled:opacity-50"
+                                            >
+                                                <span>🔄</span> Yeni Ürüne Geç
+                                            </button>
+                                        )}
                                     </div>
                                 </div>
                             </div>

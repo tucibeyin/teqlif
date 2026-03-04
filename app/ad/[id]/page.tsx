@@ -165,6 +165,7 @@ export default async function AdDetailPage({
                                     initialHighestBid={highestBid?.amount ?? 0}
                                     initialIsAuctionActive={adData.isAuctionActive}
                                     adOwnerName={displayName}
+                                    isQuickLive={ad.description === "Hızlı Canlı Yayın (Ghost Ad)"}
                                 />
                             </div>
                         ) : (
