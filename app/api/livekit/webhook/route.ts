@@ -81,10 +81,17 @@ export async function POST(req: NextRequest) {
 
         // --- ROOM FINISHED ---
         if (event.event === 'room_finished') {
-            await prisma.ad.update({
-                where: { id: adId },
-                data: { isLive: false }
-            });
+            const ad = await prisma.ad.findUnique({ where: { id: adId } });
+            if (ad) {
+                const isQuickLive = ad.description === 'Hızlı Canlı Yayın (Ghost Ad)';
+                await prisma.ad.update({
+                    where: { id: adId },
+                    data: {
+                        isLive: false,
+                        ...(isQuickLive ? { status: 'EXPIRED', isAuctionActive: false } : {})
+                    }
+                });
+            }
             console.log(`[LiveKit Webhook] Ad ${adId} is no longer live.`);
 
             // Odanın (İlanın) biriken teqliflerini Redis'ten çek ve DB'ye toplu yaz (Bulk Insert)

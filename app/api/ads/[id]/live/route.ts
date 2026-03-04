@@ -59,9 +59,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         // ⛔ Müzayede/Yayın bittiğinde fiziksel silme (delete) KURALLARA AYKIRI! Sadece bayrakları indiriyoruz.
         if (isLive === false) {
+            const isQuickLive = ad.description === 'Hızlı Canlı Yayın (Ghost Ad)';
             await prisma.ad.update({
                 where: { id },
-                data: { isLive: false, isAuctionActive: false }
+                data: {
+                    isLive: false,
+                    isAuctionActive: false,
+                    ...(isQuickLive ? { status: 'EXPIRED' } : {})
+                }
             });
         }
 
