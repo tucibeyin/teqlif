@@ -13,6 +13,7 @@ export function QuickLiveButton() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const router = useRouter();
+
     const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.files && e.target.files[0]) {
             const file = e.target.files[0];
@@ -75,103 +76,110 @@ export function QuickLiveButton() {
     };
 
     return (
-        <>
+        <div style={{ position: "relative" }}>
             <button
-                onClick={() => setIsOpen(true)}
+                onClick={() => setIsOpen(!isOpen)}
                 className="btn btn-primary btn-sm"
                 title="Canlı Yayın Aç"
                 style={{
                     background: "linear-gradient(135deg, #ef4444, #dc2626)", // Red for live
-                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)"
+                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px"
                 }}
             >
-                <Radio size={18} />
+                <Radio size={16} />
                 <span>Canlı Yayın Aç</span>
             </button>
 
             {isOpen && (
-                <div style={{
-                    position: "fixed",
-                    inset: 0,
-                    zIndex: 9999,
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    background: "rgba(0,0,0,0.5)",
-                    backdropFilter: "blur(5px)",
-                }}>
+                <>
+                    {/* Click-away backdrop */}
+                    <div
+                        onClick={() => setIsOpen(false)}
+                        style={{
+                            position: "fixed",
+                            inset: 0,
+                            zIndex: 998,
+                            background: "transparent"
+                        }}
+                    />
+
                     <div style={{
+                        position: "absolute",
+                        top: "calc(100% + 12px)",
+                        right: 0,
+                        zIndex: 999,
+                        width: "320px",
                         background: "var(--bg-card)",
                         border: "1px solid var(--border)",
-                        borderRadius: "1rem",
-                        padding: "2rem",
-                        width: "100%",
-                        maxWidth: "400px",
-                        boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)"
+                        borderRadius: "var(--radius-lg)",
+                        padding: "1.5rem",
+                        boxShadow: "var(--shadow-lg)",
+                        animation: "fadeInUp 0.2s ease-out forwards",
+                        pointerEvents: "auto"
                     }}>
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1.5rem" }}>
-                            <h2 style={{ fontSize: "1.25rem", fontWeight: 700, margin: 0 }}>Hızlı Canlı Yayın Aç</h2>
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
+                            <h2 style={{ fontSize: "1rem", fontWeight: 700, margin: 0, color: "var(--text-primary)" }}>Hızlı Canlı Yayın</h2>
                             <button
                                 onClick={() => setIsOpen(false)}
-                                style={{ background: "transparent", border: "none", fontSize: "1.5rem", cursor: "pointer", color: "var(--text-muted)" }}
+                                style={{ background: "transparent", border: "none", fontSize: "1.25rem", cursor: "pointer", color: "var(--text-muted)", padding: "4px" }}
                             >
                                 &times;
                             </button>
                         </div>
 
                         {error && (
-                            <div style={{ background: "rgba(239, 68, 68, 0.1)", color: "var(--danger)", padding: "0.75rem", borderRadius: "0.5rem", marginBottom: "1rem", fontSize: "0.875rem" }}>
+                            <div className="error-msg" style={{ marginBottom: "1rem", padding: "0.5rem 0.75rem" }}>
                                 {error}
                             </div>
                         )}
 
                         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
-                            <div>
-                                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem", color: "var(--text-secondary)" }}>
-                                    Yayın Başlığı <span style={{ color: "var(--danger)" }}>*</span>
-                                </label>
+                            <div className="form-group">
+                                <label>Yayın Başlığı</label>
                                 <input
                                     type="text"
                                     value={title}
                                     onChange={(e) => setTitle(e.target.value)}
-                                    placeholder="Örn: Antika Saat Açık Arttırması"
-                                    className="input-field"
+                                    placeholder="Yayın amacı..."
+                                    className="input"
                                     required
+                                    autoFocus
                                 />
                             </div>
 
-                            <div>
-                                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem", color: "var(--text-secondary)" }}>
-                                    Başlangıç Fiyatı (₺)
-                                </label>
+                            <div className="form-group">
+                                <label>Başlangıç Fiyatı (₺)</label>
                                 <input
                                     type="number"
                                     value={startingBid}
                                     onChange={(e) => setStartingBid(e.target.value)}
-                                    placeholder="Opsiyonel (Varsayılan: 1₺)"
-                                    className="input-field"
+                                    placeholder="Varsayılan: 1₺"
+                                    className="input"
                                     min="1"
                                 />
                             </div>
 
-                            <div>
-                                <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 500, marginBottom: "0.5rem", color: "var(--text-secondary)" }}>
-                                    Kapak Fotoğrafı (İsteğe Bağlı)
-                                </label>
-                                <div style={{ display: "flex", alignItems: "center", gap: "1rem" }}>
+                            <div className="form-group">
+                                <label>Kapak Görseli</label>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
                                     <label style={{
-                                        display: "inline-block",
-                                        padding: "0.5rem 1rem",
-                                        background: "var(--bg-secondary)",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        padding: "0.5rem",
+                                        background: "var(--bg-input)",
                                         border: "1px dashed var(--border)",
-                                        borderRadius: "0.5rem",
+                                        borderRadius: "var(--radius-md)",
                                         cursor: "pointer",
                                         color: "var(--text-secondary)",
-                                        fontSize: "0.875rem",
-                                        textAlign: "center",
-                                        flex: 1
+                                        fontSize: "0.75rem",
+                                        flex: 1,
+                                        height: "42px"
                                     }}>
-                                        {image ? "Değiştir" : "📁 Fotoğraf Seç"}
+                                        {image ? "Değiştir" : "📁 Seç"}
                                         <input
                                             type="file"
                                             accept="image/*"
@@ -182,9 +190,9 @@ export function QuickLiveButton() {
 
                                     {imagePreview && (
                                         <div style={{
-                                            width: "60px",
-                                            height: "60px",
-                                            borderRadius: "0.5rem",
+                                            width: "42px",
+                                            height: "42px",
+                                            borderRadius: "var(--radius-sm)",
                                             overflow: "hidden",
                                             border: "1px solid var(--border)",
                                             flexShrink: 0
@@ -201,19 +209,16 @@ export function QuickLiveButton() {
                                 className="btn btn-primary btn-full"
                                 style={{
                                     marginTop: "0.5rem",
-                                    padding: "0.875rem",
-                                    fontSize: "1rem",
-                                    background: "var(--danger)",
-                                    border: "none"
+                                    background: "var(--accent-red)",
+                                    boxShadow: "0 4px 12px rgba(239, 68, 68, 0.25)"
                                 }}
                             >
-                                {loading ? "Hazırlanıyor..." : "🔴 Yayını Hemen Başlat"}
+                                {loading ? "..." : "YAYINI BAŞLAT"}
                             </button>
                         </form>
                     </div>
-                </div>
+                </>
             )}
-        </>
+        </div>
     );
 }
-
