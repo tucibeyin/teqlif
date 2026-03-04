@@ -187,11 +187,9 @@ function CustomArenaLayout({
                 // Broadcast update to others
                 if (room) {
                     const payload = JSON.stringify({
-                        type: "NEW_BID",
-                        amount: initialHighestBid,
-                        bidId: null,
-                        bidderId: null,
-                        bidderName: null
+                        type: "BID_REJECTED",
+                        bidId: liveHighestBidId,
+                        bidderId: liveHighestBidderId
                     });
                     room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
                 }
@@ -347,6 +345,17 @@ function CustomArenaLayout({
                 setLastAcceptedBidId(dataObj.bidId);
                 setFlashBid(true);
                 setTimeout(() => setFlashBid(false), 300);
+            } else if (dataObj.type === 'BID_REJECTED') {
+                if (session?.user?.id === dataObj.bidderId) {
+                    alert("Teklifiniz satıcı tarafından reddedildi.");
+                }
+                setLiveHighestBid(initialHighestBid);
+                setLiveHighestBidId(null);
+                setLiveHighestBidderId(null);
+                setLiveHighestBidderName(null);
+
+                setAuctionNotification("📣 Son Teklif Reddedildi");
+                setTimeout(() => setAuctionNotification(null), 3000);
             } else if (dataObj.type === 'SYNC_STATE_RESPONSE') {
                 if (dataObj.auctionStatus) setAuctionStatus(dataObj.auctionStatus);
                 if (dataObj.liveHighestBid) setLiveHighestBid(dataObj.liveHighestBid);
@@ -632,10 +641,10 @@ function CustomArenaLayout({
                         <div style={{
                             position: "absolute",
                             right: "16px",
-                            bottom: "280px", // Just above the bottom console
+                            bottom: "270px", // Just above the bottom console
                             zIndex: 200,
                             display: "flex",
-                            flexDirection: "column",
+                            flexDirection: "row-reverse",
                             gap: "12px",
                             pointerEvents: "auto"
                         }}>
