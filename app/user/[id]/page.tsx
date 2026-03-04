@@ -5,7 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import { useSession } from "next-auth/react";
-import { Navbar } from "@/components/Navbar";
+
 
 export default function UserProfilePage() {
     const { id } = useParams();
@@ -97,7 +97,7 @@ export default function UserProfilePage() {
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-                <Navbar />
+
                 <div className="flex items-center justify-center h-[60vh]">
                     <div className="w-12 h-12 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin"></div>
                 </div>
@@ -109,7 +109,7 @@ export default function UserProfilePage() {
 
     return (
         <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-            <Navbar />
+
 
             <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
 
