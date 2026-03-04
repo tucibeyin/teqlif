@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/providers/user_provider.dart';
+import '../../../../core/api/api_client.dart';
 import '../../../../core/api/endpoints.dart';
 
 class FriendsScreen extends ConsumerStatefulWidget {
