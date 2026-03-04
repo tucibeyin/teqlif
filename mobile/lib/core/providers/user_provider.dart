@@ -201,20 +201,10 @@ class UserProvider with ChangeNotifier {
         : Endpoints.friendListMembers(listId);
       final res = await _api.patch(targetUrl, data: {'friendId': friendId});
 
-      if (res.statusCode == 200) {
-        // Optimistic update
-        final int index = _friends.indexWhere((f) => f.id == friendId);
-        if (index != -1) {
-          _friends[index] = Friend(
-            id: _friends[index].id,
-            name: _friends[index].name,
-            avatar: _friends[index].avatar,
-            friendListId: listId,
-          );
-          notifyListeners();
+        if (res.statusCode == 200) {
+          fetchFriendsData(); // Refresh all data to ensure sync across screens
+          return true;
         }
-        return true;
-      }
     } catch (e) {
       debugPrint('Error assigning friend to list: $e');
     }

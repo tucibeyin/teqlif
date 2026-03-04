@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function GET(
     request: Request,
@@ -8,7 +9,17 @@ export async function GET(
 ) {
     try {
         const { id } = await params;
-        const session = await auth();
+        let userId: string | undefined;
+
+        // Try Mobile Token Auth First
+        const mobileUser = await getMobileUser(request);
+        if (mobileUser) {
+            userId = mobileUser.id;
+        } else {
+            // Fallback to Web Session
+            const session = await auth();
+            userId = session?.user?.id;
+        }
 
         const user = await prisma.user.findUnique({
             where: { id },
@@ -44,14 +55,14 @@ export async function GET(
         let connectionStatus = "NONE";
         let isFriend = false;
 
-        if (session?.user?.id) {
-            if (session.user.id === id) {
+        if (userId) {
+            if (userId === id) {
                 connectionStatus = "SELF";
             } else {
                 const friendRecord = await prisma.friend.findUnique({
                     where: {
                         userId_friendId: {
-                            userId: session.user.id,
+                            userId: userId,
                             friendId: id
                         }
                     }
