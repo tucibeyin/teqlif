@@ -265,14 +265,6 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
       data: (ad) {
         final isOwner = currentUser?.id == ad.userId;
 
-        if (ad.isLive) {
-          if (isOwner) {
-            return LiveArenaHost(ad: ad);
-          } else {
-            return LiveArenaViewer(ad: ad);
-          }
-        }
-
         final roomState = ref.watch(liveRoomProvider(widget.adId));
         final now = DateTime.now().add(roomState.serverTimeOffset);
         final isAuctionActive = ad.isAuction == true &&
@@ -297,43 +289,34 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                   },
                 ),
                 flexibleSpace: FlexibleSpaceBar(
-                  background: ad.images.isNotEmpty
-                      ? PageView.builder(
-                          itemCount: ad.images.length,
-                          onPageChanged: (i) =>
-                              setState(() => _currentImage = i),
-                          itemBuilder: (_, i) => GestureDetector(
-                            onTap: () {
-                              Navigator.of(context).push(
-                                MaterialPageRoute(
-                                  builder: (_) => FullScreenImageViewer(
-                                    images: ad.images,
-                                    initialIndex: i,
+                  background: ad.isLive 
+                      ? (isOwner ? LiveArenaHost(ad: ad) : LiveArenaViewer(ad: ad))
+                      : (ad.images.isNotEmpty
+                          ? PageView.builder(
+                              itemCount: ad.images.length,
+                              onPageChanged: (i) =>
+                                  setState(() => _currentImage = i),
+                              itemBuilder: (_, i) => GestureDetector(
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => FullScreenImageViewer(
+                                        images: ad.images,
+                                        initialIndex: i,
+                                      ),
+                                    ),
+                                  );
+                                },
+                                child: Hero(
+                                  tag: ad.images[i],
+                                  child: Container(
+                                    color: const Color(0xFFF4F7FA),
+                                    child: CachedNetworkImage(
+                                      imageUrl: imageUrl(ad.images[i]),
+                                      fit: BoxFit.contain,
+                                    ),
                                   ),
                                 ),
-                              );
-                            },
-                            child: Hero(
-                              tag: ad.images[i],
-                              child: Container(
-                                color: const Color(0xFFF4F7FA),
-                                child: CachedNetworkImage(
-                                  imageUrl: imageUrl(ad.images[i]),
-                                  fit: BoxFit.contain,
-                                ),
-                              ),
-                            ),
-                          ),
-                        )
-                      : ad.isLive
-                          ? Container(
-                              color: Colors.black87,
-                              child: const Center(
-                                child: Text('🔴 CANLI YAYIN',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 24)),
                               ),
                             )
                           : Container(
@@ -341,7 +324,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               child: Center(
                                 child: Text(ad.category?.icon ?? '📦',
                                     style: const TextStyle(fontSize: 64)),
-                          ),
+                              ),
+                            )),
+                ),
                         ),
                 ),
                 actions: [
@@ -812,40 +797,27 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                       ],
 
                       if (ad.isLive == true && ad.status == 'ACTIVE') ...[
-                        SizedBox(
-                          width: double.infinity,
-                          height: 52,
-                          child: ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.red.shade600,
-                              foregroundColor: Colors.white,
-                              elevation: 4,
+                        if (!isOwner) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.red.shade200),
                             ),
-                            onPressed: () {
-                              if (isOwner) {
-                                if (mounted) {
-                                  Navigator.of(context, rootNavigator: true).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => LiveArenaHost(ad: ad),
-                                    ),
-                                  );
-                                }
-                              } else {
-                                if (mounted) {
-                                  Navigator.of(context, rootNavigator: true).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => LiveArenaViewer(ad: ad),
-                                    ),
-                                  );
-                                }
-                              }
-                            },
-                            icon: const Icon(Icons.sensors),
-                            label: const Text('🔴 Canlı Yayına Katıl',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.info_outline, color: Colors.red, size: 20),
+                                const SizedBox(width: 8),
+                                const Expanded(
+                                  child: Text('Açık arttırma şu an canlı yayında! Tekliflerinizi yukarıdaki ekrandan anlık olarak verebilirsiniz.',
+                                      style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w600)),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        const SizedBox(height: 24),
+                          const SizedBox(height: 24),
+                        ]
                       ],
 
                       if (isOwner && ad.status == 'ACTIVE' && ad.isLive != true) ...[

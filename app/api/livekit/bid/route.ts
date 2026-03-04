@@ -18,6 +18,17 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
         }
 
+        // Mutex Gate: Verify that the ad is ACTUALLY live in Prisma
+        const { prisma } = await import('@/lib/prisma');
+        const ad = await prisma.ad.findUnique({
+            where: { id: roomId },
+            select: { isLive: true }
+        });
+
+        if (!ad || !ad.isLive) {
+            return NextResponse.json({ error: 'Bu ilan şu anda canlı yayında değil, teklifler statik formdan verilmelidir.' }, { status: 403 });
+        }
+
         // Redis üzerinde atomik fiyat kontrolü ve kayıt
         const bidResult = await placeLiveBid(roomId, userId, amount);
 

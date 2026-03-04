@@ -100,7 +100,7 @@ export async function POST(req: NextRequest) {
         }
 
         if (ad.isLive) {
-            return NextResponse.json({ error: "Canlı yayın devam ederken teklifler sadece yayın üzerinden anlık olarak verilebilir." }, { status: 400 });
+            return NextResponse.json({ error: "Bu ilan şu an canlı yayında, teklifler yayından verilmelidir." }, { status: 403 });
         }
 
         logger.info("Processing bid", { adId, amount, userId: user.id });
