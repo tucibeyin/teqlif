@@ -1105,6 +1105,27 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                             textAlign: TextAlign.center,
                           ),
                         ),
+                        const SizedBox(height: 32),
+                        ElevatedButton.icon(
+                          onPressed: () async {
+                            await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+                            if (mounted) context.go('/');
+                          },
+                          icon: const Icon(Icons.home_outlined, color: Colors.white),
+                          label: const Text(
+                            'Ana Sayfaya Dön',
+                            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.white.withOpacity(0.15),
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
+                            shape: const StadiumBorder(
+                              side: BorderSide(color: Colors.white54, width: 1.5),
+                            ),
+                            elevation: 0,
+                          ),
+                        ),
                       ],
                     ),
                   ),

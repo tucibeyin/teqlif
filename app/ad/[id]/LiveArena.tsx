@@ -578,6 +578,17 @@ function CustomArenaLayout({
                                         <span className="text-white font-semibold">{auctionResult.winnerName}</span>
                                         &nbsp;adlı kullanıcıya satılmıştır.
                                     </p>
+                                    <div className="mt-8">
+                                        <button
+                                            onClick={async () => {
+                                                try { await room?.disconnect(); } catch (_) { }
+                                                router.push("/");
+                                            }}
+                                            className="px-8 py-3 rounded-full font-bold text-white border border-white/50 bg-white/15 hover:bg-white/30 active:scale-95 transition-all duration-200 backdrop-blur-sm text-base tracking-wide"
+                                        >
+                                            Ana Sayfaya Dön
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
