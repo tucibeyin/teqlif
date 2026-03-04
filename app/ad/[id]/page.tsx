@@ -364,39 +364,39 @@ export default async function AdDetailPage({
                         </div>
                     ) : (
                         <div style={{
-                            background: "rgba(0, 0, 0, 0.4)",
+                            background: "rgba(255, 255, 255, 0.7)",
                             backdropFilter: "blur(20px)",
                             WebkitBackdropFilter: "blur(20px)",
-                            border: "1px solid rgba(255, 255, 255, 0.15)",
+                            border: "1px solid rgba(0, 180, 204, 0.2)",
                             borderRadius: "1.5rem",
                             padding: "1.5rem",
                             position: "sticky",
                             top: "80px",
-                            boxShadow: "rgba(0, 0, 0, 0.4) 0px 20px 40px",
-                            color: "white"
+                            boxShadow: "rgba(0, 180, 204, 0.1) 0px 20px 40px",
+                            color: "var(--text-primary)"
                         }}>
                             <div style={{ marginBottom: "1.25rem" }}>
-                                <div style={{ fontSize: "0.85rem", opacity: 0.8, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>
+                                <div style={{ fontSize: "0.85rem", opacity: 0.6, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>
                                     {highestBid ? "GÜNCEL FİYAT" : (ad.startingBid === null ? "AÇILIŞ (SERBEST)" : "MİNİMUM AÇILIŞ")}
                                 </div>
-                                <div style={{ fontSize: "2rem", fontWeight: 900, color: "rgb(74, 222, 128)", textShadow: "rgba(74, 222, 128, 0.4) 0px 2px 10px" }}>
+                                <div style={{ fontSize: "2rem", fontWeight: 900, color: "var(--primary)", textShadow: "rgba(0, 180, 204, 0.2) 0px 2px 10px" }}>
                                     {highestBid ? formatPrice(highestBid.amount) : (ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid))}
                                 </div>
-                                <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.5rem", display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.6)" }}>
+                                <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.5rem", display: "flex", justifyContent: "space-between", color: "var(--text-secondary)" }}>
                                     <span>Piyasa: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span></span>
                                     <span style={{ color: "var(--primary)", fontWeight: 700 }}>➕ Aralık: {formatPrice(ad.minBidStep)}</span>
                                 </div>
                                 {highestBid && (
-                                    <div style={{ fontSize: "0.85rem", marginTop: "0.5rem", color: "rgba(255,255,255,0.8)" }}>
-                                        Son teqlif: <span style={{ fontWeight: 700 }}>{highestBid.user.name}</span>
+                                    <div style={{ fontSize: "0.85rem", marginTop: "0.5rem", color: "var(--text-secondary)" }}>
+                                        Son teqlif: <span style={{ fontWeight: 700, color: "var(--text-primary)" }}>{highestBid.user.name}</span>
                                     </div>
                                 )}
                             </div>
 
                             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
                                 <div style={{
-                                    background: "rgba(255, 255, 255, 0.1)",
-                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                    background: "rgba(0, 180, 204, 0.05)",
+                                    border: "1px solid rgba(0, 180, 204, 0.1)",
                                     borderRadius: "12px",
                                     padding: "0.5rem",
                                     flex: 1,
@@ -406,8 +406,8 @@ export default async function AdDetailPage({
                                     <div style={{ fontSize: "0.7rem", opacity: 0.6, textTransform: "uppercase" }}>Teqlif</div>
                                 </div>
                                 <div style={{
-                                    background: "rgba(255, 255, 255, 0.1)",
-                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                    background: "rgba(0, 180, 204, 0.05)",
+                                    border: "1px solid rgba(0, 180, 204, 0.1)",
                                     borderRadius: "12px",
                                     padding: "0.5rem",
                                     flex: 1,
@@ -419,8 +419,8 @@ export default async function AdDetailPage({
                                     <span style={{
                                         padding: "4px 12px",
                                         borderRadius: "20px",
-                                        background: ad.status === "ACTIVE" ? "rgba(34, 197, 94, 0.2)" : "rgba(255,255,255,0.1)",
-                                        color: ad.status === "ACTIVE" ? "#4ade80" : "white",
+                                        background: ad.status === "ACTIVE" ? "rgba(34, 197, 94, 0.1)" : "rgba(0,0,0,0.05)",
+                                        color: ad.status === "ACTIVE" ? "#16a34a" : "var(--text-secondary)",
                                         fontSize: "0.75rem",
                                         fontWeight: 800
                                     }}>
@@ -516,17 +516,17 @@ export default async function AdDetailPage({
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 padding: '12px 16px',
-                                                background: 'rgba(255,255,255,0.03)',
-                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                background: 'rgba(255,255,255,0.6)',
+                                                border: '1px solid rgba(0, 180, 204, 0.1)',
                                                 borderRadius: '12px',
                                                 marginBottom: '10px',
                                                 transition: 'all 0.2s ease',
-                                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                                                boxShadow: '0 2px 4px rgba(0, 180, 204, 0.05)'
                                             }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                     <div style={{ flex: 1 }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                                            <span className="bid-item-user" style={{ fontWeight: 700, color: 'white' }}>
+                                                            <span className="bid-item-user" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
                                                                 {i === 0 && "🏆 "}
                                                                 {formatNameInitials(bid.user.name)}
                                                             </span>
@@ -534,7 +534,7 @@ export default async function AdDetailPage({
                                                                 {formatPrice(bid.amount)}
                                                             </span>
                                                         </div>
-                                                        <div style={{ fontSize: '0.75rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.6)' }}>
+                                                        <div style={{ fontSize: '0.75rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', color: 'var(--text-secondary)' }}>
                                                             <span>{timeAgo(bid.createdAt)}</span>
                                                             {bid.status === 'ACCEPTED' && (
                                                                 <span style={{
@@ -569,7 +569,7 @@ export default async function AdDetailPage({
                                                         alignItems: 'center',
                                                         marginTop: '12px',
                                                         paddingTop: '12px',
-                                                        borderTop: '1px dashed rgba(255,255,255,0.1)',
+                                                        borderTop: '1px dashed rgba(0, 180, 204, 0.1)',
                                                         flexWrap: 'wrap'
                                                     }}>
                                                         {isOwner && ad.status !== 'SOLD' && bid.status === 'ACCEPTED' && (
@@ -588,9 +588,9 @@ export default async function AdDetailPage({
                                                                     fontWeight: 600,
                                                                     gap: '6px',
                                                                     borderRadius: '6px',
-                                                                    background: 'rgba(255,255,255,0.1)',
-                                                                    color: 'white',
-                                                                    border: '1px solid rgba(255,255,255,0.2)'
+                                                                    background: 'rgba(0, 180, 204, 0.05)',
+                                                                    color: 'var(--primary)',
+                                                                    border: '1px solid rgba(0, 180, 204, 0.2)'
                                                                 }}
                                                             >
                                                                 📞 Ara

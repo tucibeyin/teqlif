@@ -82,33 +82,33 @@ export default function BidForm({ adId, currentHighest, minStep, startingBid }: 
     return (
         <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
             <form onSubmit={handleBid} style={{
-                background: "rgba(0, 0, 0, 0.4)",
+                background: "rgba(255, 255, 255, 0.7)",
                 backdropFilter: "blur(20px)",
                 WebkitBackdropFilter: "blur(20px)",
-                border: "1px solid rgba(255, 255, 255, 0.15)",
+                border: "1px solid rgba(0, 180, 204, 0.2)",
                 borderRadius: "1rem",
                 padding: "1.25rem",
-                color: "white",
-                boxShadow: "rgba(0, 0, 0, 0.4) 0px 20px 40px"
+                color: "var(--text-primary)",
+                boxShadow: "rgba(0, 180, 204, 0.1) 0px 20px 40px"
             }}>
                 {error && (
-                    <div style={{ background: "rgba(239, 68, 68, 0.2)", color: "#fca5a5", padding: "0.5rem", borderRadius: "0.5rem", fontSize: "0.875rem", marginBottom: "1rem", textAlign: "center" }}>
+                    <div style={{ background: "rgba(239, 68, 68, 0.1)", color: "#dc2626", padding: "0.5rem", borderRadius: "0.5rem", fontSize: "0.875rem", marginBottom: "1rem", textAlign: "center" }}>
                         {error}
                     </div>
                 )}
                 {success && (
-                    <div style={{ background: "rgba(34, 197, 94, 0.2)", color: "#86efac", padding: "0.5rem", borderRadius: "0.5rem", fontSize: "0.875rem", marginBottom: "1rem", textAlign: "center" }}>
+                    <div style={{ background: "rgba(34, 197, 94, 0.1)", color: "#16a34a", padding: "0.5rem", borderRadius: "0.5rem", fontSize: "0.875rem", marginBottom: "1rem", textAlign: "center" }}>
                         {success}
                     </div>
                 )}
 
                 <div style={{ textAlign: "center", marginBottom: "1rem" }}>
-                    <div style={{ fontSize: "0.85rem", opacity: 0.8, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>GÜNCEL FİYAT</div>
+                    <div style={{ fontSize: "0.85rem", opacity: 0.6, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>GÜNCEL FİYAT</div>
                     <div className={`tabular-nums tracking-tight ${pulse ? "scale-105" : ""} transition-transform duration-300`} style={{
                         fontSize: "2rem",
                         fontWeight: 900,
-                        color: "rgb(74, 222, 128)",
-                        textShadow: "rgba(74, 222, 128, 0.4) 0px 2px 10px"
+                        color: "var(--primary)",
+                        textShadow: "rgba(0, 180, 204, 0.2) 0px 2px 10px"
                     }}>
                         {formatted.format(currentHighest)}
                     </div>
@@ -123,17 +123,17 @@ export default function BidForm({ adId, currentHighest, minStep, startingBid }: 
                             disabled={loading}
                             style={{
                                 flex: 1,
-                                background: "rgba(255, 255, 255, 0.1)",
-                                border: "1px solid rgba(255, 255, 255, 0.2)",
+                                background: "rgba(0, 180, 204, 0.05)",
+                                border: "1px solid rgba(0, 180, 204, 0.15)",
                                 borderRadius: "20px",
                                 padding: "8px 0",
-                                color: "white",
-                                fontWeight: 600,
+                                color: "var(--primary)",
+                                fontWeight: 700,
                                 transition: "0.2s",
                                 cursor: "pointer"
                             }}
-                            onMouseOver={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.2)"}
-                            onMouseOut={e => e.currentTarget.style.background = "rgba(255, 255, 255, 0.1)"}
+                            onMouseOver={e => e.currentTarget.style.background = "rgba(0, 180, 204, 0.1)"}
+                            onMouseOut={e => e.currentTarget.style.background = "rgba(0, 180, 204, 0.05)"}
                         >
                             +{val} ₺
                         </button>
@@ -152,11 +152,11 @@ export default function BidForm({ adId, currentHighest, minStep, startingBid }: 
                         required
                         style={{
                             width: "100%",
-                            background: "rgba(0, 0, 0, 0.3)",
-                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            background: "rgba(0, 180, 204, 0.03)",
+                            border: "1px solid rgba(0, 180, 204, 0.2)",
                             borderRadius: "0.75rem",
                             padding: "1rem",
-                            color: "white",
+                            color: "var(--text-primary)",
                             fontSize: "1.25rem",
                             fontWeight: "bold",
                             textAlign: "center",

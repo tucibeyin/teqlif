@@ -559,24 +559,24 @@ function CustomArenaLayout({
                     }}>
                         {/* Stats Bar */}
                         <div style={{
-                            background: "rgba(0, 0, 0, 0.4)",
+                            background: "rgba(255, 255, 255, 0.7)",
                             backdropFilter: "blur(15px)",
                             borderRadius: "20px",
-                            border: "1px solid rgba(255, 255, 255, 0.1)",
+                            border: "1px solid rgba(0, 180, 204, 0.2)",
                             padding: "12px 16px",
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center"
                         }}>
                             <div style={{ display: "flex", flexDirection: "column" }}>
-                                <span style={{ fontSize: "0.65rem", color: "rgba(255, 255, 255, 0.6)", fontWeight: 800, letterSpacing: "1px" }}>
+                                <span style={{ fontSize: "0.65rem", color: "rgba(0, 180, 204, 0.8)", fontWeight: 800, letterSpacing: "1px" }}>
                                     {auctionStatus === "ACTIVE" ? "GÜNCEL FİYAT" : "BAŞLANGIÇ FİYATI"}
                                 </span>
                                 <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-                                    <span className={`tabular-nums tracking-tighter ${flashBid ? 'text-green-400 scale-110' : 'text-white'} transition-all duration-300`} style={{ fontSize: "1.5rem", fontWeight: 900 }}>
+                                    <span className={`tabular-nums tracking-tighter ${flashBid ? 'text-primary scale-110' : 'text-[#00B4CC]'} transition-all duration-300`} style={{ fontSize: "1.5rem", fontWeight: 900 }}>
                                         {new Intl.NumberFormat("tr-TR").format(liveHighestBid || (startingBid ?? 0))}
                                     </span>
-                                    <span style={{ fontSize: "1rem", color: "rgba(255, 255, 255, 0.8)", fontWeight: 700 }}>₺</span>
+                                    <span style={{ fontSize: "1rem", color: "var(--primary)", fontWeight: 700 }}>₺</span>
                                 </div>
                             </div>
 
@@ -1067,17 +1067,17 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
 
     return (
         <form onSubmit={handleBid} style={{
-            background: "rgba(0, 0, 0, 0.4)",
+            background: "rgba(255, 255, 255, 0.8)",
             backdropFilter: "blur(20px)",
             WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(255, 255, 255, 0.15)",
+            border: "1px solid rgba(0, 180, 204, 0.2)",
             borderRadius: "1rem",
             padding: "1rem",
             display: "flex",
             flexDirection: "column",
             gap: "0.75rem",
             width: "300px",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.4)",
+            boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
             pointerEvents: "auto",
             marginBottom: "8px"
         }}>
@@ -1089,11 +1089,11 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                         onClick={() => addFastBid(val)}
                         style={{
                             flex: 1,
-                            background: "rgba(255, 255, 255, 0.1)",
-                            border: "1px solid rgba(255, 255, 255, 0.2)",
+                            background: "rgba(0, 180, 204, 0.05)",
+                            border: "1px solid rgba(0, 180, 204, 0.1)",
                             borderRadius: "12px",
                             padding: "6px 0",
-                            color: "white",
+                            color: "var(--primary)",
                             fontSize: "0.75rem",
                             fontWeight: 700,
                             cursor: "pointer"
@@ -1115,11 +1115,11 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                     style={{
                         flex: 1,
                         height: "45px",
-                        background: "rgba(0,0,0,0.3)",
-                        border: "1px solid rgba(255,255,255,0.2)",
+                        background: "rgba(0, 180, 204, 0.05)",
+                        border: "1px solid rgba(0, 180, 204, 0.2)",
                         borderRadius: "12px",
                         padding: "0 12px",
-                        color: "white",
+                        color: "var(--text-primary)",
                         fontSize: "1.1rem",
                         textAlign: "center",
                         fontWeight: 900,

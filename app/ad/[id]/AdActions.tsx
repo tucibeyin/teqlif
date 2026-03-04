@@ -326,9 +326,9 @@ export function AdActions({
                     padding: '6px 12px',
                     fontSize: '0.8rem',
                     fontWeight: 600,
-                    color: '#8b5cf6',
-                    borderColor: 'rgba(139, 92, 246, 0.3)',
-                    background: 'rgba(139, 92, 246, 0.08)',
+                    color: 'var(--primary)',
+                    borderColor: 'rgba(0, 180, 204, 0.3)',
+                    background: 'rgba(0, 180, 204, 0.08)',
                     borderRadius: '6px'
                 }}
             >
