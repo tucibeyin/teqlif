@@ -279,8 +279,19 @@ export default async function AdDetailPage({
                                         {displayPhone && (
                                             <a
                                                 href={`tel:${displayPhone}`}
-                                                className="btn btn-secondary btn-full"
-                                                style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: "0.5rem" }}
+                                                style={{
+                                                    display: "flex",
+                                                    justifyContent: "center",
+                                                    alignItems: "center",
+                                                    gap: "0.5rem",
+                                                    background: "linear-gradient(135deg, rgb(0, 180, 204), rgb(0, 141, 161))",
+                                                    color: "white",
+                                                    padding: "0.75rem 1.25rem",
+                                                    borderRadius: "var(--radius-md)",
+                                                    fontWeight: "bold",
+                                                    textDecoration: "none",
+                                                    boxShadow: "rgba(0, 180, 204, 0.3) 0px 4px 12px"
+                                                }}
                                             >
                                                 📞 {displayPhone} - İlan Sahibini Ara
                                             </a>
@@ -352,59 +363,80 @@ export default async function AdDetailPage({
                             )}
                         </div>
                     ) : (
-                        <div className="auction-card">
+                        <div style={{
+                            background: "rgba(0, 0, 0, 0.4)",
+                            backdropFilter: "blur(20px)",
+                            WebkitBackdropFilter: "blur(20px)",
+                            border: "1px solid rgba(255, 255, 255, 0.15)",
+                            borderRadius: "1.5rem",
+                            padding: "1.5rem",
+                            position: "sticky",
+                            top: "80px",
+                            boxShadow: "rgba(0, 0, 0, 0.4) 0px 20px 40px",
+                            color: "white"
+                        }}>
                             <div style={{ marginBottom: "1.25rem" }}>
-                                <div className="auction-label">
-                                    {highestBid ? "Güncel Fiyat (En Yüksek Teqlif)" : (ad.startingBid === null ? "Açılış (Serbest Teqlif)" : "Minimum Açılış Teqlifi")}
+                                <div style={{ fontSize: "0.85rem", opacity: 0.8, textTransform: "uppercase", letterSpacing: "1px", marginBottom: "4px" }}>
+                                    {highestBid ? "GÜNCEL FİYAT" : (ad.startingBid === null ? "AÇILIŞ (SERBEST)" : "MİNİMUM AÇILIŞ")}
                                 </div>
-                                <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-secondary)" }}>
+                                <div style={{ fontSize: "2rem", fontWeight: 900, color: "rgb(74, 222, 128)", textShadow: "rgba(74, 222, 128, 0.4) 0px 2px 10px" }}>
                                     {highestBid ? formatPrice(highestBid.amount) : (ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid))}
                                 </div>
-                                <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.25rem", display: "flex", justifyContent: "space-between" }}>
-                                    <span>Piyasa Değeri: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span></span>
-                                    <span style={{ color: "var(--primary)", fontWeight: 500 }}>➕ teqlif Aralığı: {formatPrice(ad.minBidStep)}</span>
+                                <div className="text-muted" style={{ fontSize: "0.875rem", marginTop: "0.5rem", display: "flex", justifyContent: "space-between", color: "rgba(255,255,255,0.6)" }}>
+                                    <span>Piyasa: <span style={{ textDecoration: "line-through" }}>{formatPrice(ad.price)}</span></span>
+                                    <span style={{ color: "var(--primary)", fontWeight: 700 }}>➕ Aralık: {formatPrice(ad.minBidStep)}</span>
                                 </div>
                                 {highestBid && (
-                                    <div className="text-muted text-sm" style={{ marginTop: "0.25rem" }}>
-                                        Son teqlif: {highestBid.user.name} tarafından verildi
+                                    <div style={{ fontSize: "0.85rem", marginTop: "0.5rem", color: "rgba(255,255,255,0.8)" }}>
+                                        Son teqlif: <span style={{ fontWeight: 700 }}>{highestBid.user.name}</span>
                                     </div>
                                 )}
                             </div>
 
                             <div style={{ display: "flex", gap: "0.5rem", marginBottom: "1.25rem" }}>
                                 <div style={{
-                                    background: "rgba(0, 188, 212, 0.08)",
-                                    border: "1px solid rgba(0, 188, 212, 0.2)",
-                                    borderRadius: "var(--radius-md)",
-                                    padding: "0.5rem 0.875rem",
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "12px",
+                                    padding: "0.5rem",
                                     flex: 1,
                                     textAlign: "center",
                                 }}>
-                                    <div style={{ fontWeight: 700, color: "var(--primary)" }}>{ad.bids.length}</div>
-                                    <div className="text-muted" style={{ fontSize: "0.75rem" }}>Teqlif</div>
+                                    <div style={{ fontWeight: 800, color: "var(--primary)", fontSize: "1.1rem" }}>{ad.bids.length}</div>
+                                    <div style={{ fontSize: "0.7rem", opacity: 0.6, textTransform: "uppercase" }}>Teqlif</div>
                                 </div>
                                 <div style={{
-                                    background: "rgba(0, 188, 212, 0.08)",
-                                    border: "1px solid rgba(0, 188, 212, 0.2)",
-                                    borderRadius: "var(--radius-md)",
-                                    padding: "0.5rem 0.875rem",
+                                    background: "rgba(255, 255, 255, 0.1)",
+                                    border: "1px solid rgba(255, 255, 255, 0.1)",
+                                    borderRadius: "12px",
+                                    padding: "0.5rem",
                                     flex: 1,
                                     textAlign: "center",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center"
                                 }}>
-                                    <span className={`badge badge-${ad.status.toLowerCase()}`}>
-                                        {ad.status === "ACTIVE" ? "Aktif" : ad.status === "SOLD" ? "Satıldı" : "Süresi Doldu"}
+                                    <span style={{
+                                        padding: "4px 12px",
+                                        borderRadius: "20px",
+                                        background: ad.status === "ACTIVE" ? "rgba(34, 197, 94, 0.2)" : "rgba(255,255,255,0.1)",
+                                        color: ad.status === "ACTIVE" ? "#4ade80" : "white",
+                                        fontSize: "0.75rem",
+                                        fontWeight: 800
+                                    }}>
+                                        {ad.status === "ACTIVE" ? "AKTİF" : ad.status === "SOLD" ? "SATILDI" : "SÜRESİ DOLDU"}
                                     </span>
                                 </div>
                             </div>
 
                             {/* Hemen Al (Buy It Now) */}
                             {ad.status === 'ACTIVE' && ad.buyItNowPrice !== null && !adData.isLive && (
-                                <div style={{ marginBottom: "1.25rem", padding: "1rem", background: "var(--bg-secondary)", borderRadius: "var(--radius-md)", border: "1px dashed var(--primary)", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                                <div style={{ marginBottom: "1.25rem", padding: "1rem", background: "rgba(255, 255, 255, 0.05)", borderRadius: "1rem", border: "1px dashed rgba(0, 180, 204, 0.4)", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
                                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <div style={{ fontWeight: 600, color: "var(--text-secondary)" }}>Hemen Al Fiyatı</div>
-                                        <div style={{ fontSize: "1.25rem", fontWeight: 700, color: "var(--primary)" }}>{formatPrice(ad.buyItNowPrice)}</div>
+                                        <div style={{ fontWeight: 600, opacity: 0.8 }}>Hemen Al Fiyatı</div>
+                                        <div style={{ fontSize: "1.25rem", fontWeight: 800, color: "var(--primary)" }}>{formatPrice(ad.buyItNowPrice)}</div>
                                     </div>
-                                    <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)" }}>
+                                    <div style={{ fontSize: "0.75rem", opacity: 0.6 }}>
                                         Açık artırmanın bitmesini beklemeden bu ürünü hemen satın alabilirsiniz.
                                     </div>
                                     {!isOwner && session?.user ? (
@@ -417,7 +449,16 @@ export default async function AdDetailPage({
                                             initialMessage={`Merhaba, "${ad.title}" (İlan No: ${ad.id}) ilanınızı Hemen Al fiyatı olan ${formatPrice(ad.buyItNowPrice)} üzerinden satın almak istiyorum.`}
                                         />
                                     ) : !session?.user && (
-                                        <Link href="/login" className="btn btn-primary btn-full">
+                                        <Link href="/login" style={{
+                                            background: "rgba(255,255,255,0.1)",
+                                            color: "white",
+                                            padding: "0.75rem",
+                                            borderRadius: "0.75rem",
+                                            textAlign: "center",
+                                            textDecoration: "none",
+                                            fontWeight: 700,
+                                            fontSize: "0.9rem"
+                                        }}>
                                             Hemen Almak İçin Giriş Yap
                                         </Link>
                                     )}
@@ -435,20 +476,30 @@ export default async function AdDetailPage({
                                 )}
 
                                 {!session?.user && !adData.isLive && (
-                                    <div style={{ textAlign: "center", padding: "1.5rem 0", border: "1px dashed var(--border)", borderRadius: "var(--radius-md)", background: "var(--bg-card-hover)" }}>
-                                        <p className="text-muted text-sm" style={{ marginBottom: "0.75rem" }}>
+                                    <div style={{ textAlign: "center", padding: "1.5rem", background: "rgba(255, 255, 255, 0.05)", borderRadius: "1rem", border: "1px dashed rgba(255, 255, 255, 0.2)" }}>
+                                        <p style={{ fontSize: "0.85rem", opacity: 0.7, marginBottom: "1rem" }}>
                                             Bu ilana teqlif vermek için giriş yapmalısınız.
                                         </p>
-                                        <Link href="/login" className="btn btn-primary btn-full">
+                                        <Link href="/login" style={{
+                                            display: "block",
+                                            background: "linear-gradient(135deg, rgb(0, 180, 204), rgb(0, 141, 161))",
+                                            color: "white",
+                                            padding: "0.75rem",
+                                            borderRadius: "0.75rem",
+                                            fontWeight: 800,
+                                            textDecoration: "none"
+                                        }}>
                                             Giriş Yap
                                         </Link>
                                     </div>
                                 )}
 
                                 {isOwner && (
-                                    <div style={{ textAlign: "center", padding: "1.25rem", background: "var(--primary-50)", borderRadius: "var(--radius-md)", color: "var(--primary-dark)", border: "1px solid var(--primary-100)" }}>
-                                        <strong style={{ display: "block", marginBottom: "0.25rem" }}>Bu ilan size ait</strong>
-                                        {ad.status === 'ACTIVE' ? "Kendi ilanınıza teqlif veremezsiniz." : "İlan satış işlemi tamamlandı."}
+                                    <div style={{ textAlign: "center", padding: "1.25rem", background: "rgba(0, 180, 204, 0.1)", borderRadius: "1rem", border: "1px solid rgba(0, 180, 204, 0.2)" }}>
+                                        <strong style={{ display: "block", marginBottom: "0.25rem", color: "var(--primary)" }}>Bu ilan size ait</strong>
+                                        <span style={{ fontSize: "0.85rem", opacity: 0.8 }}>
+                                            {ad.status === 'ACTIVE' ? "Kendi ilanınıza teqlif veremezsiniz." : "İlan satış işlemi tamamlandı."}
+                                        </span>
                                     </div>
                                 )}
                             </div>
@@ -465,17 +516,17 @@ export default async function AdDetailPage({
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 padding: '12px 16px',
-                                                background: 'var(--bg-card)',
-                                                border: '1px solid var(--border)',
-                                                borderRadius: 'var(--radius-lg)',
+                                                background: 'rgba(255,255,255,0.03)',
+                                                border: '1px solid rgba(255,255,255,0.1)',
+                                                borderRadius: '12px',
                                                 marginBottom: '10px',
                                                 transition: 'all 0.2s ease',
-                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
+                                                boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
                                             }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                                                     <div style={{ flex: 1 }}>
                                                         <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                                                            <span className="bid-item-user" style={{ fontWeight: 700, color: 'var(--text-primary)' }}>
+                                                            <span className="bid-item-user" style={{ fontWeight: 700, color: 'white' }}>
                                                                 {i === 0 && "🏆 "}
                                                                 {formatNameInitials(bid.user.name)}
                                                             </span>
@@ -528,8 +579,6 @@ export default async function AdDetailPage({
                                                         {isOwner && bid.status === 'ACCEPTED' && bid.user.phone && (
                                                             <a
                                                                 href={`tel:${bid.user.phone}`}
-                                                                className="btn btn-secondary"
-                                                                title="Ara"
                                                                 style={{
                                                                     display: 'flex',
                                                                     alignItems: 'center',
@@ -539,9 +588,9 @@ export default async function AdDetailPage({
                                                                     fontWeight: 600,
                                                                     gap: '6px',
                                                                     borderRadius: '6px',
-                                                                    background: '#f1f5f9',
-                                                                    color: '#475569',
-                                                                    border: '1px solid #e2e8f0'
+                                                                    background: 'rgba(255,255,255,0.1)',
+                                                                    color: 'white',
+                                                                    border: '1px solid rgba(255,255,255,0.2)'
                                                                 }}
                                                             >
                                                                 📞 Ara

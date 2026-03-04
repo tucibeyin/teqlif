@@ -213,8 +213,22 @@ export function AdActions({
             <button
                 onClick={handleAction}
                 disabled={isLoading}
-                className="btn btn-primary btn-full"
-                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '8px',
+                    width: '100%',
+                    padding: '0.75rem 1.25rem',
+                    background: 'linear-gradient(135deg, rgb(0, 180, 204), rgb(0, 141, 161))',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: 'var(--radius-md)',
+                    fontWeight: 700,
+                    cursor: isLoading ? 'not-allowed' : 'pointer',
+                    boxShadow: 'rgba(0, 180, 204, 0.3) 0px 4px 12px',
+                    transition: 'all 0.2s'
+                }}
             >
                 <MessageSquare size={18} />
                 {isLoading ? "İşleniyor..." : (customLabel || "Satıcıya Mesaj Gönder")}
