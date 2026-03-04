@@ -33,6 +33,10 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 final FlutterLocalNotificationsPlugin _localNotifications =
     FlutterLocalNotificationsPlugin();
 
+/// Global key for showing in-app live banners from anywhere without context
+final GlobalKey<ScaffoldMessengerState> _scaffoldKey =
+    GlobalKey<ScaffoldMessengerState>();
+
 void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
   // Force a global synchronization the moment the user taps a push notification
   ref.read(unreadCountsProvider.notifier).refresh();
@@ -44,8 +48,14 @@ void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
 
   final type = data['type'] as String?;
   final link = data['link'] as String?;
-  
+
   String route = (type == 'NEW_MESSAGE') ? '/messages' : '/notifications';
+
+  // LIVE_STARTED → deep-link directly to the live ad page
+  if (type == 'LIVE_STARTED') {
+    final adId = data['adId'] as String?;
+    if (adId != null && adId.isNotEmpty) route = '/ad/$adId';
+  }
 
   if ((type == 'BID_RECEIVED' || type == 'BID_ACCEPTED') && link != null) {
     try {
@@ -75,6 +85,37 @@ void _handleNotificationTap(Map<String, dynamic> data, WidgetRef ref) {
   } else {
     router.go(route);
   }
+}
+
+/// Shows a premium floating live-stream banner with a "Hemen Katıl" action.
+void _showLiveBanner(String adId, String text, WidgetRef ref) {
+  _scaffoldKey.currentState?.showSnackBar(
+    SnackBar(
+      content: Row(
+        children: [
+          const Icon(Icons.sensors, color: Colors.white, size: 18),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              text,
+              style: const TextStyle(fontWeight: FontWeight.w700, color: Colors.white),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+      backgroundColor: const Color(0xFFDC2626),
+      duration: const Duration(seconds: 8),
+      behavior: SnackBarBehavior.floating,
+      margin: const EdgeInsets.all(14),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      action: SnackBarAction(
+        label: 'Hemen Katıl →',
+        textColor: Colors.white,
+        onPressed: () => ref.read(routerProvider).push('/ad/$adId'),
+      ),
+    ),
+  );
 }
 
 Future<void> _initLocalNotifications(WidgetRef ref) async {
@@ -174,7 +215,17 @@ Future<void> _setupFCM(WidgetRef ref) async {
     
     final payloadData = message.data;
     final type = payloadData['type'] as String?;
-    
+
+    // LIVE_STARTED foreground handler — show premium in-app live banner
+    if (type == 'LIVE_STARTED') {
+      final adId = payloadData['adId'] as String?;
+      final body = message.notification?.body ?? '🔴 Canlı yayın başladı! Hemen katıl.';
+      if (adId != null && adId.isNotEmpty) {
+        _showLiveBanner(adId, body, ref);
+      }
+      // Fall through so system tray notification also fires below
+    }
+
     if (type == 'NEW_MESSAGE') {
       // Refresh the Inbox list so the new message snippet appears
       ref.read(conversationsProvider.notifier).refresh();
@@ -374,6 +425,7 @@ class _TeqlifAppState extends ConsumerState<TeqlifApp> with WidgetsBindingObserv
       title: 'teqlif',
       theme: AppTheme.light,
       routerConfig: router,
+      scaffoldMessengerKey: _scaffoldKey,
       debugShowCheckedModeBanner: false,
     );
   }
