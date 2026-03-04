@@ -856,18 +856,53 @@ function CustomArenaLayout({
                             width: "100px",
                             height: "140px",
                             borderRadius: "12px",
-                            overflow: "hidden",
+                            overflow: "visible",
                             border: "2px solid white",
                             boxShadow: "0 8px 24px rgba(0,0,0,0.5)",
                             zIndex: 10,
                             background: "black"
                         }}>
-                            {guestTrack?.publication?.isMuted ? (
-                                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", background: "#333" }}>
-                                    <div style={{ fontSize: "24px" }}>📷</div>
-                                </div>
-                            ) : (
-                                <VideoTrack trackRef={guestTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            <div style={{ position: "relative", width: "100%", height: "100%", borderRadius: "12px", overflow: "hidden" }}>
+                                {guestTrack?.publication?.isMuted ? (
+                                    <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", background: "#333" }}>
+                                        <div style={{ fontSize: "24px" }}>📷</div>
+                                    </div>
+                                ) : (
+                                    <VideoTrack trackRef={guestTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                )}
+                            </div>
+                            {/* Host close button to kick guest from stage */}
+                            {isOwner && (
+                                <button
+                                    onClick={() => {
+                                        if (confirm("Bu katılımcıyı sahneden çıkarmak istiyor musunuz?")) {
+                                            const payload = JSON.stringify({ type: "KICK_FROM_STAGE" });
+                                            room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                        }
+                                    }}
+                                    style={{
+                                        position: "absolute",
+                                        top: "-10px",
+                                        left: "-10px",
+                                        width: "24px",
+                                        height: "24px",
+                                        borderRadius: "50%",
+                                        background: "rgba(239, 68, 68, 1)",
+                                        border: "2px solid white",
+                                        color: "white",
+                                        fontSize: "12px",
+                                        fontWeight: 900,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        cursor: "pointer",
+                                        zIndex: 11,
+                                        boxShadow: "0 2px 8px rgba(0,0,0,0.3)"
+                                    }}
+                                    title="Sahneden çıkar"
+                                >
+                                    ✕
+                                </button>
                             )}
                         </div>
                     )}
@@ -887,7 +922,7 @@ function CustomArenaLayout({
                     }}>
                         {/* Chat Area & Reactions Tray (Flex row so chat takes left, emojis take right) */}
                         <div style={{ flex: 1, display: "flex", overflow: "hidden", pointerEvents: "auto", marginBottom: "8px" }}>
-                            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px", paddingRight: "10px" }}>
+                            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", justifyContent: "flex-end", gap: "6px", paddingRight: "10px" }}>
                                 {messages.map((msg: any) => (
                                     <div key={msg.id} style={{
                                         background: "rgba(0,0,0,0.4)",
@@ -1025,12 +1060,18 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
         setLoading(true);
         const rawAmount = parseInt(amount.replace(/\./g, ""), 10);
         try {
-            const res = await fetch("/api/bids", {
+            // Bug Fix #2: Use /api/livekit/bid instead of /api/bids for real-time sync.
+            // The static /api/bids endpoint was blocking live bids (mutex) and not broadcasting
+            // the new price to other participants via DataChannel.
+            const res = await fetch("/api/livekit/bid", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ adId, amount: rawAmount }),
+                body: JSON.stringify({ roomId: adId, amount: rawAmount }),
             });
-            if (res.ok) router.refresh();
+            if (!res.ok) {
+                const data = await res.json();
+                alert(data.error || data.message || "Teklif verilemedi.");
+            }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };

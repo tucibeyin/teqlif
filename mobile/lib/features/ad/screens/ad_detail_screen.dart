@@ -797,27 +797,77 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                       ],
 
                       if (ad.isLive == true && ad.status == 'ACTIVE') ...[
+                        Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade900.withOpacity(0.15),
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(color: Colors.red.shade400, width: 1.5),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.sensors, color: Colors.red, size: 18),
+                              const SizedBox(width: 8),
+                              const Expanded(
+                                child: Text('Bu ilan şu an CANLI! Yukarıdaki yayında anlık teklif verebilirsiniz.',
+                                    style: TextStyle(color: Colors.red, fontSize: 12, fontWeight: FontWeight.w600)),
+                              ),
+                            ],
+                          ),
+                        ),
                         if (!isOwner) ...[
-                          Container(
-                            padding: const EdgeInsets.all(12),
-                            decoration: BoxDecoration(
-                              color: Colors.red.shade50,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.red.shade200),
-                            ),
-                            child: Row(
-                              children: [
-                                const Icon(Icons.info_outline, color: Colors.red, size: 20),
-                                const SizedBox(width: 8),
-                                const Expanded(
-                                  child: Text('Açık arttırma şu an canlı yayında! Tekliflerinizi yukarıdaki ekrandan anlık olarak verebilirsiniz.',
-                                      style: TextStyle(color: Colors.red, fontSize: 13, fontWeight: FontWeight.w600)),
-                                ),
-                              ],
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red.shade600,
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                              ),
+                              onPressed: () {
+                                if (mounted) {
+                                  Navigator.of(context, rootNavigator: true).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => LiveArenaViewer(ad: ad),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.sensors),
+                              label: const Text('🔴 Tam Ekran Yayına Gir',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
                             ),
                           ),
-                          const SizedBox(height: 24),
-                        ]
+                          const SizedBox(height: 12),
+                        ],
+                        if (isOwner) ...[
+                          SizedBox(
+                            width: double.infinity,
+                            height: 52,
+                            child: ElevatedButton.icon(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange.shade700,
+                                foregroundColor: Colors.white,
+                                elevation: 4,
+                              ),
+                              onPressed: () {
+                                if (mounted) {
+                                  Navigator.of(context, rootNavigator: true).push(
+                                    MaterialPageRoute(
+                                      builder: (_) => LiveArenaHost(ad: ad),
+                                    ),
+                                  );
+                                }
+                              },
+                              icon: const Icon(Icons.dashboard),
+                              label: const Text('📡 Host Kontrol Paneline Geç',
+                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                        ],
                       ],
 
                       if (isOwner && ad.status == 'ACTIVE' && ad.isLive != true) ...[
