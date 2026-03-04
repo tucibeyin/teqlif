@@ -8,7 +8,7 @@
     "start": "next start -p 3456",
     "lint": "eslint",
     "db:push": "prisma db push",
-    "db:seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts",
+    "db:seed": "ts-node --project tsconfig.seed.json --transpile-only prisma/seed.ts",
     "db:studio": "prisma studio",
     "users:list": "ts-node --transpile-only --compiler-options '{\"module\":\"CommonJS\", \"moduleResolution\": \"node\"}' -e \"const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.user.findMany({ select: { id: true, name: true, email: true, createdAt: true }, orderBy: { createdAt: 'desc' } }).then(u => { console.table(u); process.exit(0); });\""
   },
@@ -45,6 +45,6 @@
     "typescript": "^5"
   },
   "prisma": {
-    "seed": "ts-node --compiler-options '{\"module\":\"CommonJS\"}' prisma/seed.ts"
+    "seed": "ts-node --project tsconfig.seed.json --transpile-only prisma/seed.ts"
   }
 }
