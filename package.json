@@ -13,6 +13,7 @@
     "users:list": "ts-node --transpile-only --compiler-options '{\"module\":\"CommonJS\", \"moduleResolution\": \"node\"}' -e \"const { PrismaClient } = require('@prisma/client'); const prisma = new PrismaClient(); prisma.user.findMany({ select: { id: true, name: true, email: true, createdAt: true }, orderBy: { createdAt: 'desc' } }).then(u => { console.table(u); process.exit(0); });\""
   },
   "dependencies": {
+    "@getbrevo/brevo": "^4.0.1",
     "@livekit/components-react": "^2.9.20",
     "@livekit/components-styles": "^1.2.0",
     "@prisma/client": "^5.22.0",

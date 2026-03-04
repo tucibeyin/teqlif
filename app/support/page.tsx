@@ -17,13 +17,21 @@ export default function SupportPage() {
         e.preventDefault();
         setStatus("loading");
 
-        // Simulate API call for form submission
-        // Connect this to your actual support endpoint when ready
         try {
-            await new Promise(resolve => setTimeout(resolve, 1500));
+            const res = await fetch("/api/support", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(formData),
+            });
+
+            if (!res.ok) {
+                throw new Error("Sunucu hatası");
+            }
+
             setStatus("success");
             setFormData({ name: "", email: "", subject: "", message: "" });
         } catch (error) {
+            console.error("Form gönderim hatası:", error);
             setStatus("error");
         }
     };
@@ -99,6 +107,11 @@ export default function SupportPage() {
                             </div>
                         ) : (
                             <form onSubmit={handleSubmit} className="space-y-5">
+                                {status === "error" && (
+                                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm">
+                                        Mesajınız gönderilirken bir hata oluştu. Lütfen daha sonra tekrar deneyin veya doğrudan e-posta gönderin.
+                                    </div>
+                                )}
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                                     <div className="space-y-1">
                                         <label className="text-sm font-semibold text-gray-700">Adınız Soyadınız *</label>
