@@ -1,17 +1,29 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 // GET endpoints allows fetching the logged-in user's friend list with optional list grouping
 export async function GET(request: Request) {
     try {
-        const session = await auth();
-        if (!session?.user?.email) {
+        let userId: string | undefined;
+
+        // Try Mobile Token Auth First
+        const mobileUser = await getMobileUser(request);
+        if (mobileUser) {
+            userId = mobileUser.id;
+        } else {
+            // Fallback to Web Session
+            const session = await auth();
+            userId = session?.user?.id;
+        }
+
+        if (!userId) {
             return NextResponse.json({ error: "Yetkisiz oturum" }, { status: 401 });
         }
 
         const user = await prisma.user.findUnique({
-            where: { email: session.user.email }
+            where: { id: userId }
         });
 
         if (!user) {
@@ -64,8 +76,19 @@ export async function GET(request: Request) {
 // POST endpoint to add a friend (follow)
 export async function POST(request: Request) {
     try {
-        const session = await auth();
-        if (!session?.user?.id) {
+        let userId: string | undefined;
+
+        // Try Mobile Token Auth First
+        const mobileUser = await getMobileUser(request);
+        if (mobileUser) {
+            userId = mobileUser.id;
+        } else {
+            // Fallback to Web Session
+            const session = await auth();
+            userId = session?.user?.id;
+        }
+
+        if (!userId) {
             return NextResponse.json({ error: "Lütfen giriş yapın" }, { status: 401 });
         }
 
@@ -75,7 +98,7 @@ export async function POST(request: Request) {
             return NextResponse.json({ error: "Hedef kullanıcı ID'si eksik" }, { status: 400 });
         }
 
-        if (session.user.id === targetUserId) {
+        if (userId === targetUserId) {
             return NextResponse.json({ error: "Kendinizi takip edemezsiniz" }, { status: 400 });
         }
 
@@ -83,7 +106,7 @@ export async function POST(request: Request) {
         const existing = await prisma.friend.findUnique({
             where: {
                 userId_friendId: {
-                    userId: session.user.id,
+                    userId: userId,
                     friendId: targetUserId
                 }
             }
@@ -95,7 +118,7 @@ export async function POST(request: Request) {
 
         const newFriend = await prisma.friend.create({
             data: {
-                userId: session.user.id,
+                userId: userId,
                 friendId: targetUserId
             }
         });

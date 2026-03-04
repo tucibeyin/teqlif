@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 // PATCH endpoint to assign or remove a friend from a custom list
 export async function PATCH(
@@ -9,8 +10,19 @@ export async function PATCH(
 ) {
     try {
         const { listId } = await params;
-        const session = await auth();
-        if (!session?.user?.id) {
+        let userId: string | undefined;
+
+        // Try Mobile Token Auth First
+        const mobileUser = await getMobileUser(request);
+        if (mobileUser) {
+            userId = mobileUser.id;
+        } else {
+            // Fallback to Web Session
+            const session = await auth();
+            userId = session?.user?.id;
+        }
+
+        if (!userId) {
             return NextResponse.json({ error: "Yetkisiz oturum" }, { status: 401 });
         } const { friendId } = await request.json();
 
@@ -24,7 +36,7 @@ export async function PATCH(
                 where: { id: listId }
             });
 
-            if (!list || list.userId !== session.user.id) {
+            if (!list || list.userId !== userId) {
                 return NextResponse.json({ error: "Liste bulunamadı veya yetkisiz erişim" }, { status: 403 });
             }
         }
@@ -33,7 +45,7 @@ export async function PATCH(
         const updatedFriend = await prisma.friend.update({
             where: {
                 userId_friendId: {
-                    userId: session.user.id,
+                    userId: userId,
                     friendId: friendId
                 }
             },
@@ -57,8 +69,19 @@ export async function DELETE(
 ) {
     try {
         const { listId } = await params;
-        const session = await auth();
-        if (!session?.user?.id) {
+        let userId: string | undefined;
+
+        // Try Mobile Token Auth First
+        const mobileUser = await getMobileUser(request);
+        if (mobileUser) {
+            userId = mobileUser.id;
+        } else {
+            // Fallback to Web Session
+            const session = await auth();
+            userId = session?.user?.id;
+        }
+
+        if (!userId) {
             return NextResponse.json({ error: "Yetkisiz oturum" }, { status: 401 });
         }
 
@@ -66,7 +89,7 @@ export async function DELETE(
             where: { id: listId }
         });
 
-        if (!list || list.userId !== session.user.id) {
+        if (!list || list.userId !== userId) {
             return NextResponse.json({ error: "Liste bulunamadı veya yetkisiz erişim" }, { status: 403 });
         }
 

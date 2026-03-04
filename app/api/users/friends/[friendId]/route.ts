@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 // DELETE endpoint to unfollow / remove a friend
 export async function DELETE(
@@ -9,8 +10,19 @@ export async function DELETE(
 ) {
     try {
         const { friendId } = await params;
-        const session = await auth();
-        if (!session?.user?.id) {
+        let userId: string | undefined;
+
+        // Try Mobile Token Auth First
+        const mobileUser = await getMobileUser(request);
+        if (mobileUser) {
+            userId = mobileUser.id;
+        } else {
+            // Fallback to Web Session
+            const session = await auth();
+            userId = session?.user?.id;
+        }
+
+        if (!userId) {
             return NextResponse.json({ error: "Yetkisiz oturum" }, { status: 401 });
         }
 
@@ -23,7 +35,7 @@ export async function DELETE(
         // Delete the friend relationship
         await prisma.friend.deleteMany({
             where: {
-                userId: session.user.id,
+                userId: userId,
                 friendId: friendId
             }
         });

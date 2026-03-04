@@ -285,8 +285,19 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
                                     IconButton(
                                       icon: const Icon(Icons.chat_bubble_outline),
                                       color: Theme.of(context).primaryColor,
-                                      onPressed: () {
-                                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Mesaj gönderme başlatılacak.')));
+                                      onPressed: () async {
+                                        try {
+                                          final res = await ApiClient().post(Endpoints.conversations, data: {
+                                            'userId': friend.id,
+                                          });
+                                          if (mounted) {
+                                            context.push('/messages/${res.data['id']}');
+                                          }
+                                        } catch (e) {
+                                          if (mounted) {
+                                            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Sohbet başlatılamadı.')));
+                                          }
+                                        }
                                       },
                                     ),
                                     IconButton(

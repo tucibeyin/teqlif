@@ -64,12 +64,67 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   }
 
   Future<void> _sendMessage() async {
-    // Navigate to create conversation or existing chat
-    // For now, assume a route exists or an API initiates it
-    // Example: context.push('/messages/new?userId=${widget.userId}');
-    ScaffoldMessenger.of(context).showSnackBar(
-       const SnackBar(content: Text('Mesaj gönderme özelliği entegre edilecek')),
+    setState(() => _isActionLoading = true);
+    try {
+      final res = await ApiClient().post(Endpoints.conversations, data: {
+        'userId': widget.userId,
+      });
+      final conversationId = res.data['id'];
+      if (mounted) {
+        context.push('/messages/$conversationId');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sohbet başlatılamadı.')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isActionLoading = false);
+    }
+  }
+
+  Future<void> _assignUserToList() async {
+    if (ref.read(userProvider).lists.isEmpty) {
+      await ref.read(userProvider.notifier).fetchFriendsData();
+    }
+    if (!mounted) return;
+    final lists = ref.read(userProvider).lists;
+    final user = _profileData!['user'] as PublicUserProfile;
+    
+    final newSelectedListId = await showModalBottomSheet<String?>(
+      context: context,
+      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(20))),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text('${user.name} için Liste Seçin', style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            ),
+            ListTile(
+              title: const Text('⭐ Listesiz (Varsayılan)'),
+              onTap: () => Navigator.pop(context, 'null'),
+            ),
+            const Divider(height: 1),
+            ...lists.map((l) => ListTile(
+              title: Text(l.name),
+              onTap: () => Navigator.pop(context, l.id),
+            )),
+          ],
+        ),
+      )
     );
+
+    if (newSelectedListId != null) {
+      final idToSet = newSelectedListId == 'null' ? null : newSelectedListId;
+      await ref.read(userProvider.notifier).assignFriendToList(widget.userId, idToSet);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Liste güncellendi.')));
+      }
+    }
   }
 
   @override
@@ -157,37 +212,58 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
 
                   // Actions
                   if (connectionStatus != 'SELF')
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
+                    Column(
                       children: [
-                        Expanded(
-                          child: ElevatedButton(
-                            onPressed: _isActionLoading ? null : _toggleFollow,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: connectionStatus == 'FRIEND' ? Colors.grey[200] : Theme.of(context).primaryColor,
-                              foregroundColor: connectionStatus == 'FRIEND' ? Colors.black87 : Colors.white,
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              elevation: connectionStatus == 'FRIEND' ? 0 : 2,
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isActionLoading ? null : _toggleFollow,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: connectionStatus == 'FRIEND' ? Colors.grey[200] : Theme.of(context).primaryColor,
+                                  foregroundColor: connectionStatus == 'FRIEND' ? Colors.black87 : Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  elevation: connectionStatus == 'FRIEND' ? 0 : 2,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: _isActionLoading
+                                    ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
+                                    : Text(connectionStatus == 'FRIEND' ? 'Takipten Çık' : 'Takip Et', style: const TextStyle(fontWeight: FontWeight.bold)),
+                              ),
                             ),
-                            child: _isActionLoading
-                                ? const SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                                : Text(connectionStatus == 'FRIEND' ? 'Takipten Çık' : 'Takip Et', style: const TextStyle(fontWeight: FontWeight.bold)),
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: OutlinedButton(
-                            onPressed: _sendMessage,
-                            style: OutlinedButton.styleFrom(
-                              foregroundColor: Theme.of(context).primaryColor,
-                              side: BorderSide(color: Theme.of(context).primaryColor, width: 2),
-                              padding: const EdgeInsets.symmetric(vertical: 12),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: OutlinedButton(
+                                onPressed: _sendMessage,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Theme.of(context).primaryColor,
+                                  side: BorderSide(color: Theme.of(context).primaryColor, width: 2),
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                ),
+                                child: const Text('Mesaj Gönder', style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
                             ),
-                            child: const Text('Mesaj Gönder', style: TextStyle(fontWeight: FontWeight.bold)),
-                          ),
+                          ],
                         ),
+                        if (connectionStatus == 'FRIEND') ...[
+                          const SizedBox(height: 12),
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton.icon(
+                              onPressed: _assignUserToList,
+                              icon: const Icon(Icons.list),
+                              label: const Text('Listeye Ekle', style: TextStyle(fontWeight: FontWeight.bold)),
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.black87,
+                                side: BorderSide(color: Colors.grey[300]!, width: 2),
+                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                              ),
+                            ),
+                          ),
+                        ],
                       ],
                     ),
                 ],

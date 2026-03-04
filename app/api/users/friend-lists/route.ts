@@ -1,12 +1,24 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { auth } from "@/auth";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 // POST endpoint to create a new custom friend list
 export async function POST(request: Request) {
     try {
-        const session = await auth();
-        if (!session?.user?.id) {
+        let userId: string | undefined;
+
+        // Try Mobile Token Auth First
+        const mobileUser = await getMobileUser(request);
+        if (mobileUser) {
+            userId = mobileUser.id;
+        } else {
+            // Fallback to Web Session
+            const session = await auth();
+            userId = session?.user?.id;
+        }
+
+        if (!userId) {
             return NextResponse.json({ error: "Lütfen giriş yapın" }, { status: 401 });
         }
 
@@ -19,7 +31,7 @@ export async function POST(request: Request) {
         // Check for duplicates
         const existing = await prisma.friendList.findFirst({
             where: {
-                userId: session.user.id,
+                userId: userId,
                 name: name.trim()
             }
         });
@@ -30,7 +42,7 @@ export async function POST(request: Request) {
 
         const newList = await prisma.friendList.create({
             data: {
-                userId: session.user.id,
+                userId: userId,
                 name: name.trim()
             }
         });

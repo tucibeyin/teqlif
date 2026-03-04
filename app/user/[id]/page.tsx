@@ -18,6 +18,10 @@ export default function UserProfilePage() {
     const [ads, setAds] = useState<any[]>([]);
     const [connectionStatus, setConnectionStatus] = useState<"NONE" | "FRIEND" | "SELF">("NONE");
 
+    // For friend list management
+    const [lists, setLists] = useState<any[]>([]);
+    const [currentListId, setCurrentListId] = useState<string>("null");
+
     useEffect(() => {
         const fetchProfile = async () => {
             try {
@@ -28,6 +32,16 @@ export default function UserProfilePage() {
                     setUser(data.user);
                     setAds(data.ads);
                     setConnectionStatus(data.connectionStatus);
+
+                    if (data.connectionStatus === "FRIEND") {
+                        const fRes = await fetch("/api/users/friends");
+                        if (fRes.ok) {
+                            const fData = await fRes.json();
+                            setLists(fData.customLists || []);
+                            const fInfo = fData.friends?.find((f: any) => f.id === id);
+                            if (fInfo) setCurrentListId(fInfo.friendListId || "null");
+                        }
+                    }
                 } else {
                     alert(data.error || "Kullanıcı bulunamadı.");
                     router.push("/");
@@ -60,7 +74,14 @@ export default function UserProfilePage() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({ targetUserId: id })
                 });
-                if (res.ok) setConnectionStatus("FRIEND");
+                if (res.ok) {
+                    setConnectionStatus("FRIEND");
+                    const fRes = await fetch("/api/users/friends");
+                    if (fRes.ok) {
+                        const fData = await fRes.json();
+                        setLists(fData.customLists || []);
+                    }
+                }
             }
         } catch (e) {
             console.error("Follow error:", e);
@@ -94,13 +115,24 @@ export default function UserProfilePage() {
         }
     };
 
+    const handleListChange = async (newListId: string) => {
+        try {
+            const res = await fetch(`/api/users/friend-lists/${newListId}`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ friendId: id })
+            });
+            if (res.ok) setCurrentListId(newListId);
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
     if (loading) {
         return (
-            <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-
-                <div className="flex items-center justify-center h-[60vh]">
-                    <div className="w-12 h-12 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin"></div>
-                </div>
+            <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div style={{ width: '48px', height: '48px', border: '4px solid var(--primary)', borderTopColor: 'transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
+                <style>{`@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }`}</style>
             </div>
         );
     }
@@ -108,56 +140,67 @@ export default function UserProfilePage() {
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
-
-
-            <main className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <div style={{ padding: '3rem 0', minHeight: '100vh', backgroundColor: 'var(--bg)' }}>
+            <div className="container" style={{ maxWidth: '960px' }}>
 
                 {/* Profile Header */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-100 dark:border-gray-700 p-8 mb-8">
-                    <div className="flex flex-col md:flex-row items-center md:items-start gap-8">
+                <div className="card" style={{ padding: '2rem', marginBottom: '2.5rem' }}>
+                    <div style={{ display: 'flex', gap: '2.5rem', alignItems: 'center', flexWrap: 'wrap' }}>
 
                         {/* Avatar */}
-                        <div className="flex-shrink-0 relative w-32 h-32 rounded-full overflow-hidden border-4 border-gray-50 dark:border-gray-700 shadow-md bg-gray-100 dark:bg-gray-800 flex justify-center items-center">
+                        <div style={{ width: '120px', height: '120px', borderRadius: '50%', overflow: 'hidden', border: '4px solid var(--border-light)', backgroundColor: 'var(--bg)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
                             {user.avatar ? (
-                                <Image src={user.avatar} alt={user.name} fill className="object-cover" />
+                                <Image src={user.avatar} alt={user.name} width={120} height={120} style={{ objectFit: 'cover' }} />
                             ) : (
-                                <span className="text-4xl font-bold text-gray-500">{user.name.charAt(0).toUpperCase()}</span>
+                                <span style={{ fontSize: '3rem', fontWeight: 800, color: 'var(--text-muted)' }}>{user.name.charAt(0).toUpperCase()}</span>
                             )}
                         </div>
 
                         {/* Info */}
-                        <div className="flex-1 text-center md:text-left">
-                            <h1 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">{user.name}</h1>
-                            <p className="text-gray-500 dark:text-gray-400 mb-4">
+                        <div style={{ flex: 1, minWidth: '280px' }}>
+                            <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{user.name}</h1>
+                            <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9375rem' }}>
                                 Teqlif Üyesi • {new Date(user.createdAt).toLocaleDateString("tr-TR", { year: 'numeric', month: 'long' })} tarihinden beri
                             </p>
 
                             {user.phone && (
-                                <div className="inline-flex items-center px-4 py-2 bg-gray-100 dark:bg-gray-700 rounded-full text-gray-700 dark:text-gray-300 font-medium text-sm mb-6">
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                <div style={{ display: 'inline-flex', alignItems: 'center', backgroundColor: 'var(--bg-input)', padding: '0.5rem 1rem', borderRadius: 'var(--radius-full)', fontSize: '0.875rem', fontWeight: 600, color: 'var(--text-primary)', marginBottom: '1.5rem' }}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '0.5rem', color: 'var(--primary)' }}><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
                                     {user.phone}
                                 </div>
                             )}
 
                             {/* Actions */}
                             {connectionStatus !== "SELF" && (
-                                <div className="flex flex-wrap justify-center md:justify-start gap-4">
+                                <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
+
                                     <button
                                         onClick={handleFollowToggle}
                                         disabled={actionLoading}
-                                        className={`px-6 py-2.5 rounded-xl font-bold transition-all ${connectionStatus === "FRIEND"
-                                            ? "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-200 hover:bg-gray-200"
-                                            : "bg-[var(--primary)] text-white hover:opacity-90 shadow-md shadow-[var(--primary)]/30"
-                                            }`}
+                                        className={connectionStatus === "FRIEND" ? "btn btn-secondary" : "btn btn-primary"}
+                                        style={{ minWidth: '140px' }}
                                     >
-                                        {actionLoading ? "İşleniyor..." : connectionStatus === "FRIEND" ? "Takipten Çık" : "Takip Et / Ekle"}
+                                        {actionLoading ? "İşleniyor..." : connectionStatus === "FRIEND" ? "Takipten Çık" : "Takip Et"}
                                     </button>
+
+                                    {connectionStatus === "FRIEND" && (
+                                        <select
+                                            value={currentListId}
+                                            onChange={(e) => handleListChange(e.target.value)}
+                                            className="input"
+                                            style={{ width: '160px', borderRadius: 'var(--radius-full)', padding: '0.5rem 2rem 0.5rem 1rem', fontSize: '0.875rem' }}
+                                        >
+                                            <option value="null">⭐ Listesiz</option>
+                                            {lists.map(l => (
+                                                <option key={l.id} value={l.id}>{l.name}</option>
+                                            ))}
+                                        </select>
+                                    )}
 
                                     <button
                                         onClick={handleMessage}
                                         disabled={actionLoading}
-                                        className="px-6 py-2.5 rounded-xl font-bold bg-white dark:bg-gray-800 border-2 border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)] hover:text-white transition-all shadow-sm"
+                                        className="btn btn-outline"
                                     >
                                         Mesaj Gönder
                                     </button>
@@ -166,15 +209,15 @@ export default function UserProfilePage() {
                         </div>
 
                         {/* Stats box */}
-                        <div className="flex gap-6 p-6 bg-gray-50 dark:bg-gray-900 rounded-2xl border border-gray-100 dark:border-gray-700">
-                            <div className="text-center">
-                                <div className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">{user.stats.activeAds}</div>
-                                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-1">Aktif İlan</div>
+                        <div style={{ display: 'flex', gap: '2rem', padding: '1.5rem', backgroundColor: 'var(--bg-input)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>{user.stats.activeAds}</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '0.5rem', letterSpacing: '0.05em' }}>Aktif İlan</div>
                             </div>
-                            <div className="w-px bg-gray-200 dark:bg-gray-700"></div>
-                            <div className="text-center">
-                                <div className="text-2xl font-black text-gray-900 dark:text-white tabular-nums">{user.stats.followers}</div>
-                                <div className="text-xs font-semibold text-gray-500 uppercase tracking-wider mt-1">Takipçi</div>
+                            <div style={{ width: '1px', backgroundColor: 'var(--border)' }}></div>
+                            <div style={{ textAlign: 'center' }}>
+                                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>{user.stats.followers}</div>
+                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '0.5rem', letterSpacing: '0.05em' }}>Takipçi</div>
                             </div>
                         </div>
 
@@ -183,56 +226,54 @@ export default function UserProfilePage() {
 
                 {/* Ads Section */}
                 <div>
-                    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-6">Kullanıcının İlanları</h2>
+                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem' }}>
+                        Kullanıcının İlanları
+                    </h2>
 
                     {ads.length === 0 ? (
-                        <div className="bg-white dark:bg-gray-800 rounded-2xl p-12 text-center border border-gray-100 dark:border-gray-700">
-                            <svg className="w-16 h-16 mx-auto text-gray-300 dark:text-gray-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                            </svg>
-                            <p className="text-gray-500 text-lg">Bu kullanıcının henüz aktif bir ilanı bulunmuyor.</p>
+                        <div className="card" style={{ padding: '3rem 2rem', textAlign: 'center' }}>
+                            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
+                            <p style={{ color: 'var(--text-secondary)', fontSize: '1.125rem' }}>Bu kullanıcının henüz aktif bir ilanı bulunmuyor.</p>
                         </div>
                     ) : (
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        <div className="ads-grid">
                             {ads.map((ad: any) => (
                                 <Link
                                     href={`/ad/${ad.id}`}
                                     key={ad.id}
-                                    className="group bg-white dark:bg-gray-800 rounded-2xl overflow-hidden border border-gray-100 dark:border-gray-700 shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col"
+                                    className="ad-card"
                                 >
-                                    <div className="relative aspect-[4/3] bg-gray-100 dark:bg-gray-900 overflow-hidden">
+                                    <div style={{ position: 'relative' }}>
                                         {ad.images && ad.images.length > 0 ? (
-                                            <Image
+                                            <img
                                                 src={ad.images[0]}
                                                 alt={ad.title}
-                                                fill
-                                                className="object-cover group-hover:scale-105 transition-transform duration-500"
+                                                className="ad-card-image"
                                             />
                                         ) : (
-                                            <div className="absolute inset-0 flex items-center justify-center text-gray-400">Görsel Yok</div>
+                                            <div className="ad-card-image-placeholder">📷</div>
                                         )}
                                         {/* Status Badge */}
-                                        <div className="absolute top-3 right-3 bg-white/90 dark:bg-gray-800/90 backdrop-blur-sm px-3 py-1 rounded-full text-xs font-bold shadow-sm">
+                                        <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', backgroundColor: 'rgba(255,255,255,0.9)', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700, boxShadow: 'var(--shadow-sm)' }}>
                                             {ad.isAuction ? (
-                                                <span className="text-orange-500 flex items-center gap-1">
-                                                    <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse"></span>
+                                                <span style={{ color: 'var(--accent-orange)' }}>
                                                     Açık Arttırma
                                                 </span>
                                             ) : (
-                                                <span className="text-blue-500">Sabit Fiyat</span>
+                                                <span style={{ color: 'var(--primary)' }}>Sabit Fiyat</span>
                                             )}
                                         </div>
                                     </div>
 
-                                    <div className="p-4 flex flex-col flex-grow">
-                                        <h3 className="font-semibold text-gray-900 dark:text-white line-clamp-2 mb-2 group-hover:text-[var(--primary)] transition-colors">
+                                    <div className="ad-card-body" style={{ display: 'flex', flexDirection: 'column', height: '110px' }}>
+                                        <h3 className="ad-card-title">
                                             {ad.title}
                                         </h3>
-                                        <div className="mt-auto pt-4 border-t border-gray-100 dark:border-gray-700 flex justify-between items-end">
-                                            <div className="text-sm text-gray-500 dark:text-gray-400">
+                                        <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                                                 {ad.province?.name} / {ad.district?.name}
                                             </div>
-                                            <div className="text-lg font-black text-gray-900 dark:text-white">
+                                            <div style={{ fontSize: '1.125rem', fontWeight: 900, color: 'var(--text-primary)' }}>
                                                 {new Intl.NumberFormat("tr-TR").format(ad.price)} ₺
                                             </div>
                                         </div>
@@ -243,7 +284,7 @@ export default function UserProfilePage() {
                     )}
                 </div>
 
-            </main>
+            </div>
         </div>
     );
 }
