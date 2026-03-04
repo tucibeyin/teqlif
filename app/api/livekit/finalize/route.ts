@@ -48,9 +48,10 @@ export async function POST(req: NextRequest) {
         }
 
         let updatedAd;
+        let notifyAdId = adId;
 
         if (isQuickLive) {
-            // [Phase 24.3] Clone receipt logic
+            // [Phase 24.4] Clone receipt logic
             updatedAd = await prisma.ad.update({
                 where: { id: adId },
                 data: {
@@ -59,21 +60,28 @@ export async function POST(req: NextRequest) {
             });
 
             // Create clone receipt
-            const receipt = await prisma.ad.create({
-                data: {
-                    title: "Canlı Yayından Alınan Ürün",
-                    description: "Hızlı Canlı Yayın Makbuzu",
-                    price: finalPrice,
-                    isFixedPrice: false,
-                    isAuction: true,
-                    status: "SOLD",
-                    userId: ad.userId,
-                    categoryId: ad.categoryId,
-                    provinceId: ad.provinceId,
-                    districtId: ad.districtId,
-                    winnerId: winnerId,
-                }
-            });
+            try {
+                const receipt = await prisma.ad.create({
+                    data: {
+                        title: "Canlı Yayından Satın Alınan Ürün",
+                        description: ad.description,
+                        images: ad.images ?? [],
+                        price: finalPrice,
+                        isFixedPrice: false,
+                        isAuction: true,
+                        isLive: false,
+                        status: "SOLD",
+                        userId: ad.userId,
+                        categoryId: ad.categoryId,
+                        provinceId: ad.provinceId,
+                        districtId: ad.districtId,
+                        winnerId: winnerId,
+                    }
+                });
+                notifyAdId = receipt.id;
+            } catch (error) {
+                console.error("Clone creation failed:", error);
+            }
 
             // Clean up bids for the next round
             await prisma.bid.deleteMany({
@@ -98,7 +106,7 @@ export async function POST(req: NextRequest) {
         revalidatePath("/");
 
         // Fire-and-forget winner notification (never delays response)
-        notifyAuctionWinner(winnerId, adId, finalPrice).catch((err) =>
+        notifyAuctionWinner(winnerId, notifyAdId, finalPrice).catch((err) =>
             console.error("[FINALIZE] Winner notify error:", err)
         );
 
