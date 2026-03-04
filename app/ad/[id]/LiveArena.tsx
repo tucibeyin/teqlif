@@ -559,48 +559,64 @@ function CustomArenaLayout({
                     }}>
                         {/* Stats Bar */}
                         <div style={{
-                            background: "rgba(0,0,0,0.4)",
+                            background: "rgba(0, 0, 0, 0.4)",
                             backdropFilter: "blur(15px)",
                             borderRadius: "20px",
-                            border: "1px solid rgba(255,255,255,0.1)",
+                            border: "1px solid rgba(255, 255, 255, 0.1)",
                             padding: "12px 16px",
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center"
                         }}>
                             <div style={{ display: "flex", flexDirection: "column" }}>
-                                <span style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.6)", fontWeight: 800, letterSpacing: "1px" }}>
+                                <span style={{ fontSize: "0.65rem", color: "rgba(255, 255, 255, 0.6)", fontWeight: 800, letterSpacing: "1px" }}>
                                     {auctionStatus === "ACTIVE" ? "GÜNCEL FİYAT" : "BAŞLANGIÇ FİYATI"}
                                 </span>
                                 <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
                                     <span className={`tabular-nums tracking-tighter ${flashBid ? 'text-green-400 scale-110' : 'text-white'} transition-all duration-300`} style={{ fontSize: "1.5rem", fontWeight: 900 }}>
                                         {new Intl.NumberFormat("tr-TR").format(liveHighestBid || (startingBid ?? 0))}
                                     </span>
-                                    <span style={{ fontSize: "1rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>₺</span>
+                                    <span style={{ fontSize: "1rem", color: "rgba(255, 255, 255, 0.8)", fontWeight: 700 }}>₺</span>
                                 </div>
                             </div>
 
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                                 {liveHighestBidderName ? (
-                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                                            <span style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.6)", fontWeight: 800 }}>LİDER</span>
+                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
+                                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                            <span style={{ fontSize: "0.6rem", color: "rgba(255, 255, 255, 0.6)", fontWeight: 800 }}>LİDER</span>
                                             <span style={{ fontSize: "0.85rem", color: "#4ade80", fontWeight: 900 }}>{liveHighestBidderName}</span>
                                         </div>
-                                        {isOwner && liveHighestBidderId && (
-                                            <button
-                                                onClick={() => {
-                                                    if (confirm(`${liveHighestBidderName} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
-                                                        const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId });
-                                                        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-                                                        alert("Davet gönderildi!");
-                                                    }
-                                                }}
-                                                title="Sahneye Davet Et"
-                                                style={{ background: "rgba(59, 130, 246, 0.2)", border: "1px solid rgba(59, 130, 246, 0.5)", borderRadius: "8px", padding: "6px", cursor: "pointer", marginLeft: "4px" }}
-                                            >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                                            </button>
+                                        {isOwner && (
+                                            <div style={{ display: "flex", gap: "6px" }}>
+                                                <button
+                                                    onClick={() => {
+                                                        setChatText(`@${liveHighestBidderName} `);
+                                                        // Focus input if possible or rely on the user seeing the text populated
+                                                    }}
+                                                    title="Mesaj At"
+                                                    style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.2)", borderRadius: "8px", padding: "4px 8px", cursor: "pointer", color: "white", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}
+                                                >
+                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                                                    Mesaj
+                                                </button>
+                                                {liveHighestBidderId && (
+                                                    <button
+                                                        onClick={() => {
+                                                            if (confirm(`${liveHighestBidderName} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
+                                                                const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId });
+                                                                room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                                                alert("Davet gönderildi!");
+                                                            }
+                                                        }}
+                                                        title="Sahneye Davet Et"
+                                                        style={{ background: "rgba(0, 180, 204, 0.2)", border: "1px solid rgba(0, 180, 204, 0.4)", borderRadius: "8px", padding: "4px 8px", cursor: "pointer", color: "#00B4CC", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}
+                                                    >
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                                        Sahneye
+                                                    </button>
+                                                )}
+                                            </div>
                                         )}
                                     </div>
                                 ) : (
