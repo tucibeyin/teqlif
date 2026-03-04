@@ -1196,7 +1196,7 @@ class _AdListTile extends StatelessWidget {
                 ? _fmt(ad.highestBidAmount!)
                 : (ad.startingBid != null
                     ? _fmt(ad.startingBid!)
-                    : 'Serbest Teqlif'),
+                    : 'Serbest teqlif'),
             style: const TextStyle(
                 fontWeight: FontWeight.w700, color: Color(0xFF00B4CC)),
           ),

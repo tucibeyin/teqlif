@@ -554,13 +554,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-            content: Text('Teqlifiniz verildi! 🎉'),
+            content: Text('teqlifiniz verildi! 🎉'),
             backgroundColor: Colors.green),
       );
     } catch (e) {
       await Haptics.vibrate(HapticsType.error);
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Teqlif verilemedi.')),
+        const SnackBar(content: Text('teqlif verilemedi.')),
       );
     } finally {
       if (mounted) setState(() => _bidLoading = false);
@@ -1218,7 +1218,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   Widget _buildBottomInteractionConsole(
       AdModel currentAd, bool isDisconnected) {
-    // Primary Action Button (Teqlif Ver or Hemen Al)
+    // Primary Action Button (teqlif Ver or Hemen Al)
     Widget buildPrimaryAction() {
       // Prioritize Bid if auction is active, regardless of ad type
       if (currentAd.isAuction || _isAuctionActive) {

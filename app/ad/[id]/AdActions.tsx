@@ -78,11 +78,11 @@ export function AdActions({
                 });
 
                 if (res.ok) {
-                    alert("Teqlif kabul edildi! Şimdi alıcı ile iletişime geçebilirsiniz.");
+                    alert("teqlif kabul edildi! Şimdi alıcı ile iletişime geçebilirsiniz.");
                     router.refresh();
                 } else {
                     const data = await res.json();
-                    alert(data.message || "Teqlif kabul edilemedi.");
+                    alert(data.message || "teqlif kabul edilemedi.");
                 }
             } else if (actionType === "CANCEL_BID" && bidId) {
                 if (!confirm("Kabul edilen bu teqlifi iptal etmek istediğinize emin misiniz?")) {
@@ -95,11 +95,11 @@ export function AdActions({
                 });
 
                 if (res.ok) {
-                    alert("Teqlif iptal edildi.");
+                    alert("teqlif iptal edildi.");
                     router.refresh();
                 } else {
                     const data = await res.json();
-                    alert(data.message || "Teqlif iptal edilemedi.");
+                    alert(data.message || "teqlif iptal edilemedi.");
                 }
             } else if (actionType === "FINALIZE_SALE" && bidId) {
                 if (!confirm("Dikkat! Satışın gerçekleştiğini onaylıyorsunuz. Bu işlemden sonra ilan PASİF (Satıldı) durumuna düşecektir. Emin misiniz?")) {

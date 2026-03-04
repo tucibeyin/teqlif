@@ -35,7 +35,7 @@ export async function PATCH(
 
         if (!bid) {
             return NextResponse.json(
-                { message: 'Teqlif bulunamadı' },
+                { message: 'teqlif bulunamadı' },
                 { status: 404 }
             );
         }
@@ -128,7 +128,7 @@ export async function PATCH(
             const badgeCount = await getUnreadCount(bid.userId);
             await sendPushNotification(
                 bid.user.fcmToken,
-                'Teqlifin Kabul Edildi! 🎉',
+                'teqlifin Kabul Edildi! 🎉',
                 `${bid.ad.title} ilanı için verdiğin ${bid.amount} ₺ teqlif kabul edildi! Satıcı ile hemen iletişime geçebilirsin.`,
                 { type: 'BID_ACCEPTED', link: `/ad/${bid.adId}` },
                 badgeCount
@@ -151,7 +151,7 @@ export async function PATCH(
     } catch (error) {
         console.error('Bid Accept Error:', error);
         return NextResponse.json(
-            { message: 'Teqlif kabul edilirken bir hata oluştu' },
+            { message: 'teqlif kabul edilirken bir hata oluştu' },
             { status: 500 }
         );
     }

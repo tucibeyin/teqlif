@@ -225,7 +225,7 @@ export default function UserProfilePage() {
                         <div style={{ flex: 1, minWidth: '280px' }}>
                             <h1 style={{ fontSize: '2rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '0.25rem' }}>{user.name}</h1>
                             <p style={{ color: 'var(--text-secondary)', marginBottom: '1rem', fontSize: '0.9375rem' }}>
-                                Teqlif Üyesi • {new Date(user.createdAt).toLocaleDateString("tr-TR", { year: 'numeric', month: 'long' })} tarihinden beri
+                                teqlif Üyesi • {new Date(user.createdAt).toLocaleDateString("tr-TR", { year: 'numeric', month: 'long' })} tarihinden beri
                             </p>
 
                             {user.phone && (

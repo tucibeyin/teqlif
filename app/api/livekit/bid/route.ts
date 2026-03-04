@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
         const bidResult = await placeLiveBid(roomId, userId, amount);
 
         if (bidResult === 1) {
-            // Teqlif kabul edildi! Şimdi tüm odaya (Data Channel) broadcast yapalım.
+            // teqlif kabul edildi! Şimdi tüm odaya (Data Channel) broadcast yapalım.
             const apiKey = process.env.LIVEKIT_API_KEY;
             const apiSecret = process.env.LIVEKIT_API_SECRET;
             const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;

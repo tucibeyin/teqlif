@@ -300,10 +300,10 @@ export default function PostAdPage() {
                             </div>
                         </div>
 
-                        {/* Fiyat & Teqlif Kuralları */}
+                        {/* Fiyat & teqlif Kuralları */}
                         <div className="form-section">
                             <h3 style={{ color: "var(--text-secondary)", fontSize: "0.8125rem", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                {isAuction ? "Canlı Açık Arttırma Kuralları" : "Fiyat ve Teqlif Kuralları"}
+                                {isAuction ? "Canlı Açık Arttırma Kuralları" : "Fiyat ve teqlif Kuralları"}
                             </h3>
 
                             <div className="form-group" style={{ marginBottom: "1.5rem", display: isAuction ? "none" : "block" }}>
@@ -320,7 +320,7 @@ export default function PostAdPage() {
                                         <input type="radio" name="mainAdStyle" value="fixed" checked={isFixedPrice} onChange={() => setIsFixedPrice(true)} />
                                         <span>
                                             <strong style={{ display: "block", marginBottom: "0.25rem" }}>Sabit Fiyatlı İlan</strong>
-                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>Teqliflere kapalıdır, doğrudan belirlediğiniz fiyattan listeleyip satabilirsiniz.</span>
+                                            <span style={{ fontSize: "0.875rem", color: "var(--text-muted)" }}>teqliflere kapalıdır, doğrudan belirlediğiniz fiyattan listeleyip satabilirsiniz.</span>
                                         </span>
                                     </label>
                                 </div>
@@ -392,7 +392,7 @@ export default function PostAdPage() {
                                 </div>
 
                                 <div className="form-group" id="startingBidWrapper" style={{ display: (isFixedPrice || isAuction) ? "none" : "block" }}>
-                                    <label htmlFor="startingBid">Açılış Teqlifi (₺) <span className="text-muted">(İsteğe Bağlı)</span></label>
+                                    <label htmlFor="startingBid">Açılış teqlifi (₺) <span className="text-muted">(İsteğe Bağlı)</span></label>
                                     <div style={{ position: "relative", display: "flex", alignItems: "center" }}>
                                         <input
                                             type="text"
@@ -438,7 +438,7 @@ export default function PostAdPage() {
                                         </div>
                                         <input type="hidden" name="minBidStep" value={displayMinBidStep.replace(/\./g, "") || "100"} />
                                         <div style={{ fontSize: "0.8125rem", color: "var(--text-muted)", marginTop: "0.5rem" }}>
-                                            Teqlif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
+                                            teqlif verenlerin tutarı en az bu değer kadar artırması gerekecektir.
                                         </div>
                                     </div>
 

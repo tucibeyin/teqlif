@@ -48,11 +48,11 @@ export async function POST(req: Request) {
                 </html>
             `,
             sender: {
-                name: "Teqlif Destek Formu",
+                name: "teqlif Destek Formu",
                 email: process.env.BREVO_SENDER_EMAIL || "no-reply@teqlif.com",
             },
             replyTo: { email: email, name: name },
-            to: [{ email: "destek@teqlif.com", name: "Teqlif Destek" }],
+            to: [{ email: "destek@teqlif.com", name: "teqlif Destek" }],
         });
 
         return NextResponse.json({ success: true, message: "Mesajınız başarıyla gönderildi." });

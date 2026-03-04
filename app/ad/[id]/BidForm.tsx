@@ -38,7 +38,7 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
 
         const rawAmount = parseInt(displayAmount.replace(/\./g, ""), 10);
         if (!rawAmount || rawAmount < currentHighest + minStep) {
-            setError(`Teqlifiniz minimum ${formatted.format(currentHighest + minStep)} olmalıdır.`);
+            setError(`teqlifiniz minimum ${formatted.format(currentHighest + minStep)} olmalıdır.`);
             setLoading(false);
             return;
         }
@@ -53,9 +53,9 @@ export default function BidForm({ adId, currentHighest, minStep }: BidFormProps)
         setLoading(false);
 
         if (!res.ok) {
-            setError(data.error || "Teqlif verilemedi.");
+            setError(data.error || "teqlif verilemedi.");
         } else {
-            setSuccess("🎉 Teqlifiniz başarıyla verildi!");
+            setSuccess("🎉 teqlifiniz başarıyla verildi!");
             router.refresh();
         }
     }

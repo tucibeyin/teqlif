@@ -25,7 +25,7 @@ export async function PATCH(
         });
 
         if (!bid) {
-            return NextResponse.json({ message: 'Teqlif bulunamadı' }, { status: 404 });
+            return NextResponse.json({ message: 'teqlif bulunamadı' }, { status: 404 });
         }
 
         if (bid.ad.userId !== currentUser.id) {
@@ -43,7 +43,7 @@ export async function PATCH(
                 include: { ad: { select: { title: true, userId: true, id: true, status: true } } }
             });
 
-            if (!currentBid) throw new Error('Teqlif bulunamadı');
+            if (!currentBid) throw new Error('teqlif bulunamadı');
             if (currentBid.ad.userId !== currentUser.id) throw new Error('Yetkisiz işlem');
 
             const updatedBid = await tx.bid.update({
@@ -106,6 +106,6 @@ export async function PATCH(
         return NextResponse.json(result);
     } catch (error) {
         console.error("Cancel Bid Error:", error);
-        return NextResponse.json({ message: 'Teqlif iptal edilirken hata oluştu' }, { status: 500 });
+        return NextResponse.json({ message: 'teqlif iptal edilirken hata oluştu' }, { status: 500 });
     }
 }

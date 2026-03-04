@@ -193,7 +193,7 @@ function CustomArenaLayout({
                     });
                     room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
                 }
-                alert("Teqlif reddedildi.");
+                alert("teqlif reddedildi.");
             }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
@@ -1234,7 +1234,7 @@ function BidForm({ adId, currentHighest, minStep, startingBid, formattedPrice }:
             });
             const data = await res.json();
             if (res.ok) {
-                setStatus({ type: 'success', msg: 'Teqlif verildi!' });
+                setStatus({ type: 'success', msg: 'teqlif verildi!' });
                 router.refresh();
             } else {
                 setStatus({ type: 'error', msg: data.error || 'Hata' });
@@ -1259,7 +1259,7 @@ function BidForm({ adId, currentHighest, minStep, startingBid, formattedPrice }:
             color: "white",
             position: "relative"
         }}>
-            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "bold", textAlign: "center" }}>Teqlif Ver</h3>
+            <h3 style={{ margin: 0, fontSize: "1.2rem", fontWeight: "bold", textAlign: "center" }}>teqlif Ver</h3>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: "0.5rem" }}>
                 <span style={{ fontSize: "0.8rem", opacity: 0.7 }}>Güncel:</span>
                 <span style={{ fontSize: "1.2rem", fontWeight: 800, color: "#22c55e" }}>{formattedPrice(currentHighest || (startingBid ?? 0))}</span>

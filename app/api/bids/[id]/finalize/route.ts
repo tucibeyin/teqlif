@@ -34,7 +34,7 @@ export async function POST(
 
         if (!bid) {
             return NextResponse.json(
-                { message: 'Teqlif bulunamadı' },
+                { message: 'teqlif bulunamadı' },
                 { status: 404 }
             );
         }

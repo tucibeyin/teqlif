@@ -606,7 +606,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Teqlifi İptal Et'),
+        title: const Text('teqlifi İptal Et'),
         content: const Text(
             'Bu teqlifi reddetmek veya iptal etmek istediğinize emin misiniz?'),
         actions: [
@@ -667,7 +667,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                     children: [
                       const Icon(Icons.gavel, color: Color(0xFF00B4CC)),
                       const SizedBox(width: 12),
-                      const Text('Gelen Teqlifler',
+                      const Text('Gelen teqlifler',
                           style: TextStyle(
                               fontSize: 20, fontWeight: FontWeight.bold)),
                     ],
@@ -727,7 +727,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                                                 context: context,
                                                 builder: (ctx) => AlertDialog(
                                                   title: const Text(
-                                                      'Teqlifi Onayla'),
+                                                      'teqlifi Onayla'),
                                                   content: Text(
                                                       '₺${_formatPrice(bid.amount)} tutarındaki teqlifi kabul edip satışı ilanını sonlandırmak istiyor musunuz?'),
                                                   actions: [
@@ -1219,7 +1219,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
               Text(
                 _bids.isNotEmpty
                     ? '₺${_formatPrice(_bids.first.amount)}'
-                    : 'Henüz Teqlif Yok',
+                    : 'Henüz teqlif Yok',
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -1341,7 +1341,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                   Text(
                     _bids.isNotEmpty
                         ? '₺${_formatPrice(_bids.first.amount)}'
-                        : 'Henüz Teqlif Yok',
+                        : 'Henüz teqlif Yok',
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,

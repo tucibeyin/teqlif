@@ -1,4 +1,4 @@
-// Teqlif — Recursive 4-Katmanlı Kategori Ağacı (Flutter)
+// teqlif — Recursive 4-Katmanlı Kategori Ağacı (Flutter)
 // Yapı: Gayrimenkul → Konut → Satılık → Daire
 // Leaf tespiti: node.children.isEmpty
 

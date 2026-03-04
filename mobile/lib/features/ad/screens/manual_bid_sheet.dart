@@ -32,7 +32,7 @@ class ManualBidSheet extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text('Özel Teqlif Ver', 
+          const Text('Özel teqlif Ver', 
             style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
           const SizedBox(height: 24),
           Container(

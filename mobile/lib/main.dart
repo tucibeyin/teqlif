@@ -100,8 +100,8 @@ Future<void> _initLocalNotifications(WidgetRef ref) async {
   if (defaultTargetPlatform == TargetPlatform.android) {
     const AndroidNotificationChannel channel = AndroidNotificationChannel(
       'teqlif_channel',
-      'Teqlif Bildirimleri',
-      description: 'Teqlif uygulaması için önemli bildirimler.',
+      'teqlif Bildirimleri',
+      description: 'teqlif uygulaması için önemli bildirimler.',
       importance: Importance.high,
     );
     await _localNotifications
@@ -229,7 +229,7 @@ Future<void> _setupFCM(WidgetRef ref) async {
           const NotificationDetails(
             android: AndroidNotificationDetails(
               'teqlif_channel',
-              'Teqlif Bildirimleri',
+              'teqlif Bildirimleri',
               importance: Importance.high,
               priority: Priority.high,
               icon: 'ic_notification',

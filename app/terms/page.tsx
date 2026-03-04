@@ -31,7 +31,7 @@ export default function TermsPage() {
                                 <div>
                                     <h3 style={{ fontSize: "1.125rem", fontWeight: 700, color: "#991b1b", marginBottom: "0.5rem", marginTop: 0 }}>Önemli Bildirim: Sıfır Tolerans Politikası (UGC)</h3>
                                     <p style={{ margin: 0, color: "#b91c1c", lineHeight: 1.6, fontSize: "0.95rem" }}>
-                                        Teqlif platformu ("Uygulama"), Kullanıcı Tarafından Oluşturulan İçeriklerde (UGC) ve platform içi iletişimlerde
+                                        teqlif platformu ("Uygulama"), Kullanıcı Tarafından Oluşturulan İçeriklerde (UGC) ve platform içi iletişimlerde
                                         <strong> sakıncalı içeriğe, nefret söylemine, zorbalığa ve tacize karşı SIFIR TOLERANS </strong>
                                         politikası uygulamaktadır. Bu kuralı ihlal eden kullanıcıların hesapları hiçbir uyarı yapılmaksızın
                                         <strong style={{ background: "rgba(239, 68, 68, 0.2)", padding: "0 0.25rem", borderRadius: "4px" }}> 24 saat içerisinde kalıcı olarak kapatılacaktır.</strong>
@@ -76,7 +76,7 @@ export default function TermsPage() {
                                 </h2>
                                 <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                     <p>
-                                        Teqlif, kullanıcılar tarafından oluşturulan içeriği denetleme hakkını saklı tutar ve kullanıcıların topluluk standartlarına uygun bir ortamda kalmasını sağlamak için
+                                        teqlif, kullanıcılar tarafından oluşturulan içeriği denetleme hakkını saklı tutar ve kullanıcıların topluluk standartlarına uygun bir ortamda kalmasını sağlamak için
                                         Kullanıcı Tarafından Oluşturulan İçerikleri (UGC) aktif olarak izler veya izlememesine bakılmaksızın kullanıcı geri bildirimlerini son derece ciddiye alır.
                                     </p>
                                     <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "1.25rem", borderRadius: "var(--radius-lg)", color: "#166534", display: "flex", gap: "1rem", alignItems: "flex-start" }}>

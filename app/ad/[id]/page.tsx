@@ -370,7 +370,7 @@ export default async function AdDetailPage({
                         <div className="auction-card">
                             <div style={{ marginBottom: "1.25rem" }}>
                                 <div className="auction-label">
-                                    {highestBid ? "Güncel Fiyat (En Yüksek Teqlif)" : (ad.startingBid === null ? "Açılış (Serbest Teqlif)" : "Minimum Açılış Teqlifi")}
+                                    {highestBid ? "Güncel Fiyat (En Yüksek teqlif)" : (ad.startingBid === null ? "Açılış (Serbest teqlif)" : "Minimum Açılış teqlifi")}
                                 </div>
                                 <div style={{ fontSize: "1.25rem", fontWeight: 600, color: "var(--text-secondary)" }}>
                                     {highestBid ? formatPrice(highestBid.amount) : (ad.startingBid === null ? formatPrice(1) : formatPrice(ad.startingBid))}
@@ -396,7 +396,7 @@ export default async function AdDetailPage({
                                     textAlign: "center",
                                 }}>
                                     <div style={{ fontWeight: 700, color: "var(--primary)" }}>{ad.bids.length}</div>
-                                    <div className="text-muted" style={{ fontSize: "0.75rem" }}>Teqlif</div>
+                                    <div className="text-muted" style={{ fontSize: "0.75rem" }}>teqlif</div>
                                 </div>
                                 <div style={{
                                     background: "rgba(0, 188, 212, 0.08)",
@@ -439,7 +439,7 @@ export default async function AdDetailPage({
                                 </div>
                             )}
 
-                            {/* Teqlif Formu & Mesaj Butonu */}
+                            {/* teqlif Formu & Mesaj Butonu */}
                             <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
                                 {ad.status === 'ACTIVE' && !isOwner && session?.user && !adData.isLive && (
                                     <BidForm
@@ -468,11 +468,11 @@ export default async function AdDetailPage({
                                 )}
                             </div>
 
-                            {/* Teqlif Geçmişi */}
+                            {/* teqlif Geçmişi */}
                             {ad.bids.length > 0 && (
                                 <div className="bid-history" style={{ marginTop: "1.5rem" }}>
                                     <div style={{ fontWeight: 600, fontSize: "0.875rem", marginBottom: "0.5rem" }}>
-                                        Teqlif Geçmişi ({ad.bids.length})
+                                        teqlif Geçmişi ({ad.bids.length})
                                     </div>
                                     <div style={{ maxHeight: "350px", overflowY: "auto", paddingRight: "0.5rem" }}>
                                         {ad.bids.map((bid: any, i: number) => (

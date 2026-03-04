@@ -46,7 +46,7 @@ export default function SupportContent() {
                         Kullanıcı <span style={{ color: "var(--primary)" }}>Destek Merkezi</span>
                     </h1>
                     <p className="hero-subtitle">
-                        Teqlif ekibi olarak size destek olmaktan mutluluk duyuyoruz. Soru, öneri ve şikayetlerinizi bize hızlıca iletebilirsiniz. Ekibimiz sizinle en kısa sürede iletişime geçecektir.
+                        teqlif ekibi olarak size destek olmaktan mutluluk duyuyoruz. Soru, öneri ve şikayetlerinizi bize hızlıca iletebilirsiniz. Ekibimiz sizinle en kısa sürede iletişime geçecektir.
                     </p>
                 </div>
             </section>
@@ -83,7 +83,7 @@ export default function SupportContent() {
                                 </div>
                                 <p style={{ color: "var(--text-secondary)", fontSize: "0.95rem", lineHeight: 1.6 }}>
                                     Kurallarımıza aykırı, sakıncalı veya güvenliği tehdit eden içerikleri anında bildirin.
-                                    <strong style={{ color: "var(--text-primary)" }}> Teqlif'te zorbalık ve yasadışı içeriğe sıfır tolerans gösterilir.</strong> Şikayetleriniz 24 saat içinde sonuçlandırılır.
+                                    <strong style={{ color: "var(--text-primary)" }}> teqlif'te zorbalık ve yasadışı içeriğe sıfır tolerans gösterilir.</strong> Şikayetleriniz 24 saat içinde sonuçlandırılır.
                                 </p>
                             </div>
                         </div>

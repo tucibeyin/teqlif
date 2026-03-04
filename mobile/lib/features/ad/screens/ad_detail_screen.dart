@@ -71,9 +71,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
       _bidCtrl.clear();
       ref.invalidate(adDetailProvider(widget.adId));
       ref.invalidate(myBidsProvider);
-      _snack('Teqlifiniz verildi! 🎉');
+      _snack('teqlifiniz verildi! 🎉');
     } catch (e) {
-      _snack('Teqlif verilemedi.');
+      _snack('teqlif verilemedi.');
     } finally {
       setState(() => _bidLoading = false);
     }
@@ -157,7 +157,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
       await ApiClient().patch(Endpoints.acceptBid(bidId));
       if (!mounted) return;
       ref.invalidate(adDetailProvider(widget.adId));
-      _snack('Teqlif kabul edildi. ✅');
+      _snack('teqlif kabul edildi. ✅');
     } catch (_) {
       if (!mounted) return;
       _snack('İşlem başarısız.');
@@ -170,7 +170,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Teqlifi Reddet'),
+        title: const Text('teqlifi Reddet'),
         content: const Text('Bu teqlifi reddetmek istediğinize emin misiniz?'),
         actions: [
           TextButton(
@@ -193,7 +193,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
       await ApiClient().patch(Endpoints.cancelBid(bidId));
       if (!mounted) return;
       ref.invalidate(adDetailProvider(widget.adId));
-      _snack('Teqlif reddedildi.');
+      _snack('teqlif reddedildi.');
     } catch (e) {
       if (!mounted) return;
       _snack('İşlem başarısız.');
@@ -418,7 +418,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                       backgroundColor: Colors.white.withOpacity(0.8),
                     ),
                     onPressed: () {
-                      Share.share('Bana Teqlif ver! ${ad.title}\nhttps://teqlif.com/ad/${ad.id}');
+                      Share.share('Bana teqlif ver! ${ad.title}\nhttps://teqlif.com/ad/${ad.id}');
                     },
                   ),
                   favsAsync.when(
@@ -672,7 +672,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                                     ad.bids.isNotEmpty
                                         ? _formatPrice(ad.bids.first.amount)
                                         : (ad.startingBid == null
-                                            ? '🔥 Serbest Teqlif'
+                                            ? '🔥 Serbest teqlif'
                                             : _formatPrice(ad.startingBid!)),
                                     style: const TextStyle(
                                         fontWeight: FontWeight.w800,
@@ -956,7 +956,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
 
                       // Bid history
                       if (!ad.isFixedPrice && ad.bids.isNotEmpty) ...[
-                        Text('Teqlif Geçmişi (${ad.bids.length})',
+                        Text('teqlif Geçmişi (${ad.bids.length})',
                             style: const TextStyle(
                                 fontWeight: FontWeight.w700, fontSize: 16)),
                         const SizedBox(height: 8),
@@ -1032,7 +1032,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text('Teqlif Ver',
+        const Text('teqlif Ver',
             style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
         const SizedBox(height: 8),
         if (currentUser != null)
@@ -1059,7 +1059,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             .numberWithOptions(decimal: true),
                         inputFormatters: [_bidFormatter],
                         decoration: InputDecoration(
-                          hintText: 'Teqlif miktarı (₺)',
+                          hintText: 'teqlif miktarı (₺)',
                           prefixIcon: const Icon(Icons.gavel),
                           helperText:
                               'En az ${_formatPrice(minRequiredBid)}',

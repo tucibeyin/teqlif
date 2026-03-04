@@ -3,7 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../api/endpoints.dart';
 
-/// Central error logger for the Teqlif mobile app.
+/// Central error logger for the teqlif mobile app.
 ///
 /// Sends errors to the backend /api/log-error endpoint (fire-and-forget).
 /// Errors are written to fe_errors.log on VPS with "MOBILE" prefix.
@@ -59,7 +59,7 @@ class AppLogger {
         'page': 'mobile/$context',
         'message': fullMessage.substring(0, fullMessage.length.clamp(0, 500)),
         'stack': stackStr,
-        'userAgent': 'TeqlifMobileApp/Flutter',
+        'userAgent': 'teqlifMobileApp/Flutter',
         'userId': _userId ?? 'anonymous',
       });
 

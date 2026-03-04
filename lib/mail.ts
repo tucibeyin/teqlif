@@ -38,7 +38,7 @@ export async function sendEmail({
 }
 
 export async function sendVerificationEmail(to: string, code: string) {
-  const subject = "Teqlif - E-posta Doğrulama Kodunuz";
+  const subject = "teqlif - E-posta Doğrulama Kodunuz";
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
       <div style="background-color: #00B4CC; padding: 20px; text-align: center;">
@@ -46,7 +46,7 @@ export async function sendVerificationEmail(to: string, code: string) {
       </div>
       <div style="padding: 30px; text-align: center; color: #333;">
         <h2 style="color: #008FA3;">Hoş Geldiniz!</h2>
-        <p style="font-size: 16px; line-height: 1.5;">Hesabınızı başarıyla oluşturduk. Teqlif'te avantajlı alışveriş deneyimine başlamadan önce, lütfen aşağıdaki 6 haneli doğrulama kodunu uygulamaya girerek e-postanızı doğrulayın:</p>
+        <p style="font-size: 16px; line-height: 1.5;">Hesabınızı başarıyla oluşturduk. teqlif'te avantajlı alışveriş deneyimine başlamadan önce, lütfen aşağıdaki 6 haneli doğrulama kodunu uygulamaya girerek e-postanızı doğrulayın:</p>
         <div style="background-color: #f4f7fa; padding: 20px; margin: 30px 0; border-radius: 8px; border: 1px dashed #00b4cc;">
           <span style="font-size: 32px; font-weight: bold; color: #00B4CC; letter-spacing: 5px;">${code}</span>
         </div>
@@ -61,7 +61,7 @@ export async function sendVerificationEmail(to: string, code: string) {
 }
 
 export async function sendPasswordResetEmail(to: string, code: string) {
-  const subject = "Teqlif - Şifre Sıfırlama Kodunuz";
+  const subject = "teqlif - Şifre Sıfırlama Kodunuz";
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
       <div style="background-color: #00B4CC; padding: 20px; text-align: center;">
@@ -69,7 +69,7 @@ export async function sendPasswordResetEmail(to: string, code: string) {
       </div>
       <div style="padding: 30px; text-align: center; color: #333;">
         <h2 style="color: #008FA3;">Şifre Sıfırlama İsteği</h2>
-        <p style="font-size: 16px; line-height: 1.5;">Teqlif şifrenizi sıfırlamak için bir talepte bulundunuz. Hesabınıza yeniden erişebilmek için lütfen aşağıdaki 6 haneli güvenlik kodunu kullanın:</p>
+        <p style="font-size: 16px; line-height: 1.5;">teqlif şifrenizi sıfırlamak için bir talepte bulundunuz. Hesabınıza yeniden erişebilmek için lütfen aşağıdaki 6 haneli güvenlik kodunu kullanın:</p>
         <div style="background-color: #f4f7fa; padding: 20px; margin: 30px 0; border-radius: 8px; border: 1px dashed #00b4cc;">
           <span style="font-size: 32px; font-weight: bold; color: #00B4CC; letter-spacing: 5px;">${code}</span>
         </div>
@@ -83,7 +83,7 @@ export async function sendPasswordResetEmail(to: string, code: string) {
   return sendEmail({ to, subject, htmlContent });
 }
 export async function sendProfileUpdateVerificationEmail(to: string, code: string) {
-  const subject = "Teqlif - Profil Güncelleme Doğrulama Kodunuz";
+  const subject = "teqlif - Profil Güncelleme Doğrulama Kodunuz";
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
       <div style="background-color: #00B4CC; padding: 20px; text-align: center;">

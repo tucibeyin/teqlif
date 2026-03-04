@@ -278,7 +278,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Teqlif Üyesi • $joinedDate',
+                    'teqlif Üyesi • $joinedDate',
                     style: const TextStyle(color: Colors.grey, fontSize: 14),
                   ),
                   if (user.phone != null) ...[

@@ -1,4 +1,4 @@
-// Teqlif — Recursive 4-Katmanlı Kategori Ağacı
+// teqlif — Recursive 4-Katmanlı Kategori Ağacı
 // Yapı: Gayrimenkul → Konut → Satılık → Daire
 // Leaf tespiti: node.children.length === 0
 // API'ye sadece leaf slug'ı gönderilir.

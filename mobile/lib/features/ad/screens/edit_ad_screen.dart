@@ -307,7 +307,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                               locale: 'tr_TR', symbol: '', decimalDigits: 0)
                         ],
                         decoration: const InputDecoration(
-                            labelText: 'Açılış Teqlifi (₺) (İsteğe Bağlı)',
+                            labelText: 'Açılış teqlifi (₺) (İsteğe Bağlı)',
                             helperText: 'Boş bırakırsanız 1 ₺\'den açık arttırma başlar.'),
                       ),
                       const SizedBox(height: 12),
@@ -322,7 +322,7 @@ class _EditAdScreenState extends ConsumerState<EditAdScreen> {
                         decoration: const InputDecoration(
                             labelText: 'teqlif Aralığı (Minimum Artış) (₺)',
                             helperText:
-                                'Teqlif verenlerin en az ne kadar artırması gerektiğini belirler.'),
+                                'teqlif verenlerin en az ne kadar artırması gerektiğini belirler.'),
                       ),
                       const SizedBox(height: 12),
                       TextField(

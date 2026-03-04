@@ -118,7 +118,7 @@ export async function POST(req: NextRequest) {
 
         if (Number(amount) < minRequiredAmount) {
             return NextResponse.json(
-                { error: `Teqlifiniz minimum ${new Intl.NumberFormat("tr-TR").format(minRequiredAmount)} ₺ olmalıdır.` },
+                { error: `teqlifiniz minimum ${new Intl.NumberFormat("tr-TR").format(minRequiredAmount)} ₺ olmalıdır.` },
                 { status: 400 }
             );
         }
@@ -162,7 +162,7 @@ export async function POST(req: NextRequest) {
             const badgeCount = await getUnreadCount(ad.userId);
             await sendPushNotification(
                 updatedAd.user.fcmToken,
-                'Yeni Teqlif Var! 💰',
+                'Yeni teqlif Var! 💰',
                 `${bid.user.name} "${ad.title}" ilanına ${new Intl.NumberFormat("tr-TR").format(amount)} ₺ teqlif verdi.`,
                 { type: 'BID_RECEIVED', link: `/ad/${ad.id}` },
                 badgeCount
