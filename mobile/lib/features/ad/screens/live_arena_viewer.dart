@@ -646,78 +646,93 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
+              Stack(
+                alignment: Alignment.center,
                 children: [
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                              color: Colors.redAccent.withOpacity(0.5),
-                              width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            CircleAvatar(
-                                radius: 4,
-                                backgroundColor: Colors.redAccent,
-                                child: Container(
-                                    width: 2,
-                                    height: 2,
-                                    decoration: const BoxDecoration(
-                                        color: Colors.white,
-                                        shape: BoxShape.circle))),
-                            const SizedBox(width: 8),
-                            const Text('CANLI',
-                                style: TextStyle(
-                                    color: Colors.white,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 10,
-                                    letterSpacing: 1)),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Viewer Count Pill
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(20),
-                    child: BackdropFilter(
-                      filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 10, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.3),
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.2), width: 1),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.visibility_outlined,
-                                color: Colors.white, size: 14),
-                            const SizedBox(width: 6),
-                            Text(
-                              '${ref.read(liveRoomProvider(widget.ad.id)).viewerCount}',
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.bold),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: Colors.redAccent.withOpacity(0.5),
+                                  width: 1),
                             ),
-                          ],
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                CircleAvatar(
+                                    radius: 4,
+                                    backgroundColor: Colors.redAccent,
+                                    child: Container(
+                                        width: 2,
+                                        height: 2,
+                                        decoration: const BoxDecoration(
+                                            color: Colors.white,
+                                            shape: BoxShape.circle))),
+                                const SizedBox(width: 8),
+                                const Text('CANLI',
+                                    style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 10,
+                                        letterSpacing: 1)),
+                              ],
+                            ),
+                          ),
                         ),
                       ),
+                      const SizedBox(width: 8),
+                      // Viewer Count Pill
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(20),
+                        child: BackdropFilter(
+                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 10, vertical: 8),
+                            decoration: BoxDecoration(
+                              color: Colors.black.withOpacity(0.3),
+                              borderRadius: BorderRadius.circular(20),
+                              border: Border.all(
+                                  color: Colors.white.withOpacity(0.2), width: 1),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.visibility_outlined,
+                                    color: Colors.white, size: 14),
+                                const SizedBox(width: 6),
+                                Text(
+                                  '${ref.read(liveRoomProvider(widget.ad.id)).viewerCount}',
+                                  style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  Positioned(
+                    right: 0,
+                    child: IconButton(
+                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
+                      onPressed: () {
+                        ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+                        if (mounted) context.pop();
+                      },
                     ),
                   ),
                 ],
@@ -887,10 +902,15 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         (room == null && !roomState.isConnecting);
 
     // Sync isAuctionActive from currentAd (initial state or polling updates)
-    if (currentAd.isAuctionActive != _isAuctionActive) {
+    // We only update if WebRTC hasn't yet provided an active auction broadcast,
+    // to prevent outdated API requests from overwriting the real-time 'ACTIVE' state.
+    if (currentAd.isAuctionActive && !_isAuctionActive) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted)
-          setState(() => _isAuctionActive = currentAd.isAuctionActive);
+        if (mounted) setState(() => _isAuctionActive = true);
+      });
+    } else if (!currentAd.isAuctionActive && _isAuctionActive && isDisconnected) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) setState(() => _isAuctionActive = false);
       });
     }
 

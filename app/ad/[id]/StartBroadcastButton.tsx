@@ -19,7 +19,7 @@ export default function StartBroadcastButton({ adId }: StartBroadcastButtonProps
             const res = await fetch(`/api/ads/${adId}/live`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ isLive: true, liveKitRoomId: adId }),
+                body: JSON.stringify({ isLive: true, liveKitRoomId: adId, isAuctionActive: false }),
             });
 
             if (res.ok) {

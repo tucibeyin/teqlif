@@ -99,6 +99,10 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        if (ad.isAuctionActive === false) {
+            return NextResponse.json({ error: "Açık arttırma şu anda duraklatıldı veya henüz başlamadı." }, { status: 400 });
+        }
+
         logger.info("Processing bid", { adId, amount, userId: user.id });
 
         // Determine the minimum required bid

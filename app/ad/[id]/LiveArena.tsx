@@ -287,6 +287,11 @@ function CustomArenaLayout({
         if (!room) return;
         setLoading(true);
         try {
+            await fetch(`/api/ads/${adId}/live`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isAuctionActive: true }),
+            });
             const payload = JSON.stringify({ type: "AUCTION_START" });
             await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
             setAuctionStatus("ACTIVE");
@@ -296,12 +301,17 @@ function CustomArenaLayout({
             console.error(e);
         }
         setLoading(false);
-    }, [room]);
+    }, [room, adId]);
 
     const handleStopAuction = useCallback(async () => {
         if (!room) return;
         setLoading(true);
         try {
+            await fetch(`/api/ads/${adId}/live`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isAuctionActive: false }),
+            });
             const payload = JSON.stringify({ type: "AUCTION_END" });
             await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
             setAuctionStatus("IDLE");
@@ -311,7 +321,7 @@ function CustomArenaLayout({
             console.error(e);
         }
         setLoading(false);
-    }, [room]);
+    }, [room, adId]);
 
     useDataChannel((msg) => {
 
