@@ -25,6 +25,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             isAuctionActive: isAuctionActive !== undefined ? Boolean(isAuctionActive) : ad.isAuctionActive,
         };
 
+        // Reset auction status entirely when live stream ends
+        if (updateData.isLive === false) {
+            updateData.isAuctionActive = false;
+        }
+
         // If restarting an auction, reset status and archive old bids
         if (isAuctionActive === true && ad.isAuctionActive === false) {
             updateData.status = 'ACTIVE';

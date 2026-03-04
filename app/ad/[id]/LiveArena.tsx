@@ -368,6 +368,15 @@ function CustomArenaLayout({
                 setAuctionStatus("ACTIVE");
                 setAuctionNotification("📣 AÇIK ARTTIRMA BAŞLADI!");
                 setTimeout(() => setAuctionNotification(null), 4000);
+            } else if (dataObj.type === 'AUCTION_RESET') {
+                setLiveHighestBid(initialHighestBid);
+                setLiveHighestBidId(null);
+                setLiveHighestBidderId(null);
+                setLiveHighestBidderName(null);
+                setAuctionStatus("ACTIVE");
+                // Optional: show a notification that bids were reset
+                setAuctionNotification("📣 Açık Arttırma Sıfırlandı!");
+                setTimeout(() => setAuctionNotification(null), 4000);
             } else if (dataObj.type === 'AUCTION_END') {
                 setAuctionStatus("IDLE");
                 setAuctionNotification("📣 AÇIK ARTTIRMA DURDURULDU");
@@ -451,7 +460,14 @@ function CustomArenaLayout({
                 </div>
             ) : (
                 <>
-                    <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                    {hostTrack?.publication?.isMuted ? (
+                        <div style={{ width: "100%", height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#111" }}>
+                            <div style={{ fontSize: "40px", marginBottom: "16px" }}>📷</div>
+                            <div style={{ color: "rgba(255,255,255,0.5)", fontWeight: "bold" }}>Kamera Kapalı</div>
+                        </div>
+                    ) : (
+                        <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                    )}
 
                     {/* SALE FINALIZATION OVERLAY */}
                     {showFinalization && (
@@ -684,6 +700,46 @@ function CustomArenaLayout({
                             >
                                 🔄
                             </button>
+                            <button
+                                onClick={async () => {
+                                    if (!confirm("Açık arttırmayı sıfırlamak istiyor musunuz? Tüm teklifler arşivlenecek ve başlangıç fiyatına dönülecektir.")) return;
+                                    setLoading(true);
+                                    try {
+                                        const res = await fetch(`/api/ads/${adId}/auction/reset`, { method: "POST" });
+                                        if (res.ok) {
+                                            const payload = JSON.stringify({ type: "AUCTION_RESET" });
+                                            room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                            setLiveHighestBid(initialHighestBid);
+                                            setLiveHighestBidId(null);
+                                            setLiveHighestBidderId(null);
+                                            setLiveHighestBidderName(null);
+                                            setAuctionStatus("ACTIVE");
+                                            alert("Açık arttırma sıfırlandı.");
+                                        }
+                                    } catch (e) {
+                                        console.error(e);
+                                    }
+                                    setLoading(false);
+                                }}
+                                style={{
+                                    width: "48px",
+                                    height: "48px",
+                                    borderRadius: "50%",
+                                    background: "rgba(220, 38, 38, 0.8)",
+                                    backdropFilter: "blur(12px)",
+                                    border: "1px solid rgba(255,255,255,0.1)",
+                                    fontSize: "20px",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    color: "white",
+                                    cursor: "pointer",
+                                    boxShadow: "0 4px 15px rgba(220, 38, 38, 0.4)"
+                                }}
+                                title="Açık Arttırmayı Sıfırla"
+                            >
+                                🔄 0
+                            </button>
                             {/* Stage Requests Pulse Icon */}
                             {stageRequests.length > 0 && (
                                 <div style={{ position: "relative" }}>
@@ -806,7 +862,13 @@ function CustomArenaLayout({
                             zIndex: 10,
                             background: "black"
                         }}>
-                            <VideoTrack trackRef={guestTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            {guestTrack?.publication?.isMuted ? (
+                                <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", flexDirection: "column", background: "#333" }}>
+                                    <div style={{ fontSize: "24px" }}>📷</div>
+                                </div>
+                            ) : (
+                                <VideoTrack trackRef={guestTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                            )}
                         </div>
                     )}
 

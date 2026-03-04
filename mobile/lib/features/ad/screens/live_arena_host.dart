@@ -370,7 +370,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     if (event is TrackSubscribedEvent ||
         event is TrackUnsubscribedEvent ||
         event is ParticipantConnectedEvent ||
-        event is ParticipantDisconnectedEvent) {
+        event is ParticipantDisconnectedEvent ||
+        event is TrackMutedEvent ||
+        event is TrackUnmutedEvent) {
       if (mounted) setState(() {});
     }
     if (event is DataReceivedEvent) {
@@ -430,6 +432,54 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
           customName: signalName);
     } catch (e) {
       debugPrint('Signal error: $e');
+    }
+  }
+
+  Future<void> _resetAuction() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Açık Arttırmayı Sıfırla'),
+        content: const Text('Tüm teklifleri iptal edip başlangıç fiyatına dönmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('İptal', style: TextStyle(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Sıfırla', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    final state = ref.read(liveRoomProvider(widget.ad.id));
+    try {
+      final res = await ApiClient().post('/api/ads/${widget.ad.id}/auction/reset', data: {});
+      if (res.statusCode == 200 || res.statusCode == 201) {
+        final payload = jsonEncode({'type': 'AUCTION_RESET'});
+        if (state.room != null) {
+          await state.room!.localParticipant?.publishData(utf8.encode(payload));
+        }
+
+        setState(() {
+            _liveHighestBid = widget.ad.highestBidAmount ?? widget.ad.startingBid ?? widget.ad.price;
+            _liveHighestBidId = null;
+            _liveHighestBidderId = null;
+            _liveHighestBidderName = null;
+            _bids.clear();
+        });
+        _showSystemMessage('📣 AÇIK ARTTIRMA SIFIRLANDI!', Colors.orange);
+      }
+    } catch (e) {
+      debugPrint('Reset auction error: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Sıfırlama başarısız oldu.')),
+      );
     }
   }
 
@@ -998,7 +1048,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
               borderRadius: BorderRadius.circular(16),
               color: Colors.black,
             ),
-            child: VideoTrackRenderer(guestTrack, fit: VideoViewFit.cover),
+            child: guestTrack.muted
+                ? const Center(child: Icon(Icons.videocam_off, color: Colors.white54))
+                : VideoTrackRenderer(guestTrack, fit: VideoViewFit.cover),
           ),
         ),
         if (guestIdentity != null)
@@ -1537,6 +1589,30 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       child: Row(
         children: [
           // Remove strict widget.ad.isAuction check to allow hybrid auctions on fixed-price ads
+          // Reset Auction Button
+          Padding(
+            padding: const EdgeInsets.only(right: 12),
+            child: GestureDetector(
+              onTap: _resetAuction,
+              child: Container(
+                width: 56,
+                height: 56,
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.8),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white30),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.orange.withOpacity(0.4),
+                      blurRadius: 10,
+                      spreadRadius: 2,
+                    )
+                  ],
+                ),
+                child: const Icon(Icons.refresh, color: Colors.white, size: 28),
+              ),
+            ),
+          ),
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: GestureDetector(

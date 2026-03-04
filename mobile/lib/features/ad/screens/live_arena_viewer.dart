@@ -107,6 +107,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   double? _finalizedAmount;
   bool _showFinalizationOverlay = false;
 
+  bool _isReconnectingForStage = false;
+
   void _requestStage() {
     final state = ref.read(liveRoomProvider(widget.ad.id));
     final room = state.room;
@@ -289,6 +291,16 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           setState(() => _isAuctionActive = true);
           _showSystemMessage('📣 AÇIK ARTTIRMA BAŞLADI!', Colors.green);
           return;
+        } else if (type == 'AUCTION_RESET') {
+          setState(() {
+            _liveHighestBid = widget.ad.highestBidAmount ?? widget.ad.startingBid ?? widget.ad.price;
+            _liveHighestBidId = null;
+            _liveHighestBidderId = null;
+            _liveHighestBidderName = null;
+            _bids.clear();
+          });
+          _showSystemMessage('📣 AÇIK ARTTIRMA SIFIRLANDI!', Colors.orange);
+          return;
         } else if (type == 'AUCTION_END') {
           setState(() => _isAuctionActive = false);
           _showSystemMessage('📣 AÇIK ARTTIRMA DURDURULDU', Colors.orange);
@@ -394,11 +406,17 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
+              _isReconnectingForStage = true;
               final notifier =
                   ref.read(liveRoomProvider(widget.ad.id).notifier);
               await notifier.disconnect();
               await notifier.connect(false, isGuest: true);
-              setState(() => _isGuest = true);
+              if (mounted) {
+                setState(() {
+                  _isGuest = true;
+                  _isReconnectingForStage = false;
+                });
+              }
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00B4CC)),
@@ -888,7 +906,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   Widget build(BuildContext context) {
     // Auto-pop when room is disconnected or closed by host
     ref.listen(liveRoomProvider(widget.ad.id), (previous, next) {
-      if (previous?.room != null && (next.room == null) && !next.isConnecting) {
+      if (!_isReconnectingForStage && previous?.room != null && (next.room == null) && !next.isConnecting) {
         if (mounted) context.pop();
       }
     });
@@ -898,8 +916,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
-    final isDisconnected = room?.connectionState.name == 'disconnected' ||
-        (room == null && !roomState.isConnecting);
+    final isDisconnected = !_isReconnectingForStage && (room?.connectionState.name == 'disconnected' ||
+        (room == null && !roomState.isConnecting));
 
     // Sync isAuctionActive from currentAd (initial state or polling updates)
     // We only update if WebRTC hasn't yet provided an active auction broadcast,
@@ -1011,13 +1029,23 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                   ),
                 ),
               )
-            else if (hostTrack != null)
+            else if (hostTrack != null && !hostTrack.muted)
               SizedBox.expand(
                 child: VideoTrackRenderer(
                   hostTrack,
                   fit: VideoViewFit.contain, // Ensure full video visibility
                 ),
               )
+            else if (hostTrack != null && hostTrack.muted)
+              const Center(
+                  child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.videocam_off, size: 80, color: Colors.white54),
+                  SizedBox(height: 16),
+                  Text('Kamera Kapalı', style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold)),
+                ],
+              ))
             else
               const Center(
                   child: Text('Yayın bekleniyor...',
@@ -1036,8 +1064,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         border: Border.all(
                             color: Colors.white.withOpacity(0.5), width: 2),
                         color: Colors.black),
-                    child:
-                        VideoTrackRenderer(guestTrack, fit: VideoViewFit.cover),
+                    child: guestTrack.muted
+                        ? const Center(child: Icon(Icons.videocam_off, color: Colors.white54))
+                        : VideoTrackRenderer(guestTrack, fit: VideoViewFit.cover),
                   ),
                 ),
               ),
@@ -1720,6 +1749,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   }
 
   void _onRoomEvent(RoomEvent event) {
+    if (event is TrackMutedEvent || event is TrackUnmutedEvent) {
+      if (mounted) setState(() {});
+    }
     if (event is DataReceivedEvent) {
       _handleDataChannelMessage(event.data, event.participant);
     }
