@@ -1192,11 +1192,13 @@ class _AdListTile extends StatelessWidget {
           ),
           const SizedBox(height: 4),
           Text(
-            ad.highestBidAmount != null
-                ? _fmt(ad.highestBidAmount!)
-                : (ad.startingBid != null
-                    ? _fmt(ad.startingBid!)
-                    : 'Serbest teqlif'),
+            ad.isFixedPrice
+                ? _fmt(ad.price)
+                : (ad.highestBidAmount != null
+                    ? 'G\u00fcncel ${_fmt(ad.highestBidAmount!)}'
+                    : (ad.startingBid != null
+                        ? _fmt(ad.startingBid!)
+                        : 'Serbest teqlif')),
             style: const TextStyle(
                 fontWeight: FontWeight.w700, color: Color(0xFF00B4CC)),
           ),

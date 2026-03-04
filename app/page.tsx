@@ -377,7 +377,7 @@ export default async function HomePage({
                           <div style={{ marginTop: "auto", display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
                             <div>
                               <div style={{ fontWeight: 700, color: "var(--primary)", fontSize: "1rem" }}>
-                                {ad.bids?.length > 0 ? `Güncel ${formatPrice(ad.bids[0].amount)}` : (ad.isFixedPrice ? formatPrice(ad.price) : (ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)))}
+                                {ad.isFixedPrice ? formatPrice(ad.price) : (ad.bids?.length > 0 ? `Güncel ${formatPrice(ad.bids[0].amount)}` : (ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)))}
                               </div>
                               <div style={{ fontSize: "0.72rem", color: "var(--text-muted)" }}>
                                 📍 {ad.province.name} · {timeAgo(ad.createdAt)} önce
@@ -426,7 +426,7 @@ export default async function HomePage({
                           </div>
                           <div style={{ textAlign: "right", flexShrink: 0 }}>
                             <div style={{ fontWeight: 700, color: "var(--primary)" }}>
-                              {ad.bids?.length > 0 ? `Güncel ${formatPrice(ad.bids[0].amount)}` : (ad.isFixedPrice ? formatPrice(ad.price) : (ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)))}
+                              {ad.isFixedPrice ? formatPrice(ad.price) : (ad.bids?.length > 0 ? `Güncel ${formatPrice(ad.bids[0].amount)}` : (ad.startingBid === null ? "🔥 Serbest" : formatPrice(ad.startingBid)))}
                             </div>
                             <span style={{ fontSize: "0.7rem", padding: "1px 6px", background: "rgba(0,188,212,0.08)", borderRadius: "100px", color: "var(--primary)" }}>
                               {ad.category.icon} {ad.category.name}
