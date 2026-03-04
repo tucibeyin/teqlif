@@ -327,8 +327,6 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                               ),
                             )),
                 ),
-                        ),
-                ),
                 actions: [
                   IconButton(
                     icon: const Icon(Icons.share, color: Colors.black87),
