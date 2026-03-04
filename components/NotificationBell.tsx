@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { Bell, Trash2 } from "lucide-react";
+import { Bell, Trash2, Radio } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 interface Notification {
     id: string;
+    type: string;
     message: string;
     link: string | null;
     isRead: boolean;
@@ -191,49 +192,82 @@ export function NotificationBell() {
                                 Bildiriminiz yok.
                             </div>
                         ) : (
-                            notifications.map((notif) => (
-                                <div
-                                    key={notif.id}
-                                    onClick={() => handleNotificationClick(notif)}
-                                    style={{
-                                        padding: "1rem",
-                                        borderBottom: "1px solid var(--border)",
-                                        cursor: "pointer",
-                                        background: notif.isRead ? "transparent" : "rgba(0, 188, 212, 0.05)",
-                                        transition: "background 0.2s",
-                                    }}
-                                >
-                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
-                                        <p
-                                            style={{
-                                                margin: 0,
-                                                fontSize: "0.9rem",
-                                                color: notif.isRead ? "var(--text-secondary)" : "var(--text-primary)",
-                                                fontWeight: notif.isRead ? 400 : 500,
-                                                paddingRight: "8px"
-                                            }}
-                                        >
-                                            {notif.message}
-                                        </p>
-                                        <button
-                                            onClick={(e) => deleteNotification(e, notif.id)}
-                                            style={{
-                                                background: "none",
-                                                border: "none",
-                                                color: "var(--text-muted)",
-                                                cursor: "pointer",
-                                                padding: "4px"
-                                            }}
-                                            title="Bildirimi Sil"
-                                        >
-                                            <Trash2 size={16} />
-                                        </button>
+                            notifications.map((notif) => {
+                                const isLive = notif.type === 'LIVE_STARTED';
+                                return (
+                                    <div
+                                        key={notif.id}
+                                        onClick={() => handleNotificationClick(notif)}
+                                        style={{
+                                            padding: "0.75rem 1rem",
+                                            borderBottom: "1px solid var(--border)",
+                                            cursor: "pointer",
+                                            background: isLive
+                                                ? "rgba(239, 68, 68, 0.07)"
+                                                : notif.isRead ? "transparent" : "rgba(0, 188, 212, 0.05)",
+                                            transition: "background 0.2s",
+                                            display: "flex",
+                                            gap: "0.75rem",
+                                            alignItems: "flex-start",
+                                        }}
+                                    >
+                                        {/* Icon */}
+                                        <div style={{ flexShrink: 0, marginTop: "2px" }}>
+                                            {isLive ? (
+                                                <div style={{ position: "relative" }}>
+                                                    <Radio size={18} color="#ef4444" />
+                                                    {!notif.isRead && (
+                                                        <span style={{
+                                                            position: "absolute",
+                                                            top: "-2px",
+                                                            right: "-2px",
+                                                            width: "7px",
+                                                            height: "7px",
+                                                            borderRadius: "50%",
+                                                            background: "#ef4444",
+                                                            animation: "pulse 1.5s infinite",
+                                                        }} />
+                                                    )}
+                                                </div>
+                                            ) : null}
+                                        </div>
+                                        {/* Content */}
+                                        <div style={{ flex: 1, minWidth: 0 }}>
+                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                <p
+                                                    style={{
+                                                        margin: 0,
+                                                        fontSize: "0.85rem",
+                                                        color: isLive ? "#b91c1c" : (notif.isRead ? "var(--text-secondary)" : "var(--text-primary)"),
+                                                        fontWeight: isLive ? 600 : (notif.isRead ? 400 : 500),
+                                                        paddingRight: "8px",
+                                                        lineHeight: 1.4,
+                                                    }}
+                                                >
+                                                    {notif.message}
+                                                </p>
+                                                <button
+                                                    onClick={(e) => deleteNotification(e, notif.id)}
+                                                    style={{
+                                                        background: "none",
+                                                        border: "none",
+                                                        color: "var(--text-muted)",
+                                                        cursor: "pointer",
+                                                        padding: "4px",
+                                                        flexShrink: 0,
+                                                    }}
+                                                    title="Bildirimi Sil"
+                                                >
+                                                    <Trash2 size={14} />
+                                                </button>
+                                            </div>
+                                            <span style={{ fontSize: "0.72rem", color: "var(--text-muted)", marginTop: "0.2rem", display: "block" }}>
+                                                {new Date(notif.createdAt).toLocaleDateString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
+                                            </span>
+                                        </div>
                                     </div>
-                                    <span style={{ fontSize: "0.75rem", color: "var(--text-muted)", marginTop: "0.25rem", display: "block" }}>
-                                        {new Date(notif.createdAt).toLocaleDateString("tr-TR", { hour: "2-digit", minute: "2-digit" })}
-                                    </span>
-                                </div>
-                            ))
+                                );
+                            })
                         )}
                     </div>
                 </div>

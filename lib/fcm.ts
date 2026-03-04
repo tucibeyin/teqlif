@@ -135,3 +135,71 @@ export async function sendPushNotification(
         return false;
     }
 }
+
+/**
+ * Notifies all followers of a host that they have started a live stream.
+ * Fire-and-forget: never blocks the calling API route.
+ *
+ * @param hostId   The userId of the broadcaster
+ * @param hostName Display name of the broadcaster
+ * @param adId     The live ad ID (used for deep-link navigation on mobile)
+ */
+export async function notifyFollowersOfLive(
+    hostId: string,
+    hostName: string,
+    adId: string
+): Promise<void> {
+    try {
+        const { prisma } = await import('./prisma');
+
+        // 1. Find all followers: Friend rows where friendId == hostId
+        const followers = await prisma.friend.findMany({
+            where: { friendId: hostId },
+            select: {
+                userId: true,
+                user: { select: { id: true, fcmToken: true } },
+            },
+        });
+
+        if (followers.length === 0) return;
+
+        const message = `🔴 ${hostName} adlı satıcı canlı yayına başladı! Hemen katıl.`;
+        const liveLink = `/ad/${adId}`;
+
+        // 2. Bulk-create in-app notifications (one per follower)
+        await prisma.notification.createMany({
+            data: followers.map((f) => ({
+                userId: f.userId,
+                type: 'LIVE_STARTED' as const,
+                message,
+                link: liveLink,
+            })),
+            skipDuplicates: true,
+        });
+
+        console.log(`[LIVE_NOTIFY] Created ${followers.length} in-app notifications for ad ${adId}`);
+
+        // 3. Send FCM push to each follower that has a token
+        const fcmPayload: { [key: string]: string } = {
+            type: 'LIVE_STARTED',
+            adId,
+        };
+
+        const pushPromises = followers
+            .filter((f) => f.user?.fcmToken)
+            .map((f) =>
+                sendPushNotification(
+                    f.user!.fcmToken!,
+                    '🔴 Canlı Yayın Başladı!',
+                    message,
+                    fcmPayload,
+                )
+            );
+
+        await Promise.allSettled(pushPromises);
+        console.log(`[LIVE_NOTIFY] FCM pushes dispatched for ad ${adId}`);
+    } catch (err) {
+        // Non-fatal: log but never crash the caller
+        console.error('[LIVE_NOTIFY] Failed to notify followers:', err);
+    }
+}

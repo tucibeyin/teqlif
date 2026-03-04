@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { revalidatePath } from "next/cache";
+import { notifyFollowersOfLive } from "@/lib/fcm";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,12 @@ export async function POST(req: NextRequest) {
 
         revalidatePath("/");
 
+        // 🔔 PHASE 20: Notify followers — fire-and-forget, never delays response
+        const hostName = currentUser.name ?? 'Bir satıcı';
+        notifyFollowersOfLive(currentUser.id, hostName, ghostAd.id).catch((err) =>
+            console.error('[LIVE_NOTIFY] quick-start follower notify error:', err)
+        );
+
         return NextResponse.json(ghostAd, { status: 201 });
 
     } catch (err) {
@@ -72,3 +79,4 @@ export async function POST(req: NextRequest) {
         return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
     }
 }
+

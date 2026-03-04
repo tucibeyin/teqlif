@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { logger } from "@/lib/logger";
+import { notifyFollowersOfLive } from "@/lib/fcm";
 
 export const dynamic = 'force-dynamic';
 
@@ -46,6 +47,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             data: updateData,
         });
 
+        // 🔔 PHASE 20: Notify followers when live stream STARTS (false → true transition)
+        if (isLive === true && !ad.isLive) {
+            const hostUser = await prisma.user.findUnique({ where: { id: user.id }, select: { name: true } });
+            const hostName = hostUser?.name ?? 'Bir satıcı';
+            // Fire-and-forget — do NOT await to avoid delaying the response
+            notifyFollowersOfLive(user.id, hostName, id).catch((err) =>
+                logger.liveKit("ERROR", "LIVE_NOTIFY", `Follower notification failed for ad ${id}`, err)
+            );
+        }
+
         // Ghost Ad Cleanup: If stream is ending and it is a ghost ad
         if (isLive === false && ad.description === 'Hızlı Canlı Yayın (Ghost Ad)') {
             logger.info("Ghost ad cleanup triggered", { adId: id });
@@ -71,3 +82,4 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
     }
 }
+
