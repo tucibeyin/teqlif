@@ -467,11 +467,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         }
 
         setState(() {
-            _liveHighestBid = widget.ad.highestBidAmount ?? widget.ad.startingBid ?? widget.ad.price;
-            _liveHighestBidId = null;
-            _liveHighestBidderId = null;
-            _liveHighestBidderName = null;
             _bids.clear();
+            _unreadBids = 0;
         });
         _showSystemMessage('📣 AÇIK ARTTIRMA SIFIRLANDI!', Colors.orange);
       }
