@@ -24,10 +24,13 @@ export async function Navbar() {
                         {session?.user ? (
                             <>
                                 <QuickLiveButton />
-                                <Link href="/post-ad" className="btn btn-primary btn-sm">
+                                <Link href="/post-ad" className="btn btn-primary btn-sm hidden md:flex">
                                     + İlan Ver
                                 </Link>
                                 <NotificationBell />
+                                <Link href="/support" className="btn btn-ghost btn-sm hidden md:flex text-[var(--primary)]">
+                                    Destek
+                                </Link>
                                 <Link href="/dashboard" className="btn btn-ghost btn-sm">
                                     Hesabım
                                 </Link>
