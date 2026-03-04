@@ -798,9 +798,11 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             ),
                             const SizedBox(height: 24),
                           ],
-                          _buildBidInputSection(context, ad,
-                              isOwner: isOwner, adStatus: ad.status, isFrozen: roomState.isFrozen),
-                          const SizedBox(height: 24),
+                          if (ad.isLive != true) ...[
+                            _buildBidInputSection(context, ad,
+                                isOwner: isOwner, adStatus: ad.status, isFrozen: roomState.isFrozen),
+                            const SizedBox(height: 24),
+                          ],
                         ],
                       ],
 
