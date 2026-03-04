@@ -172,17 +172,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
     ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-    
-    // Invalidate provider to refresh ad status on return
-    ref.invalidate(adDetailProvider(widget.ad.id));
-    
-    _chatCtrl.dispose();
-    _chatFocus.dispose();
-    _countdownTimer?.cancel();
-    _pulseController.dispose();
-    WidgetsBinding.instance.removeObserver(this);
     // Restore system UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
@@ -190,6 +182,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (!mounted) return;
     if (state == AppLifecycleState.paused) {
       // User left the app, disconnect from LiveKit
       ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();

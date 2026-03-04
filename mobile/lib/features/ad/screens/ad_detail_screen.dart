@@ -152,22 +152,53 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
   }
 
   Future<void> _acceptBid(String bidId) async {
+    setState(() => _bidLoading = true);
     try {
       await ApiClient().patch(Endpoints.acceptBid(bidId));
+      if (!mounted) return;
       ref.invalidate(adDetailProvider(widget.adId));
       _snack('Teqlif kabul edildi. ✅');
     } catch (_) {
+      if (!mounted) return;
       _snack('İşlem başarısız.');
+    } finally {
+      if (mounted) setState(() => _bidLoading = false);
     }
   }
 
   Future<void> _cancelBid(String bidId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Teqlifi Reddet'),
+        content: const Text('Bu teqlifi reddetmek istediğinize emin misiniz?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Vazgeç'),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text('Reddet', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    setState(() => _bidLoading = true);
     try {
       await ApiClient().patch(Endpoints.cancelBid(bidId));
+      if (!mounted) return;
       ref.invalidate(adDetailProvider(widget.adId));
-      _snack('Teqlif iptali başarılı.');
-    } catch (_) {
+      _snack('Teqlif reddedildi.');
+    } catch (e) {
+      if (!mounted) return;
       _snack('İşlem başarısız.');
+    } finally {
+      if (mounted) setState(() => _bidLoading = false);
     }
   }
 
@@ -192,12 +223,17 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
 
     if (confirmed != true) return;
 
+    setState(() => _bidLoading = true);
     try {
       await ApiClient().post(Endpoints.finalizeBid(bidId));
+      if (!mounted) return;
       ref.invalidate(adDetailProvider(widget.adId));
       _snack('Satış başarıyla tamamlandı! ✅');
     } catch (_) {
+      if (!mounted) return;
       _snack('İşlem başarısız.');
+    } finally {
+      if (mounted) setState(() => _bidLoading = false);
     }
   }
 
