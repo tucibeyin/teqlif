@@ -81,7 +81,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     }
 
     final user = _profileData!['user'] as PublicUserProfile;
-    final ads = _profileData!['ads'] as List<Ad>;
+    final ads = _profileData!['ads'] as List<AdModel>;
     final connectionStatus = _profileData!['connectionStatus'] as String;
 
     final joinedDate = DateFormat.yMMMM('tr_TR').format(DateTime.parse(user.joinedAt));

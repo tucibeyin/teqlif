@@ -89,7 +89,7 @@ class UserProvider with ChangeNotifier {
       if (res.statusCode == 200) {
         final data = res.data;
         final user = PublicUserProfile.fromJson(data['user']);
-        final ads = (data['ads'] as List).map((ad) => Ad.fromJson(ad)).toList();
+        final ads = (data['ads'] as List).map((ad) => AdModel.fromJson(ad)).toList();
         final connectionStatus = data['connectionStatus'] as String;
         return {
           'user': user,

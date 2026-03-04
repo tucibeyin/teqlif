@@ -308,16 +308,18 @@ class _FriendsScreenState extends ConsumerState<FriendsScreen> {
   }
 
   Widget _buildListChip({required String label, required bool isSelected, required VoidCallback onTap, VoidCallback? onLongPress}) {
-    return ActionChip(
-      label: Text(label, style: TextStyle(
-        color: isSelected ? Colors.white : Colors.black87,
-        fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
-      )),
-      backgroundColor: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-      side: BorderSide.none,
-      onPressed: onTap,
+    return GestureDetector(
       onLongPress: onLongPress,
+      child: ActionChip(
+        label: Text(label, style: TextStyle(
+          color: isSelected ? Colors.white : Colors.black87,
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+        )),
+        backgroundColor: isSelected ? Theme.of(context).primaryColor : Colors.grey[200],
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        side: BorderSide.none,
+        onPressed: onTap,
+      ),
     );
   }
 }
