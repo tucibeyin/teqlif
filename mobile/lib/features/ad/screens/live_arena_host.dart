@@ -183,9 +183,15 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
 
   @override
   void deactivate() {
-    // ✅ Safe to use ref here — widget is leaving the tree but NOT yet disposed
-    ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-    ref.invalidate(adDetailProvider(widget.ad.id)); // remove ghost "live" buttons
+    // 🛡️ Schedule after build frame — avoids ZonedGuarded 'modify during build' crash
+    final adId = widget.ad.id;
+    final container = ProviderScope.containerOf(context, listen: false);
+    Future.microtask(() {
+      try {
+        container.read(liveRoomProvider(adId).notifier).disconnect();
+        container.invalidate(adDetailProvider(adId));
+      } catch (_) {}
+    });
     super.deactivate();
   }
 
@@ -1115,11 +1121,14 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                         ),
                         const SizedBox(height: 32),
                         ElevatedButton.icon(
-                          onPressed: () async {
-                            // Explicit cleanup before navigation (user-initiated exit)
+                          onPressed: () {
+                            // Explicit cleanup — disconnect first, then delay nav so invalidate fires cleanly
+                            final router = GoRouter.of(context);
                             ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-                            ref.invalidate(adDetailProvider(widget.ad.id));
-                            if (mounted) context.go('/');
+                            Future.delayed(const Duration(milliseconds: 100), () {
+                              try { ref.invalidate(adDetailProvider(widget.ad.id)); } catch (_) {}
+                              router.go('/home');
+                            });
                           },
                           icon: const Icon(Icons.home_outlined, color: Colors.white),
                           label: const Text(
