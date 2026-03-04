@@ -99,8 +99,8 @@ export async function POST(req: NextRequest) {
             }
         }
 
-        if (ad.isLive) {
-            return NextResponse.json({ error: "Bu ilan şu an canlı yayında, teklifler yayından verilmelidir." }, { status: 403 });
+        if (ad.isLive && ad.isAuctionActive === false) {
+            return NextResponse.json({ error: "Canlı yayın açık arttırması şu anda duraklatıldı veya henüz başlamadı." }, { status: 400 });
         }
 
         logger.info("Processing bid", { adId, amount, userId: user.id });

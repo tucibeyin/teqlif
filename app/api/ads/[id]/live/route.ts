@@ -44,26 +44,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         const updatedAd = await prisma.ad.update({
             where: { id },
             data: updateData,
-            select: { id: true, isLive: true, startingBid: true }
         });
-
-        // 4. Value Handoff (Static -> Live Engine)
-        if (isLive === true) {
-            // Find the highest static bid in Prisma
-            const highestStaticBid = await prisma.bid.findFirst({
-                where: { adId: id, status: { not: "REJECTED" } },
-                orderBy: { amount: 'desc' },
-                select: { amount: true }
-            });
-
-            // If a static bid exists, use it. Otherwise, use the Ad's startingBid or 0.
-            const startingLivePrice = highestStaticBid?.amount || updatedAd.startingBid || 0;
-
-            // Seed Redis Engine
-            const { redis } = await import('@/lib/redis');
-            await redis.set(`highest_bid:${id}`, startingLivePrice);
-            console.log(`[Value Handoff] Initialized Redis for Ad ${id} with starting price: ${startingLivePrice}`);
-        }
 
         // Ghost Ad Cleanup: If stream is ending and it is a ghost ad
         if (isLive === false && ad.description === 'Hızlı Canlı Yayın (Ghost Ad)') {
