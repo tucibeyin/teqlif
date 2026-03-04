@@ -1101,13 +1101,13 @@ class _AdCard extends StatelessWidget {
                             fontWeight: FontWeight.w600, fontSize: 13)),
                     const Spacer(),
                     Text(
-                      ad.highestBidAmount != null
-                          ? 'Güncel ${_fmt(ad.highestBidAmount!)}'
-                          : ad.isFixedPrice
-                              ? _fmt(ad.price)
+                      ad.isFixedPrice
+                          ? _fmt(ad.price)
+                          : (ad.highestBidAmount != null
+                              ? 'Güncel ${_fmt(ad.highestBidAmount!)}'
                               : ad.startingBid == null
                                   ? '🔥 Serbest'
-                                  : _fmt(ad.startingBid!),
+                                  : _fmt(ad.startingBid!)),
                       style: const TextStyle(
                           fontWeight: FontWeight.w700,
                           fontSize: 13,
@@ -1204,17 +1204,17 @@ class _AdListTile extends StatelessWidget {
           ),
         ],
       ),
-      trailing: ad.highestBidAmount != null
+      trailing: ad.isFixedPrice
           ? Text(
-              'Güncel ${_fmt(ad.highestBidAmount!)}',
+              _fmt(ad.price),
               style: const TextStyle(
                   fontWeight: FontWeight.w700,
                   fontSize: 13,
                   color: Color(0xFF00B4CC)),
             )
-          : ad.isFixedPrice
+          : ad.highestBidAmount != null
               ? Text(
-                  _fmt(ad.price),
+                  'Güncel ${_fmt(ad.highestBidAmount!)}',
                   style: const TextStyle(
                       fontWeight: FontWeight.w700,
                       fontSize: 13,
