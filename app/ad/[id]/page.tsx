@@ -534,7 +534,7 @@ export default async function AdDetailPage({
                                                                 {formatPrice(bid.amount)}
                                                             </span>
                                                         </div>
-                                                        <div className="text-muted" style={{ fontSize: '0.75rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                                        <div style={{ fontSize: '0.75rem', marginTop: '4px', display: 'flex', alignItems: 'center', gap: '6px', color: 'rgba(255,255,255,0.6)' }}>
                                                             <span>{timeAgo(bid.createdAt)}</span>
                                                             {bid.status === 'ACCEPTED' && (
                                                                 <span style={{
@@ -569,7 +569,7 @@ export default async function AdDetailPage({
                                                         alignItems: 'center',
                                                         marginTop: '12px',
                                                         paddingTop: '12px',
-                                                        borderTop: '1px dashed var(--border)',
+                                                        borderTop: '1px dashed rgba(255,255,255,0.1)',
                                                         flexWrap: 'wrap'
                                                     }}>
                                                         {isOwner && ad.status !== 'SOLD' && bid.status === 'ACCEPTED' && (
