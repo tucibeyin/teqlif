@@ -52,6 +52,8 @@ class Endpoints {
   static const friendLists = '/api/users/friend-lists';
   static String friendListById(String id) => '/api/users/friend-lists/$id';
   static String friendListMembers(String listId) => '/api/users/friend-lists/$listId';
+  static String blockUser = '/api/users/block';
+  static String report = '/api/reports';
 
   // Upload
   static const upload = '/api/upload';

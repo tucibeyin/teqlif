@@ -15,11 +15,31 @@ export async function GET(req: NextRequest) {
         const q = searchParams.get("q");
         const isMine = searchParams.get("mine") === "true";
 
+        let blockedUserIds: string[] = [];
+        const currentUser = await getMobileUser(req);
+
+        if (currentUser) {
+            // Fetch users blocked by current user and users who blocked current user
+            const blockedRecords = await prisma.blockedUser.findMany({
+                where: {
+                    OR: [
+                        { blockerId: currentUser.id },
+                        { blockedId: currentUser.id }
+                    ]
+                }
+            });
+
+            blockedUserIds = blockedRecords.map(record =>
+                record.blockerId === currentUser.id ? record.blockedId : record.blockerId
+            );
+        }
+
         const where: Record<string, any> = {
             OR: [
                 { status: "ACTIVE" },
                 { isLive: true }
-            ]
+            ],
+            ...(blockedUserIds.length > 0 && { userId: { notIn: blockedUserIds } })
         };
         if (category) where.category = { slug: category };
         if (province) where.provinceId = province;
@@ -111,10 +131,14 @@ export async function POST(req: NextRequest) {
             }
         }
 
+        const { censorProfanity } = await import('@/lib/profanity');
+        const cleanTitle = censorProfanity(title);
+        const cleanDescription = censorProfanity(description);
+
         const ad = await prisma.ad.create({
             data: {
-                title,
-                description,
+                title: cleanTitle,
+                description: cleanDescription,
                 price: Number(price),
                 isFixedPrice: Boolean(isFixedPrice),
                 startingBid: isFixedPrice ? null : (startingBid !== undefined ? Number(startingBid) : null),

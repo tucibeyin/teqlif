@@ -32,6 +32,12 @@ model User {
   friendLists       FriendList[]   @relation("UserFriendLists")
   friends           Friend[]       @relation("UserFriends")
   friendOf          Friend[]       @relation("FriendToUser")
+
+  // --- UGC COMPLIANCE ---
+  blockedUsers      BlockedUser[]  @relation("Blocker")
+  blockedBy         BlockedUser[]  @relation("Blocked")
+  reportsMade       Report[]       @relation("Reporter")
+  reportsReceived   Report[]       @relation("ReportedUser")
 }
 
 model Category {
@@ -96,6 +102,7 @@ model Ad {
   bids             Bid[]
   conversations    Conversation[]
   favorites        Favorite[]
+  reports          Report[]
 
   @@index([status, categoryId, createdAt])
   @@index([userId])
@@ -209,4 +216,32 @@ enum BidStatus {
   PENDING
   ACCEPTED
   REJECTED
+}
+
+// --- UGC COMPLIANCE MODELS ---
+
+model BlockedUser {
+  id          String   @id @default(cuid())
+  createdAt   DateTime @default(now())
+  blockerId   String   // The user who blocked
+  blockedId   String   // The user who is blocked
+
+  blocker     User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked     User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+}
+
+model Report {
+  id             String       @id @default(cuid())
+  createdAt      DateTime     @default(now())
+  reason         String       // Reason for the report
+  
+  reporterId     String       // The user creating the report
+  reportedUserId String?      // The user being reported (optional, if reporting a user)
+  adId           String?      // The ad being reported (optional, if reporting an ad)
+
+  reporter       User         @relation("Reporter", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser   User?        @relation("ReportedUser", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  ad             Ad?          @relation(fields: [adId], references: [id], onDelete: Cascade)
 }

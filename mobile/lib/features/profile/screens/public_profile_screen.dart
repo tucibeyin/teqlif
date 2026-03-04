@@ -128,6 +128,92 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
     }
   }
 
+  Future<void> _handleBlockUser() async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kullanıcıyı Engelle'),
+        content: const Text('Bu kullanıcıyı engellemek istediğinize emin misiniz? Birbirinizin ilanlarını ve mesajlarını göremezsiniz.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Engelle', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      )
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isActionLoading = true);
+    try {
+      await ApiClient().post(Endpoints.blockUser, data: {'blockedId': widget.userId});
+      if (mounted) {
+        setState(() => _profileData!['connectionStatus'] = 'BLOCKED_BY_ME');
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kullanıcı engellendi.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
+    } finally {
+      if (mounted) setState(() => _isActionLoading = false);
+    }
+  }
+
+  Future<void> _handleUnblockUser() async {
+    setState(() => _isActionLoading = true);
+    try {
+      await ApiClient().delete(Endpoints.blockUser, data: {'blockedId': widget.userId});
+      if (mounted) {
+        setState(() => _profileData!['connectionStatus'] = 'NONE');
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kullanıcının engeli kaldırıldı.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('İşlem başarısız.')));
+    } finally {
+      if (mounted) setState(() => _isActionLoading = false);
+    }
+  }
+
+  Future<void> _handleReportUser() async {
+    final reasonController = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Kullanıcıyı Şikayet Et'),
+        content: TextField(
+          controller: reasonController,
+          decoration: const InputDecoration(hintText: 'Şikayet nedeninizi yazınız...', border: OutlineInputBorder()),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Şikayet Et', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      )
+    );
+
+    if (confirm != true || reasonController.text.trim().isEmpty) return;
+
+    setState(() => _isActionLoading = true);
+    try {
+      await ApiClient().post(Endpoints.report, data: {
+        'reportedId': widget.userId,
+        'reason': reasonController.text.trim()
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Şikayetiniz alındı.')));
+      }
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Şikayet gönderilemedi.')));
+    } finally {
+      if (mounted) setState(() => _isActionLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_isLoading) {
@@ -150,6 +236,22 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
         foregroundColor: Colors.black87,
         elevation: 0,
         centerTitle: true,
+        actions: connectionStatus != 'SELF' ? [
+          PopupMenuButton<String>(
+            onSelected: (value) {
+              if (value == 'block') _handleBlockUser();
+              if (value == 'unblock') _handleUnblockUser();
+              if (value == 'report') _handleReportUser();
+            },
+            itemBuilder: (context) => [
+              if (connectionStatus == 'BLOCKED_BY_ME')
+                const PopupMenuItem(value: 'unblock', child: Text('Engeli Kaldır'))
+              else
+                const PopupMenuItem(value: 'block', child: Text('Kullanıcıyı Engelle', style: TextStyle(color: Colors.red))),
+              const PopupMenuItem(value: 'report', child: Text('Şikayet Et', style: TextStyle(color: Colors.red))),
+            ]
+          )
+        ] : null,
       ),
       body: SingleChildScrollView(
         child: Column(
@@ -199,20 +301,56 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                   ],
                   const SizedBox(height: 24),
                   
-                  // Stats
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      _buildStatItem('Aktif İlan', user.stats['activeAds'].toString()),
-                      Container(width: 1, height: 40, color: Colors.grey[300], margin: const EdgeInsets.symmetric(horizontal: 24)),
-                      _buildStatItem('Takipçi', user.stats['followers'].toString()),
-                    ],
-                  ),
-
                   const SizedBox(height: 24),
+                  
+                  if (connectionStatus == 'BLOCKED_BY_THEM')
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.red[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.red[200]!)
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.block, color: Colors.red, size: 48),
+                          SizedBox(height: 12),
+                          Text('Bu profile erişemezsiniz.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.red)),
+                        ]
+                      ),
+                    )
+                  else if (connectionStatus == 'BLOCKED_BY_ME')
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.orange[50],
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.orange[200]!)
+                      ),
+                      child: const Column(
+                        children: [
+                          Icon(Icons.person_off, color: Colors.orange, size: 48),
+                          SizedBox(height: 12),
+                          Text('Bu kullanıcıyı engellediniz.', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: Colors.orange)),
+                          Text('Engeli kaldırarak profili görüntüleyebilirsiniz.', textAlign: TextAlign.center, style: TextStyle(color: Colors.orange)),
+                        ]
+                      ),
+                    )
+                  else ...[
+                    // Stats
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        _buildStatItem('Aktif İlan', user.stats['activeAds'].toString()),
+                        Container(width: 1, height: 40, color: Colors.grey[300], margin: const EdgeInsets.symmetric(horizontal: 24)),
+                        _buildStatItem('Takipçi', user.stats['followers'].toString()),
+                      ],
+                    ),
 
-                  // Actions
-                  if (connectionStatus != 'SELF')
+                    const SizedBox(height: 24),
+
+                    // Actions
+                    if (connectionStatus != 'SELF')
                     Column(
                       children: [
                         Row(
@@ -265,16 +403,18 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
                             ),
                           ),
                         ],
-                      ],
-                    ),
+                        ],
+                      ),
+                  ],
                 ],
               ),
             ),
 
             const SizedBox(height: 12),
 
-            // Ads Grid
-            Container(
+            if (connectionStatus != 'BLOCKED_BY_THEM' && connectionStatus != 'BLOCKED_BY_ME')
+              // Ads Grid
+              Container(
               padding: const EdgeInsets.all(16.0),
               width: double.infinity,
               color: Colors.white,

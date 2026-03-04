@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { MessageSquare, CheckCircle, XCircle, Video } from "lucide-react";
 
 interface AdActionsProps {
-    actionType: "MESSAGE" | "ACCEPT_BID" | "CANCEL_BID" | "FINALIZE_SALE" | "INVITE_TO_STAGE" | "START_LIVE";
+    actionType: "MESSAGE" | "ACCEPT_BID" | "CANCEL_BID" | "FINALIZE_SALE" | "INVITE_TO_STAGE" | "START_LIVE" | "REPORT_AD";
     adId?: string;
     sellerId?: string;
     bidId?: string;
@@ -161,6 +161,24 @@ export function AdActions({
                 } else {
                     const data = await res.json();
                     alert(data.error || "Canlı yayın başlatılamadı.");
+                }
+            } else if (actionType === "REPORT_AD" && adId) {
+                const reason = window.prompt("Lütfen ilanı şikayet etme nedeninizi yazınız:");
+                if (!reason || !reason.trim()) {
+                    setIsLoading(false);
+                    return;
+                }
+
+                const res = await fetch(`/api/reports`, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ reason, adId })
+                });
+
+                if (res.ok) {
+                    alert("Şikayetiniz alınmıştır. İncelenecektir.");
+                } else {
+                    alert("Şikayet gönderilemedi.");
                 }
             }
         } catch (error) {
@@ -352,6 +370,31 @@ export function AdActions({
                         {customLabel || "🔴 Canlı Yayını Başlat"}
                     </>
                 )}
+            </button>
+        );
+    }
+
+    if (actionType === "REPORT_AD") {
+        return (
+            <button
+                onClick={handleAction}
+                disabled={isLoading}
+                title="İlanı Şikayet Et"
+                style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    padding: '6px 12px',
+                    fontSize: '0.8rem',
+                    fontWeight: 600,
+                    color: '#ef4444',
+                    borderColor: 'transparent',
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    marginTop: '0.5rem'
+                }}
+            >
+                {isLoading ? "..." : "🚩 İlanı Şikayet Et"}
             </button>
         );
     }

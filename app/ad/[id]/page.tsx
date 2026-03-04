@@ -313,6 +313,17 @@ export default async function AdDetailPage({
                                     <strong style={{ display: "block", fontSize: "0.9rem" }}>Bu ilan size ait</strong>
                                 </div>
                             )}
+
+                            {!isOwner && session?.user && (
+                                <div style={{ display: 'flex', justifyContent: 'center' }}>
+                                    <AdActions
+                                        actionType="REPORT_AD"
+                                        adId={ad.id}
+                                        currentUser={session.user}
+                                    />
+                                </div>
+                            )}
+
                             {isOwner && !adData.isLive && adData.status === 'ACTIVE' && (
                                 <div style={{ marginTop: "1rem", paddingTop: "1rem", borderTop: "1px solid var(--border)" }}>
                                     <div style={{ fontSize: "0.85rem", color: "var(--text-muted)", marginBottom: "0.5rem", textAlign: "center" }}>

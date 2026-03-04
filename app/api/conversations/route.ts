@@ -7,12 +7,32 @@ export async function GET(request: Request) {
         const currentUser = await getMobileUser(request);
         if (!currentUser) return NextResponse.json({ message: 'Oturum açmanız gerekiyor' }, { status: 401 });
 
-        const conversations = await prisma.conversation.findMany({
+        // Fetch users blocked by current user and users who blocked current user
+        const blockedRecords = await prisma.blockedUser.findMany({
             where: {
                 OR: [
-                    { user1Id: currentUser.id },
-                    { user2Id: currentUser.id },
-                ],
+                    { blockerId: currentUser.id },
+                    { blockedId: currentUser.id }
+                ]
+            }
+        });
+
+        const blockedUserIds = blockedRecords.map((record: any) =>
+            record.blockerId === currentUser.id ? record.blockedId : record.blockerId
+        );
+
+        const conversations = await prisma.conversation.findMany({
+            where: {
+                AND: [
+                    {
+                        OR: [
+                            { user1Id: currentUser.id },
+                            { user2Id: currentUser.id },
+                        ],
+                    },
+                    { user1Id: { notIn: blockedUserIds } },
+                    { user2Id: { notIn: blockedUserIds } }
+                ]
             },
             include: {
                 user1: { select: { id: true, name: true, email: true, avatar: true } },

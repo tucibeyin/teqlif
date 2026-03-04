@@ -59,18 +59,32 @@ export async function GET(
             if (userId === id) {
                 connectionStatus = "SELF";
             } else {
-                const friendRecord = await prisma.friend.findUnique({
+                // Check for block relationship first
+                const blockRecord = await prisma.blockedUser.findFirst({
                     where: {
-                        userId_friendId: {
-                            userId: userId,
-                            friendId: id
-                        }
+                        OR: [
+                            { blockerId: userId, blockedId: id },
+                            { blockerId: id, blockedId: userId }
+                        ]
                     }
                 });
 
-                if (friendRecord) {
-                    isFriend = true;
-                    connectionStatus = "FRIEND";
+                if (blockRecord) {
+                    connectionStatus = blockRecord.blockerId === userId ? "BLOCKED_BY_ME" : "BLOCKED_BY_THEM";
+                } else {
+                    const friendRecord = await prisma.friend.findUnique({
+                        where: {
+                            userId_friendId: {
+                                userId: userId,
+                                friendId: id
+                            }
+                        }
+                    });
+
+                    if (friendRecord) {
+                        isFriend = true;
+                        connectionStatus = "FRIEND";
+                    }
                 }
             }
         }

@@ -93,12 +93,15 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Sohbet bulunamadı' }, { status: 404 });
         }
 
+        const { censorProfanity } = await import('@/lib/profanity');
+        const cleanContent = censorProfanity(content);
+
         const result = await prisma.$transaction(async (tx) => {
             const message = await tx.message.create({
                 data: {
                     conversationId,
                     senderId: currentUser.id,
-                    content,
+                    content: cleanContent,
                     parentMessageId: parentMessageId || null
                 },
                 include: {

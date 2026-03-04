@@ -28,6 +28,22 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
         // Privacy Logic
         const currentUser = await getMobileUser(_req);
 
+        // Check if blocked
+        if (currentUser && currentUser.id !== ad.userId) {
+            const blockRecord = await prisma.blockedUser.findFirst({
+                where: {
+                    OR: [
+                        { blockerId: currentUser.id, blockedId: ad.userId },
+                        { blockerId: ad.userId, blockedId: currentUser.id }
+                    ]
+                }
+            });
+
+            if (blockRecord) {
+                return NextResponse.json({ error: "Bu ilanı görüntüleme yetkiniz yok." }, { status: 403 });
+            }
+        }
+
         if (!currentUser) {
             (ad.user as any) = { id: ad.user.id, name: "Gizli Kullanıcı", email: "", phone: null };
             ad.bids.forEach((bid: any) => {

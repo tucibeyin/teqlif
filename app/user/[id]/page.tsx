@@ -16,7 +16,11 @@ export default function UserProfilePage() {
     const [actionLoading, setActionLoading] = useState(false);
     const [user, setUser] = useState<any>(null);
     const [ads, setAds] = useState<any[]>([]);
-    const [connectionStatus, setConnectionStatus] = useState<"NONE" | "FRIEND" | "SELF">("NONE");
+    const [connectionStatus, setConnectionStatus] = useState<"NONE" | "FRIEND" | "SELF" | "BLOCKED_BY_ME" | "BLOCKED_BY_THEM">("NONE");
+
+    // For report dialog
+    const [showReportDialog, setShowReportDialog] = useState(false);
+    const [reportReason, setReportReason] = useState("");
 
     // For friend list management
     const [lists, setLists] = useState<any[]>([]);
@@ -128,6 +132,67 @@ export default function UserProfilePage() {
         }
     };
 
+    const handleBlockToggle = async () => {
+        if (!session) {
+            router.push("/login");
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            if (connectionStatus === "BLOCKED_BY_ME") {
+                const res = await fetch(`/api/users/block?userId=${id}`, { method: "DELETE" });
+                if (res.ok) setConnectionStatus("NONE");
+            } else {
+                if (window.confirm("Bu kullanıcıyı engellemek istediğinize emin misiniz?")) {
+                    const res = await fetch(`/api/users/block`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ targetUserId: id })
+                    });
+                    if (res.ok) setConnectionStatus("BLOCKED_BY_ME");
+                }
+            }
+        } catch (e) {
+            console.error("Block error:", e);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
+    const handleReport = async () => {
+        if (!session) {
+            router.push("/login");
+            return;
+        }
+
+        if (!reportReason.trim()) {
+            alert("Lütfen şikayet nedeninizi belirtin.");
+            return;
+        }
+
+        setActionLoading(true);
+        try {
+            const res = await fetch(`/api/reports`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ reason: reportReason, reportedUserId: id })
+            });
+
+            if (res.ok) {
+                alert("Şikayetiniz alınmıştır. Teşekkür ederiz.");
+                setShowReportDialog(false);
+                setReportReason("");
+            } else {
+                alert("Şikayet gönderilemedi.");
+            }
+        } catch (e) {
+            console.error("Report error:", e);
+        } finally {
+            setActionLoading(false);
+        }
+    };
+
     if (loading) {
         return (
             <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -171,118 +236,171 @@ export default function UserProfilePage() {
                             )}
 
                             {/* Actions */}
-                            {connectionStatus !== "SELF" && (
+                            {connectionStatus !== "SELF" && connectionStatus !== "BLOCKED_BY_THEM" && (
                                 <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap', alignItems: 'center' }}>
 
-                                    <button
-                                        onClick={handleFollowToggle}
-                                        disabled={actionLoading}
-                                        className={connectionStatus === "FRIEND" ? "btn btn-secondary" : "btn btn-primary"}
-                                        style={{ minWidth: '140px' }}
-                                    >
-                                        {actionLoading ? "İşleniyor..." : connectionStatus === "FRIEND" ? "Takipten Çık" : "Takip Et"}
-                                    </button>
+                                    {connectionStatus !== "BLOCKED_BY_ME" && (
+                                        <>
+                                            <button
+                                                onClick={handleFollowToggle}
+                                                disabled={actionLoading}
+                                                className={connectionStatus === "FRIEND" ? "btn btn-secondary" : "btn btn-primary"}
+                                                style={{ minWidth: '140px' }}
+                                            >
+                                                {actionLoading ? "İşleniyor..." : connectionStatus === "FRIEND" ? "Takipten Çık" : "Takip Et"}
+                                            </button>
 
-                                    {connectionStatus === "FRIEND" && (
-                                        <select
-                                            value={currentListId}
-                                            onChange={(e) => handleListChange(e.target.value)}
-                                            className="input"
-                                            style={{ width: '160px', borderRadius: 'var(--radius-full)', padding: '0.5rem 2rem 0.5rem 1rem', fontSize: '0.875rem' }}
-                                        >
-                                            <option value="null">⭐ Listesiz</option>
-                                            {lists.map(l => (
-                                                <option key={l.id} value={l.id}>{l.name}</option>
-                                            ))}
-                                        </select>
+                                            {connectionStatus === "FRIEND" && (
+                                                <select
+                                                    value={currentListId}
+                                                    onChange={(e) => handleListChange(e.target.value)}
+                                                    className="input"
+                                                    style={{ width: '160px', borderRadius: 'var(--radius-full)', padding: '0.5rem 2rem 0.5rem 1rem', fontSize: '0.875rem' }}
+                                                >
+                                                    <option value="null">⭐ Listesiz</option>
+                                                    {lists.map(l => (
+                                                        <option key={l.id} value={l.id}>{l.name}</option>
+                                                    ))}
+                                                </select>
+                                            )}
+
+                                            <button
+                                                onClick={handleMessage}
+                                                disabled={actionLoading}
+                                                className="btn btn-outline"
+                                            >
+                                                Mesaj Gönder
+                                            </button>
+                                        </>
                                     )}
 
                                     <button
-                                        onClick={handleMessage}
+                                        onClick={handleBlockToggle}
                                         disabled={actionLoading}
                                         className="btn btn-outline"
+                                        style={{ color: connectionStatus === "BLOCKED_BY_ME" ? 'var(--text-primary)' : 'var(--danger)', borderColor: connectionStatus === "BLOCKED_BY_ME" ? 'var(--border)' : 'var(--danger)' }}
                                     >
-                                        Mesaj Gönder
+                                        {actionLoading ? "İşleniyor..." : connectionStatus === "BLOCKED_BY_ME" ? "Engeli Kaldır" : "Kullanıcıyı Engelle"}
                                     </button>
+
+                                    {connectionStatus !== "BLOCKED_BY_ME" && (
+                                        <button
+                                            onClick={() => setShowReportDialog(true)}
+                                            className="btn btn-outline"
+                                            style={{ color: 'var(--text-muted)', border: 'none' }}
+                                        >
+                                            Şikayet Et
+                                        </button>
+                                    )}
                                 </div>
+                            )}
+
+                            {connectionStatus === "BLOCKED_BY_THEM" && (
+                                <p style={{ color: 'var(--danger)', fontWeight: 'bold' }}>Bu kullanıcının profiline erişiminiz kısıtlanmıştır.</p>
                             )}
                         </div>
 
-                        {/* Stats box */}
-                        <div style={{ display: 'flex', gap: '2rem', padding: '1.5rem', backgroundColor: 'var(--bg-input)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
-                            <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>{user.stats.activeAds}</div>
-                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '0.5rem', letterSpacing: '0.05em' }}>Aktif İlan</div>
+                        {/* Stats box (Hidden if blocked) */}
+                        {connectionStatus !== "BLOCKED_BY_ME" && connectionStatus !== "BLOCKED_BY_THEM" && (
+                            <div style={{ display: 'flex', gap: '2rem', padding: '1.5rem', backgroundColor: 'var(--bg-input)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--border)' }}>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>{user.stats.activeAds}</div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '0.5rem', letterSpacing: '0.05em' }}>Aktif İlan</div>
+                                </div>
+                                <div style={{ width: '1px', backgroundColor: 'var(--border)' }}></div>
+                                <div style={{ textAlign: 'center' }}>
+                                    <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>{user.stats.followers}</div>
+                                    <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '0.5rem', letterSpacing: '0.05em' }}>Takipçi</div>
+                                </div>
                             </div>
-                            <div style={{ width: '1px', backgroundColor: 'var(--border)' }}></div>
-                            <div style={{ textAlign: 'center' }}>
-                                <div style={{ fontSize: '1.75rem', fontWeight: 900, color: 'var(--text-primary)', lineHeight: 1 }}>{user.stats.followers}</div>
-                                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', marginTop: '0.5rem', letterSpacing: '0.05em' }}>Takipçi</div>
-                            </div>
-                        </div>
+                        )}
 
                     </div>
                 </div>
 
-                {/* Ads Section */}
-                <div>
-                    <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem' }}>
-                        Kullanıcının İlanları
-                    </h2>
+                {/* Ads Section (Hidden if blocked) */}
+                {connectionStatus !== "BLOCKED_BY_ME" && connectionStatus !== "BLOCKED_BY_THEM" && (
+                    <div>
+                        <h2 style={{ fontSize: '1.5rem', fontWeight: 800, color: 'var(--text-primary)', marginBottom: '1.5rem' }}>
+                            Kullanıcının İlanları
+                        </h2>
 
-                    {ads.length === 0 ? (
-                        <div className="card" style={{ padding: '3rem 2rem', textAlign: 'center' }}>
-                            <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
-                            <p style={{ color: 'var(--text-secondary)', fontSize: '1.125rem' }}>Bu kullanıcının henüz aktif bir ilanı bulunmuyor.</p>
-                        </div>
-                    ) : (
-                        <div className="ads-grid">
-                            {ads.map((ad: any) => (
-                                <Link
-                                    href={`/ad/${ad.id}`}
-                                    key={ad.id}
-                                    className="ad-card"
-                                >
-                                    <div style={{ position: 'relative' }}>
-                                        {ad.images && ad.images.length > 0 ? (
-                                            <img
-                                                src={ad.images[0]}
-                                                alt={ad.title}
-                                                className="ad-card-image"
-                                            />
-                                        ) : (
-                                            <div className="ad-card-image-placeholder">📷</div>
-                                        )}
-                                        {/* Status Badge */}
-                                        <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', backgroundColor: 'rgba(255,255,255,0.9)', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700, boxShadow: 'var(--shadow-sm)' }}>
-                                            {ad.isAuction ? (
-                                                <span style={{ color: 'var(--accent-orange)' }}>
-                                                    Açık Arttırma
-                                                </span>
+                        {ads.length === 0 ? (
+                            <div className="card" style={{ padding: '3rem 2rem', textAlign: 'center' }}>
+                                <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📭</div>
+                                <p style={{ color: 'var(--text-secondary)', fontSize: '1.125rem' }}>Bu kullanıcının henüz aktif bir ilanı bulunmuyor.</p>
+                            </div>
+                        ) : (
+                            <div className="ads-grid">
+                                {ads.map((ad: any) => (
+                                    <Link
+                                        href={`/ad/${ad.id}`}
+                                        key={ad.id}
+                                        className="ad-card"
+                                    >
+                                        <div style={{ position: 'relative' }}>
+                                            {ad.images && ad.images.length > 0 ? (
+                                                <img
+                                                    src={ad.images[0]}
+                                                    alt={ad.title}
+                                                    className="ad-card-image"
+                                                />
                                             ) : (
-                                                <span style={{ color: 'var(--primary)' }}>Sabit Fiyat</span>
+                                                <div className="ad-card-image-placeholder">📷</div>
                                             )}
+                                            {/* Status Badge */}
+                                            <div style={{ position: 'absolute', top: '0.75rem', right: '0.75rem', backgroundColor: 'rgba(255,255,255,0.9)', padding: '0.25rem 0.75rem', borderRadius: '1rem', fontSize: '0.75rem', fontWeight: 700, boxShadow: 'var(--shadow-sm)' }}>
+                                                {ad.isAuction ? (
+                                                    <span style={{ color: 'var(--accent-orange)' }}>
+                                                        Açık Arttırma
+                                                    </span>
+                                                ) : (
+                                                    <span style={{ color: 'var(--primary)' }}>Sabit Fiyat</span>
+                                                )}
+                                            </div>
                                         </div>
-                                    </div>
 
-                                    <div className="ad-card-body" style={{ display: 'flex', flexDirection: 'column', height: '110px' }}>
-                                        <h3 className="ad-card-title">
-                                            {ad.title}
-                                        </h3>
-                                        <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
-                                            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                                                {ad.province?.name} / {ad.district?.name}
-                                            </div>
-                                            <div style={{ fontSize: '1.125rem', fontWeight: 900, color: 'var(--text-primary)' }}>
-                                                {new Intl.NumberFormat("tr-TR").format(ad.price)} ₺
+                                        <div className="ad-card-body" style={{ display: 'flex', flexDirection: 'column', height: '110px' }}>
+                                            <h3 className="ad-card-title">
+                                                {ad.title}
+                                            </h3>
+                                            <div style={{ marginTop: 'auto', paddingTop: '0.75rem', borderTop: '1px solid var(--border)', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end' }}>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                                                    {ad.province?.name} / {ad.district?.name}
+                                                </div>
+                                                <div style={{ fontSize: '1.125rem', fontWeight: 900, color: 'var(--text-primary)' }}>
+                                                    {new Intl.NumberFormat("tr-TR").format(ad.price)} ₺
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
-                                </Link>
-                            ))}
+                                    </Link>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                )}
+
+                {/* Report Dialog Modal */}
+                {showReportDialog && (
+                    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '1rem' }}>
+                        <div className="card" style={{ padding: '2rem', width: '100%', maxWidth: '400px' }}>
+                            <h3 style={{ fontSize: '1.25rem', fontWeight: 'bold', marginBottom: '1rem' }}>Kullanıcıyı Şikayet Et</h3>
+                            <p style={{ fontSize: '0.875rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>Lütfen bu kullanıcıyı neden şikayet ettiğinizi kısaca açıklayın.</p>
+                            <textarea
+                                value={reportReason}
+                                onChange={(e) => setReportReason(e.target.value)}
+                                className="input"
+                                rows={4}
+                                placeholder="Şikayet nedeni..."
+                                style={{ width: '100%', resize: 'vertical', marginBottom: '1rem' }}
+                            ></textarea>
+                            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
+                                <button className="btn btn-outline" onClick={() => setShowReportDialog(false)} disabled={actionLoading}>İptal</button>
+                                <button className="btn btn-primary" onClick={handleReport} disabled={actionLoading} style={{ backgroundColor: 'var(--danger)', borderColor: 'var(--danger)' }}>{actionLoading ? 'Gönderiliyor...' : 'Şikayet Et'}</button>
+                            </div>
                         </div>
-                    )}
-                </div>
+                    </div>
+                )}
 
             </div>
         </div>

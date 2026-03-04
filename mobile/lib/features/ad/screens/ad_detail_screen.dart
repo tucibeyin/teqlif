@@ -278,6 +278,42 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     }
   }
 
+  Future<void> _reportAd(AdModel ad) async {
+    final reasonController = TextEditingController();
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('İlanı Şikayet Et'),
+        content: TextField(
+          controller: reasonController,
+          decoration: const InputDecoration(hintText: 'Şikayet nedeninizi yazınız...', border: OutlineInputBorder()),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('İptal')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Şikayet Et', style: TextStyle(color: Colors.red)),
+          ),
+        ],
+      )
+    );
+
+    if (confirm != true || reasonController.text.trim().isEmpty) return;
+
+    try {
+      await ApiClient().post(Endpoints.report, data: {
+        'adId': ad.id,
+        'reason': reasonController.text.trim()
+      });
+      if (mounted) {
+        _snack('Şikayetiniz alındı.');
+      }
+    } catch (e) {
+      if (mounted) _snack('Şikayet gönderilemedi.');
+    }
+  }
+
   void _snack(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
@@ -420,6 +456,18 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                     IconButton(
                       icon: const Icon(Icons.edit),
                       onPressed: () => context.push('/edit-ad/${ad.id}'),
+                    ),
+                  if (!isOwner && currentUser != null)
+                    PopupMenuButton<String>(
+                      onSelected: (value) {
+                        if (value == 'report') _reportAd(ad);
+                      },
+                      itemBuilder: (context) => [
+                        const PopupMenuItem(
+                          value: 'report',
+                          child: Text('İlanı Şikayet Et', style: TextStyle(color: Colors.red)),
+                        ),
+                      ],
                     ),
                 ],
               ),
