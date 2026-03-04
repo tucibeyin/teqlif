@@ -253,24 +253,31 @@ export default async function AdDetailPage({
                     <div className="card" style={{ marginBottom: "1.5rem" }}>
                         <div className="card-body">
                             <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1.25rem" }}>
-                                <div style={{
-                                    width: "48px",
-                                    height: "48px",
-                                    borderRadius: "50%",
-                                    background: "var(--primary-50)",
-                                    color: "var(--primary)",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    fontSize: "1.25rem",
-                                    fontWeight: 700
-                                }}>
-                                    {displayName.charAt(0)}
-                                </div>
-                                <div style={{ flex: 1 }}>
-                                    <div style={{ fontWeight: 600, fontSize: "1.1rem" }}>{displayName}</div>
-                                    <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>İlan Sahibi</div>
-                                </div>
+                                <Link href={`/user/${ad.userId}`} style={{ display: "flex", alignItems: "center", gap: "1rem", textDecoration: "none", color: "inherit", flex: 1 }}>
+                                    <div style={{
+                                        width: "48px",
+                                        height: "48px",
+                                        borderRadius: "50%",
+                                        background: "var(--primary-50)",
+                                        color: "var(--primary)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        fontSize: "1.25rem",
+                                        fontWeight: 700
+                                    }}>
+                                        {displayName.charAt(0)}
+                                    </div>
+                                    <div style={{ flex: 1 }}>
+                                        <div style={{ fontWeight: 600, fontSize: "1.1rem", textDecoration: "underline", textDecorationColor: "transparent", transition: "text-decoration-color 0.2s ease" }}
+                                            onMouseEnter={(e) => e.currentTarget.style.textDecorationColor = "var(--primary)"}
+                                            onMouseLeave={(e) => e.currentTarget.style.textDecorationColor = "transparent"}
+                                        >
+                                            {displayName}
+                                        </div>
+                                        <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>İlan Sahibi Profili</div>
+                                    </div>
+                                </Link>
                             </div>
 
                             {!isOwner ? (

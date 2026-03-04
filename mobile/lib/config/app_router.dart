@@ -16,6 +16,8 @@ import '../features/notifications/screens/notifications_screen.dart';
 import '../features/auth/screens/edit_profile_screen.dart';
 import '../features/auth/screens/verify_profile_screen.dart';
 import '../features/splash/screens/splash_screen.dart';
+import '../features/profile/screens/public_profile_screen.dart';
+import '../features/profile/screens/friends_screen.dart';
 import '../widgets/main_shell.dart';
 
 // ── Pending Route ───────────────────────────────────────────────────────────
@@ -123,6 +125,15 @@ final routerProvider = Provider<GoRouter>((ref) {
           GoRoute(
               path: '/profile/edit',
               builder: (_, __) => const EditProfileScreen()),
+          GoRoute(
+              path: '/user/:id',
+              builder: (_, state) =>
+                  PublicProfileScreen(userId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+              path: '/dashboard/friends',
+              builder: (_, __) => const FriendsScreen(),
+          ),
           GoRoute(
             path: '/profile/verify',
             builder: (_, state) => VerifyProfileScreen(

@@ -29,6 +29,9 @@ model User {
   favorites         Favorite[]
   messages          Message[]
   notifications     Notification[]
+  friendLists       FriendList[]   @relation("UserFriendLists")
+  friends           Friend[]       @relation("UserFriends")
+  friendOf          Friend[]       @relation("FriendToUser")
 }
 
 model Category {
@@ -159,6 +162,33 @@ model Favorite {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([userId, adId])
+}
+
+
+model FriendList {
+  id        String   @id @default(cuid())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  userId    String
+  user      User     @relation("UserFriendLists", fields: [userId], references: [id], onDelete: Cascade)
+  friends   Friend[]
+
+  @@unique([userId, name])
+}
+
+model Friend {
+  id           String      @id @default(cuid())
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+  userId       String      // The person who followed / added the friend
+  friendId     String      // The person being followed
+  friendListId String?     // Optional custom list assignment
+  user         User        @relation("UserFriends", fields: [userId], references: [id], onDelete: Cascade)
+  friend       User        @relation("FriendToUser", fields: [friendId], references: [id], onDelete: Cascade)
+  friendList   FriendList? @relation(fields: [friendListId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, friendId])
 }
 
 enum NotificationType {

@@ -42,6 +42,15 @@ class Endpoints {
   // Notifications
   static const notifications = '/api/notifications';
 
+  // Users & Friends
+  static const users = '/api/users';
+  static String userById(String id) => '/api/users/$id';
+  static const friends = '/api/users/friends';
+  static String friendById(String id) => '/api/users/friends/$id';
+  static const friendLists = '/api/users/friend-lists';
+  static String friendListById(String id) => '/api/users/friend-lists/$id';
+  static String friendListMembers(String listId) => '/api/users/friend-lists/$listId/members';
+
   // Upload
   static const upload = '/api/upload';
 }

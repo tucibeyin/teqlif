@@ -120,6 +120,10 @@ export default async function DashboardPage() {
                         <div className="stat-value" style={{ color: "var(--accent-red)" }}>{myFavorites.length}</div>
                         <div className="stat-label">Favorilerim</div>
                     </Link>
+                    <Link href="/dashboard/friends" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
+                        <div className="stat-value" style={{ color: "var(--primary)" }}>👥</div>
+                        <div className="stat-label">Arkadaşlarım</div>
+                    </Link>
                     <Link href="#ilanlarim" className="stat-card" style={{ textDecoration: 'none', color: 'inherit', display: 'flex', flexDirection: 'column' }}>
                         <div className="stat-value" style={{ color: "var(--accent-green)" }}>
                             {myAds.filter((a: any) => a.status === "ACTIVE" && (!a.expiresAt || new Date(a.expiresAt) > new Date())).length}

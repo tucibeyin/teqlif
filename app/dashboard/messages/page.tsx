@@ -283,7 +283,9 @@ function MessagesContent() {
                                         >
                                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
                                                 <div style={{ fontWeight: 600, fontSize: '0.95rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                                    {otherUser.name}
+                                                    <Link href={`/user/${otherUser.id}`} style={{ color: 'inherit', textDecoration: 'none' }} className="hover:text-[var(--primary)] hover:underline">
+                                                        {otherUser.name}
+                                                    </Link>
                                                     <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
                                                         {conv._count?.messages ? (
                                                             <span style={{
@@ -370,7 +372,13 @@ function MessagesContent() {
                                     )}
                                     <div style={{ flex: 1 }}>
                                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
-                                            {activeConversation.user1.id === currentUserId ? activeConversation.user2.name : activeConversation.user1.name}
+                                            <Link
+                                                href={`/user/${activeConversation.user1.id === currentUserId ? activeConversation.user2.id : activeConversation.user1.id}`}
+                                                style={{ color: 'inherit', textDecoration: 'none' }}
+                                                className="hover:text-[var(--primary)] hover:underline"
+                                            >
+                                                {activeConversation.user1.id === currentUserId ? activeConversation.user2.name : activeConversation.user1.name}
+                                            </Link>
                                         </h3>
                                     </div>
                                 </div>

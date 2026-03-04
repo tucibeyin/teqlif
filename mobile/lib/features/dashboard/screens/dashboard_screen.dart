@@ -141,6 +141,30 @@ class _DashboardScreenState extends ConsumerState<DashboardScreen> {
                 );
               },
             ),
+            const SizedBox(height: 16),
+            // Friends Link Card
+            Card(
+              elevation: 0,
+              color: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+                side: BorderSide(color: Colors.grey.shade200),
+              ),
+              child: ListTile(
+                leading: Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF00B4CC).withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.people_outline, color: Color(0xFF00B4CC)),
+                ),
+                title: const Text('Arkadaşlarım', style: TextStyle(fontWeight: FontWeight.w600)),
+                subtitle: const Text('Takip edilenleri ve listeleri yönetin', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                trailing: const Icon(Icons.chevron_right, color: Colors.grey),
+                onTap: () => context.push('/dashboard/friends'),
+              ),
+            ),
             const SizedBox(height: 24),
             // Header Tabs
             SizedBox(

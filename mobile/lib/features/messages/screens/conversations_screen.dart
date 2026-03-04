@@ -106,16 +106,30 @@ class _ConversationsScreenState extends ConsumerState<ConversationsScreen> {
                     final other = conv.otherUser(currentUserId);
                     final lastMsg = conv.lastMessage;
                     return ListTile(
-                      leading: CircleAvatar(
-                        backgroundColor: const Color(0xFF00B4CC),
-                        child: Text(
-                          (other?.name ?? 'U')[0].toUpperCase(),
-                          style: const TextStyle(
-                              color: Colors.white, fontWeight: FontWeight.bold),
+                      leading: GestureDetector(
+                        onTap: () {
+                          if (other != null) {
+                            context.push('/user/${other.id}');
+                          }
+                        },
+                        child: CircleAvatar(
+                          backgroundColor: const Color(0xFF00B4CC),
+                          child: Text(
+                            (other?.name ?? 'U')[0].toUpperCase(),
+                            style: const TextStyle(
+                                color: Colors.white, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
-                      title: Text(other?.name ?? 'Kullanıcı',
-                          style: const TextStyle(fontWeight: FontWeight.w600)),
+                      title: GestureDetector(
+                        onTap: () {
+                          if (other != null) {
+                            context.push('/user/${other.id}');
+                          }
+                        },
+                        child: Text(other?.name ?? 'Kullanıcı',
+                            style: const TextStyle(fontWeight: FontWeight.w600)),
+                      ),
                       subtitle: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [

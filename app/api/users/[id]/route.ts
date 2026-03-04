@@ -1,0 +1,97 @@
+import { NextResponse } from "next/server";
+import { prisma } from "@/lib/prisma";
+import { auth } from "@/auth";
+
+export async function GET(
+    request: Request,
+    { params }: { params: Promise<{ id: string }> }
+) {
+    try {
+        const { id } = await params;
+        const session = await auth();
+
+        const user = await prisma.user.findUnique({
+            where: { id },
+            select: {
+                id: true,
+                name: true,
+                avatar: true,
+                createdAt: true,
+                phone: true, // Returning phone publicly based on user requirements. A stricter privacy filter can be added here if needed.
+                _count: {
+                    select: {
+                        ads: { where: { status: "ACTIVE" } },
+                        friends: true,
+                    }
+                },
+                ads: {
+                    where: { status: "ACTIVE" },
+                    orderBy: { createdAt: "desc" },
+                    include: {
+                        category: true,
+                        province: true,
+                        district: true,
+                    }
+                }
+            }
+        }) as any;
+
+        if (!user) {
+            return NextResponse.json({ error: "Kullanıcı bulunamadı" }, { status: 404 });
+        }
+
+        // Check if the current logged in user is friends with this profile
+        let connectionStatus = "NONE";
+        let isFriend = false;
+
+        if (session?.user?.id) {
+            if (session.user.id === id) {
+                connectionStatus = "SELF";
+            } else {
+                const friendRecord = await prisma.friend.findUnique({
+                    where: {
+                        userId_friendId: {
+                            userId: session.user.id,
+                            friendId: id
+                        }
+                    }
+                });
+
+                if (friendRecord) {
+                    isFriend = true;
+                    connectionStatus = "FRIEND";
+                }
+            }
+        }
+
+        // Normalize ads output to flat structure typically expected
+        const serializedAds = user.ads.map((ad: any) => ({
+            ...ad,
+            images: ad.images,
+        }));
+
+        return NextResponse.json({
+            user: {
+                id: user.id,
+                name: user.name,
+                avatar: user.avatar,
+                createdAt: user.createdAt,
+                phone: user.phone,
+                stats: {
+                    activeAds: user._count.ads,
+                    followers: user._count.friends
+                }
+            },
+            ads: serializedAds,
+            connectionStatus,
+            isFriend,
+        });
+
+    } catch (error) {
+        console.error("Fetch user profile error:", error);
+        return NextResponse.json(
+            { error: "Sunucu hatası oluştu" },
+            { status: 500 }
+        );
+    }
+}

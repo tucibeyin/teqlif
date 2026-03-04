@@ -649,36 +649,44 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                           style: TextStyle(
                               fontWeight: FontWeight.w700, fontSize: 16)),
                       const SizedBox(height: 8),
-                      Card(
-                        child: ListTile(
-                          leading: CircleAvatar(
-                            backgroundColor: const Color(0xFF00B4CC),
-                            child: Text(
-                              (ad.user?.name ?? 'U')[0].toUpperCase(),
-                              style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold),
+                      GestureDetector(
+                        onTap: () => context.push('/user/${ad.userId}'),
+                        child: Card(
+                          child: ListTile(
+                            leading: CircleAvatar(
+                              backgroundColor: const Color(0xFF00B4CC),
+                              child: Text(
+                                (ad.user?.name ?? 'U')[0].toUpperCase(),
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                            title: Text(ad.user?.name ?? 'Satıcı'),
+                            subtitle: ad.user?.phone != null
+                                ? Text(ad.user!.phone!)
+                                : null,
+                            trailing: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                if (ad.user?.phone != null && !isOwner)
+                                  IconButton(
+                                    icon: const Icon(Icons.phone,
+                                        color: Color(0xFF00B4CC)),
+                                    onPressed: () async {
+                                      final uri =
+                                          Uri.parse('tel:${ad.user!.phone}');
+                                      if (await canLaunchUrl(uri)) {
+                                        await launchUrl(uri);
+                                      } else {
+                                        _snack('Arama başlatılamadı.');
+                                      }
+                                    },
+                                  ),
+                                const Icon(Icons.chevron_right, color: Colors.grey),
+                              ],
                             ),
                           ),
-                          title: Text(ad.user?.name ?? 'Satıcı'),
-                          subtitle: ad.user?.phone != null
-                              ? Text(ad.user!.phone!)
-                              : null,
-                          trailing: ad.user?.phone != null && !isOwner
-                              ? IconButton(
-                                  icon: const Icon(Icons.phone,
-                                      color: Color(0xFF00B4CC)),
-                                  onPressed: () async {
-                                    final uri =
-                                        Uri.parse('tel:${ad.user!.phone}');
-                                    if (await canLaunchUrl(uri)) {
-                                      await launchUrl(uri);
-                                    } else {
-                                      _snack('Arama başlatılamadı.');
-                                    }
-                                  },
-                                )
-                              : null,
                         ),
                       ),
                       const SizedBox(height: 12),

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
+import { handleSignOut } from "@/app/actions/auth";
 import { NotificationBell } from "./NotificationBell";
 import { MessageBell } from "./MessageBell";
 import { LiveSearch } from "./LiveSearch";
@@ -31,10 +32,7 @@ export async function Navbar() {
                                     Hesabım
                                 </Link>
                                 <MessageBell />
-                                <LogoutButton onLogout={async () => {
-                                    "use server";
-                                    await signOut({ redirectTo: "/" });
-                                }} />
+                                <LogoutButton onLogout={handleSignOut} />
                             </>
                         ) : (
                             <>
