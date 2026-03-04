@@ -213,22 +213,8 @@ export function AdActions({
             <button
                 onClick={handleAction}
                 disabled={isLoading}
-                style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '8px',
-                    width: '100%',
-                    padding: '0.75rem 1.25rem',
-                    background: 'linear-gradient(135deg, rgb(0, 180, 204), rgb(0, 141, 161))',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: 'var(--radius-md)',
-                    fontWeight: 700,
-                    cursor: isLoading ? 'not-allowed' : 'pointer',
-                    boxShadow: 'rgba(0, 180, 204, 0.3) 0px 4px 12px',
-                    transition: 'all 0.2s'
-                }}
+                className="btn btn-primary btn-full"
+                style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
             >
                 <MessageSquare size={18} />
                 {isLoading ? "İşleniyor..." : (customLabel || "Satıcıya Mesaj Gönder")}
@@ -326,9 +312,9 @@ export function AdActions({
                     padding: '6px 12px',
                     fontSize: '0.8rem',
                     fontWeight: 600,
-                    color: 'var(--primary)',
-                    borderColor: 'rgba(0, 180, 204, 0.3)',
-                    background: 'rgba(0, 180, 204, 0.08)',
+                    color: '#8b5cf6',
+                    borderColor: 'rgba(139, 92, 246, 0.3)',
+                    background: 'rgba(139, 92, 246, 0.08)',
                     borderRadius: '6px'
                 }}
             >

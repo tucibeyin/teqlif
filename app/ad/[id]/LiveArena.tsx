@@ -559,64 +559,48 @@ function CustomArenaLayout({
                     }}>
                         {/* Stats Bar */}
                         <div style={{
-                            background: "rgba(255, 255, 255, 0.7)",
+                            background: "rgba(0,0,0,0.4)",
                             backdropFilter: "blur(15px)",
                             borderRadius: "20px",
-                            border: "1px solid rgba(0, 180, 204, 0.2)",
+                            border: "1px solid rgba(255,255,255,0.1)",
                             padding: "12px 16px",
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center"
                         }}>
                             <div style={{ display: "flex", flexDirection: "column" }}>
-                                <span style={{ fontSize: "0.65rem", color: "rgba(0, 180, 204, 0.8)", fontWeight: 800, letterSpacing: "1px" }}>
+                                <span style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.6)", fontWeight: 800, letterSpacing: "1px" }}>
                                     {auctionStatus === "ACTIVE" ? "GÜNCEL FİYAT" : "BAŞLANGIÇ FİYATI"}
                                 </span>
                                 <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-                                    <span className={`tabular-nums tracking-tighter ${flashBid ? 'text-primary scale-110' : 'text-[#00B4CC]'} transition-all duration-300`} style={{ fontSize: "1.5rem", fontWeight: 900 }}>
+                                    <span className={`tabular-nums tracking-tighter ${flashBid ? 'text-green-400 scale-110' : 'text-white'} transition-all duration-300`} style={{ fontSize: "1.5rem", fontWeight: 900 }}>
                                         {new Intl.NumberFormat("tr-TR").format(liveHighestBid || (startingBid ?? 0))}
                                     </span>
-                                    <span style={{ fontSize: "1rem", color: "var(--primary)", fontWeight: 700 }}>₺</span>
+                                    <span style={{ fontSize: "1rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>₺</span>
                                 </div>
                             </div>
 
                             <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
                                 {liveHighestBidderName ? (
-                                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "4px" }}>
-                                        <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
-                                            <span style={{ fontSize: "0.6rem", color: "rgba(255, 255, 255, 0.6)", fontWeight: 800 }}>LİDER</span>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
+                                        <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
+                                            <span style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.6)", fontWeight: 800 }}>LİDER</span>
                                             <span style={{ fontSize: "0.85rem", color: "#4ade80", fontWeight: 900 }}>{liveHighestBidderName}</span>
                                         </div>
-                                        {isOwner && (
-                                            <div style={{ display: "flex", gap: "6px" }}>
-                                                <button
-                                                    onClick={() => {
-                                                        setChatText(`@${liveHighestBidderName} `);
-                                                        // Focus input if possible or rely on the user seeing the text populated
-                                                    }}
-                                                    title="Mesaj At"
-                                                    style={{ background: "rgba(255, 255, 255, 0.1)", border: "1px solid rgba(255, 255, 255, 0.2)", borderRadius: "8px", padding: "4px 8px", cursor: "pointer", color: "white", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}
-                                                >
-                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                                                    Mesaj
-                                                </button>
-                                                {liveHighestBidderId && (
-                                                    <button
-                                                        onClick={() => {
-                                                            if (confirm(`${liveHighestBidderName} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
-                                                                const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId });
-                                                                room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-                                                                alert("Davet gönderildi!");
-                                                            }
-                                                        }}
-                                                        title="Sahneye Davet Et"
-                                                        style={{ background: "rgba(0, 180, 204, 0.2)", border: "1px solid rgba(0, 180, 204, 0.4)", borderRadius: "8px", padding: "4px 8px", cursor: "pointer", color: "#00B4CC", fontSize: "0.7rem", fontWeight: 700, display: "flex", alignItems: "center", gap: "4px" }}
-                                                    >
-                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                                                        Sahneye
-                                                    </button>
-                                                )}
-                                            </div>
+                                        {isOwner && liveHighestBidderId && (
+                                            <button
+                                                onClick={() => {
+                                                    if (confirm(`${liveHighestBidderName} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
+                                                        const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId });
+                                                        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                                        alert("Davet gönderildi!");
+                                                    }
+                                                }}
+                                                title="Sahneye Davet Et"
+                                                style={{ background: "rgba(59, 130, 246, 0.2)", border: "1px solid rgba(59, 130, 246, 0.5)", borderRadius: "8px", padding: "6px", cursor: "pointer", marginLeft: "4px" }}
+                                            >
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                            </button>
                                         )}
                                     </div>
                                 ) : (
@@ -1030,14 +1014,10 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
     const router = useRouter();
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
-    const [pulse, setPulse] = useState(false);
 
     useEffect(() => {
         const nextMin = currentHighest > 0 ? (currentHighest + minStep) : (startingBid ?? 1);
         setAmount(new Intl.NumberFormat("tr-TR").format(nextMin));
-        setPulse(true);
-        const t = setTimeout(() => setPulse(false), 800);
-        return () => clearTimeout(t);
     }, [currentHighest, minStep, startingBid]);
 
     const handleBid = async (e: React.FormEvent) => {
@@ -1045,109 +1025,63 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
         setLoading(true);
         const rawAmount = parseInt(amount.replace(/\./g, ""), 10);
         try {
-            const res = await fetch("/api/livekit/bid", {
+            const res = await fetch("/api/bids", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ adId, amount: rawAmount }),
             });
-            if (res.ok) {
-                // Real-time update happens via data channel, no need for reload
-            }
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const addFastBid = (val: number) => {
-        const currentRaw = parseInt(amount.replace(/\./g, ""), 10) || 0;
-        setAmount(new Intl.NumberFormat("tr-TR").format(currentRaw + val));
+            if (res.ok) router.refresh();
+        } catch (e) { console.error(e); }
+        finally { setLoading(false); }
     };
 
     return (
-        <form onSubmit={handleBid} style={{
-            background: "rgba(255, 255, 255, 0.8)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            border: "1px solid rgba(0, 180, 204, 0.2)",
-            borderRadius: "1rem",
-            padding: "1rem",
-            display: "flex",
-            flexDirection: "column",
-            gap: "0.75rem",
-            width: "300px",
-            boxShadow: "0 20px 40px rgba(0,0,0,0.1)",
-            pointerEvents: "auto",
-            marginBottom: "8px"
-        }}>
-            <div style={{ display: "flex", gap: "6px" }}>
-                {[50, 100, 250].map(val => (
-                    <button
-                        key={val}
-                        type="button"
-                        onClick={() => addFastBid(val)}
-                        style={{
-                            flex: 1,
-                            background: "rgba(0, 180, 204, 0.05)",
-                            border: "1px solid rgba(0, 180, 204, 0.1)",
-                            borderRadius: "12px",
-                            padding: "6px 0",
-                            color: "var(--primary)",
-                            fontSize: "0.75rem",
-                            fontWeight: 700,
-                            cursor: "pointer"
-                        }}
-                    >
-                        +{val} ₺
-                    </button>
-                ))}
-            </div>
-
-            <div style={{ display: "flex", gap: "8px" }}>
-                <input
-                    type="text"
-                    value={amount}
-                    onChange={(e) => {
-                        const val = e.target.value.replace(/[^0-9]/g, "");
-                        setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
-                    }}
-                    style={{
-                        flex: 1,
-                        height: "45px",
-                        background: "rgba(0, 180, 204, 0.05)",
-                        border: "1px solid rgba(0, 180, 204, 0.2)",
-                        borderRadius: "12px",
-                        padding: "0 12px",
-                        color: "var(--text-primary)",
-                        fontSize: "1.1rem",
-                        textAlign: "center",
-                        fontWeight: 900,
-                        outline: "none"
-                    }}
-                />
-                <button
-                    type="submit"
-                    disabled={loading}
-                    style={{
-                        height: "45px",
-                        padding: "0 16px",
-                        background: loading ? "rgba(255,255,255,0.1)" : "linear-gradient(135deg, #00B4CC, #008da1)",
-                        color: "white",
-                        border: "none",
-                        borderRadius: "12px",
-                        fontSize: "1rem",
-                        fontWeight: 900,
-                        cursor: "pointer",
-                        boxShadow: loading ? "none" : "0 4px 15px rgba(0, 180, 204, 0.4)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center"
-                    }}
-                >
-                    {loading ? "..." : "🚀"}
-                </button>
-            </div>
+        <form onSubmit={handleBid} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+            <input
+                type="text"
+                value={amount}
+                onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9]/g, "");
+                    setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
+                }}
+                style={{
+                    width: "110px",
+                    height: "50px", // Increased height for bottom console parity
+                    background: "rgba(0,0,0,0.5)",
+                    backdropFilter: "blur(10px)",
+                    border: "1px solid rgba(255,255,255,0.1)",
+                    borderRadius: "100px",
+                    padding: "0 16px",
+                    color: "white",
+                    fontSize: "0.95rem",
+                    textAlign: "center",
+                    fontWeight: 800,
+                    outline: "none"
+                }}
+            />
+            <button
+                type="submit"
+                disabled={loading}
+                style={{
+                    height: "50px",
+                    background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+                    color: "white",
+                    border: "none",
+                    borderRadius: "100px",
+                    padding: "0 20px",
+                    fontSize: "0.9rem",
+                    fontWeight: 900,
+                    cursor: loading ? "not-allowed" : "pointer",
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    boxShadow: "0 4px 15px rgba(239, 68, 68, 0.4)",
+                    opacity: loading ? 0.7 : 1
+                }}
+            >
+                {loading ? "BEKLEYİN" : "TEKLİF VER"}
+                {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9l6 6-6 6"></path><path d="M4 4v7a4 4 0 0 0 4 4h11"></path></svg>}
+            </button>
         </form>
     );
 }
