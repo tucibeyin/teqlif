@@ -34,22 +34,27 @@ interface MobileUser {
  */
 export async function getMobileUser(req: Request): Promise<MobileUser | null> {
     const authHeader = req.headers.get("authorization");
-    console.log(`[getMobileUser] Auth Header: ${authHeader ? "Present" : "Missing"}`);
+
+    // Only log if it's the delete route to avoid flooding
+    const isDeleteRoute = req.url.includes('/api/profile/delete');
+    if (isDeleteRoute) {
+        debugLog(`[getMobileUser] Auth Header: ${authHeader ? (authHeader.startsWith("Bearer ") ? "Bearer ****" : "Malformed") : "Missing"}`);
+    }
 
     // 1. Try mobile JWT first to avoid next-auth concurrency blocking on parallel mobile api requests
     if (authHeader?.startsWith("Bearer ") && JWT_SECRET) {
         try {
             const payload = jwt.verify(authHeader.slice(7), JWT_SECRET) as any;
-            console.log(`[getMobileUser] JWT Verified for: ${payload?.id}`);
+            if (isDeleteRoute) debugLog(`[getMobileUser] JWT Verified for: ${payload?.id}`);
             if (payload?.id) return payload as MobileUser;
         } catch (e) {
-            console.warn(`[getMobileUser] JWT verification failed: ${e instanceof Error ? e.message : String(e)}`);
+            if (isDeleteRoute) debugLog(`[getMobileUser] JWT verification failed: ${e instanceof Error ? e.message : String(e)}`);
         }
     }
 
     // 2. Fallback to next-auth session for browser users
     const session = await auth();
-    console.log(`[getMobileUser] Fallback to session: ${!!session?.user?.id}`);
+    if (isDeleteRoute) debugLog(`[getMobileUser] Fallback to session: ${!!session?.user?.id}`);
 
     if (session?.user?.id) {
         const user = await prisma.user.findUnique({
