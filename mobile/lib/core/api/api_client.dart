@@ -70,7 +70,8 @@ class ApiClient {
   Future<Response> put(String path, {dynamic data}) =>
       _dio.put(path, data: data);
 
-  Future<Response> delete(String path) => _dio.delete(path);
+  Future<Response> delete(String path, {Map<String, dynamic>? params}) =>
+      _dio.delete(path, queryParameters: params);
 
   Future<Response> uploadFile(String path, FormData formData) =>
       _dio.post(path, data: formData);

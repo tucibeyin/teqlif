@@ -148,7 +148,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
 
     setState(() => _isActionLoading = true);
     try {
-      await ApiClient().post(Endpoints.blockUser, data: {'blockedId': widget.userId});
+      await ApiClient().post(Endpoints.blockUser, data: {'targetUserId': widget.userId});
       if (mounted) {
         setState(() => _profileData!['connectionStatus'] = 'BLOCKED_BY_ME');
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kullanıcı engellendi.')));
@@ -163,7 +163,7 @@ class _PublicProfileScreenState extends ConsumerState<PublicProfileScreen> {
   Future<void> _handleUnblockUser() async {
     setState(() => _isActionLoading = true);
     try {
-      await ApiClient().delete(Endpoints.blockUser, data: {'blockedId': widget.userId});
+      await ApiClient().delete(Endpoints.blockUser, params: {'userId': widget.userId});
       if (mounted) {
         setState(() => _profileData!['connectionStatus'] = 'NONE');
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Kullanıcının engeli kaldırıldı.')));
