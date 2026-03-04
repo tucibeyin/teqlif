@@ -6,6 +6,7 @@ import { GlobalChatWidget } from "@/components/GlobalChatWidget";
 import TitleBadgeManager from "@/components/TitleBadgeManager";
 import { MobileAppBanner } from "@/components/MobileAppBanner";
 import { MobileGate } from "@/components/MobileGate";
+import { GlobalErrorCapture } from "@/components/GlobalErrorCapture";
 import Link from "next/link";
 
 export const metadata: Metadata = {
@@ -89,6 +90,7 @@ export default function RootLayout({
       </head>
       <body>
         <Providers>
+          <GlobalErrorCapture />
           <TitleBadgeManager />
           <MobileGate />
           <MobileAppBanner />
