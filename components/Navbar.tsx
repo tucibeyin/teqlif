@@ -36,6 +36,9 @@ export async function Navbar() {
                             </>
                         ) : (
                             <>
+                                <Link href="/support" className="btn btn-ghost btn-sm hidden md:flex">
+                                    Destek
+                                </Link>
                                 <Link href="/login" className="btn btn-ghost btn-sm">
                                     Giriş Yap
                                 </Link>

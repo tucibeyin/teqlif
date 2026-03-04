@@ -197,7 +197,7 @@ export default function RegisterPage() {
                             required
                         />
                         <label htmlFor="eula" style={{ fontSize: "0.85rem", color: "var(--text-secondary)", cursor: "pointer", lineHeight: "1.4" }}>
-                            Kullanım Koşullarını ve EULA&apos;yı kabul ediyorum. Sakıncalı içerik ve taciz edici davranışlara tolerans gösterilmeyeceğini, ihlal durumunda hesabımın 24 saat içinde kapatılabileceğini biliyorum.
+                            <Link href="/terms" target="_blank" className="font-semibold text-[var(--primary)] hover:underline">Kullanım Koşullarını ve EULA&apos;yı</Link> kabul ediyorum. Sakıncalı içerik ve taciz edici davranışlara tolerans gösterilmeyeceğini, ihlal durumunda hesabımın 24 saat içinde kapatılabileceğini biliyorum.
                         </label>
                     </div>
                     <button type="submit" id="register-btn" className="btn btn-primary btn-full btn-lg" disabled={loading || !eulaAccepted} style={{ marginTop: "1.5rem" }}>

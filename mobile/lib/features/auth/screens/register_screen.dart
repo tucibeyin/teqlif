@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../../core/providers/auth_provider.dart';
 
 enum RegisterStep { register, verify, success }
@@ -176,9 +177,27 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         CheckboxListTile(
           value: _eulaAccepted,
           onChanged: (v) => setState(() => _eulaAccepted = v ?? false),
-          title: const Text(
-            'Kullanım Koşullarını ve EULA\'yı kabul ediyorum. Sakıncalı içerik ve taciz edici davranışlara tolerans gösterilmeyeceğini, ihlal durumunda hesabımın 24 saat içinde kapatılabileceğini biliyorum.',
-            style: TextStyle(fontSize: 12, color: Color(0xFF4A5568)),
+          title: GestureDetector(
+            onTap: () async {
+              final uri = Uri.parse('https://teqlif.com/terms');
+              if (await canLaunchUrl(uri)) {
+                await launchUrl(uri);
+              }
+            },
+            child: const Text.rich(
+              TextSpan(
+                children: [
+                  TextSpan(
+                    text: 'Kullanım Koşullarını ve EULA\'yı ',
+                    style: TextStyle(color: Color(0xFF00B4CC), fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+                  ),
+                  TextSpan(
+                    text: 'kabul ediyorum. Sakıncalı içerik ve taciz edici davranışlara tolerans gösterilmeyeceğini, ihlal durumunda hesabımın 24 saat içinde kapatılabileceğini biliyorum.',
+                  ),
+                ],
+              ),
+              style: TextStyle(fontSize: 12, color: Color(0xFF4A5568)),
+            ),
           ),
           contentPadding: EdgeInsets.zero,
           controlAffinity: ListTileControlAffinity.leading,
