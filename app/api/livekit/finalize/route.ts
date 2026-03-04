@@ -51,20 +51,22 @@ export async function POST(req: NextRequest) {
         let notifyAdId = adId;
 
         if (isQuickLive) {
-            // [Phase 24.4] Clone receipt logic
+            // [Phase 24.4 & 24.5] Clone receipt & Ad State logic
             updatedAd = await prisma.ad.update({
                 where: { id: adId },
                 data: {
                     isAuctionActive: false, // temporarily suspend auctioning for UI climax
+                    winnerId: winnerId, // Update base parent ad to reflect the latest winner, preventing data loss
                 },
             });
 
-            // Create clone receipt
+            // Create clone receipt with dynamic title and fallback values
             try {
+                const dynamicTitle = "Canlı Yayın Ürünü - " + new Date().toLocaleTimeString('tr-TR');
                 const receipt = await prisma.ad.create({
                     data: {
-                        title: "Canlı Yayından Satın Alınan Ürün",
-                        description: ad.description,
+                        title: dynamicTitle,
+                        description: ad.description || "Hızlı Canlı Yayın Makbuzu",
                         images: ad.images ?? [],
                         price: finalPrice,
                         isFixedPrice: false,

@@ -30,7 +30,8 @@ export async function POST(req: NextRequest) {
             where: { id: adId },
             data: {
                 isAuctionActive: true,
-                price: ad.startingBid || 1, // Reset to starting bid
+                price: ad.startingPrice || ad.startingBid || 0, // Reset to starting bid or 0
+                winnerId: null, // Critical: Clear the previous winner entirely!
             },
         });
 
