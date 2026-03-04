@@ -4,10 +4,14 @@ import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function DELETE(request: Request) {
     try {
+        console.log(`[DELETE /api/profile/delete] Request received. Method: ${request.method}`);
+
         // getMobileUser supports both NextAuth session (web) and custom JWT (mobile)
         const userSession = await getMobileUser(request);
+        console.log(`[DELETE /api/profile/delete] User session found: ${!!userSession}`);
 
         if (!userSession?.id) {
+            console.log(`[DELETE /api/profile/delete] 401 Unauthorized - No session/id`);
             return NextResponse.json({ error: "Yetkisiz erişim" }, { status: 401 });
         }
 
