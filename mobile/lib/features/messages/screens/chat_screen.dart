@@ -227,6 +227,73 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           loading: () => const Text('Yükleniyor...'),
           error: (_, __) => const Text('Sohbet'),
         ),
+        actions: [
+          convAsync.when(
+            data: (conv) {
+              final other = conv.otherUser(currentUserId);
+              if (other == null) return const SizedBox();
+              return PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'block') {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Kullanıcıyı Engelle'),
+                        content: const Text(
+                            'Bu kullanıcıyı engellemek istediğinize emin misiniz? Engellenen kullanıcılar size bir daha mesaj gönderemez ve bu sohbet kapanır.'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('İptal'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Engelle',
+                                style: TextStyle(color: Colors.red)),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      try {
+                        await ApiClient().post(Endpoints.blockUser, data: {'targetUserId': other.id});
+                        if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Kullanıcı engellendi.')));
+                          
+                          // Refresh lists to remove conversation
+                          ref.read(conversationsProvider.notifier).refresh();
+                          ref.read(unreadCountsProvider.notifier).refresh();
+
+                          // Close chat screen
+                          if (context.canPop()) {
+                            context.pop();
+                          } else {
+                            context.go('/messages');
+                          }
+                        }
+                      } catch (e) {
+                         if (mounted) {
+                           ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('Engelleme işlemi başarısız.')));
+                         }
+                      }
+                    }
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'block',
+                    child: Text('Kullanıcıyı Engelle', style: TextStyle(color: Colors.red)),
+                  ),
+                ],
+              );
+            },
+            loading: () => const SizedBox(),
+            error: (_, __) => const SizedBox(),
+          ),
+        ],
       ),
       body: Column(
         children: [

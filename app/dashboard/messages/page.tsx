@@ -370,7 +370,7 @@ function MessagesContent() {
                                             <ArrowLeft size={20} />
                                         </button>
                                     )}
-                                    <div style={{ flex: 1 }}>
+                                    <div style={{ flex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <h3 style={{ fontSize: '1.1rem', fontWeight: 600, margin: 0 }}>
                                             <Link
                                                 href={`/user/${activeConversation.user1.id === currentUserId ? activeConversation.user2.id : activeConversation.user1.id}`}
@@ -380,6 +380,34 @@ function MessagesContent() {
                                                 {activeConversation.user1.id === currentUserId ? activeConversation.user2.name : activeConversation.user1.name}
                                             </Link>
                                         </h3>
+                                        <button
+                                            onClick={async () => {
+                                                if (!confirm("Bu kullanıcıyı engellemek istediğinize emin misiniz? Engellenen kullanıcılar size bir daha mesaj gönderemez ve bu sohbet kapanır.")) return;
+                                                const targetUserId = activeConversation.user1.id === currentUserId ? activeConversation.user2.id : activeConversation.user1.id;
+                                                try {
+                                                    const res = await fetch("/api/users/block", {
+                                                        method: "POST",
+                                                        headers: { "Content-Type": "application/json" },
+                                                        body: JSON.stringify({ targetUserId }),
+                                                    });
+                                                    if (res.ok) {
+                                                        alert("Kullanıcı engellendi.");
+                                                        setConversations(prev => prev.filter(c => c.id !== activeConversationId));
+                                                        setActiveConversationId(null);
+                                                        setMessages([]);
+                                                    } else {
+                                                        alert("Kullanıcı engellenemedi.");
+                                                    }
+                                                } catch (error) {
+                                                    console.error("Block user error", error);
+                                                    alert("Bir hata oluştu.");
+                                                }
+                                            }}
+                                            className="btn btn-outline"
+                                            style={{ padding: '6px 12px', fontSize: '0.8rem', color: '#ef4444', borderColor: 'rgba(239, 68, 68, 0.3)' }}
+                                        >
+                                            Engelle
+                                        </button>
                                     </div>
                                 </div>
 
@@ -511,72 +539,72 @@ function MessagesContent() {
 
                                 {/* Mesaj Gönderme Formu */}
                                 <div style={{ padding: '1rem', borderTop: '1px solid var(--border)', background: 'var(--bg-card)' }}>
-                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                            {replyTo && (
-                                                <div style={{
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'space-between',
-                                                    padding: '8px 12px',
-                                                    background: 'rgba(0,0,0,0.03)',
-                                                    borderLeft: '4px solid var(--primary)',
-                                                    borderRadius: '4px',
-                                                    marginBottom: '4px'
-                                                }}>
-                                                    <div style={{ overflow: 'hidden' }}>
-                                                        <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary)' }}>
-                                                            {replyTo.sender.name} kullanıcısına yanıt veriliyor
-                                                        </div>
-                                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                                            {replyTo.content}
-                                                        </div>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                        {replyTo && (
+                                            <div style={{
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'space-between',
+                                                padding: '8px 12px',
+                                                background: 'rgba(0,0,0,0.03)',
+                                                borderLeft: '4px solid var(--primary)',
+                                                borderRadius: '4px',
+                                                marginBottom: '4px'
+                                            }}>
+                                                <div style={{ overflow: 'hidden' }}>
+                                                    <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--primary)' }}>
+                                                        {replyTo.sender.name} kullanıcısına yanıt veriliyor
                                                     </div>
-                                                    <button
-                                                        onClick={() => setReplyTo(null)}
-                                                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
-                                                    >
-                                                        ✕
-                                                    </button>
+                                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                        {replyTo.content}
+                                                    </div>
                                                 </div>
-                                            )}
-                                            <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
-                                                <input
-                                                    type="text"
-                                                    value={newMessage}
-                                                    onChange={(e) => setNewMessage(e.target.value)}
-                                                    placeholder="Bir mesaj yazın..."
-                                                    className="input"
-                                                    style={{ flex: 1 }}
-                                                />
                                                 <button
-                                                    type="submit"
-                                                    className="btn btn-primary"
-                                                    disabled={isSending || !newMessage.trim()}
-                                                    style={{ padding: '0 1.5rem' }}
+                                                    onClick={() => setReplyTo(null)}
+                                                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
                                                 >
-                                                    {isSending ? "..." : <Send size={18} />}
+                                                    ✕
                                                 </button>
-                                            </form>
-                                        </div>
+                                            </div>
+                                        )}
+                                        <form onSubmit={handleSendMessage} style={{ display: 'flex', gap: '0.5rem' }}>
+                                            <input
+                                                type="text"
+                                                value={newMessage}
+                                                onChange={(e) => setNewMessage(e.target.value)}
+                                                placeholder="Bir mesaj yazın..."
+                                                className="input"
+                                                style={{ flex: 1 }}
+                                            />
+                                            <button
+                                                type="submit"
+                                                className="btn btn-primary"
+                                                disabled={isSending || !newMessage.trim()}
+                                                style={{ padding: '0 1.5rem' }}
+                                            >
+                                                {isSending ? "..." : <Send size={18} />}
+                                            </button>
+                                        </form>
                                     </div>
-                                </>
-                                ) : (
-                                <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: '1rem' }}>
-                                    <div style={{ fontSize: '3rem', opacity: 0.2 }}>💬</div>
-                                    <p>Sohbete başlamak için soldan bir kişi seçin.</p>
                                 </div>
-                        )}
+                            </>
+                        ) : (
+                            <div style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--text-secondary)', flexDirection: 'column', gap: '1rem' }}>
+                                <div style={{ fontSize: '3rem', opacity: 0.2 }}>💬</div>
+                                <p>Sohbete başlamak için soldan bir kişi seçin.</p>
                             </div>
-                )}
+                        )}
                     </div>
+                )}
+            </div>
         </div>
-            );
+    );
 }
 
-            export default function MessagesPage() {
+export default function MessagesPage() {
     return (
-            <Suspense fallback={<div className="container" style={{ padding: '2rem 0', textAlign: 'center' }}>Yükleniyor...</div>}>
-                <MessagesContent />
-            </Suspense>
-            );
+        <Suspense fallback={<div className="container" style={{ padding: '2rem 0', textAlign: 'center' }}>Yükleniyor...</div>}>
+            <MessagesContent />
+        </Suspense>
+    );
 }
