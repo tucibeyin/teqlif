@@ -43,7 +43,7 @@ export default function SupportContent() {
                         <HeadphonesIcon size={48} className="text-cyan-500" />
                     </div>
                     <h1 className="hero-title">
-                        Müşteri <span style={{ color: "var(--primary)" }}>Destek Merkezi</span>
+                        Kullanıcı <span style={{ color: "var(--primary)" }}>Destek Merkezi</span>
                     </h1>
                     <p className="hero-subtitle">
                         Teqlif ekibi olarak size destek olmaktan mutluluk duyuyoruz. Soru, öneri ve şikayetlerinizi bize hızlıca iletebilirsiniz. Ekibimiz sizinle en kısa sürede iletişime geçecektir.
