@@ -182,13 +182,17 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   }
 
   @override
+  void deactivate() {
+    // ✅ Safe to use ref here — widget is leaving the tree but NOT yet disposed
+    ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+    ref.invalidate(adDetailProvider(widget.ad.id)); // remove ghost "live" buttons
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     WakelockPlus.disable();
-    ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-    
-    // Invalidate providers to remove ghost "live" buttons on previous screens
-    ref.invalidate(adDetailProvider(widget.ad.id));
-    
+    // ⛔ NO ref.read()/ref.invalidate() here — moved to deactivate()
     WidgetsBinding.instance.removeObserver(this);
     _inactivityTimer?.cancel();
     _hypeTimer?.cancel();
@@ -1282,7 +1286,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           const SizedBox(height: 32),
                           ElevatedButton.icon(
                             onPressed: () async {
-                              await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+                              // Explicit cleanup before navigation (user-initiated exit)
+                              ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+                              ref.invalidate(adDetailProvider(widget.ad.id));
                               if (mounted) context.go('/');
                             },
                             icon: const Icon(Icons.home_outlined, color: Colors.white),

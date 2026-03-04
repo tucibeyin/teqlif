@@ -182,10 +182,18 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
   }
 
   @override
+  void deactivate() {
+    // ✅ Safe to use ref here — widget is leaving the tree but NOT yet disposed
+    ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+    ref.invalidate(adDetailProvider(widget.ad.id)); // remove ghost "live" buttons
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     WakelockPlus.disable();
-    ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+    // ⛔ NO ref.read()/ref.invalidate() here — moved to deactivate()
     _pulseController.dispose();
     _confettiController.dispose();
     // Restore system UI
@@ -1108,7 +1116,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                         const SizedBox(height: 32),
                         ElevatedButton.icon(
                           onPressed: () async {
-                            await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+                            // Explicit cleanup before navigation (user-initiated exit)
+                            ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+                            ref.invalidate(adDetailProvider(widget.ad.id));
                             if (mounted) context.go('/');
                           },
                           icon: const Icon(Icons.home_outlined, color: Colors.white),
