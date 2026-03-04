@@ -1,22 +1,21 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { auth } from "@/auth";
+import { getMobileUser } from "@/lib/mobile-auth";
 
-export async function DELETE() {
+export async function DELETE(request: Request) {
     try {
-        const session = await auth();
+        // getMobileUser supports both NextAuth session (web) and custom JWT (mobile)
+        const userSession = await getMobileUser(request);
 
-        if (!session?.user?.id) {
+        if (!userSession?.id) {
             return NextResponse.json({ error: "Yetkisiz erişim" }, { status: 401 });
         }
 
-        const userId = session.user.id;
-
         // Delete the user — all related data (Ads, Bids, Conversations, Messages,
-        // Notifications, Favorites, Friends, FriendLists) will cascade automatically
+        // Notifications, Favorites, Friends, FriendLists) cascades automatically
         // as defined in the Prisma schema with onDelete: Cascade.
         await prisma.user.delete({
-            where: { id: userId },
+            where: { id: userSession.id },
         });
 
         return NextResponse.json({ success: true, message: "Hesabınız başarıyla silindi." });
