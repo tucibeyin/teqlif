@@ -141,57 +141,61 @@ export default async function AdDetailPage({
         isFavorited = !!fav;
     }
 
+    if (adData.isLive) {
+        return (
+            <div className="container" style={{ paddingTop: "0.5rem" }}>
+                <div className="card" style={{ overflow: "hidden", border: "2px solid #ef4444", borderRadius: "1.5rem" }}>
+                    <div style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                        <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
+                        {isOwner ? "CANLI YAYIN - HOST MODU" : "CANLI AÇIK ARTTIRMA ARENASI"}
+                    </div>
+                    <LiveArenaWrapper
+                        roomId={adData.id}
+                        adId={adData.id}
+                        sellerId={ad.userId}
+                        isOwner={isOwner}
+                        buyItNowPrice={ad.buyItNowPrice}
+                        startingBid={ad.startingBid}
+                        minBidStep={ad.minBidStep}
+                        initialHighestBid={highestBid?.amount ?? 0}
+                        initialIsAuctionActive={adData.isAuctionActive}
+                        adOwnerName={displayName}
+                    />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className="container">
 
-            <div className="ad-detail" style={adData.isLive ? { paddingTop: "0.5rem", marginTop: "-1rem" } : {}}>
+            <div className="ad-detail">
                 {/* Sol: Görsel ve Detay */}
                 <div>
                     <div className="ad-detail-images">
-                        {adData.isLive ? (
-                            <div className="card" style={{ overflow: "hidden", border: "2px solid #ef4444", borderRadius: "1.5rem" }}>
-                                <div style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                                    <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
-                                    {!adData.isLive && isOwner ? "YAYIN HAZIRLIK ODASI (Sadece Siz Görüyorsunuz)" : "CANLI AÇIK ARTTIRMA ARENASI"}
-                                </div>
-                                <LiveArenaWrapper
-                                    roomId={adData.id}
-                                    adId={adData.id}
-                                    sellerId={ad.userId}
-                                    isOwner={isOwner}
-                                    buyItNowPrice={ad.buyItNowPrice}
-                                    startingBid={ad.startingBid}
-                                    minBidStep={ad.minBidStep}
-                                    initialHighestBid={highestBid?.amount ?? 0}
-                                    initialIsAuctionActive={adData.isAuctionActive}
-                                    adOwnerName={displayName}
-                                />
-                            </div>
+                        {ad.images && ad.images.length > 0 ? (
+                            <ImageSlider images={ad.images} title={ad.title} />
                         ) : (
-                            ad.images && ad.images.length > 0 ? (
-                                <ImageSlider images={ad.images} title={ad.title} />
-                            ) : (
-                                <div
-                                    style={{
-                                        width: "100%",
-                                        height: "400px",
-                                        background: "linear-gradient(135deg, var(--bg-secondary), var(--bg-card-hover))",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        fontSize: "6rem",
-                                        borderRadius: "var(--radius-lg)",
-                                        border: "1px solid var(--border)",
-                                    }}
-                                >
-                                    {ad.category.icon}
-                                </div>
-                            )
+                            <div
+                                style={{
+                                    width: "100%",
+                                    height: "400px",
+                                    background: "linear-gradient(135deg, var(--bg-secondary), var(--bg-card-hover))",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    fontSize: "6rem",
+                                    borderRadius: "var(--radius-lg)",
+                                    border: "1px solid var(--border)",
+                                }}
+                            >
+                                {ad.category.icon}
+                            </div>
                         )}
                     </div>
 
                     {/* İlan Detayları */}
-                    <div className="card" style={{ marginTop: adData.isLive ? "1rem" : "1.5rem" }}>
+                    <div className="card" style={{ marginTop: "1.5rem" }}>
                         <div className="card-body">
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                                 <div>

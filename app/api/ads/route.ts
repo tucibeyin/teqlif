@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
         const province = searchParams.get("province");
         const q = searchParams.get("q");
         const isMine = searchParams.get("mine") === "true";
+        const isLiveQuery = searchParams.get("isLive") === "true";
 
         const where: Record<string, any> = {
             OR: [
@@ -24,6 +25,10 @@ export async function GET(req: NextRequest) {
         if (category) where.category = { slug: category };
         if (province) where.provinceId = province;
         if (q) where.title = { contains: q, mode: "insensitive" };
+
+        if (!isLiveQuery) {
+            where.NOT = { description: 'Hızlı Canlı Yayın (Ghost Ad)' };
+        }
 
         if (isMine) {
             const user = await getMobileUser(req);

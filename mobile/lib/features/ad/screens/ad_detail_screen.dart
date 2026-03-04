@@ -256,26 +256,31 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
     final currentUser = ref.watch(authProvider).user;
     final favsAsync = ref.watch(favoritesProvider);
 
-    return Scaffold(
-      body: adAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Scaffold(
-          appBar: AppBar(),
-          body: Center(child: Text('Hata: $e')),
-        ),
-        data: (ad) {
-          final isOwner = currentUser?.id == ad.userId;
+    return adAsync.when(
+      loading: () => const Scaffold(body: Center(child: CircularProgressIndicator())),
+      error: (e, _) => Scaffold(
+        appBar: AppBar(),
+        body: Center(child: Text('Hata: $e')),
+      ),
+      data: (ad) {
+        final isOwner = currentUser?.id == ad.userId;
 
-          // Note: Automatic navigation removed to prevent "Arena Trap"
-          // We will show a banner or button instead.
+        if (ad.isLive) {
+          if (isOwner) {
+            return LiveArenaHost(ad: ad);
+          } else {
+            return LiveArenaViewer(ad: ad);
+          }
+        }
 
-          final roomState = ref.watch(liveRoomProvider(widget.adId));
-          final now = DateTime.now().add(roomState.serverTimeOffset);
-          final isAuctionActive = ad.isAuction == true &&
-              ad.auctionStartTime != null &&
-              ad.auctionStartTime!.isBefore(now);
+        final roomState = ref.watch(liveRoomProvider(widget.adId));
+        final now = DateTime.now().add(roomState.serverTimeOffset);
+        final isAuctionActive = ad.isAuction == true &&
+            ad.auctionStartTime != null &&
+            ad.auctionStartTime!.isBefore(now);
 
-          return CustomScrollView(
+        return Scaffold(
+          body: CustomScrollView(
             slivers: [
               // Image header
               SliverAppBar(
@@ -905,9 +910,9 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                 ),
               ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 

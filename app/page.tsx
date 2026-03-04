@@ -78,6 +78,9 @@ const getAds = cache(async (categorySlug?: string, limit = 24) => {
         { expiresAt: null },
         { expiresAt: { gt: new Date() } },
       ],
+      NOT: {
+        description: 'Hızlı Canlı Yayın (Ghost Ad)'
+      }
     };
     if (categorySlug) where.category = { slug: categorySlug };
 
