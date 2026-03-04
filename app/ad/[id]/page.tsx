@@ -269,10 +269,7 @@ export default async function AdDetailPage({
                                         {displayName.charAt(0)}
                                     </div>
                                     <div style={{ flex: 1 }}>
-                                        <div style={{ fontWeight: 600, fontSize: "1.1rem", textDecoration: "underline", textDecorationColor: "transparent", transition: "text-decoration-color 0.2s ease" }}
-                                            onMouseEnter={(e) => e.currentTarget.style.textDecorationColor = "var(--primary)"}
-                                            onMouseLeave={(e) => e.currentTarget.style.textDecorationColor = "transparent"}
-                                        >
+                                        <div style={{ fontWeight: 600, fontSize: "1.1rem" }}>
                                             {displayName}
                                         </div>
                                         <div style={{ fontSize: "0.85rem", color: "var(--text-muted)" }}>İlan Sahibi Profili</div>
