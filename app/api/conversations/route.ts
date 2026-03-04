@@ -59,17 +59,6 @@ export async function POST(request: Request) {
             return NextResponse.json({ message: 'Eksik veri: userId' }, { status: 400 });
         }
 
-        if (adId) {
-            const ad = await prisma.ad.findUnique({
-                where: { id: adId },
-                select: { status: true, winnerId: true, userId: true }
-            });
-
-            if (ad?.status === 'SOLD' && ad.winnerId !== currentUser.id && ad.userId !== currentUser.id) {
-                return NextResponse.json({ message: 'Bu ilan satıldığı için yeni mesajlaşma başlatılamaz.' }, { status: 403 });
-            }
-        }
-
         if (currentUser.id === userId) {
             return NextResponse.json({ message: 'Kendinize mesaj gönderemezsiniz' }, { status: 400 });
         }
