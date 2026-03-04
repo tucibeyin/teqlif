@@ -559,24 +559,24 @@ function CustomArenaLayout({
                     }}>
                         {/* Stats Bar */}
                         <div style={{
-                            background: "rgba(0,0,0,0.4)",
+                            background: "rgba(255, 255, 255, 0.7)",
                             backdropFilter: "blur(15px)",
                             borderRadius: "20px",
-                            border: "1px solid rgba(255,255,255,0.1)",
+                            border: "1px solid rgba(0, 180, 204, 0.2)",
                             padding: "12px 16px",
                             display: "flex",
                             justifyContent: "space-between",
                             alignItems: "center"
                         }}>
                             <div style={{ display: "flex", flexDirection: "column" }}>
-                                <span style={{ fontSize: "0.65rem", color: "rgba(255,255,255,0.6)", fontWeight: 800, letterSpacing: "1px" }}>
+                                <span style={{ fontSize: "0.65rem", color: "rgba(0, 180, 204, 0.8)", fontWeight: 800, letterSpacing: "1px" }}>
                                     {auctionStatus === "ACTIVE" ? "GÜNCEL FİYAT" : "BAŞLANGIÇ FİYATI"}
                                 </span>
                                 <div style={{ display: "flex", alignItems: "baseline", gap: "4px" }}>
-                                    <span className={`tabular-nums tracking-tighter ${flashBid ? 'text-green-400 scale-110' : 'text-white'} transition-all duration-300`} style={{ fontSize: "1.5rem", fontWeight: 900 }}>
+                                    <span className={`tabular-nums tracking-tighter ${flashBid ? 'text-primary scale-110' : 'text-[#00B4CC]'} transition-all duration-300`} style={{ fontSize: "1.5rem", fontWeight: 900 }}>
                                         {new Intl.NumberFormat("tr-TR").format(liveHighestBid || (startingBid ?? 0))}
                                     </span>
-                                    <span style={{ fontSize: "1rem", color: "rgba(255,255,255,0.8)", fontWeight: 700 }}>₺</span>
+                                    <span style={{ fontSize: "1rem", color: "var(--primary)", fontWeight: 700 }}>₺</span>
                                 </div>
                             </div>
 
@@ -584,8 +584,8 @@ function CustomArenaLayout({
                                 {liveHighestBidderName ? (
                                     <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
                                         <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end" }}>
-                                            <span style={{ fontSize: "0.6rem", color: "rgba(255,255,255,0.6)", fontWeight: 800 }}>LİDER</span>
-                                            <span style={{ fontSize: "0.85rem", color: "#4ade80", fontWeight: 900 }}>{liveHighestBidderName}</span>
+                                            <span style={{ fontSize: "0.6rem", color: "var(--text-secondary)", fontWeight: 800 }}>LİDER</span>
+                                            <span style={{ fontSize: "0.85rem", color: "var(--primary)", fontWeight: 900 }}>{liveHighestBidderName}</span>
                                         </div>
                                         {isOwner && liveHighestBidderId && (
                                             <button
@@ -597,9 +597,9 @@ function CustomArenaLayout({
                                                     }
                                                 }}
                                                 title="Sahneye Davet Et"
-                                                style={{ background: "rgba(59, 130, 246, 0.2)", border: "1px solid rgba(59, 130, 246, 0.5)", borderRadius: "8px", padding: "6px", cursor: "pointer", marginLeft: "4px" }}
+                                                style={{ background: "rgba(0, 180, 204, 0.08)", border: "1px solid rgba(0, 180, 204, 0.2)", borderRadius: "8px", padding: "6px", cursor: "pointer", marginLeft: "4px" }}
                                             >
-                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                                             </button>
                                         )}
                                     </div>
@@ -1047,12 +1047,12 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                 style={{
                     width: "110px",
                     height: "50px", // Increased height for bottom console parity
-                    background: "rgba(0,0,0,0.5)",
+                    background: "rgba(0, 180, 204, 0.05)",
                     backdropFilter: "blur(10px)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    border: "1px solid rgba(0, 180, 204, 0.2)",
                     borderRadius: "100px",
                     padding: "0 16px",
-                    color: "white",
+                    color: "var(--text-primary)",
                     fontSize: "0.95rem",
                     textAlign: "center",
                     fontWeight: 800,
@@ -1064,7 +1064,7 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                 disabled={loading}
                 style={{
                     height: "50px",
-                    background: "linear-gradient(135deg, #ef4444 0%, #b91c1c 100%)",
+                    background: loading ? "rgba(0, 180, 204, 0.3)" : "linear-gradient(135deg, rgb(0, 180, 204), rgb(0, 141, 161))",
                     color: "white",
                     border: "none",
                     borderRadius: "100px",
@@ -1075,11 +1075,11 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
-                    boxShadow: "0 4px 15px rgba(239, 68, 68, 0.4)",
+                    boxShadow: loading ? "none" : "rgba(0, 180, 204, 0.4) 0px 4px 15px",
                     opacity: loading ? 0.7 : 1
                 }}
             >
-                {loading ? "BEKLEYİN" : "TEKLİF VER"}
+                {loading ? "BEKLEYİN" : "TEQLİF VER"}
                 {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9l6 6-6 6"></path><path d="M4 4v7a4 4 0 0 0 4 4h11"></path></svg>}
             </button>
         </form>
