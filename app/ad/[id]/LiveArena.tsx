@@ -580,7 +580,7 @@ function CustomArenaLayout({
                                         <div style={{ color: "rgba(255,255,255,0.5)", fontWeight: "bold" }}>Kamera Kapalı</div>
                                     </div>
                                 ) : (
-                                    <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "contain" }} />
+                                    <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                                 )}
 
                                 {/* =============================================
