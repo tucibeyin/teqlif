@@ -8,6 +8,7 @@ import { MobileAppBanner } from "@/components/MobileAppBanner";
 import { MobileGate } from "@/components/MobileGate";
 import { GlobalErrorCapture } from "@/components/GlobalErrorCapture";
 import Link from "next/link";
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;700;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
 
 export const metadata: Metadata = {
   title: {

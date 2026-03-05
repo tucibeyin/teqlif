@@ -1,193 +1,224 @@
 "use client";
 
-// ─── FinalizationOverlay ──────────────────────────────────────────────────────
+const T = {
+  teal: "#00B4CC",
+  tealDark: "#008FA3",
+  gold: "#F5C842",
+  green: "#00E096",
+  red: "#FF4757",
+  text: "#E8EFF7",
+  muted: "#4A6070",
+  mono: "'DM Mono', 'Fira Code', 'Courier New', monospace",
+  display: "'Syne', system-ui, sans-serif",
+};
 
-const formatPrice = (val: number) =>
-    new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(val);
+const fmt = (val: number) =>
+  new Intl.NumberFormat("tr-TR").format(val) + " ₺";
 
+const BACKDROP: React.CSSProperties = {
+  position: "absolute", inset: 0,
+  background: "rgba(7,11,15,0.92)",
+  backdropFilter: "blur(24px)",
+  WebkitBackdropFilter: "blur(24px)",
+  display: "flex", alignItems: "center", justifyContent: "center",
+};
+
+// ── FinalizationOverlay ────────────────────────────────────────────────────
 interface FinalizationOverlayProps {
-    winnerName: string;
-    amount?: number | null;
-    onClose: () => void;
+  winnerName: string;
+  amount?: number | null;
+  onClose: () => void;
 }
 
 export function FinalizationOverlay({ winnerName, amount, onClose }: FinalizationOverlayProps) {
-    return (
+  return (
+    <div style={{ ...BACKDROP, zIndex: 9000 }}>
+      <style>{`
+        @keyframes tq-popIn {
+          from { opacity: 0; transform: scale(0.85); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+      <div style={{
+        background: "rgba(12,18,26,0.98)",
+        border: "1px solid rgba(245,200,66,0.3)",
+        borderRadius: 24, padding: "44px 40px",
+        textAlign: "center", maxWidth: 360,
+        boxShadow: "0 25px 60px rgba(0,0,0,0.8), 0 0 40px rgba(245,200,66,0.08)",
+        animation: "tq-popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275)",
+      }}>
+        <div style={{ fontSize: "3.5rem", marginBottom: 12 }}>🎉</div>
         <div style={{
-            position: "absolute",
-            inset: 0,
-            background: "rgba(0,0,0,0.85)",
-            backdropFilter: "blur(20px)",
-            WebkitBackdropFilter: "blur(20px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 9000,
+          fontFamily: T.display, fontWeight: 900, fontSize: "1.4rem",
+          color: T.gold, marginBottom: 12, letterSpacing: 1,
         }}>
-            <div style={{
-                background: "rgba(255,255,255,0.05)",
-                border: "1px solid rgba(255,215,0,0.4)",
-                borderRadius: "24px",
-                padding: "40px",
-                textAlign: "center",
-                maxWidth: "360px",
-                boxShadow: "0 25px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255,215,0,0.15)",
-            }}>
-                <div style={{ fontSize: "4rem", marginBottom: "12px" }}>🎉</div>
-                <h2 style={{ color: "#FFD700", fontWeight: 900, fontSize: "1.6rem", marginBottom: "8px" }}>
-                    SATIŞ TAMAMLANDI!
-                </h2>
-                <p style={{ color: "rgba(255,255,255,0.8)", fontSize: "1rem", marginBottom: "4px" }}>
-                    Kazanan: <strong style={{ color: "white" }}>{winnerName}</strong>
-                </p>
-                {amount != null && (
-                    <p style={{ color: "#22c55e", fontWeight: 900, fontSize: "1.5rem", marginBottom: "24px" }}>
-                        {formatPrice(amount)}
-                    </p>
-                )}
-                <button
-                    onClick={onClose}
-                    style={{
-                        background: "linear-gradient(135deg, #FFD700, #FFA500)",
-                        color: "#000",
-                        border: "none",
-                        borderRadius: "100px",
-                        padding: "12px 32px",
-                        fontWeight: 900,
-                        fontSize: "1rem",
-                        cursor: "pointer",
-                    }}
-                >
-                    Tamam
-                </button>
-            </div>
+          SATIŞ TAMAMLANDI
         </div>
-    );
+        <p style={{ color: T.muted, fontSize: "0.9rem", marginBottom: 4, fontFamily: T.display }}>
+          Kazanan
+        </p>
+        <p style={{ color: T.text, fontWeight: 800, fontSize: "1.1rem", marginBottom: 16, fontFamily: T.display }}>
+          {winnerName}
+        </p>
+        {amount != null && (
+          <div style={{
+            fontFamily: T.mono, fontSize: "1.8rem", fontWeight: 500,
+            color: T.green, marginBottom: 28,
+          }}>
+            {fmt(amount)}
+          </div>
+        )}
+        <button
+          onClick={onClose}
+          style={{
+            background: `linear-gradient(135deg, ${T.gold}, #d4a017)`,
+            color: "#0a0a0a", border: "none", borderRadius: 100,
+            padding: "12px 36px", fontFamily: T.display,
+            fontWeight: 900, fontSize: "0.95rem", cursor: "pointer",
+            letterSpacing: 0.5,
+          }}
+        >
+          Tamam
+        </button>
+      </div>
+    </div>
+  );
 }
 
-// ─── SoldOverlay (permanent SATILDI state) ────────────────────────────────────
-
+// ── SoldOverlay (permanent SATILDI state) ─────────────────────────────────
 interface SoldOverlayProps {
-    winnerName: string;
-    price: number;
-    isOwner: boolean;
-    onClose: () => void;
-    onReset?: () => void;
+  winnerName: string;
+  price: number;
+  isOwner: boolean;
+  onClose: () => void;
+  onReset?: () => void;
 }
 
 export function SoldOverlay({ winnerName, price, isOwner, onClose, onReset }: SoldOverlayProps) {
-    return (
-        <div style={{
-            position: "absolute",
-            inset: 0,
-            background: "rgba(0,0,0,0.9)",
-            backdropFilter: "blur(24px)",
-            WebkitBackdropFilter: "blur(24px)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            zIndex: 8500,
-        }}>
-            <div style={{
-                background: "linear-gradient(135deg, rgba(34,197,94,0.15), rgba(0,0,0,0.6))",
-                border: "2px solid rgba(34,197,94,0.4)",
-                borderRadius: "28px",
-                padding: "48px 40px",
-                textAlign: "center",
-                maxWidth: "380px",
-            }}>
-                <div style={{ fontSize: "5rem", marginBottom: "16px" }}>🏆</div>
-                <div style={{
-                    background: "rgba(34,197,94,0.2)",
-                    border: "1px solid rgba(34,197,94,0.4)",
-                    borderRadius: "100px",
-                    padding: "8px 24px",
-                    color: "#22c55e",
-                    fontWeight: 900,
-                    fontSize: "1.2rem",
-                    letterSpacing: "2px",
-                    marginBottom: "16px",
-                    display: "inline-block",
-                }}>
-                    SATILDI
-                </div>
-                <p style={{ color: "rgba(255,255,255,0.7)", margin: "0 0 8px" }}>
-                    Kazanan: <strong style={{ color: "white" }}>{winnerName}</strong>
-                </p>
-                <p style={{ color: "#FFD700", fontWeight: 900, fontSize: "1.8rem", margin: "0 0 28px" }}>
-                    {formatPrice(price)}
-                </p>
+  return (
+    <div style={{ ...BACKDROP, zIndex: 8500 }}>
+      <style>{`
+        @keyframes tq-popIn {
+          from { opacity: 0; transform: scale(0.85); }
+          to   { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
+      <div style={{
+        background: "rgba(12,18,26,0.98)",
+        border: "1px solid rgba(0,224,150,0.2)",
+        borderRadius: 28, padding: "48px 44px",
+        textAlign: "center", maxWidth: 380,
+        boxShadow: "0 30px 80px rgba(0,0,0,0.9), 0 0 60px rgba(0,224,150,0.06)",
+        animation: "tq-popIn 0.4s cubic-bezier(0.175,0.885,0.32,1.275)",
+      }}>
+        <div style={{ fontSize: "4rem", marginBottom: 16 }}>🏆</div>
 
-                <div style={{ display: "flex", gap: "12px", justifyContent: "center" }}>
-                    <button
-                        onClick={onClose}
-                        style={{
-                            background: "rgba(255,255,255,0.1)",
-                            color: "white",
-                            border: "1px solid rgba(255,255,255,0.2)",
-                            borderRadius: "100px",
-                            padding: "12px 24px",
-                            fontWeight: 700,
-                            cursor: "pointer",
-                        }}
-                    >
-                        Kapat
-                    </button>
-                    {isOwner && onReset && (
-                        <button
-                            onClick={onReset}
-                            style={{
-                                background: "linear-gradient(135deg, #00B4CC, #008da1)",
-                                color: "white",
-                                border: "none",
-                                borderRadius: "100px",
-                                padding: "12px 24px",
-                                fontWeight: 800,
-                                cursor: "pointer",
-                            }}
-                        >
-                            Yeni Ürün
-                        </button>
-                    )}
-                </div>
-            </div>
+        {/* SATILDI badge */}
+        <div style={{
+          display: "inline-flex", alignItems: "center",
+          background: "rgba(0,224,150,0.1)",
+          border: "1px solid rgba(0,224,150,0.25)",
+          borderRadius: 100, padding: "6px 24px",
+          color: T.green, fontFamily: T.display,
+          fontWeight: 900, fontSize: "0.9rem",
+          letterSpacing: 3, marginBottom: 20,
+        }}>
+          SATILDI
         </div>
-    );
+
+        <p style={{ color: T.muted, fontFamily: T.display, fontSize: "0.85rem", marginBottom: 4 }}>
+          Kazanan
+        </p>
+        <p style={{ color: T.text, fontWeight: 800, fontSize: "1.15rem", marginBottom: 12, fontFamily: T.display }}>
+          {winnerName}
+        </p>
+        <div style={{
+          fontFamily: T.mono, fontSize: "2rem", fontWeight: 500,
+          color: T.gold, marginBottom: 32,
+        }}>
+          {fmt(price)}
+        </div>
+
+        <div style={{ display: "flex", gap: 10, justifyContent: "center" }}>
+          <button
+            onClick={onClose}
+            style={{
+              background: "rgba(255,255,255,0.06)", color: T.text,
+              border: "1px solid rgba(255,255,255,0.1)", borderRadius: 100,
+              padding: "11px 24px", fontFamily: T.display,
+              fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
+              transition: "all 0.2s",
+            }}
+            onMouseOver={e => (e.currentTarget.style.background = "rgba(255,255,255,0.1)")}
+            onMouseOut={e => (e.currentTarget.style.background = "rgba(255,255,255,0.06)")}
+          >
+            Kapat
+          </button>
+          {isOwner && onReset && (
+            <button
+              onClick={onReset}
+              style={{
+                background: `linear-gradient(135deg, ${T.teal}, ${T.tealDark})`,
+                color: "white", border: "none", borderRadius: 100,
+                padding: "11px 24px", fontFamily: T.display,
+                fontWeight: 800, fontSize: "0.9rem", cursor: "pointer",
+                transition: "all 0.2s",
+              }}
+              onMouseOver={e => (e.currentTarget.style.filter = "brightness(1.1)")}
+              onMouseOut={e => (e.currentTarget.style.filter = "none")}
+            >
+              Yeni Ürün →
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
 }
 
-// ─── BroadcastEndedScreen ─────────────────────────────────────────────────────
-
+// ── BroadcastEndedScreen ──────────────────────────────────────────────────
 export function BroadcastEndedScreen() {
-    return (
-        <div style={{
-            position: "absolute",
-            inset: 0,
-            background: "linear-gradient(135deg, #0f172a, #1e293b)",
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            justifyContent: "center",
-            color: "white",
-            zIndex: 100,
-        }}>
-            <div style={{ fontSize: "4rem", marginBottom: "16px" }}>📡</div>
-            <h2 style={{ fontWeight: 900, fontSize: "1.8rem", marginBottom: "8px" }}>Yayın Sona Erdi</h2>
-            <p style={{ color: "rgba(255,255,255,0.6)" }}>Yayıncı canlı yayını kapattı.</p>
-            <button
-                onClick={() => (window.location.href = "/")}
-                style={{
-                    marginTop: "28px",
-                    background: "rgba(255,255,255,0.1)",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    borderRadius: "100px",
-                    padding: "12px 28px",
-                    color: "white",
-                    fontWeight: 700,
-                    cursor: "pointer",
-                }}
-            >
-                Ana Sayfaya Dön
-            </button>
-        </div>
-    );
+  return (
+    <div style={{
+      position: "absolute", inset: 0,
+      background: "linear-gradient(135deg, #070B0F, #0D1B2A)",
+      display: "flex", flexDirection: "column",
+      alignItems: "center", justifyContent: "center",
+      color: T.text, zIndex: 100,
+    }}>
+      {/* Grid texture */}
+      <div style={{
+        position: "absolute", inset: 0, opacity: 0.03,
+        backgroundImage: `repeating-linear-gradient(0deg, transparent, transparent 39px, rgba(0,180,204,0.5) 40px),
+                          repeating-linear-gradient(90deg, transparent, transparent 39px, rgba(0,180,204,0.5) 40px)`,
+        pointerEvents: "none",
+      }} />
+
+      <div style={{ fontSize: "3.5rem", marginBottom: 16 }}>📡</div>
+      <h2 style={{
+        fontFamily: T.display, fontWeight: 900, fontSize: "1.6rem",
+        marginBottom: 8, letterSpacing: 0.5,
+      }}>
+        Yayın Sona Erdi
+      </h2>
+      <p style={{ color: T.muted, fontFamily: T.display, fontSize: "0.95rem" }}>
+        Yayıncı canlı yayını kapattı.
+      </p>
+      <button
+        onClick={() => (window.location.href = "/")}
+        style={{
+          marginTop: 28,
+          background: "rgba(0,180,204,0.1)", border: "1px solid rgba(0,180,204,0.2)",
+          borderRadius: 100, padding: "12px 32px",
+          color: T.teal, fontFamily: T.display,
+          fontWeight: 700, fontSize: "0.9rem", cursor: "pointer",
+          transition: "all 0.2s",
+        }}
+        onMouseOver={e => (e.currentTarget.style.background = "rgba(0,180,204,0.18)")}
+        onMouseOut={e => (e.currentTarget.style.background = "rgba(0,180,204,0.1)")}
+      >
+        Ana Sayfaya Dön
+      </button>
+    </div>
+  );
 }

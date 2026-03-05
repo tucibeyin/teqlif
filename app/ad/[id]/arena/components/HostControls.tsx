@@ -1,171 +1,176 @@
 "use client";
 
-import { TrackToggle } from "@livekit/components-react";
+import { TrackToggle, useRoomContext } from "@livekit/components-react";
 import { Track } from "livekit-client";
-import { useRoomContext } from "@livekit/components-react";
 import type { AuctionStatus } from "../types";
 
-const PILL: React.CSSProperties = {
-    position: "absolute",
-    bottom: "20px",
-    left: "50%",
-    transform: "translateX(-50%)",
-    zIndex: 200,
-    display: "flex",
-    flexDirection: "row",
-    alignItems: "center",
-    gap: "16px",
-    background: "rgba(0,0,0,0.5)",
-    backdropFilter: "blur(12px)",
-    borderRadius: "100px",
-    padding: "8px 24px",
-    pointerEvents: "auto",
-    border: "1px solid rgba(255,255,255,0.1)",
+const T = {
+  teal: "#00B4CC",
+  green: "#00E096",
+  red: "#FF4757",
+  glass: "rgba(255,255,255,0.06)",
+  glassBorder: "rgba(255,255,255,0.08)",
+  text: "#E8EFF7",
+  display: "'Syne', system-ui, sans-serif",
 };
 
-const ROUND_BTN: React.CSSProperties = {
-    width: "48px",
-    height: "48px",
-    borderRadius: "50%",
-    background: "rgba(0,0,0,0.4)",
-    backdropFilter: "blur(12px)",
-    border: "1px solid rgba(255,255,255,0.1)",
-    fontSize: "20px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    color: "white",
-    cursor: "pointer",
+const ROUND: React.CSSProperties = {
+  width: 44, height: 44, borderRadius: "50%",
+  background: T.glass, border: `1px solid ${T.glassBorder}`,
+  fontSize: 18, cursor: "pointer", color: T.text,
+  display: "flex", alignItems: "center", justifyContent: "center",
+  transition: "all 0.15s", backdropFilter: "blur(12px)",
 };
 
-const TRACK_TOGGLE_STYLE: React.CSSProperties = {
-    border: "1px solid rgba(255,255,255,0.1)",
-    borderRadius: "50%",
-    width: "48px",
-    height: "48px",
-    color: "white",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    cursor: "pointer",
+const TRACK_STYLE: React.CSSProperties = {
+  ...ROUND,
+  border: `1px solid ${T.glassBorder}`,
 };
 
 interface HostControlsProps {
-    auctionStatus: AuctionStatus;
-    onStartAuction: () => void;
-    onStopAuction: () => void;
-    onResetAuction: () => void;
-    onEndBroadcast: () => void;
-    stageRequestCount: number;
-    onStageRequestClick: () => void;
-    loading: boolean;
+  auctionStatus: AuctionStatus;
+  onStartAuction: () => void;
+  onStopAuction: () => void;
+  onResetAuction: () => void;
+  onEndBroadcast: () => void;
+  stageRequestCount: number;
+  onStageRequestClick: () => void;
+  loading: boolean;
 }
 
 export function HostControls({
-    auctionStatus,
-    onStartAuction,
-    onStopAuction,
-    onResetAuction,
-    onEndBroadcast,
-    stageRequestCount,
-    onStageRequestClick,
-    loading,
+  auctionStatus, onStartAuction, onStopAuction, onResetAuction,
+  onEndBroadcast, stageRequestCount, onStageRequestClick, loading,
 }: HostControlsProps) {
-    const room = useRoomContext();
+  const room = useRoomContext();
 
-    const handleCameraSwitch = async () => {
-        try {
-            const publications = Array.from(room.localParticipant.videoTrackPublications.values());
-            const videoPub = publications.find(p => p.source === Track.Source.Camera);
-            if (videoPub?.videoTrack) {
-                // @ts-ignore
-                await videoPub.videoTrack.switchCamera();
-            }
-        } catch (e) {
-            console.error("Kamera değiştirme hatası:", e);
+  const handleCameraSwitch = async () => {
+    try {
+      const pubs = Array.from(room.localParticipant.videoTrackPublications.values());
+      const vid = pubs.find(p => p.source === Track.Source.Camera);
+      // @ts-ignore
+      if (vid?.videoTrack) await vid.videoTrack.switchCamera();
+    } catch (e) { console.error("Kamera değiştirme hatası:", e); }
+  };
+
+  const isActive = auctionStatus === "ACTIVE";
+
+  return (
+    <>
+      <style>{`
+        @keyframes tq-pulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
+          50%       { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
         }
-    };
+        .tq-round-btn:hover { background: rgba(255,255,255,0.12) !important; }
+      `}</style>
 
-    return (
-        <div style={PILL}>
-            <TrackToggle
-                source={Track.Source.Microphone}
-                className="backdrop-blur-lg bg-black/40 hover:bg-black/60 transition-all shadow-lg"
-                style={TRACK_TOGGLE_STYLE}
-            />
-            <TrackToggle
-                source={Track.Source.Camera}
-                className="backdrop-blur-lg bg-black/40 hover:bg-black/60 transition-all shadow-lg"
-                style={TRACK_TOGGLE_STYLE}
-            />
+      <div style={{
+        position: "absolute", bottom: 20, left: "50%",
+        transform: "translateX(-50%)", zIndex: 200,
+        display: "flex", flexDirection: "row",
+        alignItems: "center", gap: 10,
+        background: "rgba(7,11,15,0.7)",
+        backdropFilter: "blur(20px)",
+        WebkitBackdropFilter: "blur(20px)",
+        borderRadius: 100, padding: "8px 20px",
+        border: `1px solid ${T.glassBorder}`,
+        pointerEvents: "auto",
+      }}>
 
-            <button onClick={handleCameraSwitch} style={ROUND_BTN} title="Kamera Değiştir">
-                🔄
-            </button>
+        {/* Mic toggle */}
+        <TrackToggle
+          source={Track.Source.Microphone}
+          style={TRACK_STYLE}
+          className="backdrop-blur-lg"
+        />
 
-            <button onClick={onResetAuction} style={{ ...ROUND_BTN, background: "rgba(245, 158, 11, 0.6)" }} title="Sıfırla">
-                🔄 0
-            </button>
+        {/* Camera toggle */}
+        <TrackToggle
+          source={Track.Source.Camera}
+          style={TRACK_STYLE}
+          className="backdrop-blur-lg"
+        />
 
-            {/* Auction toggle */}
+        {/* Flip camera */}
+        <button className="tq-round-btn" onClick={handleCameraSwitch} style={ROUND} title="Kamera Değiştir">
+          🔄
+        </button>
+
+        {/* Divider */}
+        <div style={{ width: 1, height: 24, background: T.glassBorder }} />
+
+        {/* Reset */}
+        <button
+          className="tq-round-btn"
+          onClick={onResetAuction}
+          disabled={loading}
+          style={{ ...ROUND, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}
+          title="Sıfırla"
+        >
+          ↺
+        </button>
+
+        {/* Auction toggle */}
+        <button
+          onClick={isActive ? onStopAuction : onStartAuction}
+          disabled={loading}
+          style={{
+            padding: "8px 18px", borderRadius: 100, cursor: "pointer",
+            fontFamily: T.display, fontSize: 12, fontWeight: 800,
+            letterSpacing: 0.5, transition: "all 0.2s",
+            background: isActive ? "rgba(255,71,87,0.15)" : "rgba(0,224,150,0.15)",
+            border: `1px solid ${isActive ? "rgba(255,71,87,0.3)" : "rgba(0,224,150,0.3)"}`,
+            color: isActive ? T.red : T.green,
+          }}
+        >
+          {isActive ? "⏹ Durdur" : "▶ Başlat"}
+        </button>
+
+        {/* Stage requests */}
+        {stageRequestCount > 0 && (
+          <div style={{ position: "relative" }}>
             <button
-                onClick={auctionStatus === "ACTIVE" ? onStopAuction : onStartAuction}
-                disabled={loading}
-                style={{
-                    ...ROUND_BTN,
-                    background: auctionStatus === "ACTIVE" ? "rgba(239,68,68,0.8)" : "rgba(34,197,94,0.8)",
-                    fontSize: "1rem",
-                    fontWeight: 800,
-                    color: "white",
-                    border: "1px solid rgba(255,255,255,0.2)",
-                    padding: "0 16px",
-                    width: "auto",
-                    borderRadius: "100px",
-                }}
+              onClick={onStageRequestClick}
+              style={{
+                ...ROUND,
+                background: "rgba(59,130,246,0.15)",
+                border: "2px solid rgba(59,130,246,0.4)",
+                animation: "tq-pulse 1.5s infinite",
+              }}
             >
-                {auctionStatus === "ACTIVE" ? "⏹ Durdur" : "▶ Başlat"}
+              🎤
             </button>
+            <span style={{
+              position: "absolute", top: -5, right: -5,
+              background: T.red, color: "white", fontSize: 10,
+              fontWeight: 800, padding: "2px 6px", borderRadius: 10,
+              fontFamily: T.display,
+            }}>
+              {stageRequestCount}
+            </span>
+          </div>
+        )}
 
-            {/* Stage requests badge */}
-            {stageRequestCount > 0 && (
-                <div style={{ position: "relative" }}>
-                    <button
-                        onClick={onStageRequestClick}
-                        style={{
-                            ...ROUND_BTN,
-                            background: "rgba(59, 130, 246, 0.8)",
-                            border: "2px solid rgba(255,255,255,0.5)",
-                            boxShadow: "0 0 15px rgba(59, 130, 246, 0.8)",
-                            animation: "pulse 1.5s infinite",
-                        }}
-                    >
-                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                            <path d="M12 2v20" /><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-                        </svg>
-                    </button>
-                    <span style={{
-                        position: "absolute",
-                        top: "-5px",
-                        right: "-5px",
-                        background: "red",
-                        color: "white",
-                        fontSize: "10px",
-                        fontWeight: "bold",
-                        padding: "2px 6px",
-                        borderRadius: "10px",
-                    }}>
-                        {stageRequestCount}
-                    </span>
-                </div>
-            )}
+        {/* Divider */}
+        <div style={{ width: 1, height: 24, background: T.glassBorder }} />
 
-            <button
-                onClick={onEndBroadcast}
-                style={{ ...ROUND_BTN, background: "rgba(220,38,38,0.8)", border: "1px solid rgba(255,100,100,0.3)" }}
-                title="Yayını Bitir"
-            >
-                ✕
-            </button>
-        </div>
-    );
+        {/* End broadcast */}
+        <button
+          onClick={onEndBroadcast}
+          style={{
+            ...ROUND,
+            background: "rgba(255,71,87,0.1)",
+            border: "1px solid rgba(255,71,87,0.25)",
+            color: T.red,
+          }}
+          title="Yayını Bitir"
+          onMouseOver={e => (e.currentTarget.style.background = "rgba(255,71,87,0.25)")}
+          onMouseOut={e => (e.currentTarget.style.background = "rgba(255,71,87,0.1)")}
+        >
+          ✕
+        </button>
+      </div>
+    </>
+  );
 }
