@@ -261,7 +261,7 @@ function CustomArenaLayout({
     const isBroadcastEnded = isRoomClosed || connectionState === ConnectionState.Disconnected;
 
     const addReaction = useCallback((emoji: string) => {
-        const newReaction = { id: Date.now().toString() + Math.random(), emoji, left: Math.random() * 80 + 10 };
+        const newReaction = { id: Date.now().toString() + Math.random(), emoji, left: Math.random() * 60 + 20 };
         setReactions(prev => [...prev.slice(-15), newReaction]);
         setTimeout(() => setReactions(prev => prev.filter(r => r.id !== newReaction.id)), 2500);
     }, []);
@@ -413,330 +413,320 @@ function CustomArenaLayout({
     const guestTrack = tracks.length > 1 ? tracks[1] : null;
 
     return (
-        // EKRANI KİLİTLEYEN ANA KONTEYNER (NO SCROLL)
-        <div className="flex flex-col md:flex-row w-full h-[calc(100dvh-70px)] bg-neutral-950 overflow-hidden relative">
+        // ANA KONTEYNER - FULL EKRAN KİLİTLİ (OVERLAY MİMARİSİ)
+        <div className="w-full h-[calc(100dvh-70px)] md:h-[calc(100vh-80px)] bg-black relative overflow-hidden font-sans text-white">
 
             <style>{`
                 @keyframes floatUp { 0% { transform: translateY(0) scale(1); opacity: 1; } 100% { transform: translateY(-250px) scale(1.5); opacity: 0; } }
             `}</style>
 
-            {/* =======================
-                SOL TARAF: VİDEO ALANI
-            ======================== */}
-            <div className="flex-1 relative bg-black overflow-hidden flex flex-col justify-center items-center border-b md:border-b-0 md:border-r border-white/10">
-
-                {/* HUD: Sol Üst (Yayıncı Bilgisi ve İzleyici) */}
-                <div className="absolute top-4 left-4 z-50 flex flex-col gap-2 pointer-events-none">
-                    <div className="flex items-center bg-black/50 backdrop-blur-md rounded-full p-1 pr-4 border border-white/10 shadow-lg pointer-events-auto">
-                        <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center font-bold text-white shadow-inner">
-                            {adOwnerName.charAt(0).toUpperCase()}
-                        </div>
-                        <div className="ml-3 flex flex-col">
-                            <span className="text-white text-sm font-bold shadow-sm">{adOwnerName}</span>
-                            <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded uppercase font-black tracking-wider w-max -mt-0.5 animate-pulse">CANLI</span>
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full w-max border border-white/10 shadow-sm pointer-events-auto">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
-                        <span className="text-white text-xs font-bold">{participantCount}</span>
-                    </div>
-                </div>
-
-                {/* HUD: Sağ Üst (Kapat / Çıkış) */}
-                <div className="absolute top-4 right-4 z-50">
-                    {isOwner ? (
-                        <button onClick={() => handleEndBroadcast()} className="bg-red-600 hover:bg-red-500 text-white font-black px-4 py-2 rounded-full shadow-lg border border-red-400/50 flex items-center gap-2 transition-all">
-                            <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
-                            Yayını Bitir
-                        </button>
-                    ) : (
-                        <button onClick={() => window.location.href = "/"} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all">
-                            ✕
-                        </button>
-                    )}
-                </div>
-
-                {/* VİDEO İÇERİĞİ */}
+            {/* ====================================================
+                1. KATMAN: VIDEO VE ARKA PLAN (EN ALT)
+            ==================================================== */}
+            <div className="absolute inset-0 z-0 bg-black">
                 {isBroadcastEnded ? (
-                    <div className="absolute inset-0 flex flex-col justify-center items-center bg-neutral-950 z-40">
+                    <div className="flex flex-col items-center justify-center w-full h-full bg-neutral-950">
                         <div className="text-5xl mb-4">📡</div>
-                        <h2 className="text-white text-2xl font-bold">Yayın Sona Erdi</h2>
+                        <h2 className="text-2xl font-bold text-white">Yayın Sona Erdi</h2>
                         <p className="text-white/60 mt-2">Yayıncı canlı yayını kapattı.</p>
                     </div>
+                ) : hostTrack?.publication?.isMuted ? (
+                    <div className="flex flex-col items-center justify-center w-full h-full bg-neutral-900">
+                        <div className="text-5xl mb-4 opacity-50">📷</div>
+                        <div className="text-white/50 font-bold text-lg">Kamera Kapalı</div>
+                    </div>
                 ) : (
-                    <>
-                        {hostTrack?.publication?.isMuted ? (
-                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-neutral-900 z-10">
-                                <div className="text-5xl mb-4 opacity-50">📷</div>
-                                <div className="text-white/50 font-bold text-lg">Kamera Kapalı</div>
-                            </div>
-                        ) : (
-                            <VideoTrack trackRef={hostTrack} className="w-full h-full object-contain z-10" />
-                        )}
-
-                        {/* Katılımcı PIP */}
-                        {guestTrack && (
-                            <div className="absolute bottom-24 right-4 w-[120px] h-[160px] rounded-xl overflow-hidden border-2 border-white shadow-2xl z-40 bg-black">
-                                {guestTrack?.publication?.isMuted ? (
-                                    <div className="w-full h-full flex items-center justify-center bg-neutral-800"><div className="text-3xl">📷</div></div>
-                                ) : (
-                                    <VideoTrack trackRef={guestTrack} className="w-full h-full object-cover" />
-                                )}
-                            </div>
-                        )}
-                    </>
-                )}
-
-                {/* YÜZEN EMOJİLER */}
-                {reactions.map((r) => (
-                    <div key={r.id} className="animate-[floatUp_2.5s_ease-out_forwards] absolute bottom-[20%] text-4xl pointer-events-none z-50" style={{ left: `${r.left}%` }}>
-                        {r.emoji}
-                    </div>
-                ))}
-
-                {/* OVERLAY: COUNTDOWN */}
-                {countdown > 0 && (
-                    <div className={`absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-32 h-32 flex items-center justify-center rounded-full text-white font-black text-6xl shadow-2xl z-[150] ${countdown <= 10 ? 'bg-red-500/90 animate-pulse shadow-[0_0_50px_rgba(239,68,68,0.6)]' : 'bg-orange-500/90 shadow-[0_0_50px_rgba(245,158,11,0.6)]'}`}>
-                        {countdown}
-                    </div>
-                )}
-
-                {/* OVERLAY: BİLDİRİM (Başladı / Durdu vb) */}
-                {auctionNotification && (
-                    <div className="absolute inset-0 flex items-center justify-center bg-black/40 backdrop-blur-sm z-[160] animate-[zoomFadeOut_4s_ease-in-out_forwards]">
-                        <div className={`text-white px-10 py-6 rounded-3xl font-black text-3xl md:text-5xl text-center shadow-2xl border-4 border-white/30 ${auctionNotification.includes("BAŞLADI") ? "bg-gradient-to-br from-green-500 to-green-700" : "bg-gradient-to-br from-orange-500 to-orange-700"}`}>
-                            {auctionNotification}
-                        </div>
-                    </div>
-                )}
-
-                {/* OVERLAY: SATILDI (Kalıcı) */}
-                {auctionResult && showSoldOverlay && (
-                    <div className="absolute inset-0 flex flex-col items-center justify-center z-[200] bg-black/70 backdrop-blur-md">
-                        <div className="flex flex-col items-center gap-6 px-10 py-12 rounded-3xl border border-yellow-400/40 bg-gradient-to-br from-black/80 to-yellow-900/40 shadow-[0_0_80px_rgba(234,179,8,0.3)]">
-                            <span className="text-8xl drop-shadow-[0_0_25px_rgba(255,215,0,0.9)] animate-pulse">🏆</span>
-                            <h1 className="text-6xl md:text-7xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-yellow-500 to-yellow-300 animate-pulse">SATILDI!</h1>
-                            <div className="flex flex-col items-center gap-2 mt-4 text-center">
-                                <p className="text-white/70 text-sm font-semibold tracking-widest uppercase">Kazanan</p>
-                                <p className="text-white text-3xl md:text-4xl font-black">{auctionResult.winnerName}</p>
-                                <div className="mt-4 px-8 py-3 rounded-2xl font-black text-4xl bg-gradient-to-br from-emerald-400 to-emerald-600 text-white shadow-[0_0_30px_rgba(16,185,129,0.5)]">
-                                    {formattedPrice(auctionResult.price)}
-                                </div>
-                                {isOwner && isQuickLive && (
-                                    <button onClick={handleResetAuction} disabled={loading} className="mt-8 px-8 py-3 rounded-full font-bold text-white bg-emerald-500 hover:bg-emerald-400 transition-all shadow-lg flex items-center gap-2">
-                                        🔄 Yeni Ürüne Geç
-                                    </button>
-                                )}
-                            </div>
-                        </div>
-                    </div>
-                )}
-
-                {/* =========================================================
-                    HOST CONTROL DOCK (Video Altında Şık Araç Çubuğu)
-                ========================================================= */}
-                {isOwner && !isBroadcastEnded && (
-                    <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 flex items-center gap-4 bg-black/60 backdrop-blur-xl px-6 py-3 rounded-3xl border border-white/10 shadow-[0_10px_40px_rgba(0,0,0,0.5)] z-[250]">
-                        <TrackToggle
-                            source={Track.Source.Microphone}
-                            className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 transition-all flex items-center justify-center text-white border border-white/10 shadow-inner"
-                        />
-                        <TrackToggle
-                            source={Track.Source.Camera}
-                            className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 transition-all flex items-center justify-center text-white border border-white/10 shadow-inner"
-                        />
-                        <button
-                            onClick={async () => {
-                                try {
-                                    const publications = Array.from(room.localParticipant.videoTrackPublications.values());
-                                    const videoPub = publications.find(p => p.source === Track.Source.Camera);
-                                    if (videoPub?.videoTrack) {
-                                        // @ts-ignore
-                                        await videoPub.videoTrack.switchCamera();
-                                    }
-                                } catch (e) { console.error("Kamera değiştirme hatası:", e); }
-                            }}
-                            className="w-12 h-12 rounded-full bg-white/10 hover:bg-white/20 transition-all flex items-center justify-center text-white text-xl border border-white/10"
-                            title="Kamera Değiştir"
-                        >🔄</button>
-                        <button
-                            onClick={handleResetAuction}
-                            className="w-12 h-12 rounded-full bg-red-600/80 hover:bg-red-500 transition-all flex items-center justify-center text-white font-bold border border-red-400/30 shadow-[0_0_15px_rgba(220,38,38,0.4)]"
-                            title="Açık Artırmayı Sıfırla"
-                        >🔄 0</button>
-
-                        {/* Stage Requests Notification in Dock */}
-                        {stageRequests.length > 0 && (
-                            <div className="relative">
-                                <button
-                                    onClick={() => {
-                                        const req = stageRequests[0];
-                                        if (confirm(`${req.name} sahneye davet edilsin mi?`)) {
-                                            const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: req.id });
-                                            room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-                                        }
-                                        setStageRequests(prev => prev.filter(r => r.id !== req.id));
-                                    }}
-                                    className="w-12 h-12 rounded-full bg-blue-600/80 border-2 border-white flex items-center justify-center text-white animate-pulse"
-                                >
-                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
-                                </button>
-                                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{stageRequests.length}</span>
-                            </div>
-                        )}
-                    </div>
+                    <VideoTrack trackRef={hostTrack} className="w-full h-full object-cover" />
                 )}
             </div>
 
-            {/* =======================================
-                SAĞ TARAF: KONTROL VE CHAT PANELİ
-            ======================================== */}
+            {/* EKRAN OKUNABİLİRLİĞİ İÇİN GÖLGELENDİRME (GRADIENT) */}
+            <div className="absolute inset-0 z-10 pointer-events-none bg-gradient-to-b from-black/60 via-transparent to-black/80" />
+
+
+            {/* ====================================================
+                2. KATMAN: ÜST HUD (PROFİL, İZLEYİCİ, HOST BUTONLARI)
+            ==================================================== */}
             {!isBroadcastEnded && (
-                <div className="w-full md:w-[380px] lg:w-[420px] flex-shrink-0 flex flex-col bg-neutral-950 border-l border-white/10 relative z-50 h-full p-4 gap-4">
+                <div className="absolute top-4 left-4 right-4 z-50 flex justify-between items-start pointer-events-none">
 
-                    {/* --- 1. ÜST: AÇIK ARTIRMA YÖNETİMİ (Sabit Yükseklik) --- */}
-                    <div className="flex flex-col p-5 bg-neutral-900 border border-white/10 rounded-2xl shrink-0 shadow-xl relative overflow-hidden">
-                        {/* Arka plan deseni */}
-                        <div className="absolute -bottom-6 -right-6 text-8xl opacity-5 pointer-events-none rotate-12">🔨</div>
+                    {/* SOL ÜST: Host Bilgisi ve İzleyici */}
+                    <div className="flex flex-col gap-2 pointer-events-auto">
+                        <div className="flex items-center bg-black/40 backdrop-blur-md rounded-full p-1 pr-4 border border-white/10 shadow-lg">
+                            <div className="w-10 h-10 rounded-full bg-red-600 flex items-center justify-center font-bold text-white shadow-inner">
+                                {adOwnerName.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="ml-3 flex flex-col">
+                                <span className="text-white text-sm font-bold shadow-sm drop-shadow-md">{adOwnerName}</span>
+                                <span className="text-[10px] bg-red-600 text-white px-2 py-0.5 rounded uppercase font-black tracking-wider w-max -mt-0.5 animate-pulse">CANLI</span>
+                            </div>
+                        </div>
+                        <div className="flex items-center gap-1.5 bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-full w-max border border-white/10 shadow-sm">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            <span className="text-white text-xs font-bold">{participantCount}</span>
+                        </div>
+                    </div>
 
-                        <div className="text-center relative z-10">
-                            <span className="text-xs font-bold text-white/50 tracking-widest uppercase mb-1 block">
-                                {auctionStatus === "ACTIVE" ? "GÜNCEL FİYAT" : "BAŞLANGIÇ FİYATI"}
-                            </span>
-                            <div className={`text-5xl font-black tabular-nums tracking-tighter transition-all duration-300 ${flashBid ? 'text-white scale-110 drop-shadow-[0_0_15px_rgba(255,255,255,0.8)]' : 'text-emerald-400'}`}>
-                                ₺ {new Intl.NumberFormat("tr-TR").format(liveHighestBid || (startingBid ?? 0))}
+                    {/* SAĞ ÜST: Kapat / Mikrofon / Kamera */}
+                    <div className="flex flex-col gap-3 items-end pointer-events-auto">
+                        {isOwner ? (
+                            <>
+                                <button onClick={() => handleEndBroadcast()} className="bg-red-600/80 backdrop-blur-md hover:bg-red-500 text-white font-black px-5 py-2.5 rounded-full shadow-lg border border-red-400/50 flex items-center gap-2 transition-all">
+                                    <span className="w-2 h-2 rounded-full bg-white animate-pulse"></span>
+                                    Bitir
+                                </button>
+                                <div className="flex gap-2">
+                                    <TrackToggle source={Track.Source.Microphone} className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all shadow-lg" />
+                                    <TrackToggle source={Track.Source.Camera} className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white hover:bg-white/20 transition-all shadow-lg" />
+                                </div>
+                                <button onClick={async () => {
+                                    try {
+                                        const pubs = Array.from(room.localParticipant.videoTrackPublications.values());
+                                        const videoPub = pubs.find(p => p.source === Track.Source.Camera);
+                                        // @ts-ignore
+                                        if (videoPub?.videoTrack) await videoPub.videoTrack.switchCamera();
+                                    } catch (e) { }
+                                }} className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md border border-white/20 flex items-center justify-center text-white text-lg hover:bg-white/20 transition-all shadow-lg">🔄</button>
+
+                                {/* Stage Requests Bell */}
+                                {stageRequests.length > 0 && (
+                                    <button onClick={() => {
+                                        const req = stageRequests[0];
+                                        if (confirm(`${req.name} sahneye davet edilsin mi?`)) {
+                                            room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: req.id })), { reliable: true });
+                                        }
+                                        setStageRequests(prev => prev.filter(r => r.id !== req.id));
+                                    }} className="w-11 h-11 rounded-full bg-blue-600/80 border border-white/50 flex items-center justify-center text-white animate-pulse relative shadow-[0_0_15px_rgba(37,99,235,0.6)]">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20"></path><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+                                        <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full">{stageRequests.length}</span>
+                                    </button>
+                                )}
+                            </>
+                        ) : (
+                            <button onClick={() => window.location.href = "/"} className="w-10 h-10 rounded-full bg-black/50 backdrop-blur-md border border-white/20 text-white flex items-center justify-center hover:bg-white/20 transition-all shadow-lg">
+                                ✕
+                            </button>
+                        )}
+                    </div>
+                </div>
+            )}
+
+
+            {/* ====================================================
+                3. KATMAN: ALT KONTROLLER (CHAT, AÇIK ARTIRMA KİTİ)
+            ==================================================== */}
+            {!isBroadcastEnded && (
+                <div className="absolute bottom-0 left-0 right-0 p-3 md:p-6 z-40 flex flex-col justify-end pointer-events-none h-[85%]">
+
+                    {/* Yüzen Emojiler */}
+                    {reactions.map((r) => (
+                        <div key={r.id} className="animate-[floatUp_2.5s_ease-out_forwards] absolute bottom-[20%] text-4xl pointer-events-none z-50 drop-shadow-md" style={{ left: `${r.left}%` }}>
+                            {r.emoji}
+                        </div>
+                    ))}
+
+                    {/* PIP Kamera (Katılımcı) */}
+                    {guestTrack && (
+                        <div className="absolute top-24 right-4 w-[110px] h-[150px] md:w-[150px] md:h-[200px] rounded-2xl overflow-hidden border-2 border-white/50 shadow-2xl z-40 bg-black pointer-events-auto">
+                            {guestTrack?.publication?.isMuted ? (
+                                <div className="w-full h-full flex items-center justify-center bg-neutral-800"><div className="text-3xl">📷</div></div>
+                            ) : (
+                                <VideoTrack trackRef={guestTrack} className="w-full h-full object-cover" />
+                            )}
+                        </div>
+                    )}
+
+                    {/* ANA ALT BÖLÜM (Mesajlar + Açık Artırma) */}
+                    <div className="flex flex-col-reverse md:flex-row md:items-end gap-4 w-full relative z-20 pointer-events-none">
+
+                        {/* SOL: SOHBET KUTUSU */}
+                        <div className="flex-1 w-full md:max-w-md pointer-events-auto flex flex-col justify-end h-[35vh] overflow-hidden">
+                            <div className="overflow-y-auto flex flex-col gap-2 pr-2 pb-2 scrollbar-thin scrollbar-thumb-white/20 scrollbar-track-transparent" style={{ maskImage: 'linear-gradient(to bottom, transparent 0%, black 15%, black 100%)', WebkitMaskImage: 'linear-gradient(to bottom, transparent 0%, black 15%, black 100%)' }}>
+                                {chatMessages.map((msg: any, idx: number) => (
+                                    <div key={idx} className="bg-black/40 backdrop-blur-md border border-white/10 p-2.5 rounded-2xl rounded-tl-sm w-max max-w-[90%] shadow-md">
+                                        <span className="font-bold text-emerald-400 text-[11px] block mb-0.5 tracking-wide">
+                                            {msg.from?.name || "Anonim"}
+                                        </span>
+                                        <span className="text-[13px] text-white leading-tight block break-words drop-shadow-sm">
+                                            {msg.message}
+                                        </span>
+                                    </div>
+                                ))}
                             </div>
                         </div>
 
-                        {/* Lider Bilgisi */}
-                        {liveHighestBidderName ? (
-                            <div className="mt-4 bg-black/50 px-4 py-2 rounded-xl border border-white/5 text-center shadow-inner relative z-10 flex justify-center items-center gap-2">
-                                <span className="text-white/50 text-sm font-medium">LİDER:</span>
-                                <span className="text-emerald-400 font-bold text-lg truncate">{liveHighestBidderName}</span>
-                                {isOwner && liveHighestBidderId && (
-                                    <button onClick={() => {
-                                        if (confirm(`${liveHighestBidderName} davet edilsin mi?`)) {
-                                            room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId })), { reliable: true });
-                                        }
-                                    }} className="ml-2 p-1.5 bg-blue-500/20 text-blue-400 rounded-lg hover:bg-blue-500/40">
-                                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                                    </button>
-                                )}
-                            </div>
-                        ) : (
-                            <div className="mt-4 text-center text-sm font-semibold text-white/40 flex items-center justify-center gap-2 relative z-10">
-                                <span className={`w-2 h-2 rounded-full ${auctionStatus === "ACTIVE" ? "bg-emerald-500 animate-pulse" : "bg-orange-500"}`}></span>
-                                {auctionStatus === "ACTIVE" ? "TEKLİF BEKLENİYOR" : "BAŞLAMASI BEKLENİYOR"}
-                            </div>
-                        )}
+                        {/* SAĞ: AÇIK ARTIRMA KART VE EMOJİLER */}
+                        <div className="w-full md:w-[360px] flex flex-col gap-3 pointer-events-auto shrink-0">
 
-                        {/* Host Aksiyon Butonları */}
-                        {isOwner ? (
-                            <div className="mt-4 flex flex-col gap-2 relative z-10">
-                                {auctionStatus === "IDLE" ? (
-                                    <button onClick={startCountdown} className="w-full py-4 bg-gradient-to-br from-emerald-500 to-emerald-700 text-white font-black text-lg rounded-xl shadow-[0_5px_20px_rgba(16,185,129,0.4)] hover:scale-[1.02] active:scale-[0.98] transition-all uppercase tracking-widest">
-                                        BAŞLAT
-                                    </button>
-                                ) : (
-                                    <>
-                                        <button onClick={handleAccept} disabled={!liveHighestBidId || loading} className="w-full py-4 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-500 disabled:cursor-not-allowed text-white font-black text-lg rounded-xl shadow-lg transition-all uppercase tracking-widest">
-                                            {loading ? "İŞLENİYOR..." : "KABUL ET VE SAT"}
+                            {/* Viewer Emojiler */}
+                            {!isOwner && (
+                                <div className="flex justify-end gap-2 px-1">
+                                    {['❤️', '👏', '🔥'].map(emoji => (
+                                        <button key={emoji} onClick={() => handleReaction(emoji)} className="w-11 h-11 rounded-full bg-black/50 backdrop-blur-md hover:bg-black/70 border border-white/10 text-xl flex items-center justify-center transition-transform active:scale-90 shadow-lg">
+                                            {emoji}
                                         </button>
-                                        <div className="flex gap-2">
-                                            <button onClick={handleReject} disabled={!liveHighestBidId} className="flex-1 py-3 bg-red-500/10 text-red-500 border border-red-500/30 hover:bg-red-500/20 disabled:opacity-50 font-bold rounded-xl transition-all">
-                                                Reddet
-                                            </button>
-                                            <button onClick={handleStopAuction} className="flex-1 py-3 bg-orange-500/10 text-orange-500 border border-orange-500/30 hover:bg-orange-500/20 font-bold rounded-xl transition-all">
-                                                Durdur
-                                            </button>
-                                        </div>
-                                    </>
-                                )}
-                            </div>
-                        ) : (
-                            // İzleyici Teklif Formu
-                            <div className="mt-4 relative z-10">
-                                {auctionResult ? (
-                                    <div className="py-4 bg-emerald-500/20 border border-emerald-500/40 rounded-xl text-emerald-400 font-black text-center text-lg">
-                                        BU ÜRÜN SATILDI
-                                    </div>
-                                ) : auctionStatus === "ACTIVE" ? (
-                                    <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
-                                ) : (
-                                    <div className="py-4 bg-white/5 border border-white/10 rounded-xl text-white/40 font-bold text-center">
-                                        AÇIK ARTIRMA BEKLENİYOR
-                                    </div>
-                                )}
-                            </div>
-                        )}
-                    </div>
-
-                    {/* --- 2. ORTA: SOHBET KUTUSU (Esnek Yükseklik, Kaydırılabilir) --- */}
-                    <div className="flex-1 overflow-y-auto flex flex-col gap-3 pr-2 scrollbar-thin scrollbar-thumb-white/10 hover:scrollbar-thumb-white/20 scrollbar-track-transparent rounded-lg">
-                        {chatMessages.map((msg: any, idx: number) => (
-                            <div key={idx} className="flex flex-col bg-white/5 p-3 rounded-2xl rounded-tl-sm w-max max-w-[90%] border border-white/5">
-                                <span className="font-bold text-emerald-400 text-xs mb-1">
-                                    {msg.from?.name || "Anonim"}
-                                </span>
-                                <span className="text-white text-sm leading-snug break-words">
-                                    {msg.message}
-                                </span>
-                            </div>
-                        ))}
-                        {chatMessages.length === 0 && (
-                            <div className="text-white/30 text-sm italic m-auto flex flex-col items-center gap-2">
-                                <span className="text-2xl">💬</span>
-                                Sohbete ilk mesajı sen yaz...
-                            </div>
-                        )}
-                    </div>
-
-                    {/* --- 3. ALT: ETKİLEŞİM VE MESAJ GÖNDERME (Sabit Yükseklik) --- */}
-                    <div className="shrink-0 flex flex-col gap-3 pt-2">
-
-                        {/* Viewer Emojiler & Davet İsteği */}
-                        {!isOwner && (
-                            <div className="flex justify-end gap-2 px-1">
-                                {['❤️', '👏', '🔥'].map(emoji => (
-                                    <button key={emoji} onClick={() => handleReaction(emoji)} className="w-10 h-10 rounded-full bg-neutral-800 hover:bg-neutral-700 text-xl flex items-center justify-center transition-transform active:scale-90 border border-white/5">
-                                        {emoji}
+                                    ))}
+                                    <button onClick={() => {
+                                        if (confirm("Sahneye katılma isteği göndermek istiyor musunuz?")) {
+                                            room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "REQUEST_STAGE", userId: session?.user?.id, userName: session?.user?.name })), { reliable: true });
+                                        }
+                                    }} className="w-11 h-11 rounded-full bg-blue-500/40 backdrop-blur-md border border-blue-500/50 hover:bg-blue-500/60 flex items-center justify-center transition-transform active:scale-90 ml-2 shadow-[0_0_15px_rgba(59,130,246,0.3)]">
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                                     </button>
-                                ))}
-                                <button onClick={() => {
-                                    if (confirm("Sahneye katılma isteği göndermek istiyor musunuz?")) {
-                                        room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "REQUEST_STAGE", userId: session?.user?.id, userName: session?.user?.name })), { reliable: true });
-                                    }
-                                }} className="w-10 h-10 rounded-full bg-blue-500/20 border border-blue-500/50 hover:bg-blue-500/30 flex items-center justify-center transition-transform active:scale-90 ml-2">
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" className="text-blue-400" strokeWidth="2.5"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                                </button>
-                            </div>
-                        )}
+                                </div>
+                            )}
 
-                        {/* Sohbet Inputu */}
-                        <form onSubmit={(e) => {
-                            e.preventDefault();
-                            if (message.trim()) { send(message); setMessage(""); }
-                        }} className="w-full flex items-center gap-2 bg-neutral-900 border border-white/10 rounded-full p-1.5 focus-within:border-emerald-500/50 transition-colors shadow-inner">
+                            {/* Açık Artırma Durum Kartı (Merkez - Sağ) */}
+                            <div className="w-full bg-black/60 backdrop-blur-2xl border border-white/10 rounded-[2rem] p-5 shadow-2xl relative overflow-hidden">
+                                <div className="absolute -bottom-6 -right-6 text-7xl opacity-[0.03] rotate-12 pointer-events-none">🔨</div>
+
+                                <div className="flex flex-col items-center relative z-10 text-center">
+                                    <span className="text-[10px] font-bold text-white/50 tracking-widest mb-1">
+                                        {auctionStatus === "ACTIVE" ? "GÜNCEL FİYAT" : "BAŞLANGIÇ FİYATI"}
+                                    </span>
+                                    <span className={`text-4xl md:text-5xl font-black tabular-nums tracking-tighter ${flashBid ? 'text-white scale-110 drop-shadow-[0_0_20px_rgba(255,255,255,0.8)]' : 'text-emerald-400'} transition-all duration-300`}>
+                                        ₺ {new Intl.NumberFormat("tr-TR").format(liveHighestBid || startingBid || 0)}
+                                    </span>
+
+                                    {liveHighestBidderName ? (
+                                        <div className="mt-3 bg-white/10 px-4 py-1.5 rounded-full text-[13px] font-medium flex items-center gap-2 border border-white/5 shadow-inner">
+                                            <span className="text-white/50">LİDER:</span>
+                                            <span className="text-emerald-400 font-bold tracking-wide">{liveHighestBidderName}</span>
+                                            {isOwner && liveHighestBidderId && (
+                                                <button onClick={() => {
+                                                    if (confirm(`${liveHighestBidderName} davet edilsin mi?`)) {
+                                                        room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: liveHighestBidderId })), { reliable: true });
+                                                    }
+                                                }} className="ml-1 text-blue-400 hover:text-blue-300">
+                                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                                                </button>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="mt-3 text-[11px] font-bold text-white/40 flex items-center gap-2 bg-black/30 px-3 py-1 rounded-full">
+                                            <span className={`w-2 h-2 rounded-full ${auctionStatus === "ACTIVE" ? "bg-emerald-500 animate-pulse" : "bg-orange-500"}`} />
+                                            {auctionStatus === "ACTIVE" ? "TEKLİF BEKLENİYOR" : "BAŞLAMASI BEKLENİYOR"}
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div className="mt-4 relative z-10">
+                                    {isOwner ? (
+                                        <div className="flex flex-col gap-2">
+                                            {auctionStatus === "IDLE" ? (
+                                                <button onClick={startCountdown} className="w-full py-3.5 bg-gradient-to-r from-emerald-500 to-emerald-600 rounded-xl font-black text-white shadow-[0_4px_20px_rgba(16,185,129,0.4)] active:scale-[0.98] transition-transform tracking-widest text-[15px]">
+                                                    BAŞLAT
+                                                </button>
+                                            ) : (
+                                                <>
+                                                    <button onClick={handleAccept} disabled={!liveHighestBidId || loading} className="w-full py-3.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:bg-neutral-800 rounded-xl font-black text-white shadow-lg active:scale-95 transition-all tracking-widest text-[15px]">
+                                                        {loading ? "BEKLEYİN..." : "KABUL ET VE SAT"}
+                                                    </button>
+                                                    <div className="flex gap-2">
+                                                        <button onClick={handleReject} disabled={!liveHighestBidId} className="flex-[1] py-2.5 bg-red-500/15 border border-red-500/30 text-red-400 font-bold rounded-xl hover:bg-red-500/25 transition-colors disabled:opacity-30 text-sm">Reddet</button>
+                                                        <button onClick={handleStopAuction} className="flex-[1] py-2.5 bg-orange-500/15 border border-orange-500/30 text-orange-400 font-bold rounded-xl hover:bg-orange-500/25 transition-colors text-sm">Durdur</button>
+                                                        {isQuickLive && (
+                                                            <button onClick={handleResetAuction} className="flex-[1] py-2.5 bg-blue-500/15 border border-blue-500/30 text-blue-400 font-bold rounded-xl hover:bg-blue-500/25 transition-colors text-sm">Sıfırla</button>
+                                                        )}
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        // İzleyici Bidding Area inside the Card
+                                        <>
+                                            {auctionResult ? (
+                                                <div className="w-full py-3.5 bg-emerald-500/20 text-emerald-400 font-black text-center rounded-xl border border-emerald-500/30">BU ÜRÜN SATILDI</div>
+                                            ) : auctionStatus === "ACTIVE" ? (
+                                                <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
+                                            ) : (
+                                                <div className="w-full py-3.5 bg-white/5 text-white/30 font-bold text-center rounded-xl border border-white/10">BEKLENİYOR</div>
+                                            )}
+                                        </>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* EN ALT: Sohbet Input Alanı */}
+                    <div className="w-full mt-3 pointer-events-auto relative z-30">
+                        <form onSubmit={(e) => { e.preventDefault(); if (message.trim()) { send(message); setMessage(""); } }} className="flex items-center gap-2 bg-black/50 backdrop-blur-xl border border-white/10 rounded-full p-1.5 pl-5 shadow-[0_5px_25px_rgba(0,0,0,0.5)] focus-within:border-emerald-500/50 focus-within:bg-black/70 transition-all w-full md:w-[400px]">
                             <input
                                 type="text"
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
                                 placeholder="Sohbete katıl..."
-                                className="bg-transparent border-none outline-none text-white flex-1 text-sm pl-4 min-w-0 placeholder-white/40"
+                                className="bg-transparent border-none outline-none text-white text-[15px] flex-1 placeholder-white/40 min-w-0"
                             />
-                            <button type="submit" disabled={!message.trim()} className="shrink-0 w-10 h-10 bg-emerald-500 hover:bg-emerald-400 disabled:bg-neutral-800 disabled:text-neutral-500 text-neutral-950 rounded-full flex items-center justify-center transition-all active:scale-90">
-                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                            <button type="submit" disabled={!message.trim()} className="w-10 h-10 shrink-0 rounded-full bg-emerald-500 disabled:bg-white/10 disabled:text-white/30 flex items-center justify-center text-black transition-transform active:scale-90">
+                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="ml-0.5"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                             </button>
                         </form>
                     </div>
 
                 </div>
             )}
+
+            {/* ====================================================
+                4. KATMAN: DEV EKRAN BİLDİRİMLERİ (Örn: Geri Sayım, Satıldı)
+            ==================================================== */}
+            <div className="absolute inset-0 pointer-events-none z-[100] flex items-center justify-center">
+                {countdown > 0 && (
+                    <div className={`w-32 h-32 flex items-center justify-center rounded-full text-white font-black text-6xl shadow-2xl ${countdown <= 10 ? 'bg-red-500/90 animate-pulse shadow-[0_0_50px_rgba(239,68,68,0.6)]' : 'bg-orange-500/90 shadow-[0_0_50px_rgba(245,158,11,0.6)]'}`}>
+                        {countdown}
+                    </div>
+                )}
+
+                {auctionNotification && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/30 backdrop-blur-sm z-[160] animate-[zoomFadeOut_4s_ease-in-out_forwards]">
+                        <div className={`text-white px-10 py-6 rounded-[2rem] font-black text-3xl md:text-4xl text-center shadow-[0_20px_50px_rgba(0,0,0,0.5)] border-4 border-white/20 ${auctionNotification.includes("BAŞLADI") ? "bg-gradient-to-br from-emerald-500 to-emerald-700" : "bg-gradient-to-br from-orange-500 to-orange-700"}`}>
+                            {auctionNotification}
+                        </div>
+                    </div>
+                )}
+
+                {/* Finalized Transient Overlay */}
+                {showFinalization && (
+                    <div className="absolute inset-0 flex items-center justify-center z-[150] bg-black/60 backdrop-blur-sm transition-all">
+                        <div className="flex flex-col items-center bg-gradient-to-tr from-yellow-600/30 to-yellow-400/30 px-10 py-12 rounded-[3rem] border border-yellow-500/50 shadow-[0_0_80px_rgba(234,179,8,0.4)] animate-[pulse_2s_ease-in-out_infinite]">
+                            <span className="text-7xl mb-4 drop-shadow-lg">🎉</span>
+                            <h2 className="text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 to-yellow-500 tracking-widest mb-2 drop-shadow-md">SATILDI!</h2>
+                            <p className="text-2xl text-white font-bold mb-4">{finalizedWinner}</p>
+                            <p className="text-4xl text-emerald-400 font-extrabold drop-shadow-[0_0_15px_rgba(52,211,153,0.5)]">
+                                {new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(finalizedAmount || 0)}
+                            </p>
+                        </div>
+                    </div>
+                )}
+
+                {/* Permanent Sold Overlay */}
+                {auctionResult && showSoldOverlay && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center z-[200] bg-black/80 backdrop-blur-lg pointer-events-auto">
+                        <div className="flex flex-col items-center gap-6 px-10 py-12 rounded-[3rem] border border-yellow-500/30 bg-gradient-to-b from-neutral-900/80 to-black shadow-[0_0_100px_rgba(234,179,8,0.2)]">
+                            <span className="text-[6rem] drop-shadow-[0_0_30px_rgba(255,215,0,0.8)] animate-pulse">🏆</span>
+                            <h1 className="text-6xl md:text-7xl font-black tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-yellow-200 via-yellow-400 to-yellow-200 animate-pulse">SATILDI</h1>
+
+                            <div className="flex flex-col items-center gap-2 mt-2 text-center">
+                                <p className="text-white/60 text-xs font-bold tracking-widest uppercase">KAZANAN</p>
+                                <p className="text-white text-3xl font-black">{auctionResult.winnerName}</p>
+                                <div className="mt-3 px-8 py-3 rounded-2xl font-black text-4xl bg-gradient-to-br from-emerald-500 to-emerald-700 text-white shadow-[0_0_30px_rgba(16,185,129,0.4)] border border-emerald-400/50">
+                                    {formattedPrice(auctionResult.price)}
+                                </div>
+                                <button onClick={() => setShowSoldOverlay(false)} className="mt-8 px-8 py-3.5 rounded-full font-bold text-white bg-white/10 hover:bg-white/20 border border-white/20 transition-all text-sm tracking-wide">
+                                    Ekrana Dön
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
         </div>
     );
 }
 
-// İzleyici İçin Sağ Panel İçi Kompakt Teklif Formu
+// MİNİMALİZE EDİLMİŞ OVERLAY İZLEYİCİ TEKLİF FORMU
 function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
     const router = useRouter();
     const [amount, setAmount] = useState("");
@@ -762,7 +752,7 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
         e.preventDefault();
         if (!amount || !session?.user?.id) return;
         const rawAmount = parseInt(amount.replace(/\./g, ""), 10);
-        if (rawAmount <= (currentHighest || 0)) { alert("Teklif güncel fiyattan yüksek olmalıdır."); return; }
+        if (rawAmount <= (currentHighest || 0)) { alert("Teklif yüksek olmalıdır."); return; }
         setLoading(true);
         try {
             const res = await fetch("/api/livekit/bid", {
@@ -771,23 +761,22 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
             });
             if (res.ok) { setAmount(""); router.refresh(); }
             else { const d = await res.json(); alert(d.error || d.message || "Hata"); }
-        } catch (e) { }
-        finally { setLoading(false); }
+        } catch (e) { } finally { setLoading(false); }
     };
 
     return (
-        <form onSubmit={handleCustomBid} className="flex flex-col gap-3">
+        <div className="flex flex-col gap-2 w-full">
             {/* Hızlı Teklif Butonları */}
-            <div className="flex gap-2">
+            <div className="flex gap-2 w-full">
                 {[50, 100, 500].map(val => (
-                    <button key={val} type="button" disabled={loading} onClick={() => handleQuickBid(val)} className="flex-1 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-sm transition-all disabled:opacity-50 active:scale-95">
-                        +{val} ₺
+                    <button key={val} type="button" disabled={loading} onClick={() => handleQuickBid(val)} className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 active:bg-white/30 border border-white/10 text-white font-bold text-sm transition-all disabled:opacity-50">
+                        +{val}₺
                     </button>
                 ))}
             </div>
 
-            {/* Özel Teklif Girişi */}
-            <div className="flex gap-2">
+            {/* Özel Teklif */}
+            <form onSubmit={handleCustomBid} className="flex gap-2 w-full mt-1">
                 <input
                     type="text"
                     value={amount}
@@ -795,15 +784,15 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                         const val = e.target.value.replace(/[^0-9]/g, "");
                         setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
                     }}
-                    className="flex-[2] min-w-0 bg-neutral-950 border border-white/10 focus:border-emerald-500 rounded-xl px-4 text-white text-center font-bold outline-none transition-all placeholder-white/30"
+                    className="flex-[3] min-w-0 bg-black/50 border border-white/10 focus:border-emerald-500 rounded-xl px-3 text-white text-center font-bold text-[15px] outline-none transition-colors placeholder-white/30"
                     placeholder="Özel tutar..."
                 />
-                <button type="submit" disabled={loading || !amount} className="flex-[1.2] py-3 bg-emerald-600 hover:bg-emerald-500 disabled:bg-neutral-800 disabled:text-neutral-500 text-white rounded-xl font-bold tracking-wide transition-all active:scale-95">
+                <button type="submit" disabled={loading || !amount} className="flex-[2] py-2.5 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:bg-neutral-800 text-white rounded-xl font-bold tracking-wide transition-transform active:scale-95 text-sm">
                     {loading ? "..." : "TEKLİF"}
                 </button>
-            </div>
-            <div className="text-center text-[10px] text-white/40">Minimum Artırım: {minStep} ₺</div>
-        </form>
+            </form>
+            <div className="text-center text-[10px] text-white/30 font-medium mt-1">Minimum Artırım: {minStep} ₺</div>
+        </div>
     );
 }
 
