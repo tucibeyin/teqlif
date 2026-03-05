@@ -110,7 +110,7 @@ function CustomArenaLayout({
     isQuickLive
 }: any) {
     const room = useRoomContext();
-    const { chatMessages, send: sendChat } = useChat();
+    const { chatMessages, send } = useChat();
     const router = useRouter();
     const { data: session } = useSession();
     const tracks = useTracks([Track.Source.Camera]);
@@ -128,6 +128,7 @@ function CustomArenaLayout({
     const connectionState = useConnectionState();
     const [isRoomClosed, setIsRoomClosed] = useState(false);
     const [flashBid, setFlashBid] = useState(false);
+    const [message, setMessage] = useState("");
 
     // Finalization overlay state
     const [finalizedWinner, setFinalizedWinner] = useState<string | null>(null);
@@ -161,8 +162,6 @@ function CustomArenaLayout({
 
     // Reactions State
     const [reactions, setReactions] = useState<{ id: string, emoji: string, left: number }[]>([]);
-    // Bidding & Interaction State
-    const [chatText, setChatText] = useState("");
     const [lastReactionTime, setLastReactionTime] = useState(0);
     const [loading, setLoading] = useState(false);
 
@@ -314,14 +313,7 @@ function CustomArenaLayout({
         finally { setLoading(false); }
     };
 
-    const handleSendChat = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!chatText.trim() || !room) return;
-        try {
-            await sendChat(chatText.trim());
-            setChatText("");
-        } catch (e) { console.error(e); }
-    };
+
 
 
     const isBroadcastEnded = isRoomClosed || connectionState === ConnectionState.Disconnected;
@@ -1084,18 +1076,21 @@ function CustomArenaLayout({
                 <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl border-0 md:border-l border-white/10 relative z-50 h-[45vh] md:h-full p-4 pb-2">
                     {/* Chat Area & Reactions Tray */}
                     <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0" }}>
+                        {/* SOHBET KUTUSU - BU KODU KESİNLİKLE Ekle */}
                         <div className="flex-[1_1_0] overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_100%)]">
-                            {chatMessages.map((msg: any) => (
-                                <div key={msg.id} className="mb-2 text-sm">
-                                    <span className="font-bold text-emerald-400">{msg.from?.name || 'Anonim'}: </span>
-                                    <span className="text-white">{msg.message}</span>
+                            {chatMessages.map((msg: any, idx: number) => (
+                                <div key={idx} className="flex flex-col mb-1 break-words">
+                                    <span className="font-bold text-emerald-400 text-xs">
+                                        {msg.from?.name || "Anonim"}
+                                    </span>
+                                    <span className="text-white text-sm">
+                                        {msg.message}
+                                    </span>
                                 </div>
                             ))}
-                            {messages.map((msg: any) => (
-                                <div key={msg.id} className="mb-2 text-sm bg-emerald-500/20 px-2 py-1 rounded-md border border-emerald-500/50 text-white font-medium">
-                                    <span className="font-bold text-emerald-400 drop-shadow-md">{msg.text}</span>
-                                </div>
-                            ))}
+                            {chatMessages.length === 0 && (
+                                <div className="text-white/40 text-xs italic mt-auto">Sohbete ilk mesajı sen yaz...</div>
+                            )}
                         </div>
 
                         {/* Viewer Emojis and Stage Requests Panel */}
@@ -1141,11 +1136,21 @@ function CustomArenaLayout({
 
                     {/* Bottom Console (Chat Input & Action Button) */}
                     <div className="w-full pointer-events-auto flex flex-col gap-3 shrink-0">
-                        <form onSubmit={(e) => { e.preventDefault(); if (chatText.trim()) { sendChat(chatText); setChatText(""); } }} className="w-full min-h-[50px] flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 rounded-full px-4 pr-1">
+                        {/* SOHBET INPUTU */}
+                        <form
+                            onSubmit={(e) => {
+                                e.preventDefault();
+                                if (message.trim()) {
+                                    send(message);
+                                    setMessage("");
+                                }
+                            }}
+                            className="w-full min-h-[50px] flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 rounded-full px-4 pr-1"
+                        >
                             <input
                                 type="text"
-                                value={chatText}
-                                onChange={(e) => setChatText(e.target.value)}
+                                value={message}
+                                onChange={(e) => setMessage(e.target.value)}
                                 placeholder="Sohbet et..."
                                 className="bg-transparent border-none outline-none text-white flex-1 text-[0.95rem] min-w-0"
                             />
