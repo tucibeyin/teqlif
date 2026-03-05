@@ -190,28 +190,54 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                 )}
             </div>
 
-            <div className="relative z-10 mt-2">
+            {/* Quick Bids */}
+            <div className="flex flex-row justify-center gap-2 relative z-10">
+                {[50, 100, 500].map(val => (
+                    <button
+                        key={val}
+                        type="button"
+                        onClick={() => {
+                            if (!session?.user?.id || auctionStatus !== "ACTIVE") return;
+                            setLoading(true);
+                            fetch("/api/livekit/bid", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ roomId: adId, amount: currentPrice + val }),
+                            }).then(async res => {
+                                if (!res.ok) {
+                                    const data = await res.json();
+                                    alert(data.error || data.message || "Teklif verilemedi.");
+                                }
+                            }).catch(e => {
+                                console.error(e);
+                                alert("Bir hata oluştu.");
+                            }).finally(() => setLoading(false));
+                        }}
+                        disabled={loading || auctionStatus !== "ACTIVE"}
+                        className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white font-bold text-sm transition-all shadow-lg backdrop-blur-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                    >
+                        +{val} ₺
+                    </button>
+                ))}
+            </div>
+
+            {/* Premium Bid Form Input & Submit */}
+            <div className="flex gap-2 items-center relative z-10 mt-2">
+                <input
+                    type="text"
+                    value={currentPrice + minStep} // just showing next increment
+                    readOnly
+                    className="flex-1 w-full min-w-0 h-[54px] bg-white/10 backdrop-blur-md border border-white/20 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl px-4 text-white text-lg text-center font-black outline-none transition-all placeholder-white/30"
+                    placeholder="Tutar"
+                />
                 <button
-                    disabled={loading || auctionStatus !== "ACTIVE"}
                     onClick={placeBid}
-                    className={`w-full py-5 rounded-2xl text-xl font-black tracking-wide text-white shadow-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 ${auctionStatus === "ACTIVE" && !loading
-                            ? "bg-emerald-600 hover:bg-emerald-500 shadow-[0_4px_20px_rgba(5,150,105,0.4)] text-white border-0"
-                            : "bg-emerald-800/50 shadow-none text-white/50 cursor-not-allowed border border-white/10"
-                        }`}
+                    disabled={loading || auctionStatus !== "ACTIVE"}
+                    className="h-[54px] px-6 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:opacity-50 text-white border-0 rounded-2xl font-black tracking-wide text-lg flex items-center gap-2 cursor-pointer transition-all shadow-[0_4px_20px_rgba(5,150,105,0.4)] active:scale-95 flex-shrink-0"
                 >
-                    {loading ? (
-                        <div className="w-6 h-6 border-4 border-white/30 border-t-white rounded-full animate-spin"></div>
-                    ) : (
-                        <>
-                            <span>{formatPrice(currentPrice + minStep)}</span>
-                            <span className="text-lg opacity-80 uppercase tracking-wider font-bold">TEKLİF VER</span>
-                        </>
-                    )}
+                    {loading ? "..." : "TEKLİF"}
+                    {!loading && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>}
                 </button>
-                <div className="text-center mt-3 text-xs font-semibold text-white/40 flex items-center justify-center gap-1">
-                    <span>Otomatik artırım:</span>
-                    <span className="text-white/70">{formatPrice(minStep)}</span>
-                </div>
             </div>
 
             {/* Background pattern */}
