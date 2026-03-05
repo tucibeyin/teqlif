@@ -169,6 +169,36 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
 
     const formatPrice = (p: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(p);
 
+    const finalizeAuction = async () => {
+        if (!lastBidId || !room) return;
+        if (!confirm("Bu teklifi kabul edip satışı tamamlıyor musunuz?")) return;
+        setLoading(true);
+        try {
+            const resAccept = await fetch(`/api/bids/${lastBidId}/accept`, { method: "PATCH" });
+            if (resAccept.ok) {
+                const resFinalize = await fetch(`/api/bids/${lastBidId}/finalize`, { method: "POST" });
+                if (resFinalize.ok) {
+                    const payloadSold = JSON.stringify({ type: "AUCTION_SOLD", winnerName: highestBidderName || "Katılımcı", price: currentPrice });
+                    await room.localParticipant.publishData(new TextEncoder().encode(payloadSold), { reliable: true });
+
+                    const payloadEnd = JSON.stringify({ type: "AUCTION_END" });
+                    await room.localParticipant.publishData(new TextEncoder().encode(payloadEnd), { reliable: true });
+
+                    fetch("/api/livekit/finalize", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ adId, winnerId: highestBidderId, finalPrice: currentPrice, isQuickLive: false }),
+                    }).catch(console.error);
+
+                    setAuctionStatus("IDLE");
+                }
+            }
+        } catch (e) {
+            console.error(e);
+        }
+        setLoading(false);
+    };
+
     if (isOwner) {
         return (
             <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/10 rounded-2xl shadow-xl relative overflow-hidden backdrop-blur-xl">
@@ -180,7 +210,7 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                             <button disabled={loading} onClick={startCountdown} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 px-6 rounded-2xl shadow-[0_4px_25px_rgba(16,185,129,0.5)] text-xl uppercase tracking-widest transition-all">AÇIK ARTIRMAYI BAŞLAT</button>
                         ) : (
                             <>
-                                <button disabled={loading || currentPrice <= initialPrice} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:bg-emerald-800 text-white font-black py-4 px-6 rounded-2xl shadow-lg text-xl uppercase tracking-widest transition-all">
+                                <button disabled={loading || currentPrice <= initialPrice} onClick={finalizeAuction} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:bg-emerald-800 text-white font-black py-4 px-6 rounded-2xl shadow-lg text-xl uppercase tracking-widest transition-all">
                                     {loading ? "SATILIYOR..." : "KABUL ET VE SAT"}
                                 </button>
                                 <button disabled={loading} onClick={handleStopAuction} className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 px-6 rounded-xl shadow mt-2 text-sm uppercase transition-all">Durdur</button>
