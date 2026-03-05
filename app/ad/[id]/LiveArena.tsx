@@ -73,7 +73,7 @@ export default function LiveArena({
             token={token}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
-            className="flex-1 w-full h-full bg-neutral-950"
+            className="w-full h-full bg-neutral-950"
         >
             <CustomArenaLayout
                 adId={adId}
@@ -521,9 +521,9 @@ function CustomArenaLayout({
     const guestTrack = tracks.length > 1 ? tracks[1] : null;
 
     return (
-        <div id="live-arena-root" className="w-full h-full bg-black relative overflow-hidden">
-            {/* VİDEO ALANI (Tam Ekran) */}
-            <div id="video-area-container" className="absolute inset-0 z-0 bg-black overflow-hidden flex flex-col">
+        <div className="flex flex-col md:flex-row w-full h-full bg-neutral-950 overflow-hidden relative">
+            {/* VİDEO ALANI (Sol veya Üst) - FULL WIDTH & HEIGHT */}
+            <div className="flex-[1_1_0] min-h-0 relative bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 shadow-[inner_0_0_100px_rgba(0,0,0,0.8)] flex flex-col">
                 {isOwner && (
                     <button
                         onClick={() => handleEndBroadcast()}
@@ -1071,14 +1071,13 @@ function CustomArenaLayout({
                 </div>
             </div>
 
-            {/* YENİ ALTTAN YUKARI HUD (HEADS UP DISPLAY) ARAYÜZÜ */}
+            {/* KONTROL PANELİ (Sağ veya Alt) - KESİNLİKLE GÖRÜNÜR OLMALI */}
             {!isBroadcastEnded && (
-                <div id="bottom-hud-overlay" className="absolute bottom-0 left-0 w-full z-[500] flex flex-col justify-end p-4 pb-6 md:px-8 pointer-events-none bg-gradient-to-t from-black/95 via-black/50 to-transparent min-h-[50vh]">
-
+                <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl relative z-50 h-[45vh] md:h-full p-4 pb-2">
                     {/* Chat Area & Reactions Tray */}
-                    <div className="flex items-end justify-between w-full mb-4 gap-4">
-                        {/* SOHBET KUTUSU (Sol Taraf) */}
-                        <div id="live-chat-box" className="flex-1 max-w-[75%] md:max-w-[400px] max-h-[35vh] overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_100%)] pointer-events-auto">
+                    <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0" }}>
+                        {/* SOHBET KUTUSU - BU KODU KESİNLİKLE Ekle */}
+                        <div className="flex-[1_1_0] overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_100%)]">
                             {chatMessages.map((msg: any, idx: number) => (
                                 <div key={idx} className="flex flex-col mb-1 break-words">
                                     <span className="font-bold text-emerald-400 text-xs">
@@ -1094,8 +1093,8 @@ function CustomArenaLayout({
                             )}
                         </div>
 
-                        {/* EMOJİ REAKSİYON VE SAHNE BUTONLARI (Sağ Taraf) */}
-                        <div id="emoji-reactions-tray" className="flex flex-col gap-3 items-end pointer-events-auto">
+                        {/* Viewer Emojis and Stage Requests Panel */}
+                        <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end", justifySelf: "flex-end", paddingLeft: "8px" }}>
                             {['❤️', '👏', '🔥'].map(emoji => (
                                 <button
                                     key={emoji}
@@ -1136,10 +1135,9 @@ function CustomArenaLayout({
                     </div>
 
                     {/* Bottom Console (Chat Input & Action Button) */}
-                    <div id="bottom-action-console" className="w-full pointer-events-auto flex flex-col md:flex-row gap-3 items-center shrink-0">
-                        {/* SOHBET INPUTU - SOL */}
+                    <div className="w-full pointer-events-auto flex flex-col gap-3 shrink-0">
+                        {/* SOHBET INPUTU */}
                         <form
-                            id="chat-input-form"
                             onSubmit={(e) => {
                                 e.preventDefault();
                                 if (message.trim()) {
@@ -1147,91 +1145,80 @@ function CustomArenaLayout({
                                     setMessage("");
                                 }
                             }}
-                            className="w-full md:w-[60%] lg:w-[70%] min-h-[50px] flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/20 rounded-full px-4 pr-1"
+                            className="w-full min-h-[50px] flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 rounded-full px-4 pr-1"
                         >
                             <input
-                                id="chat-input-field"
                                 type="text"
                                 value={message}
                                 onChange={(e) => setMessage(e.target.value)}
                                 placeholder="Sohbet et..."
                                 className="bg-transparent border-none outline-none text-white flex-1 text-[0.95rem] min-w-0"
                             />
-                            <button id="chat-send-btn" type="submit" className="shrink-0 bg-emerald-400 hover:bg-emerald-300 text-black border-none rounded-full w-[38px] h-[38px] font-bold flex items-center justify-center active:scale-90 transition-transform">
+                            <button type="submit" className="shrink-0 bg-emerald-400 text-black border-none rounded-full w-[38px] h-[38px] font-bold flex items-center justify-center active:scale-90 transition-transform">
                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                             </button>
                         </form>
 
-                        {/* ACTION BUTTONS (Start/Stop/Bid) - SAĞ */}
-                        <div id="auction-controls" className="w-full md:w-[40%] lg:w-[30%] flex flex-col gap-2">
-                            {isOwner ? (
-                                <>
-                                    {auctionStatus === "IDLE" ? (
+                        {/* Primary Action Button (Host: Start/End, Viewer: Bid) */}
+                        {isOwner ? (
+                            <div className="w-full flex flex-col gap-2 mt-2">
+                                {auctionStatus === "IDLE" ? (
+                                    <button
+                                        onClick={startCountdown}
+                                        className="w-full flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98] min-h-[60px] px-6 text-white border-none rounded-2xl text-xl font-black shadow-[0_4px_25px_rgba(16,185,129,0.5)] bg-gradient-to-br from-emerald-500 to-emerald-700 uppercase tracking-widest"
+                                    >
+                                        Açık Artırmayı Başlat
+                                    </button>
+                                ) : (
+                                    <>
                                         <button
-                                            id="auction-start-btn"
-                                            onClick={startCountdown}
-                                            className="w-full flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98] min-h-[50px] px-4 text-white border-none rounded-2xl text-base md:text-lg font-black shadow-[0_4px_25px_rgba(16,185,129,0.5)] bg-gradient-to-br from-emerald-500 to-emerald-700 uppercase tracking-widest"
+                                            onClick={handleAccept}
+                                            disabled={!liveHighestBidId || loading}
+                                            className="w-full flex items-center justify-center transition-all active:scale-[0.98] min-h-[60px] px-6 text-white border border-emerald-400/50 rounded-2xl text-xl font-black shadow-[0_4px_25px_rgba(16,185,129,0.6)] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-900/50 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
                                         >
-                                            Açık Artırmayı Başlat
+                                            {loading ? "Satılıyor..." : "KABUL ET VE SAT"}
                                         </button>
-                                    ) : (
-                                        <>
+                                        <div className="flex gap-2">
                                             <button
-                                                id="auction-accept-btn"
-                                                onClick={handleAccept}
-                                                disabled={!liveHighestBidId || loading}
-                                                className="w-full flex items-center justify-center transition-all active:scale-[0.98] min-h-[50px] px-4 text-white border border-emerald-400/50 rounded-2xl text-base md:text-lg font-black shadow-[0_4px_25px_rgba(16,185,129,0.6)] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-900/50 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
+                                                onClick={handleStopAuction}
+                                                className="flex-[1] flex items-center justify-center transition-all active:scale-95 min-h-[44px] px-4 text-white border border-orange-500/50 rounded-xl text-sm font-bold shadow-lg bg-orange-600/80 hover:bg-orange-500 uppercase"
                                             >
-                                                {loading ? "Satılıyor..." : "KABUL ET"}
+                                                Durdur
                                             </button>
-                                            <div className="flex gap-2">
+                                            {isQuickLive && (
                                                 <button
-                                                    id="auction-stop-btn"
-                                                    onClick={handleStopAuction}
-                                                    className="flex-[1] flex items-center justify-center transition-all active:scale-95 min-h-[44px] px-4 text-white border border-orange-500/50 rounded-xl text-xs md:text-sm font-bold shadow-lg bg-orange-600/80 hover:bg-orange-500 uppercase"
+                                                    onClick={handleResetAuction}
+                                                    className="flex-[1] flex items-center justify-center transition-all active:scale-95 min-h-[44px] px-4 text-white border border-blue-500/50 rounded-xl text-sm font-bold shadow-lg bg-blue-600/80 hover:bg-blue-500 uppercase"
                                                 >
-                                                    Durdur
+                                                    Sıfırla
                                                 </button>
-                                                {isQuickLive && (
-                                                    <button
-                                                        id="auction-reset-btn"
-                                                        onClick={handleResetAuction}
-                                                        className="flex-[1] flex items-center justify-center transition-all active:scale-95 min-h-[44px] px-4 text-white border border-blue-500/50 rounded-xl text-xs md:text-sm font-bold shadow-lg bg-blue-600/80 hover:bg-blue-500 uppercase"
-                                                    >
-                                                        Sıfırla
-                                                    </button>
-                                                )}
-                                            </div>
-                                        </>
-                                    )}
-                                </>
-                            ) : (
-                                // Viewer Bidding or Sold Status
-                                <>
-                                    {auctionResult ? (
-                                        <div id="auction-sold-status" className="h-[50px] w-full px-4 bg-emerald-500/20 backdrop-blur-md border border-emerald-500/40 rounded-2xl text-emerald-500 font-black flex items-center justify-center text-sm md:text-base text-center">
-                                            BU ÜRÜN SATILMIŞTIR
+                                            )}
                                         </div>
-                                    ) : auctionStatus === "ACTIVE" ? (
-                                        <div id="viewer-bid-form-container" className="w-full">
-                                            <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
-                                        </div>
-                                    ) : (
-                                        <div id="auction-waiting-status" className="h-[50px] w-full px-4 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white/50 font-black flex items-center justify-center text-sm md:text-base">
-                                            BEKLENİYOR
-                                        </div>
-                                    )}
-                                </>
-                            )}
-                        </div>
+                                    </>
+                                )}
+                            </div>
+                        ) : (
+                            // Viewer Bidding or Sold Status
+                            <div className="w-full mt-2">
+                                {auctionResult ? (
+                                    <div className="h-[50px] px-6 bg-emerald-500/20 backdrop-blur-md border border-emerald-500/40 rounded-2xl text-emerald-500 font-black flex items-center justify-center">
+                                        BU ÜRÜN SATILMIŞTIR
+                                    </div>
+                                ) : auctionStatus === "ACTIVE" ? (
+                                    <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
+                                ) : (
+                                    <div className="h-[50px] px-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white/50 font-black flex items-center justify-center">
+                                        BEKLENİYOR
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 </div>
-            )
-            }
-        </div >
+            )}
+        </div>
     );
 }
-
 
 // Mini bid form for consolidated dashboard
 function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {

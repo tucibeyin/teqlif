@@ -143,9 +143,16 @@ export default async function AdDetailPage({
 
     return (
         <div className="container">
-            {/* Canlı Yayın Arenası: FIXE EDİLEN GERÇEK TAM EKRAN (IMMERSIVE MODE) */}
+            {/* Canlı Yayın Arenası: Tam ekran genişliğine yakın, Grid dışı */}
             {adData.isLive && (
-                <div className="fixed inset-0 z-[9999] bg-black flex flex-col">
+                <div style={{
+                    width: "100%",
+                    height: "calc(100dvh - 64px)", // Navbar boyunu (64px) çıkararak tam yükseklik veriyoruz
+                    background: "#000",
+                    position: "relative",
+                    overflow: "hidden",
+                    borderBottom: "1px solid var(--border)"
+                }}>
                     <LiveArenaWrapper
                         roomId={adData.id}
                         adId={adData.id}
