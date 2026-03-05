@@ -65,7 +65,7 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
         }
     });
 
-    const handleStartAuction = async () => {
+    const handleStartAuction = useCallback(async () => {
         if (!room) return;
         setLoading(true);
         try {
@@ -82,7 +82,7 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
             console.error("Error starting auction", e);
         }
         setLoading(false);
-    };
+    }, [room, adId]);
 
     const handleStopAuction = async () => {
         if (!room) return;
@@ -102,13 +102,27 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
         setLoading(false);
     };
 
-    const startCountdown = useCallback(() => {
+    const startCountdown = useCallback(async () => {
         if (!room) return;
 
         let counter = 10;
         setCountdown(counter);
+        setAuctionStatus("ACTIVE"); // Show "Accept" and "Stop" immediately
 
-        room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "COUNTDOWN", value: counter })), { reliable: true });
+        // Notify DB immediately so that "live" state triggers before countdown ends
+        try {
+            await fetch(`/api/ads/${adId}/live`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ isAuctionActive: true }),
+            });
+        } catch (e) { console.error(e); }
+
+        const payloadStart = JSON.stringify({ type: "AUCTION_START" });
+        await room.localParticipant.publishData(new TextEncoder().encode(payloadStart), { reliable: true });
+
+        const payload = JSON.stringify({ type: "COUNTDOWN", value: counter });
+        await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
 
         const timer = setInterval(() => {
             counter--;
@@ -120,7 +134,7 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                 handleStartAuction();
             }
         }, 1000);
-    }, [room]);
+    }, [room, handleStartAuction]);
 
     const handleQuickBid = async (val: number) => {
         if (!session?.user?.id || auctionStatus !== "ACTIVE") return;
