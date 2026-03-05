@@ -86,12 +86,12 @@ export function StatsBar({
       )}
 
       <div style={{
-        background: T.glass, backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)", borderRadius: 16,
+        background: "rgba(6,8,16,0.82)", backdropFilter: "blur(24px)",
+        WebkitBackdropFilter: "blur(24px)", borderRadius: 14,
         border: isActive
           ? "1px solid rgba(16,216,138,0.28)"
-          : `1px solid ${T.glassBorder}`,
-        padding: "14px 16px",
+          : "1px solid rgba(255,255,255,0.08)",
+        padding: "10px 14px",
         display: "flex", justifyContent: "space-between", alignItems: "flex-end",
         transition: "border-color 0.5s, box-shadow 0.5s",
         boxShadow: isActive

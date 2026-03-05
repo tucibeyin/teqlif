@@ -116,6 +116,28 @@ export function BidPanel({
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
 
+        {/* Kompakt bid header — mevcut fiyat + durum */}
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{
+            fontFamily: T.mono, fontSize: 18, fontWeight: 500,
+            color: currentHighest > 0 ? T.gold : T.muted,
+            letterSpacing: -0.5,
+          }}>
+            {currentHighest > 0
+              ? fmt(currentHighest)
+              : startingBid ? fmt(startingBid) : "—"}
+          </span>
+          <span style={{
+            fontSize: 9, fontWeight: 700, fontFamily: T.display, letterSpacing: 1.5,
+            color: isAuctionActive ? T.green : T.muted,
+            padding: "3px 8px", borderRadius: 100,
+            background: isAuctionActive ? "rgba(16,216,138,0.1)" : "transparent",
+            border: isAuctionActive ? "1px solid rgba(16,216,138,0.2)" : "none",
+          }}>
+            {isAuctionActive ? "AKTİF" : "BEKLEMEDE"}
+          </span>
+        </div>
+
         {/* ── HOST: accept / reject ── */}
         {isOwner && lastAcceptedBidId == null && currentHighest > 0 && (
           <div style={{ display: "flex", gap: 8 }}>
