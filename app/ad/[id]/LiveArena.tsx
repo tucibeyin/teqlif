@@ -1064,121 +1064,98 @@ function CustomArenaLayout({
 
             {/* RIGHT: GLASS COLUMN */}
             {!isBroadcastEnded && (
-            <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl border-0 md:border-l border-white/10 relative z-50 h-[45vh] md:h-full">
-                <div className="flex-1 w-full h-full flex flex-col p-4 pointer-events-none relative overflow-hidden z-[200]">
-                        {/* Chat Area & Reactions Tray (Flex row so chat takes left, emojis take right) */}
-                        <div className="flex-1 w-full flex overflow-hidden pointer-events-auto mb-4 relative">
-                            <div className="absolute inset-0 overflow-y-auto flex flex-col gap-2 pr-2 pb-4 scrollbar-thin scrollbar-thumb-white/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_100%)]">
-                                {messages.map((msg: any) => (
-                                    <div key={msg.id} style={{
-                                        background: "rgba(0,0,0,0.4)",
-                                        backdropFilter: "blur(6px)",
-                                        padding: "6px 14px",
-                                        borderRadius: "16px",
-                                        maxWidth: "85%",
-                                        fontSize: "0.85rem",
-                                        animation: "slideUp 0.3s ease-out",
-                                        border: "1px solid rgba(255,255,255,0.05)",
-                                        width: "max-content"
-                                    }}>
-                                        <span style={{ color: "#4ade80", fontWeight: 900, marginRight: "8px" }}>{msg.sender}:</span>
-                                        <span style={{ color: "white" }}>{msg.text}</span>
-                                    </div>
-                                ))}
+            <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl border-0 md:border-l border-white/10 relative z-50 h-[45vh] md:h-full p-4 pb-2">
+                {/* Chat Area & Reactions Tray */}
+                <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0" }}>
+                    <div className="flex-[1_1_0] overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_100%)]">
+                        {messages.map((msg: any) => (
+                            <div key={msg.id} className="bg-white/10 backdrop-blur-md px-3 py-2 rounded-2xl max-w-[85%] w-max border border-white/5 animate-[slideUp_0.3s_ease-out]">
+                                <span className="text-emerald-400 font-black mr-2 text-sm">{msg.sender}:</span>
+                                <span className="text-white text-sm">{msg.text}</span>
                             </div>
+                        ))}
+                    </div>
 
-                            {/* Viewer Emojis and Stage Requests Panel */}
-                            <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end", justifyContent: "flex-end" }}>
-                                {!isOwner && (
-                                    <>
-                                        <button
-                                            onClick={() => {
-                                                if (confirm("Sahneye katılma isteği göndermek istiyor musunuz?")) {
-                                                    const payload = JSON.stringify({ type: "REQUEST_STAGE", userId: session?.user?.id, userName: session?.user?.name });
-                                                    room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-                                                    alert("İstek gönderildi!");
-                                                }
-                                            }}
-                                            className="hover:scale-110 active:scale-90 transition-transform"
-                                            style={{ width: "45px", height: "45px", borderRadius: "50%", background: "rgba(0,180,204,0.4)", backdropFilter: "blur(12px)", border: "1px solid rgba(0,180,204,0.8)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                                        >
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
-                                        </button>
-
-                                        <button
-                                            onClick={() => {
-                                                alert("Detaylar sayfanın altında yer almaktadır.");
-                                                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
-                                            }}
-                                            className="hover:scale-110 active:scale-90 transition-transform"
-                                            style={{ width: "45px", height: "45px", borderRadius: "50%", background: "rgba(255,255,255,0.2)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.4)", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                                        >
-                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                                        </button>
-                                    </>
-                                )}
-                                {['❤️', '👏', '🔥'].map(emoji => (
-                                    <button
-                                        key={emoji}
-                                        onClick={() => handleReaction(emoji)}
-                                        className="hover:scale-110 active:scale-90 transition-transform"
-                                        style={{ width: "45px", height: "45px", borderRadius: "50%", background: "rgba(0,0,0,0.4)", backdropFilter: "blur(12px)", border: "1px solid rgba(255,255,255,0.2)", fontSize: "20px", display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}
-                                    >
-                                        {emoji}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Bottom Console (Chat Input & Action Button) */}
-                        <div className="w-full pointer-events-auto flex flex-col gap-3 mt-2">
-                            <form onSubmit={handleSendChat} className="w-full min-h-[50px] flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 rounded-full px-4 pr-1">
-                                <input
-                                    type="text"
-                                    value={chatText}
-                                    onChange={(e) => setChatText(e.target.value)}
-                                    placeholder="Sohbet et..."
-                                    style={{ background: "transparent", border: "none", outline: "none", color: "white", flex: 1, fontSize: "0.95rem" }}
-                                />
-                                <button type="submit" className="flex-shrink-0" style={{ background: "#4ade80", color: "black", border: "none", borderRadius: "100px", width: "38px", height: "38px", fontWeight: "bold", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
-                                </button>
-                            </form>
-
-                            {/* Primary Action Button (Host: Start/End, Viewer: Bid) */}
-                            {isOwner ? (
+                    {/* Viewer Emojis and Stage Requests Panel */}
+                    <div style={{ display: "flex", flexDirection: "column", gap: "10px", alignItems: "flex-end", justifySelf: "flex-end", paddingLeft: "8px" }}>
+                        {!isOwner && (
+                            <>
                                 <button
-                                    onClick={auctionStatus === "IDLE" ? startCountdown : () => handleStopAuction()}
-                                    className="w-full flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98] mt-4"
-                                    style={{
-                                        minHeight: "50px",
-                                        padding: "0 24px",
-                                        background: auctionStatus === "IDLE" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
-                                        color: "white", border: "none", borderRadius: "100px", fontWeight: 900,
-                                        display: "flex", alignItems: "center", gap: "8px", cursor: "pointer",
-                                        boxShadow: auctionStatus === "IDLE" ? "0 4px 15px rgba(16, 185, 129, 0.4)" : "0 4px 15px rgba(249, 115, 22, 0.4)"
+                                    onClick={() => {
+                                        if (confirm("Sahneye katılma isteği göndermek istiyor musunuz?")) {
+                                            const payload = JSON.stringify({ type: "REQUEST_STAGE", userId: session?.user?.id, userName: session?.user?.name });
+                                            room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+                                            alert("İstek gönderildi!");
+                                        }
                                     }}
+                                    className="hover:scale-110 active:scale-90 transition-transform w-[45px] h-[45px] rounded-full bg-cyan-500/40 backdrop-blur-md border border-cyan-500/80 flex items-center justify-center cursor-pointer mt-auto"
                                 >
-                                    {auctionStatus === "IDLE" ? "BAŞLAT" : "DURDUR"}
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"></path><path d="M19 10v2a7 7 0 0 1-14 0v-2"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                                 </button>
+
+                                <button
+                                    onClick={() => {
+                                        alert("Detaylar sayfanın altında yer almaktadır.");
+                                        window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+                                    }}
+                                    className="hover:scale-110 active:scale-90 transition-transform w-[45px] h-[45px] rounded-full bg-white/20 backdrop-blur-md border border-white/40 flex items-center justify-center cursor-pointer"
+                                >
+                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                                </button>
+                            </>
+                        )}
+                        {['❤️', '👏', '🔥'].map(emoji => (
+                            <button
+                                key={emoji}
+                                onClick={() => handleReaction(emoji)}
+                                className={`hover:scale-110 active:scale-90 transition-transform w-[45px] h-[45px] rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-xl flex items-center justify-center cursor-pointer ${isOwner && emoji === '❤️' ? 'mt-auto' : ''}`}
+                            >
+                                {emoji}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
+                {/* Bottom Console (Chat Input & Action Button) */}
+                <div className="w-full pointer-events-auto flex flex-col gap-3 shrink-0">
+                    <form onSubmit={handleSendChat} className="w-full min-h-[50px] flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 rounded-full px-4 pr-1">
+                        <input
+                            type="text"
+                            value={chatText}
+                            onChange={(e) => setChatText(e.target.value)}
+                            placeholder="Sohbet et..."
+                            className="bg-transparent border-none outline-none text-white flex-1 text-[0.95rem] min-w-0"
+                        />
+                        <button type="submit" className="shrink-0 bg-emerald-400 text-black border-none rounded-full w-[38px] h-[38px] font-bold flex items-center justify-center active:scale-90 transition-transform">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+                        </button>
+                    </form>
+
+                    {/* Primary Action Button (Host: Start/End, Viewer: Bid) */}
+                    {isOwner ? (
+                        <button
+                            onClick={auctionStatus === "IDLE" ? startCountdown : () => handleStopAuction()}
+                            className={`w-full flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98] mt-2 min-h-[50px] px-6 text-white border-none rounded-2xl font-black shadow-lg ${auctionStatus === "IDLE" ? 'bg-gradient-to-br from-emerald-500 to-emerald-700' : 'bg-gradient-to-br from-orange-500 to-orange-700'}`}
+                        >
+                            {auctionStatus === "IDLE" ? "BAŞLAT" : "DURDUR"}
+                        </button>
+                    ) : (
+                        // Viewer Bidding or Sold Status
+                        <div className="w-full mt-2">
+                            {auctionResult ? (
+                                <div className="h-[50px] px-6 bg-emerald-500/20 backdrop-blur-md border border-emerald-500/40 rounded-2xl text-emerald-500 font-black flex items-center justify-center">
+                                    BU ÜRÜN SATILMIŞTIR
+                                </div>
+                            ) : auctionStatus === "ACTIVE" ? (
+                                <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
                             ) : (
-                                // Viewer Bidding or Sold Status
-                                <div className="w-full flex justify-center items-center mt-2">
-                                    {auctionResult ? (
-                                        <div style={{ height: "50px", padding: "0 24px", background: "rgba(16, 185, 129, 0.2)", backdropFilter: "blur(10px)", border: "1px solid rgba(16, 185, 129, 0.4)", borderRadius: "100px", color: "#10b981", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                            BU ÜRÜN SATILMIŞTIR
-                                        </div>
-                                    ) : auctionStatus === "ACTIVE" ? (
-                                        <BidMiniForm adId={adId} currentHighest={liveHighestBid} minStep={minBidStep} startingBid={startingBid} />
-                                    ) : (
-                                        <div style={{ height: "50px", padding: "0 24px", background: "rgba(255,255,255,0.1)", backdropFilter: "blur(10px)", border: "1px solid rgba(255,255,255,0.2)", borderRadius: "100px", color: "rgba(255,255,255,0.5)", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
-                                            BEKLENİYOR
-                                        </div>
-                                    )}
+                                <div className="h-[50px] px-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl text-white/50 font-black flex items-center justify-center">
+                                    BEKLENİYOR
                                 </div>
                             )}
                         </div>
-                   </div>
+                    )}
+                </div>
             </div>
             )}
         </div>
@@ -1190,68 +1167,75 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
     const router = useRouter();
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
-    const [flash, setFlash] = useState(false);
+    const { data: session } = useSession();
 
-    useEffect(() => {
-        const nextMin = currentHighest > 0 ? (currentHighest + minStep) : (startingBid ?? 1);
-        setAmount(new Intl.NumberFormat("tr-TR").format(nextMin));
-        setFlash(true);
-        const timer = setTimeout(() => setFlash(false), 400);
-        return () => clearTimeout(timer);
-    }, [currentHighest, minStep, startingBid]);
-
-    const addQuickBid = (extra: number) => {
-        const rawAmount = parseInt(amount.replace(/\./g, "") || "0", 10);
-        setAmount(new Intl.NumberFormat("tr-TR").format(rawAmount + extra));
-    };
-
-    const handleBid = async (e: React.FormEvent) => {
-        e.preventDefault();
+    const handleQuickBid = async (val: number) => {
+        if (!session?.user?.id) return;
         setLoading(true);
-        const rawAmount = parseInt(amount.replace(/\./g, ""), 10);
         try {
-            const res = await fetch("/api/bids", {
+            const res = await fetch("/api/livekit/bid", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ adId, amount: rawAmount }),
+                body: JSON.stringify({ roomId: adId, amount: (currentHighest || startingBid || 0) + val }),
             });
-            if (res.ok) router.refresh();
+            const data = await res.json();
+            if (!res.ok) alert(data.error || data.message || "Teklif verilemedi.");
+            else router.refresh();
+        } catch (e) { console.error(e); alert("Bir hata oluştu."); }
+        setLoading(false);
+    };
+
+    const handleCustomBid = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!amount || !session?.user?.id) return;
+        const rawAmount = parseInt(amount.replace(/\./g, ""), 10);
+        if (rawAmount <= (currentHighest || 0)) {
+            alert("Teklif güncel fiyattan yüksek olmalıdır.");
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await fetch("/api/livekit/bid", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomId: adId, amount: rawAmount }),
+            });
+            if (res.ok) { setAmount(""); router.refresh(); }
+            else { const d = await res.json(); alert(d.error || d.message || "Hata"); }
         } catch (e) { console.error(e); }
         finally { setLoading(false); }
     };
 
     return (
-        <form onSubmit={handleBid} className="flex flex-col w-full gap-4">
+        <form onSubmit={handleCustomBid} className="flex flex-col w-full bg-black/40 border border-white/5 rounded-2xl p-4 gap-4 backdrop-blur-xl shadow-2xl">
             {/* The Climax Number */}
             <div className="flex flex-col items-center justify-center">
-                <span className="text-xs font-bold text-white/50 tracking-widest uppercase mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">GÜNCEL FİYAT</span>
-                <div className="flex items-baseline gap-1">
-                    <span 
-                        className={`text-6xl font-black tabular-nums tracking-tighter transition-all duration-300 ${flash ? "text-emerald-300 scale-105" : "text-emerald-400"}`}
-                        style={{ textShadow: "0 0 20px rgba(52, 211, 153, 0.4), 0 0 40px rgba(52, 211, 153, 0.2)" }}
-                    >
-                        {new Intl.NumberFormat("tr-TR").format(currentHighest || (startingBid ?? 0))}
-                    </span>
-                    <span className="text-3xl font-bold text-emerald-500">₺</span>
-                </div>
+                <span className="text-xs font-bold text-white/50 tracking-widest uppercase mb-1 drop-shadow-md">GÜNCEL FİYAT</span>
+                <span 
+                    className="text-5xl font-black tabular-nums tracking-tighter text-emerald-400 mb-2"
+                    style={{ textShadow: "0 0 20px rgba(52, 211, 153, 0.4)" }}
+                >
+                    {new Intl.NumberFormat("tr-TR").format(currentHighest || (startingBid ?? 0))}
+                </span>
             </div>
 
             {/* Quick Bids */}
-            <div className="flex flex-row justify-center gap-2">
+            <div className="flex flex-row justify-center gap-2 w-full">
                 {[50, 100, 500].map(val => (
                     <button
                         key={val}
                         type="button"
-                        onClick={() => addQuickBid(val)}
-                        className="px-4 py-1.5 rounded-full bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 text-white font-bold text-sm transition-all shadow-[0_4px_10px_rgba(0,0,0,0.2)] backdrop-blur-md"
+                        disabled={loading}
+                        onClick={() => handleQuickBid(val)}
+                        className="flex-1 py-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white font-bold text-sm transition-all shadow-lg backdrop-blur-md disabled:opacity-50"
                     >
                         +{val} ₺
                     </button>
                 ))}
             </div>
 
-            {/* Premium Bid Form Input & Submit */}
-            <div className="flex gap-2 items-center">
+            {/* Premium Form */}
+            <div className="flex w-full gap-2 items-center">
                 <input
                     type="text"
                     value={amount}
@@ -1259,16 +1243,15 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
                         const val = e.target.value.replace(/[^0-9]/g, "");
                         setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
                     }}
-                    className="flex-1 w-full min-w-0 h-[54px] bg-white/10 backdrop-blur-md border border-white/20 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl px-4 text-white text-lg text-center font-black outline-none transition-all placeholder-white/30"
-                    placeholder="Tutar"
+                    className="flex-[2] min-w-0 h-[50px] bg-white/10 backdrop-blur-md border border-white/20 focus:border-emerald-500 rounded-2xl px-4 text-white text-lg text-center font-black outline-none placeholder-white/30 transition-all"
+                    placeholder="Özel teklif"
                 />
                 <button
                     type="submit"
-                    disabled={loading}
-                    className="h-[54px] px-6 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:opacity-50 text-white border-0 rounded-2xl font-black tracking-wide text-lg flex items-center gap-2 cursor-pointer transition-all shadow-[0_4px_20px_rgba(5,150,105,0.4)] active:scale-95 flex-shrink-0"
+                    disabled={loading || !amount}
+                    className="flex-[1] h-[50px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:opacity-50 text-white border-0 rounded-2xl font-black tracking-wide transition-all shadow-lg active:scale-95"
                 >
-                    {loading ? "..." : "TEKLİF"}
-                    {!loading && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>}
+                    {loading ? "..." : "TEKLİF VER"}
                 </button>
             </div>
         </form>

@@ -96,6 +96,21 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
         setLoading(false);
     };
 
+    const handleQuickBid = async (val: number) => {
+        if (!session?.user?.id || auctionStatus !== "ACTIVE") return;
+        setLoading(true);
+        try {
+            const res = await fetch("/api/livekit/bid", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomId: adId, amount: currentPrice + val }),
+            });
+            const data = await res.json();
+            if (!res.ok) alert(data.error || data.message || "Teklif verilemedi.");
+        } catch (e) { console.error(e); alert("Bir hata oluştu."); }
+        setLoading(false);
+    };
+
     const placeBid = async () => {
         if (!session?.user?.id || auctionStatus !== "ACTIVE") return;
 
@@ -163,83 +178,84 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
     }
 
     // Viewer Mode
+    const [amount, setAmount] = useState("");
+
+    const handleCustomBid = async () => {
+        if (!session?.user?.id || auctionStatus !== "ACTIVE" || !amount) return;
+        const rawAmount = parseInt(amount.replace(/\./g, ""), 10);
+        if (rawAmount <= currentPrice) {
+            alert("Teklif güncel fiyattan yüksek olmalıdır.");
+            return;
+        }
+        setLoading(true);
+        try {
+            const res = await fetch("/api/livekit/bid", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ roomId: adId, amount: rawAmount }),
+            });
+            const data = await res.json();
+            if (!res.ok) alert(data.error || data.message || "Teklif verilemedi.");
+            else setAmount("");
+        } catch (e) { console.error(e); alert("Bir hata oluştu."); }
+        setLoading(false);
+    };
+
     return (
         <div className="flex flex-col gap-4 p-5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden">
-            <div className="flex justify-between items-start mb-2 relative z-10">
-                <div className="flex flex-col">
-                    <div className="flex items-center gap-2 mb-1">
-                        <span className={`w-2.5 h-2.5 rounded-full ${auctionStatus === "ACTIVE" ? "bg-red-500 animate-pulse" : "bg-amber-500"}`}></span>
-                        <span className="text-xs font-bold tracking-wider text-white/50 uppercase drop-shadow-md">{auctionStatus === "ACTIVE" ? "CANLI TEKLİF AÇIK" : "YAYINCI BEKLENİYOR"}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div className="flex flex-col items-center justify-center py-6 bg-transparent relative z-10">
-                <span className="text-xs font-bold text-white/50 tracking-widest uppercase mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">GÜNCEL FİYAT</span>
-                <span 
-                    className={`text-6xl font-black tabular-nums tracking-tighter transition-all duration-300 ${flash ? "text-emerald-300 scale-105" : "text-emerald-400"}`}
-                    style={{ textShadow: "0 0 20px rgba(52, 211, 153, 0.4), 0 0 40px rgba(52, 211, 153, 0.2)" }}
-                >
+            <div className="flex flex-col items-center justify-center py-4 relative z-10 w-full">
+                <span className="text-xs font-bold text-white/50 tracking-widest uppercase mb-1 drop-shadow-md">GÜNCEL FİYAT</span>
+                <span className="text-5xl font-black tabular-nums tracking-tighter text-emerald-400 mb-4" style={{ textShadow: "0 0 20px rgba(52, 211, 153, 0.4)" }}>
                     {formatPrice(currentPrice)}
                 </span>
                 {highestBidderName && (
-                    <div className="mt-3 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 text-sm shadow-sm backdrop-blur-md">
+                    <div className="mb-4 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 text-sm shadow-sm backdrop-blur-md">
                         <span className="text-white/50 font-medium">LİDER: </span>
                         <span className="text-emerald-500 font-bold">{highestBidderName}</span>
                     </div>
                 )}
-            </div>
 
-            {/* Quick Bids */}
-            <div className="flex flex-row justify-center gap-2 relative z-10">
-                {[50, 100, 500].map(val => (
-                    <button
-                        key={val}
-                        type="button"
-                        onClick={() => {
-                            if (!session?.user?.id || auctionStatus !== "ACTIVE") return;
-                            setLoading(true);
-                            fetch("/api/livekit/bid", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({ roomId: adId, amount: currentPrice + val }),
-                            }).then(async res => {
-                                if (!res.ok) {
-                                    const data = await res.json();
-                                    alert(data.error || data.message || "Teklif verilemedi.");
-                                }
-                            }).catch(e => {
-                                console.error(e);
-                                alert("Bir hata oluştu.");
-                            }).finally(() => setLoading(false));
+                {/* Quick Bids */}
+                <div className="flex flex-row gap-2 w-full mb-4">
+                    {[50, 100, 500].map(val => (
+                        <button
+                            key={val}
+                            type="button"
+                            disabled={loading || auctionStatus !== "ACTIVE"}
+                            onClick={() => handleQuickBid(val)}
+                            className="flex-1 py-2 rounded-full bg-white/10 hover:bg-white/20 text-white font-bold text-sm transition-all shadow-lg backdrop-blur-md disabled:opacity-50 disabled:cursor-not-allowed border border-white/10"
+                        >
+                            +{val} ₺
+                        </button>
+                    ))}
+                </div>
+
+                {/* Premium Form */}
+                <div className="flex w-full gap-2 items-center">
+                    <input
+                        type="text"
+                        value={amount}
+                        onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, "");
+                            setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
                         }}
-                        disabled={loading || auctionStatus !== "ACTIVE"}
-                        className="px-4 py-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 border border-white/20 text-white font-bold text-sm transition-all shadow-lg backdrop-blur-md disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        className="flex-[2] min-w-0 h-[50px] bg-white/10 backdrop-blur-md border border-white/20 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl px-4 text-white text-lg text-center font-black outline-none placeholder-white/30"
+                        placeholder="Özel teklif gir"
+                    />
+                    <button
+                        onClick={handleCustomBid}
+                        disabled={loading || auctionStatus !== "ACTIVE" || !amount}
+                        className="flex-[1] h-[50px] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:opacity-50 text-white border-0 rounded-2xl font-black text-sm tracking-wide transition-all shadow-lg truncate px-2"
                     >
-                        +{val} ₺
+                        {loading ? "..." : "TEKLİF VER"}
                     </button>
-                ))}
+                </div>
+                
+                <div className="text-center mt-3 text-xs font-semibold text-white/40 flex items-center justify-center gap-1 w-full">
+                    <span>Minimum Artırım:</span>
+                    <span className="text-white/70">{formatPrice(minStep)}</span>
+                </div>
             </div>
-
-            {/* Premium Bid Form Input & Submit */}
-            <div className="flex gap-2 items-center relative z-10 mt-2">
-                <input
-                    type="text"
-                    value={currentPrice + minStep} // just showing next increment
-                    readOnly
-                    className="flex-1 w-full min-w-0 h-[54px] bg-white/10 backdrop-blur-md border border-white/20 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl px-4 text-white text-lg text-center font-black outline-none transition-all placeholder-white/30"
-                    placeholder="Tutar"
-                />
-                <button
-                    onClick={placeBid}
-                    disabled={loading || auctionStatus !== "ACTIVE"}
-                    className="h-[54px] px-6 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:opacity-50 text-white border-0 rounded-2xl font-black tracking-wide text-lg flex items-center gap-2 cursor-pointer transition-all shadow-[0_4px_20px_rgba(5,150,105,0.4)] active:scale-95 flex-shrink-0"
-                >
-                    {loading ? "..." : "TEKLİF"}
-                    {!loading && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>}
-                </button>
-            </div>
-
             {/* Background pattern */}
             <div className="absolute -bottom-10 -right-10 text-9xl opacity-[0.03] select-none pointer-events-none rotate-12">🔨</div>
         </div>
