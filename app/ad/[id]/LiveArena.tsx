@@ -73,8 +73,8 @@ export default function LiveArena({
             token={token}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
-            className="w-full bg-black relative rounded-xl overflow-hidden shadow-2xl"
-            style={{ height: "calc(100vh - 120px)", minHeight: "500px", maxHeight: "800px" }}
+            className="w-full bg-neutral-950 flex flex-col md:flex-row relative overflow-hidden text-white"
+            style={{ height: "100vh" }}
         >
             <CustomArenaLayout
                 adId={adId}
@@ -547,7 +547,12 @@ function CustomArenaLayout({
     const guestTrack = tracks.length > 1 ? tracks[1] : null;
 
     return (
-        <div style={{ position: "relative", width: "100%", height: "100%", background: "black" }}>
+        <div className="flex flex-col md:flex-row w-full h-full bg-neutral-950 overflow-hidden">
+            {/* LEFT: THEATER CANVAS */}
+            <div className="flex-[1_1_0] relative flex flex-col items-center justify-center p-0 md:p-6 bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 shadow-[inner_0_0_100px_rgba(0,0,0,0.8)]" style={{ minHeight: "0" }}>
+                {/* INNER VIDEO WRAPPER */}
+                <div className="w-full h-full relative md:rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-0 md:border border-white/10 bg-neutral-900">
+                    <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
             {/* Broadcast Ended Overlay */}
             {isBroadcastEnded ? (
                 <div style={{
@@ -1044,22 +1049,19 @@ function CustomArenaLayout({
                         </div>
                     )}
 
-                    {/* Bottom Interaction Area (Matches Mobile Console) */}
-                    <div style={{
-                        position: "absolute",
-                        bottom: 0,
-                        left: 0,
-                        right: 0,
-                        height: "260px",
-                        display: "flex",
-                        flexDirection: "column",
-                        padding: "16px",
-                        zIndex: 200,
-                        pointerEvents: "none"
-                    }}>
+                </>
+            )}
+                    </div>
+                </div>
+            </div>
+
+            {/* RIGHT: GLASS COLUMN */}
+            {!isBroadcastEnded && (
+            <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl border-0 md:border-l border-white/10 relative z-50 h-[45vh] md:h-full">
+                <div className="flex-[1_1_0] flex flex-col p-4 pointer-events-none relative overflow-hidden z-[200]" style={{ minHeight: "0" }}>
                         {/* Chat Area & Reactions Tray (Flex row so chat takes left, emojis take right) */}
-                        <div style={{ flex: 1, display: "flex", overflow: "hidden", pointerEvents: "auto", marginBottom: "8px" }}>
-                            <div style={{ flex: 1, overflowY: "auto", display: "flex", flexDirection: "column", gap: "6px", paddingRight: "10px" }}>
+                        <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0" }}>
+                            <div className="flex-[1_1_0] overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20" style={{ minHeight: "0" }}>
                                 {messages.map((msg: any) => (
                                     <div key={msg.id} style={{
                                         background: "rgba(0,0,0,0.4)",
@@ -1178,8 +1180,8 @@ function CustomArenaLayout({
                                 </div>
                             )}
                         </div>
-                    </div>
-                </>
+                   </div>
+            </div>
             )}
         </div>
     );
