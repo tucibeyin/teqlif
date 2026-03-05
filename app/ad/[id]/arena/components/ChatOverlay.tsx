@@ -40,7 +40,7 @@ export function ChatOverlay({
     <>
       <style>{`
         @keyframes tq-slideIn {
-          from { opacity: 0; transform: translateX(-8px); }
+          from { opacity: 0; transform: translateX(-6px); }
           to   { opacity: 1; transform: translateX(0); }
         }
         .tq-chat-input::placeholder { color: #3D526A; font-family: 'Syne', system-ui, sans-serif; }
@@ -49,8 +49,9 @@ export function ChatOverlay({
           box-shadow: 0 0 0 3px rgba(6,200,224,0.07) !important;
           outline: none;
         }
+        .tq-chat-row:hover { background: rgba(255,255,255,0.03) !important; }
         .tq-invite-btn { opacity: 0; transition: opacity 0.2s; }
-        .tq-chat-bubble:hover .tq-invite-btn { opacity: 1; }
+        .tq-chat-row:hover .tq-invite-btn { opacity: 1; }
         .tq-send-btn:hover { filter: brightness(1.15); transform: scale(1.05); }
         .tq-send-btn:active { transform: scale(0.95); }
       `}</style>
@@ -62,7 +63,7 @@ export function ChatOverlay({
           ref={listRef}
           style={{
             flex: 1, overflowY: "auto", display: "flex",
-            flexDirection: "column", gap: 6,
+            flexDirection: "column", gap: 1,
             maskImage: "linear-gradient(to bottom, transparent, black 25%)",
             WebkitMaskImage: "linear-gradient(to bottom, transparent, black 25%)",
             paddingBottom: 4,
@@ -72,55 +73,44 @@ export function ChatOverlay({
             const avatarColor = AVATAR_COLORS[msg.sender.charCodeAt(0) % AVATAR_COLORS.length];
             const isMe = msg.senderId === currentUserId;
             const isSystem = msg.sender === "Sistem";
+
             return (
               <div
                 key={msg.id}
-                className="tq-chat-bubble"
+                className="tq-chat-row"
                 style={{
-                  display: "flex", alignItems: "flex-start", gap: 8,
-                  padding: "6px 8px", borderRadius: 10,
-                  background: isSystem
-                    ? "rgba(6,200,224,0.07)"
-                    : "rgba(255,255,255,0.02)",
-                  border: isSystem
-                    ? "1px solid rgba(6,200,224,0.15)"
-                    : "1px solid transparent",
-                  animation: "tq-slideIn 0.22s ease-out both",
-                  animationDelay: `${Math.min(i * 0.025, 0.12)}s`,
+                  display: "flex", flexWrap: "wrap", alignItems: "baseline",
+                  gap: 4, padding: "3px 8px", borderRadius: 4,
+                  background: isSystem ? "rgba(6,200,224,0.05)" : "transparent",
+                  transition: "background 0.15s",
+                  animation: "tq-slideIn 0.2s ease-out both",
+                  animationDelay: `${Math.min(i * 0.02, 0.1)}s`,
+                  position: "relative",
                 }}
               >
-                {/* Avatar */}
-                {!isSystem && (
-                  <div style={{
-                    width: 24, height: 24, borderRadius: "50%", flexShrink: 0,
-                    background: isMe
-                      ? `linear-gradient(135deg, ${T.teal}, ${T.tealDark})`
-                      : avatarColor,
-                    display: "flex", alignItems: "center", justifyContent: "center",
-                    fontSize: 10, fontWeight: 900, color: "white", fontFamily: T.display,
-                  }}>
-                    {msg.sender.charAt(0).toUpperCase()}
-                  </div>
-                )}
+                {/* Username */}
+                <span style={{
+                  fontFamily: T.display, fontWeight: 700, fontSize: 12,
+                  color: isSystem ? T.teal : (isMe ? T.teal : avatarColor),
+                  whiteSpace: "nowrap", flexShrink: 0, letterSpacing: 0.2,
+                }}>
+                  {isSystem ? "⚡ Sistem" : (isMe ? "Sen" : msg.sender)}
+                </span>
 
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: "flex", alignItems: "baseline", gap: 5, marginBottom: 1 }}>
-                    <span style={{
-                      fontSize: 10, fontWeight: 800, fontFamily: T.display,
-                      color: isSystem ? T.teal : (isMe ? T.teal : avatarColor),
-                      whiteSpace: "nowrap", letterSpacing: 0.3,
-                    }}>
-                      {isSystem ? "⚡ Sistem" : (isMe ? "Sen" : msg.sender)}
-                    </span>
-                  </div>
-                  <span style={{
-                    fontSize: 12.5, color: isSystem ? T.teal : T.text,
-                    lineHeight: 1.45, wordBreak: "break-word",
-                    fontFamily: T.display,
-                  }}>
-                    {msg.text}
-                  </span>
-                </div>
+                {/* Separator */}
+                <span style={{
+                  color: "rgba(255,255,255,0.28)", fontWeight: 400,
+                  fontSize: 12, flexShrink: 0,
+                }}>:</span>
+
+                {/* Message text */}
+                <span style={{
+                  fontFamily: T.display, fontSize: 13,
+                  color: isSystem ? T.teal : T.text,
+                  lineHeight: 1.5, wordBreak: "break-word", flex: 1,
+                }}>
+                  {msg.text}
+                </span>
 
                 {/* Invite to stage (host only) */}
                 {onInviteToStage && msg.senderId && msg.senderId !== currentUserId && !isSystem && (
@@ -129,7 +119,7 @@ export function ChatOverlay({
                     onClick={() => onInviteToStage(msg.senderId!)}
                     title="Sahneye Davet Et"
                     style={{
-                      width: 22, height: 22, borderRadius: "50%", flexShrink: 0,
+                      width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
                       background: "rgba(99,102,241,0.15)",
                       border: "1px solid rgba(99,102,241,0.3)",
                       color: "#818CF8", fontSize: 10, cursor: "pointer",
