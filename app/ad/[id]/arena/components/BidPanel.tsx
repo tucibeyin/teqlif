@@ -7,6 +7,7 @@ const T = {
   glassBorder: "rgba(255,255,255,0.07)",
   teal:        "#06C8E0",
   tealDark:    "#059AAF",
+  gold:        "#F0B429",
   green:       "#10D88A",
   red:         "#F03E3E",
   text:        "#EDF2F7",
