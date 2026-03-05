@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import confetti from "canvas-confetti";
-import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack, useDataChannel, useRoomContext, TrackToggle, useConnectionState, useParticipants } from "@livekit/components-react";
+import { LiveKitRoom, RoomAudioRenderer, useTracks, VideoTrack, useDataChannel, useRoomContext, useChat, TrackToggle, useConnectionState, useParticipants } from "@livekit/components-react";
 import { Track, ConnectionState } from "livekit-client";
 import "@livekit/components-styles";
 import { useSession } from "next-auth/react";
@@ -110,6 +110,7 @@ function CustomArenaLayout({
     isQuickLive
 }: any) {
     const room = useRoomContext();
+    const { chatMessages, send: sendChat } = useChat();
     const router = useRouter();
     const { data: session } = useSession();
     const tracks = useTracks([Track.Source.Camera]);
@@ -316,17 +317,8 @@ function CustomArenaLayout({
     const handleSendChat = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!chatText.trim() || !room) return;
-        const payload = JSON.stringify({
-            type: "CHAT",
-            text: chatText.trim(),
-            senderName: session?.user?.name || "Web Katılımcı",
-            senderId: session?.user?.id
-        });
         try {
-            await room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-            const newMessage = { id: Date.now().toString(), text: chatText.trim(), sender: session?.user?.name || "Ben" };
-            setMessages(prev => [...prev.slice(-10), newMessage]);
-            setTimeout(() => setMessages(prev => prev.filter(m => m.id !== newMessage.id)), 8000);
+            await sendChat(chatText.trim());
             setChatText("");
         } catch (e) { console.error(e); }
     };
@@ -436,17 +428,7 @@ function CustomArenaLayout({
                 if (dataObj.auctionStatus) setAuctionStatus(dataObj.auctionStatus);
                 if (dataObj.liveHighestBid) setLiveHighestBid(dataObj.liveHighestBid);
                 if (dataObj.liveHighestBidderName) setLiveHighestBidderName(dataObj.liveHighestBidderName);
-            } else if (dataObj.type === 'CHAT') {
-                const newMessage = {
-                    id: Date.now().toString() + Math.random(),
-                    text: dataObj.text,
-                    sender: dataObj.senderName || "Katılımcı",
-                    senderId: dataObj.senderId
-                };
-                setMessages(prev => [...prev.slice(-10), newMessage]); // Keep more messages
-                setTimeout(() => {
-                    setMessages(prev => prev.filter((m: any) => m.id !== newMessage.id));
-                }, 8000); // Show longer
+
             } else if (dataObj.type === 'REACTION') {
                 addReaction(dataObj.emoji);
             } else if (dataObj.type === 'AUCTION_START') {
@@ -1068,10 +1050,15 @@ function CustomArenaLayout({
                 {/* Chat Area & Reactions Tray */}
                 <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0" }}>
                     <div className="flex-[1_1_0] overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_100%)]">
+                        {chatMessages.map((msg: any) => (
+                            <div key={msg.id} className="bg-white/10 backdrop-blur-md px-3 py-2 rounded-2xl max-w-[85%] w-max border border-white/5 animate-[slideUp_0.3s_ease-out] text-sm break-words">
+                                <span className="text-emerald-400 font-black mr-2">{msg.from?.name || "Kullanıcı"}:</span>
+                                <span className="text-white font-medium">{msg.message}</span>
+                            </div>
+                        ))}
                         {messages.map((msg: any) => (
-                            <div key={msg.id} className="bg-white/10 backdrop-blur-md px-3 py-2 rounded-2xl max-w-[85%] w-max border border-white/5 animate-[slideUp_0.3s_ease-out]">
-                                <span className="text-emerald-400 font-black mr-2 text-sm">{msg.sender}:</span>
-                                <span className="text-white text-sm">{msg.text}</span>
+                            <div key={msg.id} className="bg-emerald-500/20 backdrop-blur-md px-3 py-2 rounded-2xl max-w-[85%] w-max border border-emerald-500/50 animate-[slideUp_0.3s_ease-out] text-sm font-bold text-emerald-400 break-words drop-shadow-md">
+                                {msg.text}
                             </div>
                         ))}
                     </div>
@@ -1104,15 +1091,7 @@ function CustomArenaLayout({
                                 </button>
                             </>
                         )}
-                        {['❤️', '👏', '🔥'].map(emoji => (
-                            <button
-                                key={emoji}
-                                onClick={() => handleReaction(emoji)}
-                                className={`hover:scale-110 active:scale-90 transition-transform w-[45px] h-[45px] rounded-full bg-black/40 backdrop-blur-md border border-white/20 text-xl flex items-center justify-center cursor-pointer ${isOwner && emoji === '❤️' ? 'mt-auto' : ''}`}
-                            >
-                                {emoji}
-                            </button>
-                        ))}
+
                     </div>
                 </div>
 
@@ -1133,12 +1112,42 @@ function CustomArenaLayout({
 
                     {/* Primary Action Button (Host: Start/End, Viewer: Bid) */}
                     {isOwner ? (
-                        <button
-                            onClick={auctionStatus === "IDLE" ? startCountdown : () => handleStopAuction()}
-                            className={`w-full flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98] mt-2 min-h-[50px] px-6 text-white border-none rounded-2xl font-black shadow-lg ${auctionStatus === "IDLE" ? 'bg-gradient-to-br from-emerald-500 to-emerald-700' : 'bg-gradient-to-br from-orange-500 to-orange-700'}`}
-                        >
-                            {auctionStatus === "IDLE" ? "BAŞLAT" : "DURDUR"}
-                        </button>
+                        <div className="w-full flex flex-col gap-2 mt-2">
+                            {auctionStatus === "IDLE" ? (
+                                <button
+                                    onClick={startCountdown}
+                                    className="w-full flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98] min-h-[60px] px-6 text-white border-none rounded-2xl text-xl font-black shadow-[0_4px_25px_rgba(16,185,129,0.5)] bg-gradient-to-br from-emerald-500 to-emerald-700 uppercase tracking-widest"
+                                >
+                                    Açık Artırmayı Başlat
+                                </button>
+                            ) : (
+                                <>
+                                    <button
+                                        onClick={handleAccept}
+                                        disabled={!liveHighestBidId || loading}
+                                        className="w-full flex items-center justify-center transition-all active:scale-[0.98] min-h-[60px] px-6 text-white border border-emerald-400/50 rounded-2xl text-xl font-black shadow-[0_4px_25px_rgba(16,185,129,0.6)] bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-900/50 disabled:opacity-50 disabled:cursor-not-allowed uppercase tracking-wider"
+                                    >
+                                        {loading ? "Satılıyor..." : "KABUL ET VE SAT"}
+                                    </button>
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleStopAuction}
+                                            className="flex-[1] flex items-center justify-center transition-all active:scale-95 min-h-[44px] px-4 text-white border border-orange-500/50 rounded-xl text-sm font-bold shadow-lg bg-orange-600/80 hover:bg-orange-500 uppercase"
+                                        >
+                                            Durdur
+                                        </button>
+                                        {isQuickLive && (
+                                            <button
+                                                onClick={handleResetAuction}
+                                                className="flex-[1] flex items-center justify-center transition-all active:scale-95 min-h-[44px] px-4 text-white border border-blue-500/50 rounded-xl text-sm font-bold shadow-lg bg-blue-600/80 hover:bg-blue-500 uppercase"
+                                            >
+                                                Sıfırla
+                                            </button>
+                                        )}
+                                    </div>
+                                </>
+                            )}
+                        </div>
                     ) : (
                         // Viewer Bidding or Sold Status
                         <div className="w-full mt-2">
@@ -1262,6 +1271,7 @@ function CoHostListener({ setRole, setWantsToPublish }: { setRole: any, setWants
 
     const [inviteVisible, setInviteVisible] = useState(false);
     const room = useRoomContext();
+    const { chatMessages, send: sendChat } = useChat();
 
     useDataChannel((msg) => {
         try {
