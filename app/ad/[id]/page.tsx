@@ -143,38 +143,33 @@ export default async function AdDetailPage({
 
     return (
         <div className="container">
-            {/* Canlı Yayın Arenası: Tam ekran genişliğine yakın, Grid dışı */}
-            {adData.isLive && (
-                <div style={{
-                    width: "100%",
-                    height: "calc(100dvh - 64px)", // Navbar boyunu (64px) çıkararak tam yükseklik veriyoruz
-                    background: "#000",
-                    position: "relative",
-                    overflow: "hidden",
-                    borderBottom: "1px solid var(--border)"
-                }}>
-                    <LiveArenaWrapper
-                        roomId={adData.id}
-                        adId={adData.id}
-                        sellerId={ad.userId}
-                        isOwner={isOwner}
-                        buyItNowPrice={ad.buyItNowPrice}
-                        startingBid={ad.startingBid}
-                        minBidStep={ad.minBidStep}
-                        initialHighestBid={highestBid?.amount ?? 0}
-                        initialIsAuctionActive={adData.isAuctionActive}
-                        adOwnerName={displayName}
-                        isQuickLive={ad.description === "Hızlı Canlı Yayın (Ghost Ad)"}
-                    />
-                </div>
-            )}
 
-            <div className="ad-detail" style={adData.isLive ? { paddingTop: "2rem" } : {}}>
+            <div className="ad-detail" style={adData.isLive ? { paddingTop: "0.5rem", marginTop: "-1rem" } : {}}>
                 {/* Sol: Görsel ve Detay */}
                 <div>
-                    {!adData.isLive && (
-                        <div className="ad-detail-images">
-                            {ad.images && ad.images.length > 0 ? (
+                    <div className="ad-detail-images">
+                        {adData.isLive ? (
+                            <div className="card" style={{ overflow: "hidden", border: "2px solid #ef4444", borderRadius: "1.5rem" }}>
+                                <div style={{ background: "#ef4444", color: "white", padding: "0.5rem 1rem", fontWeight: "bold", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+                                    <span style={{ display: "inline-block", width: "8px", height: "8px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span>
+                                    {!adData.isLive && isOwner ? "YAYIN HAZIRLIK ODASI (Sadece Siz Görüyorsunuz)" : "CANLI AÇIK ARTTIRMA ARENASI"}
+                                </div>
+                                <LiveArenaWrapper
+                                    roomId={adData.id}
+                                    adId={adData.id}
+                                    sellerId={ad.userId}
+                                    isOwner={isOwner}
+                                    buyItNowPrice={ad.buyItNowPrice}
+                                    startingBid={ad.startingBid}
+                                    minBidStep={ad.minBidStep}
+                                    initialHighestBid={highestBid?.amount ?? 0}
+                                    initialIsAuctionActive={adData.isAuctionActive}
+                                    adOwnerName={displayName}
+                                    isQuickLive={ad.description === "Hızlı Canlı Yayın (Ghost Ad)"}
+                                />
+                            </div>
+                        ) : (
+                            ad.images && ad.images.length > 0 ? (
                                 <ImageSlider images={ad.images} title={ad.title} />
                             ) : (
                                 <div
@@ -186,18 +181,18 @@ export default async function AdDetailPage({
                                         alignItems: "center",
                                         justifyContent: "center",
                                         fontSize: "6rem",
+                                        borderRadius: "var(--radius-lg)",
                                         border: "1px solid var(--border)",
-                                        borderRadius: "inherit"
                                     }}
                                 >
                                     {ad.category.icon}
                                 </div>
-                            )}
-                        </div>
-                    )}
+                            )
+                        )}
+                    </div>
 
                     {/* İlan Detayları */}
-                    <div className="card" style={{ marginTop: adData.isLive ? "0" : "1.5rem" }}>
+                    <div className="card" style={{ marginTop: adData.isLive ? "1rem" : "1.5rem" }}>
                         <div className="card-body">
                             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: "1rem" }}>
                                 <div>
