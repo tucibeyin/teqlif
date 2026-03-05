@@ -1,19 +1,18 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 
 const T = {
-  teal: "#00B4CC",
-  tealDark: "#008FA3",
-  green: "#00E096",
-  red: "#FF4757",
-  glass: "rgba(255,255,255,0.04)",
+  glass:       "rgba(255,255,255,0.04)",
   glassBorder: "rgba(255,255,255,0.07)",
-  text: "#E8EFF7",
-  muted: "#4A6070",
-  mono: "'DM Mono', 'Fira Code', 'Courier New', monospace",
-  display: "'Syne', system-ui, sans-serif",
+  teal:        "#06C8E0",
+  tealDark:    "#059AAF",
+  green:       "#10D88A",
+  red:         "#F03E3E",
+  text:        "#EDF2F7",
+  muted:       "#3D526A",
+  mono:        "'DM Mono', monospace",
+  display:     "'Syne', system-ui, sans-serif",
 };
 
 const fmt = (val: number) => new Intl.NumberFormat("tr-TR").format(val) + " ₺";
@@ -41,7 +40,6 @@ export function BidPanel({
   lastAcceptedBidId, highestBidderId,
   onAccept, onReject, onBuyNow, loading = false,
 }: BidPanelProps) {
-  const router = useRouter();
   const [amount, setAmount] = useState("");
   const [bidLoading, setBidLoading] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
@@ -99,9 +97,21 @@ export function BidPanel({
   return (
     <>
       <style>{`
-        .tq-bid-input::placeholder { color: #4A6070; }
-        .tq-bid-input:focus { border-color: rgba(0,180,204,0.4) !important; outline: none; }
-        .tq-quick-btn:hover { border-color: rgba(0,180,204,0.4) !important; color: #E8EFF7 !important; }
+        .tq-bid-input::placeholder { color: #3D526A; font-family: 'DM Mono', monospace; }
+        .tq-bid-input:focus {
+          border-color: rgba(6,200,224,0.45) !important;
+          box-shadow: 0 0 0 3px rgba(6,200,224,0.08) !important;
+          outline: none;
+        }
+        .tq-quick-btn:hover {
+          border-color: rgba(6,200,224,0.35) !important;
+          color: #EDF2F7 !important;
+          box-shadow: 0 0 0 1px rgba(6,200,224,0.2) !important;
+          background: rgba(6,200,224,0.07) !important;
+        }
+        .tq-quick-btn:active { transform: scale(0.96); }
+        .tq-accept-btn:hover { background: rgba(16,216,138,0.22) !important; box-shadow: 0 0 16px rgba(16,216,138,0.2) !important; }
+        .tq-reject-btn:hover { background: rgba(240,62,62,0.22) !important; box-shadow: 0 0 16px rgba(240,62,62,0.2) !important; }
       `}</style>
 
       <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -110,28 +120,28 @@ export function BidPanel({
         {isOwner && lastAcceptedBidId == null && currentHighest > 0 && (
           <div style={{ display: "flex", gap: 8 }}>
             <button
+              className="tq-accept-btn"
               onClick={onAccept} disabled={loading}
               style={{
-                flex: 1, padding: "11px 0", borderRadius: 12, cursor: "pointer",
-                background: "rgba(0,224,150,0.1)", border: "1px solid rgba(0,224,150,0.25)",
-                color: T.green, fontFamily: T.display, fontWeight: 800, fontSize: 12,
-                letterSpacing: 0.5, transition: "all 0.2s",
+                flex: 1, padding: "12px 0", borderRadius: 12, cursor: "pointer",
+                background: "rgba(16,216,138,0.1)", border: "1px solid rgba(16,216,138,0.28)",
+                color: T.green, fontFamily: T.display, fontWeight: 900, fontSize: 12,
+                letterSpacing: 0.8, transition: "all 0.2s",
+                boxShadow: "0 2px 12px rgba(16,216,138,0.1)",
               }}
-              onMouseOver={e => (e.currentTarget.style.background = "rgba(0,224,150,0.2)")}
-              onMouseOut={e => (e.currentTarget.style.background = "rgba(0,224,150,0.1)")}
             >
               ✓ Kabul Et
             </button>
             <button
+              className="tq-reject-btn"
               onClick={onReject} disabled={loading}
               style={{
-                flex: 1, padding: "11px 0", borderRadius: 12, cursor: "pointer",
-                background: "rgba(255,71,87,0.1)", border: "1px solid rgba(255,71,87,0.25)",
-                color: T.red, fontFamily: T.display, fontWeight: 800, fontSize: 12,
-                letterSpacing: 0.5, transition: "all 0.2s",
+                flex: 1, padding: "12px 0", borderRadius: 12, cursor: "pointer",
+                background: "rgba(240,62,62,0.1)", border: "1px solid rgba(240,62,62,0.28)",
+                color: T.red, fontFamily: T.display, fontWeight: 900, fontSize: 12,
+                letterSpacing: 0.8, transition: "all 0.2s",
+                boxShadow: "0 2px 12px rgba(240,62,62,0.1)",
               }}
-              onMouseOver={e => (e.currentTarget.style.background = "rgba(255,71,87,0.2)")}
-              onMouseOut={e => (e.currentTarget.style.background = "rgba(255,71,87,0.1)")}
             >
               ✕ Reddet
             </button>
@@ -150,10 +160,10 @@ export function BidPanel({
                   onClick={() => handleQuickBid(step)}
                   disabled={bidLoading}
                   style={{
-                    flex: 1, padding: "8px 0",
+                    flex: 1, padding: "9px 0",
                     background: T.glass, border: `1px solid ${T.glassBorder}`,
                     borderRadius: 10, color: T.muted, fontFamily: T.mono,
-                    fontSize: 12, cursor: "pointer", transition: "all 0.15s",
+                    fontSize: 11, cursor: "pointer", transition: "all 0.15s",
                   }}
                 >
                   +{new Intl.NumberFormat("tr-TR").format(step)} ₺
@@ -174,22 +184,25 @@ export function BidPanel({
                 style={{
                   flex: 1, height: 46,
                   background: T.glass, border: `1px solid ${T.glassBorder}`,
-                  borderRadius: 12, padding: "0 16px",
+                  borderRadius: 14, padding: "0 16px",
                   color: T.text, fontSize: 15, fontFamily: T.mono,
-                  fontWeight: 500, transition: "border-color 0.2s",
+                  fontWeight: 500, transition: "border-color 0.2s, box-shadow 0.2s",
                 }}
               />
               <button
                 type="submit"
                 disabled={bidLoading || !amount}
                 style={{
-                  padding: "0 20px", borderRadius: 12, cursor: "pointer",
+                  padding: "0 22px", borderRadius: 14, cursor: "pointer",
                   background: `linear-gradient(135deg, ${T.teal}, ${T.tealDark})`,
                   border: "none", color: "white", fontFamily: T.display,
-                  fontWeight: 800, fontSize: 13, letterSpacing: 0.5,
-                  opacity: bidLoading || !amount ? 0.5 : 1,
+                  fontWeight: 900, fontSize: 12, letterSpacing: 1.5,
+                  opacity: bidLoading || !amount ? 0.45 : 1,
                   transition: "all 0.2s",
+                  boxShadow: "0 4px 16px rgba(6,200,224,0.25)",
                 }}
+                onMouseOver={e => { if (!bidLoading && amount) e.currentTarget.style.filter = "brightness(1.12)"; }}
+                onMouseOut={e => { e.currentTarget.style.filter = "none"; }}
               >
                 {bidLoading ? "..." : "TEKLİF VER"}
               </button>
@@ -201,10 +214,10 @@ export function BidPanel({
         {status && (
           <div style={{
             padding: "9px 14px", borderRadius: 10, textAlign: "center",
-            fontFamily: T.display, fontWeight: 700, fontSize: "0.8rem",
-            background: status.type === "success" ? "rgba(0,224,150,0.1)" : "rgba(255,71,87,0.1)",
+            fontFamily: T.display, fontWeight: 700, fontSize: "0.78rem",
+            background: status.type === "success" ? "rgba(16,216,138,0.1)" : "rgba(240,62,62,0.1)",
             color: status.type === "success" ? T.green : T.red,
-            border: `1px solid ${status.type === "success" ? "rgba(0,224,150,0.2)" : "rgba(255,71,87,0.2)"}`,
+            border: `1px solid ${status.type === "success" ? "rgba(16,216,138,0.22)" : "rgba(240,62,62,0.22)"}`,
           }}>
             {status.msg}
           </div>
@@ -216,12 +229,19 @@ export function BidPanel({
             onClick={onBuyNow} disabled={loading}
             style={{
               width: "100%", padding: "13px 0", borderRadius: 14, cursor: "pointer",
-              background: "rgba(0,180,204,0.08)", border: "1px solid rgba(0,180,204,0.2)",
-              color: T.teal, fontFamily: T.display, fontWeight: 800, fontSize: 14,
-              letterSpacing: 0.3, transition: "all 0.2s",
+              background: "rgba(6,200,224,0.07)",
+              border: "1px solid rgba(6,200,224,0.28)",
+              color: T.teal, fontFamily: T.display, fontWeight: 800, fontSize: 13,
+              letterSpacing: 0.5, transition: "all 0.2s",
             }}
-            onMouseOver={e => (e.currentTarget.style.background = "rgba(0,180,204,0.15)")}
-            onMouseOut={e => (e.currentTarget.style.background = "rgba(0,180,204,0.08)")}
+            onMouseOver={e => {
+              e.currentTarget.style.background = "rgba(6,200,224,0.14)";
+              e.currentTarget.style.boxShadow = "0 0 20px rgba(6,200,224,0.15)";
+            }}
+            onMouseOut={e => {
+              e.currentTarget.style.background = "rgba(6,200,224,0.07)";
+              e.currentTarget.style.boxShadow = "none";
+            }}
           >
             ⚡ Hemen Al — {fmt(buyItNowPrice)}
           </button>

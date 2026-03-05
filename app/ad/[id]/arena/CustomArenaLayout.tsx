@@ -58,14 +58,14 @@ export function CustomArenaLayout({
 
     const fireConfetti = useCallback(() => {
         const opts = {
-            particleCount: 140, spread: 75, startVelocity: 55, gravity: 0.8,
-            colors: ["#FFD700", "#FFA500", "#FF6B35", "#00B4CC", "#FFFFFF", "#22c55e"],
+            particleCount: 150, spread: 80, startVelocity: 58, gravity: 0.75,
+            colors: ["#F0B429", "#F03E3E", "#10D88A", "#06C8E0", "#FFFFFF", "#8B5CF6"],
         };
         confetti({ ...opts, origin: { x: 0.05, y: 1 }, angle: 65 });
         confetti({ ...opts, origin: { x: 0.95, y: 1 }, angle: 115 });
         setTimeout(() => {
-            confetti({ ...opts, particleCount: 80, origin: { x: 0.2, y: 0.8 }, angle: 80 });
-            confetti({ ...opts, particleCount: 80, origin: { x: 0.8, y: 0.8 }, angle: 100 });
+            confetti({ ...opts, particleCount: 90, origin: { x: 0.2, y: 0.8 }, angle: 80 });
+            confetti({ ...opts, particleCount: 90, origin: { x: 0.8, y: 0.8 }, angle: 100 });
         }, 400);
     }, []);
 
@@ -101,7 +101,6 @@ export function CustomArenaLayout({
     // ── Derived ────────────────────────────────────────────────────────────────
 
     const isBroadcastEnded = isRoomClosed || connectionState === ConnectionState.Disconnected;
-
     const hostTrack = tracks[0] ?? null;
     const guestTrack = tracks.length > 1 ? tracks[1] : null;
 
@@ -133,8 +132,6 @@ export function CustomArenaLayout({
         else window.location.href = "/";
     };
 
-    // ── Stage request handler ──────────────────────────────────────────────────
-
     const handleStageRequestClick = () => {
         const req = stage.requests[0];
         if (req) stage.acceptRequest(req);
@@ -150,33 +147,58 @@ export function CustomArenaLayout({
     // ── Render ─────────────────────────────────────────────────────────────────
 
     return (
-        <div className="flex flex-col md:flex-row w-full h-full overflow-hidden relative" style={{ background: "#070B0F" }}>
-
-            {/* ── VIDEO PANEL ─────────────────────────────────────────── */}
-            <div className="flex-[1_1_0] min-h-0 relative bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 flex flex-col">
-
-                {/* Video track */}
-                <div className="w-full h-full relative overflow-hidden bg-neutral-900">
+        <div
+            className="flex flex-col md:flex-row w-full h-full overflow-hidden relative"
+            style={{ background: "#060810" }}
+        >
+            {/* ══ VIDEO PANEL ═══════════════════════════════════════════════ */}
+            <div
+                className="flex-[3_3_0] min-h-0 relative overflow-hidden border-b md:border-b-0 md:border-r flex flex-col"
+                style={{ borderColor: "rgba(255,255,255,0.05)", background: "#080C18" }}
+            >
+                <div className="w-full h-full relative overflow-hidden">
                     <div style={{ position: "absolute", inset: 0 }}>
                         {isBroadcastEnded ? (
                             <BroadcastEndedScreen />
                         ) : hostTrack ? (
                             hostTrack.publication?.isMuted ? (
-                                <div className="w-full h-full flex items-center justify-center bg-neutral-800 text-white">
+                                <div className="w-full h-full flex items-center justify-center text-white"
+                                    style={{ background: "#0D1220" }}>
                                     <span style={{ fontSize: "3rem" }}>📷</span>
                                 </div>
                             ) : (
-                                <VideoTrack trackRef={hostTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                <VideoTrack
+                                    trackRef={hostTrack}
+                                    style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                />
                             )
                         ) : (
-                            <div className="w-full h-full flex flex-col items-center justify-center bg-neutral-900 text-white animate-pulse">
-                                <h2 className="text-xl font-bold tracking-wider text-gray-300">Yayıncı bekleniyor...</h2>
-                                <p className="opacity-50 mt-2 text-sm">Lütfen ayrılmayın, açık arttırma birazdan başlayacak.</p>
+                            <div className="w-full h-full flex flex-col items-center justify-center"
+                                style={{ background: "#080C18" }}>
+                                <div style={{
+                                    fontSize: "2.5rem", marginBottom: 16, opacity: 0.25,
+                                }}>
+                                    📡
+                                </div>
+                                <h2 style={{
+                                    fontSize: "1.05rem", fontWeight: 700,
+                                    color: "rgba(255,255,255,0.35)",
+                                    fontFamily: "'Syne', system-ui, sans-serif",
+                                }}>
+                                    Yayıncı bekleniyor...
+                                </h2>
+                                <p style={{
+                                    opacity: 0.25, marginTop: 6, fontSize: "0.78rem",
+                                    color: "white",
+                                    fontFamily: "'Syne', system-ui, sans-serif",
+                                }}>
+                                    Açık arttırma birazdan başlayacak.
+                                </p>
                             </div>
                         )}
                     </div>
 
-                    {/* Overlays — only while broadcast is alive */}
+                    {/* ── VIDEO OVERLAYS ── */}
                     {!isBroadcastEnded && (
                         <>
                             <FlyingEmojis reactions={reactions.reactions} />
@@ -188,11 +210,10 @@ export function CustomArenaLayout({
                                 onClose={handleClose}
                             />
 
-                            {/* Stats (mobile-parity overlay) */}
+                            {/* Stats overlay */}
                             <div style={{
-                                position: "absolute", top: "100px", left: "16px", right: "16px",
-                                zIndex: 200, display: "flex", flexDirection: "column", gap: "8px",
-                                pointerEvents: "auto",
+                                position: "absolute", top: 90, left: 16, right: 16,
+                                zIndex: 200, pointerEvents: "auto",
                             }}>
                                 <StatsBar
                                     auctionStatus={auction.status}
@@ -210,10 +231,9 @@ export function CustomArenaLayout({
                                 <div style={{
                                     position: "absolute", top: "50%", left: "50%",
                                     transform: "translate(-50%, -50%)",
-                                    fontSize: "8rem", fontWeight: 900, color: "white",
-                                    textShadow: "0 0 40px rgba(239,68,68,0.8)",
-                                    zIndex: 150,
-                                    animation: "zoomIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                                    fontSize: "9rem", fontWeight: 900, color: "white",
+                                    textShadow: "0 0 50px rgba(240,62,62,0.7)",
+                                    zIndex: 150, fontFamily: "'Syne', system-ui, sans-serif",
                                 }}>
                                     {countdown}
                                 </div>
@@ -222,22 +242,30 @@ export function CustomArenaLayout({
                             {/* Guest PiP */}
                             {guestTrack && (
                                 <div style={{
-                                    position: "absolute", bottom: "100px", right: "20px",
-                                    width: "100px", height: "140px", borderRadius: "12px",
-                                    overflow: "hidden", border: "2px solid white",
-                                    boxShadow: "0 8px 24px rgba(0,0,0,0.5)", zIndex: 10, background: "black",
+                                    position: "absolute", bottom: 100, right: 20,
+                                    width: 100, height: 140, borderRadius: 14,
+                                    overflow: "hidden", border: "2px solid rgba(255,255,255,0.18)",
+                                    boxShadow: "0 8px 28px rgba(0,0,0,0.65)", zIndex: 10,
+                                    background: "black",
                                 }}>
                                     {guestTrack.publication?.isMuted ? (
-                                        <div style={{ width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", background: "#333" }}>
+                                        <div style={{
+                                            width: "100%", height: "100%",
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            background: "#111",
+                                        }}>
                                             <span style={{ fontSize: "24px" }}>📷</span>
                                         </div>
                                     ) : (
-                                        <VideoTrack trackRef={guestTrack} style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                                        <VideoTrack
+                                            trackRef={guestTrack}
+                                            style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                                        />
                                     )}
                                 </div>
                             )}
 
-                            {/* Host Controls */}
+                            {/* Host FABs */}
                             {isOwner && (
                                 <HostControls
                                     auctionStatus={auction.status}
@@ -251,13 +279,14 @@ export function CustomArenaLayout({
                                 />
                             )}
 
-                            {/* Reaction Bar (viewer) */}
+                            {/* Viewer: vertical reaction bar */}
                             {!isOwner && (
                                 <div style={{
-                                    position: "absolute", bottom: "20px", left: "16px",
+                                    position: "absolute", right: 16, bottom: "50%",
+                                    transform: "translateY(50%)",
                                     zIndex: 200, pointerEvents: "auto",
                                 }}>
-                                    <ReactionBar onReact={reactions.sendReaction} />
+                                    <ReactionBar onReact={reactions.sendReaction} vertical={true} />
                                 </div>
                             )}
                         </>
@@ -265,11 +294,16 @@ export function CustomArenaLayout({
                 </div>
             </div>
 
-            {/* ── CONTROL PANEL ───────────────────────────────────────── */}
+            {/* ══ CONTROL PANEL ═════════════════════════════════════════════ */}
             {!isBroadcastEnded && (
-                <div className="w-full md:w-96 flex-shrink-0 flex flex-col relative z-50 h-[45vh] md:h-full" style={{ background: "rgba(12,18,26,0.97)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
-
-                    {/* Sold overlay (inside panel) */}
+                <div
+                    className="w-full md:w-[340px] flex-shrink-0 flex flex-col relative z-50 h-[45vh] md:h-full"
+                    style={{
+                        background: "rgba(8,12,22,0.97)",
+                        borderLeft: "1px solid rgba(255,255,255,0.05)",
+                    }}
+                >
+                    {/* Sold overlay */}
                     {auction.result && auction.showSoldOverlay && (
                         <SoldOverlay
                             winnerName={auction.result.winnerName}
@@ -289,8 +323,11 @@ export function CustomArenaLayout({
                         />
                     )}
 
-                    {/* Stats (desktop) */}
-                    <div className="p-4 border-b border-white/10">
+                    {/* Stats */}
+                    <div style={{
+                        padding: "16px 16px 12px",
+                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                    }}>
                         <StatsBar
                             auctionStatus={auction.status}
                             highestBid={auction.highestBid}
@@ -303,7 +340,7 @@ export function CustomArenaLayout({
                     </div>
 
                     {/* Chat */}
-                    <div className="flex-1 p-4 overflow-hidden">
+                    <div style={{ flex: 1, padding: "12px 16px", overflow: "hidden" }}>
                         <ChatOverlay
                             messages={chat.messages}
                             inputValue={chat.inputValue}
@@ -315,7 +352,10 @@ export function CustomArenaLayout({
                     </div>
 
                     {/* Bid panel */}
-                    <div className="p-4 border-t border-white/10">
+                    <div style={{
+                        padding: "12px 16px",
+                        borderTop: "1px solid rgba(255,255,255,0.05)",
+                    }}>
                         <BidPanel
                             adId={adId}
                             sellerId={sellerId}
@@ -334,9 +374,13 @@ export function CustomArenaLayout({
                         />
                     </div>
 
-                    {/* Reaction bar (host side panel) */}
+                    {/* Host: reaction bar */}
                     {isOwner && (
-                        <div className="p-4 border-t border-white/10">
+                        <div style={{
+                            padding: "10px 16px 14px",
+                            borderTop: "1px solid rgba(255,255,255,0.05)",
+                            display: "flex", justifyContent: "center",
+                        }}>
                             <ReactionBar onReact={reactions.sendReaction} />
                         </div>
                     )}

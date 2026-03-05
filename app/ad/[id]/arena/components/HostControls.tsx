@@ -5,29 +5,27 @@ import { Track } from "livekit-client";
 import type { AuctionStatus } from "../types";
 
 const T = {
-  teal: "#00B4CC",
-  green: "#00E096",
-  red: "#FF4757",
-  glass: "rgba(255,255,255,0.06)",
-  glassBorder: "rgba(255,255,255,0.08)",
-  text: "#E8EFF7",
-  display: "'Syne', system-ui, sans-serif",
+  glass:       "rgba(255,255,255,0.06)",
+  glassBorder: "rgba(255,255,255,0.09)",
+  green:       "#10D88A",
+  red:         "#F03E3E",
+  gold:        "#F0B429",
+  text:        "#EDF2F7",
+  display:     "'Syne', system-ui, sans-serif",
 };
 
-const ROUND: React.CSSProperties = {
-  width: 44, height: 44, borderRadius: "50%",
-  background: T.glass, border: `1px solid ${T.glassBorder}`,
+// Base FAB style — 48x48 round cam-glass button
+const FAB: React.CSSProperties = {
+  width: 48, height: 48, borderRadius: "50%",
+  background: "rgba(14,20,34,0.75)",
+  border: `1px solid ${T.glassBorder}`,
+  backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
   fontSize: 18, cursor: "pointer", color: T.text,
   display: "flex", alignItems: "center", justifyContent: "center",
-  transition: "all 0.15s", backdropFilter: "blur(12px)",
+  transition: "all 0.18s", boxShadow: "0 4px 16px rgba(0,0,0,0.4)",
 };
 
-const TRACK_STYLE: React.CSSProperties = {
-  ...ROUND,
-  border: `1px solid ${T.glassBorder}`,
-};
-
-interface HostControlsProps {
+export interface HostControlsProps {
   auctionStatus: AuctionStatus;
   onStartAuction: () => void;
   onStopAuction: () => void;
@@ -43,6 +41,7 @@ export function HostControls({
   onEndBroadcast, stageRequestCount, onStageRequestClick, loading,
 }: HostControlsProps) {
   const room = useRoomContext();
+  const isActive = auctionStatus === "ACTIVE";
 
   const handleCameraSwitch = async () => {
     try {
@@ -53,124 +52,136 @@ export function HostControls({
     } catch (e) { console.error("Kamera değiştirme hatası:", e); }
   };
 
-  const isActive = auctionStatus === "ACTIVE";
-
   return (
     <>
       <style>{`
-        @keyframes tq-pulse {
-          0%, 100% { box-shadow: 0 0 0 0 rgba(59,130,246,0.5); }
-          50%       { box-shadow: 0 0 0 8px rgba(59,130,246,0); }
+        @keyframes tq-stagePulse {
+          0%, 100% { box-shadow: 0 0 0 0 rgba(99,102,241,0.6), 0 4px 16px rgba(0,0,0,0.4); }
+          50%       { box-shadow: 0 0 0 10px rgba(99,102,241,0), 0 4px 16px rgba(0,0,0,0.4); }
         }
-        .tq-round-btn:hover { background: rgba(255,255,255,0.12) !important; }
+        .tq-fab:hover { background: rgba(255,255,255,0.12) !important; transform: scale(1.06); }
+        .tq-fab:active { transform: scale(0.95); }
+        .tq-fab-lk button {
+          width: 48px !important; height: 48px !important;
+          border-radius: 50% !important;
+          background: rgba(14,20,34,0.75) !important;
+          border: 1px solid rgba(255,255,255,0.09) !important;
+          backdrop-filter: blur(16px) !important;
+          font-size: 18px !important; color: #EDF2F7 !important;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.4) !important;
+          transition: all 0.18s !important;
+          cursor: pointer;
+        }
+        .tq-fab-lk button:hover { background: rgba(255,255,255,0.12) !important; transform: scale(1.06); }
+        .tq-fab-lk button[data-lk-enabled="false"] { opacity: 0.55; }
       `}</style>
 
+      {/* ── MEDIA FABs — bottom left ───────────────────────────────── */}
       <div style={{
-        position: "absolute", bottom: 20, left: "50%",
-        transform: "translateX(-50%)", zIndex: 200,
-        display: "flex", flexDirection: "row",
-        alignItems: "center", gap: 10,
-        background: "rgba(7,11,15,0.7)",
-        backdropFilter: "blur(20px)",
-        WebkitBackdropFilter: "blur(20px)",
-        borderRadius: 100, padding: "8px 20px",
-        border: `1px solid ${T.glassBorder}`,
+        position: "absolute", bottom: 24, left: 20, zIndex: 200,
+        display: "flex", flexDirection: "row", gap: 10,
         pointerEvents: "auto",
       }}>
-
-        {/* Mic toggle */}
         <TrackToggle
           source={Track.Source.Microphone}
-          style={TRACK_STYLE}
-          className="backdrop-blur-lg"
+          className="tq-fab-lk"
         />
-
-        {/* Camera toggle */}
         <TrackToggle
           source={Track.Source.Camera}
-          style={TRACK_STYLE}
-          className="backdrop-blur-lg"
+          className="tq-fab-lk"
         />
-
-        {/* Flip camera */}
-        <button className="tq-round-btn" onClick={handleCameraSwitch} style={ROUND} title="Kamera Değiştir">
+        <button
+          className="tq-fab"
+          onClick={handleCameraSwitch}
+          style={FAB}
+          title="Kamerayı Çevir"
+        >
           🔄
         </button>
+      </div>
 
-        {/* Divider */}
-        <div style={{ width: 1, height: 24, background: T.glassBorder }} />
-
-        {/* Reset */}
+      {/* ── AUCTION FABs — bottom center ──────────────────────────── */}
+      <div style={{
+        position: "absolute", bottom: 24, left: "50%",
+        transform: "translateX(-50%)", zIndex: 200,
+        display: "flex", flexDirection: "row", alignItems: "center", gap: 10,
+        pointerEvents: "auto",
+      }}>
+        {/* Reset — small FAB */}
         <button
-          className="tq-round-btn"
+          className="tq-fab"
           onClick={onResetAuction}
           disabled={loading}
-          style={{ ...ROUND, background: "rgba(245,158,11,0.1)", border: "1px solid rgba(245,158,11,0.2)" }}
           title="Sıfırla"
+          style={{
+            ...FAB,
+            width: 40, height: 40,
+            background: "rgba(240,180,41,0.1)",
+            border: "1px solid rgba(240,180,41,0.22)",
+            color: T.gold, fontSize: 20,
+            opacity: loading ? 0.5 : 1,
+          }}
         >
           ↺
         </button>
 
-        {/* Auction toggle */}
+        {/* Start / Stop — large pill FAB */}
         <button
           onClick={isActive ? onStopAuction : onStartAuction}
           disabled={loading}
           style={{
-            padding: "8px 18px", borderRadius: 100, cursor: "pointer",
-            fontFamily: T.display, fontSize: 12, fontWeight: 800,
-            letterSpacing: 0.5, transition: "all 0.2s",
-            background: isActive ? "rgba(255,71,87,0.15)" : "rgba(0,224,150,0.15)",
-            border: `1px solid ${isActive ? "rgba(255,71,87,0.3)" : "rgba(0,224,150,0.3)"}`,
+            height: 48, padding: "0 26px", borderRadius: 100,
+            cursor: loading ? "not-allowed" : "pointer",
+            fontFamily: T.display, fontSize: 13, fontWeight: 900,
+            letterSpacing: 1, transition: "all 0.22s",
+            backdropFilter: "blur(16px)", WebkitBackdropFilter: "blur(16px)",
+            boxShadow: isActive
+              ? "0 0 24px rgba(240,62,62,0.3), 0 4px 16px rgba(0,0,0,0.4)"
+              : "0 0 24px rgba(16,216,138,0.25), 0 4px 16px rgba(0,0,0,0.4)",
+            background: isActive
+              ? "linear-gradient(135deg, rgba(240,62,62,0.25), rgba(200,30,30,0.2))"
+              : "linear-gradient(135deg, rgba(16,216,138,0.22), rgba(10,160,100,0.18))",
+            border: isActive
+              ? "1px solid rgba(240,62,62,0.4)"
+              : "1px solid rgba(16,216,138,0.38)",
             color: isActive ? T.red : T.green,
+            opacity: loading ? 0.6 : 1,
           }}
         >
           {isActive ? "⏹ Durdur" : "▶ Başlat"}
         </button>
+      </div>
 
-        {/* Stage requests */}
-        {stageRequestCount > 0 && (
+      {/* ── STAGE REQUEST FAB — bottom right ──────────────────────── */}
+      {stageRequestCount > 0 && (
+        <div style={{
+          position: "absolute", bottom: 24, right: 20, zIndex: 200,
+          pointerEvents: "auto",
+        }}>
           <div style={{ position: "relative" }}>
             <button
               onClick={onStageRequestClick}
               style={{
-                ...ROUND,
-                background: "rgba(59,130,246,0.15)",
-                border: "2px solid rgba(59,130,246,0.4)",
-                animation: "tq-pulse 1.5s infinite",
+                ...FAB,
+                background: "rgba(99,102,241,0.18)",
+                border: "1px solid rgba(99,102,241,0.38)",
+                animation: "tq-stagePulse 1.6s ease infinite",
               }}
             >
               🎤
             </button>
             <span style={{
-              position: "absolute", top: -5, right: -5,
-              background: T.red, color: "white", fontSize: 10,
-              fontWeight: 800, padding: "2px 6px", borderRadius: 10,
-              fontFamily: T.display,
+              position: "absolute", top: -4, right: -4,
+              background: T.red, color: "white",
+              fontSize: 10, fontWeight: 900, fontFamily: T.display,
+              padding: "2px 6px", borderRadius: 10,
+              boxShadow: "0 2px 8px rgba(240,62,62,0.5)",
             }}>
               {stageRequestCount}
             </span>
           </div>
-        )}
-
-        {/* Divider */}
-        <div style={{ width: 1, height: 24, background: T.glassBorder }} />
-
-        {/* End broadcast */}
-        <button
-          onClick={onEndBroadcast}
-          style={{
-            ...ROUND,
-            background: "rgba(255,71,87,0.1)",
-            border: "1px solid rgba(255,71,87,0.25)",
-            color: T.red,
-          }}
-          title="Yayını Bitir"
-          onMouseOver={e => (e.currentTarget.style.background = "rgba(255,71,87,0.25)")}
-          onMouseOut={e => (e.currentTarget.style.background = "rgba(255,71,87,0.1)")}
-        >
-          ✕
-        </button>
-      </div>
+        </div>
+      )}
     </>
   );
 }
