@@ -808,13 +808,20 @@ function CustomArenaLayout({
                     {isOwner && (
                         <div style={{
                             position: "absolute",
-                            right: "16px",
-                            bottom: "270px", // Just above the bottom console
+                            bottom: "20px",
+                            left: "50%",
+                            transform: "translateX(-50%)",
                             zIndex: 200,
                             display: "flex",
-                            flexDirection: "row-reverse",
-                            gap: "12px",
-                            pointerEvents: "auto"
+                            flexDirection: "row",
+                            alignItems: "center",
+                            gap: "16px",
+                            background: "rgba(0,0,0,0.5)",
+                            backdropFilter: "blur(12px)",
+                            borderRadius: "100px",
+                            padding: "8px 24px",
+                            pointerEvents: "auto",
+                            border: "1px solid rgba(255,255,255,0.1)"
                         }}>
                             <TrackToggle
                                 source={Track.Source.Microphone}
@@ -1060,8 +1067,8 @@ function CustomArenaLayout({
             <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl border-0 md:border-l border-white/10 relative z-50 h-[45vh] md:h-full">
                 <div className="flex-[1_1_0] flex flex-col p-4 pointer-events-none relative overflow-hidden z-[200]" style={{ minHeight: "0" }}>
                         {/* Chat Area & Reactions Tray (Flex row so chat takes left, emojis take right) */}
-                        <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0" }}>
-                            <div className="flex-[1_1_0] overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_100%)]" style={{ minHeight: "0" }}>
+                        <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0", flexBasis: "0" }}>
+                            <div className="flex-1 overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_100%)]">
                                 {messages.map((msg: any) => (
                                     <div key={msg.id} style={{
                                         background: "rgba(0,0,0,0.4)",
@@ -1142,7 +1149,7 @@ function CustomArenaLayout({
                             {isOwner ? (
                                 <button
                                     onClick={auctionStatus === "IDLE" ? startCountdown : () => handleStopAuction()}
-                                    className="w-full flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98]"
+                                    className="w-full flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98] mt-4"
                                     style={{
                                         minHeight: "50px",
                                         padding: "0 24px",
