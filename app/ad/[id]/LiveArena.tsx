@@ -1061,7 +1061,7 @@ function CustomArenaLayout({
                 <div className="flex-[1_1_0] flex flex-col p-4 pointer-events-none relative overflow-hidden z-[200]" style={{ minHeight: "0" }}>
                         {/* Chat Area & Reactions Tray (Flex row so chat takes left, emojis take right) */}
                         <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0" }}>
-                            <div className="flex-[1_1_0] overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20" style={{ minHeight: "0" }}>
+                            <div className="flex-[1_1_0] overflow-y-auto flex flex-col gap-2 pr-2 scrollbar-thin scrollbar-thumb-white/20 [mask-image:linear-gradient(to_bottom,transparent_0%,black_15%,black_100%)]" style={{ minHeight: "0" }}>
                                 {messages.map((msg: any) => (
                                     <div key={msg.id} style={{
                                         background: "rgba(0,0,0,0.4)",
@@ -1124,18 +1124,8 @@ function CustomArenaLayout({
                         </div>
 
                         {/* Bottom Console (Chat Input & Action Button) */}
-                        <div style={{ pointerEvents: "auto", display: "flex", gap: "10px", alignItems: "center" }}>
-                            <form onSubmit={handleSendChat} style={{
-                                flex: 1,
-                                display: "flex",
-                                gap: "8px",
-                                background: "rgba(0,0,0,0.5)",
-                                backdropFilter: "blur(10px)",
-                                border: "1px solid rgba(255,255,255,0.1)",
-                                borderRadius: "100px",
-                                padding: "6px 8px 6px 16px",
-                                height: "50px"
-                            }}>
+                        <div className="w-full pointer-events-auto flex flex-col gap-3 mt-2">
+                            <form onSubmit={handleSendChat} className="w-full min-h-[50px] flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 rounded-full px-4 pr-1">
                                 <input
                                     type="text"
                                     value={chatText}
@@ -1143,7 +1133,7 @@ function CustomArenaLayout({
                                     placeholder="Sohbet et..."
                                     style={{ background: "transparent", border: "none", outline: "none", color: "white", flex: 1, fontSize: "0.95rem" }}
                                 />
-                                <button type="submit" style={{ background: "#4ade80", color: "black", border: "none", borderRadius: "100px", width: "38px", height: "38px", fontWeight: "bold", display: "flex", alignItems: "center", justifyContent: "center" }}>
+                                <button type="submit" className="flex-shrink-0" style={{ background: "#4ade80", color: "black", border: "none", borderRadius: "100px", width: "38px", height: "38px", fontWeight: "bold", display: "flex", alignItems: "center", justifyContent: "center" }}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
                                 </button>
                             </form>
@@ -1152,8 +1142,9 @@ function CustomArenaLayout({
                             {isOwner ? (
                                 <button
                                     onClick={auctionStatus === "IDLE" ? startCountdown : () => handleStopAuction()}
+                                    className="w-full flex items-center justify-center transition-all hover:scale-[1.02] active:scale-[0.98]"
                                     style={{
-                                        height: "50px",
+                                        minHeight: "50px",
                                         padding: "0 24px",
                                         background: auctionStatus === "IDLE" ? "linear-gradient(135deg, #10b981 0%, #059669 100%)" : "linear-gradient(135deg, #f97316 0%, #ea580c 100%)",
                                         color: "white", border: "none", borderRadius: "100px", fontWeight: 900,
@@ -1165,7 +1156,7 @@ function CustomArenaLayout({
                                 </button>
                             ) : (
                                 // Viewer Bidding or Sold Status
-                                <div style={{ display: "flex", alignItems: "center" }}>
+                                <div className="w-full flex justify-center items-center mt-2">
                                     {auctionResult ? (
                                         <div style={{ height: "50px", padding: "0 24px", background: "rgba(16, 185, 129, 0.2)", backdropFilter: "blur(10px)", border: "1px solid rgba(16, 185, 129, 0.4)", borderRadius: "100px", color: "#10b981", fontWeight: 900, display: "flex", alignItems: "center", justifyContent: "center" }}>
                                             BU ÜRÜN SATILMIŞTIR
@@ -1192,11 +1183,20 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
     const router = useRouter();
     const [amount, setAmount] = useState("");
     const [loading, setLoading] = useState(false);
+    const [flash, setFlash] = useState(false);
 
     useEffect(() => {
         const nextMin = currentHighest > 0 ? (currentHighest + minStep) : (startingBid ?? 1);
         setAmount(new Intl.NumberFormat("tr-TR").format(nextMin));
+        setFlash(true);
+        const timer = setTimeout(() => setFlash(false), 400);
+        return () => clearTimeout(timer);
     }, [currentHighest, minStep, startingBid]);
+
+    const addQuickBid = (extra: number) => {
+        const rawAmount = parseInt(amount.replace(/\./g, "") || "0", 10);
+        setAmount(new Intl.NumberFormat("tr-TR").format(rawAmount + extra));
+    };
 
     const handleBid = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -1214,52 +1214,56 @@ function BidMiniForm({ adId, currentHighest, minStep, startingBid }: any) {
     };
 
     return (
-        <form onSubmit={handleBid} style={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <input
-                type="text"
-                value={amount}
-                onChange={(e) => {
-                    const val = e.target.value.replace(/[^0-9]/g, "");
-                    setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
-                }}
-                style={{
-                    width: "110px",
-                    height: "50px", // Increased height for bottom console parity
-                    background: "rgba(0, 180, 204, 0.05)",
-                    backdropFilter: "blur(10px)",
-                    border: "1px solid rgba(0, 180, 204, 0.2)",
-                    borderRadius: "100px",
-                    padding: "0 16px",
-                    color: "var(--text-primary)",
-                    fontSize: "0.95rem",
-                    textAlign: "center",
-                    fontWeight: 800,
-                    outline: "none"
-                }}
-            />
-            <button
-                type="submit"
-                disabled={loading}
-                style={{
-                    height: "50px",
-                    background: loading ? "rgba(0, 180, 204, 0.3)" : "linear-gradient(135deg, rgb(0, 180, 204), rgb(0, 141, 161))",
-                    color: "white",
-                    border: "none",
-                    borderRadius: "100px",
-                    padding: "0 20px",
-                    fontSize: "0.9rem",
-                    fontWeight: 900,
-                    cursor: loading ? "not-allowed" : "pointer",
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "8px",
-                    boxShadow: loading ? "none" : "rgba(0, 180, 204, 0.4) 0px 4px 15px",
-                    opacity: loading ? 0.7 : 1
-                }}
-            >
-                {loading ? "BEKLEYİN" : "TEQLİF VER"}
-                {!loading && <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M14 9l6 6-6 6"></path><path d="M4 4v7a4 4 0 0 0 4 4h11"></path></svg>}
-            </button>
+        <form onSubmit={handleBid} className="flex flex-col w-full gap-4">
+            {/* The Climax Number */}
+            <div className="flex flex-col items-center justify-center">
+                <span className="text-xs font-bold text-white/50 tracking-widest uppercase mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">GÜNCEL FİYAT</span>
+                <div className="flex items-baseline gap-1">
+                    <span 
+                        className={`text-6xl font-black tabular-nums tracking-tighter transition-all duration-300 ${flash ? "text-emerald-300 scale-105" : "text-emerald-400"}`}
+                        style={{ textShadow: "0 0 20px rgba(52, 211, 153, 0.4), 0 0 40px rgba(52, 211, 153, 0.2)" }}
+                    >
+                        {new Intl.NumberFormat("tr-TR").format(currentHighest || (startingBid ?? 0))}
+                    </span>
+                    <span className="text-3xl font-bold text-emerald-500">₺</span>
+                </div>
+            </div>
+
+            {/* Quick Bids */}
+            <div className="flex flex-row justify-center gap-2">
+                {[50, 100, 500].map(val => (
+                    <button
+                        key={val}
+                        type="button"
+                        onClick={() => addQuickBid(val)}
+                        className="px-4 py-1.5 rounded-full bg-white/5 hover:bg-white/10 active:scale-95 border border-white/10 text-white font-bold text-sm transition-all shadow-[0_4px_10px_rgba(0,0,0,0.2)] backdrop-blur-md"
+                    >
+                        +{val} ₺
+                    </button>
+                ))}
+            </div>
+
+            {/* Premium Bid Form Input & Submit */}
+            <div className="flex gap-2 items-center">
+                <input
+                    type="text"
+                    value={amount}
+                    onChange={(e) => {
+                        const val = e.target.value.replace(/[^0-9]/g, "");
+                        setAmount(val ? new Intl.NumberFormat("tr-TR").format(parseInt(val, 10)) : "");
+                    }}
+                    className="flex-1 w-full min-w-0 h-[54px] bg-white/10 backdrop-blur-md border border-white/20 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 rounded-2xl px-4 text-white text-lg text-center font-black outline-none transition-all placeholder-white/30"
+                    placeholder="Tutar"
+                />
+                <button
+                    type="submit"
+                    disabled={loading}
+                    className="h-[54px] px-6 bg-emerald-600 hover:bg-emerald-500 disabled:bg-emerald-800 disabled:opacity-50 text-white border-0 rounded-2xl font-black tracking-wide text-lg flex items-center gap-2 cursor-pointer transition-all shadow-[0_4px_20px_rgba(5,150,105,0.4)] active:scale-95 flex-shrink-0"
+                >
+                    {loading ? "..." : "TEKLİF"}
+                    {!loading && <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M5 12h14"></path><path d="m12 5 7 7-7 7"></path></svg>}
+                </button>
+            </div>
         </form>
     );
 }

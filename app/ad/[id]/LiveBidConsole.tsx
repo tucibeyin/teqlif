@@ -153,8 +153,8 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                     </div>
                     {highestBidderName && (
                         <div className="mt-2 text-sm">
-                            <span className="text-gray-500 font-medium">Lider: </span>
-                            <span className="text-green-600 font-bold">{highestBidderName}</span>
+                            <span className="text-white/50 font-medium">LİDER: </span>
+                            <span className="text-emerald-500 font-bold">{highestBidderName}</span>
                         </div>
                     )}
                 </div>
@@ -164,25 +164,28 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
 
     // Viewer Mode
     return (
-        <div className="flex flex-col gap-4 p-5 bg-white border border-gray-200 rounded-xl shadow-lg relative overflow-hidden">
+        <div className="flex flex-col gap-4 p-5 bg-white/5 backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl relative overflow-hidden">
             <div className="flex justify-between items-start mb-2 relative z-10">
                 <div className="flex flex-col">
                     <div className="flex items-center gap-2 mb-1">
                         <span className={`w-2.5 h-2.5 rounded-full ${auctionStatus === "ACTIVE" ? "bg-red-500 animate-pulse" : "bg-amber-500"}`}></span>
-                        <span className="text-xs font-bold tracking-wider text-gray-500 uppercase">{auctionStatus === "ACTIVE" ? "CANLI TEKLİF AÇIK" : "YAYINCI BEKLENİYOR"}</span>
+                        <span className="text-xs font-bold tracking-wider text-white/50 uppercase drop-shadow-md">{auctionStatus === "ACTIVE" ? "CANLI TEKLİF AÇIK" : "YAYINCI BEKLENİYOR"}</span>
                     </div>
                 </div>
             </div>
 
-            <div className="flex flex-col items-center justify-center py-6 bg-gray-50 rounded-xl border border-gray-100 relative z-10">
-                <span className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-2">Güncel Fiyat</span>
-                <span className={`text-5xl font-black tabular-nums tracking-tighter ${flash ? "text-green-500 scale-110" : "text-gray-900"} transition-all duration-300`}>
+            <div className="flex flex-col items-center justify-center py-6 bg-transparent relative z-10">
+                <span className="text-xs font-bold text-white/50 tracking-widest uppercase mb-1 drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)]">GÜNCEL FİYAT</span>
+                <span 
+                    className={`text-6xl font-black tabular-nums tracking-tighter transition-all duration-300 ${flash ? "text-emerald-300 scale-105" : "text-emerald-400"}`}
+                    style={{ textShadow: "0 0 20px rgba(52, 211, 153, 0.4), 0 0 40px rgba(52, 211, 153, 0.2)" }}
+                >
                     {formatPrice(currentPrice)}
                 </span>
                 {highestBidderName && (
-                    <div className="mt-3 bg-white px-4 py-1.5 rounded-full border border-gray-200 text-sm shadow-sm">
-                        <span className="text-gray-500 font-medium">Lider: </span>
-                        <span className="text-green-600 font-bold">{highestBidderName}</span>
+                    <div className="mt-3 bg-black/40 px-4 py-1.5 rounded-full border border-white/10 text-sm shadow-sm backdrop-blur-md">
+                        <span className="text-white/50 font-medium">LİDER: </span>
+                        <span className="text-emerald-500 font-bold">{highestBidderName}</span>
                     </div>
                 )}
             </div>
@@ -192,8 +195,8 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                     disabled={loading || auctionStatus !== "ACTIVE"}
                     onClick={placeBid}
                     className={`w-full py-5 rounded-2xl text-xl font-black tracking-wide text-white shadow-xl transition-all transform active:scale-[0.98] flex items-center justify-center gap-3 ${auctionStatus === "ACTIVE" && !loading
-                            ? "bg-gradient-to-r from-red-600 to-red-500 hover:from-red-500 hover:to-red-400 shadow-red-500/30"
-                            : "bg-gray-300 shadow-none text-gray-500 cursor-not-allowed"
+                            ? "bg-emerald-600 hover:bg-emerald-500 shadow-[0_4px_20px_rgba(5,150,105,0.4)] text-white border-0"
+                            : "bg-emerald-800/50 shadow-none text-white/50 cursor-not-allowed border border-white/10"
                         }`}
                 >
                     {loading ? (
@@ -205,9 +208,9 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                         </>
                     )}
                 </button>
-                <div className="text-center mt-3 text-xs font-semibold text-gray-400 flex items-center justify-center gap-1">
+                <div className="text-center mt-3 text-xs font-semibold text-white/40 flex items-center justify-center gap-1">
                     <span>Otomatik artırım:</span>
-                    <span className="text-gray-600">{formatPrice(minStep)}</span>
+                    <span className="text-white/70">{formatPrice(minStep)}</span>
                 </div>
             </div>
 
