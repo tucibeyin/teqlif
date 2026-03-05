@@ -32,12 +32,14 @@ export async function POST(req: NextRequest) {
         const { adId, winnerId, finalPrice, isQuickLive } = body as {
             adId: string;
             winnerId: string;
-            finalPrice: number;
+            finalPrice: number | string;
             isQuickLive?: boolean;
         };
 
-        if (!adId || !winnerId || finalPrice == null) {
-            return NextResponse.json({ error: "adId, winnerId ve finalPrice zorunludur." }, { status: 400 });
+        const finalPriceNum = Number(finalPrice);
+
+        if (!adId || !winnerId || isNaN(finalPriceNum)) {
+            return NextResponse.json({ error: "adId, winnerId ve geçerli bir finalPrice zorunludur." }, { status: 400 });
         }
 
         // Security: only the Host (ad owner) may finalize
@@ -68,7 +70,7 @@ export async function POST(req: NextRequest) {
                         title: dynamicTitle,
                         description: ad.description || "Hızlı Canlı Yayın Makbuzu",
                         images: ad.images ?? [],
-                        price: finalPrice,
+                        price: finalPriceNum,
                         isFixedPrice: false,
                         isAuction: true,
                         isLive: false,
@@ -99,7 +101,7 @@ export async function POST(req: NextRequest) {
                     isLive: false,
                     isAuctionActive: false,
                     winnerId,
-                    price: finalPrice,
+                    price: finalPriceNum,
                 },
             });
         }
@@ -108,7 +110,7 @@ export async function POST(req: NextRequest) {
         revalidatePath("/");
 
         // Fire-and-forget winner notification (never delays response)
-        notifyAuctionWinner(winnerId, notifyAdId, finalPrice).catch((err) =>
+        notifyAuctionWinner(winnerId, notifyAdId, finalPriceNum).catch((err) =>
             console.error("[FINALIZE] Winner notify error:", err)
         );
 
