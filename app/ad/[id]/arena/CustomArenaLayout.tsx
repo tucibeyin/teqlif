@@ -150,7 +150,7 @@ export function CustomArenaLayout({
     // ── Render ─────────────────────────────────────────────────────────────────
 
     return (
-        <div className="flex flex-col md:flex-row w-full h-full bg-neutral-950 overflow-hidden relative">
+        <div className="flex flex-col md:flex-row w-full h-full overflow-hidden relative" style={{ background: "#070B0F" }}>
 
             {/* ── VIDEO PANEL ─────────────────────────────────────────── */}
             <div className="flex-[1_1_0] min-h-0 relative bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 flex flex-col">
@@ -267,7 +267,7 @@ export function CustomArenaLayout({
 
             {/* ── CONTROL PANEL ───────────────────────────────────────── */}
             {!isBroadcastEnded && (
-                <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl relative z-50 h-[45vh] md:h-full">
+                <div className="w-full md:w-96 flex-shrink-0 flex flex-col relative z-50 h-[45vh] md:h-full" style={{ background: "rgba(12,18,26,0.97)", borderLeft: "1px solid rgba(255,255,255,0.07)" }}>
 
                     {/* Sold overlay (inside panel) */}
                     {auction.result && auction.showSoldOverlay && (
