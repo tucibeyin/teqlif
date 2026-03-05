@@ -73,7 +73,7 @@ export default function LiveArena({
             token={token}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
-            className="w-full h-[100dvh] bg-neutral-950"
+            className="w-full h-full bg-neutral-950"
         >
             <CustomArenaLayout
                 adId={adId}
@@ -87,6 +87,7 @@ export default function LiveArena({
                 role={role}
                 wantsToPublish={wantsToPublish}
                 adOwnerName={adOwnerName}
+                isQuickLive={isQuickLive}
             />
             <RoomAudioRenderer />
             {!isOwner && <CoHostListener setRole={setRole} setWantsToPublish={setWantsToPublish} />}
