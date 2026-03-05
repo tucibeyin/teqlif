@@ -73,7 +73,7 @@ export default function LiveArena({
             token={token}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
-            className="w-full h-full bg-neutral-950"
+            className="flex-1 w-full h-full bg-neutral-950"
         >
             <CustomArenaLayout
                 adId={adId}
@@ -521,7 +521,7 @@ function CustomArenaLayout({
     const guestTrack = tracks.length > 1 ? tracks[1] : null;
 
     return (
-        <div className="flex flex-col md:flex-row w-full h-full bg-neutral-950 overflow-hidden relative">
+        <div className="flex-1 flex flex-col md:flex-row w-full h-full bg-neutral-950 overflow-hidden relative">
             {/* VİDEO ALANI (Sol veya Üst) - FULL WIDTH & HEIGHT */}
             <div className="flex-[1_1_0] min-h-0 relative bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 shadow-[inner_0_0_100px_rgba(0,0,0,0.8)] flex flex-col">
                 {isOwner && (
@@ -1073,7 +1073,7 @@ function CustomArenaLayout({
 
             {/* KONTROL PANELİ (Sağ veya Alt) - KESİNLİKLE GÖRÜNÜR OLMALI */}
             {!isBroadcastEnded && (
-                <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl relative z-50 h-[45vh] md:h-full p-4 pb-2">
+                <div className="w-full md:w-[360px] flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl relative z-[500] h-[45vh] md:h-full p-4 pb-2">
                     {/* Chat Area & Reactions Tray */}
                     <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0" }}>
                         {/* SOHBET KUTUSU - BU KODU KESİNLİKLE Ekle */}
