@@ -602,6 +602,7 @@ export default async function AdDetailPage({
                         )}
                     </div>
                 </div>
-            </>
-            );
+            </div>
+        </>
+    );
 }
