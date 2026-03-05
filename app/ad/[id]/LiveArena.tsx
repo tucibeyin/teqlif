@@ -73,8 +73,7 @@ export default function LiveArena({
             token={token}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
-            className="w-full bg-neutral-950 flex flex-col md:flex-row relative overflow-hidden text-white"
-            style={{ height: "100vh" }}
+            className="w-full h-[100dvh] bg-neutral-950 flex flex-col md:flex-row relative overflow-hidden text-white"
         >
             <CustomArenaLayout
                 adId={adId}
@@ -521,9 +520,9 @@ function CustomArenaLayout({
     const guestTrack = tracks.length > 1 ? tracks[1] : null;
 
     return (
-        <div className="flex flex-col md:flex-row w-full h-full bg-neutral-950 overflow-hidden">
-            {/* LEFT: THEATER CANVAS */}
-            <div className="flex-[1_1_0] relative flex flex-col items-center justify-center p-0 md:p-6 bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 shadow-[inner_0_0_100px_rgba(0,0,0,0.8)]" style={{ minHeight: "0" }}>
+        <>
+            {/* VİDEO ALANI (Sol veya Üst) */}
+            <div className="flex-1 relative bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 shadow-[inner_0_0_100px_rgba(0,0,0,0.8)]">
                 {isOwner && (
                     <button
                         onClick={() => handleEndBroadcast()}
@@ -1071,9 +1070,9 @@ function CustomArenaLayout({
                 </div>
             </div>
 
-            {/* RIGHT: GLASS COLUMN */}
+            {/* KONTROL PANELİ (Sağ veya Alt) - KESİNLİKLE GÖRÜNÜR OLMALI */}
             {!isBroadcastEnded && (
-                <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl border-0 md:border-l border-white/10 relative z-50 h-[45vh] md:h-full p-4 pb-2">
+                <div className="w-full md:w-96 flex-shrink-0 flex flex-col bg-white/5 backdrop-blur-3xl relative z-50 h-[45vh] md:h-full p-4 pb-2">
                     {/* Chat Area & Reactions Tray */}
                     <div className="flex-[1_1_0] flex overflow-hidden pointer-events-auto mb-4" style={{ minHeight: "0" }}>
                         {/* SOHBET KUTUSU - BU KODU KESİNLİKLE Ekle */}
@@ -1216,7 +1215,7 @@ function CustomArenaLayout({
                     </div>
                 </div>
             )}
-        </div>
+        </>
     );
 }
 
