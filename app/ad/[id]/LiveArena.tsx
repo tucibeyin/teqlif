@@ -73,7 +73,7 @@ export default function LiveArena({
             token={token}
             serverUrl={process.env.NEXT_PUBLIC_LIVEKIT_URL}
             data-lk-theme="default"
-            className="w-full h-[100dvh] bg-neutral-950 flex flex-col md:flex-row relative overflow-hidden text-white"
+            className="w-full h-[100dvh] bg-neutral-950"
         >
             <CustomArenaLayout
                 adId={adId}
@@ -520,9 +520,9 @@ function CustomArenaLayout({
     const guestTrack = tracks.length > 1 ? tracks[1] : null;
 
     return (
-        <>
+        <div className="flex flex-col md:flex-row w-full h-full bg-neutral-950 overflow-hidden relative">
             {/* VİDEO ALANI (Sol veya Üst) */}
-            <div className="flex-1 relative bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 shadow-[inner_0_0_100px_rgba(0,0,0,0.8)]">
+            <div className="flex-[1_1_0] min-h-0 relative bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 shadow-[inner_0_0_100px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center">
                 {isOwner && (
                     <button
                         onClick={() => handleEndBroadcast()}
@@ -1215,7 +1215,7 @@ function CustomArenaLayout({
                     </div>
                 </div>
             )}
-        </>
+        </div>
     );
 }
 
