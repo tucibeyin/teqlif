@@ -1141,7 +1141,7 @@ function CustomArenaLayout({
 
                     {/* Bottom Console (Chat Input & Action Button) */}
                     <div className="w-full pointer-events-auto flex flex-col gap-3 shrink-0">
-                        <form onSubmit={handleSendChat} className="w-full min-h-[50px] flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 rounded-full px-4 pr-1">
+                        <form onSubmit={(e) => { e.preventDefault(); if (chatText.trim()) { sendChat(chatText); setChatText(""); } }} className="w-full min-h-[50px] flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 rounded-full px-4 pr-1">
                             <input
                                 type="text"
                                 value={chatText}

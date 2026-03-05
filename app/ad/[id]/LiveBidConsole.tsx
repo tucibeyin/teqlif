@@ -23,6 +23,7 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
     const [loading, setLoading] = useState(false);
     const [lastBidId, setLastBidId] = useState<string | null>(null);
     const [flash, setFlash] = useState(false);
+    const [countdown, setCountdown] = useState<number | null>(null);
 
     useDataChannel((msg) => {
         try {
@@ -53,6 +54,11 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                 setHighestBidderName(null);
                 setLastBidId(null);
                 setAuctionStatus("ACTIVE");
+            } else if (dataObj.type === "COUNTDOWN") {
+                setCountdown(dataObj.value);
+                if (dataObj.value === 0) {
+                    setTimeout(() => setCountdown(null), 1000);
+                }
             }
         } catch (e) {
             // Ignore non-json
@@ -95,6 +101,26 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
         }
         setLoading(false);
     };
+
+    const startCountdown = useCallback(() => {
+        if (!room) return;
+
+        let counter = 10;
+        setCountdown(counter);
+
+        room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "COUNTDOWN", value: counter })), { reliable: true });
+
+        const timer = setInterval(() => {
+            counter--;
+            if (counter >= 0) {
+                setCountdown(counter);
+                room.localParticipant.publishData(new TextEncoder().encode(JSON.stringify({ type: "COUNTDOWN", value: counter })), { reliable: true });
+            } else {
+                clearInterval(timer);
+                handleStartAuction();
+            }
+        }, 1000);
+    }, [room]);
 
     const handleQuickBid = async (val: number) => {
         if (!session?.user?.id || auctionStatus !== "ACTIVE") return;
@@ -151,7 +177,7 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
 
                     <div className="flex flex-col gap-2 w-full">
                         {auctionStatus === "IDLE" ? (
-                            <button disabled={loading} onClick={handleStartAuction} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 px-6 rounded-2xl shadow-[0_4px_25px_rgba(16,185,129,0.5)] text-xl uppercase tracking-widest transition-all">AÇIK ARTIRMAYI BAŞLAT</button>
+                            <button disabled={loading} onClick={startCountdown} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 px-6 rounded-2xl shadow-[0_4px_25px_rgba(16,185,129,0.5)] text-xl uppercase tracking-widest transition-all">AÇIK ARTIRMAYI BAŞLAT</button>
                         ) : (
                             <>
                                 <button disabled={loading || currentPrice <= initialPrice} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:bg-emerald-800 text-white font-black py-4 px-6 rounded-2xl shadow-lg text-xl uppercase tracking-widest transition-all">
