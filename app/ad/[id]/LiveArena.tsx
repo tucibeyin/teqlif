@@ -521,8 +521,8 @@ function CustomArenaLayout({
 
     return (
         <div className="flex flex-col md:flex-row w-full h-full bg-neutral-950 overflow-hidden relative">
-            {/* VİDEO ALANI (Sol veya Üst) */}
-            <div className="flex-[1_1_0] min-h-0 relative bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 shadow-[inner_0_0_100px_rgba(0,0,0,0.8)] flex flex-col items-center justify-center">
+            {/* VİDEO ALANI (Sol veya Üst) - FULL WIDTH & HEIGHT */}
+            <div className="flex-[1_1_0] min-h-0 relative bg-black overflow-hidden border-b md:border-b-0 md:border-r border-white/10 shadow-[inner_0_0_100px_rgba(0,0,0,0.8)] flex flex-col">
                 {isOwner && (
                     <button
                         onClick={() => handleEndBroadcast()}
@@ -558,8 +558,8 @@ function CustomArenaLayout({
                     }
                 `}</style>
 
-                {/* INNER VIDEO WRAPPER */}
-                <div className="w-full h-full relative md:rounded-2xl overflow-hidden shadow-[0_0_40px_rgba(0,0,0,0.5)] border-0 md:border border-white/10 bg-neutral-900">
+                {/* INNER VIDEO WRAPPER - STRETCHES FULLY */}
+                <div className="w-full h-full relative overflow-hidden bg-neutral-900 border-0">
                     <div style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}>
                         {/* Broadcast Ended Overlay */}
                         {isBroadcastEnded ? (
