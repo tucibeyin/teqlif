@@ -145,20 +145,22 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
 
     if (isOwner) {
         return (
-            <div className="flex flex-col gap-4 p-5 bg-red-50 border border-red-100 rounded-xl shadow-sm">
-                <div className="flex justify-between items-center">
-                    <div>
-                        <span className="text-sm font-bold text-red-800 tracking-wide uppercase">Host Kontrol Paneli</span>
-                        <div className="flex items-center gap-2 mt-1 hidden">
-                            <span className={`w-2 h-2 rounded-full ${auctionStatus === "ACTIVE" ? "bg-green-500 animate-pulse" : "bg-gray-400"}`}></span>
-                            <span className="text-xs font-semibold text-gray-600">{auctionStatus === "ACTIVE" ? "Açık Arttırma Aktif" : "Beklemede"}</span>
-                        </div>
+            <div className="flex flex-col gap-4 p-5 bg-black/40 border border-white/10 rounded-2xl shadow-xl relative overflow-hidden backdrop-blur-xl">
+                <div className="flex flex-col items-center">
+                    <span className="text-sm font-bold text-white/50 tracking-wider uppercase mb-4">Director Console</span>
+
+                    <div className="flex flex-col gap-2 w-full">
+                        {auctionStatus === "IDLE" ? (
+                            <button disabled={loading} onClick={handleStartAuction} className="w-full bg-emerald-600 hover:bg-emerald-500 text-white font-black py-4 px-6 rounded-2xl shadow-[0_4px_25px_rgba(16,185,129,0.5)] text-xl uppercase tracking-widest transition-all">AÇIK ARTIRMAYI BAŞLAT</button>
+                        ) : (
+                            <>
+                                <button disabled={loading || currentPrice <= initialPrice} className="w-full bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 disabled:bg-emerald-800 text-white font-black py-4 px-6 rounded-2xl shadow-lg text-xl uppercase tracking-widest transition-all">
+                                    {loading ? "SATILIYOR..." : "KABUL ET VE SAT"}
+                                </button>
+                                <button disabled={loading} onClick={handleStopAuction} className="w-full bg-orange-500 hover:bg-orange-400 text-white font-bold py-3 px-6 rounded-xl shadow mt-2 text-sm uppercase transition-all">Durdur</button>
+                            </>
+                        )}
                     </div>
-                    {auctionStatus === "ACTIVE" ? (
-                        <button disabled={loading} onClick={handleStopAuction} className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors text-sm">⛔ Durdur</button>
-                    ) : (
-                        <button disabled={loading} onClick={handleStartAuction} className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg shadow transition-colors text-sm">▶️ Başlat</button>
-                    )}
                 </div>
 
                 <div className={`flex flex-col p-4 bg-white rounded-xl border-2 ${flash ? "border-green-400 shadow-[0_0_15px_rgba(74,222,128,0.3)]" : "border-gray-100"} transition-all duration-300`}>
@@ -250,7 +252,7 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                         {loading ? "..." : "TEKLİF VER"}
                     </button>
                 </div>
-                
+
                 <div className="text-center mt-3 text-xs font-semibold text-white/40 flex items-center justify-center gap-1 w-full">
                     <span>Minimum Artırım:</span>
                     <span className="text-white/70">{formatPrice(minStep)}</span>
