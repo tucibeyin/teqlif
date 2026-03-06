@@ -29,7 +29,7 @@ export async function POST(req: NextRequest) {
         const resetAd = await prisma.ad.update({
             where: { id: adId },
             data: {
-                isAuctionActive: true,
+                isAuctionActive: false,
                 price: ad.startingPrice || ad.startingBid || 0, // Reset to starting bid or 0
                 winnerId: null, // Critical: Clear the previous winner entirely!
             },
