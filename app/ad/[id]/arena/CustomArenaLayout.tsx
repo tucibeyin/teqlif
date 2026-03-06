@@ -136,20 +136,35 @@ export function CustomArenaLayout({
         if (!skipConfirm && !confirm("Yayını bitirmek istiyor musunuz?")) return;
         try {
             if (room) {
-                room.localParticipant.publishData(
+                // Notifying others first
+                await room.localParticipant.publishData(
                     new TextEncoder().encode(JSON.stringify({ type: "ROOM_CLOSED" })),
                     { reliable: true }
                 );
             }
-            await fetch(`/ api / ads / ${adId}/live`, {
+            // Updating DB
+            await fetch(`/api/ads/${adId}/live`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ isLive: false }),
             });
-            room?.disconnect();
-            router.refresh();
+
+            // Local state update ensures UI changes immediately even if redirect is slow
+            setIsRoomClosed(true);
+
+            if (room) {
+                await room.disconnect();
+            }
+
+            // Small delay to ensure state propagates, then full refresh or redirect
+            setTimeout(() => {
+                window.location.href = `/ad/${adId}?closed=true`;
+            }, 500);
+
         } catch (e) {
-            console.error(e);
+            console.error("End broadcast error:", e);
+            // Fallback: at least try to get out
+            window.location.href = `/ad/${adId}`;
         }
     };
 
