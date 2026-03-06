@@ -433,6 +433,8 @@ class ViewerController extends StateNotifier<ViewerState> {
       if (e is DioException) {
         final errorMsg = e.response?.data?['error']?.toString();
         if (errorMsg != null) {
+          // The API now returns Turkish messages, so we can use them directly.
+          // We keep the mapping as a fallback if the API returns English or specific codes.
           if (errorMsg.contains('higher than the current highest bid')) {
             message = 'Teklifiniz en yüksek tekliften düşük.';
           } else if (errorMsg.contains('Auction is not active')) {

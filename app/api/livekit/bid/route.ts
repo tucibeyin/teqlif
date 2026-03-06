@@ -19,11 +19,11 @@ export async function POST(req: NextRequest) {
     const { adId, amount } = body as { adId?: string; amount?: unknown };
 
     if (!adId || typeof adId !== "string") {
-      return NextResponse.json({ error: "adId is required" }, { status: 400 });
+      return NextResponse.json({ error: "İlan ID'si zorunludur" }, { status: 400 });
     }
     if (typeof amount !== "number" || !Number.isInteger(amount) || amount <= 0) {
       return NextResponse.json(
-        { error: "amount must be a positive integer" },
+        { error: "Teklif tutarı pozitif bir tam sayı olmalıdır" },
         { status: 400 }
       );
     }
@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
     if (!result.accepted) {
       const message =
         result.reason === "auction_not_active"
-          ? "Auction is not active"
-          : "Bid amount must be higher than the current highest bid";
+          ? "Müzayede şu an aktif değil"
+          : "Teklifiniz en yüksek tekliften düşük";
 
       return NextResponse.json({ error: message }, { status: 400 });
     }
