@@ -473,7 +473,7 @@ class ViewerController extends StateNotifier<ViewerState> {
             timestamp: DateTime.now(),
           ));
           state = state.copyWith(
-            liveHighestBid: 0,
+            liveHighestBid: null, // Reset to null to fallback to AdModel price
             isSold: false,
             showSoldOverlay: false,
             soldWinnerName: null,
@@ -482,6 +482,7 @@ class ViewerController extends StateNotifier<ViewerState> {
             countdownValue: null,
             messages: msgs,
           );
+          ref.invalidate(adDetailProvider(ad.id)); // Refresh starting price
           onShowSystemMessage?.call(
               '📣 Yeni Ürün Açık Arttırmada!', Colors.orange);
           return;
