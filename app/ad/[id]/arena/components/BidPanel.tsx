@@ -194,7 +194,7 @@ export function BidPanel({
         )}
 
         {/* ── HOST: accept / reject ── */}
-        {isOwner && currentHighest > 0 && (
+        {isOwner && isAuctionActive && currentHighest > 0 && (
           <div style={{ display: "flex", gap: 8 }}>
             <button
               className="tq-accept-btn"
