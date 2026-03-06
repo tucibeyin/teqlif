@@ -28,7 +28,7 @@ export function useAuction({
     const [notification, setNotification] = useState<string | null>(null);
     const [flashBid, setFlashBid] = useState(false);
     const [result, setResult] = useState<AuctionResult | null>(null);
-    const [showSoldOverlay, setShowSoldOverlay] = useState(true);
+    const [showSoldOverlay, setShowSoldOverlay] = useState(false);
     const [finalizedWinner, setFinalizedWinner] = useState<string | null>(null);
     const [finalizedAmount, setFinalizedAmount] = useState<number | null>(null);
     const [showFinalization, setShowFinalization] = useState(false);
@@ -218,6 +218,7 @@ export function useAuction({
                 };
                 publish(auctionSoldPayload);
                 setResult({ winnerName: highestBidderName || "Katılımcı", price: highestBid });
+                setShowSoldOverlay(true);
             }
         } catch (e) {
             console.error(e);
