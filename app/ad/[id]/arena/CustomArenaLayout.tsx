@@ -175,14 +175,25 @@ export function CustomArenaLayout({
     return (
         <div
             id="arena-root"
-            className="flex flex-row w-full h-full overflow-hidden"
-            style={{ background: "#060810" }}
+            style={{
+                display: "flex",
+                flexDirection: "row",
+                width: "100%",
+                height: "100%",
+                overflow: "hidden",
+                background: "#060810"
+            }}
         >
             {/* ══ VIDEO PANEL ═══════════════════════════════════════════════ */}
             <div
                 id="arena-video-panel"
-                className="flex-[4_4_0] min-h-0 relative overflow-hidden"
-                style={{ background: "#080C18" }}
+                style={{
+                    flex: 1,
+                    minHeight: 0,
+                    position: "relative",
+                    overflow: "hidden",
+                    background: "#080C18"
+                }}
             >
                 {/* Video / idle / ended */}
                 <div style={{ position: "absolute", inset: 0 }}>
@@ -361,8 +372,12 @@ export function CustomArenaLayout({
             {!isBroadcastEnded && (
                 <div
                     id="arena-right-panel"
-                    className="w-[320px] flex-shrink-0 flex flex-col h-full"
                     style={{
+                        width: "320px",
+                        flexShrink: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        height: "100%",
                         background: "rgba(7,10,20,1)",
                         /* Masaüstü: sol kenar (video yanında) | Mobil: üst kenar (video altında) */
                         borderLeft: "2px solid rgba(6,200,224,0.18)",
