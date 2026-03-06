@@ -21,8 +21,8 @@ class ViewerSidebar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewerState = ref.watch(viewerControllerProvider(ad));
-    final controller = ref.read(viewerControllerProvider(ad).notifier);
+    final viewerState = ref.watch(viewerControllerProvider(ad.id));
+    final controller = ref.read(viewerControllerProvider(ad.id).notifier);
 
     return Positioned(
       right: 16,

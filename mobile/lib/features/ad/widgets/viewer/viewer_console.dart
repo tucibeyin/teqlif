@@ -34,7 +34,7 @@ class ViewerConsole extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewerState = ref.watch(viewerControllerProvider(ad));
+    final viewerState = ref.watch(viewerControllerProvider(ad.id));
 
     // Compute next bid amount
     final double nextBid;

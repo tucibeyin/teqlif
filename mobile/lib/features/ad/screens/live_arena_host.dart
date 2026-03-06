@@ -65,7 +65,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     // Wire animation callbacks into the controller
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctrl =
-          ref.read(hostControllerProvider(widget.ad).notifier);
+          ref.read(hostControllerProvider(widget.ad.id).notifier);
       ctrl.onPlayConfetti = () {
         if (mounted) _confettiController.play();
       };
@@ -93,7 +93,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         final room = ref.read(liveRoomProvider(widget.ad.id)).room;
         if (room != null) {
           final ctrl =
-              ref.read(hostControllerProvider(widget.ad).notifier);
+              ref.read(hostControllerProvider(widget.ad.id).notifier);
           room.events.listen((event) {
             if (event is TrackSubscribedEvent ||
                 event is TrackUnsubscribedEvent ||
@@ -181,9 +181,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
 
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
-    final hostState = ref.watch(hostControllerProvider(widget.ad));
+    final hostState = ref.watch(hostControllerProvider(widget.ad.id));
     final controller =
-        ref.read(hostControllerProvider(widget.ad).notifier);
+        ref.read(hostControllerProvider(widget.ad.id).notifier);
 
     // Extract tracks
     VideoTrack? localVideoTrack;
@@ -517,7 +517,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
 
   void _showBidsSheet() {
     final controller =
-        ref.read(hostControllerProvider(widget.ad).notifier);
+        ref.read(hostControllerProvider(widget.ad.id).notifier);
     controller.readBids();
     showModalBottomSheet(
       context: context,

@@ -27,8 +27,8 @@ class HostTopDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(hostControllerProvider(ad));
-    final controller = ref.read(hostControllerProvider(ad).notifier);
+    final state = ref.watch(hostControllerProvider(ad.id));
+    final controller = ref.read(hostControllerProvider(ad.id).notifier);
 
     return Column(
       children: [

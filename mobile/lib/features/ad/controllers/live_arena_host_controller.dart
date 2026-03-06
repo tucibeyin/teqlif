@@ -62,10 +62,10 @@ class HostState {
     required this.showFinalizationOverlay,
   });
 
-  factory HostState.initial(AdModel ad) => HostState(
+  factory HostState.initial(AdModel? ad) => HostState(
         bids: const [],
         messages: const [],
-        isAuctionActive: ad.isAuctionActive,
+        isAuctionActive: ad?.isAuctionActive ?? false,
         isCameraEnabled: true,
         isMicEnabled: true,
         isFinalizing: false,
@@ -139,16 +139,23 @@ const _sentinel = Object();
 // ─────────────────────────────────────────────────────────────────────────────
 
 class HostController extends StateNotifier<HostState> {
-  final AdModel ad;
+  final String adId; // Changed from AdModel ad
   final Ref ref;
   Timer? _countdownTimer;
   VoidCallback? onPlayConfetti;
   VoidCallback? onPulseStart;
   VoidCallback? onPulseStop;
 
-  HostController(this.ad, this.ref) : super(HostState.initial(ad));
+  HostController(this.adId, this.ref, {AdModel? initialAd})
+      : super(HostState.initial(initialAd));
 
-  Room? get _room => ref.read(liveRoomProvider(ad.id)).room;
+  Room? get _room => ref.read(liveRoomProvider(adId)).room;
+
+  AdModel get ad {
+    final liveAd = ref.read(adDetailProvider(adId)).value;
+    if (liveAd != null) return liveAd;
+    throw Exception('Ad not found in provider for $adId');
+  }
 
   // Expose room for widgets that need local participant info (e.g. chat input)
   Room? get currentRoom => _room;
@@ -459,12 +466,12 @@ class HostController extends StateNotifier<HostState> {
 
     final signal = jsonEncode({
       'type': newActive ? 'AUCTION_START' : 'AUCTION_END',
-      'adId': ad.id,
+      'adId': adId,
     });
 
     try {
       await _room!.localParticipant?.publishData(signal.codeUnits);
-      await ApiClient().post('/api/ads/${ad.id}/live', data: {
+      await ApiClient().post('/api/ads/$adId/live', data: {
         'isAuctionActive': newActive,
       });
 
@@ -508,7 +515,7 @@ class HostController extends StateNotifier<HostState> {
 
     try {
       final res = await ApiClient()
-          .post('/api/ads/${ad.id}/auction/reset', data: {});
+          .post('/api/ads/$adId/auction/reset', data: {});
       if (res.statusCode == 200 || res.statusCode == 201) {
         final payload = jsonEncode({'type': 'AUCTION_RESET'});
         if (_room != null) {
@@ -586,7 +593,7 @@ class HostController extends StateNotifier<HostState> {
 
         if (finalizeSuccess) {
           await ApiClient().post('/api/livekit/finalize', data: {
-            'adId': ad.id,
+            'adId': adId,
             'winnerId': bid.userId,
             'finalPrice': bid.amount,
             'isQuickLive': isQuickLive,
@@ -725,7 +732,7 @@ class HostController extends StateNotifier<HostState> {
       final res = await ApiClient().post(
         Endpoints.moderation,
         data: {
-          'roomId': ad.id,
+          'roomId': adId,
           'identity': identity,
           'action': action,
         },
@@ -793,12 +800,12 @@ class HostController extends StateNotifier<HostState> {
         // Tell backend we're done (Best effort)
         try {
           await ApiClient()
-              .post('/api/ads/${ad.id}/live', data: {'isLive': false})
+              .post('/api/ads/$adId/live', data: {'isLive': false})
               .timeout(const Duration(seconds: 2));
         } catch (_) {}
       } finally {
         // Essential Cleanup: Disconnect RTC
-        await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
+        await ref.read(liveRoomProvider(adId).notifier).disconnect();
 
         // Exit screen
         if (ctx.mounted) {
@@ -825,12 +832,12 @@ class HostController extends StateNotifier<HostState> {
       // Tell backend we're done (Best effort)
       try {
         await ApiClient()
-            .post('/api/ads/${ad.id}/live', data: {'isLive': false})
+            .post('/api/ads/$adId/live', data: {'isLive': false})
             .timeout(const Duration(seconds: 2));
       } catch (_) {}
     } finally {
       // Essential Cleanup: Disconnect RTC
-      await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
+      await ref.read(liveRoomProvider(adId).notifier).disconnect();
 
       // Exit screen
       if (ctx.mounted) {
@@ -898,6 +905,9 @@ class HostController extends StateNotifier<HostState> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 final hostControllerProvider =
-    StateNotifierProvider.family<HostController, HostState, AdModel>(
-  (ref, ad) => HostController(ad, ref),
+    StateNotifierProvider.family<HostController, HostState, String>(
+  (ref, adId) {
+    final ad = ref.read(adDetailProvider(adId)).value;
+    return HostController(adId, ref, initialAd: ad);
+  },
 );

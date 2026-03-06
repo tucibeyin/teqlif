@@ -19,7 +19,7 @@ class ViewerTopHeader extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewerState = ref.watch(viewerControllerProvider(ad));
+    final viewerState = ref.watch(viewerControllerProvider(ad.id));
     final adAsync = ref.watch(adDetailProvider(ad.id));
     final currentAd = adAsync.value ?? ad;
     final viewerCount =

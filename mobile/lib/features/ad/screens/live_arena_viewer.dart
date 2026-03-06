@@ -69,7 +69,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     // Wire animation & dialog callbacks into controller
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctrl =
-          ref.read(viewerControllerProvider(widget.ad).notifier);
+          ref.read(viewerControllerProvider(widget.ad.id).notifier);
       ctrl.onPlayConfetti = () {
         if (mounted) _confettiController.play();
       };
@@ -175,13 +175,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     }
     if (event is DataReceivedEvent) {
       ref
-          .read(viewerControllerProvider(widget.ad).notifier)
+          .read(viewerControllerProvider(widget.ad.id).notifier)
           .handleDataChannelMessage(event.data, event.participant);
     }
   }
 
   void _onInteraction() {
-    ref.read(viewerControllerProvider(widget.ad).notifier).resetInactivityTimer();
+    ref.read(viewerControllerProvider(widget.ad.id).notifier).resetInactivityTimer();
   }
 
   // ── System message ────────────────────────────────────────────────────────
@@ -227,7 +227,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
             onPressed: () async {
               Navigator.pop(ctx);
               final ctrl = ref
-                  .read(viewerControllerProvider(widget.ad).notifier);
+                  .read(viewerControllerProvider(widget.ad.id).notifier);
               ctrl.setReconnectingForStage(true);
               final notifier =
                   ref.read(liveRoomProvider(widget.ad.id).notifier);
@@ -433,7 +433,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     final text = _chatCtrl.text.trim();
     if (text.isEmpty) return;
     await ref
-        .read(viewerControllerProvider(widget.ad).notifier)
+        .read(viewerControllerProvider(widget.ad.id).notifier)
         .sendChatMessage(text);
     _chatCtrl.clear();
     _chatFocus.unfocus();
@@ -457,7 +457,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     }
     if (mounted) {
       await ref
-          .read(viewerControllerProvider(widget.ad).notifier)
+          .read(viewerControllerProvider(widget.ad.id).notifier)
           .placeBid(amount, context);
     }
     _bidCtrl.clear();
@@ -474,7 +474,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   Widget build(BuildContext context) {
     // Auto-pop when room is disconnected (unless reconnecting for stage)
     ref.listen(liveRoomProvider(widget.ad.id), (previous, next) {
-      final viewerState = ref.read(viewerControllerProvider(widget.ad));
+      final viewerState = ref.read(viewerControllerProvider(widget.ad.id));
       if (!viewerState.isReconnectingForStage &&
           previous?.room != null &&
           next.room == null &&
@@ -487,7 +487,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     final currentAd = adAsync.value ?? widget.ad;
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
-    final viewerState = ref.watch(viewerControllerProvider(widget.ad));
+    final viewerState = ref.watch(viewerControllerProvider(widget.ad.id));
 
     final isDisconnected = !viewerState.isReconnectingForStage &&
         (room?.connectionState.name == 'disconnected' ||
@@ -722,7 +722,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 soldFinalPrice: viewerState.soldFinalPrice,
                 confettiController: _confettiController,
                 onClose: () => ref
-                    .read(viewerControllerProvider(widget.ad).notifier)
+                    .read(viewerControllerProvider(widget.ad.id).notifier)
                     .hideSoldOverlay(),
               ),
 
@@ -741,7 +741,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   // ── Portrait Layout ───────────────────────────────────────────────────────
 
   Widget _buildPortraitLayout(AdModel currentAd, bool isDisconnected) {
-    final viewerState = ref.read(viewerControllerProvider(widget.ad));
+    final viewerState = ref.read(viewerControllerProvider(widget.ad.id));
     return Stack(
       children: [
         ViewerTopHeader(ad: widget.ad),
@@ -947,7 +947,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           blendMode: BlendMode.dstIn,
                           child: Builder(builder: (context) {
                             final messages = ref.watch(
-                                viewerControllerProvider(widget.ad)
+                                viewerControllerProvider(widget.ad.id)
                                     .select((s) => s.messages));
                             return ListView.builder(
                               padding: const EdgeInsets.symmetric(
@@ -1027,7 +1027,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                             size: 24),
                                         onPressed: () => ref
                                             .read(viewerControllerProvider(
-                                                    widget.ad)
+                                                    widget.ad.id)
                                                 .notifier)
                                             .sendReaction('❤️'),
                                       ),

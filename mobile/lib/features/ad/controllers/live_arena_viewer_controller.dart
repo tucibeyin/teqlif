@@ -68,15 +68,15 @@ class ViewerState {
     required this.isReconnectingForStage,
   });
 
-  factory ViewerState.initial(AdModel ad) => ViewerState(
+  factory ViewerState.initial(AdModel? ad) => ViewerState(
         currentQuality: VideoQuality.HIGH,
         messages: const [],
         bidLoading: false,
         recentBids: const [],
         isHypeMode: false,
         isGuest: false,
-        isAuctionActive: ad.isAuctionActive,
-        liveHighestBid: ad.highestBidAmount,
+        isAuctionActive: ad?.isAuctionActive ?? false,
+        liveHighestBid: ad?.highestBidAmount,
         reactions: const [],
         lastReactionTime: 0,
         isMuted: false,
@@ -159,7 +159,7 @@ const _sentinel = Object();
 // ─────────────────────────────────────────────────────────────────────────────
 
 class ViewerController extends StateNotifier<ViewerState> {
-  final AdModel ad;
+  final String adId;
   final Ref ref;
   Timer? _inactivityTimer;
   Timer? _hypeTimer;
@@ -185,9 +185,12 @@ class ViewerController extends StateNotifier<ViewerState> {
   // Inactivity timeout callback
   VoidCallback? onInactivityTimeout;
 
-  ViewerController(this.ad, this.ref) : super(ViewerState.initial(ad));
+  ViewerController(this.adId, this.ref, {AdModel? initialAd})
+      : super(ViewerState.initial(initialAd));
 
-  Room? get _room => ref.read(liveRoomProvider(ad.id)).room;
+  Room? get _room => ref.read(liveRoomProvider(adId)).room;
+
+  AdModel? get ad => ref.read(adDetailProvider(adId)).value;
 
   @override
   void dispose() {
@@ -267,7 +270,7 @@ class ViewerController extends StateNotifier<ViewerState> {
   }
 
   void sendReaction(String emoji) {
-    final roomState = ref.read(liveRoomProvider(ad.id));
+    final roomState = ref.read(liveRoomProvider(adId));
     final room = roomState.room;
     final isDisconnected = room?.connectionState.name == 'disconnected' ||
         (room == null && !roomState.isConnecting);
@@ -320,7 +323,7 @@ class ViewerController extends StateNotifier<ViewerState> {
   Future<void> handleKick() async {
     onKicked?.call();
     state = state.copyWith(isReconnectingForStage: true);
-    final roomState = ref.read(liveRoomProvider(ad.id));
+    final roomState = ref.read(liveRoomProvider(adId));
     if (roomState.room?.localParticipant != null) {
       await roomState.room!.localParticipant!.setCameraEnabled(false);
       await roomState.room!.localParticipant!.setMicrophoneEnabled(false);
@@ -329,10 +332,10 @@ class ViewerController extends StateNotifier<ViewerState> {
     state = state.copyWith(isGuest: false);
     if (wasGuest) {
       try {
-        await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
+        await ref.read(liveRoomProvider(adId).notifier).disconnect();
         await Future.delayed(const Duration(milliseconds: 500));
         if (!_disposed) {
-          await ref.read(liveRoomProvider(ad.id).notifier).connect(false);
+          await ref.read(liveRoomProvider(adId).notifier).connect(false);
         }
       } catch (e) {
         debugPrint('Error restoring viewer state: $e');
@@ -381,7 +384,7 @@ class ViewerController extends StateNotifier<ViewerState> {
     if (text.isEmpty) return;
     final censoredText = ProfanityFilter.censor(text);
     final currentUser = ref.read(authProvider).user;
-    final roomState = ref.read(liveRoomProvider(ad.id));
+    final roomState = ref.read(liveRoomProvider(adId));
     if (roomState.room != null) {
       final name = roomState.room!.localParticipant?.name;
       final payload = jsonEncode({
@@ -402,10 +405,10 @@ class ViewerController extends StateNotifier<ViewerState> {
     await Haptics.vibrate(HapticsType.medium);
     try {
       await ApiClient().post(Endpoints.bids, data: {
-        'adId': ad.id,
+        'adId': adId,
         'amount': amount,
       });
-      ref.invalidate(adDetailProvider(ad.id));
+      ref.invalidate(adDetailProvider(adId));
       ref.invalidate(myBidsProvider);
       await Haptics.vibrate(HapticsType.success);
       if (!_disposed) {
@@ -444,7 +447,7 @@ class ViewerController extends StateNotifier<ViewerState> {
         final type = decoded['type'];
 
         if (type == 'ROOM_CLOSED') {
-          ref.read(liveRoomProvider(ad.id).notifier).disconnect();
+          ref.read(liveRoomProvider(adId).notifier).disconnect();
           return;
         } else if (type == 'INVITE_TO_STAGE') {
           final targetIdentity = decoded['targetIdentity'];
@@ -482,7 +485,7 @@ class ViewerController extends StateNotifier<ViewerState> {
             countdownValue: null,
             messages: msgs,
           );
-          ref.invalidate(adDetailProvider(ad.id)); // Refresh starting price
+          ref.invalidate(adDetailProvider(adId)); // Refresh starting price
           onShowSystemMessage?.call(
               '📣 Yeni Ürün Açık Arttırmada!', Colors.orange);
           return;
@@ -542,13 +545,13 @@ class ViewerController extends StateNotifier<ViewerState> {
             Haptics.vibrate(HapticsType.success);
           }
           recordBidVelocity();
-          ref.invalidate(adDetailProvider(ad.id));
+          ref.invalidate(adDetailProvider(adId));
           return;
         } else if (type == 'BID_REJECTED') {
           if (decoded['bidderId'] == ref.read(authProvider).user?.id) {
             Haptics.vibrate(HapticsType.error);
           }
-          ref.invalidate(adDetailProvider(ad.id));
+          ref.invalidate(adDetailProvider(adId));
           return;
         } else if (type == 'COUNTDOWN') {
           final value = int.tryParse(decoded['value']?.toString() ?? '');
@@ -627,6 +630,12 @@ class ViewerController extends StateNotifier<ViewerState> {
 // ─────────────────────────────────────────────────────────────────────────────
 
 final viewerControllerProvider =
-    StateNotifierProvider.family<ViewerController, ViewerState, AdModel>(
-  (ref, ad) => ViewerController(ad, ref),
+    StateNotifierProvider.family<ViewerController, ViewerState, String>(
+  (ref, adId) {
+    // We can read the initial ad from adDetailProvider or elsewhere
+    // but for the controller, we just need the stable ID.
+    // For the initial state, we'll try to find the ad in the cache
+    final ad = ref.read(adDetailProvider(adId)).value;
+    return ViewerController(adId, ref, initialAd: ad);
+  },
 );

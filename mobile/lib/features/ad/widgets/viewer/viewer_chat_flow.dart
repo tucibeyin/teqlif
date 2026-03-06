@@ -17,7 +17,7 @@ class ViewerChatFlow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final messages = ref.watch(
-        viewerControllerProvider(ad).select((s) => s.messages));
+        viewerControllerProvider(ad.id).select((s) => s.messages));
 
     return Padding(
       padding:
