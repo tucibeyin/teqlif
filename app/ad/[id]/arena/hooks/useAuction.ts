@@ -100,7 +100,7 @@ export function useAuction({
     }, []);
 
     const onAuctionReset = useCallback(() => {
-        setHighestBid(initialHighestBid);
+        setHighestBid(0);
         setHighestBidId(null);
         setHighestBidderId(null);
         setHighestBidderName(null);
@@ -194,6 +194,7 @@ export function useAuction({
             });
             if (res.ok) {
                 publish({ type: "AUCTION_RESET" });
+                onAuctionReset();
             }
         } catch (e) {
             console.error("Reset Auction Error:", e);
