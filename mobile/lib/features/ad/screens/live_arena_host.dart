@@ -371,16 +371,28 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       } else if (dataObj['type'] == 'REACTION') {
         _addReaction(dataObj['emoji']?.toString() ?? '❤️');
         return;
-      } else if (dataObj['type'] == 'REQUEST_STAGE') {
-        final userId = dataObj['userId']?.toString();
-        final userName = dataObj['userName']?.toString() ?? 'Katılımcı';
-        if (userId != null && !_stageRequests.any((r) => r.id == userId)) {
-          setState(() {
-            _stageRequests.add(_StageRequest(userId, userName));
-          });
+        } else if (dataObj['type'] == 'REQUEST_STAGE') {
+          final userId = dataObj['userId']?.toString();
+          final userName = dataObj['userName']?.toString() ?? 'Katılımcı';
+          if (userId != null && !_stageRequests.any((r) => r.id == userId)) {
+            setState(() {
+              _stageRequests.add(_StageRequest(userId, userName));
+            });
+          }
+          return;
+        } else if (dataObj['type'] == 'SYNC_STATE_REQUEST') {
+          final state = ref.read(liveRoomProvider(widget.ad.id));
+          if (state.room != null) {
+            final payload = jsonEncode({
+              'type': 'SYNC_STATE_RESPONSE',
+              'isAuctionActive': _isAuctionActive,
+              'highestBid': _bids.isNotEmpty ? _bids.first.amount : (widget.ad.highestBidAmount ?? 0.0),
+              'isSold': _isSold,
+            });
+            state.room!.localParticipant?.publishData(utf8.encode(payload));
+          }
+          return;
         }
-        return;
-      }
     } catch (_) {}
 
     final senderName = customName ?? p?.name;

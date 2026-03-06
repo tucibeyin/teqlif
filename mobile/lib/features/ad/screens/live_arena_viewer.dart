@@ -178,6 +178,14 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       final room = ref.read(liveRoomProvider(widget.ad.id)).room;
       if (room != null) {
         room.events.listen(_onRoomEvent);
+
+        // Request initial state from host
+        try {
+          final syncPayload = jsonEncode({'type': 'SYNC_STATE_REQUEST'});
+          room.localParticipant?.publishData(utf8.encode(syncPayload));
+        } catch (e) {
+          debugPrint('Sync request error: $e');
+        }
       }
     });
   }
@@ -412,6 +420,18 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 Future.delayed(const Duration(seconds: 2), () {
                   if (mounted) setState(() => _countdownValue = null);
                 });
+              }
+            });
+          }
+          return;
+        } else if (type == 'SYNC_STATE_RESPONSE') {
+          if (mounted) {
+            setState(() {
+              _isAuctionActive = decoded['isAuctionActive'] == true;
+              _liveHighestBid = (decoded['highestBid'] as num?)?.toDouble();
+              _isSold = decoded['isSold'] == true;
+              if (_isSold) {
+                _showSoldOverlay = true;
               }
             });
           }
@@ -968,17 +988,14 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         (room == null && !roomState.isConnecting));
 
     // Sync isAuctionActive from currentAd (initial state or polling updates)
-    // We only update if WebRTC hasn't yet provided an active auction broadcast,
-    // to prevent outdated API requests from overwriting the real-time 'ACTIVE' state.
+    // Only trust the API if it says active, to avoid missing any manual 'Start' from Host via WebRTC.
     if (currentAd.isAuctionActive && !_isAuctionActive) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         if (mounted) setState(() => _isAuctionActive = true);
       });
-    } else if (!currentAd.isAuctionActive && _isAuctionActive && isDisconnected) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _isAuctionActive = false);
-      });
     }
+    // Note: We don't automatically set it to false here to avoid flickering 
+    // when WebRTC is authoritative.
 
     VideoTrack? hostTrack;
     VideoTrack? guestTrack;
