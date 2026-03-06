@@ -61,9 +61,9 @@ export function BidPanel({
     }
     setBidLoading(true);
     try {
-      const res = await fetch(`/api/ads/${adId}/bid`, {
+      const res = await fetch(`/api/bids`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: num }),
+        body: JSON.stringify({ adId, amount: num }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -83,9 +83,9 @@ export function BidPanel({
     const num = currentHighest + step;
     setBidLoading(true);
     try {
-      const res = await fetch(`/api/ads/${adId}/bid`, {
+      const res = await fetch(`/api/bids`, {
         method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: num }),
+        body: JSON.stringify({ adId, amount: num }),
       });
       if (res.ok) {
         setStatus({ type: "success", msg: `✅ +${fmt(step)} teklif verildi!` });
