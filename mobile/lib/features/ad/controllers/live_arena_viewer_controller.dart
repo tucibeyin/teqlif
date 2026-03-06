@@ -165,7 +165,7 @@ class ViewerController extends StateNotifier<ViewerState> {
   Timer? _inactivityTimer;
   Timer? _hypeTimer;
   bool _disposed = false;
-  StreamSubscription<RoomEvent>? _roomEventSub;
+  EventsListenerUnsubscribe? _roomEventUnsubscribe;
 
   // Animation callbacks — wired from initState via addPostFrameCallback
   VoidCallback? onPlayConfetti;
@@ -199,7 +199,7 @@ class ViewerController extends StateNotifier<ViewerState> {
     _disposed = true;
     _inactivityTimer?.cancel();
     _hypeTimer?.cancel();
-    _roomEventSub?.cancel();
+    _roomEventUnsubscribe?.call();
     super.dispose();
   }
 
@@ -270,8 +270,8 @@ class ViewerController extends StateNotifier<ViewerState> {
 
     _syncAuctionState(); // Late joiner initial snapshot
 
-    _roomEventSub?.cancel();
-    _roomEventSub = room.events.listen((event) {
+    _roomEventUnsubscribe?.call();
+    _roomEventUnsubscribe = room.events.listen((event) {
       if (event is RoomReconnectedEvent) {
         _syncAuctionState();
       }
