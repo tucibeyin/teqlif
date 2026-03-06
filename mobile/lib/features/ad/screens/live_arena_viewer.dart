@@ -114,9 +114,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       ctrl.resetInactivityTimer();
     });
 
-    // Connect to room
+    // Connect to room, then trigger initial sync and reconnect listener
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       await ref.read(liveRoomProvider(widget.ad.id).notifier).connect(false);
+      if (mounted) {
+        ref.read(viewerControllerProvider(widget.ad.id).notifier).setupSync();
+      }
     });
   }
 

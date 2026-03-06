@@ -165,6 +165,7 @@ class ViewerController extends StateNotifier<ViewerState> {
   Timer? _inactivityTimer;
   Timer? _hypeTimer;
   bool _disposed = false;
+  StreamSubscription<RoomEvent>? _roomEventSub;
 
   // Animation callbacks — wired from initState via addPostFrameCallback
   VoidCallback? onPlayConfetti;
@@ -198,6 +199,7 @@ class ViewerController extends StateNotifier<ViewerState> {
     _disposed = true;
     _inactivityTimer?.cancel();
     _hypeTimer?.cancel();
+    _roomEventSub?.cancel();
     super.dispose();
   }
 
@@ -241,6 +243,38 @@ class ViewerController extends StateNotifier<ViewerState> {
     _inactivityTimer?.cancel();
     _inactivityTimer = Timer(const Duration(seconds: 30), () {
       if (!_disposed) onInactivityTimeout?.call();
+    });
+  }
+
+  // ── Sync (Late Joiner / Reconnection) ──────────────────────────────────────
+
+  Future<void> _syncAuctionState() async {
+    try {
+      final res = await ApiClient().get('/api/livekit/sync', params: {'adId': adId});
+      if (res.statusCode != 200 || _disposed) return;
+      final data = res.data as Map<String, dynamic>;
+      state = state.copyWith(
+        isAuctionActive: data['isAuctionActive'] == true,
+        liveHighestBid: (data['highestBid'] as num?)?.toDouble(),
+      );
+    } catch (_) {
+      // Sync hatası kritik değil — DataChannel eventleri UI'yı güncel tutmaya devam eder
+    }
+  }
+
+  /// Odaya bağlandıktan sonra bir kez çağrılır.
+  /// İlk sync'i tetikler ve RoomReconnectedEvent için dinleyici kurar.
+  void setupSync() {
+    final room = _room;
+    if (room == null) return;
+
+    _syncAuctionState(); // Late joiner initial snapshot
+
+    _roomEventSub?.cancel();
+    _roomEventSub = room.events.listen((event) {
+      if (event is RoomReconnectedEvent) {
+        _syncAuctionState();
+      }
     });
   }
 

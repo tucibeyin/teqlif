@@ -1,8 +1,11 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { useConnectionState } from "@livekit/components-react";
+import { ConnectionState } from "livekit-client";
 import type { Room } from "livekit-client";
 import type { AuctionStatus, AuctionResult } from "../types";
 import type { AuctionEndedPayload } from "./useArenaDataChannel";
+import type { SyncResponse } from "@/app/api/livekit/sync/route";
 
 interface UseAuctionOptions {
     adId: string;
@@ -36,6 +39,38 @@ export function useAuction({
     const [finalizedAmount, setFinalizedAmount] = useState<number | null>(null);
     const [showFinalization, setShowFinalization] = useState(false);
     const [loading, setLoading] = useState(false);
+
+    // ── Sync (Late Joiner / Reconnection) ──────────────────────────────────────
+
+    const connectionState = useConnectionState();
+    const prevConnectionStateRef = useRef<ConnectionState | null>(null);
+
+    const syncAuctionState = useCallback(async () => {
+        try {
+            const res = await fetch(`/api/livekit/sync?adId=${adId}`);
+            if (!res.ok) return;
+            const data: SyncResponse = await res.json();
+            setStatus(data.isAuctionActive ? "ACTIVE" : "IDLE");
+            setHighestBid(data.highestBid);
+            if (data.highestBidder) setHighestBidderId(data.highestBidder);
+        } catch {
+            // Sync hatası kritik değil — sessizce geç
+        }
+    }, [adId]);
+
+    // Mount sync: odaya geç katılanlar için ilk yüklemede bir kez çalışır
+    useEffect(() => {
+        syncAuctionState();
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Reconnection sync: bağlantı Reconnecting → Connected'a döndüğünde çalışır
+    useEffect(() => {
+        const wasReconnecting = prevConnectionStateRef.current === ConnectionState.Reconnecting;
+        prevConnectionStateRef.current = connectionState;
+        if (connectionState === ConnectionState.Connected && wasReconnecting) {
+            syncAuctionState();
+        }
+    }, [connectionState, syncAuctionState]);
 
     const notify = (msg: string, duration = 4000) => {
         setNotification(msg);
@@ -298,5 +333,7 @@ export function useAuction({
         onAuctionEnded, onSaleFinalized, onAuctionSold, onSyncStateResponse,
         // Host actions
         start, stop, reset, accept, reject, buyNow, broadcastState,
+        // Sync
+        syncAuctionState,
     };
 }
