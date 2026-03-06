@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { revalidatePath } from "next/cache";
+import { closeAuction } from "@/lib/services/auction-redis.service";
 
 export const dynamic = "force-dynamic";
 
@@ -39,6 +40,9 @@ export async function POST(req: NextRequest) {
         await prisma.bid.deleteMany({
             where: { adId: adId }
         });
+
+        // 🔄 Synchronize Redis state (STOP live bid tracking and clear)
+        await closeAuction(adId);
 
         revalidatePath(`/ad/${adId}`);
 

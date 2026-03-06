@@ -202,15 +202,17 @@ class ViewerConsole extends ConsumerWidget {
               .map((amount) => Padding(
                     padding: const EdgeInsets.only(right: 8),
                     child: GestureDetector(
-                      onTap: () {
-                        final currentPrice = viewerState.liveHighestBid ??
-                            ad.highestBidAmount ??
-                            ad.startingBid ??
-                            0;
-                        bidCtrl.text =
-                            _formatPrice((currentPrice + amount).toDouble());
-                        onPlaceBid();
-                      },
+                      onTap: !viewerState.isAuctionActive
+                        ? null
+                        : () {
+                            final currentPrice = viewerState.liveHighestBid ??
+                                ad.highestBidAmount ??
+                                ad.startingBid ??
+                                0;
+                            bidCtrl.text =
+                                _formatPrice((currentPrice + amount).toDouble());
+                            onPlaceBid();
+                          },
                       child: Container(
                         padding:
                             const EdgeInsets.symmetric(horizontal: 16),
@@ -255,17 +257,25 @@ class ViewerConsole extends ConsumerWidget {
               buildPrimaryAction(),
               const SizedBox(width: 12),
               GestureDetector(
-                onTap: onShowBidSheet,
+                onTap: !viewerState.isAuctionActive ? null : onShowBidSheet,
                 child: Container(
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
+                    color: viewerState.isAuctionActive
+                        ? Colors.white.withOpacity(0.1)
+                        : Colors.white.withOpacity(0.05),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24),
+                    border: Border.all(
+                        color: viewerState.isAuctionActive
+                            ? Colors.white24
+                            : Colors.white12),
                   ),
-                  child:
-                      const Icon(Icons.add, color: Colors.white, size: 24),
+                  child: Icon(Icons.add,
+                      color: viewerState.isAuctionActive
+                          ? Colors.white
+                          : Colors.white24,
+                      size: 24),
                 ),
               ),
             ],

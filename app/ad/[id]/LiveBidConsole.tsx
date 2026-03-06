@@ -178,7 +178,7 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
     // Auto-request sync on mount if viewer
     useEffect(() => {
         if (!isOwner && room) {
-            const payload = JSON.stringify({ type: "REQUEST_SYNC_STATE" });
+            const payload = JSON.stringify({ type: "SYNC_STATE_REQUEST" });
             room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true }).catch(console.error);
         }
     }, [isOwner, room]);

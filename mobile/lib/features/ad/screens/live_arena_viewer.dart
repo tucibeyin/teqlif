@@ -292,6 +292,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   }
 
   void _showBidInputSheet(AdModel currentAd) {
+    final viewerState = ref.read(viewerControllerProvider(widget.ad.id));
+    if (!viewerState.isAuctionActive) {
+      _showSystemMessage('Açık arttırma henüz başlatılmadı', Colors.orange);
+      return;
+    }
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
