@@ -412,17 +412,20 @@ class ViewerController extends StateNotifier<ViewerState> {
     state = state.copyWith(bidLoading: true);
     await Haptics.vibrate(HapticsType.medium);
     try {
-      await ApiClient().post(Endpoints.bids, data: {
+      final res = await ApiClient().post('/api/livekit/bid', data: {
         'adId': adId,
         'amount': amount,
       });
+      if (res.statusCode == 400) {
+        final errMsg = res.data['error']?.toString() ?? 'Teklif çok düşük.';
+        throw Exception(errMsg);
+      }
       ref.invalidate(adDetailProvider(adId));
-      ref.invalidate(myBidsProvider);
       await Haptics.vibrate(HapticsType.success);
       if (!_disposed) {
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(
-              content: Text('teqlifiniz verildi! 🎉'),
+              content: Text('teqlifiniz iletildi! 🎉'),
               backgroundColor: Colors.green),
         );
       }
@@ -430,7 +433,7 @@ class ViewerController extends StateNotifier<ViewerState> {
       await Haptics.vibrate(HapticsType.error);
       if (!_disposed) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(content: Text('teqlif verilemedi.')),
+          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
         );
       }
     } finally {
@@ -502,6 +505,13 @@ class ViewerController extends StateNotifier<ViewerState> {
           onShowSystemMessage?.call(
               '📣 AÇIK ARTTIRMA DURDURULDU', Colors.orange);
           return;
+        } else if (type == 'AUCTION_ENDED') {
+          final winner = decoded['winner']?.toString() ?? 'Katılımcı';
+          final amount = (decoded['amount'] as num?)?.toDouble();
+          state = state.copyWith(isAuctionActive: false);
+          _showFinalizationOverlayAlert(winner, amount);
+          onPlayConfetti?.call();
+          return;
         } else if (type == 'REACTION') {
           addReaction(decoded['emoji']?.toString() ?? '❤️');
           return;
@@ -549,14 +559,14 @@ class ViewerController extends StateNotifier<ViewerState> {
           state = state.copyWith(liveHighestBid: amount);
           onUpdateBidText?.call(_formatPrice(nextBid));
           if (type == 'BID_ACCEPTED' &&
-              decoded['bidderId'] == ref.read(authProvider).user?.id) {
+              (decoded['bidderId'] ?? decoded['bidderIdentity']) == ref.read(authProvider).user?.id) {
             Haptics.vibrate(HapticsType.success);
           }
           recordBidVelocity();
           ref.invalidate(adDetailProvider(adId));
           return;
         } else if (type == 'BID_REJECTED') {
-          if (decoded['bidderId'] == ref.read(authProvider).user?.id) {
+          if ((decoded['bidderId'] ?? decoded['bidderIdentity']) == ref.read(authProvider).user?.id) {
             Haptics.vibrate(HapticsType.error);
           }
           ref.invalidate(adDetailProvider(adId));

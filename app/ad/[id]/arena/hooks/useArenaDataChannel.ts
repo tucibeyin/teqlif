@@ -2,6 +2,12 @@ import { useRef, useEffect } from "react";
 import { useDataChannel } from "@livekit/components-react";
 import { useSession } from "next-auth/react";
 
+/** Backend'in /api/livekit/finalize'dan broadcast ettiği payload. */
+export interface AuctionEndedPayload {
+    winner: string;
+    amount: number;
+}
+
 interface DataChannelHandlers {
     onNewBid: (data: any) => void;
     onBidAccepted: (data: any) => void;
@@ -10,6 +16,8 @@ interface DataChannelHandlers {
     onReaction: (emoji: string) => void;
     onAuctionStart: () => void;
     onAuctionEnd: () => void;
+    /** Backend'den gelen AUCTION_ENDED sinyali (Redis kaynaklı, nihai kazanan ve fiyat içerir). */
+    onAuctionEnded: (data: AuctionEndedPayload) => void;
     onAuctionReset: () => void;
     onAuctionSold: (data: any) => void;
     onSaleFinalized: (data: any) => void;
@@ -43,6 +51,7 @@ export function useArenaDataChannel(handlers: DataChannelHandlers) {
                 case "REACTION": return h.onReaction(data.emoji);
                 case "AUCTION_START": return h.onAuctionStart();
                 case "AUCTION_END": return h.onAuctionEnd();
+                case "AUCTION_ENDED": return h.onAuctionEnded(data as AuctionEndedPayload);
                 case "AUCTION_RESET": return h.onAuctionReset();
                 case "AUCTION_SOLD": return h.onAuctionSold(data);
                 case "SALE_FINALIZED": return h.onSaleFinalized(data);

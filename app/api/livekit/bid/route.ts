@@ -1,61 +1,80 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { RoomServiceClient } from 'livekit-server-sdk';
-import { auth } from '@/auth';
-import { placeLiveBid } from '@/lib/redis';
+import { NextRequest, NextResponse } from "next/server";
+import { RoomServiceClient } from "livekit-server-sdk";
+import { auth } from "@/auth";
+import { placeBid } from "@/lib/services/auction-redis.service";
 
 export async function POST(req: NextRequest) {
-    try {
-        const session = await auth();
-        if (!session || !session.user || !session.user.id) {
-            return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-        }
-
-        const userId = session.user.id;
-        const body = await req.json();
-        const { roomId, amount } = body;
-
-        if (!roomId || !amount || typeof amount !== 'number') {
-            return NextResponse.json({ error: 'Invalid input' }, { status: 400 });
-        }
-
-        // Redis üzerinde atomik fiyat kontrolü ve kayıt
-        const bidResult = await placeLiveBid(roomId, userId, amount);
-
-        if (bidResult === 1) {
-            // teqlif kabul edildi! Şimdi tüm odaya (Data Channel) broadcast yapalım.
-            const apiKey = process.env.LIVEKIT_API_KEY;
-            const apiSecret = process.env.LIVEKIT_API_SECRET;
-            const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
-
-            if (!apiKey || !apiSecret || !wsUrl) {
-                console.error('[LiveKit Bid API] Keys or URL missing');
-                return NextResponse.json({ error: 'Server config error' }, { status: 500 });
-            }
-
-            const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
-
-            const payload = JSON.stringify({
-                type: 'NEW_BID',
-                amount: amount,
-                userId: userId,
-                userName: session.user.name || 'Bidder',
-                timestamp: Date.now()
-            });
-
-            // Veriyi odaya (room) yolla, topic olarak "auction_events" kullanıyoruz
-            await roomService.sendData(
-                roomId,
-                new TextEncoder().encode(payload),
-                1, // Reliability: 1 = RELIABLE (UDP üzerinden ama kayıpsız)
-                { topic: 'auction_events' }
-            );
-
-            return NextResponse.json({ success: true, message: 'Bid accepted and broadcasted' }, { status: 200 });
-        } else {
-            return NextResponse.json({ success: false, message: 'Bid was too low' }, { status: 400 });
-        }
-    } catch (error: any) {
-        console.error('[LiveKit Bid API] Processing error:', error);
-        return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  try {
+    // ── Auth ────────────────────────────────────────────────────────────────
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+    const userId = session.user.id;
+
+    // ── Input Validation ────────────────────────────────────────────────────
+    const body = await req.json();
+    const { adId, amount } = body as { adId?: string; amount?: unknown };
+
+    if (!adId || typeof adId !== "string") {
+      return NextResponse.json({ error: "adId is required" }, { status: 400 });
+    }
+    if (typeof amount !== "number" || !Number.isInteger(amount) || amount <= 0) {
+      return NextResponse.json(
+        { error: "amount must be a positive integer" },
+        { status: 400 }
+      );
+    }
+
+    // ── Atomik Teklif (Lua Script via Redis) ────────────────────────────────
+    const result = await placeBid(adId, userId, amount);
+
+    if (!result.accepted) {
+      const message =
+        result.reason === "auction_not_active"
+          ? "Auction is not active"
+          : "Bid amount must be higher than the current highest bid";
+
+      return NextResponse.json({ error: message }, { status: 400 });
+    }
+
+    // ── LiveKit DataChannel Broadcast ───────────────────────────────────────
+    const apiKey = process.env.LIVEKIT_API_KEY;
+    const apiSecret = process.env.LIVEKIT_API_SECRET;
+    const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
+
+    if (!apiKey || !apiSecret || !wsUrl) {
+      console.error("[LiveKit Bid API] Missing environment variables");
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      );
+    }
+
+    const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
+
+    const payload = JSON.stringify({
+      type: "NEW_BID",
+      amount: result.newHighestBid,
+      bidderIdentity: userId,
+    });
+
+    await roomService.sendData(
+      adId,
+      new TextEncoder().encode(payload),
+      1, // DataPacket_Kind.RELIABLE
+      { topic: "auction_events" }
+    );
+
+    return NextResponse.json(
+      { success: true, newHighestBid: result.newHighestBid },
+      { status: 200 }
+    );
+  } catch (error) {
+    console.error("[LiveKit Bid API] Unexpected error:", error);
+    return NextResponse.json(
+      { error: "Internal server error" },
+      { status: 500 }
+    );
+  }
 }

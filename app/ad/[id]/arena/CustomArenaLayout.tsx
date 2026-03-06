@@ -66,7 +66,7 @@ export function CustomArenaLayout({
 
     const auction = useAuction({
         adId, sellerId, room,
-        initialHighestBid, initialIsAuctionActive,
+        initialHighestBid, initialIsAuctionActive, isQuickLive,
     });
 
     const chat = useArenaChat();
@@ -98,6 +98,15 @@ export function CustomArenaLayout({
         onReaction: reactions.addReaction,
         onAuctionStart: auction.onAuctionStart,
         onAuctionEnd: auction.onAuctionEnd,
+        onAuctionEnded: (data) => {
+            auction.onAuctionEnded(data);
+            fireConfetti();
+            chat.addMessage({
+                id: Date.now().toString(),
+                text: `🎉 İhale ${new Intl.NumberFormat("tr-TR").format(data.amount)} ₺ fiyatla tamamlandı!`,
+                sender: "Sistem",
+            });
+        },
         onAuctionReset: auction.onAuctionReset,
         onAuctionSold: (data) => {
             auction.onAuctionSold(data);

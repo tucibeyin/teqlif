@@ -312,7 +312,7 @@ class HostController extends StateNotifier<HostState> {
       } else if (dataObj['type'] == 'NEW_BID') {
         final amount = (dataObj['amount'] as num).toDouble();
         final bidId = dataObj['bidId']?.toString();
-        final bidderId = dataObj['bidderId']?.toString();
+        final bidderId = dataObj['bidderIdentity']?.toString() ?? dataObj['bidderId']?.toString();
         final bids = List<LiveBid>.from(state.bids);
         bids.insert(
           0,
@@ -362,6 +362,14 @@ class HostController extends StateNotifier<HostState> {
           unreadBids: 0,
           countdown: 0,
         );
+        return;
+
+      } else if (dataObj['type'] == 'AUCTION_ENDED') {
+        final winner = dataObj['winner']?.toString() ?? 'Katılımcı';
+        final amount = (dataObj['amount'] as num?)?.toDouble();
+        state = state.copyWith(isAuctionActive: false);
+        _showFinalizationOverlayAlert(winner, amount);
+        onPlayConfetti?.call();
         return;
 
       } else if (dataObj['type'] == 'BID_REJECTED') {
@@ -516,7 +524,7 @@ class HostController extends StateNotifier<HostState> {
 
     try {
       final res = await ApiClient()
-          .post('/api/ads/$adId/auction/reset', data: {});
+          .post('/api/livekit/reset', data: {'adId': adId});
       if (res.statusCode == 200 || res.statusCode == 201) {
         final payload = jsonEncode({'type': 'AUCTION_RESET'});
         if (_room != null) {
@@ -578,59 +586,25 @@ class HostController extends StateNotifier<HostState> {
   Future<void> _finalizeBid(LiveBid bid, BuildContext ctx) async {
     state = state.copyWith(isFinalizing: true);
     try {
-      final acceptRes = await ApiClient().patch('/api/bids/${bid.id}/accept');
-      if (acceptRes.statusCode == 200) {
-        bool finalizeSuccess = false;
-        final isQuickLive =
-            ad.description == 'Hızlı Canlı Yayın (Ghost Ad)';
-
-        if (!isQuickLive) {
-          final finalizeRes =
-              await ApiClient().post('/api/bids/${bid.id}/finalize');
-          finalizeSuccess = finalizeRes.statusCode == 200;
-        } else {
-          finalizeSuccess = true;
-        }
-
-        if (finalizeSuccess) {
-          await ApiClient().post('/api/livekit/finalize', data: {
-            'adId': adId,
-            'winnerId': bid.userId,
-            'finalPrice': bid.amount,
-            'isQuickLive': isQuickLive,
-          });
-
-          state = state.copyWith(isFinalizing: false, isAuctionActive: false);
-
-          final room = _room;
-          final soldSignal = jsonEncode({
-            'type': 'AUCTION_SOLD',
-            'winnerId': bid.userId,
-            'winnerName': bid.userLabel,
-            'price': bid.amount,
-          });
-          room?.localParticipant?.publishData(utf8.encode(soldSignal));
-
-          final endSignal = jsonEncode({'type': 'AUCTION_END'});
-          room?.localParticipant?.publishData(utf8.encode(endSignal));
-
-          final saleSignal = jsonEncode({
-            'type': 'SALE_FINALIZED',
-            'winnerName': bid.userLabel,
-            'amount': bid.amount,
-          });
-          room?.localParticipant?.publishData(utf8.encode(saleSignal));
-          return;
-        }
+      final isQuickLive = ad.description == 'Hızlı Canlı Yayın (Ghost Ad)';
+      final res = await ApiClient().post('/api/livekit/finalize', data: {
+        'adId': adId,
+        'isQuickLive': isQuickLive,
+      });
+      if (res.statusCode != 200 && res.statusCode != 201) {
+        final errMsg = res.data['error']?.toString() ?? 'Satış tamamlanamadı.';
+        throw Exception(errMsg);
       }
-      throw Exception('Satış işlemleri sırasında bir hata oluştu');
+      // Backend broadcasts AUCTION_ENDED to all participants.
+      // handleDataChannelMessage will update UI when that signal arrives.
     } catch (e) {
-      state = state.copyWith(isFinalizing: false);
       if (ctx.mounted) {
-        ScaffoldMessenger.of(ctx).showSnackBar(const SnackBar(
+        ScaffoldMessenger.of(ctx).showSnackBar(SnackBar(
             content: Text(
-                'Satış işlemi başarısız oldu. Lütfen tekrar deneyin.')));
+                e.toString().replaceFirst('Exception: ', ''))));
       }
+    } finally {
+      if (mounted) state = state.copyWith(isFinalizing: false);
     }
   }
 

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import type { Room } from "livekit-client";
 import type { AuctionStatus, AuctionResult } from "../types";
+import type { AuctionEndedPayload } from "./useArenaDataChannel";
 
 interface UseAuctionOptions {
     adId: string;
@@ -9,6 +10,7 @@ interface UseAuctionOptions {
     room: Room | null;
     initialHighestBid: number;
     initialIsAuctionActive: boolean;
+    isQuickLive?: boolean;
 }
 
 export function useAuction({
@@ -17,6 +19,7 @@ export function useAuction({
     room,
     initialHighestBid,
     initialIsAuctionActive,
+    isQuickLive = false,
 }: UseAuctionOptions) {
     const router = useRouter();
     const [highestBid, setHighestBid] = useState(initialHighestBid);
@@ -56,7 +59,8 @@ export function useAuction({
         (data: any) => {
             setHighestBid(data.amount);
             setHighestBidId(data.bidId ?? null);
-            setHighestBidderId(data.bidderId ?? null);
+            // Yeni backend: bidderIdentity (userId). Eski: bidderId. Her ikisini destekle.
+            setHighestBidderId(data.bidderIdentity ?? data.bidderId ?? null);
             if (data.bidderName) setHighestBidderName(data.bidderName);
             setLastAcceptedBidId(null);
             setFlashBid(true);
@@ -117,6 +121,18 @@ export function useAuction({
         setFinalizedWinner(data.winnerName || "Katılımcı");
         setFinalizedAmount(data.amount ?? null);
         setShowFinalization(true);
+    }, []);
+
+    /**
+     * Backend'in /api/livekit/finalize'dan broadcast ettiği AUCTION_ENDED sinyali.
+     * Redis'ten gelen nihai kazanan ve fiyatı içerir — client'a güvenilmez.
+     */
+    const onAuctionEnded = useCallback((data: AuctionEndedPayload) => {
+        setStatus("IDLE");
+        setFinalizedWinner(data.winner);
+        setFinalizedAmount(data.amount);
+        setShowFinalization(true);
+        notify("🎉 İhale tamamlandı!");
     }, []);
 
     const onAuctionSold = useCallback((data: any) => {
@@ -206,28 +222,29 @@ export function useAuction({
     }, [room, adId, publish]);
 
     const accept = useCallback(async () => {
-        if (!highestBidId) return;
         if (!confirm("Dikkat! Bu teqlifi kabul edip satışı tamamlıyorsunuz?")) return;
         setLoading(true);
         try {
-            const res = await fetch(`/api/bids/${highestBidId}/accept`, { method: "PATCH" });
-            if (res.ok) {
-                setLastAcceptedBidId(highestBidId);
-                const auctionSoldPayload = {
-                    type: "AUCTION_SOLD",
-                    winnerName: highestBidderName,
-                    price: highestBid,
-                };
-                publish(auctionSoldPayload);
-                setResult({ winnerName: highestBidderName || "Katılımcı", price: highestBid });
-                setShowSoldOverlay(true);
+            // Kazanan ve fiyat artık backend'de Redis'ten okunuyor.
+            // Client'tan winnerId / finalPrice gönderilmez — manipülasyon riski ortadan kalkar.
+            const res = await fetch("/api/livekit/finalize", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ adId, isQuickLive }),
+            });
+            if (!res.ok) {
+                const data = await res.json();
+                notify(data.error || "Satış tamamlanamadı.");
             }
+            // Başarılı: backend AUCTION_ENDED sinyalini tüm katılımcılara broadcast eder.
+            // onAuctionEnded handler'ı çalışarak UI'ı günceller — burada manuel state değişikliğine gerek yok.
         } catch (e) {
-            console.error(e);
+            console.error("[accept] finalize error:", e);
+            notify("Bağlantı hatası.");
         } finally {
             setLoading(false);
         }
-    }, [highestBidId, highestBidderName, highestBid, publish]);
+    }, [adId, isQuickLive, notify]);
 
     const reject = useCallback(async () => {
         if (!highestBidId) return;
@@ -278,7 +295,7 @@ export function useAuction({
         // Incoming event handlers
         onNewBid, onBidAccepted, onBidRejected,
         onAuctionStart, onAuctionEnd, onAuctionReset,
-        onSaleFinalized, onAuctionSold, onSyncStateResponse,
+        onAuctionEnded, onSaleFinalized, onAuctionSold, onSyncStateResponse,
         // Host actions
         start, stop, reset, accept, reject, buyNow, broadcastState,
     };

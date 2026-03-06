@@ -61,13 +61,14 @@ export function BidPanel({
     }
     setBidLoading(true);
     try {
-      const res = await fetch(`/api/bids`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/livekit/bid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ adId, amount: num }),
       });
       const data = await res.json();
       if (res.ok) {
-        setStatus({ type: "success", msg: "✅ Teklifiniz iletildi!" });
+        setStatus({ type: "success", msg: "Teklifiniz iletildi!" });
         setTimeout(() => setStatus(null), 3000);
       } else {
         setStatus({ type: "error", msg: data.error || "Hata oluştu." });
@@ -83,16 +84,23 @@ export function BidPanel({
     const num = currentHighest + step;
     setBidLoading(true);
     try {
-      const res = await fetch(`/api/bids`, {
-        method: "POST", headers: { "Content-Type": "application/json" },
+      const res = await fetch("/api/livekit/bid", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ adId, amount: num }),
       });
+      const data = await res.json();
       if (res.ok) {
-        setStatus({ type: "success", msg: `✅ +${fmt(step)} teklif verildi!` });
+        setStatus({ type: "success", msg: `+${new Intl.NumberFormat("tr-TR").format(step)} ₺ teklif verildi!` });
         setTimeout(() => setStatus(null), 2500);
+      } else {
+        setStatus({ type: "error", msg: data.error || "Hata oluştu." });
       }
-    } catch { /* noop */ }
-    finally { setBidLoading(false); }
+    } catch {
+      setStatus({ type: "error", msg: "Bağlantı hatası." });
+    } finally {
+      setBidLoading(false);
+    }
   };
 
   return (
