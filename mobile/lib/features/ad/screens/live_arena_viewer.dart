@@ -106,7 +106,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     try {
       room!.localParticipant!.publishData(
         utf8.encode(payload),
-        reliability: Reliability.reliable,
       );
       _addReaction(emoji);
     } catch (e) {
@@ -141,7 +140,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     try {
       room!.localParticipant!.publishData(
         utf8.encode(payload),
-        reliability: Reliability.reliable,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -191,7 +189,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           final syncPayload = jsonEncode({'type': 'SYNC_STATE_REQUEST'});
           room.localParticipant?.publishData(
             utf8.encode(syncPayload),
-            reliability: Reliability.reliable,
           );
         } catch (e) {
           debugPrint('Sync request error: $e');
@@ -606,7 +603,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       });
       await state.room!.localParticipant?.publishData(
         utf8.encode(payload),
-        reliability: Reliability.reliable,
       );
       _handleDataChannelMessage(utf8.encode(payload), null);
     }

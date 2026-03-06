@@ -188,7 +188,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     try {
       state.room!.localParticipant!.publishData(
         utf8.encode(payload),
-        reliability: Reliability.reliable,
       );
       _addReaction(emoji);
     } catch (e) {
@@ -476,7 +475,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
             });
             state.room!.localParticipant?.publishData(
               utf8.encode(payload),
-              reliability: Reliability.reliable,
             );
           }
           return;
@@ -515,7 +513,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       });
       await state.room!.localParticipant?.publishData(
         utf8.encode(payload),
-        reliability: Reliability.reliable,
       );
       _handleDataChannelMessage(utf8.encode(payload), null, customName: name);
     }
@@ -546,7 +543,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       });
       await state.room!.localParticipant?.publishData(
         utf8.encode(payload),
-        reliability: Reliability.reliable,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -570,7 +566,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     try {
       await state.room!.localParticipant?.publishData(
         signal.codeUnits,
-        reliability: Reliability.reliable,
       );
 
       // Persist state to DB
@@ -628,7 +623,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         if (state.room != null) {
           await state.room!.localParticipant?.publishData(
             utf8.encode(payload),
-            reliability: Reliability.reliable,
           );
         }
 
@@ -684,7 +678,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       });
       await state.room!.localParticipant?.publishData(
         utf8.encode(payload),
-        reliability: Reliability.reliable,
       );
     }
   }
@@ -717,7 +710,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       final payload = jsonEncode({'type': 'ROOM_CLOSED'});
       await state.room!.localParticipant?.publishData(
         utf8.encode(payload),
-        reliability: Reliability.reliable,
       );
     }
 
@@ -757,7 +749,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         final payload = jsonEncode({'type': 'ROOM_CLOSED'});
         await state.room!.localParticipant?.publishData(
           utf8.encode(payload),
-          reliability: Reliability.reliable,
         );
       }
 
@@ -777,7 +768,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       });
       await state.room!.localParticipant?.publishData(
         utf8.encode(payload),
-        reliability: Reliability.reliable,
       );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -959,26 +949,33 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                                                         'isQuickLive': isQuickLive,
                                                       });
 
-                                                      if (mounted) {
-                                                        setState(() =>
-                                                            _isFinalizing =
-                                                                false);
-                                                        Navigator.pop(
-                                                            context); // Close sheet
-                                                        
-                                                        room?.localParticipant?.publishData(
-                                                          utf8.encode(soldSignal),
-                                                          reliability: Reliability.reliable,
-                                                        );
-                                                        room?.localParticipant?.publishData(
-                                                          utf8.encode(endSignal),
-                                                          reliability: Reliability.reliable,
-                                                        );
-                                                        room?.localParticipant?.publishData(
-                                                          utf8.encode(saleSignal),
-                                                          reliability: Reliability.reliable,
-                                                        );
-                                                      }
+                                                       if (mounted) {
+                                                         setState(() {
+                                                           _isFinalizing = false;
+                                                         });
+                                                         Navigator.pop(context); // Close sheet
+                                                         
+                                                         // Inform participants via DataChannel
+                                                         final room = ref.read(liveRoomProvider(widget.ad.id)).room;
+                                                         
+                                                         final soldSignal = jsonEncode({
+                                                           'type': 'AUCTION_SOLD',
+                                                           'winnerId': bid.userId,
+                                                           'winnerName': bid.userLabel,
+                                                           'price': bid.amount,
+                                                         });
+                                                         room?.localParticipant?.publishData(utf8.encode(soldSignal));
+
+                                                         final endSignal = jsonEncode({'type': 'AUCTION_END'});
+                                                         room?.localParticipant?.publishData(utf8.encode(endSignal));
+
+                                                         final saleSignal = jsonEncode({
+                                                           'type': 'SALE_FINALIZED',
+                                                           'winnerName': bid.userLabel,
+                                                           'amount': bid.amount,
+                                                         });
+                                                         room?.localParticipant?.publishData(utf8.encode(saleSignal));
+                                                       }
                                                       return;
                                                     }
                                                   }
@@ -986,8 +983,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                                                       'Satış işlemleri sırasında bir hata oluştu');
                                                 } catch (e) {
                                                   if (mounted) {
-                                                    setState(() =>
-                                                        _isFinalizing = false);
+                                                    setState(() {
+                                                        _isFinalizing = false;
+                                                    });
                                                     ScaffoldMessenger.of(
                                                             context)
                                                         .showSnackBar(
@@ -1103,16 +1101,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                 'winnerName': latestBid.userLabel,
                 'price': latestBid.amount,
               });
-              room?.localParticipant?.publishData(
-                utf8.encode(soldSignal),
-                reliability: Reliability.reliable,
-              );
-
+              room?.localParticipant?.publishData(utf8.encode(soldSignal));
               final endSignal = jsonEncode({'type': 'AUCTION_END'});
-              room?.localParticipant?.publishData(
-                utf8.encode(endSignal),
-                reliability: Reliability.reliable,
-              );
+              room?.localParticipant?.publishData(utf8.encode(endSignal));
 
               final saleSignal = jsonEncode({
                 'type': 'SALE_FINALIZED',
@@ -1121,7 +1112,6 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
               });
               room?.localParticipant?.publishData(
                 utf8.encode(saleSignal),
-                reliability: Reliability.reliable,
               );
             }
             return;
@@ -1130,7 +1120,9 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         throw Exception('API Hatası');
       } catch (e) {
         if (mounted) {
-          setState(() => _isFinalizing = false);
+          setState(() {
+            _isFinalizing = false;
+          });
           ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
               content:
                   Text('Satış işlemi başarısız oldu. Lütfen tekrar deneyin.')));
