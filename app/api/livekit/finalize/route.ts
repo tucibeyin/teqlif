@@ -197,10 +197,16 @@ export async function POST(req: NextRequest) {
     const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
     if (apiKey && apiSecret && wsUrl) {
+      // Kazananın gerçek ismini çek (id yerine isim göstermek için)
+      const winnerUser = await prisma.user.findUnique({
+        where: { id: highestBidder },
+        select: { name: true },
+      });
+
       const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
       const payload = JSON.stringify({
         type: "AUCTION_ENDED",
-        winner: highestBidder,
+        winner: winnerUser?.name || "Katılımcı",
         amount: highestBid,
       });
 

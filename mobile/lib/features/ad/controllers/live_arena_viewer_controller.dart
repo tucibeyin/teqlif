@@ -563,28 +563,9 @@ class ViewerController extends StateNotifier<ViewerState> {
           onShowSystemMessage?.call(
               '📣 AÇIK ARTTIRMA DURDURULDU', Colors.orange);
           return;
-        } else if (type == 'AUCTION_ENDED') {
-          final winner = decoded['winner']?.toString() ?? 'Katılımcı';
-          final amount = (decoded['amount'] as num?)?.toDouble();
-          state = state.copyWith(isAuctionActive: false);
-          _showFinalizationOverlayAlert(winner, amount);
-          onPlayConfetti?.call();
-          return;
-        } else if (type == 'REACTION') {
-          addReaction(decoded['emoji']?.toString() ?? '❤️');
-          return;
-        } else if (type == 'SALE_FINALIZED') {
-          final winnerName = decoded['winnerName']?.toString();
-          final amount = decoded['amount'] != null
-              ? (decoded['amount'] as num).toDouble()
-              : null;
-          _showFinalizationOverlayAlert(winnerName, amount);
-          return;
         } else if (type == 'AUCTION_SOLD') {
-          final winner = decoded['winnerName']?.toString() ?? 'Katılımcı';
-          final price = decoded['price'] != null
-              ? (decoded['price'] as num).toDouble()
-              : 0.0;
+          final winner = _formatSenderName(decoded['winnerName']?.toString());
+          final price = (decoded['price'] as num?)?.toDouble() ?? 0.0;
           if (!_disposed) {
             state = state.copyWith(
               isSold: true,
@@ -595,6 +576,23 @@ class ViewerController extends StateNotifier<ViewerState> {
             );
             onPlayConfetti?.call();
           }
+          return;
+        } else if (type == 'AUCTION_ENDED') {
+          final winner = _formatSenderName(decoded['winner']?.toString());
+          final amount = (decoded['amount'] as num?)?.toDouble();
+          state = state.copyWith(isAuctionActive: false);
+          _showFinalizationOverlayAlert(winner, amount);
+          onPlayConfetti?.call();
+          return;
+        } else if (type == 'REACTION') {
+          addReaction(decoded['emoji']?.toString() ?? '❤️');
+          return;
+        } else if (type == 'SALE_FINALIZED') {
+          final winnerName = _formatSenderName(decoded['winnerName']?.toString());
+          final amount = decoded['amount'] != null
+              ? (decoded['amount'] as num).toDouble()
+              : null;
+          _showFinalizationOverlayAlert(winnerName, amount);
           return;
         } else if (type == 'CHAT') {
           final chatText = decoded['text']?.toString() ?? '';

@@ -329,18 +329,14 @@ class HostController extends StateNotifier<HostState> {
         return;
 
       } else if (dataObj['type'] == 'SALE_FINALIZED') {
-        final winnerName = dataObj['winnerName']?.toString();
-        final amount = dataObj['amount'] != null
-            ? (dataObj['amount'] as num).toDouble()
-            : null;
+        final winnerName = _formatSenderName(dataObj['winnerName']?.toString());
+        final amount = (dataObj['amount'] as num?)?.toDouble();
         _showFinalizationOverlayAlert(winnerName, amount);
         return;
 
       } else if (dataObj['type'] == 'AUCTION_SOLD') {
-        final winner = dataObj['winnerName']?.toString() ?? 'Katılımcı';
-        final price = dataObj['price'] != null
-            ? (dataObj['price'] as num).toDouble()
-            : 0.0;
+        final winner = _formatSenderName(dataObj['winnerName']?.toString());
+        final price = (dataObj['price'] as num?)?.toDouble() ?? 0.0;
         state = state.copyWith(
           isSold: true,
           showSoldOverlay: true,
@@ -365,7 +361,7 @@ class HostController extends StateNotifier<HostState> {
         return;
 
       } else if (dataObj['type'] == 'AUCTION_ENDED') {
-        final winner = dataObj['winner']?.toString() ?? 'Katılımcı';
+        final winner = _formatSenderName(dataObj['winner']?.toString());
         final amount = (dataObj['amount'] as num?)?.toDouble();
         state = state.copyWith(isAuctionActive: false);
         _showFinalizationOverlayAlert(winner, amount);

@@ -152,8 +152,17 @@ export function useAuction({
         notify("📣 Yeni Ürüne Geçildi! Teklif Bekleniyor...");
     }, [initialHighestBid]);
 
+    const formatWinnerName = (name: string | null) => {
+        if (!name) return "Katılımcı";
+        const parts = name.trim().split(" ");
+        if (parts.length === 1) return parts[0];
+        const firstName = parts[0];
+        const lastPart = parts[parts.length - 1];
+        return `${firstName} ${lastPart[0]}.`;
+    };
+
     const onSaleFinalized = useCallback((data: any) => {
-        setFinalizedWinner(data.winnerName || "Katılımcı");
+        setFinalizedWinner(formatWinnerName(data.winnerName));
         setFinalizedAmount(data.amount ?? null);
         setShowFinalization(true);
     }, []);
@@ -164,14 +173,14 @@ export function useAuction({
      */
     const onAuctionEnded = useCallback((data: AuctionEndedPayload) => {
         setStatus("IDLE");
-        setFinalizedWinner(data.winner);
+        setFinalizedWinner(formatWinnerName(data.winner));
         setFinalizedAmount(data.amount);
         setShowFinalization(true);
         notify("🎉 İhale tamamlandı!");
     }, []);
 
     const onAuctionSold = useCallback((data: any) => {
-        setResult({ winnerName: data.winnerName || "Katılımcı", price: data.price ?? 0 });
+        setResult({ winnerName: formatWinnerName(data.winnerName), price: data.price ?? 0 });
         setShowSoldOverlay(true);
         setStatus("IDLE");
     }, []);

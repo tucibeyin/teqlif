@@ -185,6 +185,15 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
 
     const formatPrice = (p: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(p);
 
+    const formatName = (name: string | null) => {
+        if (!name) return "Katılımcı";
+        const parts = name.trim().split(" ");
+        if (parts.length === 1) return parts[0];
+        const firstName = parts[0];
+        const lastPart = parts[parts.length - 1];
+        return `${firstName} ${lastPart[0]}.`;
+    };
+
     const finalizeAuction = async () => {
         if (!lastBidId || !room) return;
         if (!confirm("Bu teklifi kabul edip satışı tamamlıyor musunuz?")) return;
@@ -194,7 +203,7 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
             if (resAccept.ok) {
                 const resFinalize = await fetch(`/api/bids/${lastBidId}/finalize`, { method: "POST" });
                 if (resFinalize.ok) {
-                    const payloadSold = JSON.stringify({ type: "AUCTION_SOLD", winnerName: highestBidderName || "Katılımcı", price: currentPrice });
+                    const payloadSold = JSON.stringify({ type: "AUCTION_SOLD", winnerName: formatName(highestBidderName) || "Katılımcı", price: currentPrice });
                     await room.localParticipant.publishData(new TextEncoder().encode(payloadSold), { reliable: true });
 
                     const payloadEnd = JSON.stringify({ type: "AUCTION_END" });
