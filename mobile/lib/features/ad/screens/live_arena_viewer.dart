@@ -1,26 +1,29 @@
+import 'dart:convert';
+import 'dart:ui';
+
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:intl/intl.dart';
-import 'package:livekit_client/livekit_client.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
-import 'package:confetti/confetti.dart';
-import 'dart:ui';
-import 'dart:convert';
-import 'dart:async';
+import 'package:livekit_client/livekit_client.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
-import '../../../core/providers/auth_provider.dart';
-import 'dart:math';
-import '../widgets/floating_reactions.dart';
-import '../../../core/api/api_client.dart';
-import '../../../core/api/endpoints.dart';
-import '../providers/ad_detail_provider.dart';
-import '../../dashboard/screens/dashboard_screen.dart';
 import '../../../core/utils/profanity_filter.dart';
+import '../controllers/live_arena_viewer_controller.dart';
+import '../providers/ad_detail_provider.dart';
+import '../widgets/floating_reactions.dart';
+import '../widgets/viewer/viewer_chat_flow.dart';
+import '../widgets/viewer/viewer_console.dart';
+import '../widgets/viewer/viewer_finalization_overlay.dart';
+import '../widgets/viewer/viewer_sold_overlay.dart';
+import '../widgets/viewer/viewer_sidebar.dart';
+import '../widgets/viewer/viewer_top_header.dart';
+
+// ─────────────────────────────────────────────────────────────────────────────
 
 class LiveArenaViewer extends ConsumerStatefulWidget {
   final AdModel ad;
@@ -30,166 +33,97 @@ class LiveArenaViewer extends ConsumerStatefulWidget {
   ConsumerState<LiveArenaViewer> createState() => _LiveArenaViewerState();
 }
 
+// ─────────────────────────────────────────────────────────────────────────────
+
 class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     with TickerProviderStateMixin, WidgetsBindingObserver {
-  bool _uiVisible = true;
-  Timer? _inactivityTimer;
-  VideoQuality _currentQuality = VideoQuality.HIGH;
-
-  // Ephemeral Chat
-  final List<_EphemeralMessage> _messages = [];
-  final TextEditingController _chatCtrl = TextEditingController();
-  final FocusNode _chatFocus = FocusNode();
-
-  // Bid
-  final _bidCtrl = TextEditingController();
-  bool _bidLoading = false;
-
-  final List<DateTime> _recentBids = [];
-  bool _isHypeMode = false;
-  Timer? _hypeTimer;
-
-  // Animation for Pulse
+  // ── TickerProvider-dependent (cannot move to controller) ──────────────────
   late AnimationController _pulseController;
-
-  bool _isGuest = false;
-  bool _isAuctionActive = false;
-  double? _liveHighestBid;
-
-  // Reactions State
-  final List<FloatingReaction> _reactions = [];
-  int _lastReactionTime = 0;
-  bool _isMuted = false;
-  int? _countdownValue;
-
-  // 🎊 AUCTION_SOLD — permanent sold state
-  bool _isSold = false;
-  String? _soldWinnerName;
-  double? _soldFinalPrice;
-  bool _showSoldOverlay = false;
   late ConfettiController _confettiController;
 
-  void _addReaction(String emoji) {
-    if (!mounted) return;
-    final id = DateTime.now().millisecondsSinceEpoch.toString() +
-        Random().nextInt(1000).toString();
-    setState(() {
-      _reactions.add(FloatingReaction(id: id, emoji: emoji));
-      if (_reactions.length > 20) _reactions.removeAt(0);
-    });
-    Future.delayed(const Duration(milliseconds: 2500), () {
-      if (!mounted) return;
-      setState(() {
-        _reactions.removeWhere((r) => r.id == id);
-      });
-    });
-  }
+  // ── Form controllers ──────────────────────────────────────────────────────
+  final TextEditingController _chatCtrl = TextEditingController();
+  final FocusNode _chatFocus = FocusNode();
+  final TextEditingController _bidCtrl = TextEditingController();
 
-  void _sendReaction(String emoji) {
-    final state = ref.read(liveRoomProvider(widget.ad.id));
-    final room = state.room;
-    final isDisconnected = room?.connectionState.name == 'disconnected' ||
-        (room == null && !state.isConnecting);
-    if (isDisconnected) return;
+  // ── Pure UI state ─────────────────────────────────────────────────────────
+  bool _uiVisible = true;
 
-    final now = DateTime.now().millisecondsSinceEpoch;
-    if (now - _lastReactionTime < 500) return;
-    _lastReactionTime = now;
-
-    if (room?.localParticipant == null) return;
-
-    final payload = jsonEncode({
-      'type': 'REACTION',
-      'emoji': emoji,
-    });
-
-    try {
-      room!.localParticipant!.publishData(
-        utf8.encode(payload),
-      );
-      _addReaction(emoji);
-    } catch (e) {
-      debugPrint('Reaction send error: $e');
-    }
-  }
-
-  // Sale Finalized Overlay State
-  String? _finalizedWinnerName;
-  double? _finalizedAmount;
-  bool _showFinalizationOverlay = false;
-
-  bool _isReconnectingForStage = false;
-
-  void _requestStage() {
-    final state = ref.read(liveRoomProvider(widget.ad.id));
-    final room = state.room;
-    if (room?.localParticipant == null) return;
-    final currentUser = ref.read(authProvider).user;
-    if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Kullanıcı girişi gerekli.')));
-      return;
-    }
-
-    final payload = jsonEncode({
-      'type': 'REQUEST_STAGE',
-      'userId': currentUser.id,
-      'userName': currentUser.name,
-    });
-
-    try {
-      room!.localParticipant!.publishData(
-        utf8.encode(payload),
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('Sahneye katılma isteği gönderildi!',
-                style: TextStyle(fontWeight: FontWeight.bold)),
-            backgroundColor: Colors.green),
-      );
-    } catch (e) {
-      debugPrint('Stage request error: $e');
-    }
-  }
+  // ── Lifecycle ─────────────────────────────────────────────────────────────
 
   @override
   void initState() {
     super.initState();
-    // Hide system UI (FullScreen)
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     WidgetsBinding.instance.addObserver(this);
-    _resetInactivityTimer();
 
     _pulseController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 600),
     );
-
     _confettiController = ConfettiController(
       duration: const Duration(seconds: 5),
     );
 
-    // Initial sync for late joiners
-    _isAuctionActive = widget.ad.isAuctionActive;
-    _liveHighestBid = widget.ad.highestBidAmount;
+    // Wire animation & dialog callbacks into controller
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctrl =
+          ref.read(viewerControllerProvider(widget.ad).notifier);
+      ctrl.onPlayConfetti = () {
+        if (mounted) _confettiController.play();
+      };
+      ctrl.onPulseStart = () {
+        if (mounted) _pulseController.repeat(reverse: true);
+      };
+      ctrl.onPulseStop = () {
+        if (mounted) {
+          _pulseController.stop();
+          _pulseController.value = 1.0;
+        }
+      };
+      ctrl.onUpdateBidText = (text) {
+        if (mounted) _bidCtrl.text = text;
+      };
+      ctrl.onShowInviteDialog = () {
+        if (mounted) _showInviteDialog();
+      };
+      ctrl.onKicked = () {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Sahneden çıkarıldınız.'),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 3),
+            ),
+          );
+        }
+      };
+      ctrl.onShowSystemMessage = _showSystemMessage;
+      ctrl.onInactivityTimeout = () {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Hareketsizlik modu aktif (AdaptiveStream).'),
+              duration: Duration(seconds: 2),
+              backgroundColor: Colors.black54,
+            ),
+          );
+        }
+      };
+      ctrl.resetInactivityTimer();
+    });
 
     // Connect to room
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final notifier = ref.read(liveRoomProvider(widget.ad.id).notifier);
       await notifier.connect(false);
-
-      // Listen to events after connection
       final room = ref.read(liveRoomProvider(widget.ad.id)).room;
       if (room != null) {
         room.events.listen(_onRoomEvent);
-
-        // Request initial state from host
         try {
           final syncPayload = jsonEncode({'type': 'SYNC_STATE_REQUEST'});
-          room.localParticipant?.publishData(
-            utf8.encode(syncPayload),
-          );
+          room.localParticipant?.publishData(utf8.encode(syncPayload));
         } catch (e) {
           debugPrint('Sync request error: $e');
         }
@@ -199,7 +133,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   @override
   void deactivate() {
-    // 🛡️ Schedule after build frame — avoids ZonedGuarded 'modify during build' crash
+    // Schedule after build frame to avoid ZonedGuarded crash
     final adId = widget.ad.id;
     final container = ProviderScope.containerOf(context, listen: false);
     Future.microtask(() {
@@ -214,261 +148,66 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   @override
   void dispose() {
     WakelockPlus.disable();
-    // ⛔ NO ref.read()/ref.invalidate() here — moved to deactivate()
     WidgetsBinding.instance.removeObserver(this);
-    _inactivityTimer?.cancel();
-    _hypeTimer?.cancel();
     _pulseController.dispose();
     _confettiController.dispose();
     _chatCtrl.dispose();
     _chatFocus.dispose();
     _bidCtrl.dispose();
-    // Restore system UI
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     super.dispose();
-  }
-
-  String _formatSenderName(String? name) {
-    if (name == null || name.isEmpty) return 'Katılımcı';
-    final parts = name.trim().split(' ');
-    if (parts.length == 1) return parts[0];
-
-    final firstName = parts[0];
-    final otherParts = parts
-        .skip(1)
-        .map((p) => p.isNotEmpty ? '${p[0]}.' : '')
-        .where((s) => s.isNotEmpty)
-        .join(' ');
-    return '$firstName $otherParts';
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.paused) {
-      // In background, disable camera/audio? Viewer doesn't have it.
       // LiveKit adaptive stream pauses video when view is hidden.
     } else if (state == AppLifecycleState.resumed) {
       // Resume
     }
   }
 
-  void _resetInactivityTimer() {
-    _inactivityTimer?.cancel();
-    _inactivityTimer = Timer(const Duration(seconds: 30), () {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Hareketsizlik modu aktif (AdaptiveStream).'),
-            duration: Duration(seconds: 2),
-            backgroundColor: Colors.black54,
-          ),
-        );
-      }
-    });
+  // ── Room event listener ───────────────────────────────────────────────────
+
+  void _onRoomEvent(RoomEvent event) {
+    if (event is TrackMutedEvent || event is TrackUnmutedEvent) {
+      if (mounted) setState(() {});
+    }
+    if (event is DataReceivedEvent) {
+      ref
+          .read(viewerControllerProvider(widget.ad).notifier)
+          .handleDataChannelMessage(event.data, event.participant);
+    }
   }
 
   void _onInteraction() {
-    _resetInactivityTimer();
+    ref.read(viewerControllerProvider(widget.ad).notifier).resetInactivityTimer();
   }
 
-  String _formatPrice(double p) =>
-      '₺${p.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+  // ── System message ────────────────────────────────────────────────────────
 
-  double _getNextBidAmount(AdModel currentAd) {
-    if (_liveHighestBid != null) return _liveHighestBid! + currentAd.minBidStep;
-    if (!currentAd.isAuction && !_isAuctionActive) return currentAd.price;
-    final base =
-        currentAd.highestBidAmount ?? currentAd.startingBid ?? currentAd.price;
-    return base + currentAd.minBidStep;
+  void _showSystemMessage(String text, Color color) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Center(
+            child: Text(text,
+                style: const TextStyle(
+                    fontWeight: FontWeight.w900, color: Colors.white))),
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: color.withOpacity(0.9),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.7,
+            left: 50,
+            right: 50),
+        duration: const Duration(seconds: 4),
+      ),
+    );
   }
 
-  void _resetMessageTimer() {
-    Timer(const Duration(seconds: 4), () {
-      if (mounted) {
-        setState(() {
-          if (_messages.isNotEmpty) {
-            _messages.removeAt(0);
-          }
-        });
-      }
-    });
-  }
-
-  void _handleDataChannelMessage(List<int> data, RemoteParticipant? p) {
-    String message;
-    try {
-      message = utf8.decode(data);
-    } catch (e) {
-      debugPrint('UTF-8 Decode error: $e');
-      message = String.fromCharCodes(data);
-    }
-
-    try {
-      final decoded = jsonDecode(message);
-      if (decoded is Map<String, dynamic> && decoded['type'] != null) {
-        final type = decoded['type'];
-        if (type == 'ROOM_CLOSED') {
-          // Instead of popping out instantly, cleanly display disconnected state.
-          ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-          return;
-        } else if (type == 'INVITE_TO_STAGE') {
-          final targetIdentity = decoded['targetIdentity'];
-          final currentUser = ref.read(authProvider).user;
-          if (currentUser != null && targetIdentity == currentUser.id) {
-            _showInviteDialog();
-          }
-          return;
-        } else if (type == 'KICK_FROM_STAGE') {
-          final targetIdentity = decoded['targetIdentity'];
-          final currentUser = ref.read(authProvider).user;
-          if (currentUser != null && targetIdentity == currentUser.id) {
-            _handleKick();
-          }
-          return;
-        } else if (type == 'AUCTION_START') {
-          setState(() => _isAuctionActive = true);
-          _showSystemMessage('📣 AÇIK ARTTIRMA BAŞLADI!', Colors.green);
-          return;
-        } else if (type == 'AUCTION_RESET') {
-          setState(() {
-            _liveHighestBid = 0;
-            _isSold = false;
-            _showSoldOverlay = false;
-            _soldWinnerName = null;
-            _soldFinalPrice = null;
-            _isAuctionActive = false;
-            _countdownValue = null;
-            _messages.add(_EphemeralMessage(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              text: '📣 Yeni Ürün Açık Arttırmada!',
-              senderName: 'Sistem',
-              timestamp: DateTime.now(),
-            ));
-          });
-          _showSystemMessage('📣 Yeni Ürün Açık Arttırmada!', Colors.orange);
-          return;
-        } else if (type == 'AUCTION_END') {
-          setState(() => _isAuctionActive = false);
-          _showSystemMessage('📣 AÇIK ARTTIRMA DURDURULDU', Colors.orange);
-          return;
-        } else if (type == 'REACTION') {
-          _addReaction(decoded['emoji']?.toString() ?? '❤️');
-          return;
-        } else if (type == 'SALE_FINALIZED') {
-          final winnerName = decoded['winnerName']?.toString();
-          final amount = decoded['amount'] != null
-              ? (decoded['amount'] as num).toDouble()
-              : null;
-          _showFinalizationOverlayAlert(winnerName, amount);
-          return;
-        } else if (type == 'AUCTION_SOLD') {
-          // 🎊 Permanent SATILDI overlay — fires confetti and locks all bidding
-          final winner = decoded['winnerName']?.toString() ?? 'Katılımcı';
-          final price = decoded['price'] != null
-              ? (decoded['price'] as num).toDouble()
-              : 0.0;
-          if (mounted) {
-            setState(() {
-              _isSold = true;
-              _showSoldOverlay = true;
-              _soldWinnerName = winner;
-              _soldFinalPrice = price;
-              _isAuctionActive = false;
-            });
-            _confettiController.play();
-          }
-          return;
-        } else if (type == 'CHAT') {
-          final chatText = decoded['text']?.toString() ?? '';
-          final censoredText = ProfanityFilter.censor(chatText);
-          final chatSender = decoded['senderName']?.toString();
-          setState(() {
-            _messages.add(_EphemeralMessage(
-              id: DateTime.now().millisecondsSinceEpoch.toString(),
-              text: censoredText,
-              senderName: _formatSenderName(chatSender),
-              timestamp: DateTime.now(),
-            ));
-            if (_messages.length > 5) _messages.removeAt(0);
-          });
-          _resetMessageTimer();
-          return;
-        } else if (type == 'NEW_BID' || type == 'BID_ACCEPTED') {
-          final amount = (decoded['amount'] as num).toDouble();
-
-          // Auto-update bid controller for the user to the NEXT valid step
-          if (mounted) {
-            final nextBid = amount + (widget.ad.minBidStep);
-            setState(() {
-              _liveHighestBid = amount;
-              _bidCtrl.text = _formatPrice(nextBid);
-            });
-            // If the user's bid was accepted, vibrate success
-            if (type == 'BID_ACCEPTED' &&
-                decoded['bidderId'] == ref.read(authProvider).user?.id) {
-              Haptics.vibrate(HapticsType.success);
-            }
-          }
-
-          _recordBidVelocity();
-          ref.invalidate(adDetailProvider(widget.ad.id));
-          return;
-        } else if (type == 'BID_REJECTED') {
-          if (decoded['bidderId'] == ref.read(authProvider).user?.id) {
-            Haptics.vibrate(HapticsType.error);
-          }
-          ref.invalidate(adDetailProvider(widget.ad.id));
-          return;
-        } else if (type == 'COUNTDOWN') {
-          final value = int.tryParse(decoded['value']?.toString() ?? '');
-          if (mounted && value != null) {
-            setState(() {
-              _countdownValue = value;
-              if (value == 0) {
-                Future.delayed(const Duration(seconds: 2), () {
-                  if (mounted) setState(() => _countdownValue = null);
-                });
-              }
-            });
-          }
-          return;
-        } else if (type == 'SYNC_STATE_RESPONSE') {
-          if (mounted) {
-            setState(() {
-              _isAuctionActive = decoded['isAuctionActive'] == true;
-              _liveHighestBid = (decoded['highestBid'] as num?)?.toDouble();
-              _isSold = decoded['isSold'] == true;
-              String? hostSuppliedWinner = decoded['highestBidderName']?.toString();
-              if (_isSold) {
-                _showSoldOverlay = true;
-                if (hostSuppliedWinner != null) _soldWinnerName = hostSuppliedWinner;
-              }
-            });
-          }
-          return;
-        }
-      }
-    } catch (e) {
-      // Fallback to normal text chat or skip
-    }
-
-    // Removed legacy text-based bid detection to enforce JSON payloads
-
-    final censoredMessage = ProfanityFilter.censor(message);
-
-    setState(() {
-      _messages.add(_EphemeralMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: censoredMessage,
-        senderName: _formatSenderName(p?.name),
-        timestamp: DateTime.now(),
-      ));
-      if (_messages.length > 3) {
-        _messages.removeAt(0);
-      }
-    });
-    _resetMessageTimer();
-  }
+  // ── Modal dialogs (BuildContext required) ─────────────────────────────────
 
   void _showInviteDialog() {
     showDialog(
@@ -481,197 +220,28 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx),
-            child: const Text('Reddet', style: TextStyle(color: Colors.grey)),
+            child:
+                const Text('Reddet', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              _isReconnectingForStage = true;
+              final ctrl = ref
+                  .read(viewerControllerProvider(widget.ad).notifier);
+              ctrl.setReconnectingForStage(true);
               final notifier =
                   ref.read(liveRoomProvider(widget.ad.id).notifier);
               await notifier.disconnect();
               await notifier.connect(false, isGuest: true);
-              if (mounted) {
-                setState(() {
-                  _isGuest = true;
-                  _isReconnectingForStage = false;
-                });
-              }
+              ctrl.setIsGuest(true);
+              ctrl.setReconnectingForStage(false);
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00B4CC)),
-            child:
-                const Text('Kabul Et', style: TextStyle(color: Colors.white)),
+            child: const Text('Kabul Et',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
-      ),
-    );
-  }
-
-  Future<void> _handleKick() async {
-    if (!mounted) return;
-
-    // First notify the user
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Sahneden çıkarıldınız.'),
-        backgroundColor: Colors.orange,
-        duration: Duration(seconds: 3),
-      ),
-    );
-
-    // Turn off local tracks if they are on (just in case)
-    final state = ref.read(liveRoomProvider(widget.ad.id));
-    if (state.room != null && state.room!.localParticipant != null) {
-      await state.room!.localParticipant!.setCameraEnabled(false);
-      await state.room!.localParticipant!.setMicrophoneEnabled(false);
-    }
-
-    // Switch state back to viewer only
-    final wasGuest = _isGuest;
-    setState(() {
-      _isGuest = false;
-    });
-
-    if (wasGuest) {
-      // Best approach to downgrade permissions is to reconnect with a standard token
-      // Because we can't tell the server to demote us from the client side without an API.
-      // Easiest reliable fallback: Disconnect and Reconnect.
-      try {
-        await ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-        // Give it a tiny delay to ensure proper cleanup
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (mounted) {
-          ref.read(liveRoomProvider(widget.ad.id).notifier).connect(false);
-        }
-      } catch (e) {
-        debugPrint('Error restoring viewer state: $e');
-      }
-    }
-  }
-
-  void _recordBidVelocity() {
-    final now = DateTime.now();
-    _recentBids.add(now);
-
-    // Remove bids older than 5 seconds
-    _recentBids.removeWhere((t) => now.difference(t).inSeconds > 5);
-
-    // Trigger Haptic
-    Haptics.vibrate(HapticsType.heavy);
-
-    if (_recentBids.length >= 3 && !_isHypeMode) {
-      setState(() => _isHypeMode = true);
-      _pulseController.repeat(reverse: true);
-
-      _hypeTimer?.cancel();
-      _hypeTimer = Timer(const Duration(seconds: 5), () {
-        if (mounted) {
-          setState(() => _isHypeMode = false);
-          _pulseController.stop();
-          _pulseController.value = 1.0;
-        }
-      });
-    } else if (_isHypeMode) {
-      // Extend hype
-      _hypeTimer?.cancel();
-      _hypeTimer = Timer(const Duration(seconds: 5), () {
-        if (mounted) {
-          setState(() => _isHypeMode = false);
-          _pulseController.stop();
-          _pulseController.value = 1.0;
-        }
-      });
-    }
-  }
-
-  Future<void> _sendChatMessage() async {
-    final text = _chatCtrl.text.trim();
-    if (text.isEmpty) return;
-    
-    final censoredText = ProfanityFilter.censor(text);
-
-    final currentUser = ref.read(authProvider).user;
-    final state = ref.read(liveRoomProvider(widget.ad.id));
-    if (state.room != null) {
-      final name = state.room!.localParticipant?.name;
-      final payload = jsonEncode({
-        'type': 'CHAT',
-        'text': censoredText,
-        'senderName': name,
-        'senderId': currentUser?.id,
-      });
-      await state.room!.localParticipant?.publishData(
-        utf8.encode(payload),
-      );
-      _handleDataChannelMessage(utf8.encode(payload), null);
-    }
-    _chatCtrl.clear();
-    _chatFocus.unfocus();
-  }
-
-  Future<void> _placeBidSlide() async {
-    final rawText = _bidCtrl.text
-        .replaceAll('₺', '')
-        .replaceAll(' ', '')
-        .replaceAll('.', '')
-        .replaceAll(',', '.');
-    final amount = double.tryParse(rawText);
-
-    if (amount == null) {
-      await Haptics.vibrate(HapticsType.error);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Lütfen geçerli bir teqlif girin')),
-      );
-      return;
-    }
-
-    setState(() => _bidLoading = true);
-    await Haptics.vibrate(HapticsType.medium);
-
-    try {
-      await ApiClient().post(Endpoints.bids, data: {
-        'adId': widget.ad.id,
-        'amount': amount,
-      });
-      _bidCtrl.clear();
-      ref.invalidate(adDetailProvider(widget.ad.id));
-      ref.invalidate(myBidsProvider);
-
-      // Success feedback
-      await Haptics.vibrate(HapticsType.success);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-            content: Text('teqlifiniz verildi! 🎉'),
-            backgroundColor: Colors.green),
-      );
-    } catch (e) {
-      await Haptics.vibrate(HapticsType.error);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('teqlif verilemedi.')),
-      );
-    } finally {
-      if (mounted) setState(() => _bidLoading = false);
-    }
-  }
-
-  void _showSystemMessage(String text, Color color) {
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Center(
-            child: Text(text,
-                style: const TextStyle(
-                    fontWeight: FontWeight.w900, color: Colors.white))),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: color.withOpacity(0.9),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-        margin: EdgeInsets.only(
-            bottom: MediaQuery.of(context).size.height * 0.7,
-            left: 50,
-            right: 50),
-        duration: const Duration(seconds: 4),
       ),
     );
   }
@@ -688,7 +258,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         builder: (_, controller) => Container(
           decoration: BoxDecoration(
             color: Colors.white.withOpacity(0.95),
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+            borderRadius:
+                const BorderRadius.vertical(top: Radius.circular(24)),
           ),
           child: ListView(
             controller: controller,
@@ -711,17 +282,19 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               const SizedBox(height: 16),
               if (widget.ad.startingBid != null)
                 Text(
-                    'Başlangıç Fiyatı: ₺${_formatPrice(widget.ad.startingBid!)}',
+                    'Başlangıç Fiyatı: ${_formatPrice(widget.ad.startingBid!)}',
                     style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
                         color: Color(0xFF00B4CC))),
               const SizedBox(height: 24),
               const Text('Açıklama',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                  style: TextStyle(
+                      fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
               Text(widget.ad.description,
-                  style: const TextStyle(fontSize: 16, height: 1.5)),
+                  style:
+                      const TextStyle(fontSize: 16, height: 1.5)),
             ],
           ),
         ),
@@ -729,238 +302,124 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     );
   }
 
-  Widget _buildTopHeader(AdModel currentAd) {
-    // Show current auction price if active, otherwise show ad price
-    final displayPrice = _isAuctionActive
-        ? (_liveHighestBid ?? currentAd.highestBidAmount ?? currentAd.startingBid ?? 0)
-        : (currentAd.isAuction
-            ? (_liveHighestBid ?? currentAd.highestBidAmount ?? currentAd.startingBid ?? 0)
-            : (currentAd.buyItNowPrice ?? 0));
-
-    final label = _isAuctionActive
-        ? 'GÜNCEL TEKLİF: '
-        : (currentAd.isAuction ? 'BAŞLANGIÇ: ' : 'FİYAT: ');
-
-    return SafeArea(
-      child: Align(
-        alignment: Alignment.topCenter,
-        child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+  void _showBidInputSheet(AdModel currentAd) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) => Padding(
+        padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          decoration: const BoxDecoration(
+              color: Color(0xFF131722),
+              borderRadius:
+                  BorderRadius.vertical(top: Radius.circular(30))),
+          padding: const EdgeInsets.all(24),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Stack(
-                alignment: Alignment.center,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 12, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: Colors.redAccent.withOpacity(0.5),
-                                  width: 1),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                CircleAvatar(
-                                    radius: 4,
-                                    backgroundColor: Colors.redAccent,
-                                    child: Container(
-                                        width: 2,
-                                        height: 2,
-                                        decoration: const BoxDecoration(
-                                            color: Colors.white,
-                                            shape: BoxShape.circle))),
-                                const SizedBox(width: 8),
-                                const Text('CANLI',
-                                    style: TextStyle(
-                                        color: Colors.white,
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 10,
-                                        letterSpacing: 1)),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Viewer Count Pill
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(20),
-                        child: BackdropFilter(
-                          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 8),
-                            decoration: BoxDecoration(
-                              color: Colors.black.withOpacity(0.3),
-                              borderRadius: BorderRadius.circular(20),
-                              border: Border.all(
-                                  color: Colors.white.withOpacity(0.2), width: 1),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                const Icon(Icons.visibility_outlined,
-                                    color: Colors.white, size: 14),
-                                const SizedBox(width: 6),
-                                Text(
-                                  '${ref.read(liveRoomProvider(widget.ad.id)).viewerCount}',
-                                  style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  Positioned(
-                    right: 0,
-                    child: IconButton(
-                      icon: const Icon(Icons.close, color: Colors.white, size: 28),
-                      onPressed: () {
-                        ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
-                        if (mounted) context.pop();
-                      },
-                    ),
-                  ),
-                ],
-              ),
+              Container(
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                      color: Colors.white24,
+                      borderRadius: BorderRadius.circular(2))),
+              const SizedBox(height: 24),
+              const Text('TEQLİF VER',
+                  style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      letterSpacing: 1)),
               const SizedBox(height: 8),
-              // Price Info Bar
-              ClipRRect(
-                borderRadius: BorderRadius.circular(20),
-                child: BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-                  child: Container(
-                    padding:
-                        const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black.withOpacity(0.4),
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white10),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(label,
-                            style: const TextStyle(
-                                color: Colors.white70,
-                                fontSize: 10,
-                                fontWeight: FontWeight.bold)),
-                        Text(_formatPrice(displayPrice),
-                            style: const TextStyle(
-                                color: Color(0xFF00B4CC),
-                                fontWeight: FontWeight.w900,
-                                fontSize: 16)),
-                      ],
-                    ),
-                  ),
+              const Text('Teklif vermek istediğiniz tutarı girin.',
+                  style:
+                      TextStyle(color: Colors.white60, fontSize: 13)),
+              const SizedBox(height: 24),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 20, vertical: 4),
+                decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                    border: Border.all(color: Colors.white10)),
+                child: TextField(
+                  controller: _bidCtrl,
+                  autofocus: true,
+                  keyboardType: TextInputType.number,
+                  style: const TextStyle(
+                      color: Colors.black,
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold),
+                  decoration: const InputDecoration(
+                      border: InputBorder.none,
+                      prefixText: '₺ ',
+                      prefixStyle: TextStyle(
+                          color: Colors.black87,
+                          fontWeight: FontWeight.bold)),
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildQuickBidButtons(AdModel currentAd) {
-    if (!currentAd.isAuction && !_isAuctionActive) return const SizedBox.shrink();
-
-    // Create dynamic quick bid list, starting with minBidStep
-    final minStep = currentAd.minBidStep.toInt();
-    final quickBids = {minStep, 100, 250, 500, 1000, 5000}.toList()..sort();
-
-    return Container(
-      height: 48,
-      margin: const EdgeInsets.only(bottom: 8),
-      child: ListView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 16),
-        children: quickBids
-            .map((amount) => Padding(
-                  padding: const EdgeInsets.only(right: 8),
-                  child: GestureDetector(
-                    onTap: () {
-                      final currentPrice = _liveHighestBid ??
-                          currentAd.highestBidAmount ??
-                          currentAd.startingBid ??
-                          0;
-                      _bidCtrl.text = _formatPrice(currentPrice + amount);
-                      _placeBidSlide();
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                            colors: [Color(0xFF00B4CC), Color(0xFF008D9E)]),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                              color: const Color(0xFF00B4CC).withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: const Offset(0, 4))
-                        ],
-                      ),
-                      child: Center(
-                        child: Text('+$amount ₺',
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w900,
-                                fontSize: 13,
-                                letterSpacing: 0.5)),
-                      ),
-                    ),
-                  ),
-                ))
-            .toList(),
-      ),
-    );
-  }
-
-  Widget _buildSidebar(bool isDisconnected, {bool isPortrait = true}) {
-    return Positioned(
-      right: 16, // Always strictly on the right side
-      top: 0,
-      bottom: 120, // Avoid overlapping with bottom console
-      child: Center(
-        child: SingleChildScrollView(
-          clipBehavior: Clip.none,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _CircularControlButton(
-                  icon: Icons.info_outline, onPressed: _showAdDetailsSheet),
-              const SizedBox(height: 16),
-              _CircularControlButton(
-                  icon: _isMuted ? Icons.volume_off : Icons.volume_up,
-                  onPressed: () {
-                    setState(() => _isMuted = !_isMuted);
-                  }),
-              const SizedBox(height: 16),
-              _CircularControlButton(
-                  icon: Icons.mic_none, onPressed: _requestStage),
-              const SizedBox(height: 16),
-              _CircularControlButton(
-                  icon: Icons.cameraswitch_outlined,
-                  onPressed: () {}), // Ghosted
               const SizedBox(height: 24),
-              ReactionButtons(onReact: _sendReaction, isVertical: true),
+              Row(
+                children: ([
+                  currentAd.minBidStep.toInt(),
+                  100,
+                  250,
+                  500,
+                  1000
+                ].toSet().toList()
+                      ..sort())
+                    .map((inc) => Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 2),
+                            child: ElevatedButton(
+                              onPressed: () {
+                                final currentPrice = ref
+                                        .read(viewerControllerProvider(
+                                            widget.ad))
+                                        .liveHighestBid ??
+                                    currentAd.highestBidAmount ??
+                                    currentAd.startingBid ??
+                                    0;
+                                _bidCtrl.text = _formatPrice(
+                                    (currentPrice + inc).toDouble());
+                              },
+                              style: ElevatedButton.styleFrom(
+                                  backgroundColor:
+                                      const Color(0xFF00B4CC),
+                                  foregroundColor: Colors.white,
+                                  padding: EdgeInsets.zero,
+                                  shape: RoundedRectangleBorder(
+                                      borderRadius:
+                                          BorderRadius.circular(12))),
+                              child: Text('+$inc',
+                                  style: const TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ))
+                    .toList(),
+              ),
+              const SizedBox(height: 24),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  _placeBidSlide();
+                },
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00B4CC),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 55),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(15))),
+                child: const Text('TEKLİFİ ONAYLA',
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold, fontSize: 16)),
+              ),
+              const SizedBox(height: 12),
             ],
           ),
         ),
@@ -968,45 +427,75 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     );
   }
 
-  Widget _buildSidebarItem(IconData icon, VoidCallback? onTap,
-      {String? label}) {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        IconButton(
-          icon: Icon(icon, color: Colors.white, size: 24),
-          onPressed: onTap,
-        ),
-        if (label != null)
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  fontWeight: FontWeight.bold)),
-      ],
-    );
+  // ── Chat & Bid (own form controllers) ────────────────────────────────────
+
+  Future<void> _sendChatMessage() async {
+    final text = _chatCtrl.text.trim();
+    if (text.isEmpty) return;
+    await ref
+        .read(viewerControllerProvider(widget.ad).notifier)
+        .sendChatMessage(text);
+    _chatCtrl.clear();
+    _chatFocus.unfocus();
   }
+
+  Future<void> _placeBidSlide() async {
+    final rawText = _bidCtrl.text
+        .replaceAll('₺', '')
+        .replaceAll(' ', '')
+        .replaceAll('.', '')
+        .replaceAll(',', '.');
+    final amount = double.tryParse(rawText);
+    if (amount == null) {
+      await Haptics.vibrate(HapticsType.error);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Lütfen geçerli bir teqlif girin')),
+        );
+      }
+      return;
+    }
+    if (mounted) {
+      await ref
+          .read(viewerControllerProvider(widget.ad).notifier)
+          .placeBid(amount, context);
+    }
+    _bidCtrl.clear();
+  }
+
+  // ── Helpers ───────────────────────────────────────────────────────────────
+
+  String _formatPrice(double p) =>
+      '₺${p.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
+
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    // Auto-pop when room is disconnected or closed by host
+    // Auto-pop when room is disconnected (unless reconnecting for stage)
     ref.listen(liveRoomProvider(widget.ad.id), (previous, next) {
-      if (!_isReconnectingForStage && previous?.room != null && (next.room == null) && !next.isConnecting) {
+      final viewerState = ref.read(viewerControllerProvider(widget.ad));
+      if (!viewerState.isReconnectingForStage &&
+          previous?.room != null &&
+          next.room == null &&
+          !next.isConnecting) {
         if (mounted) context.pop();
       }
     });
 
     final adAsync = ref.watch(adDetailProvider(widget.ad.id));
     final currentAd = adAsync.value ?? widget.ad;
-
     final roomState = ref.watch(liveRoomProvider(widget.ad.id));
     final room = roomState.room;
-    final isDisconnected = !_isReconnectingForStage && (room?.connectionState.name == 'disconnected' ||
-        (room == null && !roomState.isConnecting));
+    final viewerState = ref.watch(viewerControllerProvider(widget.ad));
 
+    final isDisconnected = !viewerState.isReconnectingForStage &&
+        (room?.connectionState.name == 'disconnected' ||
+            (room == null && !roomState.isConnecting));
+
+    // Track extraction
     VideoTrack? hostTrack;
     VideoTrack? guestTrack;
-
     if (room != null) {
       final allRemote = room.remoteParticipants.values.toList();
       for (var p in allRemote) {
@@ -1019,14 +508,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         }
         if (t != null) {
           if (p.identity == widget.ad.userId) {
-            hostTrack = t; // Found the host
+            hostTrack = t;
           } else {
-            guestTrack = t; // Found another guest
+            guestTrack = t;
           }
         }
       }
-
-      // Fallback host track
       if (hostTrack == null && allRemote.isNotEmpty) {
         for (var pub in allRemote.first.videoTrackPublications) {
           if (pub.track != null) {
@@ -1035,8 +522,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           }
         }
       }
-
-      if (_isGuest && room.localParticipant != null) {
+      if (viewerState.isGuest && room.localParticipant != null) {
         for (var pub in room.localParticipant!.videoTrackPublications) {
           if (pub.track != null) {
             guestTrack = pub.track as VideoTrack;
@@ -1060,23 +546,24 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         backgroundColor: Colors.black,
         body: Stack(
           children: [
-            // 1. Video Player & Error State
+            // 1. Video Player & States
             if (isDisconnected)
               Positioned.fill(
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.videocam_off_outlined,
+                  children: const [
+                    Icon(Icons.videocam_off_outlined,
                         color: Colors.white54, size: 64),
-                    const SizedBox(height: 16),
-                    const Text('Yayın Sona Erdi',
+                    SizedBox(height: 16),
+                    Text('Yayın Sona Erdi',
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 24,
                             fontWeight: FontWeight.bold)),
-                    const SizedBox(height: 8),
-                    const Text('Yayıncı canlı yayını kapattı.',
-                        style: TextStyle(color: Colors.white54, fontSize: 16)),
+                    SizedBox(height: 8),
+                    Text('Yayıncı canlı yayını kapattı.',
+                        style: TextStyle(
+                            color: Colors.white54, fontSize: 16)),
                   ],
                 ),
               )
@@ -1093,36 +580,42 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      CircularProgressIndicator(color: Color(0xFF00B4CC)),
+                      CircularProgressIndicator(
+                          color: Color(0xFF00B4CC)),
                       SizedBox(height: 24),
                       Text('Arena\'ya Katılınıyor...',
-                          style: TextStyle(color: Colors.white, fontSize: 16)),
+                          style: TextStyle(
+                              color: Colors.white, fontSize: 16)),
                     ],
                   ),
                 ),
               )
             else if (hostTrack != null && !hostTrack.muted)
               SizedBox.expand(
-                child: VideoTrackRenderer(
-                  hostTrack,
-                  fit: VideoViewFit.contain, // Ensure full video visibility
-                ),
+                child: VideoTrackRenderer(hostTrack,
+                    fit: VideoViewFit.contain),
               )
             else if (hostTrack != null && hostTrack.muted)
               const Center(
-                  child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.videocam_off, size: 80, color: Colors.white54),
-                  SizedBox(height: 16),
-                  Text('Kamera Kapalı', style: TextStyle(color: Colors.white54, fontWeight: FontWeight.bold)),
-                ],
-              ))
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.videocam_off,
+                        size: 80, color: Colors.white54),
+                    SizedBox(height: 16),
+                    Text('Kamera Kapalı',
+                        style: TextStyle(
+                            color: Colors.white54,
+                            fontWeight: FontWeight.bold)),
+                  ],
+                ),
+              )
             else
               const Center(
                   child: Text('Yayın bekleniyor...',
                       style: TextStyle(color: Colors.white54))),
 
+            // Guest PiP
             if (guestTrack != null)
               Positioned(
                 top: 200,
@@ -1134,21 +627,26 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                   child: Container(
                     decoration: BoxDecoration(
                         border: Border.all(
-                            color: Colors.white.withOpacity(0.5), width: 2),
+                            color: Colors.white.withOpacity(0.5),
+                            width: 2),
                         color: Colors.black),
                     child: guestTrack.muted
-                        ? const Center(child: Icon(Icons.videocam_off, color: Colors.white54))
-                        : VideoTrackRenderer(guestTrack, fit: VideoViewFit.cover),
+                        ? const Center(
+                            child: Icon(Icons.videocam_off,
+                                color: Colors.white54))
+                        : VideoTrackRenderer(guestTrack,
+                            fit: VideoViewFit.cover),
                   ),
                 ),
               ),
 
-            // Countdown Overlay
-            if (_countdownValue != null && _countdownValue! > 0)
+            // Countdown overlay
+            if (viewerState.countdownValue != null &&
+                viewerState.countdownValue! > 0)
               Positioned.fill(
                 child: Center(
                   child: TweenAnimationBuilder<double>(
-                      key: ValueKey(_countdownValue),
+                      key: ValueKey(viewerState.countdownValue),
                       tween: Tween(begin: 0.5, end: 1.0),
                       duration: const Duration(milliseconds: 300),
                       curve: Curves.easeOutBack,
@@ -1159,21 +657,23 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                             width: 120,
                             height: 120,
                             decoration: BoxDecoration(
-                                color: _countdownValue! <= 10
+                                color: viewerState.countdownValue! <= 10
                                     ? Colors.red.withOpacity(0.9)
                                     : Colors.orange.withOpacity(0.9),
                                 shape: BoxShape.circle,
                                 boxShadow: [
                                   BoxShadow(
-                                    color: _countdownValue! <= 10
-                                        ? Colors.red.withOpacity(0.6)
-                                        : Colors.orange.withOpacity(0.6),
+                                    color:
+                                        viewerState.countdownValue! <= 10
+                                            ? Colors.red.withOpacity(0.6)
+                                            : Colors.orange
+                                                .withOpacity(0.6),
                                     blurRadius: 50,
                                   )
                                 ]),
                             child: Center(
                               child: Text(
-                                '$_countdownValue',
+                                '${viewerState.countdownValue}',
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 64,
@@ -1187,7 +687,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 ),
               ),
 
-            // 2. Premium Overlay (UI) with Smooth Swipe Animation
+            // 2. UI overlay (swipeable)
             AnimatedPositioned(
               duration: const Duration(milliseconds: 400),
               curve: Curves.easeOutCubic,
@@ -1196,7 +696,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               top: 0,
               bottom: 0,
               child: IgnorePointer(
-                ignoring: !_uiVisible, // Allow UI interactions even when sold (chat)
+                ignoring: !_uiVisible,
                 child: !isDisconnected
                     ? SafeArea(
                         child: OrientationBuilder(
@@ -1206,7 +706,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                   currentAd, isDisconnected);
                             } else {
                               return _buildLandscapeLayout(
-                                  currentAd, isDisconnected);
+                                  currentAd, isDisconnected, viewerState);
                             }
                           },
                         ),
@@ -1215,217 +715,62 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               ),
             ),
 
-            // 🎊 AUCTION_SOLD — Permanent SATILDI Full-Screen Overlay
-            if (_isSold && _showSoldOverlay)
-              Positioned.fill(
-                child: ClipRect(
-                  child: BackdropFilter(
-                    filter: ImageFilter.blur(sigmaX: 12, sigmaY: 12),
-                    child: Container(
-                      color: Colors.black.withOpacity(0.72),
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          // Confetti fires from top-center
-                          Align(
-                            alignment: Alignment.topCenter,
-                            child: ConfettiWidget(
-                              confettiController: _confettiController,
-                              blastDirectionality: BlastDirectionality.explosive,
-                              shouldLoop: false,
-                              numberOfParticles: 60,
-                              maxBlastForce: 55,
-                              minBlastForce: 25,
-                              emissionFrequency: 0.06,
-                              colors: const [
-                                Colors.amber, Color(0xFFFFA500),
-                                Color(0xFF00B4CC), Colors.white,
-                                Color(0xFF22c55e), Color(0xFFFF6B35),
-                              ],
-                            ),
-                          ),
-                          const SizedBox(height: 24),
-                          // Trophy
-                          const Text('🏆', style: TextStyle(fontSize: 72)),
-                          const SizedBox(height: 12),
-                          // SATILDI! text with golden glow
-                          ShaderMask(
-                            shaderCallback: (bounds) => const LinearGradient(
-                              colors: [Color(0xFFFFD700), Color(0xFFFFA500), Color(0xFFFFD700)],
-                            ).createShader(bounds),
-                            child: const Text(
-                              'SATILDI!',
-                              style: TextStyle(
-                                fontSize: 64,
-                                fontWeight: FontWeight.w900,
-                                color: Colors.white,
-                                letterSpacing: 4,
-                                shadows: [
-                                  Shadow(color: Color(0xFFFF8C00), blurRadius: 30),
-                                  Shadow(color: Color(0xFFFFD700), blurRadius: 50),
-                                ],
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          // Winner label
-                          const Text(
-                            'KAZANAN',
-                            style: TextStyle(
-                              color: Colors.white54,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 3,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            _soldWinnerName ?? 'Katılımcı',
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 26,
-                              fontWeight: FontWeight.w900,
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          // Price badge
-                          Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
-                            decoration: BoxDecoration(
-                              gradient: const LinearGradient(
-                                colors: [Color(0xFF10b981), Color(0xFF059669)],
-                              ),
-                              borderRadius: BorderRadius.circular(30),
-                              boxShadow: const [
-                                BoxShadow(
-                                  color: Color(0x5010b981),
-                                  blurRadius: 24,
-                                  spreadRadius: 4,
-                                ),
-                              ],
-                            ),
-                            child: Text(
-                              '₺${_soldFinalPrice?.toStringAsFixed(0) ?? '-'}',
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 36,
-                                fontWeight: FontWeight.w900,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 20),
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 32),
-                            child: Text(
-                              'Bu ürün ${_soldWinnerName ?? 'Katılımcı'} adlı kullanıcıya '
-                              '₺${_soldFinalPrice?.toStringAsFixed(0) ?? '-'}\'ye satılmıştır.',
-                              style: const TextStyle(
-                                color: Colors.white60,
-                                fontSize: 14,
-                                height: 1.5,
-                              ),
-                              textAlign: TextAlign.center,
-                            ),
-                          ),
-                          const SizedBox(height: 32),
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              if (mounted) {
-                                setState(() => _showSoldOverlay = false);
-                              }
-                            },
-                            icon: const Icon(Icons.close, color: Colors.white),
-                            label: const Text(
-                              'Sohbete Dön / Kapat',
-                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.white.withOpacity(0.15),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 14),
-                              shape: const StadiumBorder(
-                                side: BorderSide(color: Colors.white54, width: 1.5),
-                              ),
-                              elevation: 0,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
+            // 3. SATILDI overlay
+            if (viewerState.isSold && viewerState.showSoldOverlay)
+              ViewerSoldOverlay(
+                soldWinnerName: viewerState.soldWinnerName,
+                soldFinalPrice: viewerState.soldFinalPrice,
+                confettiController: _confettiController,
+                onClose: () => ref
+                    .read(viewerControllerProvider(widget.ad).notifier)
+                    .hideSoldOverlay(),
               ),
+
+            // 4. Finalization overlay
+            ViewerFinalizationOverlay(
+              show: viewerState.showFinalizationOverlay,
+              winnerName: viewerState.finalizedWinnerName,
+              amount: viewerState.finalizedAmount,
+            ),
           ],
         ),
       ),
     );
   }
 
+  // ── Portrait Layout ───────────────────────────────────────────────────────
+
   Widget _buildPortraitLayout(AdModel currentAd, bool isDisconnected) {
+    final viewerState = ref.read(viewerControllerProvider(widget.ad));
     return Stack(
       children: [
-        // Header (Status & Price)
-        _buildTopHeader(currentAd),
-
-        // Sidebar Actions & Reactions
-        _buildSidebar(isDisconnected, isPortrait: true),
-
-        // Floating Reactions Animation Layer
+        ViewerTopHeader(ad: widget.ad),
+        ViewerSidebar(
+          ad: widget.ad,
+          isPortrait: true,
+          onShowAdDetails: _showAdDetailsSheet,
+        ),
         Positioned.fill(
-            child: IgnorePointer(
-                child: FloatingReactionsOverlay(reactions: _reactions))),
-
-        // Interaction Layer (Bottom)
+          child: IgnorePointer(
+            child: FloatingReactionsOverlay(
+                reactions: viewerState.reactions),
+          ),
+        ),
         SafeArea(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              // Chat Flow (Floating Left)
-              Padding(
-                padding: const EdgeInsets.only(
-                    left: 16, bottom: 8, right: 80), // Keep space from sidebar
-                child: ShaderMask(
-                  shaderCallback: (bounds) => const LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Colors.transparent, Colors.white, Colors.white],
-                    stops: [0.0, 0.3, 1.0],
-                  ).createShader(bounds),
-                  blendMode: BlendMode.dstIn,
-                  child: SizedBox(
-                    height: 140, // Reduced slightly to accommodate quick bids
-                    child: ListView.builder(
-                      reverse: true,
-                      itemCount: _messages.length,
-                      itemBuilder: (context, index) {
-                        final msg = _messages[_messages.length - 1 - index];
-                        return Padding(
-                          padding: const EdgeInsets.only(bottom: 6),
-                          child: RichText(
-                              text: TextSpan(children: [
-                            TextSpan(
-                                text: '${msg.senderName}: ',
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.w900,
-                                    color: Colors.white70,
-                                    fontSize: 13)),
-                            TextSpan(
-                                text: msg.text,
-                                style: const TextStyle(
-                                    color: Colors.white, fontSize: 13)),
-                          ])),
-                        );
-                      },
-                    ),
-                  ),
-                ),
+              ViewerChatFlow(ad: widget.ad, height: 140),
+              ViewerConsole(
+                ad: currentAd,
+                chatCtrl: _chatCtrl,
+                bidCtrl: _bidCtrl,
+                chatFocus: _chatFocus,
+                isDisconnected: isDisconnected,
+                onShowBidSheet: () => _showBidInputSheet(currentAd),
+                onSendChat: _sendChatMessage,
+                onPlaceBid: _placeBidSlide,
               ),
-
-              // Quick Bid Buttons (Above Console)
-              _buildQuickBidButtons(currentAd),
-
-              // Bottom Console
-              _buildBottomInteractionConsole(currentAd, isDisconnected),
             ],
           ),
         ),
@@ -1433,229 +778,43 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     );
   }
 
-  Widget _buildBottomInteractionConsole(
-      AdModel currentAd, bool isDisconnected) {
-    // Primary Action Button (teqlif Ver or Hemen Al)
-    Widget buildPrimaryAction() {
-      if (_isSold) {
-        return Expanded(
-          child: Container(
-            height: 56,
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(28),
-              border: Border.all(color: Colors.green.withOpacity(0.4)),
-            ),
-            child: const Center(
-              child: Text('BU ÜRÜN SATILMIŞTIR',
-                  style: TextStyle(color: Colors.green, fontWeight: FontWeight.w900, fontSize: 13)),
-            ),
-          ),
-        );
-      } else if (currentAd.isAuction || _isAuctionActive) {
-        final nextBid = _getNextBidAmount(currentAd);
-        return Expanded(
-          child: GestureDetector(
-            onTap: (isDisconnected || !_isAuctionActive || _bidLoading)
-                ? null
-                : () {
-                    // Directly use the pre-synced _bidCtrl or calculate it
-                    if (_bidCtrl.text.isEmpty) {
-                      _bidCtrl.text = _formatPrice(nextBid);
-                    }
-                    _placeBidSlide();
-                  },
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 300),
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: _isAuctionActive
-                    ? const LinearGradient(
-                        colors: [Color(0xFFE50914), Color(0xFFB81D24)])
-                    : LinearGradient(
-                        colors: [Colors.grey.shade800, Colors.grey.shade900]),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white30),
-                boxShadow: _isAuctionActive
-                    ? [
-                        BoxShadow(
-                            color: Colors.red.withOpacity(0.4), blurRadius: 15)
-                      ]
-                    : null,
-              ),
-              child: Stack(
-                alignment: Alignment.center,
-                children: [
-                  if (_bidLoading)
-                    const SizedBox(
-                        width: 24,
-                        height: 24,
-                        child: CircularProgressIndicator(
-                            color: Colors.white, strokeWidth: 2))
-                  else
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                            _isAuctionActive
-                                ? Icons.gavel
-                                : Icons.hourglass_empty,
-                            color: _isAuctionActive
-                                ? Colors.white
-                                : Colors.white38,
-                            size: 22),
-                        const SizedBox(width: 8),
-                        Text(
-                          _isAuctionActive
-                              ? 'TEKLİF VER: ${_formatPrice(nextBid)}'
-                              : 'BEKLENİYOR',
-                          style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.w900,
-                              fontSize: 13,
-                              letterSpacing: 0.5),
-                        ),
-                      ],
-                    ),
-                ],
-              ),
-            ),
-          ),
-        );
-      } else {
-        // Fixed Price "Hemen Al"
-        return Expanded(
-          child: GestureDetector(
-            onTap: isDisconnected
-                ? null
-                : () {
-                    // Navigate back to Ad Detail screen to use the actual Hemen Al button
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text("Hemen satın almak için ilan detayından işleme devam ediniz."),
-                          duration: Duration(seconds: 3)),
-                    );
-                    context.pop();
-                  },
-            child: Container(
-              height: 56,
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                    colors: [Color(0xFFFFD700), Color(0xFFFFA500)]),
-                borderRadius: BorderRadius.circular(28),
-                border: Border.all(color: Colors.white30),
-                boxShadow: [
-                  BoxShadow(
-                      color: Colors.amber.withOpacity(0.3), blurRadius: 10)
-                ],
-              ),
-              child: const Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.shopping_cart, color: Colors.black, size: 22),
-                  SizedBox(width: 8),
-                  Text('HEMEN AL',
-                      style: TextStyle(
-                          color: Colors.black,
-                          fontWeight: FontWeight.w900,
-                          fontSize: 13)),
-                ],
-              ),
-            ),
-          ),
-        );
-      }
+  // ── Landscape Layout ──────────────────────────────────────────────────────
+
+  Widget _buildLandscapeLayout(
+      AdModel currentAd, bool isDisconnected, ViewerState viewerState) {
+    final double nextBid;
+    if (viewerState.liveHighestBid != null) {
+      nextBid = viewerState.liveHighestBid! + currentAd.minBidStep;
+    } else if (!currentAd.isAuction && !viewerState.isAuctionActive) {
+      nextBid = currentAd.price;
+    } else {
+      nextBid = (currentAd.highestBidAmount ??
+              currentAd.startingBid ??
+              currentAd.price) +
+          currentAd.minBidStep;
     }
-
-    return Container(
-      padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Row(
-            children: [
-              buildPrimaryAction(),
-              const SizedBox(width: 12),
-              // Message / More Toggle
-              GestureDetector(
-                onTap: () => _showBidInputSheet(currentAd),
-                child: Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withOpacity(0.1),
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white24),
-                  ),
-                  child: const Icon(Icons.add, color: Colors.white, size: 24),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(30),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 4),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.95),
-                  borderRadius: BorderRadius.circular(30),
-                ),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: TextField(
-                        controller: _chatCtrl,
-                        enabled: !isDisconnected,
-                        style: const TextStyle(
-                            color: Colors.black, fontWeight: FontWeight.bold),
-                        decoration: const InputDecoration(
-                          hintText: 'Mesaj gönder...',
-                          hintStyle:
-                              TextStyle(color: Colors.black54, fontSize: 13),
-                          border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(
-                              horizontal: 20, vertical: 12),
-                        ),
-                        onSubmitted: (_) => _sendChatMessage(),
-                      ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.send, color: Color(0xFF00B4CC)),
-                      onPressed: isDisconnected ? null : _sendChatMessage,
-                    )
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLandscapeLayout(AdModel currentAd, bool isDisconnected) {
-    final nextBid = _getNextBidAmount(currentAd);
 
     return Row(
       children: [
-        // Main View (Video & Reactions)
         Expanded(
           flex: 7,
           child: Stack(
             children: [
-              _buildTopHeader(currentAd),
-              _buildSidebar(isDisconnected, isPortrait: false),
+              ViewerTopHeader(ad: widget.ad),
+              ViewerSidebar(
+                ad: widget.ad,
+                isPortrait: false,
+                onShowAdDetails: _showAdDetailsSheet,
+              ),
               Positioned.fill(
-                  child: IgnorePointer(
-                      child: FloatingReactionsOverlay(reactions: _reactions))),
+                child: IgnorePointer(
+                  child: FloatingReactionsOverlay(
+                      reactions: viewerState.reactions),
+                ),
+              ),
             ],
           ),
         ),
-
-        // Premium Auction Sidebar
         Container(
           width: 300,
           color: Colors.black.withOpacity(0.4),
@@ -1663,8 +822,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
             left: false,
             child: Column(
               children: [
-                // Auction Dashboard (Compact)
-                if (_isAuctionActive)
+                if (viewerState.isAuctionActive)
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -1690,8 +848,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         const SizedBox(height: 12),
                         ElevatedButton(
                           onPressed: (isDisconnected ||
-                                  !_isAuctionActive ||
-                                  _bidLoading)
+                                  !viewerState.isAuctionActive ||
+                                  viewerState.bidLoading)
                               ? null
                               : () {
                                   _bidCtrl.text = _formatPrice(nextBid);
@@ -1702,10 +860,11 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                             foregroundColor: Colors.white,
                             shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12)),
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding:
+                                const EdgeInsets.symmetric(vertical: 16),
                             elevation: 8,
                           ),
-                          child: _bidLoading
+                          child: viewerState.bidLoading
                               ? const SizedBox(
                                   width: 20,
                                   height: 20,
@@ -1717,21 +876,27 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                       letterSpacing: 1)),
                         ),
                         const SizedBox(height: 12),
-                        // Quick Increment Bids
                         Row(
-                          children: [currentAd.minBidStep.toInt(), 250, 500, 1000]
+                          children: [
+                            currentAd.minBidStep.toInt(),
+                            250,
+                            500,
+                            1000
+                          ]
                               .map((inc) => Expanded(
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
                                           horizontal: 4),
                                       child: OutlinedButton(
                                         onPressed: () {
-                                          final currentPrice = _liveHighestBid ??
-                                              currentAd.highestBidAmount ??
-                                              currentAd.startingBid ??
-                                              0;
-                                          _bidCtrl.text =
-                                              _formatPrice(currentPrice + inc);
+                                          final currentPrice =
+                                              viewerState.liveHighestBid ??
+                                                  currentAd.highestBidAmount ??
+                                                  currentAd.startingBid ??
+                                                  0;
+                                          _bidCtrl.text = _formatPrice(
+                                              (currentPrice + inc)
+                                                  .toDouble());
                                           _placeBidSlide();
                                         },
                                         style: OutlinedButton.styleFrom(
@@ -1739,16 +904,19 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                               color: Colors.white
                                                   .withOpacity(0.2)),
                                           foregroundColor: Colors.white,
-                                          padding: const EdgeInsets.symmetric(
-                                              vertical: 12),
+                                          padding:
+                                              const EdgeInsets.symmetric(
+                                                  vertical: 12),
                                           shape: RoundedRectangleBorder(
                                               borderRadius:
-                                                  BorderRadius.circular(8)),
+                                                  BorderRadius.circular(
+                                                      8)),
                                         ),
                                         child: Text('+$inc',
                                             style: const TextStyle(
                                                 fontSize: 11,
-                                                fontWeight: FontWeight.bold)),
+                                                fontWeight:
+                                                    FontWeight.bold)),
                                       ),
                                     ),
                                   ))
@@ -1757,56 +925,61 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                       ],
                     ),
                   ),
-
-                // Chat Area
                 Expanded(
                   child: Column(
                     children: [
                       Expanded(
                         child: ShaderMask(
-                          shaderCallback: (bounds) => const LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [
+                          shaderCallback: (bounds) =>
+                              const LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [
                                 Colors.transparent,
                                 Colors.white,
                                 Colors.white
                               ],
-                              stops: [
+                                  stops: [
                                 0.0,
                                 0.4,
                                 1.0
                               ]).createShader(bounds),
                           blendMode: BlendMode.dstIn,
-                          child: ListView.builder(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 8),
-                            reverse: true,
-                            itemCount: _messages.length,
-                            itemBuilder: (context, index) {
-                              final msg =
-                                  _messages[_messages.length - 1 - index];
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 8),
-                                child: RichText(
-                                    text: TextSpan(children: [
-                                  TextSpan(
-                                      text: '${msg.senderName}: ',
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w900,
-                                          color: Colors.white70,
-                                          fontSize: 13)),
-                                  TextSpan(
-                                      text: msg.text,
-                                      style: const TextStyle(
-                                          color: Colors.white, fontSize: 13))
-                                ])),
-                              );
-                            },
-                          ),
+                          child: Builder(builder: (context) {
+                            final messages = ref.watch(
+                                viewerControllerProvider(widget.ad)
+                                    .select((s) => s.messages));
+                            return ListView.builder(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 16, vertical: 8),
+                              reverse: true,
+                              itemCount: messages.length,
+                              itemBuilder: (context, index) {
+                                final msg = messages[
+                                    messages.length - 1 - index];
+                                return Padding(
+                                  padding:
+                                      const EdgeInsets.only(bottom: 8),
+                                  child: RichText(
+                                      text: TextSpan(children: [
+                                    TextSpan(
+                                        text: '${msg.senderName}: ',
+                                        style: const TextStyle(
+                                            fontWeight: FontWeight.w900,
+                                            color: Colors.white70,
+                                            fontSize: 13)),
+                                    TextSpan(
+                                        text: msg.text,
+                                        style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 13))
+                                  ])),
+                                );
+                              },
+                            );
+                          }),
                         ),
                       ),
-                      // Sidebar Bottom Actions
                       Padding(
                         padding: const EdgeInsets.all(12),
                         child: Row(
@@ -1815,34 +988,57 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                               child: Container(
                                 height: 44,
                                 decoration: BoxDecoration(
-                                    color: Colors.white.withOpacity(0.1),
-                                    borderRadius: BorderRadius.circular(22)),
+                                    color:
+                                        Colors.white.withOpacity(0.1),
+                                    borderRadius:
+                                        BorderRadius.circular(22)),
                                 child: TextField(
                                   controller: _chatCtrl,
                                   style: const TextStyle(
-                                      color: Colors.white, fontSize: 13),
+                                      color: Colors.white,
+                                      fontSize: 13),
                                   decoration: const InputDecoration(
                                       hintText: 'Mesaj...',
-                                      hintStyle:
-                                          TextStyle(color: Colors.white54),
+                                      hintStyle: TextStyle(
+                                          color: Colors.white54),
                                       border: InputBorder.none,
                                       contentPadding:
-                                          EdgeInsets.symmetric(horizontal: 16)),
+                                          EdgeInsets.symmetric(
+                                              horizontal: 16)),
                                   onSubmitted: (_) => _sendChatMessage(),
                                 ),
                               ),
                             ),
                             const SizedBox(width: 8),
-                            _isAuctionActive
+                            viewerState.isAuctionActive
                                 ? IconButton(
                                     icon: const Icon(Icons.edit_note,
                                         color: Colors.white70),
                                     onPressed: () =>
                                         _showBidInputSheet(currentAd),
                                   )
-                                : _buildSidebarItem(Icons.favorite_border,
-                                    () => _sendReaction('❤️'),
-                                    label: 'Beğen'),
+                                : Column(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      IconButton(
+                                        icon: const Icon(
+                                            Icons.favorite_border,
+                                            color: Colors.white,
+                                            size: 24),
+                                        onPressed: () => ref
+                                            .read(viewerControllerProvider(
+                                                    widget.ad)
+                                                .notifier)
+                                            .sendReaction('❤️'),
+                                      ),
+                                      const Text('Beğen',
+                                          style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                              fontWeight:
+                                                  FontWeight.bold)),
+                                    ],
+                                  ),
                           ],
                         ),
                       ),
@@ -1856,282 +1052,4 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       ],
     );
   }
-
-  void _showBidInputSheet(AdModel currentAd) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      isScrollControlled: true,
-      builder: (context) => Padding(
-        padding:
-            EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
-        child: Container(
-          decoration: const BoxDecoration(
-              color: Color(0xFF131722),
-              borderRadius: BorderRadius.vertical(top: Radius.circular(30))),
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                  width: 40,
-                  height: 4,
-                  decoration: BoxDecoration(
-                      color: Colors.white24,
-                      borderRadius: BorderRadius.circular(2))),
-              const SizedBox(height: 24),
-              const Text('TEQLİF VER',
-                  style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: 1)),
-              const SizedBox(height: 8),
-              const Text('Teklif vermek istediğiniz tutarı girin.',
-                  style: TextStyle(color: Colors.white60, fontSize: 13)),
-              const SizedBox(height: 24),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 4),
-                decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
-                    border: Border.all(color: Colors.white10)),
-                child: TextField(
-                  controller: _bidCtrl,
-                  autofocus: true,
-                  keyboardType: TextInputType.number,
-                  style: const TextStyle(
-                      color: Colors.black, // Set text color to black as requested
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold),
-                  decoration: const InputDecoration(
-                      border: InputBorder.none,
-                      prefixText: '₺ ',
-                      prefixStyle: TextStyle(
-                          color: Colors.black87, fontWeight: FontWeight.bold)),
-                ),
-              ),
-              const SizedBox(height: 24),
-              Row(
-                children: ([
-                  currentAd.minBidStep.toInt(),
-                  100,
-                  250,
-                  500,
-                  1000
-                ].toSet().toList()
-                      ..sort()) // Ensure uniqueness and order
-                    .map((inc) => Expanded(
-                              child: Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 2),
-                                child: ElevatedButton(
-                                  onPressed: () {
-                                    final currentPrice = _liveHighestBid ??
-                                        currentAd.highestBidAmount ??
-                                        currentAd.startingBid ??
-                                        0;
-                                    _bidCtrl.text =
-                                        _formatPrice(currentPrice + inc);
-                                  },
-                                  style: ElevatedButton.styleFrom(
-                                      backgroundColor:
-                                          const Color(0xFF00B4CC),
-                                      foregroundColor: Colors.white,
-                                      padding: EdgeInsets.zero,
-                                      shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(12))),
-                                  child: Text('+$inc',
-                                      style: const TextStyle(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.bold)),
-                                ),
-                              ),
-                            ))
-                        .toList(),
-              ),
-              const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  _placeBidSlide();
-                },
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00B4CC),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 55),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(15))),
-                child: const Text('TEKLİFİ ONAYLA',
-                    style:
-                        TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              ),
-              const SizedBox(height: 12),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _onRoomEvent(RoomEvent event) {
-    if (event is TrackMutedEvent || event is TrackUnmutedEvent) {
-      if (mounted) setState(() {});
-    }
-    if (event is DataReceivedEvent) {
-      _handleDataChannelMessage(event.data, event.participant);
-    }
-  }
-
-  void _showFinalizationOverlayAlert(String? winnerName, double? amount) {
-    if (!mounted) return;
-    setState(() {
-      _finalizedWinnerName = winnerName ?? 'Katılımcı';
-      _finalizedAmount = amount;
-      _showFinalizationOverlay = true;
-    });
-
-    // Optionally add a chat message about the sale
-    final chatPayload = jsonEncode({
-      'type': 'CHAT',
-      'text':
-          '🎉 Tebrikler! ${_formatSenderName(winnerName)} bu ürünü ${NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(amount ?? 0)} bedel ile kazandı!',
-      'senderName': 'SİSTEM',
-    });
-    _handleDataChannelMessage(utf8.encode(chatPayload), null);
-
-    // Auto-hide the overlay after 10 seconds
-    Future.delayed(const Duration(seconds: 10), () {
-      if (mounted) {
-        setState(() {
-          _showFinalizationOverlay = false;
-        });
-      }
-    });
-  }
-
-  Widget _buildFinalizationOverlay() {
-    if (!_showFinalizationOverlay) return const SizedBox.shrink();
-
-    return Positioned.fill(
-      child: Container(
-        color: Colors.black.withOpacity(0.7),
-        child: Center(
-          child: TweenAnimationBuilder<double>(
-            tween: Tween(begin: 0.5, end: 1.0),
-            duration: const Duration(milliseconds: 600),
-            curve: Curves.elasticOut,
-            builder: (context, scale, child) {
-              return Transform.scale(
-                scale: scale,
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(Icons.celebration,
-                        color: Colors.amber, size: 80),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'SATILDI!',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 36,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: 2,
-                        shadows: [Shadow(blurRadius: 10, color: Colors.amber)],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Tebrikler ${_formatSenderName(_finalizedWinnerName)}!',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 24,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    if (_finalizedAmount != null) ...[
-                      const SizedBox(height: 8),
-                      Text(
-                        '${NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(_finalizedAmount)}',
-                        style: const TextStyle(
-                          color: Colors.greenAccent,
-                          fontSize: 28,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
-                  ],
-                ),
-              );
-            },
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _CircularControlButton extends StatelessWidget {
-  final IconData icon;
-  final VoidCallback onPressed;
-  final String? badge;
-
-  const _CircularControlButton(
-      {required this.icon, required this.onPressed, this.badge});
-
-  @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        GestureDetector(
-          onTap: onPressed,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(28),
-            child: BackdropFilter(
-              filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-              child: Container(
-                width: 50,
-                height: 50,
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.3),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white.withOpacity(0.2)),
-                ),
-                child: Icon(icon, color: Colors.white, size: 24),
-              ),
-            ),
-          ),
-        ),
-        if (badge != null)
-          Positioned(
-            right: 0,
-            top: 0,
-            child: Container(
-              padding: const EdgeInsets.all(6),
-              decoration: const BoxDecoration(
-                  color: Colors.red, shape: BoxShape.circle),
-              child: Text(badge!,
-                  style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 10,
-                      fontWeight: FontWeight.bold)),
-            ),
-          ),
-      ],
-    );
-  }
-}
-
-class _EphemeralMessage {
-  final String id;
-  final String text;
-  final String senderName;
-  final DateTime timestamp;
-
-  _EphemeralMessage(
-      {required this.id,
-      required this.text,
-      required this.senderName,
-      required this.timestamp});
 }
