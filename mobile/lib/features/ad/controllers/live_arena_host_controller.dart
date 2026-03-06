@@ -249,6 +249,36 @@ class HostController extends StateNotifier<HostState> {
   void setMicEnabled(bool enabled) =>
       state = state.copyWith(isMicEnabled: enabled);
 
+  // ── Synchronization ────────────────────────────────────────────────────────
+
+  Future<void> syncInitialState() async {
+    try {
+      final response = await ApiClient().get('/api/livekit/sync', queryParameters: {'adId': adId});
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data;
+        final isAuctionActive = data['isAuctionActive'] == true;
+        final highestBid = (data['highestBid'] as num?)?.toDouble() ?? 0;
+        final highestBidder = data['highestBidder']?.toString();
+
+        if (highestBid > 0 || isAuctionActive) {
+          state = state.copyWith(
+            isAuctionActive: isAuctionActive,
+            // Note: we don't have the full bid list here, but we can set the conceptual highest bid
+            // The dashboard will show this if the bid list is empty.
+          );
+          debugPrint('Host synced from Redis: bid=$highestBid, active=$isAuctionActive');
+          
+          // If we have a bid but no local bids, we might want to trigger a refresh
+          if (state.bids.isEmpty && highestBid > 0) {
+             readBids();
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('Host sync error: $e');
+    }
+  }
+
   // ── Data Channel ───────────────────────────────────────────────────────────
 
   void handleDataChannelMessage(List<int> data, RemoteParticipant? p,
@@ -402,21 +432,24 @@ class HostController extends StateNotifier<HostState> {
       } else if (dataObj['type'] == 'SYNC_STATE_REQUEST') {
         if (_room != null) {
           double highestBid;
+          String? bidderName;
+
           if (state.bids.isNotEmpty) {
             highestBid = state.bids.first.amount;
+            bidderName = state.bids.first.userLabel;
           } else {
-            // Fallback to latest fetched ad price/starting bid
+            // Fallback to latest fetched ad price/starting bid or synced Redis value
             highestBid = ad.highestBidAmount ??
                 ad.startingBid ??
                 ad.price;
+            bidderName = null;
           }
 
           final payload = jsonEncode({
             'type': 'SYNC_STATE_RESPONSE',
             'isAuctionActive': state.isAuctionActive,
             'highestBid': highestBid,
-            'highestBidderName':
-                state.bids.isNotEmpty ? state.bids.first.userLabel : null,
+            'highestBidderName': bidderName,
             'isSold': state.isSold,
           });
           _room!.localParticipant?.publishData(utf8.encode(payload));

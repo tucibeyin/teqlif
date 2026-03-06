@@ -643,9 +643,15 @@ class ViewerController extends StateNotifier<ViewerState> {
             final isSold = decoded['isSold'] == true;
             final hostSuppliedWinner =
                 decoded['highestBidderName']?.toString();
+            final hostHighestBid = (decoded['highestBid'] as num?)?.toDouble() ?? 0.0;
+            
+            // PHASE 21: Protect against downgrading the local bid (race condition)
+            final currentLocalBid = state.liveHighestBid ?? 0.0;
+            final finalBid = (hostHighestBid > currentLocalBid) ? hostHighestBid : currentLocalBid;
+
             var newState = state.copyWith(
               isAuctionActive: decoded['isAuctionActive'] == true,
-              liveHighestBid: (decoded['highestBid'] as num?)?.toDouble(),
+              liveHighestBid: finalBid > 0 ? finalBid : null,
               isSold: isSold,
             );
             if (isSold) {

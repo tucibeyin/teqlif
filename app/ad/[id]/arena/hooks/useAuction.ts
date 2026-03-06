@@ -50,13 +50,18 @@ export function useAuction({
             const res = await fetch(`/api/livekit/sync?adId=${adId}`);
             if (!res.ok) return;
             const data: SyncResponse = await res.json();
+
             setStatus(data.isAuctionActive ? "ACTIVE" : "IDLE");
-            setHighestBid(data.highestBid);
-            if (data.highestBidder) setHighestBidderId(data.highestBidder);
+
+            // PHASE 21: Protect against downgrading the local bid (race condition)
+            if (data.highestBid > highestBid) {
+                setHighestBid(data.highestBid);
+                if (data.highestBidder) setHighestBidderId(data.highestBidder);
+            }
         } catch {
             // Sync hatası kritik değil — sessizce geç
         }
-    }, [adId]);
+    }, [adId, highestBid]);
 
     // Mount sync: odaya geç katılanlar için ilk yüklemede bir kez çalışır
     useEffect(() => {
@@ -187,10 +192,15 @@ export function useAuction({
 
     const onSyncStateResponse = useCallback((data: any) => {
         if (data.isAuctionActive !== undefined) setStatus(data.isAuctionActive ? "ACTIVE" : "IDLE");
-        if (data.highestBid !== undefined) setHighestBid(data.highestBid);
-        if (data.highestBidderName) setHighestBidderName(data.highestBidderName);
+
+        // PHASE 21: Protect against downgrading the local bid (race condition)
+        if (data.highestBid !== undefined && data.highestBid > highestBid) {
+            setHighestBid(data.highestBid);
+            if (data.highestBidderName) setHighestBidderName(data.highestBidderName);
+        }
+
         if (data.isSold !== undefined) setShowSoldOverlay(data.isSold);
-    }, []);
+    }, [highestBid]);
 
     const broadcastState = useCallback(() => {
         if (!room) return;

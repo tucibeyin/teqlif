@@ -48,8 +48,12 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                 setTimeout(() => setFlash(false), 500);
             } else if (dataObj.type === "SYNC_STATE_RESPONSE") {
                 if (dataObj.auctionStatus) setAuctionStatus(dataObj.auctionStatus);
-                if (dataObj.liveHighestBid) setCurrentPrice(dataObj.liveHighestBid);
-                if (dataObj.liveHighestBidderName) setHighestBidderName(dataObj.liveHighestBidderName);
+
+                // PHASE 21: Protect against downgrading the local bid (race condition)
+                if (dataObj.liveHighestBid && dataObj.liveHighestBid > currentPrice) {
+                    setCurrentPrice(dataObj.liveHighestBid);
+                    if (dataObj.liveHighestBidderName) setHighestBidderName(dataObj.liveHighestBidderName);
+                }
             } else if (dataObj.type === "AUCTION_RESET") {
                 setCurrentPrice(initialPrice);
                 setHighestBidderId(null);
@@ -175,13 +179,34 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
         setLoading(false);
     };
 
-    // Auto-request sync on mount if viewer
+    // Auto-request sync on mount
     useEffect(() => {
+        const syncInitialState = async () => {
+            try {
+                const res = await fetch(`/api/livekit/sync?adId=${adId}`);
+                if (res.ok) {
+                    const data = await res.json();
+
+                    if (data.status === "active") setAuctionStatus("ACTIVE");
+
+                    // PHASE 21: Protect against downgrading the local bid (race condition)
+                    if (data.highestBid && data.highestBid > currentPrice) {
+                        setCurrentPrice(data.highestBid);
+                        if (data.highestBidder) setHighestBidderId(data.highestBidder);
+                    }
+                }
+            } catch (e) {
+                console.error("Initial sync error", e);
+            }
+        };
+
+        syncInitialState();
+
         if (!isOwner && room) {
             const payload = JSON.stringify({ type: "SYNC_STATE_REQUEST" });
             room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true }).catch(console.error);
         }
-    }, [isOwner, room]);
+    }, [adId, isOwner, room]);
 
     const formatPrice = (p: number) => new Intl.NumberFormat("tr-TR", { style: "currency", currency: "TRY", minimumFractionDigits: 0 }).format(p);
 

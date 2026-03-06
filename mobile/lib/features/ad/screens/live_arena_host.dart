@@ -94,6 +94,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         if (room != null) {
           final ctrl =
               ref.read(hostControllerProvider(widget.ad.id).notifier);
+          
+          // PHASE 21: Sync initial state from Redis before handling messages
+          await ctrl.syncInitialState();
+
           room.events.listen((event) {
             if (event is TrackSubscribedEvent ||
                 event is TrackUnsubscribedEvent ||
