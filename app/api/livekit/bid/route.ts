@@ -3,19 +3,13 @@ import { RoomServiceClient } from "livekit-server-sdk";
 import { placeBid } from "@/lib/services/auction-redis.service";
 import { getMobileUser } from "@/lib/mobile-auth";
 
-import jwt from "jsonwebtoken";
-const JWT_SECRET = process.env.NEXTAUTH_SECRET || process.env.AUTH_SECRET;
 
 export async function POST(req: NextRequest) {
   try {
     // ── Auth (Supports both Web Session and Mobile JWT) ─────────────────────
-    console.log("[Bid API] Calling getMobileUser... (Secret exists:", !!JWT_SECRET, ")");
     const user = await getMobileUser(req);
-    console.log("[Bid API] User found:", user?.id ? "YES (ID: " + user.id + ")" : "NO (null)");
 
     if (!user?.id) {
-      const authHeader = req.headers.get("authorization");
-      console.log("[Bid API] 401 Unauthorized - user.id is missing. AuthHeader:", authHeader ? (authHeader.startsWith("Bearer ") ? "Bearer [TOKEN]" : "Malformed") : "Missing");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     const userId = user.id;

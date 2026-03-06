@@ -408,18 +408,15 @@ class ViewerController extends StateNotifier<ViewerState> {
 
   // ── Bid ────────────────────────────────────────────────────────────────────
 
-  Future<void> placeBid(double amount, BuildContext ctx) async {
+    Future<void> placeBid(double amount, BuildContext ctx) async {
     state = state.copyWith(bidLoading: true);
     await Haptics.vibrate(HapticsType.medium);
     try {
-      final res = await ApiClient().post('/api/livekit/bid', data: {
+      await ApiClient().post('/api/livekit/bid', data: {
         'adId': adId,
-        'amount': amount,
+        'amount': amount.toInt(), // Ensure it's an integer as expected by the API
       });
-      if (res.statusCode == 400) {
-        final errMsg = res.data['error']?.toString() ?? 'Teklif çok düşük.';
-        throw Exception(errMsg);
-      }
+
       ref.invalidate(adDetailProvider(adId));
       await Haptics.vibrate(HapticsType.success);
       if (!_disposed) {
@@ -431,14 +428,32 @@ class ViewerController extends StateNotifier<ViewerState> {
       }
     } catch (e) {
       await Haptics.vibrate(HapticsType.error);
+      String message = 'teqlif iletilemedi.';
+      
+      if (e is DioException) {
+        final errorMsg = e.response?.data?['error']?.toString();
+        if (errorMsg != null) {
+          if (errorMsg.contains('higher than the current highest bid')) {
+            message = 'Teklifiniz en yüksek tekliften düşük.';
+          } else if (errorMsg.contains('Auction is not active')) {
+            message = 'Müzayede şu an aktif değil.';
+          } else {
+            message = errorMsg;
+          }
+        }
+      } else {
+        message = e.toString().replaceFirst('Exception: ', '');
+      }
+
       if (!_disposed) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text(e.toString().replaceFirst('Exception: ', ''))),
+          SnackBar(content: Text(message)),
         );
       }
     } finally {
       if (!_disposed) state = state.copyWith(bidLoading: false);
     }
+  }
   }
 
   // ── Data channel ───────────────────────────────────────────────────────────

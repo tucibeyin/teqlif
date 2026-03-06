@@ -34,9 +34,6 @@ interface MobileUser {
  */
 export async function getMobileUser(req: Request): Promise<MobileUser | null> {
     const authHeader = req.headers.get("authorization");
-    // Log for debugging 401 errors
-    console.log(`[getMobileUser] Request: ${req.method} ${req.url}`);
-    console.log(`[getMobileUser] Authorization Header: ${authHeader ? (authHeader.startsWith("Bearer ") ? "Bearer [TOKEN]" : "Malformed") : "Missing"}`);
 
     // Only log if it's the delete route to avoid flooding
     const isDeleteRoute = req.url.includes('/api/profile/delete');
