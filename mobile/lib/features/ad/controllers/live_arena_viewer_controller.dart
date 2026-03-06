@@ -320,8 +320,7 @@ class ViewerController extends StateNotifier<ViewerState> {
     }
   }
 
-  Future<void> handleKick() async {
-    onKicked?.call();
+  Future<void> _revertToViewer() async {
     state = state.copyWith(isReconnectingForStage: true);
     final roomState = ref.read(liveRoomProvider(adId));
     if (roomState.room?.localParticipant != null) {
@@ -347,6 +346,15 @@ class ViewerController extends StateNotifier<ViewerState> {
     } else {
       state = state.copyWith(isReconnectingForStage: false);
     }
+  }
+
+  Future<void> handleKick() async {
+    onKicked?.call();
+    await _revertToViewer();
+  }
+
+  Future<void> leaveStage() async {
+    await _revertToViewer();
   }
 
   // ── Bid velocity ───────────────────────────────────────────────────────────

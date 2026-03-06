@@ -187,6 +187,22 @@ export function CustomArenaLayout({
         );
     };
 
+    const handleKickGuest = async () => {
+        if (!guestTrack?.participant?.identity) return;
+        try {
+            const data = new TextEncoder().encode(JSON.stringify({
+                type: "KICK_FROM_STAGE",
+                targetIdentity: guestTrack.participant.identity
+            }));
+            await room.localParticipant.publishData(data, {
+                destinationIdentities: [guestTrack.participant.identity],
+                reliable: true
+            });
+        } catch (e) {
+            console.error("Kick guest error:", e);
+        }
+    };
+
     // ── Render ─────────────────────────────────────────────────────────────────
 
     return (
@@ -339,6 +355,24 @@ export function CustomArenaLayout({
                                         trackRef={guestTrack}
                                         style={{ width: "100%", height: "100%", objectFit: "cover" }}
                                     />
+                                )}
+
+                                {/* Cancel/Kick button */}
+                                {isOwner && (
+                                    <button
+                                        onClick={() => handleKickGuest()}
+                                        title="Sahneden Çıkar"
+                                        style={{
+                                            position: "absolute", top: 6, right: 6,
+                                            width: 20, height: 20, borderRadius: "50%",
+                                            background: "rgba(0,0,0,0.5)", color: "white",
+                                            border: "none", cursor: "pointer",
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            fontSize: 10, zIndex: 20, backdropFilter: "blur(4px)"
+                                        }}
+                                    >
+                                        ✕
+                                    </button>
                                 )}
                             </div>
                         )}

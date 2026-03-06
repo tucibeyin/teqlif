@@ -626,21 +626,45 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 right: 16,
                 width: 100,
                 height: 140,
-                child: ClipRRect(
-                  borderRadius: BorderRadius.circular(16),
-                  child: Container(
-                    decoration: BoxDecoration(
-                        border: Border.all(
-                            color: Colors.white.withOpacity(0.5),
-                            width: 2),
-                        color: Colors.black),
-                    child: guestTrack.muted
-                        ? const Center(
-                            child: Icon(Icons.videocam_off,
-                                color: Colors.white54))
-                        : VideoTrackRenderer(guestTrack,
-                            fit: VideoViewFit.cover),
-                  ),
+                child: Stack(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        decoration: BoxDecoration(
+                            border: Border.all(
+                                color: Colors.white.withOpacity(0.5),
+                                width: 2),
+                            color: Colors.black),
+                        child: guestTrack.muted
+                            ? const Center(
+                                child: Icon(Icons.videocam_off,
+                                    color: Colors.white54))
+                            : VideoTrackRenderer(guestTrack,
+                                fit: VideoViewFit.cover),
+                      ),
+                    ),
+                    if (viewerState.isGuest)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: GestureDetector(
+                          onTap: () => ref
+                              .read(viewerControllerProvider(widget.ad.id)
+                                  .notifier)
+                              .leaveStage(),
+                          child: Container(
+                            padding: const EdgeInsets.all(4),
+                            decoration: const BoxDecoration(
+                              color: Colors.black54,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(Icons.close,
+                                color: Colors.white, size: 16),
+                          ),
+                        ),
+                      ),
+                  ],
                 ),
               ),
 
