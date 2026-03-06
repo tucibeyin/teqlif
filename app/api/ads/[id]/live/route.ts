@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { logger } from "@/lib/logger";
 import { notifyFollowersOfLive } from "@/lib/fcm";
-import { startAuction } from "@/lib/services/auction-redis.service";
+import { startAuction, closeAuction } from "@/lib/services/auction-redis.service";
 
 export const dynamic = 'force-dynamic';
 
@@ -62,16 +62,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         }
 
         // ⛔ Müzayede/Yayın bittiğinde fiziksel silme (delete) KURALLARA AYKIRI! Sadece bayrakları indiriyoruz.
-        if (isLive === false) {
+        if (isLive === false || isAuctionActive === false) {
             const isQuickLive = ad.description === 'Hızlı Canlı Yayın (Ghost Ad)';
             await prisma.ad.update({
                 where: { id },
                 data: {
-                    isLive: false,
+                    isLive: isLive !== undefined ? Boolean(isLive) : ad.isLive,
                     isAuctionActive: false,
-                    ...(isQuickLive ? { status: 'EXPIRED' } : {})
+                    ...(isQuickLive && isLive === false ? { status: 'EXPIRED' } : {})
                 }
             });
+            // 🔄 Synchronize Redis state (STOP live bid tracking)
+            await closeAuction(id);
         }
 
         revalidatePath(`/ad/${id}`);

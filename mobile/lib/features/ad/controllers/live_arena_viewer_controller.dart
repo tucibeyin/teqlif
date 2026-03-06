@@ -438,8 +438,8 @@ class ViewerController extends StateNotifier<ViewerState> {
           // We keep the mapping as a fallback if the API returns English or specific codes.
           if (errorMsg.contains('higher than the current highest bid')) {
             message = 'Teklifiniz en yüksek tekliften düşük.';
-          } else if (errorMsg.contains('Auction is not active')) {
-            message = 'Müzayede şu an aktif değil.';
+          } else if (errorMsg.contains('başlatılmadı')) {
+            message = 'Açık arttırma henüz başlatılmadı.';
           } else {
             message = errorMsg;
           }

@@ -34,7 +34,7 @@ export async function POST(req: NextRequest) {
     if (!result.accepted) {
       const message =
         result.reason === "auction_not_active"
-          ? "Müzayede şu an aktif değil"
+          ? "Açık arttırma henüz başlatılmadı"
           : "Teklifiniz en yüksek tekliften düşük";
 
       return NextResponse.json({ error: message }, { status: 400 });
