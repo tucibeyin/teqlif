@@ -316,12 +316,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           return;
         } else if (type == 'AUCTION_RESET') {
           setState(() {
-            _liveHighestBid = widget.ad.highestBidAmount ?? widget.ad.startingBid ?? widget.ad.price;
+            _liveHighestBid = 0;
             _isSold = false;
             _showSoldOverlay = false;
             _soldWinnerName = null;
             _soldFinalPrice = null;
-            _isAuctionActive = true;
+            _isAuctionActive = false;
             _countdownValue = null;
             _messages.add(_EphemeralMessage(
               id: DateTime.now().millisecondsSinceEpoch.toString(),
