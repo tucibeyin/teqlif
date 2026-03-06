@@ -1,3 +1,6 @@
+import { NextRequest, NextResponse } from "next/server";
+import { RoomServiceClient } from "livekit-server-sdk";
+import { prisma } from "@/lib/prisma";
 import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function POST(req: NextRequest) {

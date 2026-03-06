@@ -18,18 +18,6 @@ class ApiClient {
       contentType: 'application/json',
     ));
 
-    // Log all requests/responses in debug mode
-    if (kDebugMode) {
-      _dio.interceptors.add(LogInterceptor(
-        requestHeader: true,
-        requestBody: true,
-        responseHeader: false,
-        responseBody: true,
-        error: true,
-        logPrint: (o) => debugPrint('[API] $o'),
-      ));
-    }
-
     _dio.interceptors.add(InterceptorsWrapper(
       onRequest: (options, handler) async {
         final token = await _storage.read(key: 'jwt_token');
@@ -45,6 +33,18 @@ class ApiClient {
         handler.next(error);
       },
     ));
+
+    // Log all requests/responses in debug mode (Moved after headers are added)
+    if (kDebugMode) {
+      _dio.interceptors.add(LogInterceptor(
+        requestHeader: true,
+        requestBody: true,
+        responseHeader: false,
+        responseBody: true,
+        error: true,
+        logPrint: (o) => debugPrint('[API] $o'),
+      ));
+    }
   }
 
   Future<void> setToken(String token) async {
