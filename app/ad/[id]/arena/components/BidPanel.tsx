@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 const T = {
   glass: "rgba(255,255,255,0.04)",
@@ -44,6 +44,16 @@ export function BidPanel({
   const [amount, setAmount] = useState("");
   const [bidLoading, setBidLoading] = useState(false);
   const [status, setStatus] = useState<{ type: "success" | "error"; msg: string } | null>(null);
+  const statusTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showStatus = (type: "success" | "error", msg: string, duration = 1500) => {
+    if (statusTimerRef.current) clearTimeout(statusTimerRef.current);
+    setStatus({ type, msg });
+    statusTimerRef.current = setTimeout(() => {
+      setStatus(null);
+      statusTimerRef.current = null;
+    }, duration);
+  };
 
   const nextMin = currentHighest > 0 ? currentHighest + minStep : (startingBid ?? minStep);
   const quickSteps = [minStep, minStep * 2, minStep * 5];
@@ -56,7 +66,7 @@ export function BidPanel({
     e.preventDefault();
     const num = parseFloat(amount.replace(/\./g, "").replace(",", "."));
     if (isNaN(num) || num < nextMin) {
-      setStatus({ type: "error", msg: `Min. teklif: ${fmt(nextMin)}` });
+      showStatus("error", `Min. teklif: ${fmt(nextMin)}`);
       return;
     }
     setBidLoading(true);
@@ -68,13 +78,12 @@ export function BidPanel({
       });
       const data = await res.json();
       if (res.ok) {
-        setStatus({ type: "success", msg: "Teklifiniz iletildi!" });
-        setTimeout(() => setStatus(null), 3000);
+        showStatus("success", "Teklifiniz iletildi!", 1000);
       } else {
-        setStatus({ type: "error", msg: data.error || "Hata oluştu." });
+        showStatus("error", data.error || "Hata oluştu.");
       }
     } catch {
-      setStatus({ type: "error", msg: "Bağlantı hatası." });
+      showStatus("error", "Bağlantı hatası.");
     } finally {
       setBidLoading(false);
     }
@@ -91,13 +100,12 @@ export function BidPanel({
       });
       const data = await res.json();
       if (res.ok) {
-        setStatus({ type: "success", msg: `+${new Intl.NumberFormat("tr-TR").format(step)} ₺ teklif verildi!` });
-        setTimeout(() => setStatus(null), 2500);
+        showStatus("success", `+${new Intl.NumberFormat("tr-TR").format(step)} ₺ teklif verildi!`, 1000);
       } else {
-        setStatus({ type: "error", msg: data.error || "Hata oluştu." });
+        showStatus("error", data.error || "Hata oluştu.");
       }
     } catch {
-      setStatus({ type: "error", msg: "Bağlantı hatası." });
+      showStatus("error", "Bağlantı hatası.");
     } finally {
       setBidLoading(false);
     }

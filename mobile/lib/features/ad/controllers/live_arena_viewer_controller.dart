@@ -421,10 +421,13 @@ class ViewerController extends StateNotifier<ViewerState> {
       ref.invalidate(adDetailProvider(adId));
       await Haptics.vibrate(HapticsType.success);
       if (!_disposed) {
+        ScaffoldMessenger.of(ctx).clearSnackBars();
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(
-              content: Text('teqlifiniz iletildi! 🎉'),
-              backgroundColor: Colors.green),
+            content: Text('teqlifiniz iletildi! 🎉'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 1),
+          ),
         );
       }
     } catch (e) {
@@ -449,8 +452,12 @@ class ViewerController extends StateNotifier<ViewerState> {
       }
 
       if (!_disposed) {
+        ScaffoldMessenger.of(ctx).clearSnackBars();
         ScaffoldMessenger.of(ctx).showSnackBar(
-          SnackBar(content: Text(message)),
+          SnackBar(
+            content: Text(message),
+            duration: const Duration(seconds: 2),
+          ),
         );
       }
     } finally {
