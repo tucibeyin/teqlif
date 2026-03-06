@@ -1069,11 +1069,22 @@ textarea.input {
   }
 }
 
+
 /* ========================
    Utility
    ======================== */
 .flex {
-  display: flex;
+  display: flex !important;
+}
+
+.flex-row {
+  display: flex !important;
+  flex-direction: row !important;
+}
+
+.flex-col {
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 .items-center {
@@ -1082,6 +1093,14 @@ textarea.input {
 
 .justify-between {
   justify-content: space-between;
+}
+
+.flex-shrink-0 {
+  flex-shrink: 0 !important;
+}
+
+.flex-grow {
+  flex-grow: 1 !important;
 }
 
 .gap-1 {
@@ -1125,7 +1144,19 @@ textarea.input {
 }
 
 .w-full {
-  width: 100%;
+  width: 100% !important;
+}
+
+.h-full {
+  height: 100% !important;
+}
+
+.w-\[320px\] {
+  width: 320px !important;
+}
+
+.overflow-hidden {
+  overflow: hidden !important;
 }
 
 /* ========================

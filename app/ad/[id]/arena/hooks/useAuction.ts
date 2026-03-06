@@ -131,6 +131,17 @@ export function useAuction({
         if (data.liveHighestBidderName) setHighestBidderName(data.liveHighestBidderName);
     }, []);
 
+    const broadcastState = useCallback(() => {
+        if (!room) return;
+        const payload = {
+            type: "SYNC_STATE_RESPONSE",
+            auctionStatus: status,
+            liveHighestBid: highestBid,
+            liveHighestBidderName: highestBidderName,
+        };
+        publish(payload);
+    }, [room, status, highestBid, highestBidderName, publish]);
+
     // ── Host actions ──
 
     const start = useCallback(async () => {
@@ -265,6 +276,6 @@ export function useAuction({
         onAuctionStart, onAuctionEnd, onAuctionReset,
         onSaleFinalized, onAuctionSold, onSyncStateResponse,
         // Host actions
-        start, stop, reset, accept, reject, buyNow,
+        start, stop, reset, accept, reject, buyNow, broadcastState,
     };
 }

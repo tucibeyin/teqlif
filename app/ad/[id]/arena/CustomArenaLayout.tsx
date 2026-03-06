@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import confetti from "canvas-confetti";
 import {
     useTracks, VideoTrack, useRoomContext, useParticipants, useConnectionState,
@@ -43,6 +43,23 @@ export function CustomArenaLayout({
     const [isRoomClosed, setIsRoomClosed] = useState(false);
     const [countdown, setCountdown] = useState(0);
 
+    // ── SYNC STATE ON JOIN ──────────────────────────────────────────────────
+    useEffect(() => {
+        if (!room || isOwner) return;
+
+        const sendSyncRequest = () => {
+            const payload = JSON.stringify({ type: "SYNC_STATE_REQUEST" });
+            room.localParticipant.publishData(
+                new TextEncoder().encode(payload),
+                { reliable: true }
+            );
+        };
+
+        // Delay slightly to ensure host is ready to receive
+        const timer = setTimeout(sendSyncRequest, 1500);
+        return () => clearTimeout(timer);
+    }, [room, isOwner]);
+
     // ── Hooks ──────────────────────────────────────────────────────────────────
 
     const auction = useAuction({
@@ -72,14 +89,14 @@ export function CustomArenaLayout({
     // ── Data channel dispatcher ────────────────────────────────────────────────
 
     useArenaDataChannel({
-        onNewBid:           auction.onNewBid,
-        onBidAccepted:      auction.onBidAccepted,
-        onBidRejected:      auction.onBidRejected,
-        onChat:             chat.onChatMessage,
-        onReaction:         reactions.addReaction,
-        onAuctionStart:     auction.onAuctionStart,
-        onAuctionEnd:       auction.onAuctionEnd,
-        onAuctionReset:     auction.onAuctionReset,
+        onNewBid: auction.onNewBid,
+        onBidAccepted: auction.onBidAccepted,
+        onBidRejected: auction.onBidRejected,
+        onChat: chat.onChatMessage,
+        onReaction: reactions.addReaction,
+        onAuctionStart: auction.onAuctionStart,
+        onAuctionEnd: auction.onAuctionEnd,
+        onAuctionReset: auction.onAuctionReset,
         onAuctionSold: (data) => {
             auction.onAuctionSold(data);
             fireConfetti();
@@ -93,9 +110,10 @@ export function CustomArenaLayout({
             });
         },
         onSyncStateResponse: auction.onSyncStateResponse,
-        onRoomClosed:        () => setIsRoomClosed(true),
-        onCountdown:         setCountdown,
-        onStageRequest:      stage.onStageRequest,
+        onSyncStateRequest: isOwner ? auction.broadcastState : () => { },
+        onRoomClosed: () => setIsRoomClosed(true),
+        onCountdown: setCountdown,
+        onStageRequest: stage.onStageRequest,
     });
 
     // ── Derived ────────────────────────────────────────────────────────────────
@@ -123,7 +141,7 @@ export function CustomArenaLayout({
                     { reliable: true }
                 );
             }
-            await fetch(`/api/ads/${adId}/live`, {
+            await fetch(`/ api / ads / ${adId}/live`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ isLive: false }),

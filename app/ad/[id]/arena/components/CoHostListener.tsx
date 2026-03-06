@@ -18,10 +18,12 @@ export function CoHostListener({ setRole, setWantsToPublish }: CoHostListenerPro
             if (data.type === "INVITE_TO_STAGE") {
                 setInviteVisible(true);
             } else if (data.type === "KICK_FROM_STAGE") {
-                setWantsToPublish(false);
-                setRole("viewer");
-                alert("Sahneden alındınız.");
-                room.disconnect();
+                if (data.targetIdentity === room.localParticipant.identity) {
+                    setWantsToPublish(false);
+                    setRole("viewer");
+                    alert("Sahneden alındınız.");
+                    room.disconnect();
+                }
             }
         } catch {
             // ignore
