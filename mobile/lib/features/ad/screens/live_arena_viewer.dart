@@ -378,7 +378,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                               onPressed: () {
                                 final currentPrice = ref
                                         .read(viewerControllerProvider(
-                                            widget.ad))
+                                            widget.ad.id))
                                         .liveHighestBid ??
                                     currentAd.highestBidAmount ??
                                     currentAd.startingBid ??
