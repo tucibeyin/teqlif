@@ -139,6 +139,24 @@ export function BidPanel({
           </span>
         </div>
 
+        {/* ── HOST: arttırma BEKLEMEDE — başlatma ipucu ── */}
+        {isOwner && !isAuctionActive && (
+          <div style={{
+            padding: "12px 14px",
+            borderRadius: 10,
+            background: "rgba(240,180,41,0.05)",
+            border: "1px solid rgba(240,180,41,0.15)",
+            display: "flex", flexDirection: "column", gap: 6,
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: T.gold, fontFamily: T.display, letterSpacing: 0.5 }}>
+              ▶ Arttırmayı Başlat
+            </span>
+            <span style={{ fontSize: 11, color: T.muted, fontFamily: T.display, lineHeight: 1.6 }}>
+              Video ekranının altındaki <strong style={{ color: "rgba(255,255,255,0.45)" }}>Başlat</strong> butonuna tıklayarak açık arttırmayı başlatabilirsiniz.
+            </span>
+          </div>
+        )}
+
         {/* ── HOST: teklif bekleniyor (aktif ama henüz teklif yok) ── */}
         {isOwner && isAuctionActive && currentHighest === 0 && (
           <div style={{
@@ -151,6 +169,24 @@ export function BidPanel({
             </span>
             <span style={{ fontSize: 11, color: T.muted, fontFamily: T.display, letterSpacing: 0.5, textAlign: "center" }}>
               burada kabul edebilirsiniz.
+            </span>
+          </div>
+        )}
+
+        {/* ── VIEWER: arttırma BEKLEMEDE — bekleme mesajı ── */}
+        {!isOwner && !isAuctionActive && (
+          <div style={{
+            padding: "12px 14px",
+            borderRadius: 10,
+            background: "rgba(6,200,224,0.04)",
+            border: "1px solid rgba(6,200,224,0.12)",
+            display: "flex", flexDirection: "column", gap: 5,
+          }}>
+            <span style={{ fontSize: 11, fontWeight: 700, color: T.teal, fontFamily: T.display, letterSpacing: 0.5 }}>
+              ⏳ Arttırma Başlamadı
+            </span>
+            <span style={{ fontSize: 11, color: T.muted, fontFamily: T.display, lineHeight: 1.6 }}>
+              Satıcı açık arttırmayı başlattığında teklif verebilirsiniz.
             </span>
           </div>
         )}
