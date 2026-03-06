@@ -2,6 +2,7 @@ import { useState, useCallback } from "react";
 import { useChat, useRoomContext } from "@livekit/components-react";
 import { useSession } from "next-auth/react";
 import type { ArenaMessage } from "../types";
+import { censorProfanity } from "@/lib/profanity";
 
 const MAX_MESSAGES = 50;
 
@@ -18,7 +19,7 @@ export function useArenaChat() {
     const onChatMessage = useCallback((data: any) => {
         addMessage({
             id: Date.now().toString() + Math.random(),
-            text: data.text ?? "",
+            text: censorProfanity(data.text ?? ""),
             sender: data.senderName ?? "Katılımcı",
             senderId: data.senderId,
         });
@@ -27,9 +28,12 @@ export function useArenaChat() {
     const sendMessage = useCallback(async () => {
         const text = inputValue.trim();
         if (!text || !room) return;
+
+        const censoredText = censorProfanity(text);
+
         const payload = {
             type: "CHAT",
-            text,
+            text: censoredText,
             senderName: session?.user?.name ?? "Katılımcı",
             senderId: session?.user?.id,
         };
@@ -40,7 +44,7 @@ export function useArenaChat() {
         // Local echo
         addMessage({
             id: Date.now().toString(),
-            text,
+            text: censoredText,
             sender: session?.user?.name ?? "Sen",
             senderId: session?.user?.id,
         });

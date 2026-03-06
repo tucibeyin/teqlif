@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import type { ArenaMessage } from "../types";
+import { censorProfanity } from "@/lib/profanity";
 
 const T = {
   glass: "rgba(255,255,255,0.03)",
@@ -159,7 +160,7 @@ export function ChatOverlay({
                     wordBreak: "break-word",
                     flex: 1,
                   }}>
-                    {msg.text}
+                    {censorProfanity(msg.text)}
                   </span>
 
                   {/* Sahneye davet (sadece host) */}
