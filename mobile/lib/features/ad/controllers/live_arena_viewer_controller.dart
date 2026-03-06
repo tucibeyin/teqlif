@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
@@ -455,7 +456,6 @@ class ViewerController extends StateNotifier<ViewerState> {
     } finally {
       if (!_disposed) state = state.copyWith(bidLoading: false);
     }
-  }
   }
 
   // ── Data channel ───────────────────────────────────────────────────────────
