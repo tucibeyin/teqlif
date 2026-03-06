@@ -20,6 +20,9 @@ import '../features/profile/screens/public_profile_screen.dart';
 import '../features/profile/screens/friends_screen.dart';
 import '../features/profile/screens/auction_history_screen.dart';
 import '../widgets/main_shell.dart';
+import '../features/ad/screens/live_arena_host.dart';
+import '../features/ad/screens/live_arena_viewer.dart';
+import '../core/models/ad.dart';
 
 // ── Pending Route ───────────────────────────────────────────────────────────
 // Stores deep links / push notification taps that arrive while the app
@@ -146,6 +149,16 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/live-host/:id',
+        builder: (context, state) =>
+            LiveArenaHost(ad: state.extra as AdModel),
+      ),
+      GoRoute(
+        path: '/live-viewer/:id',
+        builder: (context, state) =>
+            LiveArenaViewer(ad: state.extra as AdModel),
       ),
     ],
   );

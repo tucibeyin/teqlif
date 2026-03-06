@@ -579,9 +579,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                   }
 
                                   // Direct navigation to Host Arena
-                                  Navigator.of(context, rootNavigator: true).push(
-                                    MaterialPageRoute(builder: (_) => LiveArenaHost(ad: ad))
-                                  );
+                                  context.push('/live-host/${ad.id}', extra: ad);
 
                                   // Invalidate providers to show the new live ad
                                   ref.invalidate(adsProvider);

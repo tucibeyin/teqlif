@@ -143,7 +143,7 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
         _snack('Canlı yayın başladı! Arena yükleniyor...');
         ref.invalidate(adDetailProvider(widget.adId));
         // Direct navigation after success
-        Navigator.of(context, rootNavigator: true).push(MaterialPageRoute(builder: (_) => LiveArenaHost(ad: ad)));
+        context.push('/live-host/${ad.id}', extra: ad);
       }
     } catch (e) {
       if (!mounted) return;
@@ -911,19 +911,11 @@ class _AdDetailScreenState extends ConsumerState<AdDetailScreen> {
                             onPressed: () {
                               if (isOwner) {
                                 if (mounted) {
-                                  Navigator.of(context, rootNavigator: true).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => LiveArenaHost(ad: ad),
-                                    ),
-                                  );
+                                  context.push('/live-host/${ad.id}', extra: ad);
                                 }
                               } else {
                                 if (mounted) {
-                                  Navigator.of(context, rootNavigator: true).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => LiveArenaViewer(ad: ad),
-                                    ),
-                                  );
+                                  context.push('/live-viewer/${ad.id}', extra: ad);
                                 }
                               }
                             },
