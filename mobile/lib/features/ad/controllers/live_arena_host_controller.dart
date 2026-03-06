@@ -776,28 +776,67 @@ class HostController extends StateNotifier<HostState> {
     );
 
     if (confirmed == true) {
-      state = state.copyWith(isFinalizing: true);
-      if (_room != null) {
-        final payload = jsonEncode({'type': 'ROOM_CLOSED'});
-        await _room!.localParticipant?.publishData(utf8.encode(payload));
+      if (!ctx.mounted) return;
+      try {
+        state = state.copyWith(isFinalizing: true);
+
+        // Signal room closing (Best effort)
+        if (_room != null) {
+          try {
+            final payload = jsonEncode({'type': 'ROOM_CLOSED'});
+            await _room!.localParticipant
+                ?.publishData(utf8.encode(payload))
+                .timeout(const Duration(seconds: 1));
+          } catch (_) {}
+        }
+
+        // Tell backend we're done (Best effort)
+        try {
+          await ApiClient()
+              .post('/api/ads/${ad.id}/live', data: {'isLive': false})
+              .timeout(const Duration(seconds: 2));
+        } catch (_) {}
+      } finally {
+        // Essential Cleanup: Disconnect RTC
+        await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
+
+        // Exit screen
+        if (ctx.mounted) {
+          ctx.go('/home');
+        }
       }
-      await ApiClient()
-          .post('/api/ads/${ad.id}/live', data: {'isLive': false});
-      await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
-      if (ctx.mounted) ctx.go('/home');
     }
   }
 
   Future<void> closeLiveStreamSilently(BuildContext ctx) async {
-    state = state.copyWith(isFinalizing: true);
-    if (_room != null) {
-      final payload = jsonEncode({'type': 'ROOM_CLOSED'});
-      await _room!.localParticipant?.publishData(utf8.encode(payload));
+    try {
+      state = state.copyWith(isFinalizing: true);
+
+      // Signal room closing (Best effort)
+      if (_room != null) {
+        try {
+          final payload = jsonEncode({'type': 'ROOM_CLOSED'});
+          await _room!.localParticipant
+              ?.publishData(utf8.encode(payload))
+              .timeout(const Duration(seconds: 1));
+        } catch (_) {}
+      }
+
+      // Tell backend we're done (Best effort)
+      try {
+        await ApiClient()
+            .post('/api/ads/${ad.id}/live', data: {'isLive': false})
+            .timeout(const Duration(seconds: 2));
+      } catch (_) {}
+    } finally {
+      // Essential Cleanup: Disconnect RTC
+      await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
+
+      // Exit screen
+      if (ctx.mounted) {
+        ctx.go('/home');
+      }
     }
-    await ApiClient()
-        .post('/api/ads/${ad.id}/live', data: {'isLive': false});
-    await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
-    if (ctx.mounted) ctx.go('/home');
   }
 
   // ── Overlay helpers ────────────────────────────────────────────────────────
