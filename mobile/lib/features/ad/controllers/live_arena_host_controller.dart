@@ -730,6 +730,27 @@ class HostController extends StateNotifier<HostState> {
 
   void inviteToStage(String userId, BuildContext ctx) async {
     if (_room != null) {
+      // Sadece bir kişi sahnede olabilsin kontrolü
+      bool isStageBusy = false;
+      for (var p in _room!.remoteParticipants.values) {
+        if (p.isCameraEnabled || p.isMicrophoneEnabled) {
+          isStageBusy = true;
+          break;
+        }
+      }
+
+      if (isStageBusy) {
+        if (ctx.mounted) {
+          ScaffoldMessenger.of(ctx).showSnackBar(
+            const SnackBar(
+              content: Text('Şu anda sahnede başka bir konuk var. Yeni bir davet gönderilemez.'),
+              backgroundColor: Colors.orange,
+            ),
+          );
+        }
+        return;
+      }
+
       final payload = jsonEncode(
           {'type': 'INVITE_TO_STAGE', 'targetIdentity': userId});
       await _room!.localParticipant?.publishData(utf8.encode(payload));

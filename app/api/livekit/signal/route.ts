@@ -11,9 +11,9 @@ export async function POST(req: NextRequest) {
         }
 
         const body = await req.json();
-        const { adId, targetUserId, signal } = body;
+        const { adId, targetIdentity, signal } = body;
 
-        if (!adId || !targetUserId || !signal) {
+        if (!adId || !targetIdentity || !signal) {
             return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
         }
 
@@ -38,14 +38,14 @@ export async function POST(req: NextRequest) {
         const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
 
         // signal is one of: "INVITE_TO_STAGE", "KICK_FROM_STAGE"
-        const payload = JSON.stringify({ type: signal, targetUserId });
+        const payload = JSON.stringify({ type: signal, targetIdentity });
         const data = new TextEncoder().encode(payload);
 
         // Send to specific target or broadcast to room
-        if (targetUserId === "BROADCAST") {
+        if (targetIdentity === "BROADCAST") {
             await roomService.sendData(ad.liveKitRoomId, data, 1, []);
         } else {
-            await roomService.sendData(ad.liveKitRoomId, data, 1, [targetUserId]);
+            await roomService.sendData(ad.liveKitRoomId, data, 1, [targetIdentity]);
         }
 
         return NextResponse.json({ success: true, message: "Signal sent" });

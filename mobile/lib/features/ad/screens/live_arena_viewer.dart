@@ -513,7 +513,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       for (var p in allRemote) {
         VideoTrack? t;
         for (var pub in p.videoTrackPublications) {
-          if (pub.track != null) {
+          if (pub.track != null && pub.track is VideoTrack) {
             t = pub.track as VideoTrack;
             break;
           }
@@ -521,16 +521,35 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         if (t != null) {
           if (p.identity == widget.ad.userId) {
             hostTrack = t;
-          } else {
+          } else if (p.isCameraEnabled || p.isMicrophoneEnabled) {
+            // This is likely our invited guest who is now publishing
             guestTrack = t;
           }
         }
       }
+      // PHASE 21: Improved host track extraction. 
+      // If we didn't find the host by identity, we should only fall back if the first participant is NOT the guest we already found.
       if (hostTrack == null && allRemote.isNotEmpty) {
-        for (var pub in allRemote.first.videoTrackPublications) {
-          if (pub.track != null) {
-            hostTrack = pub.track as VideoTrack;
-            break;
+        final candidate = allRemote.first;
+        // If this candidate identity matches our guestTrack identity, don't use it as host.
+        bool isAlreadyGuest = false;
+        if (guestTrack != null) {
+           for (var p in allRemote) {
+             for (var pub in p.videoTrackPublications) {
+               if (pub.track == guestTrack) {
+                 if (p == candidate) isAlreadyGuest = true;
+                 break;
+               }
+             }
+           }
+        }
+
+        if (!isAlreadyGuest) {
+          for (var pub in candidate.videoTrackPublications) {
+            if (pub.track != null && pub.track is VideoTrack) {
+              hostTrack = pub.track as VideoTrack;
+              break;
+            }
           }
         }
       }

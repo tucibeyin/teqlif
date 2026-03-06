@@ -15,6 +15,16 @@ export function useStageRequests() {
     }, []);
 
     const acceptRequest = useCallback((req: StageRequest) => {
+        // Sadece bir kişi sahnede olabilsin kontrolü
+        const isStageBusy = Array.from(room.remoteParticipants.values()).some(
+            p => p.isCameraEnabled || p.isMicrophoneEnabled
+        );
+
+        if (isStageBusy) {
+            alert("Şu anda sahnede başka bir konuk var. Yeni bir davet gönderilemez.");
+            return;
+        }
+
         if (!confirm(`${req.name} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
             setRequests(prev => prev.filter(r => r.id !== req.id));
             return;

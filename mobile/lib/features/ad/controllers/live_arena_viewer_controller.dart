@@ -519,14 +519,14 @@ class ViewerController extends StateNotifier<ViewerState> {
           ref.read(liveRoomProvider(adId).notifier).disconnect();
           return;
         } else if (type == 'INVITE_TO_STAGE') {
-          final targetIdentity = decoded['targetIdentity'];
+          final targetIdentity = decoded['targetIdentity'] ?? decoded['targetUserId'];
           final currentUser = ref.read(authProvider).user;
           if (currentUser != null && targetIdentity == currentUser.id) {
             onShowInviteDialog?.call();
           }
           return;
         } else if (type == 'KICK_FROM_STAGE') {
-          final targetIdentity = decoded['targetIdentity'];
+          final targetIdentity = decoded['targetIdentity'] ?? decoded['targetUserId'];
           final currentUser = ref.read(authProvider).user;
           if (currentUser != null && targetIdentity == currentUser.id) {
             handleKick();

@@ -16,7 +16,9 @@ export function CoHostListener({ setRole, setWantsToPublish }: CoHostListenerPro
         try {
             const data = JSON.parse(new TextDecoder().decode(msg.payload));
             if (data.type === "INVITE_TO_STAGE") {
-                setInviteVisible(true);
+                if (data.targetIdentity === room.localParticipant.identity || data.targetUserId === room.localParticipant.identity) {
+                    setInviteVisible(true);
+                }
             } else if (data.type === "KICK_FROM_STAGE") {
                 if (data.targetIdentity === room.localParticipant.identity) {
                     setWantsToPublish(false);

@@ -138,8 +138,12 @@ export function CustomArenaLayout({
         (connectionState === ConnectionState.Disconnected ||
             connectionState === ConnectionState.Reconnecting);
 
-    const hostTrack = tracks[0] ?? null;
-    const guestTrack = tracks.length > 1 ? tracks[1] : null;
+    // ── Track Extraction ──
+    const hostTrack = tracks.find(t => t.participant.identity === sellerId) ?? null;
+    const guestTrack = tracks.find(t =>
+        t.participant.identity !== sellerId &&
+        (t.participant.isCameraEnabled || t.participant.isMicrophoneEnabled)
+    ) ?? null;
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -190,6 +194,16 @@ export function CustomArenaLayout({
     };
 
     const handleInviteFromChat = (userId: string) => {
+        // Sadece bir kişi sahnede olabilsin kontrolü
+        const isStageBusy = Array.from(room.remoteParticipants.values()).some(
+            p => p.isCameraEnabled || p.isMicrophoneEnabled
+        );
+
+        if (isStageBusy) {
+            alert("Şu anda sahnede başka bir konuk var. Yeni bir davet gönderilemez.");
+            return;
+        }
+
         room.localParticipant.publishData(
             new TextEncoder().encode(JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: userId })),
             { reliable: true }
