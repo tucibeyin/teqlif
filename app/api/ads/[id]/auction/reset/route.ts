@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { logger } from "@/lib/logger";
+import { startAuction } from "@/lib/services/auction-redis.service";
 
 export const dynamic = 'force-dynamic';
 
@@ -22,6 +23,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             where: { adId: id },
             data: { isArchived: true, status: 'REJECTED' }
         });
+
+        // 🔄 Synchronize Redis state (RESET live bid tracking)
+        await startAuction(id, ad.startingBid ?? 0);
 
         revalidatePath(`/ad/${id}`);
         revalidatePath("/");
