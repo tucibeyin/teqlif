@@ -125,7 +125,7 @@ class ViewerConsole extends ConsumerWidget {
                         Text(
                           viewerState.isAuctionActive
                               ? 'TEKLİF VER: ${_formatPrice(nextBid)}'
-                              : 'BEKLENİYOR',
+                              : 'AÇIK ARTTIRMA BEKLENİYOR',
                           style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w900,

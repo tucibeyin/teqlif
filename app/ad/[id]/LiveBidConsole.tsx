@@ -374,6 +374,12 @@ export default function LiveBidConsole({ adId, isOwner, initialPrice, minStep }:
                         </div>
                     )}
 
+                    {auctionStatus !== "ACTIVE" && (
+                        <div className="mb-4 w-full bg-orange-500/20 border border-orange-500/50 p-3 rounded-xl flex items-center justify-center gap-2 animate-pulse">
+                            <span className="text-orange-400 text-sm font-bold uppercase tracking-wider">Açık Arttırma Henüz Başlatılmadı</span>
+                        </div>
+                    )}
+
                     {/* Quick Bids */}
                     <div className="flex flex-row gap-2 w-full mb-4">
                         {[50, 100, 500].map(val => (
