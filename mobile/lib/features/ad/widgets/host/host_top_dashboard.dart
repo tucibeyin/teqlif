@@ -205,7 +205,9 @@ class _PortraitStatsInner extends StatelessWidget {
               Text(
                 state.bids.isNotEmpty
                     ? '₺${_formatPrice(state.bids.first.amount)}'
-                    : 'Henüz teqlif Yok',
+                    : (state.liveHighestBid != null
+                        ? '₺${_formatPrice(state.liveHighestBid!)}'
+                        : 'Henüz teqlif Yok'),
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 18,
@@ -239,16 +241,19 @@ class _PortraitStatsInner extends StatelessWidget {
                       letterSpacing: 0.5),
                 ),
               ),
-              if (state.bids.isNotEmpty)
+              if (state.bids.isNotEmpty || state.liveHighestBidderName != null)
                 Padding(
                   padding: const EdgeInsets.only(top: 4),
                   child: Row(children: [
-                    Text(state.bids.first.userLabel,
+                    Text(
+                        state.bids.isNotEmpty
+                            ? state.bids.first.userLabel
+                            : state.liveHighestBidderName!,
                         style: const TextStyle(
                             color: Colors.greenAccent,
                             fontSize: 11,
                             fontWeight: FontWeight.bold)),
-                    if (state.bids.first.userId != null)
+                    if (state.bids.isNotEmpty && state.bids.first.userId != null)
                       GestureDetector(
                         onTap: () => onInvite(state.bids.first.userId!),
                         child: Container(
@@ -343,7 +348,9 @@ class _LandscapeStatsInner extends StatelessWidget {
                   Text(
                     state.bids.isNotEmpty
                         ? '₺${_formatPrice(state.bids.first.amount)}'
-                        : 'Henüz teqlif Yok',
+                        : (state.liveHighestBid != null
+                            ? '₺${_formatPrice(state.liveHighestBid!)}'
+                            : 'Henüz teqlif Yok'),
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 16,
@@ -379,9 +386,12 @@ class _LandscapeStatsInner extends StatelessWidget {
                   ),
                 ),
               ),
-              if (state.bids.isNotEmpty) ...[
+              if (state.bids.isNotEmpty || state.liveHighestBidderName != null) ...[
                 const SizedBox(width: 8),
-                Text(state.bids.first.userLabel,
+                Text(
+                    state.bids.isNotEmpty
+                        ? state.bids.first.userLabel
+                        : state.liveHighestBidderName!,
                     style: const TextStyle(
                         color: Colors.greenAccent,
                         fontSize: 10,

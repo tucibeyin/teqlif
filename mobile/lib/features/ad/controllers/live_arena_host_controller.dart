@@ -35,12 +35,11 @@ class HostState {
   final List<FloatingReaction> reactions;
   final int lastReactionTime;
   final bool isSold;
-  final String? soldWinnerName;
-  final double? soldFinalPrice;
-  final bool showSoldOverlay;
   final String? finalizedWinnerName;
   final double? finalizedAmount;
   final bool showFinalizationOverlay;
+  final double? liveHighestBid;
+  final String? liveHighestBidderName;
 
   const HostState({
     required this.bids,
@@ -61,6 +60,8 @@ class HostState {
     this.finalizedWinnerName,
     this.finalizedAmount,
     required this.showFinalizationOverlay,
+    this.liveHighestBid,
+    this.liveHighestBidderName,
   });
 
   factory HostState.initial(AdModel? ad) => HostState(
@@ -78,6 +79,8 @@ class HostState {
         isSold: false,
         showSoldOverlay: false,
         showFinalizationOverlay: false,
+        liveHighestBid: null,
+        liveHighestBidderName: null,
       );
 
   HostState copyWith({
@@ -99,6 +102,8 @@ class HostState {
     Object? finalizedWinnerName = _sentinel,
     Object? finalizedAmount = _sentinel,
     bool? showFinalizationOverlay,
+    Object? liveHighestBid = _sentinel,
+    Object? liveHighestBidderName = _sentinel,
   }) {
     return HostState(
       bids: bids ?? this.bids,
@@ -128,6 +133,12 @@ class HostState {
           : finalizedAmount as double?,
       showFinalizationOverlay:
           showFinalizationOverlay ?? this.showFinalizationOverlay,
+      liveHighestBid: liveHighestBid == _sentinel
+          ? this.liveHighestBid
+          : liveHighestBid as double?,
+      liveHighestBidderName: liveHighestBidderName == _sentinel
+          ? this.liveHighestBidderName
+          : liveHighestBidderName as String?,
     );
   }
 }
@@ -253,7 +264,7 @@ class HostController extends StateNotifier<HostState> {
 
   Future<void> syncInitialState() async {
     try {
-      final response = await ApiClient().get('/api/livekit/sync', queryParameters: {'adId': adId});
+      final response = await ApiClient().get('/api/livekit/sync', params: {'adId': adId});
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
         final isAuctionActive = data['isAuctionActive'] == true;
@@ -263,12 +274,11 @@ class HostController extends StateNotifier<HostState> {
         if (highestBid > 0 || isAuctionActive) {
           state = state.copyWith(
             isAuctionActive: isAuctionActive,
-            // Note: we don't have the full bid list here, but we can set the conceptual highest bid
-            // The dashboard will show this if the bid list is empty.
+            liveHighestBid: highestBid > 0 ? highestBid : null,
+            liveHighestBidderName: highestBidder,
           );
           debugPrint('Host synced from Redis: bid=$highestBid, active=$isAuctionActive');
           
-          // If we have a bid but no local bids, we might want to trigger a refresh
           if (state.bids.isEmpty && highestBid > 0) {
              readBids();
           }
@@ -437,8 +447,11 @@ class HostController extends StateNotifier<HostState> {
           if (state.bids.isNotEmpty) {
             highestBid = state.bids.first.amount;
             bidderName = state.bids.first.userLabel;
+          } else if (state.liveHighestBid != null) {
+            highestBid = state.liveHighestBid!;
+            bidderName = state.liveHighestBidderName;
           } else {
-            // Fallback to latest fetched ad price/starting bid or synced Redis value
+            // Fallback to latest fetched ad price/starting bid
             highestBid = ad.highestBidAmount ??
                 ad.startingBid ??
                 ad.price;
