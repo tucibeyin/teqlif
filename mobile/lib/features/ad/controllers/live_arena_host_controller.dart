@@ -35,6 +35,9 @@ class HostState {
   final List<FloatingReaction> reactions;
   final int lastReactionTime;
   final bool isSold;
+  final String? soldWinnerName;
+  final double? soldFinalPrice;
+  final bool showSoldOverlay;
   final String? finalizedWinnerName;
   final double? finalizedAmount;
   final bool showFinalizationOverlay;
