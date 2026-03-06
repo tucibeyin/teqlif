@@ -784,7 +784,7 @@ class HostController extends StateNotifier<HostState> {
       await ApiClient()
           .post('/api/ads/${ad.id}/live', data: {'isLive': false});
       await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
-      if (ctx.mounted) ctx.go('/');
+      if (ctx.mounted) ctx.go('/home');
     }
   }
 
@@ -797,7 +797,7 @@ class HostController extends StateNotifier<HostState> {
     await ApiClient()
         .post('/api/ads/${ad.id}/live', data: {'isLive': false});
     await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
-    if (ctx.mounted) ctx.go('/');
+    if (ctx.mounted) ctx.go('/home');
   }
 
   // ── Overlay helpers ────────────────────────────────────────────────────────
