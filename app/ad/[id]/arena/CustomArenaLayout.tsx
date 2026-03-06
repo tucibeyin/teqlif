@@ -100,7 +100,15 @@ export function CustomArenaLayout({
 
     // ── Derived ────────────────────────────────────────────────────────────────
 
-    const isBroadcastEnded = isRoomClosed || connectionState === ConnectionState.Disconnected;
+    // isBroadcastEnded = sadece HOST kasıtlı yayını kapattığında (ROOM_CLOSED mesajı).
+    // ConnectionState.Disconnected LiveKit'in initial state'i veya kısa WebRTC kesintisi olabilir;
+    // bu durum için sağ paneli saklamak yerine video üzerinde bir overlay gösteriyoruz.
+    const isBroadcastEnded = isRoomClosed;
+    const isReconnecting =
+        !isRoomClosed &&
+        (connectionState === ConnectionState.Disconnected ||
+            connectionState === ConnectionState.Reconnecting);
+
     const hostTrack = tracks[0] ?? null;
     const guestTrack = tracks.length > 1 ? tracks[1] : null;
 
@@ -192,6 +200,28 @@ export function CustomArenaLayout({
                         </div>
                     )}
                 </div>
+
+                {/* ── RECONNECTING OVERLAY ── */}
+                {isReconnecting && (
+                    <div style={{
+                        position: "absolute", inset: 0, zIndex: 300,
+                        background: "rgba(6,8,16,0.82)",
+                        backdropFilter: "blur(6px)",
+                        display: "flex", flexDirection: "column",
+                        alignItems: "center", justifyContent: "center",
+                        gap: 12,
+                        pointerEvents: "none",
+                    }}>
+                        <span style={{ fontSize: "2.2rem" }}>📡</span>
+                        <span style={{
+                            color: "rgba(255,255,255,0.65)",
+                            fontFamily: "'Syne', system-ui, sans-serif",
+                            fontSize: 13, fontWeight: 600, letterSpacing: 0.5,
+                        }}>
+                            Bağlantı yeniden kuruluyor...
+                        </span>
+                    </div>
+                )}
 
                 {/* ── VIDEO OVERLAYS ── */}
                 {!isBroadcastEnded && (
