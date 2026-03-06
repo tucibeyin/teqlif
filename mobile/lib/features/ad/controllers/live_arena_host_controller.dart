@@ -412,7 +412,6 @@ class HostController extends StateNotifier<HostState> {
             // Fallback to latest fetched ad price/starting bid
             highestBid = ad.highestBidAmount ??
                 ad.startingBid ??
-                ad.startingPrice ??
                 ad.price;
           }
 
