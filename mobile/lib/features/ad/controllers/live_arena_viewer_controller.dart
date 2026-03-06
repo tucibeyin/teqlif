@@ -293,7 +293,7 @@ class ViewerController extends StateNotifier<ViewerState> {
   // ── Stage ──────────────────────────────────────────────────────────────────
 
   void requestStage(BuildContext ctx) {
-    final roomState = ref.read(liveRoomProvider(ad.id));
+    final roomState = ref.read(liveRoomProvider(adId));
     final room = roomState.room;
     if (room?.localParticipant == null) return;
     final currentUser = ref.read(authProvider).user;
@@ -537,7 +537,7 @@ class ViewerController extends StateNotifier<ViewerState> {
           return;
         } else if (type == 'NEW_BID' || type == 'BID_ACCEPTED') {
           final amount = (decoded['amount'] as num).toDouble();
-          final nextBid = amount + ad.minBidStep;
+          final nextBid = amount + (ad?.minBidStep ?? 1000);
           state = state.copyWith(liveHighestBid: amount);
           onUpdateBidText?.call(_formatPrice(nextBid));
           if (type == 'BID_ACCEPTED' &&

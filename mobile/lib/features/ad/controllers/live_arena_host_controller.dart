@@ -15,6 +15,7 @@ import '../../../core/api/endpoints.dart';
 import '../../../core/utils/profanity_filter.dart';
 import '../models/live_bid.dart';
 import '../models/stage_request.dart';
+import '../providers/ad_detail_provider.dart';
 import '../widgets/floating_reactions.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
