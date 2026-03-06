@@ -126,21 +126,23 @@ export function useAuction({
     }, []);
 
     const onSyncStateResponse = useCallback((data: any) => {
-        if (data.auctionStatus) setStatus(data.auctionStatus);
-        if (data.liveHighestBid) setHighestBid(data.liveHighestBid);
-        if (data.liveHighestBidderName) setHighestBidderName(data.liveHighestBidderName);
+        if (data.isAuctionActive !== undefined) setStatus(data.isAuctionActive ? "ACTIVE" : "IDLE");
+        if (data.highestBid !== undefined) setHighestBid(data.highestBid);
+        if (data.highestBidderName) setHighestBidderName(data.highestBidderName);
+        if (data.isSold !== undefined) setShowSoldOverlay(data.isSold);
     }, []);
 
     const broadcastState = useCallback(() => {
         if (!room) return;
         const payload = {
             type: "SYNC_STATE_RESPONSE",
-            auctionStatus: status,
-            liveHighestBid: highestBid,
-            liveHighestBidderName: highestBidderName,
+            isAuctionActive: status === "ACTIVE",
+            highestBid: highestBid,
+            highestBidderName: highestBidderName,
+            isSold: showSoldOverlay,
         };
         publish(payload);
-    }, [room, status, highestBid, highestBidderName, publish]);
+    }, [room, status, highestBid, highestBidderName, showSoldOverlay, publish]);
 
     // ── Host actions ──
 

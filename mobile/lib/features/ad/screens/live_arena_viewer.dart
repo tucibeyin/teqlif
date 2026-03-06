@@ -430,8 +430,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               _isAuctionActive = decoded['isAuctionActive'] == true;
               _liveHighestBid = (decoded['highestBid'] as num?)?.toDouble();
               _isSold = decoded['isSold'] == true;
+              String? hostSuppliedWinner = decoded['highestBidderName']?.toString();
               if (_isSold) {
                 _showSoldOverlay = true;
+                if (hostSuppliedWinner != null) _soldWinnerName = hostSuppliedWinner;
               }
             });
           }

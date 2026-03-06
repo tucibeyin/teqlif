@@ -387,6 +387,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
               'type': 'SYNC_STATE_RESPONSE',
               'isAuctionActive': _isAuctionActive,
               'highestBid': _bids.isNotEmpty ? _bids.first.amount : (widget.ad.highestBidAmount ?? 0.0),
+              'highestBidderName': _bids.isNotEmpty ? _bids.first.userLabel : null,
               'isSold': _isSold,
             });
             state.room!.localParticipant?.publishData(utf8.encode(payload));
