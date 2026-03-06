@@ -1,16 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { RoomServiceClient } from "livekit-server-sdk";
-import { auth } from "@/auth";
 import { placeBid } from "@/lib/services/auction-redis.service";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function POST(req: NextRequest) {
   try {
-    // ── Auth ────────────────────────────────────────────────────────────────
-    const session = await auth();
-    if (!session?.user?.id) {
+    // ── Auth (Supports both Web Session and Mobile JWT) ─────────────────────
+    const user = await getMobileUser(req);
+    if (!user?.id) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    const userId = session.user.id;
+    const userId = user.id;
 
     // ── Input Validation ────────────────────────────────────────────────────
     const body = await req.json();
