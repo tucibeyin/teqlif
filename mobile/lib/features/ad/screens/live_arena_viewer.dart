@@ -20,6 +20,7 @@ import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../providers/ad_detail_provider.dart';
 import '../../dashboard/screens/dashboard_screen.dart';
+import '../../../core/utils/profanity_filter.dart';
 
 class LiveArenaViewer extends ConsumerStatefulWidget {
   final AdModel ad;
@@ -373,11 +374,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           return;
         } else if (type == 'CHAT') {
           final chatText = decoded['text']?.toString() ?? '';
+          final censoredText = ProfanityFilter.censor(chatText);
           final chatSender = decoded['senderName']?.toString();
           setState(() {
             _messages.add(_EphemeralMessage(
               id: DateTime.now().millisecondsSinceEpoch.toString(),
-              text: chatText,
+              text: censoredText,
               senderName: _formatSenderName(chatSender),
               timestamp: DateTime.now(),
             ));
@@ -446,10 +448,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
     // Removed legacy text-based bid detection to enforce JSON payloads
 
+    final censoredMessage = ProfanityFilter.censor(message);
+
     setState(() {
       _messages.add(_EphemeralMessage(
         id: DateTime.now().millisecondsSinceEpoch.toString(),
-        text: message,
+        text: censoredMessage,
         senderName: _formatSenderName(p?.name),
         timestamp: DateTime.now(),
       ));
@@ -578,13 +582,16 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   Future<void> _sendChatMessage() async {
     final text = _chatCtrl.text.trim();
     if (text.isEmpty) return;
+    
+    final censoredText = ProfanityFilter.censor(text);
+
     final currentUser = ref.read(authProvider).user;
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room != null) {
       final name = state.room!.localParticipant?.name;
       final payload = jsonEncode({
         'type': 'CHAT',
-        'text': text,
+        'text': censoredText,
         'senderName': name,
         'senderId': currentUser?.id,
       });
