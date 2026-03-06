@@ -127,7 +127,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                 content: Text(
                     'Yayın başlatmak için kamera ve mikrofon izni gereklidir.')),
           );
-          context.pop();
+          context.go('/');
         }
       }
     });
@@ -175,7 +175,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       if (previous?.room != null &&
           next.room == null &&
           !next.isConnecting) {
-        if (mounted) context.pop();
+        if (mounted) context.go('/');
       }
     });
 

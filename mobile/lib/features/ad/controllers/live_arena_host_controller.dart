@@ -4,6 +4,7 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart';
 
@@ -783,7 +784,7 @@ class HostController extends StateNotifier<HostState> {
       await ApiClient()
           .post('/api/ads/${ad.id}/live', data: {'isLive': false});
       await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
-      if (ctx.mounted) Navigator.of(ctx).pop();
+      if (ctx.mounted) ctx.go('/');
     }
   }
 
@@ -796,9 +797,7 @@ class HostController extends StateNotifier<HostState> {
     await ApiClient()
         .post('/api/ads/${ad.id}/live', data: {'isLive': false});
     await ref.read(liveRoomProvider(ad.id).notifier).disconnect();
-    if (ctx.mounted) {
-      Navigator.of(ctx).popUntil((route) => route.isFirst);
-    }
+    if (ctx.mounted) ctx.go('/');
   }
 
   // ── Overlay helpers ────────────────────────────────────────────────────────
