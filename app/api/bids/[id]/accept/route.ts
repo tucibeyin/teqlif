@@ -120,6 +120,15 @@ export async function PATCH(
                 });
             }
 
+            // 5. Create Automated "Congratulations" Message
+            await tx.message.create({
+                data: {
+                    conversationId: conversation.id,
+                    senderId: currentUser.id,
+                    content: `Tebrikler! "${bid.ad.title}" ilanınız için verdiğiniz ${bid.amount} ₺ teqlif kabul edildi! Sizinle iletişime geçeceğim.`,
+                }
+            });
+
             return { acceptedBid, conversation };
         });
 

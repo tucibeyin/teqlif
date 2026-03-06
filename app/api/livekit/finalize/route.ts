@@ -106,6 +106,48 @@ export async function POST(req: NextRequest) {
             });
         }
 
+        // 2. Find or Create conversation for messaging
+        let conversation = await prisma.conversation.findUnique({
+            where: {
+                user1Id_user2Id_adId: {
+                    user1Id: callerId,
+                    user2Id: winnerId,
+                    adId: adId,
+                }
+            }
+        });
+
+        if (!conversation) {
+            conversation = await prisma.conversation.findUnique({
+                where: {
+                    user1Id_user2Id_adId: {
+                        user1Id: winnerId,
+                        user2Id: callerId,
+                        adId: adId,
+                    }
+                }
+            });
+        }
+
+        if (!conversation) {
+            conversation = await prisma.conversation.create({
+                data: {
+                    user1Id: callerId,
+                    user2Id: winnerId,
+                    adId: adId,
+                }
+            });
+        }
+
+        // 3. Create Automated "Congratulations" Message
+        await prisma.message.create({
+            data: {
+                conversationId: conversation.id,
+                senderId: callerId,
+                content: `Tebrikler! "${ad.title}" ilanının açık arttırmasını ${finalPriceNum} ₺ bedelle kazandınız. Sizinle iletişime geçeceğim.`,
+            }
+        });
+
         revalidatePath(`/ad/${adId}`);
         revalidatePath("/");
 
