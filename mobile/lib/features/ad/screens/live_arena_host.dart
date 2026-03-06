@@ -419,9 +419,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     if (state.room != null) {
       final identity = state.room!.localParticipant?.identity;
       final name = state.room!.localParticipant?.name;
+      final censoredText = ProfanityFilter.censor(text);
       final payload = jsonEncode({
         'type': 'CHAT',
-        'text': text,
+        'text': censoredText,
         'senderName': name,
         'senderId': identity,
       });
