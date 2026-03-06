@@ -4,13 +4,13 @@ import { useEffect, useRef } from "react";
 import type { ArenaMessage } from "../types";
 
 const T = {
-  glass:       "rgba(255,255,255,0.03)",
+  glass: "rgba(255,255,255,0.03)",
   glassBorder: "rgba(255,255,255,0.06)",
-  teal:        "#06C8E0",
-  tealDark:    "#059AAF",
-  text:        "#EDF2F7",
-  muted:       "#3D526A",
-  display:     "'Syne', system-ui, sans-serif",
+  teal: "#06C8E0",
+  tealDark: "#059AAF",
+  text: "#EDF2F7",
+  muted: "#3D526A",
+  display: "'Syne', system-ui, sans-serif",
 };
 
 const AVATAR_COLORS = [
@@ -57,7 +57,9 @@ export function ChatOverlay({
       `}</style>
 
       {/* Outer: flex: 1 ile parent flex container'ı doldurur */}
-      <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 8 }}>
+      <div
+        id="arena-chat-overlay"
+        style={{ display: "flex", flexDirection: "column", flex: 1, gap: 8 }}>
 
         {/* ── Message list ── */}
         {/*

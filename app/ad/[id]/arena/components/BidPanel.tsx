@@ -115,7 +115,9 @@ export function BidPanel({
         .tq-reject-btn:hover { background: rgba(240,62,62,0.22) !important; box-shadow: 0 0 16px rgba(240,62,62,0.2) !important; }
       `}</style>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+      <div
+        id="arena-bid-panel"
+        style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
         {/* Kompakt bid header — mevcut fiyat + durum */}
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>

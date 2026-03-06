@@ -4,15 +4,15 @@ import { useEffect, useRef, useState } from "react";
 import type { AuctionStatus } from "../types";
 
 const T = {
-  glass:       "rgba(255,255,255,0.04)",
+  glass: "rgba(255,255,255,0.04)",
   glassBorder: "rgba(255,255,255,0.07)",
-  teal:        "#06C8E0",
-  gold:        "#F0B429",
-  green:       "#10D88A",
-  text:        "#EDF2F7",
-  muted:       "#3D526A",
-  mono:        "'DM Mono', monospace",
-  display:     "'Syne', system-ui, sans-serif",
+  teal: "#06C8E0",
+  gold: "#F0B429",
+  green: "#10D88A",
+  text: "#EDF2F7",
+  muted: "#3D526A",
+  mono: "'DM Mono', monospace",
+  display: "'Syne', system-ui, sans-serif",
 };
 
 function BidFlash({ amount }: { amount: number }) {
@@ -38,7 +38,7 @@ function BidFlash({ amount }: { amount: number }) {
   );
 }
 
-const AVATAR_COLORS = ["#06C8E0","#F03E3E","#F0B429","#10D88A","#8B5CF6","#F97316"];
+const AVATAR_COLORS = ["#06C8E0", "#F03E3E", "#F0B429", "#10D88A", "#8B5CF6", "#F97316"];
 
 interface StatsBarProps {
   auctionStatus: AuctionStatus;
@@ -85,20 +85,22 @@ export function StatsBar({
         </div>
       )}
 
-      <div style={{
-        background: "rgba(6,8,16,0.82)", backdropFilter: "blur(24px)",
-        WebkitBackdropFilter: "blur(24px)", borderRadius: 14,
-        border: isActive
-          ? "1px solid rgba(16,216,138,0.28)"
-          : "1px solid rgba(255,255,255,0.08)",
-        padding: "10px 14px",
-        display: "flex", justifyContent: "space-between", alignItems: "flex-end",
-        transition: "border-color 0.5s, box-shadow 0.5s",
-        boxShadow: isActive
-          ? "0 0 24px rgba(16,216,138,0.07)"
-          : "none",
-        animation: isActive ? "tq-activePulse 2.5s ease infinite" : "none",
-      }}>
+      <div
+        id="arena-stats-bar"
+        style={{
+          background: "rgba(6,8,16,0.82)", backdropFilter: "blur(24px)",
+          WebkitBackdropFilter: "blur(24px)", borderRadius: 14,
+          border: isActive
+            ? "1px solid rgba(16,216,138,0.28)"
+            : "1px solid rgba(255,255,255,0.08)",
+          padding: "10px 14px",
+          display: "flex", justifyContent: "space-between", alignItems: "flex-end",
+          transition: "border-color 0.5s, box-shadow 0.5s",
+          boxShadow: isActive
+            ? "0 0 24px rgba(16,216,138,0.07)"
+            : "none",
+          animation: isActive ? "tq-activePulse 2.5s ease infinite" : "none",
+        }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
           {/* Status label */}
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>

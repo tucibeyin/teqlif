@@ -174,11 +174,13 @@ export function CustomArenaLayout({
 
     return (
         <div
+            id="arena-root"
             className="flex flex-row w-full h-full overflow-hidden"
             style={{ background: "#060810" }}
         >
             {/* ══ VIDEO PANEL ═══════════════════════════════════════════════ */}
             <div
+                id="arena-video-panel"
                 className="flex-[4_4_0] min-h-0 relative overflow-hidden"
                 style={{ background: "#080C18" }}
             >
@@ -358,6 +360,7 @@ export function CustomArenaLayout({
             {/* ══ RIGHT PANEL ═══════════════════════════════════════════════ */}
             {!isBroadcastEnded && (
                 <div
+                    id="arena-right-panel"
                     className="w-[320px] flex-shrink-0 flex flex-col h-full"
                     style={{
                         background: "rgba(7,10,20,1)",
@@ -367,13 +370,15 @@ export function CustomArenaLayout({
                     }}
                 >
                     {/* ── SOHBET header ── */}
-                    <div style={{
-                        padding: "12px 16px 11px",
-                        borderBottom: "1px solid rgba(255,255,255,0.08)",
-                        display: "flex", alignItems: "center", justifyContent: "space-between",
-                        flexShrink: 0,
-                        background: "rgba(255,255,255,0.02)",
-                    }}>
+                    <div
+                        id="arena-chat-header"
+                        style={{
+                            padding: "12px 16px 11px",
+                            borderBottom: "1px solid rgba(255,255,255,0.08)",
+                            display: "flex", alignItems: "center", justifyContent: "space-between",
+                            flexShrink: 0,
+                            background: "rgba(255,255,255,0.02)",
+                        }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                             <span style={{ fontSize: 14 }}>💬</span>
                             <span style={{
@@ -399,11 +404,13 @@ export function CustomArenaLayout({
                     </div>
 
                     {/* ── Chat — flex: 1 ── */}
-                    <div style={{
-                        flex: 1, padding: "10px 14px",
-                        overflow: "hidden", minHeight: 0,
-                        display: "flex", flexDirection: "column",
-                    }}>
+                    <div
+                        id="arena-chat-container"
+                        style={{
+                            flex: 1, padding: "10px 14px",
+                            overflow: "hidden", minHeight: 0,
+                            display: "flex", flexDirection: "column",
+                        }}>
                         <ChatOverlay
                             messages={chat.messages}
                             inputValue={chat.inputValue}
@@ -415,12 +422,14 @@ export function CustomArenaLayout({
                     </div>
 
                     {/* ── BidPanel — sabit alt ── */}
-                    <div style={{
-                        padding: "14px 16px 18px",
-                        borderTop: "1px solid rgba(255,255,255,0.08)",
-                        flexShrink: 0,
-                        background: "rgba(255,255,255,0.015)",
-                    }}>
+                    <div
+                        id="arena-bid-panel-container"
+                        style={{
+                            padding: "14px 16px 18px",
+                            borderTop: "1px solid rgba(255,255,255,0.08)",
+                            flexShrink: 0,
+                            background: "rgba(255,255,255,0.015)",
+                        }}>
                         <BidPanel
                             adId={adId}
                             sellerId={sellerId}

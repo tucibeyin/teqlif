@@ -1,13 +1,13 @@
 "use client";
 
 const T = {
-  glass:       "rgba(255,255,255,0.04)",
+  glass: "rgba(255,255,255,0.04)",
   glassBorder: "rgba(255,255,255,0.07)",
-  teal:        "#06C8E0",
-  red:         "#F03E3E",
-  text:        "#EDF2F7",
-  muted:       "#3D526A",
-  display:     "'Syne', system-ui, sans-serif",
+  teal: "#06C8E0",
+  red: "#F03E3E",
+  text: "#EDF2F7",
+  muted: "#3D526A",
+  display: "'Syne', system-ui, sans-serif",
 };
 
 function PulsingDot({ color }: { color: string }) {
@@ -39,13 +39,15 @@ interface TopHUDProps {
 
 export function TopHUD({ adOwnerName, participantCount, isOwner, onClose }: TopHUDProps) {
   return (
-    <div style={{
-      position: "absolute", top: 0, left: 0, right: 0,
-      padding: "18px 20px", zIndex: 200,
-      display: "flex", justifyContent: "space-between", alignItems: "center",
-      background: "linear-gradient(to bottom, rgba(6,8,16,0.92) 0%, rgba(6,8,16,0.4) 70%, transparent 100%)",
-      pointerEvents: "none",
-    }}>
+    <div
+      id="arena-top-hud"
+      style={{
+        position: "absolute", top: 0, left: 0, right: 0,
+        padding: "18px 20px", zIndex: 200,
+        display: "flex", justifyContent: "space-between", alignItems: "center",
+        background: "linear-gradient(to bottom, rgba(6,8,16,0.92) 0%, rgba(6,8,16,0.4) 70%, transparent 100%)",
+        pointerEvents: "none",
+      }}>
 
       {/* Left: seller pill + LIVE badge */}
       <div style={{ display: "flex", alignItems: "center", gap: 8, pointerEvents: "auto" }}>

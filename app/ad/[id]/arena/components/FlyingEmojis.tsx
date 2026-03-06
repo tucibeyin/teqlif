@@ -63,11 +63,13 @@ export function ReactionBar({ onReact, vertical = false }: ReactionBarProps) {
         }
         .tq-emoji-btn:active { transform: scale(0.9); }
       `}</style>
-      <div style={{
-        display: "flex",
-        flexDirection: vertical ? "column" : "row",
-        gap: vertical ? 8 : 6,
-      }}>
+      <div
+        id="arena-reaction-bar"
+        style={{
+          display: "flex",
+          flexDirection: vertical ? "column" : "row",
+          gap: vertical ? 8 : 6,
+        }}>
         {EMOJIS.map(emoji => (
           <button
             key={emoji}

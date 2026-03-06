@@ -1,14 +1,14 @@
 "use client";
 
 const T = {
-  teal:    "#06C8E0",
-  tealDark:"#059AAF",
-  gold:    "#F0B429",
-  green:   "#10D88A",
-  red:     "#F03E3E",
-  text:    "#EDF2F7",
-  muted:   "#3D526A",
-  mono:    "'DM Mono', monospace",
+  teal: "#06C8E0",
+  tealDark: "#059AAF",
+  gold: "#F0B429",
+  green: "#10D88A",
+  red: "#F03E3E",
+  text: "#EDF2F7",
+  muted: "#3D526A",
+  mono: "'DM Mono', monospace",
   display: "'Syne', system-ui, sans-serif",
 };
 
@@ -32,7 +32,7 @@ interface FinalizationOverlayProps {
 
 export function FinalizationOverlay({ winnerName, amount, onClose }: FinalizationOverlayProps) {
   return (
-    <div style={{ ...BACKDROP, zIndex: 9000 }}>
+    <div id="arena-finalization-overlay" style={{ ...BACKDROP, zIndex: 9000 }}>
       <style>{`
         @keyframes tq-popIn {
           from { opacity: 0; transform: scale(0.82) translateY(12px); }
@@ -106,7 +106,7 @@ interface SoldOverlayProps {
 
 export function SoldOverlay({ winnerName, price, isOwner, onClose, onReset }: SoldOverlayProps) {
   return (
-    <div style={{ ...BACKDROP, zIndex: 8500 }}>
+    <div id="arena-sold-overlay" style={{ ...BACKDROP, zIndex: 8500 }}>
       <style>{`
         @keyframes tq-popIn {
           from { opacity: 0; transform: scale(0.82) translateY(12px); }
@@ -202,13 +202,15 @@ export function SoldOverlay({ winnerName, price, isOwner, onClose, onReset }: So
 // ── BroadcastEndedScreen ──────────────────────────────────────────────────
 export function BroadcastEndedScreen() {
   return (
-    <div style={{
-      position: "absolute", inset: 0,
-      background: "radial-gradient(ellipse at center, #0D1626 0%, #060810 70%)",
-      display: "flex", flexDirection: "column",
-      alignItems: "center", justifyContent: "center",
-      color: T.text, zIndex: 100, overflow: "hidden",
-    }}>
+    <div
+      id="arena-broadcast-ended-overlay"
+      style={{
+        position: "absolute", inset: 0,
+        background: "radial-gradient(ellipse at center, #0D1626 0%, #060810 70%)",
+        display: "flex", flexDirection: "column",
+        alignItems: "center", justifyContent: "center",
+        color: T.text, zIndex: 100, overflow: "hidden",
+      }}>
       {/* Subtle dot grid */}
       <div style={{
         position: "absolute", inset: 0, opacity: 0.045,
