@@ -116,18 +116,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
     // Connect to room
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final notifier = ref.read(liveRoomProvider(widget.ad.id).notifier);
-      await notifier.connect(false);
-      final room = ref.read(liveRoomProvider(widget.ad.id)).room;
-      if (room != null) {
-        room.events.listen(_onRoomEvent);
-        try {
-          final syncPayload = jsonEncode({'type': 'SYNC_STATE_REQUEST'});
-          room.localParticipant?.publishData(utf8.encode(syncPayload));
-        } catch (e) {
-          debugPrint('Sync request error: $e');
-        }
-      }
+      await ref.read(liveRoomProvider(widget.ad.id).notifier).connect(false);
     });
   }
 
@@ -472,14 +461,29 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   @override
   Widget build(BuildContext context) {
-    // Auto-pop when room is disconnected (unless reconnecting for stage)
+    // Reactive listener for room-wide events & life-cycle
     ref.listen(liveRoomProvider(widget.ad.id), (previous, next) {
       final viewerState = ref.read(viewerControllerProvider(widget.ad.id));
+      
+      // 1. Auto-pop when room is disconnected (unless switching roles)
       if (!viewerState.isReconnectingForStage &&
           previous?.room != null &&
           next.room == null &&
           !next.isConnecting) {
         if (mounted) context.pop();
+        return;
+      }
+
+      // 2. Attach data listener to new room instances
+      if (previous?.room != next.room && next.room != null) {
+          next.room!.events.listen(_onRoomEvent);
+          // Auto-sync state request on new join (viewer only)
+          if (next.room != null && !viewerState.isGuest) {
+             try {
+               final syncPayload = jsonEncode({'type': 'SYNC_STATE_REQUEST'});
+               next.room!.localParticipant?.publishData(utf8.encode(syncPayload));
+             } catch (_) {}
+          }
       }
     });
 

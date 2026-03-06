@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:io' show Platform;
 import '../api/api_client.dart';
 
 final liveRoomProvider = StateNotifierProvider.family<LiveRoomNotifier, LiveRoomState, String>((ref, roomId) {
@@ -61,6 +63,28 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
       final token = response.data['token'] as String;
       final serverUrl = response.data['wsUrl'] as String;
       
+      // 1. Handle Permissions before connecting if we intend to publish
+      if (isOwner || isGuest) {
+        final camStatus = await Permission.camera.request();
+        final micStatus = await Permission.microphone.request();
+        
+        if (camStatus.isDenied || micStatus.isDenied) {
+           state = state.copyWith(isConnecting: false, error: "Kamera veya Mikrofon izni reddedildi.");
+           return;
+        }
+      }
+
+      // 2. Configure iOS Audio Category
+      if (Platform.isIOS) {
+        if (isOwner || isGuest) {
+          await HardwareSettings().setAudioCategory(AudioCategory.playAndRecord);
+          await HardwareSettings().setAudioMode(AudioMode.videoChat);
+        } else {
+          await HardwareSettings().setAudioCategory(AudioCategory.playback);
+          await HardwareSettings().setAudioMode(AudioMode.defaultMode);
+        }
+      }
+      
       // 2. We need the LiveKit URL from env, or we can hardcode for now or fetch it from another endpoint.
       // Usually, it's better to fetch from a config endpoint or have it in a constants file. 
       // For this project, let's assume it's wss://teqlif.com or we can fetch it? 
@@ -74,10 +98,13 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
       
       // const wsUrl = 'wss://teqlif.com'; // Adjust if needed
 
-      final connectOptions = ConnectOptions(); // No auto-subscribe needed, handled
+      final connectOptions = ConnectOptions();
       final roomOptions = RoomOptions(
         adaptiveStream: true,
         dynacast: true,
+        defaultVideoPublishOptions: const VideoPublishOptions(
+          simulcast: true,
+        ),
       );
 
       _room = Room();
