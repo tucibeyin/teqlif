@@ -326,21 +326,6 @@ export function CustomArenaLayout({
                             </div>
                         )}
 
-                        {/* StatsBar — video altında, Whatnot tarzı */}
-                        <div style={{
-                            position: "absolute", bottom: 96, left: 16, right: 16,
-                            zIndex: 200, pointerEvents: "none",
-                        }}>
-                            <StatsBar
-                                auctionStatus={auction.status}
-                                highestBid={auction.highestBid}
-                                startingBid={startingBid}
-                                buyItNowPrice={buyItNowPrice}
-                                highestBidderName={auction.highestBidderName}
-                                flashBid={auction.flashBid}
-                                notification={auction.notification}
-                            />
-                        </div>
 
                         {/* Host FABs */}
                         {isOwner && (
@@ -417,6 +402,16 @@ export function CustomArenaLayout({
                             </span>
                         </div>
                     </div>
+
+                    <StatsBar
+                        auctionStatus={auction.status}
+                        highestBid={auction.highestBid}
+                        startingBid={startingBid}
+                        buyItNowPrice={buyItNowPrice}
+                        highestBidderName={auction.highestBidderName}
+                        flashBid={auction.flashBid}
+                        notification={auction.notification}
+                    />
 
                     {/* ── Chat — flex: 1 ── */}
                     <div
