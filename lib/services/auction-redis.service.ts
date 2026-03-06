@@ -128,5 +128,9 @@ export async function getAuctionState(adId: string): Promise<AuctionState> {
  * Status 'closed' yapıldıktan sonra Lua script yeni teklifleri reddeder.
  */
 export async function closeAuction(adId: string): Promise<void> {
-  await redis.set(keys.status(adId), "closed");
+  const pipeline = redis.pipeline();
+  pipeline.set(keys.status(adId), "closed");
+  pipeline.del(keys.highestBid(adId));
+  pipeline.del(keys.highestBidder(adId));
+  await pipeline.exec();
 }

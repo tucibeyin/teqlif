@@ -405,12 +405,21 @@ class HostController extends StateNotifier<HostState> {
 
       } else if (dataObj['type'] == 'SYNC_STATE_REQUEST') {
         if (_room != null) {
+          double highestBid;
+          if (state.bids.isNotEmpty) {
+            highestBid = state.bids.first.amount;
+          } else {
+            // Fallback to latest fetched ad price/starting bid
+            highestBid = ad.highestBidAmount ??
+                ad.startingBid ??
+                ad.startingPrice ??
+                ad.price;
+          }
+
           final payload = jsonEncode({
             'type': 'SYNC_STATE_RESPONSE',
             'isAuctionActive': state.isAuctionActive,
-            'highestBid': state.bids.isNotEmpty
-                ? state.bids.first.amount
-                : (ad.highestBidAmount ?? 0.0),
+            'highestBid': highestBid,
             'highestBidderName':
                 state.bids.isNotEmpty ? state.bids.first.userLabel : null,
             'isSold': state.isSold,
@@ -530,7 +539,20 @@ class HostController extends StateNotifier<HostState> {
         if (_room != null) {
           await _room!.localParticipant?.publishData(utf8.encode(payload));
         }
-        state = state.copyWith(bids: [], unreadBids: 0);
+        // Full local state reset
+        state = state.copyWith(
+          bids: [],
+          unreadBids: 0,
+          isAuctionActive: false,
+          isSold: false,
+          showSoldOverlay: false,
+          soldWinnerName: null,
+          soldFinalPrice: null,
+          countdown: 0,
+        );
+        // FORCE refresh ad details to get new starting price/bid
+        ref.invalidate(adDetailProvider(adId));
+
         if (ctx.mounted) {
           ScaffoldMessenger.of(ctx).showSnackBar(
             _systemSnack('📣 AÇIK ARTTIRMA SIFIRLANDI!', Colors.orange, ctx),
