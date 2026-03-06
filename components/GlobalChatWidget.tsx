@@ -14,6 +14,7 @@ export function GlobalChatWidget() {
     const { data: session } = useSession();
     const [isOpen, setIsOpen] = useState(false);
     const [isMinimized, setIsMinimized] = useState(false);
+    const [isArenaActive, setIsArenaActive] = useState(false);
     const [conversations, setConversations] = useState<Conversation[]>([]);
     const [activeConvId, setActiveConvId] = useState<string | null>(null);
     const [messages, setMessages] = useState<Message[]>([]);
@@ -22,6 +23,24 @@ export function GlobalChatWidget() {
 
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const widgetRef = useRef<HTMLDivElement>(null);
+
+    // Hide widget if live arena is active
+    useEffect(() => {
+        const checkArena = () => {
+            const arena = document.getElementById("arena-root");
+            setIsArenaActive(!!arena);
+        };
+
+        checkArena();
+
+        const observer = new MutationObserver(() => {
+            checkArena();
+        });
+
+        observer.observe(document.body, { childList: true, subtree: true });
+
+        return () => observer.disconnect();
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -158,7 +177,7 @@ export function GlobalChatWidget() {
         }
     };
 
-    if (!session?.user) return null;
+    if (!session?.user || isArenaActive) return null;
 
     const currentUserId = (session.user as any).id;
 
