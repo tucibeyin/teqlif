@@ -342,7 +342,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
             _showSoldOverlay = false;
             _soldWinnerName = null;
             _soldFinalPrice = null;
-            _isAuctionActive = true;
+            _isAuctionActive = false;
             _bids.clear();
             _unreadBids = 0;
             _countdown = 0;

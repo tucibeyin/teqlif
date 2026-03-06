@@ -989,16 +989,6 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     final isDisconnected = !_isReconnectingForStage && (room?.connectionState.name == 'disconnected' ||
         (room == null && !roomState.isConnecting));
 
-    // Sync isAuctionActive from currentAd (initial state or polling updates)
-    // Only trust the API if it says active, to avoid missing any manual 'Start' from Host via WebRTC.
-    if (currentAd.isAuctionActive && !_isAuctionActive) {
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        if (mounted) setState(() => _isAuctionActive = true);
-      });
-    }
-    // Note: We don't automatically set it to false here to avoid flickering 
-    // when WebRTC is authoritative.
-
     VideoTrack? hostTrack;
     VideoTrack? guestTrack;
 
