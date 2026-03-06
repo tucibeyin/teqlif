@@ -521,7 +521,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
         if (t != null) {
           if (p.identity == widget.ad.userId) {
             hostTrack = t;
-          } else if (p.isCameraEnabled || p.isMicrophoneEnabled) {
+          } else if (p.isCameraEnabled() || p.isMicrophoneEnabled()) {
             // This is likely our invited guest who is now publishing
             guestTrack = t;
           }

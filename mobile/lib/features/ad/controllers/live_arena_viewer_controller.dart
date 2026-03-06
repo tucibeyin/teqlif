@@ -664,6 +664,9 @@ class ViewerController extends StateNotifier<ViewerState> {
             state = newState;
           }
           return;
+        } else {
+          // Unknown or unhandled internal message type
+          return;
         }
       }
     } catch (e) {

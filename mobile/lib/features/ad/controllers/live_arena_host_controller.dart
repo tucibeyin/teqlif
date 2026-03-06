@@ -471,6 +471,9 @@ class HostController extends StateNotifier<HostState> {
           _room!.localParticipant?.publishData(utf8.encode(payload));
         }
         return;
+      } else {
+        // Unknown or unhandled internal message type
+        return;
       }
     } catch (_) {}
 
@@ -733,7 +736,7 @@ class HostController extends StateNotifier<HostState> {
       // Sadece bir kişi sahnede olabilsin kontrolü
       bool isStageBusy = false;
       for (var p in _room!.remoteParticipants.values) {
-        if (p.isCameraEnabled || p.isMicrophoneEnabled) {
+        if (p.isCameraEnabled() || p.isMicrophoneEnabled()) {
           isStageBusy = true;
           break;
         }
