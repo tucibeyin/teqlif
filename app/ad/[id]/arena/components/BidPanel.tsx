@@ -139,6 +139,22 @@ export function BidPanel({
           </span>
         </div>
 
+        {/* ── HOST: teklif bekleniyor (aktif ama henüz teklif yok) ── */}
+        {isOwner && isAuctionActive && currentHighest === 0 && (
+          <div style={{
+            padding: "10px 0 4px",
+            display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+            opacity: 0.55,
+          }}>
+            <span style={{ fontSize: 11, color: T.muted, fontFamily: T.display, letterSpacing: 0.5, textAlign: "center" }}>
+              Katılımcılar teklif verdiğinde
+            </span>
+            <span style={{ fontSize: 11, color: T.muted, fontFamily: T.display, letterSpacing: 0.5, textAlign: "center" }}>
+              burada kabul edebilirsiniz.
+            </span>
+          </div>
+        )}
+
         {/* ── HOST: accept / reject ── */}
         {isOwner && lastAcceptedBidId == null && currentHighest > 0 && (
           <div style={{ display: "flex", gap: 8 }}>

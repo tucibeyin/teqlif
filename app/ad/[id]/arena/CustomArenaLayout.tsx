@@ -310,41 +310,52 @@ export function CustomArenaLayout({
             {/* ══ RIGHT PANEL ═══════════════════════════════════════════════ */}
             {!isBroadcastEnded && (
                 <div
-                    className="w-full md:w-[300px] flex-shrink-0 flex flex-col h-[45vh] md:h-full"
+                    className="w-full md:w-[320px] flex-shrink-0 flex flex-col h-[48vh] md:h-full"
                     style={{
-                        background: "rgba(8,12,22,0.97)",
-                        borderLeft: "1px solid rgba(255,255,255,0.05)",
+                        background: "rgba(7,10,20,1)",
+                        /* Masaüstü: sol kenar (video yanında) | Mobil: üst kenar (video altında) */
+                        borderLeft: "2px solid rgba(6,200,224,0.18)",
+                        borderTop: "2px solid rgba(6,200,224,0.18)",
                     }}
                 >
-                    {/* "SOHBET" header */}
+                    {/* ── SOHBET header ── */}
                     <div style={{
-                        padding: "14px 16px 12px",
-                        borderBottom: "1px solid rgba(255,255,255,0.05)",
+                        padding: "12px 16px 11px",
+                        borderBottom: "1px solid rgba(255,255,255,0.08)",
                         display: "flex", alignItems: "center", justifyContent: "space-between",
                         flexShrink: 0,
+                        background: "rgba(255,255,255,0.02)",
                     }}>
-                        <span style={{
-                            fontSize: 10, fontWeight: 700, letterSpacing: 2.5,
-                            color: "#3D526A", fontFamily: "'Syne', system-ui, sans-serif",
-                        }}>
-                            SOHBET
-                        </span>
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                            <span style={{ fontSize: 14 }}>💬</span>
+                            <span style={{
+                                fontSize: 11, fontWeight: 800, letterSpacing: 2,
+                                color: "rgba(255,255,255,0.65)",
+                                fontFamily: "'Syne', system-ui, sans-serif",
+                            }}>
+                                SOHBET
+                            </span>
+                        </div>
                         <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
                             <span style={{
-                                width: 5, height: 5, borderRadius: "50%", background: "#10D88A",
-                                boxShadow: "0 0 5px rgba(16,216,138,0.7)", display: "inline-block",
+                                width: 6, height: 6, borderRadius: "50%", background: "#10D88A",
+                                boxShadow: "0 0 6px rgba(16,216,138,0.8)", display: "inline-block",
                             }} />
                             <span style={{
-                                fontSize: 9, fontWeight: 700, color: "#10D88A",
-                                fontFamily: "'Syne', system-ui, sans-serif", letterSpacing: 1.5,
+                                fontSize: 9, fontWeight: 800, color: "#10D88A",
+                                fontFamily: "'Syne', system-ui, sans-serif", letterSpacing: 1.8,
                             }}>
                                 CANLI
                             </span>
                         </div>
                     </div>
 
-                    {/* Chat — flex: 1, display flex so ChatOverlay'in flex:1'i çalışsın */}
-                    <div style={{ flex: 1, padding: "10px 14px", overflow: "hidden", minHeight: 0, display: "flex", flexDirection: "column" }}>
+                    {/* ── Chat — flex: 1 ── */}
+                    <div style={{
+                        flex: 1, padding: "10px 14px",
+                        overflow: "hidden", minHeight: 0,
+                        display: "flex", flexDirection: "column",
+                    }}>
                         <ChatOverlay
                             messages={chat.messages}
                             inputValue={chat.inputValue}
@@ -355,11 +366,12 @@ export function CustomArenaLayout({
                         />
                     </div>
 
-                    {/* BidPanel — sabit alt */}
+                    {/* ── BidPanel — sabit alt ── */}
                     <div style={{
                         padding: "14px 16px 18px",
-                        borderTop: "1px solid rgba(255,255,255,0.05)",
+                        borderTop: "1px solid rgba(255,255,255,0.08)",
                         flexShrink: 0,
+                        background: "rgba(255,255,255,0.015)",
                     }}>
                         <BidPanel
                             adId={adId}
