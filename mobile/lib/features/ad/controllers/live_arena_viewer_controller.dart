@@ -165,7 +165,7 @@ class ViewerController extends StateNotifier<ViewerState> {
   Timer? _inactivityTimer;
   Timer? _hypeTimer;
   bool _disposed = false;
-  EventsListenerUnsubscribe? _roomEventUnsubscribe;
+  void Function()? _roomEventUnsubscribe;
 
   // Animation callbacks — wired from initState via addPostFrameCallback
   VoidCallback? onPlayConfetti;
