@@ -1,14 +1,17 @@
 import { NextResponse } from 'next/server';
-import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
+import { NextRequest, NextResponse } from "next/server";
+import { RoomServiceClient } from "livekit-server-sdk";
+import { prisma } from "@/lib/prisma";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function PATCH(
     request: Request,
     { params }: { params: Promise<{ id: string }> }
 ) {
     try {
-        const session = await auth();
-        if (!session?.user) {
+        const user = await getMobileUser(request);
+        if (!user) {
             return NextResponse.json({ message: 'Yetkisiz erişim' }, { status: 401 });
         }
 
@@ -23,7 +26,7 @@ export async function PATCH(
             return NextResponse.json({ message: 'İlan bulunamadı' }, { status: 404 });
         }
 
-        if (ad.userId !== session.user.id) {
+        if (ad.userId !== user.id) {
             return NextResponse.json({ message: 'Bu işlem için yetkiniz yok' }, { status: 403 });
         }
 

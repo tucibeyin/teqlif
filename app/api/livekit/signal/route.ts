@@ -1,12 +1,9 @@
-import { NextRequest, NextResponse } from "next/server";
-import { RoomServiceClient } from "livekit-server-sdk";
-import { auth } from "@/auth";
-import { prisma } from "@/lib/prisma";
+import { getMobileUser } from "@/lib/mobile-auth";
 
 export async function POST(req: NextRequest) {
     try {
-        const session = await auth();
-        if (!session?.user?.id) {
+        const user = await getMobileUser(req);
+        if (!user?.id) {
             return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
         }
 
@@ -23,7 +20,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Only the host can invite or kick
-        if (ad.userId !== session.user.id && signal !== "ACCEPT_INVITE" && signal !== "REJECT_INVITE") {
+        if (ad.userId !== user.id && signal !== "ACCEPT_INVITE" && signal !== "REJECT_INVITE") {
             return NextResponse.json({ error: "Not the host" }, { status: 403 });
         }
 
