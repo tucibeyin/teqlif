@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'dart:io' show Platform;
 import '../api/api_client.dart';
 
 final liveRoomProvider = StateNotifierProvider.family<LiveRoomNotifier, LiveRoomState, String>((ref, roomId) {
@@ -74,16 +73,8 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
         }
       }
 
-      // 2. Configure iOS Audio Category
-      if (Platform.isIOS) {
-        if (isOwner || isGuest) {
-          await HardwareSettings().setAudioCategory(AudioCategory.playAndRecord);
-          await HardwareSettings().setAudioMode(AudioMode.videoChat);
-        } else {
-          await HardwareSettings().setAudioCategory(AudioCategory.playback);
-          await HardwareSettings().setAudioMode(AudioMode.defaultMode);
-        }
-      }
+      // Note: livekit_client should handle AVAudioSession category transition automatically 
+      // when local tracks are enabled.
       
       // 2. We need the LiveKit URL from env, or we can hardcode for now or fetch it from another endpoint.
       // Usually, it's better to fetch from a config endpoint or have it in a constants file. 
@@ -107,10 +98,10 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
         ),
       );
 
-      _room = Room();
+      _room = Room(roomOptions: roomOptions);
       
       await _room!.connect(serverUrl, token,
-          roomOptions: roomOptions, connectOptions: connectOptions);
+          connectOptions: connectOptions);
       
       if (isOwner || isGuest) {
         // Publish camera and mic
