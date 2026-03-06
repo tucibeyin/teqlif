@@ -343,8 +343,8 @@ export function CustomArenaLayout({
                         </div>
                     </div>
 
-                    {/* Chat — flex: 1 */}
-                    <div style={{ flex: 1, padding: "10px 14px", overflow: "hidden", minHeight: 0 }}>
+                    {/* Chat — flex: 1, display flex so ChatOverlay'in flex:1'i çalışsın */}
+                    <div style={{ flex: 1, padding: "10px 14px", overflow: "hidden", minHeight: 0, display: "flex", flexDirection: "column" }}>
                         <ChatOverlay
                             messages={chat.messages}
                             inputValue={chat.inputValue}

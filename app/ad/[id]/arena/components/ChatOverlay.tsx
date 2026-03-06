@@ -56,85 +56,141 @@ export function ChatOverlay({
         .tq-send-btn:active { transform: scale(0.95); }
       `}</style>
 
-      <div style={{ display: "flex", flexDirection: "column", height: "100%", gap: 8 }}>
+      {/* Outer: flex: 1 ile parent flex container'ı doldurur */}
+      <div style={{ display: "flex", flexDirection: "column", flex: 1, gap: 8 }}>
 
-        {/* Message list */}
+        {/* ── Message list ── */}
+        {/*
+          Twitch-style: flex spacer + column layout.
+          Spacer (flex:1) mesajları alta ittiriyor.
+          Mask gradient yalnızca üst boşluğu etkiler, mesajlar alt %80'de görünür.
+        */}
         <div
           ref={listRef}
           style={{
-            flex: 1, overflowY: "auto", display: "flex",
-            flexDirection: "column", gap: 1,
-            maskImage: "linear-gradient(to bottom, transparent, black 25%)",
-            WebkitMaskImage: "linear-gradient(to bottom, transparent, black 25%)",
+            flex: 1,
+            overflowY: "auto",
+            display: "flex",
+            flexDirection: "column",
+            gap: 1,
+            maskImage: "linear-gradient(to bottom, transparent, black 20%)",
+            WebkitMaskImage: "linear-gradient(to bottom, transparent, black 20%)",
             paddingBottom: 4,
           }}
         >
-          {messages.map((msg, i) => {
-            const avatarColor = AVATAR_COLORS[msg.sender.charCodeAt(0) % AVATAR_COLORS.length];
-            const isMe = msg.senderId === currentUserId;
-            const isSystem = msg.sender === "Sistem";
+          {/* Spacer — mesajları div'in altına iter */}
+          <div style={{ flex: 1, minHeight: 0 }} />
 
-            return (
-              <div
-                key={msg.id}
-                className="tq-chat-row"
-                style={{
-                  display: "flex", flexWrap: "wrap", alignItems: "baseline",
-                  gap: 4, padding: "3px 8px", borderRadius: 4,
-                  background: isSystem ? "rgba(6,200,224,0.05)" : "transparent",
-                  transition: "background 0.15s",
-                  animation: "tq-slideIn 0.2s ease-out both",
-                  animationDelay: `${Math.min(i * 0.02, 0.1)}s`,
-                  position: "relative",
-                }}
-              >
-                {/* Username */}
-                <span style={{
-                  fontFamily: T.display, fontWeight: 700, fontSize: 12,
-                  color: isSystem ? T.teal : (isMe ? T.teal : avatarColor),
-                  whiteSpace: "nowrap", flexShrink: 0, letterSpacing: 0.2,
-                }}>
-                  {isSystem ? "⚡ Sistem" : (isMe ? "Sen" : msg.sender)}
-                </span>
+          {messages.length === 0 ? (
+            /* Boş durum */
+            <div style={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 8,
+              padding: "20px 8px",
+              opacity: 0.42,
+              pointerEvents: "none",
+            }}>
+              <span style={{ fontSize: 24 }}>💬</span>
+              <span style={{
+                fontSize: 11,
+                color: T.muted,
+                fontFamily: T.display,
+                textAlign: "center",
+                lineHeight: 1.7,
+              }}>
+                Henüz mesaj yok.<br />Sohbeti başlatan sen ol!
+              </span>
+            </div>
+          ) : (
+            messages.map((msg, i) => {
+              const avatarColor = AVATAR_COLORS[msg.sender.charCodeAt(0) % AVATAR_COLORS.length];
+              const isMe = msg.senderId === currentUserId;
+              const isSystem = msg.sender === "Sistem";
 
-                {/* Separator */}
-                <span style={{
-                  color: "rgba(255,255,255,0.28)", fontWeight: 400,
-                  fontSize: 12, flexShrink: 0,
-                }}>:</span>
+              return (
+                <div
+                  key={msg.id}
+                  className="tq-chat-row"
+                  style={{
+                    display: "flex",
+                    flexWrap: "wrap",
+                    alignItems: "baseline",
+                    gap: 4,
+                    padding: "3px 8px",
+                    borderRadius: 4,
+                    background: isSystem ? "rgba(6,200,224,0.05)" : "transparent",
+                    transition: "background 0.15s",
+                    animation: "tq-slideIn 0.2s ease-out both",
+                    animationDelay: `${Math.min(i * 0.02, 0.1)}s`,
+                    position: "relative",
+                  }}
+                >
+                  {/* Kullanıcı adı */}
+                  <span style={{
+                    fontFamily: T.display,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    color: isSystem ? T.teal : (isMe ? T.teal : avatarColor),
+                    whiteSpace: "nowrap",
+                    flexShrink: 0,
+                    letterSpacing: 0.2,
+                  }}>
+                    {isSystem ? "⚡ Sistem" : (isMe ? "Sen" : msg.sender)}
+                  </span>
 
-                {/* Message text */}
-                <span style={{
-                  fontFamily: T.display, fontSize: 13,
-                  color: isSystem ? T.teal : T.text,
-                  lineHeight: 1.5, wordBreak: "break-word", flex: 1,
-                }}>
-                  {msg.text}
-                </span>
+                  {/* Ayraç */}
+                  <span style={{
+                    color: "rgba(255,255,255,0.28)",
+                    fontWeight: 400,
+                    fontSize: 12,
+                    flexShrink: 0,
+                  }}>:</span>
 
-                {/* Invite to stage (host only) */}
-                {onInviteToStage && msg.senderId && msg.senderId !== currentUserId && !isSystem && (
-                  <button
-                    className="tq-invite-btn"
-                    onClick={() => onInviteToStage(msg.senderId!)}
-                    title="Sahneye Davet Et"
-                    style={{
-                      width: 20, height: 20, borderRadius: "50%", flexShrink: 0,
-                      background: "rgba(99,102,241,0.15)",
-                      border: "1px solid rgba(99,102,241,0.3)",
-                      color: "#818CF8", fontSize: 10, cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center",
-                    }}
-                  >
-                    🎤
-                  </button>
-                )}
-              </div>
-            );
-          })}
+                  {/* Mesaj metni */}
+                  <span style={{
+                    fontFamily: T.display,
+                    fontSize: 13,
+                    color: isSystem ? T.teal : T.text,
+                    lineHeight: 1.5,
+                    wordBreak: "break-word",
+                    flex: 1,
+                  }}>
+                    {msg.text}
+                  </span>
+
+                  {/* Sahneye davet (sadece host) */}
+                  {onInviteToStage && msg.senderId && msg.senderId !== currentUserId && !isSystem && (
+                    <button
+                      className="tq-invite-btn"
+                      onClick={() => onInviteToStage(msg.senderId!)}
+                      title="Sahneye Davet Et"
+                      style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: "50%",
+                        flexShrink: 0,
+                        background: "rgba(99,102,241,0.15)",
+                        border: "1px solid rgba(99,102,241,0.3)",
+                        color: "#818CF8",
+                        fontSize: 10,
+                        cursor: "pointer",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                      }}
+                    >
+                      🎤
+                    </button>
+                  )}
+                </div>
+              );
+            })
+          )}
         </div>
 
-        {/* Input */}
+        {/* ── Input ── */}
         <div style={{ display: "flex", gap: 8, flexShrink: 0 }}>
           <input
             value={inputValue}
@@ -143,22 +199,34 @@ export function ChatOverlay({
             placeholder="Mesaj yaz..."
             className="tq-chat-input"
             style={{
-              flex: 1, height: 42,
+              flex: 1,
+              height: 42,
               background: T.glass,
               border: `1px solid ${T.glassBorder}`,
-              borderRadius: 22, padding: "0 16px",
-              color: T.text, fontSize: 13, outline: "none",
-              fontFamily: T.display, transition: "border-color 0.2s, box-shadow 0.2s",
+              borderRadius: 22,
+              padding: "0 16px",
+              color: T.text,
+              fontSize: 13,
+              outline: "none",
+              fontFamily: T.display,
+              transition: "border-color 0.2s, box-shadow 0.2s",
             }}
           />
           <button
             className="tq-send-btn"
             onClick={onSend}
             style={{
-              width: 42, height: 42, borderRadius: "50%", flexShrink: 0,
+              width: 42,
+              height: 42,
+              borderRadius: "50%",
+              flexShrink: 0,
               background: `linear-gradient(135deg, ${T.teal}, ${T.tealDark})`,
-              border: "none", color: "white", cursor: "pointer",
-              display: "flex", alignItems: "center", justifyContent: "center",
+              border: "none",
+              color: "white",
+              cursor: "pointer",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
               transition: "all 0.15s",
               boxShadow: "0 4px 14px rgba(6,200,224,0.3)",
               fontSize: 15,
