@@ -186,7 +186,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     });
 
     try {
-      state.room!.localParticipant!.publishData(utf8.encode(payload));
+      state.room!.localParticipant!.publishData(
+        utf8.encode(payload),
+        reliability: Reliability.reliable,
+      );
       _addReaction(emoji);
     } catch (e) {
       debugPrint('Reaction send error: $e');
@@ -471,7 +474,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
               'highestBidderName': _bids.isNotEmpty ? _bids.first.userLabel : null,
               'isSold': _isSold,
             });
-            state.room!.localParticipant?.publishData(utf8.encode(payload));
+            state.room!.localParticipant?.publishData(
+              utf8.encode(payload),
+              reliability: Reliability.reliable,
+            );
           }
           return;
         }
@@ -507,7 +513,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         'senderName': name,
         'senderId': identity,
       });
-      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+      await state.room!.localParticipant?.publishData(
+        utf8.encode(payload),
+        reliability: Reliability.reliable,
+      );
       _handleDataChannelMessage(utf8.encode(payload), null, customName: name);
     }
     _chatCtrl.clear();
@@ -535,7 +544,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         'type': 'INVITE_TO_STAGE',
         'targetIdentity': userId,
       });
-      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+      await state.room!.localParticipant?.publishData(
+        utf8.encode(payload),
+        reliability: Reliability.reliable,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Sahneye davet gönderildi!'),
@@ -556,7 +568,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     });
 
     try {
-      await state.room!.localParticipant?.publishData(signal.codeUnits);
+      await state.room!.localParticipant?.publishData(
+        signal.codeUnits,
+        reliability: Reliability.reliable,
+      );
 
       // Persist state to DB
       await ApiClient().post('/api/ads/${widget.ad.id}/live', data: {
@@ -611,7 +626,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       if (res.statusCode == 200 || res.statusCode == 201) {
         final payload = jsonEncode({'type': 'AUCTION_RESET'});
         if (state.room != null) {
-          await state.room!.localParticipant?.publishData(utf8.encode(payload));
+          await state.room!.localParticipant?.publishData(
+            utf8.encode(payload),
+            reliability: Reliability.reliable,
+          );
         }
 
         setState(() {
@@ -664,7 +682,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         'type': 'COUNTDOWN',
         'value': value,
       });
-      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+      await state.room!.localParticipant?.publishData(
+        utf8.encode(payload),
+        reliability: Reliability.reliable,
+      );
     }
   }
 
@@ -694,7 +715,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     final state = ref.read(liveRoomProvider(widget.ad.id));
     if (state.room != null) {
       final payload = jsonEncode({'type': 'ROOM_CLOSED'});
-      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+      await state.room!.localParticipant?.publishData(
+        utf8.encode(payload),
+        reliability: Reliability.reliable,
+      );
     }
 
     await ApiClient()
@@ -731,7 +755,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       final state = ref.read(liveRoomProvider(widget.ad.id));
       if (state.room != null) {
         final payload = jsonEncode({'type': 'ROOM_CLOSED'});
-        await state.room!.localParticipant?.publishData(utf8.encode(payload));
+        await state.room!.localParticipant?.publishData(
+          utf8.encode(payload),
+          reliability: Reliability.reliable,
+        );
       }
 
       await ApiClient()
@@ -748,7 +775,10 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
         'type': 'KICK_FROM_STAGE',
         'targetIdentity': userId,
       });
-      await state.room!.localParticipant?.publishData(utf8.encode(payload));
+      await state.room!.localParticipant?.publishData(
+        utf8.encode(payload),
+        reliability: Reliability.reliable,
+      );
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
             content: Text('Davetli çıkarıldı.'),
@@ -936,26 +966,18 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                                                         Navigator.pop(
                                                             context); // Close sheet
                                                         
-                                                        // Inform participants via DataChannel
-                                                        final room = ref.read(liveRoomProvider(widget.ad.id)).room;
-                                                        
-                                                        final soldSignal = jsonEncode({
-                                                          'type': 'AUCTION_SOLD',
-                                                          'winnerId': bid.userId,
-                                                          'winnerName': bid.userLabel,
-                                                          'price': bid.amount,
-                                                        });
-                                                        room?.localParticipant?.publishData(utf8.encode(soldSignal));
-
-                                                        final endSignal = jsonEncode({'type': 'AUCTION_END'});
-                                                        room?.localParticipant?.publishData(utf8.encode(endSignal));
-
-                                                        final saleSignal = jsonEncode({
-                                                          'type': 'SALE_FINALIZED',
-                                                          'winnerName': bid.userLabel,
-                                                          'amount': bid.amount,
-                                                        });
-                                                        room?.localParticipant?.publishData(utf8.encode(saleSignal));
+                                                        room?.localParticipant?.publishData(
+                                                          utf8.encode(soldSignal),
+                                                          reliability: Reliability.reliable,
+                                                        );
+                                                        room?.localParticipant?.publishData(
+                                                          utf8.encode(endSignal),
+                                                          reliability: Reliability.reliable,
+                                                        );
+                                                        room?.localParticipant?.publishData(
+                                                          utf8.encode(saleSignal),
+                                                          reliability: Reliability.reliable,
+                                                        );
                                                       }
                                                       return;
                                                     }
@@ -1081,17 +1103,26 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                 'winnerName': latestBid.userLabel,
                 'price': latestBid.amount,
               });
-              room?.localParticipant?.publishData(utf8.encode(soldSignal));
+              room?.localParticipant?.publishData(
+                utf8.encode(soldSignal),
+                reliability: Reliability.reliable,
+              );
 
               final endSignal = jsonEncode({'type': 'AUCTION_END'});
-              room?.localParticipant?.publishData(utf8.encode(endSignal));
+              room?.localParticipant?.publishData(
+                utf8.encode(endSignal),
+                reliability: Reliability.reliable,
+              );
 
               final saleSignal = jsonEncode({
                 'type': 'SALE_FINALIZED',
                 'winnerName': latestBid.userLabel,
                 'amount': latestBid.amount,
               });
-              room?.localParticipant?.publishData(utf8.encode(saleSignal));
+              room?.localParticipant?.publishData(
+                utf8.encode(saleSignal),
+                reliability: Reliability.reliable,
+              );
             }
             return;
           }
