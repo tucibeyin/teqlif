@@ -3,17 +3,17 @@
 import { useState, useEffect } from "react";
 
 const T = {
-  glass:       "rgba(255,255,255,0.04)",
+  glass: "rgba(255,255,255,0.04)",
   glassBorder: "rgba(255,255,255,0.07)",
-  teal:        "#06C8E0",
-  tealDark:    "#059AAF",
-  gold:        "#F0B429",
-  green:       "#10D88A",
-  red:         "#F03E3E",
-  text:        "#EDF2F7",
-  muted:       "#3D526A",
-  mono:        "'DM Mono', monospace",
-  display:     "'Syne', system-ui, sans-serif",
+  teal: "#06C8E0",
+  tealDark: "#059AAF",
+  gold: "#F0B429",
+  green: "#10D88A",
+  red: "#F03E3E",
+  text: "#EDF2F7",
+  muted: "#3D526A",
+  mono: "'DM Mono', monospace",
+  display: "'Syne', system-ui, sans-serif",
 };
 
 const fmt = (val: number) => new Intl.NumberFormat("tr-TR").format(val) + " ₺";
@@ -121,7 +121,7 @@ export function BidPanel({
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{
             fontFamily: T.mono, fontSize: 18, fontWeight: 500,
-            color: currentHighest > 0 ? T.gold : T.muted,
+            color: currentHighest > 0 ? T.gold : T.text,
             letterSpacing: -0.5,
           }}>
             {currentHighest > 0
@@ -254,6 +254,7 @@ export function BidPanel({
                   const raw = e.target.value.replace(/\D/g, "");
                   setAmount(raw ? new Intl.NumberFormat("tr-TR").format(parseInt(raw, 10)) : "");
                 }}
+                autoFocus
                 className="tq-bid-input"
                 placeholder={`Min. ${fmt(nextMin)}`}
                 style={{
