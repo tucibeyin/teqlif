@@ -21,6 +21,7 @@ import { TopHUD } from "./components/TopHUD";
 import { StatsBar } from "./components/StatsBar";
 import { ChatOverlay } from "./components/ChatOverlay";
 import { HostControls } from "./components/HostControls";
+import { ParticipantsModal } from "./components/ParticipantsModal";
 import { FlyingEmojis, ReactionBar } from "./components/FlyingEmojis";
 import { BidPanel } from "./components/BidPanel";
 import { FinalizationOverlay, SoldOverlay, BroadcastEndedScreen } from "./components/Overlays";
@@ -41,6 +42,7 @@ export function CustomArenaLayout({
     const connectionState = useConnectionState();
 
     const [isRoomClosed, setIsRoomClosed] = useState(false);
+    const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
     const [countdown, setCountdown] = useState(0);
 
     // ── SYNC STATE ON JOIN ──────────────────────────────────────────────────
@@ -352,9 +354,17 @@ export function CustomArenaLayout({
                                 onEndBroadcast={() => handleEndBroadcast()}
                                 stageRequestCount={stage.requests.length}
                                 onStageRequestClick={handleStageRequestClick}
+                                onInviteClick={() => setIsParticipantsModalOpen(true)}
                                 loading={auction.loading}
                             />
                         )}
+
+                        <ParticipantsModal
+                            isOpen={isParticipantsModalOpen}
+                            onClose={() => setIsParticipantsModalOpen(false)}
+                            participants={participants.filter(p => p.identity !== session?.user?.id) as any}
+                            onInvite={handleInviteFromChat}
+                        />
 
                         {/* Reaction bar — sağ kenar, dikey */}
                         <div style={{

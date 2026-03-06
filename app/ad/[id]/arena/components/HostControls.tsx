@@ -5,13 +5,13 @@ import { Track } from "livekit-client";
 import type { AuctionStatus } from "../types";
 
 const T = {
-  glass:       "rgba(255,255,255,0.06)",
+  glass: "rgba(255,255,255,0.06)",
   glassBorder: "rgba(255,255,255,0.09)",
-  green:       "#10D88A",
-  red:         "#F03E3E",
-  gold:        "#F0B429",
-  text:        "#EDF2F7",
-  display:     "'Syne', system-ui, sans-serif",
+  green: "#10D88A",
+  red: "#F03E3E",
+  gold: "#F0B429",
+  text: "#EDF2F7",
+  display: "'Syne', system-ui, sans-serif",
 };
 
 // Base FAB style — 48x48 round cam-glass button
@@ -33,12 +33,13 @@ export interface HostControlsProps {
   onEndBroadcast: () => void;
   stageRequestCount: number;
   onStageRequestClick: () => void;
+  onInviteClick: () => void;
   loading: boolean;
 }
 
 export function HostControls({
   auctionStatus, onStartAuction, onStopAuction, onResetAuction,
-  onEndBroadcast, stageRequestCount, onStageRequestClick, loading,
+  onEndBroadcast, stageRequestCount, onStageRequestClick, onInviteClick, loading,
 }: HostControlsProps) {
   const room = useRoomContext();
   const isActive = auctionStatus === "ACTIVE";
@@ -90,6 +91,14 @@ export function HostControls({
           source={Track.Source.Camera}
           className="tq-fab-lk"
         />
+        <button
+          className="tq-fab"
+          onClick={onInviteClick}
+          style={FAB}
+          title="Sahneye Davet Et"
+        >
+          🎤
+        </button>
         <button
           className="tq-fab"
           onClick={handleCameraSwitch}
