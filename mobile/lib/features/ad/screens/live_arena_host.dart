@@ -36,6 +36,85 @@ class _StageRequest {
 
 class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     with TickerProviderStateMixin, WidgetsBindingObserver {
+  Future<void> _moderateUser(String identity, String name, String action) async {
+    try {
+      final res = await ApiClient().post(
+        Endpoints.moderation,
+        data: {
+          'roomId': widget.ad.id,
+          'identity': identity,
+          'action': action,
+        },
+      );
+
+      if (res.statusCode == 200) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+            content: Text(action == 'kick'
+                ? '$name odadan atıldı.'
+                : '$name susturuldu.'),
+            backgroundColor: Colors.green,
+          ));
+        }
+      } else {
+        throw Exception(res.data['error'] ?? 'İşlem başarısız.');
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text('Moderasyon hatası: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ));
+      }
+    }
+  }
+
+  void _showModerationMenu(String identity, String name) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A1A1A),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Text(
+                '$name Yönet',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ListTile(
+              leading: const Icon(Icons.mic_off, color: Colors.orangeAccent),
+              title: const Text('Sustur', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _moderateUser(identity, name, 'mute');
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.gavel, color: Colors.redAccent),
+              title:
+                  const Text('Odadan At', style: TextStyle(color: Colors.white)),
+              onTap: () {
+                Navigator.pop(context);
+                _moderateUser(identity, name, 'kick');
+              },
+            ),
+            const SizedBox(height: 8),
+          ],
+        ),
+      ),
+    );
+  }
+
   // Ephemeral Chat
   final List<_EphemeralMessage> _messages = [];
   final List<_LiveBid> _bids = [];
@@ -1703,11 +1782,23 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('${msg.senderName}:',
-                        style: const TextStyle(
-                            color: Colors.white70,
-                            fontWeight: FontWeight.w800,
-                            fontSize: 13)),
+                    GestureDetector(
+                      onTap: () => msg.senderId != null && msg.senderId != currentUserId && msg.senderName != 'Sistem'
+                          ? _showModerationMenu(msg.senderId!, msg.senderName)
+                          : null,
+                      child: Text('${msg.senderName}:',
+                          style: TextStyle(
+                              color: msg.senderId != null && msg.senderId != currentUserId && msg.senderName != 'Sistem' 
+                                  ? Colors.blueAccent 
+                                  : Colors.white70,
+                              fontWeight: FontWeight.w800,
+                              fontSize: 13,
+                              decoration: msg.senderId != null && msg.senderId != currentUserId && msg.senderName != 'Sistem'
+                                  ? TextDecoration.underline
+                                  : TextDecoration.none,
+                              decorationStyle: TextDecorationStyle.dotted,
+                          )),
+                    ),
                     const SizedBox(width: 6),
                     Expanded(
                         child: Text(msg.text,

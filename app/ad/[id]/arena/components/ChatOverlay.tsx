@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { ArenaMessage } from "../types";
 import { censorProfanity } from "@/lib/profanity";
 
@@ -25,13 +25,43 @@ interface ChatOverlayProps {
   onInputChange: (val: string) => void;
   onSend: () => void;
   currentUserId?: string;
+  isOwner?: boolean;
+  adId?: string;
   onInviteToStage?: (userId: string) => void;
 }
 
 export function ChatOverlay({
-  messages, inputValue, onInputChange, onSend, currentUserId, onInviteToStage,
+  messages, inputValue, onInputChange, onSend, currentUserId, isOwner, adId, onInviteToStage,
 }: ChatOverlayProps) {
   const listRef = useRef<HTMLDivElement>(null);
+  const [selectedUser, setSelectedUser] = useState<{ id: string, name: string } | null>(null);
+  const [isModerating, setIsModerating] = useState(false);
+
+  const handleModerate = async (action: 'kick' | 'mute') => {
+    if (!selectedUser || !adId) return;
+
+    setIsModerating(true);
+    try {
+      const res = await fetch('/api/livekit/moderate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ roomId: adId, identity: selectedUser.id, action }),
+      });
+
+      const data = await res.json();
+      if (res.ok) {
+        alert(action === 'kick' ? `${selectedUser.name} odadan atıldı.` : `${selectedUser.name} susturuldu.`);
+        setSelectedUser(null);
+      } else {
+        alert("Hata: " + (data.error || "İşlem başarısız."));
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Sunucuya bağlanılamadı.");
+    } finally {
+      setIsModerating(false);
+    }
+  };
 
   useEffect(() => {
     if (listRef.current) listRef.current.scrollTop = listRef.current.scrollHeight;
@@ -111,6 +141,7 @@ export function ChatOverlay({
               const avatarColor = AVATAR_COLORS[msg.sender.charCodeAt(0) % AVATAR_COLORS.length];
               const isMe = msg.senderId === currentUserId;
               const isSystem = msg.sender === "Sistem";
+              const canModerate = isOwner && !isMe && !isSystem && msg.senderId;
 
               return (
                 <div
@@ -131,15 +162,21 @@ export function ChatOverlay({
                   }}
                 >
                   {/* Kullanıcı adı */}
-                  <span style={{
-                    fontFamily: T.display,
-                    fontWeight: 700,
-                    fontSize: 12,
-                    color: isSystem ? T.teal : (isMe ? T.teal : avatarColor),
-                    whiteSpace: "nowrap",
-                    flexShrink: 0,
-                    letterSpacing: 0.2,
-                  }}>
+                  <span
+                    onClick={() => canModerate ? setSelectedUser({ id: msg.senderId!, name: msg.sender }) : null}
+                    style={{
+                      fontFamily: T.display,
+                      fontWeight: 700,
+                      fontSize: 12,
+                      color: isSystem ? T.teal : (isMe ? T.teal : avatarColor),
+                      whiteSpace: "nowrap",
+                      flexShrink: 0,
+                      letterSpacing: 0.2,
+                      cursor: canModerate ? "pointer" : "default",
+                      textDecoration: canModerate ? "underline dotted rgba(255,255,255,0.2)" : "none",
+                    }}
+                    title={canModerate ? "Moderasyon Seçenekleri" : undefined}
+                  >
                     {isSystem ? "⚡ Sistem" : (isMe ? "Sen" : msg.sender)}
                   </span>
 
@@ -186,6 +223,49 @@ export function ChatOverlay({
                     >
                       🎤
                     </button>
+                  )}
+
+                  {/* Moderation Menu (Floating for selected user) */}
+                  {selectedUser && selectedUser.id === msg.senderId && (
+                    <div style={{
+                      position: "absolute",
+                      left: 10,
+                      top: 24,
+                      zIndex: 1000,
+                      background: "#1A202C",
+                      border: "1px solid rgba(255,255,255,0.1)",
+                      borderRadius: 8,
+                      boxShadow: "0 10px 25px rgba(0,0,0,0.5)",
+                      padding: 6,
+                      display: "flex",
+                      flexDirection: "column",
+                      gap: 4,
+                      minWidth: 120,
+                    }}>
+                      <div style={{ fontSize: 10, color: T.muted, padding: "2px 6px", borderBottom: "1px solid rgba(255,255,255,0.05)", marginBottom: 2 }}>
+                        {selectedUser.name} Yönet
+                      </div>
+                      <button
+                        disabled={isModerating}
+                        onClick={() => handleModerate('mute')}
+                        style={{ background: "transparent", border: "none", color: "#F6E05E", fontSize: 12, padding: "6px", textAlign: "left", cursor: "pointer", borderRadius: 4 }}
+                      >
+                        🔇 Sustur
+                      </button>
+                      <button
+                        disabled={isModerating}
+                        onClick={() => handleModerate('kick')}
+                        style={{ background: "transparent", border: "none", color: "#F56565", fontSize: 12, padding: "6px", textAlign: "left", cursor: "pointer", borderRadius: 4 }}
+                      >
+                        ⛔ Odadan At
+                      </button>
+                      <button
+                        onClick={() => setSelectedUser(null)}
+                        style={{ background: "transparent", border: "none", color: T.muted, fontSize: 11, padding: "4px", textAlign: "center", cursor: "pointer", marginTop: 2 }}
+                      >
+                        İptal
+                      </button>
+                    </div>
                   )}
                 </div>
               );

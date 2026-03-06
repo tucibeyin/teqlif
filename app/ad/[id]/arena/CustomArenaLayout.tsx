@@ -427,6 +427,8 @@ export function CustomArenaLayout({
                             onInputChange={chat.setInputValue}
                             onSend={chat.sendMessage}
                             currentUserId={session?.user?.id}
+                            isOwner={isOwner}
+                            adId={adId}
                             onInviteToStage={isOwner ? handleInviteFromChat : undefined}
                         />
                     </div>

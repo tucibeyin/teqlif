@@ -57,4 +57,7 @@ class Endpoints {
 
   // Upload
   static const upload = '/api/upload';
+
+  // LiveKit Moderation
+  static const moderation = '/api/livekit/moderate';
 }
