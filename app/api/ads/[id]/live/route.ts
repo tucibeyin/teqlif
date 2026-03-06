@@ -32,6 +32,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
             updateData.isAuctionActive = false;
         }
 
+        // 🔄 Session Start Protection: Force auction reset when stream starts
+        if (isLive === true && !ad.isLive) {
+            if (isAuctionActive !== true) {
+                updateData.isAuctionActive = false;
+                await closeAuction(id);
+            }
+        }
+
         // If restarting an auction, reset status and archive old bids
         if (isAuctionActive === true && ad.isAuctionActive === false) {
             updateData.status = 'ACTIVE';
