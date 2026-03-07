@@ -3,12 +3,11 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/models/ad.dart';
 import '../../controllers/live_arena_host_controller.dart';
 
 /// Bottom row: Reset, Start/Stop, Countdown timer, Chat input.
 class HostAuctionInput extends ConsumerWidget {
-  final AdModel ad;
+  final String providerKey;
   final TextEditingController chatCtrl;
   final FocusNode chatFocus;
   final Animation<double> pulseAnimation;
@@ -17,7 +16,7 @@ class HostAuctionInput extends ConsumerWidget {
 
   const HostAuctionInput({
     super.key,
-    required this.ad,
+    required this.providerKey,
     required this.chatCtrl,
     required this.chatFocus,
     required this.pulseAnimation,
@@ -27,8 +26,8 @@ class HostAuctionInput extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(hostControllerProvider(ad.id));
-    final controller = ref.read(hostControllerProvider(ad.id).notifier);
+    final state = ref.watch(hostControllerProvider(providerKey));
+    final controller = ref.read(hostControllerProvider(providerKey).notifier);
 
     return Container(
       padding: const EdgeInsets.all(16),

@@ -3,14 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:dio/dio.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/api/api_client.dart';
 import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../../../core/constants/categories.dart';
-import '../../ad/screens/live_arena_host.dart';
 import '../widgets/live_stories.dart';
 
 // ── Static data ────────────────────────────────────────────────────────────
@@ -519,70 +517,30 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     onPressed: isLoading
                         ? null
                         : () async {
-                            final title = titleCtrl.text.trim();
-                            if (title.isEmpty) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content:
-                                        Text('Lütfen yayın başlığı girin.')),
-                              );
-                              return;
-                            }
-
                             setModalState(() => isLoading = true);
-
                             try {
-                              String? uploadedImageUrl;
-
-                              // 1. Upload the image if selected
-                              if (selectedImage != null) {
-                                final form = FormData.fromMap({
-                                  'file': await MultipartFile.fromFile(
-                                    selectedImage!.path,
-                                    filename: selectedImage!.path.split('/').last,
-                                  ),
-                                });
-                                final uploadRes = await ApiClient().uploadFile('/api/upload', form);
-                                uploadedImageUrl = uploadRes.data['url'] as String;
+                              // Request permissions first
+                              final cameraStatus = await Permission.camera.request();
+                              final micStatus = await Permission.microphone.request();
+                              if (cameraStatus != PermissionStatus.granted ||
+                                  micStatus != PermissionStatus.granted) {
+                                if (mounted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(content: Text('Kamera ve Mikrofon izni olmadan canlı yayın başlatılamaz!')),
+                                  );
+                                }
+                                return;
                               }
 
-                              final price =
-                                  int.tryParse(priceCtrl.text.trim()) ?? 1;
                               final res = await ApiClient().post(
                                 '/api/livekit/quick-start',
-                                data: {
-                                  'title': title,
-                                  'startingBid': price,
-                                  if (uploadedImageUrl != null) 'images': [uploadedImageUrl],
-                                },
                               );
 
-                              if (res.statusCode == 201 && res.data != null) {
-                                final adId = res.data['id'];
-                                if (mounted) {
+                              if (res.statusCode == 200 && res.data != null) {
+                                final hostId = res.data['hostId']?.toString();
+                                if (hostId != null && mounted) {
                                   Navigator.pop(ctx);
-                                  
-                                  final ad = AdModel.fromJson(res.data);
-
-                                  // Request permissions before jumping to Arena
-                                  final cameraStatus = await Permission.camera.request();
-                                  final micStatus = await Permission.microphone.request();
-
-                                  if (cameraStatus != PermissionStatus.granted || micStatus != PermissionStatus.granted) {
-                                    if (mounted) {
-                                      ScaffoldMessenger.of(context).showSnackBar(
-                                        const SnackBar(content: Text('Kamera ve Mikrofon izni olmadan canlı yayın başlatılamaz!')),
-                                      );
-                                      context.push('/ad/${ad.id}');
-                                    }
-                                    return;
-                                  }
-
-                                  // Direct navigation to Host Arena
-                                  context.push('/live-host/${ad.id}', extra: ad);
-
-                                  // Invalidate providers to show the new live ad
-                                  ref.invalidate(adsProvider);
+                                  context.push('/live/$hostId');
                                 }
                               } else {
                                 throw Exception('Sunucu hatası');
@@ -590,9 +548,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                             } catch (e) {
                               if (mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content:
-                                          Text('Yayına başlanamadı: $e')),
+                                  SnackBar(content: Text('Yayına başlanamadı: $e')),
                                 );
                               }
                             } finally {

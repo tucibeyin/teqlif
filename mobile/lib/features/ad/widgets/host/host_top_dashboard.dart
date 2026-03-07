@@ -11,7 +11,8 @@ import '../../controllers/live_arena_host_controller.dart';
 /// Top HUD + auction stats bar — portrait and landscape variants.
 class HostTopDashboard extends ConsumerWidget {
   final bool isLandscape;
-  final AdModel ad;
+  final String providerKey;
+  final AdModel? ad;
   final VoidCallback onEndStream;
   final VoidCallback onCancelTopBid;
   final VoidCallback onAcceptBid;
@@ -19,7 +20,8 @@ class HostTopDashboard extends ConsumerWidget {
   const HostTopDashboard({
     super.key,
     required this.isLandscape,
-    required this.ad,
+    required this.providerKey,
+    this.ad,
     required this.onEndStream,
     required this.onCancelTopBid,
     required this.onAcceptBid,
@@ -27,8 +29,8 @@ class HostTopDashboard extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(hostControllerProvider(ad.id));
-    final controller = ref.read(hostControllerProvider(ad.id).notifier);
+    final state = ref.watch(hostControllerProvider(providerKey));
+    final controller = ref.read(hostControllerProvider(providerKey).notifier);
 
     return Column(
       children: [
@@ -80,7 +82,7 @@ class HostTopDashboard extends ConsumerWidget {
                           color: Colors.white, size: 12),
                       const SizedBox(width: 6),
                       Text(
-                        '${ref.read(liveRoomProvider(ad.id)).viewerCount}',
+                        '${ref.read(liveRoomProvider(providerKey)).viewerCount}',
                         style: const TextStyle(
                             color: Colors.white,
                             fontSize: 11,
@@ -178,7 +180,7 @@ class HostTopDashboard extends ConsumerWidget {
 
 class _PortraitStatsInner extends StatelessWidget {
   final HostState state;
-  final AdModel ad;
+  final AdModel? ad;
   final void Function(String userId) onInvite;
 
   const _PortraitStatsInner(
@@ -294,7 +296,7 @@ class _PortraitStatsInner extends StatelessWidget {
             ],
           ),
         ),
-        if (ad.buyItNowPrice != null) ...[
+        if (ad?.buyItNowPrice != null) ...[
           Container(
               width: 1,
               height: 40,
@@ -310,7 +312,7 @@ class _PortraitStatsInner extends StatelessWidget {
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1)),
               const SizedBox(height: 2),
-              Text('₺${_formatPrice(ad.buyItNowPrice!)}',
+              Text('₺${_formatPrice(ad!.buyItNowPrice!)}',
                   style: const TextStyle(
                       color: Color(0xFFFFD700),
                       fontSize: 18,
@@ -327,7 +329,7 @@ class _PortraitStatsInner extends StatelessWidget {
 
 class _LandscapeStatsInner extends StatelessWidget {
   final HostState state;
-  final AdModel ad;
+  final AdModel? ad;
   final void Function(String userId) onInvite;
 
   const _LandscapeStatsInner(
@@ -419,7 +421,7 @@ class _LandscapeStatsInner extends StatelessWidget {
             ],
           ),
         ),
-        if (ad.buyItNowPrice != null) ...[
+        if (ad?.buyItNowPrice != null) ...[
           Container(
               width: 1,
               height: 30,
@@ -435,7 +437,7 @@ class _LandscapeStatsInner extends StatelessWidget {
                       fontSize: 8,
                       fontWeight: FontWeight.w800,
                       letterSpacing: 1)),
-              Text('₺${_formatPrice(ad.buyItNowPrice!)}',
+              Text('₺${_formatPrice(ad!.buyItNowPrice!)}',
                   style: const TextStyle(
                       color: Color(0xFFFFD700),
                       fontSize: 16,

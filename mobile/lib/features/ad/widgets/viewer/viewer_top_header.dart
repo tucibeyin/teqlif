@@ -11,19 +11,21 @@ import '../../providers/ad_detail_provider.dart';
 
 class ViewerTopHeader extends ConsumerWidget {
   final AdModel ad;
+  final String? providerKey;
 
-  const ViewerTopHeader({super.key, required this.ad});
+  const ViewerTopHeader({super.key, required this.ad, this.providerKey});
 
   String _formatPrice(double p) =>
       '₺${p.toStringAsFixed(0).replaceAllMapped(RegExp(r'(\d{1,3})(?=(\d{3})+(?!\d))'), (m) => '${m[1]}.')}';
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewerState = ref.watch(viewerControllerProvider(ad.id));
+    final _key = providerKey ?? ad.id;
+    final viewerState = ref.watch(viewerControllerProvider(_key));
     final adAsync = ref.watch(adDetailProvider(ad.id));
     final currentAd = adAsync.value ?? ad;
     final viewerCount =
-        ref.watch(liveRoomProvider(ad.id).select((s) => s.viewerCount));
+        ref.watch(liveRoomProvider(_key).select((s) => s.viewerCount));
 
     final displayPrice = viewerState.isAuctionActive
         ? (viewerState.liveHighestBid ??
@@ -140,7 +142,7 @@ class ViewerTopHeader extends ConsumerWidget {
                           color: Colors.white, size: 28),
                       onPressed: () {
                         ref
-                            .read(liveRoomProvider(ad.id).notifier)
+                            .read(liveRoomProvider(_key).notifier)
                             .disconnect();
                         if (context.mounted) context.pop();
                       },

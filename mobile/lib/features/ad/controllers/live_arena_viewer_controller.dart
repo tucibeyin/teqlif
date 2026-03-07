@@ -10,7 +10,6 @@ import 'package:intl/intl.dart';
 import 'package:livekit_client/livekit_client.dart';
 
 import '../../../core/api/api_client.dart';
-import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../../../core/providers/auth_provider.dart';
 import '../../../core/providers/live_room_provider.dart';
@@ -18,7 +17,6 @@ import '../../../core/utils/profanity_filter.dart';
 import '../models/live_bid.dart';
 import '../providers/ad_detail_provider.dart';
 import '../widgets/floating_reactions.dart';
-import '../../dashboard/screens/dashboard_screen.dart';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // ViewerState — Immutable snapshot of everything the viewer screen needs
@@ -264,8 +262,10 @@ class ViewerController extends StateNotifier<ViewerState> {
   // ── Sync (Late Joiner / Reconnection) ──────────────────────────────────────
 
   Future<void> _syncAuctionState() async {
-    // Kanal modu: hostId (sellerId) varsa önce kanal sync'ini dene
-    final hostId = ad?.userId;
+    // Kanal modu: adId 'channel:' ile başlıyorsa doğrudan hostId'yi çıkar
+    final hostId = adId.startsWith('channel:')
+        ? adId.replaceFirst('channel:', '')
+        : ad?.userId;
     if (hostId != null) {
       try {
         final res = await ApiClient().get(
@@ -516,7 +516,17 @@ class ViewerController extends StateNotifier<ViewerState> {
     state = state.copyWith(bidLoading: true);
     await Haptics.vibrate(HapticsType.medium);
     // Kanal modunda aktif ürünün adId'sini kullan; yoksa klasik adId
-    final effectiveAdId = state.activeAdId ?? adId;
+    final effectiveAdId = state.activeAdId ??
+        (adId.startsWith('channel:') ? null : adId);
+    if (effectiveAdId == null) {
+      if (!_disposed) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(content: Text('Henüz aktif ürün yok.')),
+        );
+        state = state.copyWith(bidLoading: false);
+      }
+      return;
+    }
     final hostId = ad?.userId;
     try {
       await ApiClient().post('/api/livekit/bid', data: {

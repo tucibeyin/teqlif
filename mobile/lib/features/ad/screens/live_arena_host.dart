@@ -26,8 +26,12 @@ import '../widgets/host/host_top_dashboard.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class LiveArenaHost extends ConsumerStatefulWidget {
-  final AdModel ad;
-  const LiveArenaHost({super.key, required this.ad});
+  final AdModel? ad;
+  final String? channelHostId;
+
+  const LiveArenaHost({super.key, this.ad, this.channelHostId})
+      : assert(ad != null || channelHostId != null,
+            'Either ad or channelHostId must be provided');
 
   @override
   ConsumerState<LiveArenaHost> createState() => _LiveArenaHostState();
@@ -37,6 +41,11 @@ class LiveArenaHost extends ConsumerStatefulWidget {
 
 class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     with TickerProviderStateMixin, WidgetsBindingObserver {
+  // ── Provider / room key ───────────────────────────────────────────────────
+  String get _providerKey => widget.channelHostId != null
+      ? 'channel:${widget.channelHostId}'
+      : widget.ad!.id;
+
   // ── Saf UI state (TickerProvider / drag) ──────────────────────────────────
   final TextEditingController _chatCtrl = TextEditingController();
   final FocusNode _chatFocus = FocusNode();
@@ -65,7 +74,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
     // Wire animation callbacks into the controller
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctrl =
-          ref.read(hostControllerProvider(widget.ad.id).notifier);
+          ref.read(hostControllerProvider(_providerKey).notifier);
       ctrl.onPlayConfetti = () {
         if (mounted) _confettiController.play();
       };
@@ -87,13 +96,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
 
       if (cameraStatus.isGranted && micStatus.isGranted) {
         final notifier =
-            ref.read(liveRoomProvider(widget.ad.id).notifier);
-        await notifier.connect(true, hostId: widget.ad.userId);
+            ref.read(liveRoomProvider(_providerKey).notifier);
+        await notifier.connect(true, hostId: widget.channelHostId ?? widget.ad?.userId);
 
-        final room = ref.read(liveRoomProvider(widget.ad.id)).room;
+        final room = ref.read(liveRoomProvider(_providerKey)).room;
         if (room != null) {
           final ctrl =
-              ref.read(hostControllerProvider(widget.ad.id).notifier);
+              ref.read(hostControllerProvider(_providerKey).notifier);
           
           // PHASE 21: Sync initial state from Redis before handling messages
           await ctrl.syncInitialState();
@@ -113,15 +122,17 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
             }
           });
 
-          // Signal backend that we are LIVE
-          try {
-            await ApiClient().post('/api/ads/${widget.ad.id}/live',
-                data: {
-                  'isLive': true,
-                  'liveKitRoomId': widget.ad.id,
-                });
-          } catch (e) {
-            debugPrint('Failed to set isLive to true: $e');
+          // Signal backend that we are LIVE (skip for pure channel mode)
+          if (widget.channelHostId == null && widget.ad != null) {
+            try {
+              await ApiClient().post('/api/ads/${widget.ad!.id}/live',
+                  data: {
+                    'isLive': true,
+                    'liveKitRoomId': widget.ad!.id,
+                  });
+            } catch (e) {
+              debugPrint('Failed to set isLive to true: $e');
+            }
           }
         }
       } else {
@@ -139,12 +150,12 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
 
   @override
   void deactivate() {
-    final adId = widget.ad.id;
+    final key = _providerKey;
     final container = ProviderScope.containerOf(context, listen: false);
     Future.microtask(() {
       try {
-        container.read(liveRoomProvider(adId).notifier).disconnect();
-        container.invalidate(adDetailProvider(adId));
+        container.read(liveRoomProvider(key).notifier).disconnect();
+        container.invalidate(adDetailProvider(key));
       } catch (_) {}
     });
     super.deactivate();
@@ -166,7 +177,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (!mounted) return;
     if (state == AppLifecycleState.paused) {
-      ref.read(liveRoomProvider(widget.ad.id).notifier).disconnect();
+      ref.read(liveRoomProvider(_providerKey).notifier).disconnect();
     }
   }
 
@@ -175,7 +186,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
   @override
   Widget build(BuildContext context) {
     // Auto-pop when room disconnects
-    ref.listen(liveRoomProvider(widget.ad.id), (previous, next) {
+    ref.listen(liveRoomProvider(_providerKey), (previous, next) {
       if (previous?.room != null &&
           next.room == null &&
           !next.isConnecting) {
@@ -183,11 +194,11 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       }
     });
 
-    final roomState = ref.watch(liveRoomProvider(widget.ad.id));
+    final roomState = ref.watch(liveRoomProvider(_providerKey));
     final room = roomState.room;
-    final hostState = ref.watch(hostControllerProvider(widget.ad.id));
+    final hostState = ref.watch(hostControllerProvider(_providerKey));
     final controller =
-        ref.read(hostControllerProvider(widget.ad.id).notifier);
+        ref.read(hostControllerProvider(_providerKey).notifier);
 
     // Extract tracks
     VideoTrack? localVideoTrack;
@@ -246,8 +257,8 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
             HostSoldOverlay(
               soldWinnerName: hostState.soldWinnerName,
               soldFinalPrice: hostState.soldFinalPrice,
-              isQuickLive: widget.ad.description ==
-                  'Hızlı Canlı Yayın (Ghost Ad)',
+              isQuickLive: widget.channelHostId != null ||
+                  widget.ad?.description == 'Hızlı Canlı Yayın (Ghost Ad)',
               confettiController: _confettiController,
               onClose: controller.hideSoldOverlay,
               onResetAuction: () => controller.resetAuction(context),
@@ -292,6 +303,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
               padding: const EdgeInsets.symmetric(horizontal: 16),
               child: HostTopDashboard(
                 isLandscape: false,
+                providerKey: _providerKey,
                 ad: widget.ad,
                 onEndStream: () => controller.endLiveStream(context),
                 onCancelTopBid: hostState.bids.isNotEmpty
@@ -363,7 +375,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                       children: [
                         HostControlsWidget(
                           room: room,
-                          ad: widget.ad,
+                          providerKey: _providerKey,
                           onShowBidsSheet: _showBidsSheet,
                         ),
                         const SizedBox(height: 12),
@@ -375,7 +387,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                 ],
               ),
               HostAuctionInput(
-                ad: widget.ad,
+                providerKey: _providerKey,
                 chatCtrl: _chatCtrl,
                 chatFocus: _chatFocus,
                 pulseAnimation: _pulseController,
@@ -431,6 +443,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                   padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
                   child: HostTopDashboard(
                     isLandscape: true,
+                    providerKey: _providerKey,
                     ad: widget.ad,
                     onEndStream: () =>
                         controller.endLiveStream(context),
@@ -475,7 +488,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                             children: [
                               HostControlsWidget(
                                 room: room,
-                                ad: widget.ad,
+                                providerKey: _providerKey,
                                 onShowBidsSheet: _showBidsSheet,
                               ),
                               const SizedBox(height: 12),
@@ -506,7 +519,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
                   ),
                 ),
                 HostAuctionInput(
-                  ad: widget.ad,
+                  providerKey: _providerKey,
                   chatCtrl: _chatCtrl,
                   chatFocus: _chatFocus,
                   pulseAnimation: _pulseController,
@@ -525,13 +538,13 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
 
   void _showBidsSheet() {
     final controller =
-        ref.read(hostControllerProvider(widget.ad.id).notifier);
+        ref.read(hostControllerProvider(_providerKey).notifier);
     controller.readBids();
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
-      builder: (_) => HostBidsSheet(ad: widget.ad),
+      builder: (_) => HostBidsSheet(providerKey: _providerKey),
     );
   }
 

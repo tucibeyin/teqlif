@@ -3,19 +3,18 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:livekit_client/livekit_client.dart';
 
-import '../../../../core/models/ad.dart';
 import '../../controllers/live_arena_host_controller.dart';
 
 /// Circular FAB column: stage requests, bids, camera flip, camera toggle, mic toggle.
 class HostControlsWidget extends ConsumerWidget {
   final Room? room;
-  final AdModel ad;
+  final String providerKey;
   final VoidCallback onShowBidsSheet;
 
   const HostControlsWidget({
     super.key,
     required this.room,
-    required this.ad,
+    required this.providerKey,
     required this.onShowBidsSheet,
   });
 
@@ -70,8 +69,8 @@ class HostControlsWidget extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(hostControllerProvider(ad.id));
-    final controller = ref.read(hostControllerProvider(ad.id).notifier);
+    final state = ref.watch(hostControllerProvider(providerKey));
+    final controller = ref.read(hostControllerProvider(providerKey).notifier);
 
     return Column(
       children: [

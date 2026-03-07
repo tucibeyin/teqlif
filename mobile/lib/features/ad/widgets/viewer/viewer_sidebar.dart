@@ -11,18 +11,20 @@ class ViewerSidebar extends ConsumerWidget {
   final AdModel ad;
   final bool isPortrait;
   final VoidCallback onShowAdDetails;
+  final String? providerKey;
 
   const ViewerSidebar({
     super.key,
     required this.ad,
     required this.isPortrait,
     required this.onShowAdDetails,
+    this.providerKey,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewerState = ref.watch(viewerControllerProvider(ad.id));
-    final controller = ref.read(viewerControllerProvider(ad.id).notifier);
+    final viewerState = ref.watch(viewerControllerProvider(providerKey ?? ad.id));
+    final controller = ref.read(viewerControllerProvider(providerKey ?? ad.id).notifier);
 
     return Positioned(
       right: 16,

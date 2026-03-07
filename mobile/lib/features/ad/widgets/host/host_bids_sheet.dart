@@ -1,15 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/models/ad.dart';
 import '../../controllers/live_arena_host_controller.dart';
 import '../../models/live_bid.dart';
 
 /// Modal bottom sheet displaying incoming bids with accept / cancel actions.
 class HostBidsSheet extends ConsumerWidget {
-  final AdModel ad;
+  final String providerKey;
 
-  const HostBidsSheet({super.key, required this.ad});
+  const HostBidsSheet({super.key, required this.providerKey});
 
   String _formatPrice(double amount) {
     // Simple Turkish format (comma as thousands separator)
@@ -19,8 +18,8 @@ class HostBidsSheet extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final state = ref.watch(hostControllerProvider(ad.id));
-    final controller = ref.read(hostControllerProvider(ad.id).notifier);
+    final state = ref.watch(hostControllerProvider(providerKey));
+    final controller = ref.read(hostControllerProvider(providerKey).notifier);
 
     return DraggableScrollableSheet(
       initialChildSize: 0.6,
@@ -64,7 +63,6 @@ class HostBidsSheet extends ConsumerWidget {
                         final bid = state.bids[i];
                         return _BidListItem(
                           bid: bid,
-                          ad: ad,
                           formatPrice: _formatPrice,
                           onAccept: () => controller.acceptBidFromSheet(
                               bid, context, () => Navigator.of(context).pop()),
@@ -85,14 +83,12 @@ class HostBidsSheet extends ConsumerWidget {
 
 class _BidListItem extends StatelessWidget {
   final LiveBid bid;
-  final AdModel ad;
   final String Function(double) formatPrice;
   final VoidCallback onAccept;
   final VoidCallback? onInvite;
 
   const _BidListItem({
     required this.bid,
-    required this.ad,
     required this.formatPrice,
     required this.onAccept,
     required this.onInvite,

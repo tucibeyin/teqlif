@@ -174,11 +174,11 @@ class HostController extends StateNotifier<HostState> {
 
   Room? get _room => ref.read(liveRoomProvider(adId)).room;
 
-  AdModel get ad {
-    final liveAd = ref.read(adDetailProvider(adId)).value;
-    if (liveAd != null) return liveAd;
-    throw Exception('Ad not found in provider for $adId');
-  }
+  AdModel? get ad => ref.read(adDetailProvider(adId)).value;
+
+  /// Returns the hostId for channel mode (adId starts with 'channel:')
+  String? get _channelHostId =>
+      adId.startsWith('channel:') ? adId.replaceFirst('channel:', '') : null;
 
   // Expose room for widgets that need local participant info (e.g. chat input)
   Room? get currentRoom => _room;
@@ -275,8 +275,9 @@ class HostController extends StateNotifier<HostState> {
 
   Future<void> syncInitialState() async {
     // Kanal modu: host kendi kanalını senkronize eder
-    final hostId = ad.userId;
+    final hostId = _channelHostId ?? ad?.userId;
     try {
+      if (hostId == null) throw Exception('No hostId for channel sync');
       final response = await ApiClient().get(
         '/api/livekit/channel/sync',
         params: {'hostId': hostId},
@@ -511,9 +512,7 @@ class HostController extends StateNotifier<HostState> {
             bidderName = state.liveHighestBidderName;
           } else {
             // Fallback to latest fetched ad price/starting bid
-            highestBid = ad.highestBidAmount ??
-                ad.startingBid ??
-                ad.price;
+            highestBid = ad?.highestBidAmount ?? ad?.startingBid ?? ad?.price ?? 0;
             bidderName = null;
           }
 
@@ -747,11 +746,12 @@ class HostController extends StateNotifier<HostState> {
     state = state.copyWith(isFinalizing: true);
     final currentAdId = state.activeAdId ?? adId;
     try {
-      final isQuickLive = ad.description == 'Hızlı Canlı Yayın (Ghost Ad)';
+      final isQuickLive = _channelHostId != null || (ad?.description == 'Hızlı Canlı Yayın (Ghost Ad)');
+      final channelHostId = _channelHostId ?? ad?.userId;
       final res = await ApiClient().post('/api/livekit/finalize', data: {
         'adId': currentAdId,
         'isQuickLive': isQuickLive,
-        'channelHostId': ad.userId,
+        if (channelHostId != null) 'channelHostId': channelHostId,
       });
       if (res.statusCode != 200 && res.statusCode != 201) {
         final errMsg = res.data['error']?.toString() ?? 'Satış tamamlanamadı.';
@@ -948,12 +948,14 @@ class HostController extends StateNotifier<HostState> {
           } catch (_) {}
         }
 
-        // Tell backend we're done (Best effort)
-        try {
-          await ApiClient()
-              .post('/api/ads/$adId/live', data: {'isLive': false})
-              .timeout(const Duration(seconds: 2));
-        } catch (_) {}
+        // Tell backend we're done (Best effort) — skip for channel mode
+        if (_channelHostId == null) {
+          try {
+            await ApiClient()
+                .post('/api/ads/$adId/live', data: {'isLive': false})
+                .timeout(const Duration(seconds: 2));
+          } catch (_) {}
+        }
       } finally {
         // Essential Cleanup: Disconnect RTC
         await ref.read(liveRoomProvider(adId).notifier).disconnect();
@@ -980,12 +982,14 @@ class HostController extends StateNotifier<HostState> {
         } catch (_) {}
       }
 
-      // Tell backend we're done (Best effort)
-      try {
-        await ApiClient()
-            .post('/api/ads/$adId/live', data: {'isLive': false})
-            .timeout(const Duration(seconds: 2));
-      } catch (_) {}
+      // Tell backend we're done (Best effort) — skip for channel mode
+      if (_channelHostId == null) {
+        try {
+          await ApiClient()
+              .post('/api/ads/$adId/live', data: {'isLive': false})
+              .timeout(const Duration(seconds: 2));
+        } catch (_) {}
+      }
     } finally {
       // Essential Cleanup: Disconnect RTC
       await ref.read(liveRoomProvider(adId).notifier).disconnect();

@@ -160,6 +160,27 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) =>
             LiveArenaViewer(ad: state.extra as AdModel),
       ),
+      GoRoute(
+        path: '/live/:hostId',
+        builder: (context, state) =>
+            LiveChannelGate(hostId: state.pathParameters['hostId']!),
+      ),
     ],
   );
 });
+
+// ── LiveChannelGate ───────────────────────────────────────────────────────────
+// Determines whether the current user is the host or a viewer for a channel.
+class LiveChannelGate extends ConsumerWidget {
+  final String hostId;
+  const LiveChannelGate({super.key, required this.hostId});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final currentUserId = ref.watch(authProvider).user?.id;
+    if (currentUserId == hostId) {
+      return LiveArenaHost(channelHostId: hostId);
+    }
+    return LiveArenaViewer(channelHostId: hostId);
+  }
+}

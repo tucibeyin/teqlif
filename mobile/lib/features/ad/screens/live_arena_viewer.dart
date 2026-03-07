@@ -12,7 +12,6 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../../../core/models/ad.dart';
 import '../../../core/providers/live_room_provider.dart';
-import '../../../core/utils/profanity_filter.dart';
 import '../controllers/live_arena_viewer_controller.dart';
 import '../providers/ad_detail_provider.dart';
 import '../widgets/floating_reactions.dart';
@@ -26,8 +25,12 @@ import '../widgets/viewer/viewer_top_header.dart';
 // ─────────────────────────────────────────────────────────────────────────────
 
 class LiveArenaViewer extends ConsumerStatefulWidget {
-  final AdModel ad;
-  const LiveArenaViewer({super.key, required this.ad});
+  final AdModel? ad;
+  final String? channelHostId;
+
+  const LiveArenaViewer({super.key, this.ad, this.channelHostId})
+      : assert(ad != null || channelHostId != null,
+            'Either ad or channelHostId must be provided');
 
   @override
   ConsumerState<LiveArenaViewer> createState() => _LiveArenaViewerState();
@@ -37,6 +40,23 @@ class LiveArenaViewer extends ConsumerStatefulWidget {
 
 class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     with TickerProviderStateMixin, WidgetsBindingObserver {
+  // ── Provider / room key ───────────────────────────────────────────────────
+  String get _providerKey => widget.channelHostId != null
+      ? 'channel:${widget.channelHostId}'
+      : widget.ad!.id;
+
+  static final _placeholderAd = AdModel(
+    id: '',
+    title: 'Kanal Yayını',
+    description: '',
+    price: 0,
+    status: 'active',
+    images: const [],
+    views: 0,
+    createdAt: DateTime(2024),
+    userId: '',
+  );
+
   // ── TickerProvider-dependent (cannot move to controller) ──────────────────
   late AnimationController _pulseController;
   late ConfettiController _confettiController;
@@ -69,7 +89,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     // Wire animation & dialog callbacks into controller
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final ctrl =
-          ref.read(viewerControllerProvider(widget.ad.id).notifier);
+          ref.read(viewerControllerProvider(_providerKey).notifier);
       ctrl.onPlayConfetti = () {
         if (mounted) _confettiController.play();
       };
@@ -116,9 +136,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
     // Connect to room, then trigger initial sync and reconnect listener
     WidgetsBinding.instance.addPostFrameCallback((_) async {
-      await ref.read(liveRoomProvider(widget.ad.id).notifier).connect(false, hostId: widget.ad.userId);
+      await ref.read(liveRoomProvider(_providerKey).notifier).connect(false,
+          hostId: widget.channelHostId ?? widget.ad?.userId);
       if (mounted) {
-        ref.read(viewerControllerProvider(widget.ad.id).notifier).setupSync();
+        ref.read(viewerControllerProvider(_providerKey).notifier).setupSync();
       }
     });
   }
@@ -126,12 +147,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   @override
   void deactivate() {
     // Schedule after build frame to avoid ZonedGuarded crash
-    final adId = widget.ad.id;
+    final key = _providerKey;
     final container = ProviderScope.containerOf(context, listen: false);
     Future.microtask(() {
       try {
-        container.read(liveRoomProvider(adId).notifier).disconnect();
-        container.invalidate(adDetailProvider(adId));
+        container.read(liveRoomProvider(key).notifier).disconnect();
+        container.invalidate(adDetailProvider(key));
       } catch (_) {}
     });
     super.deactivate();
@@ -162,19 +183,19 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   // ── Room event listener ───────────────────────────────────────────────────
 
   void _onRoomEvent(RoomEvent event) {
-    if (event is TrackMutedEvent || event is TrackUnmutedEvent || 
+    if (event is TrackMutedEvent || event is TrackUnmutedEvent ||
         event is TrackSubscribedEvent || event is TrackUnsubscribedEvent) {
       if (mounted) setState(() {});
     }
     if (event is DataReceivedEvent) {
       ref
-          .read(viewerControllerProvider(widget.ad.id).notifier)
+          .read(viewerControllerProvider(_providerKey).notifier)
           .handleDataChannelMessage(event.data, event.participant);
     }
   }
 
   void _onInteraction() {
-    ref.read(viewerControllerProvider(widget.ad.id).notifier).resetInactivityTimer();
+    ref.read(viewerControllerProvider(_providerKey).notifier).resetInactivityTimer();
   }
 
   // ── System message ────────────────────────────────────────────────────────
@@ -219,11 +240,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(ctx);
-              final ctrl = ref
-                  .read(viewerControllerProvider(widget.ad.id).notifier);
               // Sıfır Kopma: odadan ayrılmadan yetki alınır, kamera/mikrofon açılır.
               await ref
-                  .read(viewerControllerProvider(widget.ad.id).notifier)
+                  .read(viewerControllerProvider(_providerKey).notifier)
                   .acceptStageInvite(ctx);
             },
             style: ElevatedButton.styleFrom(
@@ -237,6 +256,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   }
 
   void _showAdDetailsSheet() {
+    final ad = widget.ad;
+    if (ad == null) return;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -266,13 +287,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                   ),
                 ),
               ),
-              Text(widget.ad.title,
+              Text(ad.title,
                   style: const TextStyle(
                       fontSize: 22, fontWeight: FontWeight.bold)),
               const SizedBox(height: 16),
-              if (widget.ad.startingBid != null)
+              if (ad.startingBid != null)
                 Text(
-                    'Başlangıç Fiyatı: ${_formatPrice(widget.ad.startingBid!)}',
+                    'Başlangıç Fiyatı: ${_formatPrice(ad.startingBid!)}',
                     style: const TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.w600,
@@ -282,7 +303,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                   style: TextStyle(
                       fontSize: 18, fontWeight: FontWeight.bold)),
               const SizedBox(height: 8),
-              Text(widget.ad.description,
+              Text(ad.description,
                   style:
                       const TextStyle(fontSize: 16, height: 1.5)),
             ],
@@ -292,8 +313,9 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     );
   }
 
-  void _showBidInputSheet(AdModel currentAd) {
-    final viewerState = ref.read(viewerControllerProvider(widget.ad.id));
+  void _showBidInputSheet(AdModel? currentAd) {
+    final ad = currentAd ?? widget.ad ?? _placeholderAd;
+    final viewerState = ref.read(viewerControllerProvider(_providerKey));
     if (!viewerState.isAuctionActive) {
       _showSystemMessage('Açık arttırma henüz başlatılmadı', Colors.orange);
       return;
@@ -358,7 +380,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               const SizedBox(height: 24),
               Row(
                 children: ([
-                  currentAd.minBidStep.toInt(),
+                  ad.minBidStep.toInt(),
                   100,
                   250,
                   500,
@@ -373,10 +395,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                               onPressed: () {
                                 final currentPrice = ref
                                         .read(viewerControllerProvider(
-                                            widget.ad.id))
+                                            _providerKey))
                                         .liveHighestBid ??
-                                    currentAd.highestBidAmount ??
-                                    currentAd.startingBid ??
+                                    ad.highestBidAmount ??
+                                    ad.startingBid ??
                                     0;
                                 _bidCtrl.text = _formatPrice(
                                     (currentPrice + inc).toDouble());
@@ -428,7 +450,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     final text = _chatCtrl.text.trim();
     if (text.isEmpty) return;
     await ref
-        .read(viewerControllerProvider(widget.ad.id).notifier)
+        .read(viewerControllerProvider(_providerKey).notifier)
         .sendChatMessage(text);
     _chatCtrl.clear();
     _chatFocus.unfocus();
@@ -452,7 +474,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     }
     if (mounted) {
       await ref
-          .read(viewerControllerProvider(widget.ad.id).notifier)
+          .read(viewerControllerProvider(_providerKey).notifier)
           .placeBid(amount, context);
     }
     _bidCtrl.clear();
@@ -468,8 +490,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   @override
   Widget build(BuildContext context) {
     // Reactive listener for room-wide events & life-cycle
-    ref.listen(liveRoomProvider(widget.ad.id), (previous, next) {
-      final viewerState = ref.read(viewerControllerProvider(widget.ad.id));
+    ref.listen(liveRoomProvider(_providerKey), (previous, next) {
+      final viewerState = ref.read(viewerControllerProvider(_providerKey));
       
       // 1. Auto-pop when room is disconnected (unless switching roles)
       if (!viewerState.isReconnectingForStage &&
@@ -493,11 +515,13 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
       }
     });
 
-    final adAsync = ref.watch(adDetailProvider(widget.ad.id));
-    final currentAd = adAsync.value ?? widget.ad;
-    final roomState = ref.watch(liveRoomProvider(widget.ad.id));
+    final viewerState = ref.watch(viewerControllerProvider(_providerKey));
+    final roomState = ref.watch(liveRoomProvider(_providerKey));
     final room = roomState.room;
-    final viewerState = ref.watch(viewerControllerProvider(widget.ad.id));
+    // Resolve the effective ad: pinned item in channel mode, or constructor ad
+    final activeAdId = viewerState.activeAdId;
+    final adAsync = ref.watch(adDetailProvider(activeAdId ?? widget.ad?.id ?? ''));
+    final currentAd = adAsync.value ?? widget.ad;
 
     final isDisconnected = !viewerState.isReconnectingForStage &&
         (room?.connectionState.name == 'disconnected' ||
@@ -517,7 +541,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           }
         }
         if (t != null) {
-          if (p.identity == widget.ad.userId) {
+          if (p.identity == (widget.channelHostId ?? widget.ad?.userId)) {
             hostTrack = t;
           } else if (p.isCameraEnabled() || p.isMicrophoneEnabled()) {
             // This is likely our invited guest who is now publishing
@@ -675,7 +699,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         right: 4,
                         child: GestureDetector(
                           onTap: () => ref
-                              .read(viewerControllerProvider(widget.ad.id)
+                              .read(viewerControllerProvider(_providerKey)
                                   .notifier)
                               .leaveStage(),
                           child: Container(
@@ -775,7 +799,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                 soldFinalPrice: viewerState.soldFinalPrice,
                 confettiController: _confettiController,
                 onClose: () => ref
-                    .read(viewerControllerProvider(widget.ad.id).notifier)
+                    .read(viewerControllerProvider(_providerKey).notifier)
                     .hideSoldOverlay(),
               ),
 
@@ -793,15 +817,17 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
 
   // ── Portrait Layout ───────────────────────────────────────────────────────
 
-  Widget _buildPortraitLayout(AdModel currentAd, bool isDisconnected) {
-    final viewerState = ref.read(viewerControllerProvider(widget.ad.id));
+  Widget _buildPortraitLayout(AdModel? currentAd, bool isDisconnected) {
+    final viewerState = ref.read(viewerControllerProvider(_providerKey));
+    final effectiveAd = currentAd ?? widget.ad;
     return Stack(
       children: [
-        ViewerTopHeader(ad: widget.ad),
+        ViewerTopHeader(ad: effectiveAd ?? _placeholderAd, providerKey: _providerKey),
         ViewerSidebar(
-          ad: widget.ad,
+          ad: effectiveAd ?? _placeholderAd,
           isPortrait: true,
           onShowAdDetails: _showAdDetailsSheet,
+          providerKey: _providerKey,
         ),
         Positioned.fill(
           child: IgnorePointer(
@@ -813,16 +839,17 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           child: Column(
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
-              ViewerChatFlow(ad: widget.ad, height: 140),
+              ViewerChatFlow(ad: effectiveAd ?? _placeholderAd, height: 140, providerKey: _providerKey),
               ViewerConsole(
-                ad: currentAd,
+                ad: currentAd ?? widget.ad ?? _placeholderAd,
                 chatCtrl: _chatCtrl,
                 bidCtrl: _bidCtrl,
                 chatFocus: _chatFocus,
                 isDisconnected: isDisconnected,
-                onShowBidSheet: () => _showBidInputSheet(currentAd),
+                onShowBidSheet: () => _showBidInputSheet(currentAd ?? widget.ad ?? _placeholderAd),
                 onSendChat: _sendChatMessage,
                 onPlaceBid: _placeBidSlide,
+                providerKey: _providerKey,
               ),
             ],
           ),
@@ -834,17 +861,18 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   // ── Landscape Layout ──────────────────────────────────────────────────────
 
   Widget _buildLandscapeLayout(
-      AdModel currentAd, bool isDisconnected, ViewerState viewerState) {
+      AdModel? currentAd, bool isDisconnected, ViewerState viewerState) {
+    final effectiveLandAd = currentAd ?? widget.ad ?? _placeholderAd;
     final double nextBid;
     if (viewerState.liveHighestBid != null) {
-      nextBid = viewerState.liveHighestBid! + currentAd.minBidStep;
-    } else if (!currentAd.isAuction && !viewerState.isAuctionActive) {
-      nextBid = currentAd.price;
+      nextBid = viewerState.liveHighestBid! + effectiveLandAd.minBidStep;
+    } else if (!effectiveLandAd.isAuction && !viewerState.isAuctionActive) {
+      nextBid = effectiveLandAd.price;
     } else {
-      nextBid = (currentAd.highestBidAmount ??
-              currentAd.startingBid ??
-              currentAd.price) +
-          currentAd.minBidStep;
+      nextBid = (effectiveLandAd.highestBidAmount ??
+              effectiveLandAd.startingBid ??
+              effectiveLandAd.price) +
+          effectiveLandAd.minBidStep;
     }
 
     return Row(
@@ -853,11 +881,12 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
           flex: 7,
           child: Stack(
             children: [
-              ViewerTopHeader(ad: widget.ad),
+              ViewerTopHeader(ad: effectiveLandAd, providerKey: _providerKey),
               ViewerSidebar(
-                ad: widget.ad,
+                ad: effectiveLandAd,
                 isPortrait: false,
                 onShowAdDetails: _showAdDetailsSheet,
+                providerKey: _providerKey,
               ),
               Positioned.fill(
                 child: IgnorePointer(
@@ -931,7 +960,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                         const SizedBox(height: 12),
                         Row(
                           children: [
-                            currentAd.minBidStep.toInt(),
+                            effectiveLandAd.minBidStep.toInt(),
                             250,
                             500,
                             1000
@@ -944,8 +973,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                         onPressed: () {
                                           final currentPrice =
                                               viewerState.liveHighestBid ??
-                                                  currentAd.highestBidAmount ??
-                                                  currentAd.startingBid ??
+                                                  effectiveLandAd.highestBidAmount ??
+                                                  effectiveLandAd.startingBid ??
                                                   0;
                                           _bidCtrl.text = _formatPrice(
                                               (currentPrice + inc)
@@ -1000,7 +1029,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                           blendMode: BlendMode.dstIn,
                           child: Builder(builder: (context) {
                             final messages = ref.watch(
-                                viewerControllerProvider(widget.ad.id)
+                                viewerControllerProvider(_providerKey)
                                     .select((s) => s.messages));
                             return ListView.builder(
                               padding: const EdgeInsets.symmetric(
@@ -1080,7 +1109,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
                                             size: 24),
                                         onPressed: () => ref
                                             .read(viewerControllerProvider(
-                                                    widget.ad.id)
+                                                    _providerKey)
                                                 .notifier)
                                             .sendReaction('❤️'),
                                       ),

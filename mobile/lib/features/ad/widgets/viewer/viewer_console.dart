@@ -16,6 +16,7 @@ class ViewerConsole extends ConsumerWidget {
   final VoidCallback onShowBidSheet;
   final VoidCallback onSendChat;
   final VoidCallback onPlaceBid;
+  final String? providerKey;
 
   const ViewerConsole({
     super.key,
@@ -27,6 +28,7 @@ class ViewerConsole extends ConsumerWidget {
     required this.onShowBidSheet,
     required this.onSendChat,
     required this.onPlaceBid,
+    this.providerKey,
   });
 
   String _formatPrice(double p) =>
@@ -34,7 +36,7 @@ class ViewerConsole extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final viewerState = ref.watch(viewerControllerProvider(ad.id));
+    final viewerState = ref.watch(viewerControllerProvider(providerKey ?? ad.id));
 
     // Compute next bid amount
     final double nextBid;

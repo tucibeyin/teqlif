@@ -7,17 +7,19 @@ import '../../controllers/live_arena_viewer_controller.dart';
 class ViewerChatFlow extends ConsumerWidget {
   final AdModel ad;
   final double height;
+  final String? providerKey;
 
   const ViewerChatFlow({
     super.key,
     required this.ad,
     required this.height,
+    this.providerKey,
   });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final messages = ref.watch(
-        viewerControllerProvider(ad.id).select((s) => s.messages));
+        viewerControllerProvider(providerKey ?? ad.id).select((s) => s.messages));
 
     return Padding(
       padding:
