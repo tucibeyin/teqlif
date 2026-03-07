@@ -32,6 +32,7 @@ interface BidPanelProps {
   onAccept?: () => void;
   onReject?: () => void;
   onBuyNow?: () => void;
+  onBid?: (amount: number) => Promise<void>;
   loading?: boolean;
   /** Kanal mimarisinde bid isteğine eklenir; Lua script doğru kanalı kontrol eder. */
   channelHostId?: string;
@@ -41,7 +42,7 @@ export function BidPanel({
   adId, sellerId, currentHighest, minStep, startingBid,
   buyItNowPrice, isAuctionActive, isOwner,
   lastAcceptedBidId, highestBidderId,
-  onAccept, onReject, onBuyNow, loading = false,
+  onAccept, onReject, onBuyNow, onBid, loading = false,
   channelHostId,
 }: BidPanelProps) {
   const [amount, setAmount] = useState("");
@@ -73,22 +74,8 @@ export function BidPanel({
       return;
     }
     setBidLoading(true);
-    try {
-      const res = await fetch("/api/livekit/bid", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adId, amount: num, ...(channelHostId && { channelHostId }) }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showStatus("success", "Teklifiniz iletildi!", 1000);
-      } else {
-        showStatus("error", data.error || "Hata oluştu.");
-      }
-    } catch {
-      showStatus("error", "Bağlantı hatası.");
-    } finally {
-      setBidLoading(false);
+    if (onBid) {
+      await onBid(num);
     }
   };
 
@@ -96,23 +83,10 @@ export function BidPanel({
     const base = currentHighest > 0 ? currentHighest : (startingBid || 0);
     const num = base + step;
     setBidLoading(true);
-    try {
-      const res = await fetch("/api/livekit/bid", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adId, amount: num, ...(channelHostId && { channelHostId }) }),
-      });
-      const data = await res.json();
-      if (res.ok) {
-        showStatus("success", `+${new Intl.NumberFormat("tr-TR").format(step)} ₺ teklif verildi!`, 1000);
-      } else {
-        showStatus("error", data.error || "Hata oluştu.");
-      }
-    } catch {
-      showStatus("error", "Bağlantı hatası.");
-    } finally {
-      setBidLoading(false);
+    if (onBid) {
+      await onBid(num);
     }
+    setBidLoading(false);
   };
 
   return (

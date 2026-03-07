@@ -517,29 +517,30 @@ class ViewerController extends StateNotifier<ViewerState> {
   Future<void> placeBid(double amount, BuildContext ctx) async {
     state = state.copyWith(bidLoading: true);
     await Haptics.vibrate(HapticsType.medium);
-    // Kanal modunda aktif ürünün adId'sini kullan; yoksa klasik adId
-    final effectiveAdId = state.activeAdId ??
-        (adId.startsWith('channel:') ? null : adId);
-    if (effectiveAdId == null) {
+    // 1. Determine target ID: channelHostId is present -> use pinned item, else use adId.
+    final channelHostId = adId.startsWith('channel:')
+        ? adId.replaceFirst('channel:', '')
+        : ad?.userId;
+    final targetId = channelHostId != null ? state.activeAdId : adId;
+
+    if (targetId == null) {
       if (!_disposed) {
         ScaffoldMessenger.of(ctx).showSnackBar(
-          const SnackBar(content: Text('Henüz aktif ürün yok.')),
+          const SnackBar(content: Text('Henüz aktif bir ürün pinlenmedi.')),
         );
         state = state.copyWith(bidLoading: false);
       }
       return;
     }
-    final hostId = ad?.userId;
+
     try {
       await ApiClient().post('/api/livekit/bid', data: {
-        'adId': effectiveAdId,
+        'adId': targetId,
         'amount': amount.toInt(),
-        // channelHostId yalnızca kanal modunda gönderilir (activeAdId != null)
-        // Klasik/hızlı canlı yayında gönderilmez — Lua script'in kanal kontrolü tetiklenmesin
-        if (state.activeAdId != null && hostId != null) 'channelHostId': hostId,
+        if (channelHostId != null) 'channelHostId': channelHostId,
       });
 
-      ref.invalidate(adDetailProvider(effectiveAdId));
+      ref.invalidate(adDetailProvider(targetId));
       await Haptics.vibrate(HapticsType.success);
       if (!_disposed) {
         ScaffoldMessenger.of(ctx).clearSnackBars();
@@ -741,7 +742,19 @@ class ViewerController extends StateNotifier<ViewerState> {
           _resetMessageTimer();
           return;
         } else if (type == 'ITEM_PINNED') {
-          final activeItemMap = decoded['activeItem'] as Map<String, dynamic>?;
+          final dynamic rawItem = decoded['activeItem'];
+          Map<String, dynamic>? activeItemMap;
+          
+          if (rawItem is String) {
+            try {
+              activeItemMap = jsonDecode(rawItem) as Map<String, dynamic>;
+            } catch (e) {
+              debugPrint('ITEM_PINNED JSON decode error: $e');
+            }
+          } else if (rawItem is Map<String, dynamic>) {
+            activeItemMap = rawItem;
+          }
+
           final startingBid = (decoded['startingBid'] as num?)?.toDouble();
           if (activeItemMap == null) return;
           state = state.copyWith(

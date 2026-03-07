@@ -317,6 +317,38 @@ export function useAuction({
         }
     }, [room, publish]);
 
+    const placeBid = useCallback(async (amount: number) => {
+        const targetAdId = isQuickLive ? activeAdIdRef.current : adId;
+        if (!targetAdId) {
+            notify("Lütfen aktif bir ürün pinlenmesini bekleyin.");
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const res = await fetch("/api/livekit/bid", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    adId: targetAdId,
+                    amount,
+                    ...(isQuickLive && { channelHostId: sellerId })
+                }),
+            });
+            const data = await res.json();
+            if (res.ok) {
+                notify("Teklifiniz iletildi! 🎉");
+            } else {
+                notify(data.error || "Teklif iletilemedi.");
+            }
+        } catch (e) {
+            console.error(e);
+            notify("Bağlantı hatası.");
+        } finally {
+            setLoading(false);
+        }
+    }, [isQuickLive, adId, sellerId, notify]);
+
     const accept = useCallback(async () => {
         if (!confirm("Dikkat! Bu teqlifi kabul edip satışı tamamlıyorsunuz?")) return;
         setLoading(true);
@@ -394,6 +426,7 @@ export function useAuction({
         onAuctionEnded, onSaleFinalized, onAuctionSold, onSyncStateResponse,
         // Host actions
         start, stop, reset, accept, reject, buyNow, broadcastState,
+        placeBid,
         // Sync
         syncAuctionState,
     };

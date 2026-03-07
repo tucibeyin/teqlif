@@ -588,6 +588,7 @@ export function CustomArenaLayout({
                             onAccept={auction.accept}
                             onReject={auction.reject}
                             onBuyNow={auction.buyNow}
+                            onBid={auction.placeBid}
                             loading={auction.loading}
                             channelHostId={channelSync.activeItem ? sellerId : undefined}
                         />
