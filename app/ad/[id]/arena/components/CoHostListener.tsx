@@ -1,38 +1,83 @@
 "use client";
 
-import { useState } from "react";
-import { useDataChannel, useRoomContext } from "@livekit/components-react";
+import { useEffect, useState } from "react";
+import { useLocalParticipant } from "@livekit/components-react";
+import { ParticipantEvent } from "livekit-client";
 
 interface CoHostListenerProps {
-    setRole: (role: string) => void;
-    setWantsToPublish: (val: boolean) => void;
+    adId: string;
+    /** Görünür davet dialogu — CustomArenaLayout'tan kontrol edilir */
+    showInviteDialog: boolean;
+    onDecline: () => void;
+    /** isCoHost değiştiğinde parent'ı bilgilendir */
+    onCoHostStatusChange: (isCoHost: boolean) => void;
 }
 
-export function CoHostListener({ setRole, setWantsToPublish }: CoHostListenerProps) {
-    const [inviteVisible, setInviteVisible] = useState(false);
-    const room = useRoomContext();
+export function CoHostListener({
+    adId,
+    showInviteDialog,
+    onDecline,
+    onCoHostStatusChange,
+}: CoHostListenerProps) {
+    const { localParticipant } = useLocalParticipant();
+    const [isAccepting, setIsAccepting] = useState(false);
 
-    useDataChannel((msg) => {
-        try {
-            const data = JSON.parse(new TextDecoder().decode(msg.payload));
-            if (data.type === "INVITE_TO_STAGE") {
-                if (data.targetIdentity === room.localParticipant.identity || data.targetUserId === room.localParticipant.identity) {
-                    setInviteVisible(true);
-                }
-            } else if (data.type === "KICK_FROM_STAGE") {
-                if (data.targetIdentity === room.localParticipant.identity) {
-                    setWantsToPublish(false);
-                    setRole("viewer");
-                    alert("Sahneden alındınız.");
-                    room.disconnect();
-                }
+    // ── İzin değişikliği dinleyicisi ────────────────────────────────────────
+    // Host, backend üzerinden updateParticipant(canPublish: false) yaptığında
+    // bu event tetiklenir. Odadan KOPMADAN kamera/mikrofon kapatılır.
+    useEffect(() => {
+        const handlePermissionChange = (prevPermissions?: { canPublish?: boolean }) => {
+            const nowCanPublish = localParticipant.permissions?.canPublish;
+            const wasCanPublish = prevPermissions?.canPublish;
+
+            if (wasCanPublish === true && nowCanPublish === false) {
+                // Yetki geri alındı — sessizce kapat, disconnect YOK
+                localParticipant.setCameraEnabled(false).catch(() => {});
+                localParticipant.setMicrophoneEnabled(false).catch(() => {});
+                onCoHostStatusChange(false);
             }
-        } catch {
-            // ignore
-        }
-    });
+        };
 
-    if (!inviteVisible) return null;
+        localParticipant.on(ParticipantEvent.ParticipantPermissionsChanged, handlePermissionChange);
+        return () => {
+            localParticipant.off(ParticipantEvent.ParticipantPermissionsChanged, handlePermissionChange);
+        };
+    }, [localParticipant, onCoHostStatusChange]);
+
+    // ── Kabul et ─────────────────────────────────────────────────────────────
+    const handleAccept = async () => {
+        setIsAccepting(true);
+        try {
+            const res = await fetch("/api/livekit/stage", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    adId,
+                    targetIdentity: localParticipant.identity,
+                    action: "accept",
+                }),
+            });
+
+            if (res.ok) {
+                // Backend updateParticipant(canPublish: true) yaptı.
+                // Artık kamera/mikrofon açılabilir — disconnect YOK.
+                await localParticipant.setCameraEnabled(true);
+                await localParticipant.setMicrophoneEnabled(true);
+                onCoHostStatusChange(true);
+            } else {
+                const data = await res.json().catch(() => ({}));
+                console.error("[CoHost] Kabul hatası:", data.error);
+                onDecline();
+            }
+        } catch (e) {
+            console.error("[CoHost] Kabul isteği başarısız:", e);
+            onDecline();
+        } finally {
+            setIsAccepting(false);
+        }
+    };
+
+    if (!showInviteDialog) return null;
 
     return (
         <div style={{
@@ -61,12 +106,13 @@ export function CoHostListener({ setRole, setWantsToPublish }: CoHostListenerPro
                 </h3>
                 <p style={{ fontSize: "0.95rem", color: "rgba(255,255,255,0.7)", lineHeight: 1.5 }}>
                     Yayıncı sizinle beraber yayına katılmanızı istiyor.{" "}
-                    <b>Kameranız açılacaktır.</b> Kabul ediyor musunuz?
+                    <b>Kameranız ve mikrofonunuz açılacak.</b> Kabul ediyor musunuz?
                 </p>
 
                 <div style={{ display: "flex", gap: "12px", justifyContent: "center", marginTop: "24px" }}>
                     <button
-                        onClick={() => setInviteVisible(false)}
+                        onClick={onDecline}
+                        disabled={isAccepting}
                         style={{
                             background: "rgba(255,255,255,0.1)",
                             color: "white",
@@ -75,16 +121,14 @@ export function CoHostListener({ setRole, setWantsToPublish }: CoHostListenerPro
                             padding: "12px 24px",
                             fontWeight: 700,
                             cursor: "pointer",
+                            opacity: isAccepting ? 0.5 : 1,
                         }}
                     >
                         Reddet
                     </button>
                     <button
-                        onClick={async () => {
-                            setInviteVisible(false);
-                            await room.disconnect();
-                            setRole("guest");
-                        }}
+                        onClick={handleAccept}
+                        disabled={isAccepting}
                         style={{
                             background: "linear-gradient(135deg, #00B4CC, #008da1)",
                             color: "white",
@@ -92,11 +136,13 @@ export function CoHostListener({ setRole, setWantsToPublish }: CoHostListenerPro
                             borderRadius: "100px",
                             padding: "12px 24px",
                             fontWeight: 800,
-                            cursor: "pointer",
+                            cursor: isAccepting ? "not-allowed" : "pointer",
                             boxShadow: "0 8px 20px rgba(0,180,204,0.4)",
+                            opacity: isAccepting ? 0.7 : 1,
+                            minWidth: 110,
                         }}
                     >
-                        Kabul Et
+                        {isAccepting ? "Bağlanıyor..." : "Kabul Et"}
                     </button>
                 </div>
             </div>

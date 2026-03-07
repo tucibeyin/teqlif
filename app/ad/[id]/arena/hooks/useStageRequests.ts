@@ -1,9 +1,19 @@
 import { useState, useCallback } from "react";
-import { useRoomContext } from "@livekit/components-react";
 import type { StageRequest } from "../types";
 
-export function useStageRequests() {
-    const room = useRoomContext();
+async function callStageApi(adId: string, targetIdentity: string, action: "invite" | "accept" | "revoke") {
+    const res = await fetch("/api/livekit/stage", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ adId, targetIdentity, action }),
+    });
+    if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error ?? "Stage API hatası");
+    }
+}
+
+export function useStageRequests(adId: string) {
     const [requests, setRequests] = useState<StageRequest[]>([]);
 
     const onStageRequest = useCallback((data: any) => {
@@ -14,34 +24,44 @@ export function useStageRequests() {
         });
     }, []);
 
-    const acceptRequest = useCallback((req: StageRequest) => {
-        // Sadece bir kişi sahnede olabilsin kontrolü
-        const isStageBusy = Array.from(room.remoteParticipants.values()).some(
-            p => p.isCameraEnabled || p.isMicrophoneEnabled
-        );
-
-        if (isStageBusy) {
-            alert("Şu anda sahnede başka bir konuk var. Yeni bir davet gönderilemez.");
-            return;
+    /**
+     * Host bir kullanıcıya sahne daveti gönderir.
+     * Backend, hedef katılımcıya yalnızca ona görünür INVITE_TO_STAGE DataChannel sinyali iletir.
+     */
+    const inviteToStage = useCallback(async (targetIdentity: string) => {
+        try {
+            await callStageApi(adId, targetIdentity, "invite");
+        } catch (e) {
+            console.error("[Stage] Davet gönderilemedi:", e);
         }
+    }, [adId]);
 
+    /** Host, sahne isteği listesinden birini onaylayıp davet gönderir. */
+    const acceptRequest = useCallback(async (req: StageRequest) => {
         if (!confirm(`${req.name} adlı kullanıcıyı sahneye davet etmek istiyor musunuz?`)) {
             setRequests(prev => prev.filter(r => r.id !== req.id));
             return;
         }
-        const payload = JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: req.id });
-        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
+        await inviteToStage(req.id);
         setRequests(prev => prev.filter(r => r.id !== req.id));
-    }, [room]);
+    }, [inviteToStage]);
 
     const dismissRequest = useCallback((id: string) => {
         setRequests(prev => prev.filter(r => r.id !== id));
     }, []);
 
-    const kickFromStage = useCallback((targetIdentity: string) => {
-        const payload = JSON.stringify({ type: "KICK_FROM_STAGE", targetIdentity });
-        room.localParticipant.publishData(new TextEncoder().encode(payload), { reliable: true });
-    }, [room]);
+    /**
+     * Host bir katılımcıyı sahneden çıkarır (veya katılımcı kendi isteğiyle ayrılır).
+     * Backend updateParticipant(canPublish: false) + tüm odaya STAGE_UPDATE broadcast yapar.
+     * Katılımcı odadan KOPMAZ — yalnızca yayın yetkisi anında geri alınır.
+     */
+    const kickFromStage = useCallback(async (targetIdentity: string) => {
+        try {
+            await callStageApi(adId, targetIdentity, "revoke");
+        } catch (e) {
+            console.error("[Stage] Sahneden çıkarma başarısız:", e);
+        }
+    }, [adId]);
 
-    return { requests, onStageRequest, acceptRequest, dismissRequest, kickFromStage };
+    return { requests, onStageRequest, inviteToStage, acceptRequest, dismissRequest, kickFromStage };
 }

@@ -743,47 +743,38 @@ class HostController extends StateNotifier<HostState> {
 
   // ── Stage ──────────────────────────────────────────────────────────────────
 
-  void inviteToStage(String userId, BuildContext ctx) async {
-    if (_room != null) {
-      // Sadece bir kişi sahnede olabilsin kontrolü
-      bool isStageBusy = false;
-      for (var p in _room!.remoteParticipants.values) {
-        if (p.isCameraEnabled() || p.isMicrophoneEnabled()) {
-          isStageBusy = true;
-          break;
-        }
-      }
-
-      if (isStageBusy) {
-        if (ctx.mounted) {
-          ScaffoldMessenger.of(ctx).showSnackBar(
-            const SnackBar(
-              content: Text('Şu anda sahnede başka bir konuk var. Yeni bir davet gönderilemez.'),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
-        return;
-      }
-
-      final payload = jsonEncode(
-          {'type': 'INVITE_TO_STAGE', 'targetIdentity': userId});
-      await _room!.localParticipant?.publishData(utf8.encode(payload));
-      if (ctx.mounted) {
+  /// Backend'e POST /api/livekit/stage { action: 'invite' } gönderir.
+  /// Backend, hedef katılımcıya yalnızca ona görünür INVITE_TO_STAGE DataChannel sinyali iletir.
+  /// Eski publishData yaklaşımı tamamen kaldırıldı — disconnect/reconnect YOK.
+  Future<void> inviteToStage(String userId, BuildContext ctx) async {
+    try {
+      final res = await ApiClient().post('/api/livekit/stage', data: {
+        'adId': adId,
+        'targetIdentity': userId,
+        'action': 'invite',
+      });
+      if ((res.statusCode == 200 || res.statusCode == 201) && ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(
               content: Text('Sahneye davet gönderildi!'),
               backgroundColor: Colors.blue),
         );
       }
+    } catch (e) {
+      debugPrint('inviteToStage error: $e');
     }
   }
 
-  void kickGuest(String userId, BuildContext ctx) async {
-    if (_room != null) {
-      final payload = jsonEncode(
-          {'type': 'KICK_FROM_STAGE', 'targetIdentity': userId});
-      await _room!.localParticipant?.publishData(utf8.encode(payload));
+  /// Backend'e POST /api/livekit/stage { action: 'revoke' } gönderir.
+  /// Backend updateParticipant(canPublish: false) + STAGE_UPDATE broadcast yapar.
+  /// Hedef katılımcı odadan KOPMAZ; yalnızca yayın yetkisi anında geri alınır.
+  Future<void> kickGuest(String userId, BuildContext ctx) async {
+    try {
+      await ApiClient().post('/api/livekit/stage', data: {
+        'adId': adId,
+        'targetIdentity': userId,
+        'action': 'revoke',
+      });
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(
@@ -791,6 +782,8 @@ class HostController extends StateNotifier<HostState> {
               backgroundColor: Colors.orange),
         );
       }
+    } catch (e) {
+      debugPrint('kickGuest error: $e');
     }
   }
 

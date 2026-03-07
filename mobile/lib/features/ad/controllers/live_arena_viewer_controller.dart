@@ -362,31 +362,45 @@ class ViewerController extends StateNotifier<ViewerState> {
     }
   }
 
+  /// Odadan KOPMADAN sahne yetkisini bırakır.
+  /// Kamera ve mikrofonu kapatır; disconnect() ASLA çağrılmaz.
   Future<void> _revertToViewer() async {
-    state = state.copyWith(isReconnectingForStage: true);
-    final roomState = ref.read(liveRoomProvider(adId));
-    if (roomState.room?.localParticipant != null) {
-      await roomState.room!.localParticipant!.setCameraEnabled(false);
-      await roomState.room!.localParticipant!.setMicrophoneEnabled(false);
+    final room = ref.read(liveRoomProvider(adId)).room;
+    if (room?.localParticipant != null) {
+      await room!.localParticipant!.setCameraEnabled(false).catchError((_) {});
+      await room.localParticipant!.setMicrophoneEnabled(false).catchError((_) {});
     }
-    final wasGuest = state.isGuest;
-    state = state.copyWith(isGuest: false);
-    if (wasGuest) {
-      try {
-        await ref.read(liveRoomProvider(adId).notifier).disconnect();
-        await Future.delayed(const Duration(milliseconds: 500));
-        if (!_disposed) {
-          await ref.read(liveRoomProvider(adId).notifier).connect(false);
+    if (!_disposed) {
+      state = state.copyWith(isGuest: false, isReconnectingForStage: false);
+    }
+  }
+
+  /// Host tarafından sahne daveti kabul edildiğinde çağrılır.
+  /// Backend'e POST /api/livekit/stage { action: 'accept' } gönderir,
+  /// ardından kamera ve mikrofonu açar — disconnect/reconnect YOK.
+  Future<void> acceptStageInvite(BuildContext ctx) async {
+    final currentUser = ref.read(authProvider).user;
+    if (currentUser == null) return;
+    try {
+      final res = await ApiClient().post('/api/livekit/stage', data: {
+        'adId': adId,
+        'targetIdentity': currentUser.id,
+        'action': 'accept',
+      });
+      if ((res.statusCode == 200 || res.statusCode == 201) && !_disposed) {
+        final room = ref.read(liveRoomProvider(adId)).room;
+        if (room?.localParticipant != null) {
+          await room!.localParticipant!.setCameraEnabled(true);
+          await room.localParticipant!.setMicrophoneEnabled(true);
         }
-      } catch (e) {
-        debugPrint('Error restoring viewer state: $e');
-      } finally {
-        if (!_disposed) {
-          state = state.copyWith(isReconnectingForStage: false);
-        }
+        state = state.copyWith(isGuest: true);
       }
-    } else {
-      state = state.copyWith(isReconnectingForStage: false);
+    } catch (e) {
+      debugPrint('acceptStageInvite error: $e');
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text('Sahneye katılınamadı.')));
+      }
     }
   }
 
@@ -395,7 +409,19 @@ class ViewerController extends StateNotifier<ViewerState> {
     await _revertToViewer();
   }
 
+  /// İzleyici kendi isteğiyle sahneden iner.
+  /// Backend'e revoke isteği gönderir; backend updateParticipant + STAGE_UPDATE broadcast yapar.
   Future<void> leaveStage() async {
+    final currentUser = ref.read(authProvider).user;
+    if (currentUser != null) {
+      try {
+        await ApiClient().post('/api/livekit/stage', data: {
+          'adId': adId,
+          'targetIdentity': currentUser.id,
+          'action': 'revoke',
+        });
+      } catch (_) {}
+    }
     await _revertToViewer();
   }
 
@@ -533,9 +559,22 @@ class ViewerController extends StateNotifier<ViewerState> {
           }
           return;
         } else if (type == 'KICK_FROM_STAGE') {
+          // Eski DataChannel tabanlı kick — yeni mimaride STAGE_UPDATE kullanılır.
+          // Geriye dönük uyumluluk için korunur.
           final targetIdentity = decoded['targetIdentity'] ?? decoded['targetUserId'];
           final currentUser = ref.read(authProvider).user;
           if (currentUser != null && targetIdentity == currentUser.id) {
+            handleKick(); // _revertToViewer() — disconnect YOK
+          }
+          return;
+        } else if (type == 'STAGE_UPDATE') {
+          // Backend, updateParticipant çağrısı sonrası tüm odaya broadcast eder.
+          final action = decoded['action']?.toString();
+          final identity = decoded['identity']?.toString();
+          final currentUser = ref.read(authProvider).user;
+          // Sahneden çıkarıldıysak (kicked veya izin alındıysa): cam/mic kapat, disconnect YOK
+          if (action == 'left' && identity != null &&
+              identity == currentUser?.id && state.isGuest) {
             handleKick();
           }
           return;

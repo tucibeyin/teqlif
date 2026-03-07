@@ -25,6 +25,7 @@ import { ParticipantsModal } from "./components/ParticipantsModal";
 import { FlyingEmojis, ReactionBar } from "./components/FlyingEmojis";
 import { BidPanel } from "./components/BidPanel";
 import { FinalizationOverlay, SoldOverlay, BroadcastEndedScreen } from "./components/Overlays";
+import { CoHostListener } from "./components/CoHostListener";
 
 import type { CustomArenaLayoutProps } from "./types";
 
@@ -44,6 +45,8 @@ export function CustomArenaLayout({
     const [isRoomClosed, setIsRoomClosed] = useState(false);
     const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
     const [countdown, setCountdown] = useState(0);
+    const [isCoHost, setIsCoHost] = useState(false);
+    const [showInviteDialog, setShowInviteDialog] = useState(false);
 
     // ── SYNC STATE ON JOIN ──────────────────────────────────────────────────
     useEffect(() => {
@@ -71,7 +74,7 @@ export function CustomArenaLayout({
 
     const chat = useArenaChat();
     const reactions = useReactions();
-    const stage = useStageRequests();
+    const stage = useStageRequests(adId);
 
     // ── Confetti ───────────────────────────────────────────────────────────────
 
@@ -125,6 +128,14 @@ export function CustomArenaLayout({
         onRoomClosed: () => setIsRoomClosed(true),
         onCountdown: setCountdown,
         onStageRequest: stage.onStageRequest,
+        onInviteToStage: (targetIdentity) => {
+            if (targetIdentity === session?.user?.id) {
+                setShowInviteDialog(true);
+            }
+        },
+        onStageUpdate: () => {
+            // guestTrack re-derivation is automatic via useTracks reactive updates
+        },
     });
 
     // ── Derived ────────────────────────────────────────────────────────────────
@@ -194,36 +205,12 @@ export function CustomArenaLayout({
     };
 
     const handleInviteFromChat = (userId: string) => {
-        // Sadece bir kişi sahnede olabilsin kontrolü
-        const isStageBusy = Array.from(room.remoteParticipants.values()).some(
-            p => p.isCameraEnabled || p.isMicrophoneEnabled
-        );
-
-        if (isStageBusy) {
-            alert("Şu anda sahnede başka bir konuk var. Yeni bir davet gönderilemez.");
-            return;
-        }
-
-        room.localParticipant.publishData(
-            new TextEncoder().encode(JSON.stringify({ type: "INVITE_TO_STAGE", targetIdentity: userId })),
-            { reliable: true }
-        );
+        stage.inviteToStage(userId);
     };
 
-    const handleKickGuest = async () => {
+    const handleKickGuest = () => {
         if (!guestTrack?.participant?.identity) return;
-        try {
-            const data = new TextEncoder().encode(JSON.stringify({
-                type: "KICK_FROM_STAGE",
-                targetIdentity: guestTrack.participant.identity
-            }));
-            await room.localParticipant.publishData(data, {
-                destinationIdentities: [guestTrack.participant.identity],
-                reliable: true
-            });
-        } catch (e) {
-            console.error("Kick guest error:", e);
-        }
+        stage.kickFromStage(guestTrack.participant.identity);
     };
 
     // ── Render ─────────────────────────────────────────────────────────────────
@@ -380,11 +367,14 @@ export function CustomArenaLayout({
                                     />
                                 )}
 
-                                {/* Cancel/Kick button */}
-                                {isOwner && (
+                                {/* Host: kick button | CoHost: leave stage button */}
+                                {(isOwner || isCoHost) && (
                                     <button
-                                        onClick={() => handleKickGuest()}
-                                        title="Sahneden Çıkar"
+                                        onClick={() => isOwner
+                                            ? handleKickGuest()
+                                            : stage.kickFromStage(room.localParticipant.identity)
+                                        }
+                                        title={isOwner ? "Sahneden Çıkar" : "Sahneden Ayrıl"}
                                         style={{
                                             position: "absolute", top: 6, right: 6,
                                             width: 20, height: 20, borderRadius: "50%",
@@ -413,6 +403,18 @@ export function CustomArenaLayout({
                                 onStageRequestClick={handleStageRequestClick}
                                 onInviteClick={() => setIsParticipantsModalOpen(true)}
                                 loading={auction.loading}
+                            />
+                        )}
+
+                        {!isOwner && (
+                            <CoHostListener
+                                adId={adId}
+                                showInviteDialog={showInviteDialog}
+                                onDecline={() => setShowInviteDialog(false)}
+                                onCoHostStatusChange={(v) => {
+                                    setIsCoHost(v);
+                                    setShowInviteDialog(false);
+                                }}
                             />
                         )}
 

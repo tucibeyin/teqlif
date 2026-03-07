@@ -220,13 +220,10 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
               Navigator.pop(ctx);
               final ctrl = ref
                   .read(viewerControllerProvider(widget.ad.id).notifier);
-              ctrl.setReconnectingForStage(true);
-              final notifier =
-                  ref.read(liveRoomProvider(widget.ad.id).notifier);
-              await notifier.disconnect();
-              await notifier.connect(false, isGuest: true);
-              ctrl.setIsGuest(true);
-              ctrl.setReconnectingForStage(false);
+              // Sıfır Kopma: odadan ayrılmadan yetki alınır, kamera/mikrofon açılır.
+              await ref
+                  .read(viewerControllerProvider(widget.ad.id).notifier)
+                  .acceptStageInvite(ctx);
             },
             style: ElevatedButton.styleFrom(
                 backgroundColor: const Color(0xFF00B4CC)),

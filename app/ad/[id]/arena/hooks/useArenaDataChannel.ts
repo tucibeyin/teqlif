@@ -26,6 +26,10 @@ interface DataChannelHandlers {
     onRoomClosed: () => void;
     onCountdown: (value: number) => void;
     onStageRequest: (data: any) => void;
+    /** Hedef katılımcıya gönderilen sahne daveti (yalnızca hedef alır). */
+    onInviteToStage?: (targetIdentity: string) => void;
+    /** Sahne üyeliği değiştiğinde tüm odaya broadcast edilir. */
+    onStageUpdate?: (data: { action: "joined" | "left"; identity: string }) => void;
 }
 
 export function useArenaDataChannel(handlers: DataChannelHandlers) {
@@ -60,6 +64,8 @@ export function useArenaDataChannel(handlers: DataChannelHandlers) {
                 case "ROOM_CLOSED": return h.onRoomClosed();
                 case "COUNTDOWN": return h.onCountdown(data.value);
                 case "REQUEST_STAGE": return h.onStageRequest(data);
+                case "INVITE_TO_STAGE": return h.onInviteToStage?.(data.targetIdentity);
+                case "STAGE_UPDATE": return h.onStageUpdate?.(data);
                 default:
                     break;
             }
