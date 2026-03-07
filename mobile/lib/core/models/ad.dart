@@ -119,6 +119,19 @@ class AdModel {
     return null;
   }
 
+  String? get highestBidderName {
+    if (bids.isNotEmpty) {
+      BidModel? highestBid;
+      for (var bid in bids) {
+        if (highestBid == null || bid.amount > highestBid.amount) {
+          highestBid = bid;
+        }
+      }
+      return highestBid?.user?.name;
+    }
+    return null;
+  }
+
   factory AdModel.fromJson(Map<String, dynamic> json) => AdModel(
         id: json['id'] as String? ?? '',
         title: json['title'] as String? ?? 'İsimsiz İlan',

@@ -82,8 +82,8 @@ class HostState {
         isSold: false,
         showSoldOverlay: false,
         showFinalizationOverlay: false,
-        liveHighestBid: null,
-        liveHighestBidderName: null,
+        liveHighestBid: ad?.highestBidAmount,
+        liveHighestBidderName: ad?.highestBidderName,
       );
 
   HostState copyWith({
