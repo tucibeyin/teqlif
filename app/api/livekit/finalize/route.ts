@@ -42,9 +42,10 @@ export async function POST(req: NextRequest) {
 
     // ── Input Validation ──────────────────────────────────────────────────────
     const body = await req.json();
-    const { adId, isQuickLive } = body as {
+    const { adId, isQuickLive, channelHostId } = body as {
       adId?: string;
       isQuickLive?: boolean;
+      channelHostId?: string;
     };
 
     if (!adId || typeof adId !== "string") {
@@ -205,7 +206,7 @@ export async function POST(req: NextRequest) {
 
       const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
       const winnerName = winnerUser?.name || "Katılımcı";
-      const targetRoom = isQuickLive ? `channel:${ad.userId}` : adId;
+      const targetRoom = channelHostId ? `channel:${channelHostId}` : adId;
       const payload = JSON.stringify({
         type: "AUCTION_ENDED",
         adId,

@@ -413,7 +413,7 @@ class HostController extends StateNotifier<HostState> {
           activeAdId: pinnedAdId,
           liveHighestBid: (startingBid != null && startingBid > 0) ? startingBid : null,
           liveHighestBidderName: null,
-          isAuctionActive: true,
+          isAuctionActive: false,
           isSold: false,
           showSoldOverlay: false,
           soldWinnerName: null,
@@ -751,6 +751,7 @@ class HostController extends StateNotifier<HostState> {
       final res = await ApiClient().post('/api/livekit/finalize', data: {
         'adId': currentAdId,
         'isQuickLive': isQuickLive,
+        'channelHostId': ad.userId,
       });
       if (res.statusCode != 200 && res.statusCode != 201) {
         final errMsg = res.data['error']?.toString() ?? 'Satış tamamlanamadı.';

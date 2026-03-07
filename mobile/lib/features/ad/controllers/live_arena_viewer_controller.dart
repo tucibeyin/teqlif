@@ -736,7 +736,7 @@ class ViewerController extends StateNotifier<ViewerState> {
             activeAdId: pinnedAdId,
             liveHighestBid: (startingBid != null && startingBid > 0) ? startingBid : null,
             liveHighestBidderName: null,
-            isAuctionActive: true,
+            isAuctionActive: false,
             isSold: false,
             showSoldOverlay: false,
             soldWinnerName: null,

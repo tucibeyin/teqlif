@@ -174,7 +174,7 @@ export function useAuction({
             setHighestBidderId(null);
             setHighestBidderName(null);
             setLastAcceptedBidId(null);
-            setStatus("ACTIVE");
+            setStatus("IDLE");
             setResult(null);
             setShowSoldOverlay(false);
             setFinalizedWinner(null);
@@ -326,7 +326,7 @@ export function useAuction({
             const res = await fetch("/api/livekit/finalize", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ adId: activeAdIdRef.current, isQuickLive }),
+                body: JSON.stringify({ adId: activeAdIdRef.current, isQuickLive, channelHostId: sellerId }),
             });
             if (!res.ok) {
                 const data = await res.json();
