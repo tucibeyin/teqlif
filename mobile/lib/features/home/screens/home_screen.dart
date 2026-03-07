@@ -533,8 +533,12 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                                 return;
                               }
 
+                              final titleText = titleCtrl.text.trim();
                               final res = await ApiClient().post(
                                 '/api/livekit/quick-start',
+                                data: {
+                                  if (titleText.isNotEmpty) 'title': titleText,
+                                },
                               );
 
                               if (res.statusCode == 200 && res.data != null) {
