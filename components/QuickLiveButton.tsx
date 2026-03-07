@@ -15,6 +15,9 @@ export function QuickLiveButton() {
     useEffect(() => {
         if (showModal) {
             setTimeout(() => inputRef.current?.focus(), 50);
+        } else {
+            setTitle("");
+            setError(null);
         }
     }, [showModal]);
 
@@ -43,13 +46,14 @@ export function QuickLiveButton() {
 
     return (
         <>
+            {/* Trigger button */}
             <button
                 onClick={() => setShowModal(true)}
                 className="btn btn-primary btn-sm"
                 title="Canlı Yayın Aç"
                 style={{
                     background: "linear-gradient(135deg, #ef4444, #dc2626)",
-                    boxShadow: "0 2px 8px rgba(239, 68, 68, 0.3)",
+                    boxShadow: "0 2px 8px rgba(239,68,68,0.3)",
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
@@ -59,47 +63,31 @@ export function QuickLiveButton() {
                 <span>Canlı Yayın Aç</span>
             </button>
 
+            {/* Modal */}
             {showModal && (
                 <div
-                    style={{
-                        position: "fixed",
-                        inset: 0,
-                        zIndex: 9999,
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        background: "rgba(0,0,0,0.5)",
-                    }}
+                    className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
                     onClick={(e) => { if (e.target === e.currentTarget) setShowModal(false); }}
                 >
-                    <div
-                        style={{
-                            background: "#fff",
-                            borderRadius: "16px",
-                            padding: "28px 24px 24px",
-                            width: "min(420px, 92vw)",
-                            boxShadow: "0 20px 60px rgba(0,0,0,0.25)",
-                        }}
-                    >
+                    <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6">
                         {/* Header */}
-                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "20px" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-                                <span style={{ fontSize: "1.25rem" }}>🔴</span>
-                                <span style={{ fontWeight: 800, fontSize: "1.1rem", color: "#1a1a1a" }}>
-                                    Canlı Yayın Aç
-                                </span>
+                        <div className="flex items-center justify-between mb-5">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">🔴</span>
+                                <span className="font-extrabold text-lg text-gray-900">Canlı Yayın Aç</span>
                             </div>
                             <button
                                 onClick={() => setShowModal(false)}
-                                style={{ background: "none", border: "none", cursor: "pointer", color: "#666", padding: "4px" }}
+                                className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-100 transition-colors"
                             >
                                 <X size={20} />
                             </button>
                         </div>
 
-                        {/* Input */}
-                        <label style={{ display: "block", fontSize: "0.8rem", fontWeight: 600, color: "#555", marginBottom: "6px" }}>
-                            Yayınınıza bir isim verin (Opsiyonel)
+                        {/* Title input */}
+                        <label className="block text-sm font-semibold text-gray-500 mb-1.5">
+                            Yayınınıza bir isim verin{" "}
+                            <span className="font-normal text-gray-400">(Opsiyonel)</span>
                         </label>
                         <input
                             ref={inputRef}
@@ -109,61 +97,29 @@ export function QuickLiveButton() {
                             onKeyDown={(e) => { if (e.key === "Enter" && !loading) handleStart(); }}
                             placeholder="Örn: Akşam İndirimleri"
                             maxLength={80}
-                            style={{
-                                width: "100%",
-                                padding: "10px 14px",
-                                borderRadius: "10px",
-                                border: "1.5px solid #e2e8f0",
-                                fontSize: "0.95rem",
-                                outline: "none",
-                                marginBottom: "20px",
-                                boxSizing: "border-box",
-                            }}
+                            className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-red-300 focus:border-transparent mb-5"
                         />
 
                         {/* Error */}
                         {error && (
-                            <p style={{ color: "#ef4444", fontSize: "0.8rem", marginBottom: "12px" }}>{error}</p>
+                            <p className="text-red-500 text-xs mb-3">{error}</p>
                         )}
 
                         {/* Actions */}
-                        <div style={{ display: "flex", gap: "10px" }}>
+                        <div className="flex gap-2.5">
                             <button
                                 onClick={() => setShowModal(false)}
-                                style={{
-                                    flex: 1,
-                                    padding: "10px",
-                                    borderRadius: "10px",
-                                    border: "1.5px solid #e2e8f0",
-                                    background: "#fff",
-                                    cursor: "pointer",
-                                    fontWeight: 600,
-                                    fontSize: "0.9rem",
-                                    color: "#555",
-                                }}
+                                className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-500 hover:bg-gray-50 transition-colors"
                             >
                                 İptal
                             </button>
                             <button
                                 onClick={handleStart}
                                 disabled={loading}
-                                style={{
-                                    flex: 2,
-                                    padding: "10px",
-                                    borderRadius: "10px",
-                                    border: "none",
-                                    background: loading ? "#f87171" : "linear-gradient(135deg, #ef4444, #dc2626)",
-                                    color: "#fff",
-                                    fontWeight: 700,
-                                    fontSize: "0.9rem",
-                                    cursor: loading ? "not-allowed" : "pointer",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "center",
-                                    gap: "8px",
-                                }}
+                                className="flex-[2] py-2.5 rounded-xl text-sm font-bold text-white flex items-center justify-center gap-2 disabled:opacity-70 transition-opacity"
+                                style={{ background: "linear-gradient(135deg, #ef4444, #dc2626)" }}
                             >
-                                <Radio size={15} />
+                                <Radio size={14} />
                                 {loading ? "Başlatılıyor..." : "Yayını Başlat"}
                             </button>
                         </div>

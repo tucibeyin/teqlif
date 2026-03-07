@@ -1,8 +1,6 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:image_picker/image_picker.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../../core/api/api_client.dart';
@@ -363,10 +361,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   Future<void> _showQuickLiveBottomSheet() async {
     final titleCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
-    File? selectedImage;
     bool isLoading = false;
-    final picker = ImagePicker();
 
     await showModalBottomSheet(
       context: context,
@@ -388,6 +383,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Handle
                   Center(
                     child: Container(
                       width: 40,
@@ -399,6 +395,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       ),
                     ),
                   ),
+                  // Header
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
@@ -412,20 +409,24 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                       IconButton(
                         icon: const Icon(Icons.close),
                         onPressed: () => Navigator.pop(ctx),
-                      )
+                      ),
                     ],
                   ),
                   const SizedBox(height: 16),
-                  const Text('Yayın Başlığı *',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black54)),
+                  // Title input
+                  const Text(
+                    'Yayınınızın İsmi (Opsiyonel)',
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.black54),
+                  ),
                   const SizedBox(height: 8),
                   TextField(
                     controller: titleCtrl,
+                    autofocus: true,
                     decoration: InputDecoration(
-                      hintText: 'Örn: Antika Saat Açık Arttırması',
+                      hintText: 'Örn: Akşam İndirimleri',
                       filled: true,
                       fillColor: Colors.grey[100],
                       border: OutlineInputBorder(
@@ -433,85 +434,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                         borderSide: BorderSide.none,
                       ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Başlangıç Fiyatı (₺)',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black54)),
-                  const SizedBox(height: 8),
-                  TextField(
-                    controller: priceCtrl,
-                    keyboardType: TextInputType.number,
-                    decoration: InputDecoration(
-                      hintText: 'Opsiyonel (Varsayılan: 1₺)',
-                      filled: true,
-                      fillColor: Colors.grey[100],
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text('Kapak Fotoğrafı (İsteğe Bağlı)',
-                      style: TextStyle(
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.black54)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: OutlinedButton.icon(
-                          onPressed: () async {
-                            final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 80);
-                            if (picked != null) {
-                              setModalState(() => selectedImage = File(picked.path));
-                            }
-                          },
-                          icon: const Icon(Icons.photo_library),
-                          label: Text(selectedImage != null ? 'Değiştir' : 'Fotoğraf Seç'),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                          ),
-                        ),
-                      ),
-                      if (selectedImage != null) ...[
-                        const SizedBox(width: 12),
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                selectedImage!,
-                                width: 50,
-                                height: 50,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Positioned(
-                              top: -8,
-                              right: -8,
-                              child: GestureDetector(
-                                onTap: () => setModalState(() => selectedImage = null),
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.black54,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: const Icon(Icons.close, size: 12, color: Colors.white),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ]
-                    ],
                   ),
                   const SizedBox(height: 24),
                   ElevatedButton(
