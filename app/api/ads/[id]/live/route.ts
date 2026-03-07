@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { logger } from "@/lib/logger";
 import { notifyFollowersOfLive } from "@/lib/fcm";
-import { startAuction, closeAuction } from "@/lib/services/auction-redis.service";
+import { startAuction, closeAuction, startChannel, pinItemToChannel } from "@/lib/services/auction-redis.service";
 
 export const dynamic = 'force-dynamic';
 
@@ -35,9 +35,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
         // 🔄 Session Start Protection: Force auction reset when stream starts
         if (isLive === true && !ad.isLive) {
             // Channel mimarisini başlat
-            const { startChannel, pinItemToChannel } = await import("@/lib/services/auction-redis.service");
             await startChannel(user.id);
-            await pinItemToChannel(user.id, id, ad.startingBid ?? 0);
+            await pinItemToChannel(user.id, {
+                id: ad.id,
+                title: ad.title,
+                price: ad.startingBid ?? 0,
+                imageUrl: (ad.images as string[])?.[0],
+                isStaticAd: true,
+            }, ad.startingBid ?? 0);
 
             if (isAuctionActive !== true) {
                 updateData.isAuctionActive = false;
