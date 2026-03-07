@@ -30,27 +30,38 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "roomId, identity ve action zorunludur." }, { status: 400 });
         }
 
-        // 3. Ownership verification via Prisma
-        // The roomId is assumed to be the adId in this system
-        const ad = await prisma.ad.findUnique({
-            where: { id: roomId },
-            select: { userId: true }
-        });
+        // 3. Ownership verification
+        // Kanal modu: roomId = "channel:{hostId}" — Prisma değil, string'den sahip çıkarılır.
+        // Klasik mod: roomId = adId — Prisma ile doğrulanır.
+        let callerIsOwner = false;
+        let effectiveRoom = roomId;
 
-        if (!ad) {
-            return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
+        if (roomId.startsWith("channel:")) {
+            const channelHostId = roomId.replace("channel:", "");
+            callerIsOwner = channelHostId === userId;
+        } else {
+            const ad = await prisma.ad.findUnique({
+                where: { id: roomId },
+                select: { userId: true },
+            });
+            if (!ad) {
+                return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
+            }
+            callerIsOwner = ad.userId === userId;
+            // Klasik modda yayın channel:{hostId} odasında olabilir; roomId=adId geçilmişse kullan
+            effectiveRoom = roomId;
         }
 
-        if (ad.userId !== userId) {
+        if (!callerIsOwner) {
             return NextResponse.json({ error: "Bu işlemi gerçekleştirme yetkiniz yok (Owner only)." }, { status: 403 });
         }
 
         // 4. Perform moderation action
         if (action === 'kick') {
-            await roomService.removeParticipant(roomId, identity);
+            await roomService.removeParticipant(effectiveRoom, identity);
         } else if (action === 'mute') {
             // Revoke publishData permission to prevent chat
-            await roomService.updateParticipant(roomId, identity, undefined, {
+            await roomService.updateParticipant(effectiveRoom, identity, undefined, {
                 canPublish: true,
                 canSubscribe: true,
                 canPublishData: false,

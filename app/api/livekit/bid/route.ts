@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { RoomServiceClient } from "livekit-server-sdk";
 import { placeBid } from "@/lib/services/auction-redis.service";
 import { getMobileUser } from "@/lib/mobile-auth";
+import { prisma } from "@/lib/prisma";
 
 
 export async function POST(req: NextRequest) {
@@ -33,6 +34,29 @@ export async function POST(req: NextRequest) {
         { error: "Teklif tutarı pozitif bir tam sayı olmalıdır" },
         { status: 400 }
       );
+    }
+
+    // ── Öz-Teklif Yasağı (Host kendi ihalesine teklif veremez) ─────────────
+    if (channelHostId) {
+      // Kanal modu: channelHostId doğrudan host'tur
+      if (userId === channelHostId) {
+        return NextResponse.json(
+          { error: "Kendi kanalınızdaki açık artırmaya teklif veremezsiniz." },
+          { status: 403 }
+        );
+      }
+    } else {
+      // Klasik mod: adın sahibini Prisma'dan al
+      const adOwner = await prisma.ad.findUnique({
+        where: { id: adId },
+        select: { userId: true },
+      });
+      if (adOwner?.userId === userId) {
+        return NextResponse.json(
+          { error: "Kendi ilanınıza teklif veremezsiniz." },
+          { status: 403 }
+        );
+      }
     }
 
     // ── Atomik Teklif (Lua Script via Redis) ────────────────────────────────
