@@ -92,9 +92,6 @@ export async function startAuction(
 /**
  * Lua script aracılığıyla atomik teklif işlemi gerçekleştirir.
  * Aynı anda gelen teklifler için Redis'in tek-thread modeli race condition'ı engeller.
- *
- * channelHostId verilirse, adId'nin o kanalın aktif ürünü olup olmadığı da kontrol edilir.
- * Eski ürünlere gelen teklifler "not_active_item" hatası ile reddedilir.
  */
 export async function placeBid(
   adId: string,
@@ -158,7 +155,10 @@ export async function closeAuction(adId: string): Promise<void> {
  * LiveKit odası açılırken çağrılmalıdır.
  */
 export async function startChannel(hostId: string): Promise<void> {
-  await redis.set(channelKeys.status(hostId), "live");
+  const pipeline = redis.pipeline();
+  pipeline.set(channelKeys.status(hostId), "live");
+  pipeline.del(channelKeys.activeAd(hostId));
+  await pipeline.exec();
 }
 
 /**

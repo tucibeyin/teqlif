@@ -81,14 +81,11 @@ export async function GET(req: NextRequest) {
         // Redis erişilemiyorsa klasik adId odasıyla devam et
       }
     } else {
-      // Kanal odası ise, hostIdOfRoom zaten 'channel:' prefix'inden çıkarıldı.
-      // Opsiyonel: hostIdOfRoom'un geçerli bir kullanıcı olup olmadığını kontrol edebiliriz.
-      const user = await prisma.user.findUnique({
-        where: { id: hostIdOfRoom! },
-        select: { id: true }
-      });
-      if (!user) {
-        return NextResponse.json({ error: 'Kanal sahibi bulunamadı' }, { status: 404 });
+      // Kanal odası: Prisma yerine Redis'ten canlı olup olmadığını kontrol et.
+      const channelState = await getChannelState(hostIdOfRoom!);
+      if (channelState.status !== 'live') {
+        logger.liveKit("WARN", "TOKEN_API", `Channel not live for hostId: ${hostIdOfRoom}`);
+        return NextResponse.json({ error: 'Kanal şu an canlı değil' }, { status: 404 });
       }
     }
 
