@@ -612,7 +612,11 @@ class ViewerController extends StateNotifier<ViewerState> {
         } else if (type == 'NEW_BID' || type == 'BID_ACCEPTED') {
           final amount = (decoded['amount'] as num).toDouble();
           final nextBid = amount + (ad?.minBidStep ?? 1000);
-          state = state.copyWith(liveHighestBid: amount);
+          final bidderName = decoded['bidderName']?.toString();
+          state = state.copyWith(
+            liveHighestBid: amount,
+            liveHighestBidderName: bidderName ?? state.liveHighestBidderName,
+          );
           onUpdateBidText?.call(_formatPrice(nextBid));
           if (type == 'BID_ACCEPTED' &&
               (decoded['bidderId'] ?? decoded['bidderIdentity']) == ref.read(authProvider).user?.id) {

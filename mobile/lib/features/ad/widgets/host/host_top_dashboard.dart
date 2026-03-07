@@ -243,16 +243,26 @@ class _PortraitStatsInner extends StatelessWidget {
               ),
               if (state.bids.isNotEmpty || state.liveHighestBidderName != null)
                 Padding(
-                  padding: const EdgeInsets.only(top: 4),
-                  child: Row(children: [
-                    Text(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.person_outline,
+                          color: Colors.greenAccent, size: 12),
+                      const SizedBox(width: 4),
+                      Text(
                         state.bids.isNotEmpty
                             ? state.bids.first.userLabel
                             : state.liveHighestBidderName!,
                         style: const TextStyle(
-                            color: Colors.greenAccent,
-                            fontSize: 11,
-                            fontWeight: FontWeight.bold)),
+                          color: Colors.greenAccent,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                      if (state.bids.isNotEmpty &&
+                          state.bids.first.userId != null)
+                        GestureDetector(
                     if (state.bids.isNotEmpty && state.bids.first.userId != null)
                       GestureDetector(
                         onTap: () => onInvite(state.bids.first.userId!),
@@ -387,15 +397,25 @@ class _LandscapeStatsInner extends StatelessWidget {
                 ),
               ),
               if (state.bids.isNotEmpty || state.liveHighestBidderName != null) ...[
-                const SizedBox(width: 8),
-                Text(
-                    state.bids.isNotEmpty
-                        ? state.bids.first.userLabel
-                        : state.liveHighestBidderName!,
-                    style: const TextStyle(
+                const SizedBox(width: 12),
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(Icons.person_outline,
+                        color: Colors.greenAccent, size: 10),
+                    const SizedBox(width: 4),
+                    Text(
+                      state.bids.isNotEmpty
+                          ? state.bids.first.userLabel
+                          : state.liveHighestBidderName!,
+                      style: const TextStyle(
                         color: Colors.greenAccent,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold)),
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                  ],
+                ),
               ]
             ],
           ),

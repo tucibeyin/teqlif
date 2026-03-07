@@ -332,7 +332,12 @@ class HostController extends StateNotifier<HostState> {
             ),
           );
         }
-        state = state.copyWith(bids: bids);
+        state = state.copyWith(
+          bids: bids,
+          liveHighestBid: amount,
+          liveHighestBidderName: dataObj['bidderName']?.toString() ??
+              state.liveHighestBidderName,
+        );
         return;
 
       } else if (dataObj['type'] == 'CHAT') {
@@ -368,7 +373,12 @@ class HostController extends StateNotifier<HostState> {
           ),
         );
         if (bids.length > 50) bids.removeLast();
-        state = state.copyWith(bids: bids, unreadBids: state.unreadBids + 1);
+        state = state.copyWith(
+          bids: bids,
+          unreadBids: state.unreadBids + 1,
+          liveHighestBid: amount,
+          liveHighestBidderName: bidderName,
+        );
         return;
 
       } else if (dataObj['type'] == 'SALE_FINALIZED') {

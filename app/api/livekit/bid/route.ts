@@ -59,6 +59,7 @@ export async function POST(req: NextRequest) {
       type: "NEW_BID",
       amount: result.newHighestBid,
       bidderIdentity: userId,
+      bidderName: user.name,
     });
 
     await roomService.sendData(
