@@ -79,12 +79,17 @@ export async function POST(req: NextRequest) {
     // Kanal mimarisinde broadcast hedefi channel:{hostId}, klasik mimaride adId odasıdır.
     const targetRoom = channelHostId ? `channel:${channelHostId}` : adId;
 
-    await roomService.sendData(
-      targetRoom,
-      new TextEncoder().encode(payload),
-      1, // DataPacket_Kind.RELIABLE
-      { topic: "auction_events" }
-    );
+    // Fire-and-forget: oda yoksa veya LiveKit hatası olursa teklif yine de kabul edilmiş sayılır.
+    roomService
+      .sendData(
+        targetRoom,
+        new TextEncoder().encode(payload),
+        1, // DataPacket_Kind.RELIABLE
+        { topic: "auction_events" }
+      )
+      .catch((err) =>
+        console.error("[LiveKit Bid API] sendData error:", err)
+      );
 
     return NextResponse.json(
       { success: true, newHighestBid: result.newHighestBid },
