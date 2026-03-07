@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
 
       // Redis: kanala sabitlenmiş aktif ürün ID'si
       const channelState = await getChannelState(hostId);
-      const pinnedAdId = channelState.activeAdId;
+      const pinnedAdId = channelState.activeItem?.id;
 
       if (!pinnedAdId) {
         return NextResponse.json(
@@ -99,7 +99,7 @@ export async function POST(req: NextRequest) {
             `auction:${pinnedAdId}:highest_bid`,
             `auction:${pinnedAdId}:highest_bidder`
           )
-          .catch(() => {});
+          .catch(() => { });
         return NextResponse.json(
           { success: true, message: "İhale kazanansız kapandı.", winner: null },
           { status: 200 }
@@ -117,7 +117,7 @@ export async function POST(req: NextRequest) {
             `auction:${pinnedAdId}:highest_bid`,
             `auction:${pinnedAdId}:highest_bidder`
           )
-          .catch(() => {});
+          .catch(() => { });
         return NextResponse.json(
           { error: "Sabitlenen ürün DB'de bulunamadı." },
           { status: 404 }
@@ -287,7 +287,7 @@ export async function POST(req: NextRequest) {
           `auction:${adId}:highest_bid`,
           `auction:${adId}:highest_bidder`
         )
-        .catch(() => {});
+        .catch(() => { });
       revalidatePath(`/ad/${adId}`);
       revalidatePath("/");
       return NextResponse.json(
