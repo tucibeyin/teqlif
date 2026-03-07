@@ -3,6 +3,11 @@ import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 import { roomService } from "@/lib/livekit";
 import { getMobileUser } from "@/lib/mobile-auth";
+import {
+    startAuction,
+    closeAuction,
+    getChannelState
+} from "@/lib/services/auction-redis.service";
 
 export async function POST(req: NextRequest) {
     try {
@@ -66,6 +71,26 @@ export async function POST(req: NextRequest) {
                 canSubscribe: true,
                 canPublishData: false,
             });
+        } else if (action === 'start' || action === 'stop') {
+            // Auction management
+            if (!roomId.startsWith("channel:")) {
+                return NextResponse.json({ error: "Start/Stop işlemi sadece kanal modunda desteklenir." }, { status: 400 });
+            }
+
+            const channelHostId = roomId.replace("channel:", "");
+            const channelState = await getChannelState(channelHostId);
+
+            if (!channelState.activeItem) {
+                return NextResponse.json({ error: "Kanalda aktif bir ürün bulunamadı." }, { status: 400 });
+            }
+
+            const auctionId = channelState.activeItem.id;
+
+            if (action === 'start') {
+                await startAuction(auctionId, channelState.activeItem.price || 0);
+            } else {
+                await closeAuction(auctionId);
+            }
         } else {
             return NextResponse.json({ error: "Geçersiz işlem tipi." }, { status: 400 });
         }

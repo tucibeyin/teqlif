@@ -10,6 +10,7 @@ import {
 } from "@/lib/services/auction-redis.service";
 import { redis } from "@/lib/redis";
 import { revalidatePath } from "next/cache";
+import { ensureCategory } from "@/lib/ensure-category";
 
 export const dynamic = "force-dynamic";
 
@@ -107,30 +108,29 @@ export async function POST(req: NextRequest) {
       }
 
       // Pinned ilanın DB kaydını çek (başlık / kategori / görseller için)
-      const pinnedAd = await prisma.ad.findUnique({ where: { id: pinnedAdId } });
+      // Hızlı ürünlerde (custom_ ID) bu null dönecek, o zaman activeItem verisini kullanacağız.
+      const pinnedAd = pinnedAdId.startsWith("custom_")
+        ? null
+        : await prisma.ad.findUnique({ where: { id: pinnedAdId } });
 
-      // Makbuz için zorunlu alanlar pinnedAd'den geliyor; bulunamazsa işlem yapılamaz
-      if (!pinnedAd) {
-        await redis
-          .del(
-            `auction:${pinnedAdId}:status`,
-            `auction:${pinnedAdId}:highest_bid`,
-            `auction:${pinnedAdId}:highest_bidder`
-          )
-          .catch(() => { });
-        return NextResponse.json(
-          { error: "Sabitlenen ürün DB'de bulunamadı." },
-          { status: 404 }
-        );
+      const activeItem = channelState.activeItem!; // activeItem guaranteed by pinnedAdId check above
+
+      const receiptTitle = pinnedAd ? `${pinnedAd.title} - Canlı Yayın Satışı` : `${activeItem.title} - Canlı Yayın Satışı`;
+      const receiptDescription = pinnedAd?.description || "Canlı Yayın Kanalı Satışı";
+      const receiptImages = pinnedAd?.images || (activeItem.imageUrl ? [activeItem.imageUrl] : []);
+
+      // Category safety for custom items
+      let receiptCategoryId = pinnedAd?.categoryId;
+      if (!receiptCategoryId) {
+        const cat = await ensureCategory("vasita"); // Fallback slug
+        receiptCategoryId = cat?.id || "not-found";
       }
-
-      const receiptTitle = `${pinnedAd.title} - Canlı Yayın Satışı`;
 
       // 3. Prisma transaction: Makbuz ilanı + konuşma + mesaj
       let notifyAdId = pinnedAdId;
 
       const { receipt } = await prisma.$transaction(async (tx) => {
-        // Kazanan teklifi kaydet
+        // Kazanan teklifi kaydet (Custom ürünler için adId custom_xxx olarak kalır, Sorun değil)
         await tx.bid.create({
           data: {
             amount: highestBid,
@@ -144,17 +144,17 @@ export async function POST(req: NextRequest) {
         const newReceipt = await tx.ad.create({
           data: {
             title: receiptTitle,
-            description: pinnedAd.description || "Canlı Yayın Kanalı Satışı",
-            images: pinnedAd.images ?? [],
+            description: receiptDescription,
+            images: receiptImages as string[],
             price: highestBid,
             isFixedPrice: false,
             isAuction: true,
             isLive: false,
             status: "SOLD",
             userId: hostId,
-            categoryId: pinnedAd.categoryId,
-            provinceId: pinnedAd.provinceId,
-            districtId: pinnedAd.districtId,
+            categoryId: receiptCategoryId,
+            provinceId: pinnedAd?.provinceId || "06", // Default values if quick-live
+            districtId: pinnedAd?.districtId || "06-01",
             winnerId: highestBidder,
           },
         });
@@ -226,7 +226,8 @@ export async function POST(req: NextRequest) {
           .catch((err) =>
             console.error("[AUCTION_ENDED] LiveKit broadcast error:", err)
           );
-      } else {
+      }
+      else {
         console.warn("[AUCTION_ENDED] LiveKit env variables missing — skipping broadcast");
       }
 
