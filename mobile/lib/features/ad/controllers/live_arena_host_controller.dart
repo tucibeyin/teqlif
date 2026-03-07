@@ -43,8 +43,11 @@ class HostState {
   final bool showFinalizationOverlay;
   final double? liveHighestBid;
   final String? liveHighestBidderName;
-  /// Kanal modunda şu an aktif olan ürünün adId'si. null → klasik mod (adId kullanılır).
-  final String? activeAdId;
+  /// Kanal modunda şu an aktif olan ürün (ActiveItem). null → klasik mod (adId kullanılır).
+  final Map<String, dynamic>? currentActiveItem;
+
+  /// Convenience getter — backward compat for code that needs only the active ad ID.
+  String? get activeAdId => currentActiveItem?['id'] as String?;
 
   const HostState({
     required this.bids,
@@ -67,7 +70,7 @@ class HostState {
     required this.showFinalizationOverlay,
     this.liveHighestBid,
     this.liveHighestBidderName,
-    this.activeAdId,
+    this.currentActiveItem,
   });
 
   factory HostState.initial(AdModel? ad) => HostState(
@@ -87,7 +90,7 @@ class HostState {
         showFinalizationOverlay: false,
         liveHighestBid: ad?.highestBidAmount,
         liveHighestBidderName: ad?.highestBidderName,
-        activeAdId: null,
+        currentActiveItem: null,
       );
 
   HostState copyWith({
@@ -111,7 +114,7 @@ class HostState {
     bool? showFinalizationOverlay,
     Object? liveHighestBid = _sentinel,
     Object? liveHighestBidderName = _sentinel,
-    Object? activeAdId = _sentinel,
+    Object? currentActiveItem = _sentinel,
   }) {
     return HostState(
       bids: bids ?? this.bids,
@@ -147,9 +150,9 @@ class HostState {
       liveHighestBidderName: liveHighestBidderName == _sentinel
           ? this.liveHighestBidderName
           : liveHighestBidderName as String?,
-      activeAdId: activeAdId == _sentinel
-          ? this.activeAdId
-          : activeAdId as String?,
+      currentActiveItem: currentActiveItem == _sentinel
+          ? this.currentActiveItem
+          : currentActiveItem as Map<String, dynamic>?,
     );
   }
 }
@@ -284,17 +287,16 @@ class HostController extends StateNotifier<HostState> {
       );
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data as Map<String, dynamic>;
-        final newActiveAdId = data['activeAdId']?.toString();
-        final auction = data['auction'] as Map<String, dynamic>?;
-        if (newActiveAdId != null && auction != null) {
-          final isAuctionActive = auction['isAuctionActive'] == true;
-          final highestBid = (auction['highestBid'] as num?)?.toDouble() ?? 0;
+        final activeItem = data['activeItem'] as Map<String, dynamic>?;
+        final isAuctionActive = data['auctionStatus'] == 'ACTIVE';
+        final highestBid = (data['highestBid'] as num?)?.toDouble() ?? 0;
+        if (activeItem != null) {
           state = state.copyWith(
-            activeAdId: newActiveAdId,
+            currentActiveItem: activeItem,
             isAuctionActive: isAuctionActive,
             liveHighestBid: highestBid > 0 ? highestBid : null,
           );
-          debugPrint('Host synced from channel: activeAd=$newActiveAdId, bid=$highestBid');
+          debugPrint('Host synced from channel: activeItem=${activeItem['id']}, bid=$highestBid');
           return;
         }
       }
@@ -407,11 +409,11 @@ class HostController extends StateNotifier<HostState> {
         return;
 
       } else if (type == 'ITEM_PINNED') {
-        final pinnedAdId = dataObj['adId']?.toString();
+        final activeItemMap = dataObj['activeItem'] as Map<String, dynamic>?;
         final startingBid = (dataObj['startingBid'] as num?)?.toDouble();
-        if (pinnedAdId == null) return;
+        if (activeItemMap == null) return;
         state = state.copyWith(
-          activeAdId: pinnedAdId,
+          currentActiveItem: activeItemMap,
           liveHighestBid: (startingBid != null && startingBid > 0) ? startingBid : null,
           liveHighestBidderName: null,
           isAuctionActive: false,
@@ -676,12 +678,9 @@ class HostController extends StateNotifier<HostState> {
   // ── Channel item pinning ────────────────────────────────────────────────────
 
   Future<void> pinItemToChannel(
-      String targetAdId, int startingBid, BuildContext ctx) async {
+      Map<String, dynamic> body, BuildContext ctx) async {
     try {
-      final res = await ApiClient().post('/api/livekit/channel/pin-item', data: {
-        'adId': targetAdId,
-        'startingBid': startingBid,
-      });
+      final res = await ApiClient().post('/api/livekit/channel/pin-item', data: body);
       if ((res.statusCode == 200 || res.statusCode == 201) && ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(

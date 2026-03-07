@@ -4,6 +4,8 @@ import { useState } from "react";
 import { TrackToggle, useRoomContext } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import type { AuctionStatus } from "../types";
+import { PinItemModal } from "./PinItemModal";
+import type { PinPayload } from "./PinItemModal";
 
 const T = {
   glass: "rgba(255,255,255,0.06)",
@@ -36,8 +38,8 @@ export interface HostControlsProps {
   onStageRequestClick: () => void;
   onInviteClick: () => void;
   loading: boolean;
-  /** Kanal modunda ürün sabitleme. Verilmezse Pin paneli gösterilmez. */
-  onPinItem?: (adId: string, startingBid: number) => Promise<void>;
+  /** Kanal modunda ürün sabitleme. Verilmezse Pin butonu gösterilmez. */
+  onPinItem?: (payload: PinPayload) => Promise<void>;
 }
 
 export function HostControls({
@@ -48,30 +50,7 @@ export function HostControls({
   const room = useRoomContext();
   const isActive = auctionStatus === "ACTIVE";
 
-  // ── Pin Item Panel State ──
-  const [showPinPanel, setShowPinPanel] = useState(false);
-  const [pinAdId, setPinAdId] = useState("");
-  const [pinStartingBid, setPinStartingBid] = useState("");
-  const [pinLoading, setPinLoading] = useState(false);
-  const [pinError, setPinError] = useState<string | null>(null);
-
-  const handlePin = async () => {
-    const trimmedAdId = pinAdId.trim();
-    const bid = parseInt(pinStartingBid, 10);
-    if (!trimmedAdId) { setPinError("İlan ID zorunludur."); return; }
-    setPinError(null);
-    setPinLoading(true);
-    try {
-      await onPinItem!(trimmedAdId, isNaN(bid) ? 0 : bid);
-      setPinAdId("");
-      setPinStartingBid("");
-      setShowPinPanel(false);
-    } catch {
-      setPinError("Sabitleme başarısız.");
-    } finally {
-      setPinLoading(false);
-    }
-  };
+  const [showPinModal, setShowPinModal] = useState(false);
 
   const handleCameraSwitch = async () => {
     try {
@@ -190,74 +169,20 @@ export function HostControls({
         </button>
       </div>
 
-      {/* ── PIN ITEM FAB + PANEL — bottom right (kanal modu) ──────── */}
+      {/* ── PIN ITEM FAB — bottom right (kanal modu) ───────────────── */}
       {onPinItem && (
         <div style={{
           position: "absolute", bottom: 24, right: 20, zIndex: 200,
-          pointerEvents: "auto", display: "flex", flexDirection: "column",
-          alignItems: "flex-end", gap: 10,
+          pointerEvents: "auto",
         }}>
-          {/* Panel */}
-          {showPinPanel && (
-            <div style={{
-              background: "rgba(14,20,34,0.92)", border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 16, padding: "14px 16px", backdropFilter: "blur(20px)",
-              width: 220, display: "flex", flexDirection: "column", gap: 8,
-            }}>
-              <span style={{
-                fontSize: 10, fontWeight: 800, letterSpacing: 1.5,
-                color: "rgba(255,255,255,0.5)", fontFamily: T.display,
-              }}>
-                ÜRÜN SABİTLE
-              </span>
-              <input
-                value={pinAdId}
-                onChange={e => setPinAdId(e.target.value)}
-                placeholder="İlan ID"
-                style={{
-                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 10, padding: "8px 12px", color: T.text,
-                  fontSize: 12, fontFamily: T.display, outline: "none",
-                }}
-              />
-              <input
-                value={pinStartingBid}
-                onChange={e => setPinStartingBid(e.target.value.replace(/\D/g, ""))}
-                placeholder="Başlangıç fiyatı (₺)"
-                style={{
-                  background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.1)",
-                  borderRadius: 10, padding: "8px 12px", color: T.text,
-                  fontSize: 12, fontFamily: T.display, outline: "none",
-                }}
-              />
-              {pinError && (
-                <span style={{ fontSize: 11, color: T.red, fontFamily: T.display }}>{pinError}</span>
-              )}
-              <button
-                onClick={handlePin}
-                disabled={pinLoading || !pinAdId.trim()}
-                style={{
-                  padding: "9px 0", borderRadius: 10, cursor: pinLoading ? "not-allowed" : "pointer",
-                  background: "linear-gradient(135deg, rgba(6,200,224,0.25), rgba(5,154,175,0.2))",
-                  border: "1px solid rgba(6,200,224,0.35)", color: "#06C8E0",
-                  fontFamily: T.display, fontWeight: 800, fontSize: 12, letterSpacing: 0.5,
-                  opacity: pinLoading || !pinAdId.trim() ? 0.5 : 1,
-                }}
-              >
-                {pinLoading ? "Sabitleniyor..." : "📌 Sabitle"}
-              </button>
-            </div>
-          )}
-
-          {/* Toggle FAB */}
           <button
             className="tq-fab"
-            onClick={() => { setShowPinPanel(p => !p); setPinError(null); }}
+            onClick={() => setShowPinModal(true)}
             title="Ürün Sabitle"
             style={{
               ...FAB,
-              background: showPinPanel ? "rgba(6,200,224,0.2)" : FAB.background,
-              border: showPinPanel ? "1px solid rgba(6,200,224,0.4)" : FAB.border,
+              background: showPinModal ? "rgba(6,200,224,0.2)" : FAB.background,
+              border: showPinModal ? "1px solid rgba(6,200,224,0.4)" : FAB.border,
             }}
           >
             📌
@@ -294,6 +219,15 @@ export function HostControls({
             </span>
           </div>
         </div>
+      )}
+
+      {/* ── PinItemModal ───────────────────────────────────────────── */}
+      {onPinItem && (
+        <PinItemModal
+          isOpen={showPinModal}
+          onClose={() => setShowPinModal(false)}
+          onSubmit={onPinItem}
+        />
       )}
     </>
   );

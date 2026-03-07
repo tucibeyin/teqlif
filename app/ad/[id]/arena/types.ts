@@ -1,5 +1,17 @@
 // ─── Shared Arena Types ───────────────────────────────────────────────────────
 
+/**
+ * Kanala sabitlenmiş ürünün standart temsili (backend ActiveItem ile birebir).
+ * isStaticAd: true → mevcut ilan | false → on-the-fly ürün
+ */
+export interface ActiveItem {
+    id: string;
+    title: string;
+    price: number;
+    imageUrl?: string;
+    isStaticAd: boolean;
+}
+
 export interface ArenaMessage {
     id: string;
     text: string;

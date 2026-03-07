@@ -4,6 +4,7 @@ import 'package:flutter_webrtc/flutter_webrtc.dart' as webrtc;
 import 'package:livekit_client/livekit_client.dart';
 
 import '../../controllers/live_arena_host_controller.dart';
+import 'pin_item_sheet.dart';
 
 /// Circular FAB column: stage requests, bids, camera flip, camera toggle, mic toggle.
 class HostControlsWidget extends ConsumerWidget {
@@ -18,53 +19,17 @@ class HostControlsWidget extends ConsumerWidget {
     required this.onShowBidsSheet,
   });
 
-  void _showPinItemDialog(BuildContext context, HostController controller) {
-    final adIdCtrl = TextEditingController();
-    final bidCtrl = TextEditingController();
-
-    showDialog(
+  Future<void> _showPinItemSheet(
+      BuildContext context, HostController controller) async {
+    final result = await showModalBottomSheet<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Ürün Sabitle'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            TextField(
-              controller: adIdCtrl,
-              decoration: const InputDecoration(
-                labelText: 'İlan ID',
-                hintText: 'Sabitlenecek ilanın ID\'si',
-              ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: bidCtrl,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Başlangıç Fiyatı (₺)',
-                hintText: '0',
-              ),
-            ),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            onPressed: () {
-              final targetAdId = adIdCtrl.text.trim();
-              if (targetAdId.isEmpty) return;
-              final startingBid = int.tryParse(bidCtrl.text.trim()) ?? 0;
-              Navigator.pop(ctx);
-              controller.pinItemToChannel(targetAdId, startingBid, context);
-            },
-            child: const Text('📌 Sabitle'),
-          ),
-        ],
-      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => const PinItemSheet(),
     );
+    if (result != null && context.mounted) {
+      controller.pinItemToChannel(result, context);
+    }
   }
 
   @override
@@ -121,7 +86,7 @@ class HostControlsWidget extends ConsumerWidget {
         // Pin item button (kanal modu)
         CircularControlButton(
           icon: Icons.push_pin,
-          onPressed: () => _showPinItemDialog(context, controller),
+          onPressed: () => _showPinItemSheet(context, controller),
         ),
         const SizedBox(height: 12),
         // Camera flip

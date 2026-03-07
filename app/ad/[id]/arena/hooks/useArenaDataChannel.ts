@@ -1,6 +1,7 @@
 import { useRef, useEffect } from "react";
 import { useDataChannel } from "@livekit/components-react";
 import { useSession } from "next-auth/react";
+import type { ActiveItem } from "../types";
 
 /** Backend'in /api/livekit/finalize'dan broadcast ettiği payload. */
 export interface AuctionEndedPayload {
@@ -30,8 +31,8 @@ interface DataChannelHandlers {
     onInviteToStage?: (targetIdentity: string) => void;
     /** Sahne üyeliği değiştiğinde tüm odaya broadcast edilir. */
     onStageUpdate?: (data: { action: "joined" | "left"; identity: string }) => void;
-    /** Kanala yeni ürün sabitlendiğinde tüm odaya broadcast edilir. */
-    onItemPinned?: (data: { adId: string; startingBid: number }) => void;
+    /** Kanala yeni ürün sabitlendiğinde tüm odaya broadcast edilir (tam ActiveItem objesiyle). */
+    onItemPinned?: (data: { activeItem: ActiveItem; startingBid: number }) => void;
 }
 
 export function useArenaDataChannel(handlers: DataChannelHandlers) {

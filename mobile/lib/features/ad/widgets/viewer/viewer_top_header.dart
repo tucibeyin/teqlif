@@ -27,21 +27,29 @@ class ViewerTopHeader extends ConsumerWidget {
     final viewerCount =
         ref.watch(liveRoomProvider(_key).select((s) => s.viewerCount));
 
+    // When a channel item is pinned, use its price as the base starting price.
+    final pinnedPrice =
+        (viewerState.currentActiveItem?['price'] as num?)?.toDouble();
+
     final displayPrice = viewerState.isAuctionActive
         ? (viewerState.liveHighestBid ??
+            pinnedPrice ??
             currentAd.highestBidAmount ??
             currentAd.startingBid ??
             0)
-        : (currentAd.isAuction
-            ? (viewerState.liveHighestBid ??
-                currentAd.highestBidAmount ??
-                currentAd.startingBid ??
-                0)
-            : (currentAd.buyItNowPrice ?? 0));
+        : (pinnedPrice ??
+            (currentAd.isAuction
+                ? (viewerState.liveHighestBid ??
+                    currentAd.highestBidAmount ??
+                    currentAd.startingBid ??
+                    0)
+                : (currentAd.buyItNowPrice ?? 0)));
 
     final label = viewerState.isAuctionActive
         ? 'GÜNCEL TEKLİF: '
-        : (currentAd.isAuction ? 'BAŞLANGIÇ: ' : 'FİYAT: ');
+        : (viewerState.currentActiveItem != null
+            ? 'BAŞLANGIÇ: '
+            : (currentAd.isAuction ? 'BAŞLANGIÇ: ' : 'FİYAT: '));
 
     return SafeArea(
       child: Align(

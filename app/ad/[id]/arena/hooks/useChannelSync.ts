@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useConnectionState } from "@livekit/components-react";
 import { ConnectionState } from "livekit-client";
 import type { ChannelSyncResponse } from "@/app/api/livekit/channel/sync/route";
+import type { ActiveItem } from "../types";
 
 interface UseChannelSyncOptions {
     /** Kanalın sahibi (host) kullanıcı ID'si. null verilirse hook pasif kalır. */
@@ -9,25 +10,24 @@ interface UseChannelSyncOptions {
 }
 
 interface UseChannelSyncReturn {
-    /** Kanalda şu an satılan ürünün ID'si. null = ürün sabitlenmemiş. */
-    activeAdId: string | null;
-    channelStatus: ChannelSyncResponse["channelStatus"];
+    /** Kanala sabitlenmiş ürün. null = ürün sabitlenmemiş. */
+    activeItem: ActiveItem | null;
+    channelStatus: ChannelSyncResponse["status"];
     /** Manuel veya reconnect tetiklemeli senkronizasyon. */
     syncChannelState: () => Promise<void>;
-    /** ITEM_PINNED DataChannel sinyali geldiğinde çağrılır — activeAdId'yi anında günceller. */
-    onItemPinned: (adId: string) => void;
+    /** ITEM_PINNED DataChannel sinyali geldiğinde çağrılır — activeItem'ı anında günceller. */
+    onItemPinned: (item: ActiveItem) => void;
 }
 
 /**
  * Yayıncı kanalının anlık durumunu yönetir.
  *
  * - İlk mount'ta ve reconnect sonrasında GET /api/livekit/channel/sync?hostId=... çağırır.
- * - ITEM_PINNED sinyali geldiğinde onItemPinned() ile activeAdId anında güncellenir
- *   (sayfa yenilemesi olmaz).
+ * - ITEM_PINNED sinyali geldiğinde onItemPinned() ile activeItem anında güncellenir.
  */
 export function useChannelSync({ hostId }: UseChannelSyncOptions): UseChannelSyncReturn {
-    const [activeAdId, setActiveAdId] = useState<string | null>(null);
-    const [channelStatus, setChannelStatus] = useState<ChannelSyncResponse["channelStatus"]>(null);
+    const [activeItem, setActiveItem] = useState<ActiveItem | null>(null);
+    const [channelStatus, setChannelStatus] = useState<ChannelSyncResponse["status"]>(null);
 
     const connectionState = useConnectionState();
     const prevConnectionStateRef = useRef<ConnectionState | null>(null);
@@ -38,9 +38,8 @@ export function useChannelSync({ hostId }: UseChannelSyncOptions): UseChannelSyn
             const res = await fetch(`/api/livekit/channel/sync?hostId=${encodeURIComponent(hostId)}`);
             if (!res.ok) return;
             const data: ChannelSyncResponse = await res.json();
-            setChannelStatus(data.channelStatus);
-            // Sadece yükselt; null'a düşürme DataChannel (ITEM_PINNED) üzerinden olur
-            if (data.activeAdId) setActiveAdId(data.activeAdId);
+            setChannelStatus(data.status);
+            if (data.activeItem) setActiveItem(data.activeItem);
         } catch {
             // Sync hatası kritik değil — sessizce geç
         }
@@ -61,9 +60,9 @@ export function useChannelSync({ hostId }: UseChannelSyncOptions): UseChannelSyn
     }, [connectionState, syncChannelState]);
 
     /** ITEM_PINNED DataChannel sinyali aldığında çağrılır. */
-    const onItemPinned = useCallback((adId: string) => {
-        setActiveAdId(adId);
+    const onItemPinned = useCallback((item: ActiveItem) => {
+        setActiveItem(item);
     }, []);
 
-    return { activeAdId, channelStatus, syncChannelState, onItemPinned };
+    return { activeItem, channelStatus, syncChannelState, onItemPinned };
 }

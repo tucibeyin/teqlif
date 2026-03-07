@@ -44,8 +44,11 @@ class ViewerState {
   final bool showFinalizationOverlay;
   final bool isReconnectingForStage;
   final String? liveHighestBidderName;
-  /// Kanal modunda şu an aktif olan ürünün adId'si. null → klasik mod (adId kullanılır).
-  final String? activeAdId;
+  /// Kanal modunda şu an aktif olan ürün (ActiveItem). null → klasik mod (adId kullanılır).
+  final Map<String, dynamic>? currentActiveItem;
+
+  /// Convenience getter — backward compat for code that needs only the active ad ID.
+  String? get activeAdId => currentActiveItem?['id'] as String?;
 
   const ViewerState({
     required this.currentQuality,
@@ -69,7 +72,7 @@ class ViewerState {
     required this.showFinalizationOverlay,
     required this.isReconnectingForStage,
     this.liveHighestBidderName,
-    this.activeAdId,
+    this.currentActiveItem,
   });
 
   factory ViewerState.initial(AdModel? ad) => ViewerState(
@@ -94,7 +97,7 @@ class ViewerState {
         showFinalizationOverlay: false,
         isReconnectingForStage: false,
         liveHighestBidderName: ad?.highestBidderName,
-        activeAdId: null,
+        currentActiveItem: null,
       );
 
   ViewerState copyWith({
@@ -119,7 +122,7 @@ class ViewerState {
     bool? showFinalizationOverlay,
     bool? isReconnectingForStage,
     Object? liveHighestBidderName = _sentinel,
-    Object? activeAdId = _sentinel,
+    Object? currentActiveItem = _sentinel,
   }) {
     return ViewerState(
       currentQuality: currentQuality ?? this.currentQuality,
@@ -159,9 +162,9 @@ class ViewerState {
       liveHighestBidderName: liveHighestBidderName == _sentinel
           ? this.liveHighestBidderName
           : liveHighestBidderName as String?,
-      activeAdId: activeAdId == _sentinel
-          ? this.activeAdId
-          : activeAdId as String?,
+      currentActiveItem: currentActiveItem == _sentinel
+          ? this.currentActiveItem
+          : currentActiveItem as Map<String, dynamic>?,
     );
   }
 }
@@ -274,14 +277,13 @@ class ViewerController extends StateNotifier<ViewerState> {
         );
         if (res.statusCode == 200 && !_disposed) {
           final data = res.data as Map<String, dynamic>;
-          final newActiveAdId = data['activeAdId']?.toString();
+          final activeItem = data['activeItem'] as Map<String, dynamic>?;
           // Sadece gerçek bir kanal aktifse işle; null ise klasik sync'e düş
-          if (newActiveAdId != null) {
-            final auction = data['auction'] as Map<String, dynamic>?;
+          if (activeItem != null) {
             state = state.copyWith(
-              activeAdId: newActiveAdId,
-              isAuctionActive: auction?['isAuctionActive'] == true,
-              liveHighestBid: (auction?['highestBid'] as num?)?.toDouble(),
+              currentActiveItem: activeItem,
+              isAuctionActive: data['auctionStatus'] == 'ACTIVE',
+              liveHighestBid: (data['highestBid'] as num?)?.toDouble(),
             );
             return;
           }
@@ -739,11 +741,11 @@ class ViewerController extends StateNotifier<ViewerState> {
           _resetMessageTimer();
           return;
         } else if (type == 'ITEM_PINNED') {
-          final pinnedAdId = decoded['adId']?.toString();
+          final activeItemMap = decoded['activeItem'] as Map<String, dynamic>?;
           final startingBid = (decoded['startingBid'] as num?)?.toDouble();
-          if (pinnedAdId == null) return;
+          if (activeItemMap == null) return;
           state = state.copyWith(
-            activeAdId: pinnedAdId,
+            currentActiveItem: activeItemMap,
             liveHighestBid: (startingBid != null && startingBid > 0) ? startingBid : null,
             liveHighestBidderName: null,
             isAuctionActive: false,

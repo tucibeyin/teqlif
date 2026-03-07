@@ -38,10 +38,14 @@ class ViewerConsole extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final viewerState = ref.watch(viewerControllerProvider(providerKey ?? ad.id));
 
-    // Compute next bid amount
+    // Compute next bid amount — prefer pinned item price when available.
+    final pinnedPrice =
+        (viewerState.currentActiveItem?['price'] as num?)?.toDouble();
     final double nextBid;
     if (viewerState.liveHighestBid != null && viewerState.liveHighestBid! > 0) {
       nextBid = viewerState.liveHighestBid! + ad.minBidStep;
+    } else if (pinnedPrice != null && pinnedPrice > 0) {
+      nextBid = pinnedPrice + ad.minBidStep;
     } else if (!ad.isAuction && !viewerState.isAuctionActive) {
       nextBid = ad.price;
     } else {

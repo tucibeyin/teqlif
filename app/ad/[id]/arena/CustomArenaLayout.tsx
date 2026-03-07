@@ -67,7 +67,7 @@ export function CustomArenaLayout({
 
     // ── Hooks ──────────────────────────────────────────────────────────────────
 
-    // Kanal sync önce kurulur; activeAdId useAuction'a geçirilerek:
+    // Kanal sync önce kurulur; activeItem?.id useAuction'a geçirilerek:
     //  - activeAdIdRef güncel kalır (late-joiner / reconnect sonrası doğru ürün filtrelenir)
     //  - syncAuctionState doğru adId ile çalışır
     const channelSync = useChannelSync({ hostId: sellerId });
@@ -75,7 +75,7 @@ export function CustomArenaLayout({
     const auction = useAuction({
         adId, sellerId, room,
         initialHighestBid, initialIsAuctionActive, isQuickLive,
-        activeAdId: channelSync.activeAdId,
+        activeAdId: channelSync.activeItem?.id,
     });
 
     const chat = useArenaChat();
@@ -143,8 +143,8 @@ export function CustomArenaLayout({
             // guestTrack re-derivation is automatic via useTracks reactive updates
         },
         onItemPinned: (data) => {
-            // İki hook'u koordineli güncelle: channelSync activeAdId'yi tutar, auction state'i sıfırlar.
-            channelSync.onItemPinned(data.adId);
+            // İki hook'u koordineli güncelle: channelSync activeItem'ı tutar, auction state'i sıfırlar.
+            channelSync.onItemPinned(data.activeItem);
             auction.onItemPinned(data);
             chat.addMessage({
                 id: Date.now().toString(),
@@ -441,17 +441,16 @@ export function CustomArenaLayout({
                                 onStageRequestClick={handleStageRequestClick}
                                 onInviteClick={() => setIsParticipantsModalOpen(true)}
                                 loading={auction.loading}
-                                onPinItem={async (pinAdId, pinStartingBid) => {
-                                    await fetch("/api/livekit/channel/pin-item", {
+                                onPinItem={async (payload) => {
+                                    const res = await fetch("/api/livekit/channel/pin-item", {
                                         method: "POST",
                                         headers: { "Content-Type": "application/json" },
-                                        body: JSON.stringify({ adId: pinAdId, startingBid: pinStartingBid }),
-                                    }).then(async res => {
-                                        if (!res.ok) {
-                                            const data = await res.json().catch(() => ({}));
-                                            throw new Error(data.error || "Sabitleme başarısız");
-                                        }
+                                        body: JSON.stringify(payload),
                                     });
+                                    if (!res.ok) {
+                                        const data = await res.json().catch(() => ({}));
+                                        throw new Error(data.error || "Sabitleme başarısız");
+                                    }
                                 }}
                             />
                         )}
@@ -576,7 +575,7 @@ export function CustomArenaLayout({
                             background: "rgba(255,255,255,0.015)",
                         }}>
                         <BidPanel
-                            adId={channelSync.activeAdId ?? adId}
+                            adId={channelSync.activeItem?.id ?? adId}
                             sellerId={sellerId}
                             currentHighest={auction.highestBid}
                             minStep={minBidStep}
@@ -590,7 +589,7 @@ export function CustomArenaLayout({
                             onReject={auction.reject}
                             onBuyNow={auction.buyNow}
                             loading={auction.loading}
-                            channelHostId={channelSync.activeAdId ? sellerId : undefined}
+                            channelHostId={channelSync.activeItem ? sellerId : undefined}
                         />
                     </div>
                 </div>
