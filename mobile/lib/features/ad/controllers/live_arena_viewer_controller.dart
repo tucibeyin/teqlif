@@ -274,14 +274,17 @@ class ViewerController extends StateNotifier<ViewerState> {
         );
         if (res.statusCode == 200 && !_disposed) {
           final data = res.data as Map<String, dynamic>;
-          final auction = data['auction'] as Map<String, dynamic>?;
           final newActiveAdId = data['activeAdId']?.toString();
-          state = state.copyWith(
-            activeAdId: newActiveAdId,
-            isAuctionActive: auction?['isAuctionActive'] == true,
-            liveHighestBid: (auction?['highestBid'] as num?)?.toDouble(),
-          );
-          return;
+          // Sadece gerçek bir kanal aktifse işle; null ise klasik sync'e düş
+          if (newActiveAdId != null) {
+            final auction = data['auction'] as Map<String, dynamic>?;
+            state = state.copyWith(
+              activeAdId: newActiveAdId,
+              isAuctionActive: auction?['isAuctionActive'] == true,
+              liveHighestBid: (auction?['highestBid'] as num?)?.toDouble(),
+            );
+            return;
+          }
         }
       } catch (_) {
         // Kanal sync başarısız — klasik sync'e düş
@@ -519,7 +522,9 @@ class ViewerController extends StateNotifier<ViewerState> {
       await ApiClient().post('/api/livekit/bid', data: {
         'adId': effectiveAdId,
         'amount': amount.toInt(),
-        if (hostId != null) 'channelHostId': hostId,
+        // channelHostId yalnızca kanal modunda gönderilir (activeAdId != null)
+        // Klasik/hızlı canlı yayında gönderilmez — Lua script'in kanal kontrolü tetiklenmesin
+        if (state.activeAdId != null && hostId != null) 'channelHostId': hostId,
       });
 
       ref.invalidate(adDetailProvider(effectiveAdId));

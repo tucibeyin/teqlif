@@ -587,7 +587,7 @@ export function CustomArenaLayout({
                             onReject={auction.reject}
                             onBuyNow={auction.buyNow}
                             loading={auction.loading}
-                            channelHostId={sellerId}
+                            channelHostId={channelSync.activeAdId ? sellerId : undefined}
                         />
                     </div>
                 </div>
