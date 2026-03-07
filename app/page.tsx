@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { categoryTree, findPath } from "@/lib/categories";
 import type { CategoryNode } from "@/lib/categories";
 import { cache } from "react";
+import LiveStories from "@/components/LiveStories";
 
 export const dynamic = "force-dynamic";
 
@@ -104,32 +105,6 @@ const getAds = cache(async (categorySlug?: string, limit = 24) => {
   }
 });
 
-const getLiveAuctions = cache(async () => {
-  try {
-    return await prisma.ad.findMany({
-      where: {
-        status: "ACTIVE",
-        isLive: true,
-      },
-      take: 10,
-      orderBy: { auctionStartTime: "desc" },
-      include: {
-        user: { select: { name: true, avatar: true } },
-        category: true,
-        province: true,
-        _count: { select: { bids: true } },
-        bids: {
-          where: { status: { in: ['PENDING', 'ACCEPTED'] } },
-          orderBy: { amount: "desc" },
-          take: 1,
-          select: { amount: true }
-        },
-      },
-    });
-  } catch {
-    return [];
-  }
-});
 
 function formatPrice(price: number) {
   return new Intl.NumberFormat("tr-TR", {
@@ -172,7 +147,6 @@ export default async function HomePage({
   const activePathSlugs = new Set(path?.map(n => n.slug) || []);
 
   const allAds = await getAds(activeCategory, 24);
-  const liveAuctions = await getLiveAuctions();
 
   // Filter based on tab
   let displayAds = allAds;
@@ -208,54 +182,7 @@ export default async function HomePage({
       </section>
 
       {/* CANLI YAYIN VİTRİNİ (STORIES) */}
-      {!activeCategory && liveAuctions.length > 0 && (
-        <div className="container" style={{ paddingTop: "2rem", paddingBottom: "1rem" }}>
-          <div className="section-header" style={{ marginBottom: "1rem" }}>
-            <h2 className="section-title" style={{ fontSize: "1.25rem", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-              <span style={{ display: "inline-block", width: "10px", height: "10px", borderRadius: "50%", background: "#ef4444", animation: "pulse 2s infinite" }}></span>
-              🔥 Şu An Canlı
-            </h2>
-          </div>
-          <div style={{
-            display: "flex", gap: "1rem", overflowX: "auto", paddingBottom: "1rem", scrollBehavior: "smooth",
-            scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", margin: "0 -1rem", padding: "0 1rem"
-          }}>
-            {liveAuctions.map((auction) => (
-              <Link key={auction.id} href={`/ad/${auction.id}`} style={{ textDecoration: "none", flexShrink: 0, width: "160px", scrollSnapAlign: "start" }}>
-                <div style={{
-                  position: "relative", width: "160px", height: "240px", borderRadius: "var(--radius-lg)", overflow: "hidden",
-                  boxShadow: "var(--shadow-md)", border: "2px solid #ef4444", background: "var(--bg-secondary)"
-                }}>
-                  {auction.images && auction.images.length > 0 ? (
-                    <Image src={auction.images[0]} alt={auction.title} fill style={{ objectFit: "cover" }} />
-                  ) : (
-                    <div style={{ position: "absolute", top: 0, left: 0, width: "100%", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "3rem" }}>
-                      {auction.category.icon}
-                    </div>
-                  )}
-                  {/* Karanlık gradyan */}
-                  <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: "60%", background: "linear-gradient(to top, rgba(0,0,0,0.9) 0%, transparent 100%)" }}></div>
-
-                  {/* Canlı Badge */}
-                  <div style={{ position: "absolute", top: "8px", left: "8px", background: "#ef4444", color: "white", fontSize: "0.7rem", fontWeight: "bold", padding: "2px 6px", borderRadius: "100px", display: "flex", alignItems: "center", gap: "4px" }}>
-                    <span style={{ width: "6px", height: "6px", borderRadius: "50%", background: "white", animation: "pulse 1.5s infinite" }}></span> CANLI
-                  </div>
-
-                  {/* Kategori Müşteri */}
-                  <div style={{ position: "absolute", bottom: "8px", left: "8px", right: "8px", color: "white" }}>
-                    <div style={{ fontSize: "0.85rem", fontWeight: 700, display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical", overflow: "hidden", lineHeight: 1.2, marginBottom: "4px", textShadow: "0 1px 2px rgba(0,0,0,0.5)" }}>
-                      {auction.title}
-                    </div>
-                    <div style={{ fontSize: "0.75rem", color: "rgba(255,255,255,0.8)", display: "flex", alignItems: "center", gap: "4px" }}>
-                      👤 {auction.user.name.split(" ")[0]}
-                    </div>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      )}
+      {!activeCategory && <LiveStories />}
 
       <div className="container" id="ilanlar" style={{ paddingTop: "2rem" }}>
         <div style={{ display: "grid", gridTemplateColumns: "220px 1fr", gap: "2rem", alignItems: "start" }}>
