@@ -138,14 +138,12 @@ export async function getAuctionState(adId: string): Promise<AuctionState> {
 
 /**
  * Açık artırmayı kapatır.
- * Status 'closed' yapıldıktan sonra Lua script yeni teklifleri reddeder.
+ * Sadece status 'closed' yapılır; highest_bid ve highest_bidder key'leri
+ * finalize sonrası ayrı bir temizlik adımında silinir (önce kazananı oku,
+ * sonra temizle). Lua script status != "active" görünce yeni teklifleri reddeder.
  */
 export async function closeAuction(adId: string): Promise<void> {
-  const pipeline = redis.pipeline();
-  pipeline.set(keys.status(adId), "closed");
-  pipeline.del(keys.highestBid(adId));
-  pipeline.del(keys.highestBidder(adId));
-  await pipeline.exec();
+  await redis.set(keys.status(adId), "closed");
 }
 
 // ── Channel Service ───────────────────────────────────────────────────────────
