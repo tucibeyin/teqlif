@@ -49,14 +49,16 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
 
   LiveRoomNotifier(this.roomId) : super(LiveRoomState());
 
-  Future<void> connect(bool isOwner, {bool isGuest = false}) async {
+  Future<void> connect(bool isOwner, {bool isGuest = false, String? hostId}) async {
     if (state.isConnecting || state.room != null) return;
     
     state = state.copyWith(isConnecting: true, error: null);
 
+    final effectiveRoomId = hostId != null ? 'channel:$hostId' : roomId;
+
     try {
       final response = await ApiClient().get('/api/livekit/token', params: {
-        'room': roomId,
+        'room': effectiveRoomId,
         if (isGuest) 'role': 'guest',
       });
       final token = response.data['token'] as String;

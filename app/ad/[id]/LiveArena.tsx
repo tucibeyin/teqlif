@@ -39,10 +39,14 @@ export default function LiveArena({
     const [role, setRole] = useState(isOwner ? "host" : "viewer");
     const [wantsToPublish, setWantsToPublish] = useState(isOwner);
 
+    // Kanal mimarisi: Eğer sellerId varsa (normal akış), 
+    // LiveKit odası olarak 'channel:${sellerId}' kullanılır.
+    const effectiveRoomId = sellerId ? `channel:${sellerId}` : roomId;
+
     const fetchToken = useCallback(async (currentRole: string) => {
         try {
             const resp = await fetch(
-                `/api/livekit/token?room=${roomId}${currentRole === "guest" ? "&role=guest" : ""}`
+                `/api/livekit/token?room=${effectiveRoomId}${currentRole === "guest" ? "&role=guest" : ""}`
             );
             const data = await resp.json();
             setToken(data.token);
@@ -50,12 +54,12 @@ export default function LiveArena({
         } catch (e) {
             console.error("LiveKit token hatası:", e);
         }
-    }, [roomId]);
+    }, [effectiveRoomId]);
 
     useEffect(() => {
         if (!session?.user?.id) return;
         fetchToken(role);
-    }, [roomId, session, role, fetchToken]);
+    }, [effectiveRoomId, session, role, fetchToken]);
 
     if (!token) {
         return (

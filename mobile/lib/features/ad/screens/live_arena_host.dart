@@ -88,7 +88,7 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
       if (cameraStatus.isGranted && micStatus.isGranted) {
         final notifier =
             ref.read(liveRoomProvider(widget.ad.id).notifier);
-        await notifier.connect(true);
+        await notifier.connect(true, hostId: widget.ad.userId);
 
         final room = ref.read(liveRoomProvider(widget.ad.id)).room;
         if (room != null) {

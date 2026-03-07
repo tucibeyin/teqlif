@@ -30,7 +30,16 @@ export async function GET(req: NextRequest) {
     const roleParam = req.nextUrl.searchParams.get('role'); // İleriki co-host (guest) özelliği için
 
     if (!room) {
-      return NextResponse.json({ error: 'Room (Ad ID) is required' }, { status: 400 });
+      return NextResponse.json({ error: 'Room (Ad ID or Channel) is required' }, { status: 400 });
+    }
+
+    // ── ODA TİPİ ANALİZİ (Channel vs Ad) ───────────────────────────────────
+    let hostIdOfRoom: string | null = null;
+    let isChannelRoom = false;
+
+    if (room.startsWith('channel:')) {
+      isChannelRoom = true;
+      hostIdOfRoom = room.replace('channel:', '');
     }
 
     const apiKey = process.env.LIVEKIT_API_KEY;
@@ -41,19 +50,32 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: 'Server misconfigured: Keys missing' }, { status: 500 });
     }
 
-    // Prisma üzerinden ilanı bul
-    const ad = await prisma.ad.findUnique({
-      where: { id: room },
-      select: { userId: true }
-    });
+    // Prisma üzerinden ilanı veya kullanıcıyı doğrula
+    if (!isChannelRoom) {
+      const ad = await prisma.ad.findUnique({
+        where: { id: room },
+        select: { userId: true }
+      });
 
-    if (!ad) {
-      logger.liveKit("WARN", "TOKEN_API", `Ad not found for room: ${room}`);
-      return NextResponse.json({ error: 'Ad not found' }, { status: 404 });
+      if (!ad) {
+        logger.liveKit("WARN", "TOKEN_API", `Ad not found for room: ${room}`);
+        return NextResponse.json({ error: 'Ad not found' }, { status: 404 });
+      }
+      hostIdOfRoom = ad.userId;
+    } else {
+      // Kanal odası ise, hostIdOfRoom zaten 'channel:' prefix'inden çıkarıldı.
+      // Opsiyonel: hostIdOfRoom'un geçerli bir kullanıcı olup olmadığını kontrol edebiliriz.
+      const user = await prisma.user.findUnique({
+        where: { id: hostIdOfRoom! },
+        select: { id: true }
+      });
+      if (!user) {
+        return NextResponse.json({ error: 'Kanal sahibi bulunamadı' }, { status: 404 });
+      }
     }
 
     // Rol Belirleme
-    const isHost = ad.userId === userId;
+    const isHost = hostIdOfRoom === userId;
     const isGuest = roleParam === 'guest'; // Co-Host daveti almış izleyici
 
     const at = new AccessToken(apiKey, apiSecret, {
