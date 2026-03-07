@@ -521,7 +521,7 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
     // Resolve the effective ad: pinned item in channel mode, or constructor ad
     final activeAdId = viewerState.activeAdId;
     final adAsync = ref.watch(adDetailProvider(activeAdId ?? widget.ad?.id ?? ''));
-    final currentAd = adAsync.value ?? widget.ad;
+    final currentAd = adAsync.valueOrNull ?? widget.ad;
 
     final isDisconnected = !viewerState.isReconnectingForStage &&
         (room?.connectionState.name == 'disconnected' ||
