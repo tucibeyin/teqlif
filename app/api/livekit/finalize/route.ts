@@ -219,9 +219,7 @@ export async function POST(req: NextRequest) {
       });
 
       roomService
-        .sendData(targetRoom, new TextEncoder().encode(payload), 1, {
-          topic: "auction_events",
-        })
+        .sendData(targetRoom, new TextEncoder().encode(payload), 1)
         .catch((err) =>
           console.error("[AUCTION_ENDED] LiveKit broadcast error:", err)
         );
