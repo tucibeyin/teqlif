@@ -23,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
 
         let updateData: any = {
             isLive: isLive !== undefined ? Boolean(isLive) : ad.isLive,
-            liveKitRoomId: liveKitRoomId !== undefined ? String(liveKitRoomId) : ad.liveKitRoomId,
+            liveKitRoomId: `channel:${user.id}`, // Enforce channel room naming
             isAuctionActive: isAuctionActive !== undefined ? Boolean(isAuctionActive) : ad.isAuctionActive,
         };
 

@@ -162,7 +162,8 @@ class _LiveArenaViewerState extends ConsumerState<LiveArenaViewer>
   // ── Room event listener ───────────────────────────────────────────────────
 
   void _onRoomEvent(RoomEvent event) {
-    if (event is TrackMutedEvent || event is TrackUnmutedEvent) {
+    if (event is TrackMutedEvent || event is TrackUnmutedEvent || 
+        event is TrackSubscribedEvent || event is TrackUnsubscribedEvent) {
       if (mounted) setState(() {});
     }
     if (event is DataReceivedEvent) {

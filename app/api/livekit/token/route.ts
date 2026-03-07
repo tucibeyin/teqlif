@@ -29,6 +29,8 @@ export async function GET(req: NextRequest) {
     const room = req.nextUrl.searchParams.get('room');
     const roleParam = req.nextUrl.searchParams.get('role'); // İleriki co-host (guest) özelliği için
 
+    logger.liveKit("INFO", "TOKEN_API", `Request for room: ${room}, role: ${roleParam}`);
+
     if (!room) {
       return NextResponse.json({ error: 'Room (Ad ID or Channel) is required' }, { status: 400 });
     }
@@ -40,6 +42,7 @@ export async function GET(req: NextRequest) {
     if (room.startsWith('channel:')) {
       isChannelRoom = true;
       hostIdOfRoom = room.replace('channel:', '');
+      logger.liveKit("INFO", "TOKEN_API", `Channel room detected. HostId: ${hostIdOfRoom}`);
     }
 
     const apiKey = process.env.LIVEKIT_API_KEY;

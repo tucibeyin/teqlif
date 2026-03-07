@@ -147,6 +147,11 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
            _updateParticipantCount();
         }
 
+        // Trigger UI rebuild on track changes
+        if (event is TrackSubscribedEvent || event is TrackUnsubscribedEvent) {
+          state = state.copyWith(); // Force refresh
+        }
+
         if (isOwner) {
           if (event is ParticipantConnectionQualityUpdatedEvent && event.participant == _room!.localParticipant) {
             if (event.connectionQuality == ConnectionQuality.poor || event.connectionQuality == ConnectionQuality.lost) {
