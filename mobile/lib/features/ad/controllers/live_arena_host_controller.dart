@@ -275,10 +275,11 @@ class HostController extends StateNotifier<HostState> {
 
   Future<void> syncInitialState() async {
     // Kanal modu: host kendi kanalını senkronize eder
+    final hostId = ad.userId;
     try {
       final response = await ApiClient().get(
         '/api/livekit/channel/sync',
-        params: {'hostId': adId},
+        params: {'hostId': hostId},
       );
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data as Map<String, dynamic>;
@@ -296,8 +297,8 @@ class HostController extends StateNotifier<HostState> {
           return;
         }
       }
-    } catch (_) {
-      // Kanal sync başarısız — klasik sync'e düş
+    } catch (e) {
+      debugPrint('Host channel sync error: $e');
     }
 
     // Klasik mod fallback
@@ -323,14 +324,12 @@ class HostController extends StateNotifier<HostState> {
         }
       }
     } catch (e) {
-      debugPrint('Host sync error: $e');
+      debugPrint('Host classic sync error: $e');
     }
   }
 
   // ── Data Channel ───────────────────────────────────────────────────────────
-
-  void handleDataChannelMessage(List<int> data, RemoteParticipant? p,
-      {String? customName}) {
+  void handleDataChannelMessage(List<int> data, RemoteParticipant? p, {String? customName}) {
     String message;
     try {
       message = utf8.decode(data);
@@ -341,41 +340,55 @@ class HostController extends StateNotifier<HostState> {
 
     try {
       final dataObj = jsonDecode(message);
+      final type = dataObj['type']?.toString();
+      debugPrint('[HostController] Incoming: $type');
 
-      if (dataObj['type'] == 'BID_ACCEPTED') {
+      if (type == 'NEW_BID' || type == 'BID_ACCEPTED') {
+        // Kanal modunda: payload'daki adId, şu an aktif ürünle eşleşmiyorsa yut
+        final payloadAdId = dataObj['adId']?.toString();
+        final currentActiveAdId = state.activeAdId;
+        if (payloadAdId != null && currentActiveAdId != null && payloadAdId != currentActiveAdId) {
+          debugPrint('Ignored bid for non-active ad: $payloadAdId != $currentActiveAdId');
+          return;
+        }
+
         final amount = (dataObj['amount'] as num).toDouble();
         final bidId = dataObj['bidId']?.toString();
+        final bidderId = dataObj['bidderIdentity']?.toString() ?? dataObj['bidderId']?.toString();
+        final bidderName = _formatSenderName(dataObj['bidderName']?.toString());
+        final isAccepted = type == 'BID_ACCEPTED';
+        
         final bids = List<LiveBid>.from(state.bids);
-        final existingIndex = bids.indexWhere((b) => b.id == bidId);
+        final existingIndex = bids.indexWhere((b) => b.id == bidId && bidId != null);
+        
         if (existingIndex != -1) {
           bids[existingIndex] = bids[existingIndex].copyWith(
             amount: amount,
-            userLabel: dataObj['bidderName'] ?? bids[existingIndex].userLabel,
-            isAccepted: true,
-            userId: dataObj['bidderId']?.toString() ?? bids[existingIndex].userId,
+            userLabel: bidderName,
+            isAccepted: isAccepted,
+            userId: bidderId,
           );
         } else {
-          bids.insert(
-            0,
-            LiveBid(
-              id: bidId ?? 'bid-${DateTime.now().millisecondsSinceEpoch}',
-              amount: amount,
-              userLabel: _formatSenderName(dataObj['bidderName']),
-              timestamp: DateTime.now(),
-              isAccepted: true,
-              userId: dataObj['bidderId']?.toString(),
-            ),
-          );
+          bids.insert(0, LiveBid(
+            id: bidId ?? 'bid-${DateTime.now().millisecondsSinceEpoch}',
+            amount: amount,
+            userLabel: bidderName,
+            timestamp: DateTime.now(),
+            isAccepted: isAccepted,
+            userId: bidderId,
+          ));
         }
+
+        if (bids.length > 50) bids.removeLast();
         state = state.copyWith(
           bids: bids,
+          unreadBids: state.unreadBids + 1,
           liveHighestBid: amount,
-          liveHighestBidderName: dataObj['bidderName']?.toString() ??
-              state.liveHighestBidderName,
+          liveHighestBidderName: bidderName,
         );
         return;
 
-      } else if (dataObj['type'] == 'CHAT') {
+      } else if (type == 'CHAT') {
         final chatText = dataObj['text']?.toString() ?? '';
         final chatSender = dataObj['senderName']?.toString();
         final senderId = dataObj['senderId']?.toString();
@@ -392,7 +405,7 @@ class HostController extends StateNotifier<HostState> {
         _resetMessageTimer();
         return;
 
-      } else if (dataObj['type'] == 'ITEM_PINNED') {
+      } else if (type == 'ITEM_PINNED') {
         final pinnedAdId = dataObj['adId']?.toString();
         final startingBid = (dataObj['startingBid'] as num?)?.toDouble();
         if (pinnedAdId == null) return;
@@ -414,39 +427,7 @@ class HostController extends StateNotifier<HostState> {
         );
         return;
 
-      } else if (dataObj['type'] == 'NEW_BID') {
-        // Kanal modunda: payload'daki adId, aktif ürünle eşleşmiyorsa yut
-        final payloadAdId = dataObj['adId']?.toString();
-        final currentActiveAdId = state.activeAdId;
-        if (payloadAdId != null && currentActiveAdId != null && payloadAdId != currentActiveAdId) {
-          return;
-        }
-        final amount = (dataObj['amount'] as num).toDouble();
-        final bidId = dataObj['bidId']?.toString();
-        final bidderId = dataObj['bidderIdentity']?.toString() ?? dataObj['bidderId']?.toString();
-        final bidderName = _formatSenderName(dataObj['bidderName']?.toString());
-        
-        final bids = List<LiveBid>.from(state.bids);
-        bids.insert(
-          0,
-          LiveBid(
-            id: bidId ?? 'bid-${DateTime.now().millisecondsSinceEpoch}',
-            amount: amount,
-            userLabel: bidderName,
-            timestamp: DateTime.now(),
-            userId: bidderId,
-          ),
-        );
-        if (bids.length > 50) bids.removeLast();
-        state = state.copyWith(
-          bids: bids,
-          unreadBids: state.unreadBids + 1,
-          liveHighestBid: amount,
-          liveHighestBidderName: bidderName,
-        );
-        return;
-
-      } else if (dataObj['type'] == 'SALE_FINALIZED') {
+      } else if (type == 'SALE_FINALIZED') {
         final winnerName = _formatSenderName(dataObj['winnerName']?.toString());
         final amount = (dataObj['amount'] as num?)?.toDouble();
         _showFinalizationOverlayAlert(winnerName, amount);
