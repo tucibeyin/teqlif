@@ -23,6 +23,8 @@ export async function POST(req: NextRequest) {
       channelHostId?: string;
     };
 
+    console.log("[LiveKit Bid API] Request Body:", { adId, amount, channelHostId, userId });
+
     if (!adId || typeof adId !== "string") {
       return NextResponse.json({ error: "İlan ID'si zorunludur" }, { status: 400 });
     }
@@ -36,15 +38,17 @@ export async function POST(req: NextRequest) {
     // ── Atomik Teklif (Lua Script via Redis) ────────────────────────────────
     // channelHostId verilirse, Lua script adId'nin kanalın active_ad'i olup
     // olmadığını da kontrol eder — eski ürünlere teklif gelmesini engeller.
+    console.log("[LiveKit Bid API] Calling placeBid...");
     const result = await placeBid(adId, userId, amount, channelHostId ?? undefined);
+    console.log("[LiveKit Bid API] placeBid Result:", result);
 
     if (!result.accepted) {
       const message =
         result.reason === "auction_not_active"
           ? "Açık arttırma henüz başlatılmadı"
           : result.reason === "not_active_item"
-          ? "Bu ürün artık kanalın aktif ürünü değil"
-          : "Teklifiniz en yüksek tekliften düşük";
+            ? "Bu ürün artık kanalın aktif ürünü değil"
+            : "Teklifiniz en yüksek tekliften düşük";
 
       return NextResponse.json({ error: message }, { status: 400 });
     }
