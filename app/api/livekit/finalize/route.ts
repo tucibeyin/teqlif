@@ -206,7 +206,11 @@ export async function POST(req: NextRequest) {
 
       const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
       const winnerName = winnerUser?.name || "Katılımcı";
-      const targetRoom = channelHostId ? `channel:${channelHostId}` : adId;
+      const targetRoom = channelHostId
+        ? `channel:${channelHostId}`
+        : isQuickLive
+        ? `channel:${ad.userId}`
+        : adId;
       const payload = JSON.stringify({
         type: "AUCTION_ENDED",
         adId,
