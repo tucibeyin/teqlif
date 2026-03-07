@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { RoomServiceClient } from "livekit-server-sdk";
 import { prisma } from "@/lib/prisma";
+import { getChannelTitle } from "@/lib/services/auction-redis.service";
 
 export const dynamic = "force-dynamic";
 
@@ -44,10 +45,13 @@ export async function GET() {
             const hostId = room.name.split(":")[1];
             if (!hostId) return null;
 
-            const user = await prisma.user.findUnique({
-              where: { id: hostId },
-              select: { id: true, name: true, avatar: true },
-            });
+            const [user, customTitle] = await Promise.all([
+              prisma.user.findUnique({
+                where: { id: hostId },
+                select: { id: true, name: true, avatar: true },
+              }),
+              getChannelTitle(hostId),
+            ]);
             if (!user) return null;
 
             return {
@@ -55,7 +59,7 @@ export async function GET() {
               roomId: room.name,
               hostId: user.id,
               hostName: user.name ?? "Yayıncı",
-              title: `${user.name ?? "Yayıncı"} Yayında`,
+              title: customTitle || `${user.name ?? "Yayıncı"} Yayında`,
               imageUrl: user.avatar ?? null,
               viewerCount: room.numParticipants,
             };

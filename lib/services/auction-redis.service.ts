@@ -34,6 +34,7 @@ const keys = {
 const channelKeys = {
   status: (hostId: string) => `channel:${hostId}:status`,
   activeAd: (hostId: string) => `channel:${hostId}:active_ad`,
+  title: (hostId: string) => `channel:${hostId}:title`,
 } as const;
 
 // ── Lua Script ────────────────────────────────────────────────────────────────
@@ -152,11 +153,23 @@ export async function closeAuction(adId: string): Promise<void> {
  * Yayıncı kanalını başlatır. Status 'live' yapılır.
  * LiveKit odası açılırken çağrılmalıdır.
  */
-export async function startChannel(hostId: string): Promise<void> {
+export async function startChannel(hostId: string, title?: string): Promise<void> {
   const pipeline = redis.pipeline();
   pipeline.set(channelKeys.status(hostId), "live");
   pipeline.del(channelKeys.activeAd(hostId));
+  if (title) {
+    pipeline.set(channelKeys.title(hostId), title);
+  } else {
+    pipeline.del(channelKeys.title(hostId));
+  }
   await pipeline.exec();
+}
+
+/**
+ * Kanala ait özel başlığı döner. Başlık yoksa null.
+ */
+export async function getChannelTitle(hostId: string): Promise<string | null> {
+  return redis.get(channelKeys.title(hostId));
 }
 
 /**

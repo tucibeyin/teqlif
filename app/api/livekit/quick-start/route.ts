@@ -28,8 +28,14 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // ── Body: İsteğe bağlı başlık ────────────────────────────────────────────
+    const body = await req.json().catch(() => ({})) as { title?: string };
+    const title = (typeof body.title === "string" && body.title.trim())
+      ? body.title.trim()
+      : `${currentUser.name ?? "Yayıncı"} Yayında`;
+
     // ── Redis: Kanalı Başlat ──────────────────────────────────────────────────
-    await startChannel(currentUser.id);
+    await startChannel(currentUser.id, title);
 
     const channelRoom = `channel:${currentUser.id}`;
 
