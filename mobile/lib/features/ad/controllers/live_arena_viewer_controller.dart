@@ -46,6 +46,8 @@ class ViewerState {
   final bool showFinalizationOverlay;
   final bool isReconnectingForStage;
   final String? liveHighestBidderName;
+  /// Kanal modunda şu an aktif olan ürünün adId'si. null → klasik mod (adId kullanılır).
+  final String? activeAdId;
 
   const ViewerState({
     required this.currentQuality,
@@ -69,6 +71,7 @@ class ViewerState {
     required this.showFinalizationOverlay,
     required this.isReconnectingForStage,
     this.liveHighestBidderName,
+    this.activeAdId,
   });
 
   factory ViewerState.initial(AdModel? ad) => ViewerState(
@@ -93,6 +96,7 @@ class ViewerState {
         showFinalizationOverlay: false,
         isReconnectingForStage: false,
         liveHighestBidderName: ad?.highestBidderName,
+        activeAdId: null,
       );
 
   ViewerState copyWith({
@@ -117,6 +121,7 @@ class ViewerState {
     bool? showFinalizationOverlay,
     bool? isReconnectingForStage,
     Object? liveHighestBidderName = _sentinel,
+    Object? activeAdId = _sentinel,
   }) {
     return ViewerState(
       currentQuality: currentQuality ?? this.currentQuality,
@@ -156,6 +161,9 @@ class ViewerState {
       liveHighestBidderName: liveHighestBidderName == _sentinel
           ? this.liveHighestBidderName
           : liveHighestBidderName as String?,
+      activeAdId: activeAdId == _sentinel
+          ? this.activeAdId
+          : activeAdId as String?,
     );
   }
 }
@@ -256,6 +264,31 @@ class ViewerController extends StateNotifier<ViewerState> {
   // ── Sync (Late Joiner / Reconnection) ──────────────────────────────────────
 
   Future<void> _syncAuctionState() async {
+    // Kanal modu: hostId (sellerId) varsa önce kanal sync'ini dene
+    final hostId = ad?.userId;
+    if (hostId != null) {
+      try {
+        final res = await ApiClient().get(
+          '/api/livekit/channel/sync',
+          params: {'hostId': hostId},
+        );
+        if (res.statusCode == 200 && !_disposed) {
+          final data = res.data as Map<String, dynamic>;
+          final auction = data['auction'] as Map<String, dynamic>?;
+          final newActiveAdId = data['activeAdId']?.toString();
+          state = state.copyWith(
+            activeAdId: newActiveAdId,
+            isAuctionActive: auction?['isAuctionActive'] == true,
+            liveHighestBid: (auction?['highestBid'] as num?)?.toDouble(),
+          );
+          return;
+        }
+      } catch (_) {
+        // Kanal sync başarısız — klasik sync'e düş
+      }
+    }
+
+    // Klasik mod fallback
     try {
       final res = await ApiClient().get('/api/livekit/sync', params: {'adId': adId});
       if (res.statusCode != 200 || _disposed) return;
@@ -476,16 +509,20 @@ class ViewerController extends StateNotifier<ViewerState> {
 
   // ── Bid ────────────────────────────────────────────────────────────────────
 
-    Future<void> placeBid(double amount, BuildContext ctx) async {
+  Future<void> placeBid(double amount, BuildContext ctx) async {
     state = state.copyWith(bidLoading: true);
     await Haptics.vibrate(HapticsType.medium);
+    // Kanal modunda aktif ürünün adId'sini kullan; yoksa klasik adId
+    final effectiveAdId = state.activeAdId ?? adId;
+    final hostId = ad?.userId;
     try {
       await ApiClient().post('/api/livekit/bid', data: {
-        'adId': adId,
-        'amount': amount.toInt(), // Ensure it's an integer as expected by the API
+        'adId': effectiveAdId,
+        'amount': amount.toInt(),
+        if (hostId != null) 'channelHostId': hostId,
       });
 
-      ref.invalidate(adDetailProvider(adId));
+      ref.invalidate(adDetailProvider(effectiveAdId));
       await Haptics.vibrate(HapticsType.success);
       if (!_disposed) {
         ScaffoldMessenger.of(ctx).clearSnackBars();
@@ -655,7 +692,33 @@ class ViewerController extends StateNotifier<ViewerState> {
           state = state.copyWith(messages: msgs);
           _resetMessageTimer();
           return;
+        } else if (type == 'ITEM_PINNED') {
+          final pinnedAdId = decoded['adId']?.toString();
+          final startingBid = (decoded['startingBid'] as num?)?.toDouble();
+          if (pinnedAdId == null) return;
+          state = state.copyWith(
+            activeAdId: pinnedAdId,
+            liveHighestBid: startingBid,
+            liveHighestBidderName: null,
+            isAuctionActive: true,
+            isSold: false,
+            showSoldOverlay: false,
+            soldWinnerName: null,
+            soldFinalPrice: null,
+            showFinalizationOverlay: false,
+            finalizedWinnerName: null,
+            finalizedAmount: null,
+            countdownValue: null,
+          );
+          onShowSystemMessage?.call('📦 Yeni ürün sahnede! Teklif verebilirsiniz.', Colors.blue);
+          return;
         } else if (type == 'NEW_BID' || type == 'BID_ACCEPTED') {
+          // Kanal modunda: payload'daki adId, şu an aktif ürünle eşleşmiyorsa yut
+          final payloadAdId = decoded['adId']?.toString();
+          final currentActiveAdId = state.activeAdId;
+          if (payloadAdId != null && currentActiveAdId != null && payloadAdId != currentActiveAdId) {
+            return;
+          }
           final amount = (decoded['amount'] as num).toDouble();
           final nextBid = amount + (ad?.minBidStep ?? 1000);
           final bidderName = decoded['bidderName']?.toString();

@@ -15,6 +15,7 @@ import { useArenaChat } from "./hooks/useArenaChat";
 import { useReactions } from "./hooks/useReactions";
 import { useStageRequests } from "./hooks/useStageRequests";
 import { useArenaDataChannel } from "./hooks/useArenaDataChannel";
+import { useChannelSync } from "./hooks/useChannelSync";
 
 // Components
 import { TopHUD } from "./components/TopHUD";
@@ -70,6 +71,9 @@ export function CustomArenaLayout({
         adId, sellerId, room,
         initialHighestBid, initialIsAuctionActive, isQuickLive,
     });
+
+    // Kanal sync: sellerId = channel hostId. activeAdId değiştiğinde BidPanel otomatik güncellenir.
+    const channelSync = useChannelSync({ hostId: sellerId });
 
     const chat = useArenaChat();
     const reactions = useReactions();
@@ -134,6 +138,16 @@ export function CustomArenaLayout({
         },
         onStageUpdate: () => {
             // guestTrack re-derivation is automatic via useTracks reactive updates
+        },
+        onItemPinned: (data) => {
+            // İki hook'u koordineli güncelle: channelSync activeAdId'yi tutar, auction state'i sıfırlar.
+            channelSync.onItemPinned(data.adId);
+            auction.onItemPinned(data);
+            chat.addMessage({
+                id: Date.now().toString(),
+                text: `📦 Yeni ürün sahnede! Teklif verebilirsiniz.`,
+                sender: "Sistem",
+            });
         },
     });
 
@@ -424,6 +438,18 @@ export function CustomArenaLayout({
                                 onStageRequestClick={handleStageRequestClick}
                                 onInviteClick={() => setIsParticipantsModalOpen(true)}
                                 loading={auction.loading}
+                                onPinItem={async (pinAdId, pinStartingBid) => {
+                                    await fetch("/api/livekit/channel/pin-item", {
+                                        method: "POST",
+                                        headers: { "Content-Type": "application/json" },
+                                        body: JSON.stringify({ adId: pinAdId, startingBid: pinStartingBid }),
+                                    }).then(async res => {
+                                        if (!res.ok) {
+                                            const data = await res.json().catch(() => ({}));
+                                            throw new Error(data.error || "Sabitleme başarısız");
+                                        }
+                                    });
+                                }}
                             />
                         )}
 
@@ -547,7 +573,7 @@ export function CustomArenaLayout({
                             background: "rgba(255,255,255,0.015)",
                         }}>
                         <BidPanel
-                            adId={adId}
+                            adId={channelSync.activeAdId ?? adId}
                             sellerId={sellerId}
                             currentHighest={auction.highestBid}
                             minStep={minBidStep}
@@ -561,6 +587,7 @@ export function CustomArenaLayout({
                             onReject={auction.reject}
                             onBuyNow={auction.buyNow}
                             loading={auction.loading}
+                            channelHostId={sellerId}
                         />
                     </div>
                 </div>

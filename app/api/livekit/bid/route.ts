@@ -16,7 +16,12 @@ export async function POST(req: NextRequest) {
 
     // ── Input Validation ────────────────────────────────────────────────────
     const body = await req.json();
-    const { adId, amount } = body as { adId?: string; amount?: unknown };
+    const { adId, amount, channelHostId } = body as {
+      adId?: string;
+      amount?: unknown;
+      /** Kanal mimarisinde opsiyonel: hangi host'un kanalı üzerinden teklif veriliyor. */
+      channelHostId?: string;
+    };
 
     if (!adId || typeof adId !== "string") {
       return NextResponse.json({ error: "İlan ID'si zorunludur" }, { status: 400 });
@@ -29,12 +34,16 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Atomik Teklif (Lua Script via Redis) ────────────────────────────────
-    const result = await placeBid(adId, userId, amount);
+    // channelHostId verilirse, Lua script adId'nin kanalın active_ad'i olup
+    // olmadığını da kontrol eder — eski ürünlere teklif gelmesini engeller.
+    const result = await placeBid(adId, userId, amount, channelHostId ?? undefined);
 
     if (!result.accepted) {
       const message =
         result.reason === "auction_not_active"
           ? "Açık arttırma henüz başlatılmadı"
+          : result.reason === "not_active_item"
+          ? "Bu ürün artık kanalın aktif ürünü değil"
           : "Teklifiniz en yüksek tekliften düşük";
 
       return NextResponse.json({ error: message }, { status: 400 });
@@ -57,13 +66,17 @@ export async function POST(req: NextRequest) {
 
     const payload = JSON.stringify({
       type: "NEW_BID",
+      adId,
       amount: result.newHighestBid,
       bidderIdentity: userId,
       bidderName: user.name,
     });
 
+    // Kanal mimarisinde broadcast hedefi channel:{hostId}, klasik mimaride adId odasıdır.
+    const targetRoom = channelHostId ? `channel:${channelHostId}` : adId;
+
     await roomService.sendData(
-      adId,
+      targetRoom,
       new TextEncoder().encode(payload),
       1, // DataPacket_Kind.RELIABLE
       { topic: "auction_events" }

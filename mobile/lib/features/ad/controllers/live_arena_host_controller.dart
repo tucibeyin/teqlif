@@ -43,6 +43,8 @@ class HostState {
   final bool showFinalizationOverlay;
   final double? liveHighestBid;
   final String? liveHighestBidderName;
+  /// Kanal modunda şu an aktif olan ürünün adId'si. null → klasik mod (adId kullanılır).
+  final String? activeAdId;
 
   const HostState({
     required this.bids,
@@ -65,6 +67,7 @@ class HostState {
     required this.showFinalizationOverlay,
     this.liveHighestBid,
     this.liveHighestBidderName,
+    this.activeAdId,
   });
 
   factory HostState.initial(AdModel? ad) => HostState(
@@ -84,6 +87,7 @@ class HostState {
         showFinalizationOverlay: false,
         liveHighestBid: ad?.highestBidAmount,
         liveHighestBidderName: ad?.highestBidderName,
+        activeAdId: null,
       );
 
   HostState copyWith({
@@ -107,6 +111,7 @@ class HostState {
     bool? showFinalizationOverlay,
     Object? liveHighestBid = _sentinel,
     Object? liveHighestBidderName = _sentinel,
+    Object? activeAdId = _sentinel,
   }) {
     return HostState(
       bids: bids ?? this.bids,
@@ -142,6 +147,9 @@ class HostState {
       liveHighestBidderName: liveHighestBidderName == _sentinel
           ? this.liveHighestBidderName
           : liveHighestBidderName as String?,
+      activeAdId: activeAdId == _sentinel
+          ? this.activeAdId
+          : activeAdId as String?,
     );
   }
 }
@@ -266,6 +274,33 @@ class HostController extends StateNotifier<HostState> {
   // ── Synchronization ────────────────────────────────────────────────────────
 
   Future<void> syncInitialState() async {
+    // Kanal modu: host kendi kanalını senkronize eder
+    try {
+      final response = await ApiClient().get(
+        '/api/livekit/channel/sync',
+        params: {'hostId': adId},
+      );
+      if (response.statusCode == 200 && response.data != null) {
+        final data = response.data as Map<String, dynamic>;
+        final newActiveAdId = data['activeAdId']?.toString();
+        final auction = data['auction'] as Map<String, dynamic>?;
+        if (newActiveAdId != null && auction != null) {
+          final isAuctionActive = auction['isAuctionActive'] == true;
+          final highestBid = (auction['highestBid'] as num?)?.toDouble() ?? 0;
+          state = state.copyWith(
+            activeAdId: newActiveAdId,
+            isAuctionActive: isAuctionActive,
+            liveHighestBid: highestBid > 0 ? highestBid : null,
+          );
+          debugPrint('Host synced from channel: activeAd=$newActiveAdId, bid=$highestBid');
+          return;
+        }
+      }
+    } catch (_) {
+      // Kanal sync başarısız — klasik sync'e düş
+    }
+
+    // Klasik mod fallback
     try {
       final response = await ApiClient().get('/api/livekit/sync', params: {'adId': adId});
       if (response.statusCode == 200 && response.data != null) {
@@ -281,7 +316,7 @@ class HostController extends StateNotifier<HostState> {
             liveHighestBidderName: highestBidder,
           );
           debugPrint('Host synced from Redis: bid=$highestBid, active=$isAuctionActive');
-          
+
           if (state.bids.isEmpty && highestBid > 0) {
              readBids();
           }
@@ -357,7 +392,35 @@ class HostController extends StateNotifier<HostState> {
         _resetMessageTimer();
         return;
 
+      } else if (dataObj['type'] == 'ITEM_PINNED') {
+        final pinnedAdId = dataObj['adId']?.toString();
+        final startingBid = (dataObj['startingBid'] as num?)?.toDouble();
+        if (pinnedAdId == null) return;
+        state = state.copyWith(
+          activeAdId: pinnedAdId,
+          liveHighestBid: startingBid,
+          liveHighestBidderName: null,
+          isAuctionActive: true,
+          isSold: false,
+          showSoldOverlay: false,
+          soldWinnerName: null,
+          soldFinalPrice: null,
+          showFinalizationOverlay: false,
+          finalizedWinnerName: null,
+          finalizedAmount: null,
+          bids: [],
+          unreadBids: 0,
+          countdown: 0,
+        );
+        return;
+
       } else if (dataObj['type'] == 'NEW_BID') {
+        // Kanal modunda: payload'daki adId, aktif ürünle eşleşmiyorsa yut
+        final payloadAdId = dataObj['adId']?.toString();
+        final currentActiveAdId = state.activeAdId;
+        if (payloadAdId != null && currentActiveAdId != null && payloadAdId != currentActiveAdId) {
+          return;
+        }
         final amount = (dataObj['amount'] as num).toDouble();
         final bidId = dataObj['bidId']?.toString();
         final bidderId = dataObj['bidderIdentity']?.toString() ?? dataObj['bidderId']?.toString();
@@ -623,6 +686,39 @@ class HostController extends StateNotifier<HostState> {
       if (ctx.mounted) {
         ScaffoldMessenger.of(ctx).showSnackBar(
           const SnackBar(content: Text('Sıfırlama başarısız oldu.')),
+        );
+      }
+    }
+  }
+
+  // ── Channel item pinning ────────────────────────────────────────────────────
+
+  Future<void> pinItemToChannel(
+      String targetAdId, int startingBid, BuildContext ctx) async {
+    try {
+      final res = await ApiClient().post('/api/livekit/channel/pin-item', data: {
+        'adId': targetAdId,
+        'startingBid': startingBid,
+      });
+      if ((res.statusCode == 200 || res.statusCode == 201) && ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(
+            content: Text('📌 Ürün sahnede sabitleniyor!'),
+            backgroundColor: Colors.blue,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      } else if (ctx.mounted) {
+        final errMsg = res.data?['error']?.toString() ?? 'Sabitleme başarısız.';
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          SnackBar(content: Text(errMsg)),
+        );
+      }
+    } catch (e) {
+      debugPrint('pinItemToChannel error: $e');
+      if (ctx.mounted) {
+        ScaffoldMessenger.of(ctx).showSnackBar(
+          const SnackBar(content: Text('Bağlantı hatası.')),
         );
       }
     }

@@ -19,6 +19,55 @@ class HostControlsWidget extends ConsumerWidget {
     required this.onShowBidsSheet,
   });
 
+  void _showPinItemDialog(BuildContext context, HostController controller) {
+    final adIdCtrl = TextEditingController();
+    final bidCtrl = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Ürün Sabitle'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: adIdCtrl,
+              decoration: const InputDecoration(
+                labelText: 'İlan ID',
+                hintText: 'Sabitlenecek ilanın ID\'si',
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: bidCtrl,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Başlangıç Fiyatı (₺)',
+                hintText: '0',
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('İptal'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              final targetAdId = adIdCtrl.text.trim();
+              if (targetAdId.isEmpty) return;
+              final startingBid = int.tryParse(bidCtrl.text.trim()) ?? 0;
+              Navigator.pop(ctx);
+              controller.pinItemToChannel(targetAdId, startingBid, context);
+            },
+            child: const Text('📌 Sabitle'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final state = ref.watch(hostControllerProvider(ad.id));
@@ -68,6 +117,12 @@ class HostControlsWidget extends ConsumerWidget {
           icon: Icons.gavel,
           onPressed: onShowBidsSheet,
           badge: state.unreadBids > 0 ? '${state.unreadBids}' : null,
+        ),
+        const SizedBox(height: 12),
+        // Pin item button (kanal modu)
+        CircularControlButton(
+          icon: Icons.push_pin,
+          onPressed: () => _showPinItemDialog(context, controller),
         ),
         const SizedBox(height: 12),
         // Camera flip

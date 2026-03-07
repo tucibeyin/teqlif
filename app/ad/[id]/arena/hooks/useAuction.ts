@@ -25,6 +25,8 @@ export function useAuction({
     isQuickLive = false,
 }: UseAuctionOptions) {
     const router = useRouter();
+    // Kanal modunda aktif adId değişebilir; ref kullanarak NEW_BID filtresi stale closure'dan etkilenmez.
+    const activeAdIdRef = useRef<string>(adId);
     const [highestBid, setHighestBid] = useState(initialHighestBid);
     const [highestBidId, setHighestBidId] = useState<string | null>(null);
     const [highestBidderId, setHighestBidderId] = useState<string | null>(null);
@@ -97,6 +99,8 @@ export function useAuction({
 
     const onNewBid = useCallback(
         (data: any) => {
+            // Kanal modunda: payload'daki adId, şu an aktif ürünle eşleşmiyorsa sessizce yut.
+            if (data.adId && data.adId !== activeAdIdRef.current) return;
             setHighestBid(data.amount);
             setHighestBidId(data.bidId ?? null);
             // Yeni backend: bidderIdentity (userId). Eski: bidderId. Her ikisini destekle.
@@ -106,7 +110,7 @@ export function useAuction({
             setFlashBid(true);
             setTimeout(() => setFlashBid(false), 300);
         },
-        []
+        [] // activeAdIdRef ref'i — dependency gerekmez
     );
 
     const onBidAccepted = useCallback((data: any) => {
@@ -142,6 +146,29 @@ export function useAuction({
         setStatus("IDLE");
         notify("📣 AÇIK ARTTIRMA DURDURULDU");
     }, []);
+
+    /**
+     * ITEM_PINNED geldiğinde: tüm ihale state'ini sıfırla, yeni ürünü aktifle.
+     * activeAdIdRef güncellenerek sonraki NEW_BID'ler doğru filtrelenir.
+     */
+    const onItemPinned = useCallback(
+        (data: { adId: string; startingBid: number }) => {
+            activeAdIdRef.current = data.adId;
+            setHighestBid(data.startingBid);
+            setHighestBidId(null);
+            setHighestBidderId(null);
+            setHighestBidderName(null);
+            setLastAcceptedBidId(null);
+            setStatus("ACTIVE");
+            setResult(null);
+            setShowSoldOverlay(false);
+            setFinalizedWinner(null);
+            setFinalizedAmount(null);
+            setShowFinalization(false);
+            notify("📦 Yeni ürün sahnede! Teklif verebilirsiniz.");
+        },
+        [] // Tüm setter'lar ve activeAdIdRef ref'i stabil
+    );
 
     const onAuctionReset = useCallback(() => {
         setHighestBid(0);
@@ -348,7 +375,7 @@ export function useAuction({
         loading,
         // Incoming event handlers
         onNewBid, onBidAccepted, onBidRejected,
-        onAuctionStart, onAuctionEnd, onAuctionReset,
+        onAuctionStart, onAuctionEnd, onAuctionReset, onItemPinned,
         onAuctionEnded, onSaleFinalized, onAuctionSold, onSyncStateResponse,
         // Host actions
         start, stop, reset, accept, reject, buyNow, broadcastState,

@@ -33,6 +33,8 @@ interface BidPanelProps {
   onReject?: () => void;
   onBuyNow?: () => void;
   loading?: boolean;
+  /** Kanal mimarisinde bid isteğine eklenir; Lua script doğru kanalı kontrol eder. */
+  channelHostId?: string;
 }
 
 export function BidPanel({
@@ -40,6 +42,7 @@ export function BidPanel({
   buyItNowPrice, isAuctionActive, isOwner,
   lastAcceptedBidId, highestBidderId,
   onAccept, onReject, onBuyNow, loading = false,
+  channelHostId,
 }: BidPanelProps) {
   const [amount, setAmount] = useState("");
   const [bidLoading, setBidLoading] = useState(false);
@@ -74,7 +77,7 @@ export function BidPanel({
       const res = await fetch("/api/livekit/bid", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adId, amount: num }),
+        body: JSON.stringify({ adId, amount: num, ...(channelHostId && { channelHostId }) }),
       });
       const data = await res.json();
       if (res.ok) {
@@ -96,7 +99,7 @@ export function BidPanel({
       const res = await fetch("/api/livekit/bid", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ adId, amount: num }),
+        body: JSON.stringify({ adId, amount: num, ...(channelHostId && { channelHostId }) }),
       });
       const data = await res.json();
       if (res.ok) {
