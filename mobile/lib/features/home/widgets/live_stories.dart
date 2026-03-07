@@ -3,43 +3,27 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:shimmer/shimmer.dart';
-import '../../../core/api/api_client.dart';
-import '../../../core/api/endpoints.dart';
-import '../../../core/models/ad.dart';
-import '../screens/home_screen.dart';
-
-final liveAdsProvider = FutureProvider.autoDispose<List<AdModel>>((ref) async {
-  final params = <String, dynamic>{'isLive': true};
-  final res = await ApiClient().get(Endpoints.ads, params: params);
-  final list = res.data as List<dynamic>;
-  // Hem API filtresini kullan hem de istemci tarafında isLive kontrolü yap (garanti olsun)
-  return list
-      .map((e) => AdModel.fromJson(e as Map<String, dynamic>))
-      .where((ad) => ad.isLive)
-      .toList();
-});
+import '../providers/live_streams_provider.dart';
 
 class LiveStories extends ConsumerWidget {
   const LiveStories({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final liveAdsAsync = ref.watch(liveAdsProvider);
+    final streamsAsync = ref.watch(liveStreamsProvider);
 
-    return liveAdsAsync.when(
-      data: (ads) {
-        if (ads.isEmpty) return const SizedBox.shrink();
+    return streamsAsync.when(
+      data: (streams) {
+        if (streams.isEmpty) return const SizedBox.shrink();
 
-        return Container(
+        return SizedBox(
           height: 110,
-          padding: const EdgeInsets.symmetric(vertical: 8),
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 12),
-            itemCount: ads.length,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            itemCount: streams.length,
             itemBuilder: (context, index) {
-              final ad = ads[index];
-              return _StoryItem(ad: ad);
+              return _StoryItem(stream: streams[index]);
             },
           ),
         );
@@ -51,85 +35,126 @@ class LiveStories extends ConsumerWidget {
 }
 
 class _StoryItem extends StatelessWidget {
-  final AdModel ad;
+  final Map<String, dynamic> stream;
 
-  const _StoryItem({required this.ad});
+  const _StoryItem({required this.stream});
+
+  void _onTap(BuildContext context) {
+    final type = stream['type'] as String?;
+    if (type == 'channel') {
+      context.push('/live/${stream['hostId']}');
+    } else {
+      context.push('/ad/${stream['adId']}');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    final String hostName = stream['hostName'] as String? ?? 'Yayıncı';
+    final String? imageUrl = stream['imageUrl'] as String?;
+    final int viewerCount = stream['viewerCount'] as int? ?? 0;
+
     return GestureDetector(
-      onTap: () => context.push('/ad/${ad.id}'),
+      onTap: () => _onTap(context),
       child: Container(
         width: 80,
         margin: const EdgeInsets.symmetric(horizontal: 4),
         child: Column(
+          mainAxisSize: MainAxisSize.min,
           children: [
             Stack(
-              alignment: Alignment.bottomCenter,
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
               children: [
+                // Gradient border ring
                 Container(
-                  padding: const EdgeInsets.all(2.5),
-                  decoration: BoxDecoration(
+                  width: 72,
+                  height: 72,
+                  decoration: const BoxDecoration(
                     shape: BoxShape.circle,
                     gradient: LinearGradient(
                       colors: [
-                        const Color(0xFF00B4CC),
-                        const Color(0xFF00B4CC).withOpacity(0.5),
-                        Colors.purple,
-                        const Color(0xFFEF4444),
+                        Color(0xFFEF4444),
+                        Color(0xFFEC4899),
+                        Color(0xFF8B5CF6),
+                        Color(0xFF00B4CC),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
                     ),
                   ),
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: const BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                    ),
-                    child: CircleAvatar(
-                      radius: 30,
-                      backgroundColor: const Color(0xFFF4F7FA),
-                      backgroundImage: ad.images.isNotEmpty
-                          ? CachedNetworkImageProvider(imageUrl(ad.images.first))
-                          : null,
-                      child: ad.images.isEmpty
-                          ? Text(ad.category?.icon ?? '📦',
-                              style: const TextStyle(fontSize: 24))
-                          : null,
+                  child: Padding(
+                    padding: const EdgeInsets.all(2.5),
+                    child: Container(
+                      decoration: const BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
+                      ),
+                      padding: const EdgeInsets.all(2),
+                      child: CircleAvatar(
+                        radius: 30,
+                        backgroundColor: const Color(0xFFF4F7FA),
+                        backgroundImage: (imageUrl != null && imageUrl.isNotEmpty)
+                            ? CachedNetworkImageProvider(imageUrl)
+                            : null,
+                        child: (imageUrl == null || imageUrl.isEmpty)
+                            ? const Icon(Icons.videocam_rounded,
+                                size: 26, color: Color(0xFFEF4444))
+                            : null,
+                      ),
                     ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFEF4444),
-                    borderRadius: BorderRadius.circular(4),
-                    border: Border.all(color: Colors.white, width: 1.5),
-                    boxShadow: [
-                      BoxShadow(
-                        color: Colors.black.withOpacity(0.2),
-                        blurRadius: 4,
-                        offset: const Offset(0, 2),
-                      ),
-                    ],
-                  ),
-                  child: const Text(
-                    'CANLI',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 8,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 0.5,
+                // Viewer count badge
+                Positioned(
+                  bottom: -2,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEF4444),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.2),
+                          blurRadius: 4,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
                     ),
+                    child: viewerCount > 0
+                        ? Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.remove_red_eye_rounded,
+                                  size: 8, color: Colors.white),
+                              const SizedBox(width: 2),
+                              Text(
+                                '$viewerCount',
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ],
+                          )
+                        : const Text(
+                            'CANLI',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 8,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 8),
             Text(
-              ad.user?.name?.split(' ').first ?? 'Katılımcı',
+              hostName.split(' ').first,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: const TextStyle(
@@ -150,12 +175,11 @@ class _LiveStoriesSkeleton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return SizedBox(
       height: 110,
-      padding: const EdgeInsets.symmetric(vertical: 8),
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: 12),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
         itemCount: 5,
         itemBuilder: (context, index) {
           return Container(

@@ -60,4 +60,7 @@ class Endpoints {
 
   // LiveKit Moderation
   static const moderation = '/api/livekit/moderate';
+
+  // Live Streams
+  static const liveStreams = '/api/live-streams';
 }
