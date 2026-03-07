@@ -202,14 +202,18 @@ class _LiveArenaHostState extends ConsumerState<LiveArenaHost>
           break;
         }
       }
-      if (room.remoteParticipants.isNotEmpty) {
-        final firstGuest = room.remoteParticipants.values.first;
-        guestIdentity = firstGuest.identity;
-        for (var pub in firstGuest.videoTrackPublications) {
-          if (pub.track != null) {
-            guestTrack = pub.track as VideoTrack?;
-            break;
+      // Evrensel filtre: kamerası VEYA mikrofonu açık olan ilk remote katılımcı = aktif sahne misafiri.
+      // Yayın yapmayan (izleyen) katılımcılar atlanır.
+      for (final p in room.remoteParticipants.values) {
+        if (p.isCameraEnabled() || p.isMicrophoneEnabled()) {
+          guestIdentity = p.identity;
+          for (var pub in p.videoTrackPublications) {
+            if (pub.track != null) {
+              guestTrack = pub.track as VideoTrack?;
+              break;
+            }
           }
+          break; // ilk aktif yayıncı = misafir
         }
       }
     }

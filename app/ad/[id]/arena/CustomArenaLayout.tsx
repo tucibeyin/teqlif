@@ -45,7 +45,6 @@ export function CustomArenaLayout({
     const [isRoomClosed, setIsRoomClosed] = useState(false);
     const [isParticipantsModalOpen, setIsParticipantsModalOpen] = useState(false);
     const [countdown, setCountdown] = useState(0);
-    const [isCoHost, setIsCoHost] = useState(false);
     const [showInviteDialog, setShowInviteDialog] = useState(false);
 
     // ── SYNC STATE ON JOIN ──────────────────────────────────────────────────
@@ -151,10 +150,19 @@ export function CustomArenaLayout({
 
     // ── Track Extraction ──
     const hostTrack = tracks.find(t => t.participant.identity === sellerId) ?? null;
-    const guestTrack = tracks.find(t =>
-        t.participant.identity !== sellerId &&
-        (t.participant.isCameraEnabled || t.participant.isMicrophoneEnabled)
+
+    // Evrensel misafir tespiti: useParticipants() tüm katılımcıları (yerel + uzak) reaktif verir.
+    // Kriter: asıl host (sellerId) OLMAYAN ve kamerası ya da mikrofonu aktif olan ilk katılımcı.
+    const guestParticipant = participants.find(p =>
+        p.identity !== sellerId &&
+        (p.isCameraEnabled || p.isMicrophoneEnabled)
     ) ?? null;
+
+    // guestParticipant'ın kamera track'ini bul (muted olsa bile container gösterilir).
+    const guestTrack = tracks.find(t => t.participant.identity === guestParticipant?.identity) ?? null;
+
+    // Oturum açan kullanıcının bizzat sahne misafiri olup olmadığı.
+    const isCurrentUserGuest = !!session?.user?.id && session.user.id === guestParticipant?.identity;
 
     // ── Handlers ───────────────────────────────────────────────────────────────
 
@@ -343,8 +351,8 @@ export function CustomArenaLayout({
                             </div>
                         )}
 
-                        {/* Guest PiP */}
-                        {guestTrack && (
+                        {/* Guest PiP — guestParticipant varsa odadaki HERKES görür */}
+                        {guestParticipant && (
                             <div style={{
                                 position: "absolute", bottom: 150, right: 20,
                                 width: 100, height: 140, borderRadius: 14,
@@ -352,7 +360,7 @@ export function CustomArenaLayout({
                                 boxShadow: "0 8px 28px rgba(0,0,0,0.65)", zIndex: 10,
                                 background: "black",
                             }}>
-                                {guestTrack.publication?.isMuted ? (
+                                {(!guestTrack || guestTrack.publication?.isMuted) ? (
                                     <div style={{
                                         width: "100%", height: "100%",
                                         display: "flex", alignItems: "center", justifyContent: "center",
@@ -367,14 +375,27 @@ export function CustomArenaLayout({
                                     />
                                 )}
 
-                                {/* Host: kick button | CoHost: leave stage button */}
-                                {(isOwner || isCoHost) && (
+                                {/* Host → kick | Misafirin kendisi → sahneyi bırak | İzleyici → buton yok */}
+                                {isOwner && (
                                     <button
-                                        onClick={() => isOwner
-                                            ? handleKickGuest()
-                                            : stage.kickFromStage(room.localParticipant.identity)
-                                        }
-                                        title={isOwner ? "Sahneden Çıkar" : "Sahneden Ayrıl"}
+                                        onClick={handleKickGuest}
+                                        title="Sahneden Çıkar"
+                                        style={{
+                                            position: "absolute", top: 6, right: 6,
+                                            width: 20, height: 20, borderRadius: "50%",
+                                            background: "rgba(0,0,0,0.5)", color: "white",
+                                            border: "none", cursor: "pointer",
+                                            display: "flex", alignItems: "center", justifyContent: "center",
+                                            fontSize: 10, zIndex: 20, backdropFilter: "blur(4px)"
+                                        }}
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                                {isCurrentUserGuest && (
+                                    <button
+                                        onClick={() => stage.kickFromStage(room.localParticipant.identity)}
+                                        title="Sahneden Ayrıl"
                                         style={{
                                             position: "absolute", top: 6, right: 6,
                                             width: 20, height: 20, borderRadius: "50%",
@@ -411,8 +432,7 @@ export function CustomArenaLayout({
                                 adId={adId}
                                 showInviteDialog={showInviteDialog}
                                 onDecline={() => setShowInviteDialog(false)}
-                                onCoHostStatusChange={(v) => {
-                                    setIsCoHost(v);
+                                onCoHostStatusChange={() => {
                                     setShowInviteDialog(false);
                                 }}
                             />
