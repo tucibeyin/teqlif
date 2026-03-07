@@ -4,28 +4,35 @@ import {
   getChannelState,
   getAuctionState,
 } from "@/lib/services/auction-redis.service";
-import type { ChannelState, AuctionState } from "@/lib/services/auction-redis.service";
+import type { ChannelState, ActiveItem } from "@/lib/services/auction-redis.service";
 
 export const dynamic = "force-dynamic";
 
+export type AuctionSyncStatus = "IDLE" | "ACTIVE" | "SOLD";
+
+/**
+ * Unified sync response — hem Channel hem Ad oda tipi için aynı format.
+ */
 export interface ChannelSyncResponse {
   hostId: string;
-  channelStatus: ChannelState["status"];
-  activeAdId: string | null;
-  auction: {
-    status: AuctionState["status"];
-    highestBid: number;
-    highestBidder: string | null;
-    isAuctionActive: boolean;
-  } | null;
+  status: ChannelState["status"];
+  activeItem: ActiveItem | null;
+  auctionStatus: AuctionSyncStatus;
+  highestBid: number;
+  highestBidder: string | null;
+}
+
+function mapAuctionStatus(s: string | null): AuctionSyncStatus {
+  if (s === "active") return "ACTIVE";
+  if (s === "closed") return "SOLD";
+  return "IDLE";
 }
 
 /**
  * GET /api/livekit/channel/sync?hostId=xxx
  *
  * Kanalın anlık durumunu döner. Late-joiner'lar bu endpoint ile senkronize olur.
- *   - channel:{hostId}:status + channel:{hostId}:active_ad okunur.
- *   - Eğer activeAdId varsa, o ürünün açık artırma durumu da eklenir.
+ * Her iki oda tipi (Channel / Ad) için aynı unified format kullanılır.
  *
  * Cache-Control: no-store — her zaman taze veri.
  */
@@ -47,22 +54,24 @@ export async function GET(req: NextRequest) {
     const channelState = await getChannelState(hostId);
 
     // ── Redis: Aktif ürün varsa açık artırma state'i de çek ──────────────────
-    let auctionData: ChannelSyncResponse["auction"] = null;
-    if (channelState.activeAdId) {
-      const auctionState = await getAuctionState(channelState.activeAdId);
-      auctionData = {
-        status: auctionState.status,
-        highestBid: auctionState.highestBid,
-        highestBidder: auctionState.highestBidder,
-        isAuctionActive: auctionState.status === "active",
-      };
+    let auctionStatus: AuctionSyncStatus = "IDLE";
+    let highestBid = 0;
+    let highestBidder: string | null = null;
+
+    if (channelState.activeItem) {
+      const auctionState = await getAuctionState(channelState.activeItem.id);
+      auctionStatus = mapAuctionStatus(auctionState.status);
+      highestBid = auctionState.highestBid;
+      highestBidder = auctionState.highestBidder;
     }
 
     const body: ChannelSyncResponse = {
       hostId,
-      channelStatus: channelState.status,
-      activeAdId: channelState.activeAdId,
-      auction: auctionData,
+      status: channelState.status,
+      activeItem: channelState.activeItem,
+      auctionStatus,
+      highestBid,
+      highestBidder,
     };
 
     return NextResponse.json(body, {

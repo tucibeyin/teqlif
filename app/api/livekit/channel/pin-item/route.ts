@@ -3,19 +3,23 @@ import { RoomServiceClient } from "livekit-server-sdk";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { prisma } from "@/lib/prisma";
 import { pinItemToChannel } from "@/lib/services/auction-redis.service";
+import type { ActiveItem } from "@/lib/services/auction-redis.service";
 
 export const dynamic = "force-dynamic";
 
 /**
  * POST /api/livekit/channel/pin-item
- * Body: { adId: string, startingBid?: number }
+ *
+ * İki mod desteklenir:
+ *   A) Mevcut ilan: { adId: string, startingBid?: number }
+ *   B) Anlık ürün:  { customTitle: string, customPrice?: number, startingBid?: number }
  *
  * Kanala yeni ürün sabitler:
- *   1. adId'nin gerçek sahibinin isteği atan kişi olduğunu Prisma ile doğrular.
- *   2. Önceki ihaleyi kapatır, yeni ürünü active_ad olarak atar, yeni ihaleyi başlatır.
- *   3. channel:{hostId} LiveKit odasına ITEM_PINNED DataChannel sinyali fırlatır.
+ *   1. Mod A'da adId sahipliğini Prisma ile doğrular; mod B'de doğrulama gerekmez (host kendisi giriyor).
+ *   2. ActiveItem oluşturur ve Redis'e JSON olarak yazar; önceki ihaleyi kapatır.
+ *   3. channel:{hostId} LiveKit odasına ITEM_PINNED sinyalini ActiveItem ile birlikte fırlatır.
  *
- * Response: { success: true, adId, startingBid }
+ * Response: { success: true, activeItem, startingBid }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -26,40 +30,77 @@ export async function POST(req: NextRequest) {
     }
     const hostId = currentUser.id;
 
-    // ── Input Validation ──────────────────────────────────────────────────────
-    const body = await req.json();
-    const { adId, startingBid } = body as { adId?: string; startingBid?: unknown };
+    // ── Input Parsing ─────────────────────────────────────────────────────────
+    const body = await req.json() as {
+      adId?: string;
+      customTitle?: string;
+      customPrice?: unknown;
+      startingBid?: unknown;
+    };
 
-    if (!adId || typeof adId !== "string") {
-      return NextResponse.json({ error: "adId zorunludur." }, { status: 400 });
-    }
+    const { adId, customTitle } = body;
 
     const startingBidNum =
-      typeof startingBid === "number" && Number.isFinite(startingBid) && startingBid >= 0
-        ? Math.floor(startingBid)
+      typeof body.startingBid === "number" && Number.isFinite(body.startingBid) && body.startingBid >= 0
+        ? Math.floor(body.startingBid)
         : 0;
 
-    // ── Sahiplik Doğrulaması (Prisma) ─────────────────────────────────────────
-    const ad = await prisma.ad.findUnique({
-      where: { id: adId },
-      select: { userId: true },
-    });
+    let activeItem: ActiveItem;
 
-    if (!ad) {
-      return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
-    }
+    if (adId && typeof adId === "string") {
+      // ── Mod A: Mevcut ilan ──────────────────────────────────────────────────
+      const ad = await prisma.ad.findUnique({
+        where: { id: adId },
+        select: { userId: true, title: true, price: true, startingBid: true, images: true },
+      });
 
-    if (ad.userId !== hostId) {
+      if (!ad) {
+        return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
+      }
+      if (ad.userId !== hostId) {
+        return NextResponse.json(
+          { error: "Bu ilanı kanalınıza sabitlemek için yetkiniz yok." },
+          { status: 403 }
+        );
+      }
+
+      const adPrice = startingBidNum > 0
+        ? startingBidNum
+        : ((ad.price ?? ad.startingBid) ?? 0);
+
+      activeItem = {
+        id: adId,
+        title: ad.title,
+        price: adPrice,
+        imageUrl: (ad.images as string[])[0] ?? undefined,
+        isStaticAd: true,
+      };
+
+    } else if (customTitle && typeof customTitle === "string" && customTitle.trim()) {
+      // ── Mod B: Anlık (on-the-fly) ürün ────────────────────────────────────
+      const customPrice =
+        typeof body.customPrice === "number" && Number.isFinite(body.customPrice) && body.customPrice >= 0
+          ? Math.floor(body.customPrice)
+          : startingBidNum;
+
+      activeItem = {
+        id: `custom_${Date.now()}`,
+        title: customTitle.trim(),
+        price: customPrice,
+        isStaticAd: false,
+      };
+
+    } else {
       return NextResponse.json(
-        { error: "Bu ilanı kanalınıza sabitlemek için yetkiniz yok." },
-        { status: 403 }
+        { error: "adId veya customTitle zorunludur." },
+        { status: 400 }
       );
     }
 
     // ── Redis: Önceki ihaleyi kapat, yeni ürünü başlat ───────────────────────
-    await pinItemToChannel(hostId, adId, startingBidNum);
+    await pinItemToChannel(hostId, activeItem, startingBidNum);
 
-    // ── LiveKit: ITEM_PINNED Sinyali ──────────────────────────────────────────
+    // ── LiveKit: ITEM_PINNED Sinyali (ActiveItem JSON ile) ────────────────────
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
     const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
@@ -72,14 +113,18 @@ export async function POST(req: NextRequest) {
     const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
     const roomName = `channel:${hostId}`;
 
-    const payload = JSON.stringify({ type: "ITEM_PINNED", adId, startingBid: startingBidNum });
+    const payload = JSON.stringify({
+      type: "ITEM_PINNED",
+      activeItem,
+      startingBid: startingBidNum,
+    });
 
     // Fire-and-forget — oda yoksa (henüz kimse katılmamışsa) hata yutulur.
     roomService
       .sendData(roomName, new TextEncoder().encode(payload), 1, { topic: "auction_events" })
       .catch((err) => console.error("[channel/pin-item] LiveKit broadcast hatası:", err));
 
-    return NextResponse.json({ success: true, adId, startingBid: startingBidNum }, { status: 200 });
+    return NextResponse.json({ success: true, activeItem, startingBid: startingBidNum }, { status: 200 });
   } catch (err) {
     console.error("[channel/pin-item] Hata:", err);
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });
