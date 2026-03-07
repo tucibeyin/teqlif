@@ -23,7 +23,7 @@ class ViewerTopHeader extends ConsumerWidget {
     final _key = providerKey ?? ad.id;
     final viewerState = ref.watch(viewerControllerProvider(_key));
     final adAsync = ref.watch(adDetailProvider(ad.id));
-    final currentAd = adAsync.value ?? ad;
+    final currentAd = adAsync.valueOrNull ?? ad;
     final viewerCount =
         ref.watch(liveRoomProvider(_key).select((s) => s.viewerCount));
 
