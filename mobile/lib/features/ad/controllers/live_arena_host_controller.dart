@@ -361,13 +361,15 @@ class HostController extends StateNotifier<HostState> {
         final amount = (dataObj['amount'] as num).toDouble();
         final bidId = dataObj['bidId']?.toString();
         final bidderId = dataObj['bidderIdentity']?.toString() ?? dataObj['bidderId']?.toString();
+        final bidderName = _formatSenderName(dataObj['bidderName']?.toString());
+        
         final bids = List<LiveBid>.from(state.bids);
         bids.insert(
           0,
           LiveBid(
             id: bidId ?? 'bid-${DateTime.now().millisecondsSinceEpoch}',
             amount: amount,
-            userLabel: _formatSenderName(dataObj['bidderName']),
+            userLabel: bidderName,
             timestamp: DateTime.now(),
             userId: bidderId,
           ),

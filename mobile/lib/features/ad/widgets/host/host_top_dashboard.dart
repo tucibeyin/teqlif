@@ -263,34 +263,33 @@ class _PortraitStatsInner extends StatelessWidget {
                       if (state.bids.isNotEmpty &&
                           state.bids.first.userId != null)
                         GestureDetector(
-                    if (state.bids.isNotEmpty && state.bids.first.userId != null)
-                      GestureDetector(
-                        onTap: () => onInvite(state.bids.first.userId!),
-                        child: Container(
-                          margin: const EdgeInsets.only(left: 6),
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 6, vertical: 2),
-                          decoration: BoxDecoration(
-                              color: Colors.blue.withOpacity(0.2),
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                  color: Colors.blue.withOpacity(0.5))),
-                          child: const Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Icon(Icons.mic,
-                                  color: Colors.blueAccent, size: 10),
-                              SizedBox(width: 2),
-                              Text('Davet Et',
-                                  style: TextStyle(
-                                      color: Colors.blueAccent,
-                                      fontSize: 8,
-                                      fontWeight: FontWeight.bold))
-                            ],
+                          onTap: () => onInvite(state.bids.first.userId!),
+                          child: Container(
+                            margin: const EdgeInsets.only(left: 6),
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                                color: Colors.blue.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(8),
+                                border: Border.all(
+                                    color: Colors.blue.withOpacity(0.5))),
+                            child: const Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Icon(Icons.mic,
+                                    color: Colors.blueAccent, size: 10),
+                                SizedBox(width: 2),
+                                Text('Davet Et',
+                                    style: TextStyle(
+                                        color: Colors.blueAccent,
+                                        fontSize: 8,
+                                        fontWeight: FontWeight.bold))
+                              ],
+                            ),
                           ),
-                        ),
-                      )
-                  ]),
+                        )
+                    ],
+                  ),
                 ),
             ],
           ),

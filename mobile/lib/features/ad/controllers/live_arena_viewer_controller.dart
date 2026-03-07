@@ -45,6 +45,7 @@ class ViewerState {
   final double? finalizedAmount;
   final bool showFinalizationOverlay;
   final bool isReconnectingForStage;
+  final String? liveHighestBidderName;
 
   const ViewerState({
     required this.currentQuality,
@@ -67,6 +68,7 @@ class ViewerState {
     this.finalizedAmount,
     required this.showFinalizationOverlay,
     required this.isReconnectingForStage,
+    this.liveHighestBidderName,
   });
 
   factory ViewerState.initial(AdModel? ad) => ViewerState(
@@ -90,6 +92,7 @@ class ViewerState {
         finalizedAmount: null,
         showFinalizationOverlay: false,
         isReconnectingForStage: false,
+        liveHighestBidderName: ad?.highestBidderName,
       );
 
   ViewerState copyWith({
@@ -113,6 +116,7 @@ class ViewerState {
     Object? finalizedAmount = _sentinel,
     bool? showFinalizationOverlay,
     bool? isReconnectingForStage,
+    Object? liveHighestBidderName = _sentinel,
   }) {
     return ViewerState(
       currentQuality: currentQuality ?? this.currentQuality,
@@ -149,6 +153,9 @@ class ViewerState {
           showFinalizationOverlay ?? this.showFinalizationOverlay,
       isReconnectingForStage:
           isReconnectingForStage ?? this.isReconnectingForStage,
+      liveHighestBidderName: liveHighestBidderName == _sentinel
+          ? this.liveHighestBidderName
+          : liveHighestBidderName as String?,
     );
   }
 }
