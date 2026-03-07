@@ -6,7 +6,6 @@ import "@livekit/components-styles";
 import { useSession } from "next-auth/react";
 
 import { CustomArenaLayout } from "./arena/CustomArenaLayout";
-import { CoHostListener } from "./arena/components/CoHostListener";
 
 interface LiveArenaProps {
     roomId: string;
@@ -95,9 +94,6 @@ export default function LiveArena({
                 isQuickLive={isQuickLive}
             />
             <RoomAudioRenderer />
-            {!isOwner && (
-                <CoHostListener setRole={setRole} setWantsToPublish={setWantsToPublish} />
-            )}
         </LiveKitRoom>
     );
 }
