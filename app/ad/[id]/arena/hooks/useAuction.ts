@@ -14,6 +14,8 @@ interface UseAuctionOptions {
     initialHighestBid: number;
     initialIsAuctionActive: boolean;
     isQuickLive?: boolean;
+    /** Kanal modunda useChannelSync'ten gelen aktif ürün ID'si. */
+    activeAdId?: string | null;
 }
 
 export function useAuction({
@@ -23,10 +25,20 @@ export function useAuction({
     initialHighestBid,
     initialIsAuctionActive,
     isQuickLive = false,
+    activeAdId: externalActiveAdId = null,
 }: UseAuctionOptions) {
     const router = useRouter();
     // Kanal modunda aktif adId değişebilir; ref kullanarak NEW_BID filtresi stale closure'dan etkilenmez.
     const activeAdIdRef = useRef<string>(adId);
+
+    // useChannelSync'ten gelen activeAdId değiştiğinde ref'i güncelle.
+    // Late-joiner ve reconnect senaryolarında doğru ürünün filtrelenmesini sağlar.
+    useEffect(() => {
+        if (externalActiveAdId) {
+            activeAdIdRef.current = externalActiveAdId;
+        }
+    }, [externalActiveAdId]);
+
     const [highestBid, setHighestBid] = useState(initialHighestBid);
     const [highestBidId, setHighestBidId] = useState<string | null>(null);
     const [highestBidderId, setHighestBidderId] = useState<string | null>(null);
@@ -48,8 +60,11 @@ export function useAuction({
     const prevConnectionStateRef = useRef<ConnectionState | null>(null);
 
     const syncAuctionState = useCallback(async () => {
+        // Kanal modunda activeAdIdRef.current, ITEM_PINNED veya externalActiveAdId ile güncellenir.
+        // Klasik modda adId'ye eşittir. Her iki durumda da doğru ürünü senkronize eder.
+        const syncAdId = activeAdIdRef.current;
         try {
-            const res = await fetch(`/api/livekit/sync?adId=${adId}`);
+            const res = await fetch(`/api/livekit/sync?adId=${syncAdId}`);
             if (!res.ok) return;
             const data: SyncResponse = await res.json();
 
@@ -63,7 +78,7 @@ export function useAuction({
         } catch {
             // Sync hatası kritik değil — sessizce geç
         }
-    }, [adId, highestBid]);
+    }, [highestBid]); // adId yerine ref kullanıldı; stale closure riski yok
 
     // Mount sync: odaya geç katılanlar için ilk yüklemede bir kez çalışır
     useEffect(() => {
@@ -154,7 +169,7 @@ export function useAuction({
     const onItemPinned = useCallback(
         (data: { adId: string; startingBid: number }) => {
             activeAdIdRef.current = data.adId;
-            setHighestBid(data.startingBid);
+            setHighestBid(data.startingBid || 0);
             setHighestBidId(null);
             setHighestBidderId(null);
             setHighestBidderName(null);

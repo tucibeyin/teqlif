@@ -38,7 +38,7 @@ class ViewerConsole extends ConsumerWidget {
 
     // Compute next bid amount
     final double nextBid;
-    if (viewerState.liveHighestBid != null) {
+    if (viewerState.liveHighestBid != null && viewerState.liveHighestBid! > 0) {
       nextBid = viewerState.liveHighestBid! + ad.minBidStep;
     } else if (!ad.isAuction && !viewerState.isAuctionActive) {
       nextBid = ad.price;
@@ -205,10 +205,9 @@ class ViewerConsole extends ConsumerWidget {
                       onTap: !viewerState.isAuctionActive
                         ? null
                         : () {
-                            final currentPrice = viewerState.liveHighestBid ??
-                                ad.highestBidAmount ??
-                                ad.startingBid ??
-                                0;
+                            final currentPrice = (viewerState.liveHighestBid != null && viewerState.liveHighestBid! > 0)
+                                ? viewerState.liveHighestBid!
+                                : (ad.highestBidAmount ?? ad.startingBid ?? 0);
                             bidCtrl.text =
                                 _formatPrice((currentPrice + amount).toDouble());
                             onPlaceBid();

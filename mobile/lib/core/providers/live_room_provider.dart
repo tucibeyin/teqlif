@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -63,7 +64,11 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
       });
       final token = response.data['token'] as String;
       final serverUrl = response.data['wsUrl'] as String;
-      
+      // Gateway: server token'ı hangi oda için ürettiğini döner.
+      // Token bu odayı encode ettiğinden room.connect() ayrıca oda adı almaz.
+      final resolvedRoom = response.data['roomName'] as String? ?? effectiveRoomId;
+      debugPrint('[LiveRoom] Gateway: $effectiveRoomId → $resolvedRoom');
+
       // 1. Handle Permissions before connecting if we intend to publish
       if (isOwner || isGuest) {
         final camStatus = await Permission.camera.request();

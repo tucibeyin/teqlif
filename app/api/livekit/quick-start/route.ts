@@ -3,7 +3,7 @@ import { RoomServiceClient } from "livekit-server-sdk";
 import { prisma } from "@/lib/prisma";
 import { getMobileUser } from "@/lib/mobile-auth";
 import { notifyFollowersOfLive } from "@/lib/fcm";
-import { startAuction } from "@/lib/services/auction-redis.service";
+import { startChannel, pinItemToChannel } from "@/lib/services/auction-redis.service";
 import { revalidatePath } from "next/cache";
 
 export const dynamic = "force-dynamic";
@@ -87,22 +87,28 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // ── Redis: Açık Artırmayı Başlat ──────────────────────────────────────────
-    // Ghost Ad ID'si hem Redis key hem LiveKit oda adı olarak kullanılır.
-    await startAuction(ghostAd.id, startingBidNum);
+    // ── Redis: Kanalı Başlat + Ghost Ad'ı Aktif Ürün Olarak Sabitle ──────────
+    // startChannel → channel:{userId}:status = "live"
+    // pinItemToChannel → channel:{userId}:active_ad = ghostAd.id + auction başlatır
+    // Bu sayede viewer'lar kanal sync'te activeAdId'yi görür ve channelHostId ile teklif verebilir.
+    await startChannel(currentUser.id);
+    await pinItemToChannel(currentUser.id, ghostAd.id, startingBidNum);
 
     // ── LiveKit: AUCTION_START Sinyali ────────────────────────────────────────
     const apiKey = process.env.LIVEKIT_API_KEY;
     const apiSecret = process.env.LIVEKIT_API_SECRET;
     const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
+    const channelRoom = `channel:${currentUser.id}`;
+
     if (apiKey && apiSecret && wsUrl) {
       const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
-      const payload = JSON.stringify({ type: "AUCTION_START" });
+      // ITEM_PINNED: hem host hem viewer controller'ları activeAdId'yi günceller.
+      const payload = JSON.stringify({ type: "ITEM_PINNED", adId: ghostAd.id, startingBid: startingBidNum });
 
       // Fire-and-forget: oda henüz yoksa hata yutulur; istemci token alınca zaten state'i çeker.
       roomService
-        .sendData(ghostAd.id, new TextEncoder().encode(payload), 1, {
+        .sendData(channelRoom, new TextEncoder().encode(payload), 1, {
           topic: "auction_events",
         })
         .catch((err) =>
@@ -120,7 +126,8 @@ export async function POST(req: NextRequest) {
       console.error("[LIVE_NOTIFY] quick-start follower notify error:", err)
     );
 
-    return NextResponse.json(ghostAd, { status: 201 });
+    // roomName: istemci bu odaya bağlanmalı (channel:{userId})
+    return NextResponse.json({ ...ghostAd, roomName: channelRoom }, { status: 201 });
   } catch (err) {
     console.error("POST /api/livekit/quick-start error:", err);
     return NextResponse.json({ error: "Sunucu hatası." }, { status: 500 });

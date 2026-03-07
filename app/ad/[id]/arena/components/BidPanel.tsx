@@ -58,7 +58,7 @@ export function BidPanel({
     }, duration);
   };
 
-  const nextMin = currentHighest > 0 ? currentHighest + minStep : (startingBid ?? minStep);
+  const nextMin = currentHighest > 0 ? currentHighest + minStep : (startingBid || minStep);
   const quickSteps = [minStep, minStep * 2, minStep * 5];
 
   useEffect(() => {
@@ -93,7 +93,8 @@ export function BidPanel({
   };
 
   const handleQuickBid = async (step: number) => {
-    const num = currentHighest + step;
+    const base = currentHighest > 0 ? currentHighest : (startingBid || 0);
+    const num = base + step;
     setBidLoading(true);
     try {
       const res = await fetch("/api/livekit/bid", {

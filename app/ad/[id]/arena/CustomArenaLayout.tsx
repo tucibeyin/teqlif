@@ -67,13 +67,16 @@ export function CustomArenaLayout({
 
     // ── Hooks ──────────────────────────────────────────────────────────────────
 
+    // Kanal sync önce kurulur; activeAdId useAuction'a geçirilerek:
+    //  - activeAdIdRef güncel kalır (late-joiner / reconnect sonrası doğru ürün filtrelenir)
+    //  - syncAuctionState doğru adId ile çalışır
+    const channelSync = useChannelSync({ hostId: sellerId });
+
     const auction = useAuction({
         adId, sellerId, room,
         initialHighestBid, initialIsAuctionActive, isQuickLive,
+        activeAdId: channelSync.activeAdId,
     });
-
-    // Kanal sync: sellerId = channel hostId. activeAdId değiştiğinde BidPanel otomatik güncellenir.
-    const channelSync = useChannelSync({ hostId: sellerId });
 
     const chat = useArenaChat();
     const reactions = useReactions();

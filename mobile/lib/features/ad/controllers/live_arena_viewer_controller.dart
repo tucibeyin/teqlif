@@ -703,7 +703,7 @@ class ViewerController extends StateNotifier<ViewerState> {
           if (pinnedAdId == null) return;
           state = state.copyWith(
             activeAdId: pinnedAdId,
-            liveHighestBid: startingBid,
+            liveHighestBid: (startingBid != null && startingBid > 0) ? startingBid : null,
             liveHighestBidderName: null,
             isAuctionActive: true,
             isSold: false,

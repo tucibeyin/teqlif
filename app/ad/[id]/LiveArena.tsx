@@ -36,30 +36,35 @@ export default function LiveArena({
 }: LiveArenaProps) {
     const { data: session } = useSession();
     const [token, setToken] = useState("");
+    // Server-side Gateway'in döndüğü gerçek oda adı. Token bu odayı encode eder.
+    const [actualRoomName, setActualRoomName] = useState<string>(
+        sellerId ? `channel:${sellerId}` : roomId
+    );
     const [role, setRole] = useState(isOwner ? "host" : "viewer");
     const [wantsToPublish, setWantsToPublish] = useState(isOwner);
 
-    // Kanal mimarisi: Eğer sellerId varsa (normal akış), 
-    // LiveKit odası olarak 'channel:${sellerId}' kullanılır.
-    const effectiveRoomId = sellerId ? `channel:${sellerId}` : roomId;
+    // İlk token isteğinde server'ın belirlediği oda adını kullan (adId → channel:{hostId} yönlendirmesi).
+    // Yeniden bağlantı token'larında actualRoomName kullanılır — gateway redirect'i tekrarlamak gerekmez.
+    const initialRoomId = sellerId ? `channel:${sellerId}` : roomId;
 
     const fetchToken = useCallback(async (currentRole: string) => {
         try {
             const resp = await fetch(
-                `/api/livekit/token?room=${effectiveRoomId}${currentRole === "guest" ? "&role=guest" : ""}`
+                `/api/livekit/token?room=${initialRoomId}${currentRole === "guest" ? "&role=guest" : ""}`
             );
             const data = await resp.json();
             setToken(data.token);
+            if (data.roomName) setActualRoomName(data.roomName);
             if (currentRole === "guest") setWantsToPublish(true);
         } catch (e) {
             console.error("LiveKit token hatası:", e);
         }
-    }, [effectiveRoomId]);
+    }, [initialRoomId]);
 
     useEffect(() => {
         if (!session?.user?.id) return;
         fetchToken(role);
-    }, [effectiveRoomId, session, role, fetchToken]);
+    }, [initialRoomId, session, role, fetchToken]);
 
     // Signal backend that we are LIVE
     useEffect(() => {

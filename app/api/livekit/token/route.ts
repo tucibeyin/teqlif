@@ -4,6 +4,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 import { getMobileUser } from '@/lib/mobile-auth';
 import { logger } from '@/lib/logger';
+import { getChannelState } from '@/lib/services/auction-redis.service';
 
 export async function GET(req: NextRequest) {
   try {
@@ -36,6 +37,7 @@ export async function GET(req: NextRequest) {
     }
 
     // ── ODA TİPİ ANALİZİ (Channel vs Ad) ───────────────────────────────────
+    let effectiveRoom = room; // Gateway redirect sonrası gerçek oda adı
     let hostIdOfRoom: string | null = null;
     let isChannelRoom = false;
 
@@ -65,6 +67,19 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Ad not found' }, { status: 404 });
       }
       hostIdOfRoom = ad.userId;
+
+      // ── Gateway: Satıcının aktif kanalı varsa o odaya yönlendir ─────────────
+      // Viewer, eski usül adId ile gelirse bile channel:{hostId} odasına bağlanır.
+      try {
+        const channelState = await getChannelState(hostIdOfRoom);
+        if (channelState.status === 'live') {
+          logger.liveKit("INFO", "TOKEN_API", `Gateway redirect: ad=${room} → channel:${hostIdOfRoom}`);
+          effectiveRoom = `channel:${hostIdOfRoom}`;
+          isChannelRoom = true;
+        }
+      } catch (_) {
+        // Redis erişilemiyorsa klasik adId odasıyla devam et
+      }
     } else {
       // Kanal odası ise, hostIdOfRoom zaten 'channel:' prefix'inden çıkarıldı.
       // Opsiyonel: hostIdOfRoom'un geçerli bir kullanıcı olup olmadığını kontrol edebiliriz.
@@ -90,7 +105,7 @@ export async function GET(req: NextRequest) {
 
     at.addGrant({
       roomJoin: true,
-      room: room,
+      room: effectiveRoom,
       canPublish: canPublish,
       canPublishData: true,
       canSubscribe: true,
@@ -99,8 +114,8 @@ export async function GET(req: NextRequest) {
     const token = await at.toJwt();
     const wsUrl = process.env.NEXT_PUBLIC_LIVEKIT_URL;
 
-    logger.liveKit("INFO", "TOKEN_API", `Generated token for user ${userId} in room ${room} (isHost: ${isHost})`);
-    return NextResponse.json({ token, wsUrl });
+    logger.liveKit("INFO", "TOKEN_API", `Generated token for user ${userId} in room ${effectiveRoom} (isHost: ${isHost})`);
+    return NextResponse.json({ token, wsUrl, roomName: effectiveRoom });
   } catch (error: any) {
     console.error('[LiveKit Token API] Processing error:', error);
     return NextResponse.json({ error: 'Failed to generate token' }, { status: 500 });
