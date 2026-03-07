@@ -44,29 +44,19 @@ const channelKeys = {
  * KEYS[1] = auction:{adId}:status
  * KEYS[2] = auction:{adId}:highest_bid
  * KEYS[3] = auction:{adId}:highest_bidder
- * KEYS[4] = channel:{hostId}:active_ad   ← Opsiyonel. Kanal kontrolü için.
  *
  * ARGV[1] = bidAmount (integer string)
  * ARGV[2] = userId
- * ARGV[3] = adId  ← KEYS[4] varsa, active_ad ile karşılaştırılır.
  *
  * Dönüş değerleri:
  *   0 → açık artırma aktif değil
  *   1 → teklif reddedildi (mevcut fiyata eşit veya düşük)
  *   2 → teklif kabul edildi
- *   3 → bu ilan şu an kanalın aktif ürünü değil
  */
 const PLACE_BID_SCRIPT = `
   local status = redis.call("GET", KEYS[1])
   if status ~= "active" then
     return 0
-  end
-
-  if #KEYS >= 4 then
-    local activeAd = redis.call("GET", KEYS[4])
-    if activeAd ~= ARGV[3] then
-      return 3
-    end
   end
 
   local current  = tonumber(redis.call("GET", KEYS[2])) or 0
@@ -109,14 +99,12 @@ export async function startAuction(
 export async function placeBid(
   adId: string,
   userId: string,
-  bidAmount: number,
-  channelHostId?: string
+  bidAmount: number
 ): Promise<BidResult> {
   const evalKeys = [
     keys.status(adId),
     keys.highestBid(adId),
     keys.highestBidder(adId),
-    ...(channelHostId ? [channelKeys.activeAd(channelHostId)] : []),
   ];
 
   const result = (await redis.eval(
@@ -124,13 +112,11 @@ export async function placeBid(
     evalKeys.length,
     ...evalKeys,
     bidAmount.toString(),
-    userId,
-    adId
+    userId
   )) as number;
 
   if (result === 0) return { accepted: false, reason: "auction_not_active" };
   if (result === 1) return { accepted: false, reason: "bid_too_low" };
-  if (result === 3) return { accepted: false, reason: "not_active_item" };
 
   return { accepted: true, newHighestBid: bidAmount };
 }

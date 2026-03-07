@@ -36,10 +36,8 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Atomik Teklif (Lua Script via Redis) ────────────────────────────────
-    // channelHostId verilirse, Lua script adId'nin kanalın active_ad'i olup
-    // olmadığını da kontrol eder — eski ürünlere teklif gelmesini engeller.
     console.log("[LiveKit Bid API] Calling placeBid...");
-    const result = await placeBid(adId, userId, amount, channelHostId ?? undefined);
+    const result = await placeBid(adId, userId, amount);
     console.log("[LiveKit Bid API] placeBid Result:", result);
 
     if (!result.accepted) {
