@@ -665,22 +665,53 @@ class ViewerController extends StateNotifier<ViewerState> {
             onPlayConfetti?.call();
           }
           return;
-        } else if (type == 'AUCTION_ENDED') {
-          final winner = _formatSenderName(decoded['winner']?.toString());
+        } else if (type == 'AUCTION_ENDED' || type == 'SALE_FINALIZED') {
+          final winnerId = decoded['winnerId']?.toString();
+          final winnerName = _formatSenderName(
+              (decoded['winnerName'] ?? decoded['winner'])?.toString());
+          final adTitle = decoded['adTitle']?.toString();
+          final sellerName = decoded['sellerName']?.toString();
           final amount = (decoded['amount'] as num?)?.toDouble();
+
           state = state.copyWith(isAuctionActive: false);
-          _showFinalizationOverlayAlert(winner, amount);
+          _showFinalizationOverlayAlert(winnerName, amount);
           onPlayConfetti?.call();
+          ref.invalidate(adDetailProvider(state.activeAdId ?? adId));
+
+          final currentUserId = ref.read(authProvider).user?.id;
+          final msgs = List<EphemeralMessage>.from(state.messages);
+
+          if (winnerId != null && currentUserId == winnerId) {
+            // Kazanan bu cihazın sahibi
+            Haptics.vibrate(HapticsType.heavy);
+            final amountStr = amount != null
+                ? NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(amount)
+                : '?';
+            msgs.add(EphemeralMessage(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              text: '🎉 TEBRİKLER! ${adTitle ?? 'Ürün'} ürününü $amountStr bedel ile SİZ KAZANDINIZ.'
+                  '${sellerName != null ? ' Satıcı ($sellerName) sizinle mesajlar üzerinden iletişime geçecektir.' : ''}',
+              senderName: 'SİSTEM',
+              timestamp: DateTime.now(),
+            ));
+          } else {
+            final amountStr = amount != null
+                ? NumberFormat.currency(locale: 'tr_TR', symbol: '₺').format(amount)
+                : '?';
+            msgs.add(EphemeralMessage(
+              id: DateTime.now().millisecondsSinceEpoch.toString(),
+              text: '🎉 ${adTitle ?? 'Ürün'} ürünü $winnerName tarafından $amountStr bedelle satın alındı.',
+              senderName: 'SİSTEM',
+              timestamp: DateTime.now(),
+            ));
+          }
+
+          if (msgs.length > 5) msgs.removeAt(0);
+          state = state.copyWith(messages: msgs);
+          _resetMessageTimer();
           return;
         } else if (type == 'REACTION') {
           addReaction(decoded['emoji']?.toString() ?? '❤️');
-          return;
-        } else if (type == 'SALE_FINALIZED') {
-          final winnerName = _formatSenderName(decoded['winnerName']?.toString());
-          final amount = decoded['amount'] != null
-              ? (decoded['amount'] as num).toDouble()
-              : null;
-          _showFinalizationOverlayAlert(winnerName, amount);
           return;
         } else if (type == 'CHAT') {
           final chatText = decoded['text']?.toString() ?? '';

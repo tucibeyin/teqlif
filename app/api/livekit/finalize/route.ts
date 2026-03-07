@@ -204,14 +204,21 @@ export async function POST(req: NextRequest) {
       });
 
       const roomService = new RoomServiceClient(wsUrl, apiKey, apiSecret);
+      const winnerName = winnerUser?.name || "Katılımcı";
+      const targetRoom = isQuickLive ? `channel:${ad.userId}` : adId;
       const payload = JSON.stringify({
         type: "AUCTION_ENDED",
-        winner: winnerUser?.name || "Katılımcı",
+        adId,
+        adTitle: ad.title,
+        sellerName: caller.name,
+        winnerId: highestBidder,
+        winner: winnerName,
+        winnerName,
         amount: highestBid,
       });
 
       roomService
-        .sendData(adId, new TextEncoder().encode(payload), 1, {
+        .sendData(targetRoom, new TextEncoder().encode(payload), 1, {
           topic: "auction_events",
         })
         .catch((err) =>
