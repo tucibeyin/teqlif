@@ -118,7 +118,7 @@ class LiveRoomNotifier extends StateNotifier<LiveRoomState> {
       // Ping a lightweight endpoint to get server time
       try {
         final sendTime = DateTime.now();
-        final response = await ApiClient().get('/api/livekit/sync'); // We will assume this returns { serverTime: timestamp }
+        final response = await ApiClient().get('/api/livekit/sync', params: {'adId': roomId}); 
         final receiveTime = DateTime.now();
         
         if (response.statusCode == 200) {

@@ -44,8 +44,8 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: "İlan bulunamadı." }, { status: 404 });
         }
 
-        // LiveKit room name: prefer stored liveKitRoomId, fallback to adId
-        const roomName = (ad as any).liveKitRoomId ?? adId;
+        // LiveKit room name: Channel mimarisi gereği channel:${hostId} formatı kullanılır.
+        const roomName = `channel:${ad.userId}`;
 
         const isHost = ad.userId === caller.id;
         const isSelf = targetIdentity === caller.id;

@@ -61,6 +61,17 @@ export default function LiveArena({
         fetchToken(role);
     }, [effectiveRoomId, session, role, fetchToken]);
 
+    // Signal backend that we are LIVE
+    useEffect(() => {
+        if (isOwner && adId) {
+            fetch(`/api/ads/${adId}/live`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ isLive: true, liveKitRoomId: adId })
+            }).catch(err => console.error("Failed to set isLive to true:", err));
+        }
+    }, [isOwner, adId]);
+
     if (!token) {
         return (
             <div style={{

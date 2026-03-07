@@ -20,18 +20,22 @@ export async function GET(req: NextRequest) {
   }
 
   const adId = req.nextUrl.searchParams.get("adId");
-  if (!adId) {
-    return NextResponse.json({ error: "adId zorunludur." }, { status: 400 });
+
+  let auctionData = {};
+  if (adId) {
+    const state = await getAuctionState(adId);
+    auctionData = {
+      status: state.status,
+      highestBid: state.highestBid,
+      highestBidder: state.highestBidder,
+      isAuctionActive: state.status === "active",
+    };
   }
 
-  const state = await getAuctionState(adId);
-
-  const body: SyncResponse = {
-    adId,
-    status: state.status,
-    highestBid: state.highestBid,
-    highestBidder: state.highestBidder,
-    isAuctionActive: state.status === "active",
+  const body = {
+    ...auctionData,
+    adId, // null ise null döner
+    serverTime: Date.now(),
   };
 
   return NextResponse.json(body, {

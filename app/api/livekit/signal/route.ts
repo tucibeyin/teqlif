@@ -41,11 +41,13 @@ export async function POST(req: NextRequest) {
         const payload = JSON.stringify({ type: signal, targetIdentity });
         const data = new TextEncoder().encode(payload);
 
+        const roomName = `channel:${ad.userId}`;
+
         // Send to specific target or broadcast to room
         if (targetIdentity === "BROADCAST") {
-            await roomService.sendData(ad.liveKitRoomId, data, 1, []);
+            await roomService.sendData(roomName, data, 1, []);
         } else {
-            await roomService.sendData(ad.liveKitRoomId, data, 1, [targetIdentity]);
+            await roomService.sendData(roomName, data, 1, [targetIdentity]);
         }
 
         return NextResponse.json({ success: true, message: "Signal sent" });
