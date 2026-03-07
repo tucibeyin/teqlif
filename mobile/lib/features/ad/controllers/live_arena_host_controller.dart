@@ -303,7 +303,7 @@ class HostController extends StateNotifier<HostState> {
 
     // Klasik mod fallback
     try {
-      final response = await ApiClient().get('/api/livekit/sync', params: {'adId': adId});
+      final response = await ApiClient().get('/api/livekit/sync', params: {'adId': state.activeAdId ?? adId});
       if (response.statusCode == 200 && response.data != null) {
         final data = response.data;
         final isAuctionActive = data['isAuctionActive'] == true;
@@ -411,7 +411,7 @@ class HostController extends StateNotifier<HostState> {
         if (pinnedAdId == null) return;
         state = state.copyWith(
           activeAdId: pinnedAdId,
-          liveHighestBid: startingBid,
+          liveHighestBid: (startingBid != null && startingBid > 0) ? startingBid : null,
           liveHighestBidderName: null,
           isAuctionActive: true,
           isSold: false,
@@ -582,17 +582,18 @@ class HostController extends StateNotifier<HostState> {
 
   Future<void> toggleAuction() async {
     if (_room == null) return;
+    final currentAdId = state.activeAdId ?? adId;
     final newActive = !state.isAuctionActive;
     state = state.copyWith(isAuctionActive: newActive);
 
     final signal = jsonEncode({
       'type': newActive ? 'AUCTION_START' : 'AUCTION_END',
-      'adId': adId,
+      'adId': currentAdId,
     });
 
     try {
       await _room!.localParticipant?.publishData(signal.codeUnits);
-      await ApiClient().post('/api/ads/$adId/live', data: {
+      await ApiClient().post('/api/ads/$currentAdId/live', data: {
         'isAuctionActive': newActive,
       });
 
@@ -634,9 +635,10 @@ class HostController extends StateNotifier<HostState> {
 
     if (confirmed != true) return;
 
+    final currentAdId = state.activeAdId ?? adId;
     try {
       final res = await ApiClient()
-          .post('/api/livekit/reset', data: {'adId': adId});
+          .post('/api/livekit/reset', data: {'adId': currentAdId});
       if (res.statusCode == 200 || res.statusCode == 201) {
         final payload = jsonEncode({'type': 'AUCTION_RESET'});
         if (_room != null) {
@@ -654,7 +656,7 @@ class HostController extends StateNotifier<HostState> {
           countdown: 0,
         );
         // FORCE refresh ad details to get new starting price/bid
-        ref.invalidate(adDetailProvider(adId));
+        ref.invalidate(adDetailProvider(currentAdId));
 
         if (ctx.mounted) {
           ScaffoldMessenger.of(ctx).showSnackBar(
@@ -743,10 +745,11 @@ class HostController extends StateNotifier<HostState> {
 
   Future<void> _finalizeBid(LiveBid bid, BuildContext ctx) async {
     state = state.copyWith(isFinalizing: true);
+    final currentAdId = state.activeAdId ?? adId;
     try {
       final isQuickLive = ad.description == 'Hızlı Canlı Yayın (Ghost Ad)';
       final res = await ApiClient().post('/api/livekit/finalize', data: {
-        'adId': adId,
+        'adId': currentAdId,
         'isQuickLive': isQuickLive,
       });
       if (res.statusCode != 200 && res.statusCode != 201) {

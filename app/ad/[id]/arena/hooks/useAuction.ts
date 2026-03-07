@@ -262,7 +262,7 @@ export function useAuction({
         if (!room) return;
         setLoading(true);
         try {
-            await fetch(`/api/ads/${adId}/live`, {
+            await fetch(`/api/ads/${activeAdIdRef.current}/live`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ isAuctionActive: true }),
@@ -275,13 +275,13 @@ export function useAuction({
         } finally {
             setLoading(false);
         }
-    }, [room, adId, publish]);
+    }, [room, publish]);
 
     const stop = useCallback(async () => {
         if (!room) return;
         setLoading(true);
         try {
-            await fetch(`/api/ads/${adId}/live`, {
+            await fetch(`/api/ads/${activeAdIdRef.current}/live`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ isAuctionActive: false }),
@@ -294,7 +294,7 @@ export function useAuction({
         } finally {
             setLoading(false);
         }
-    }, [room, adId, publish]);
+    }, [room, publish]);
 
     const reset = useCallback(async () => {
         if (!room) return;
@@ -304,7 +304,7 @@ export function useAuction({
             const res = await fetch("/api/livekit/reset", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ adId }),
+                body: JSON.stringify({ adId: activeAdIdRef.current }),
             });
             if (res.ok) {
                 publish({ type: "AUCTION_RESET" });
@@ -315,7 +315,7 @@ export function useAuction({
         } finally {
             setLoading(false);
         }
-    }, [room, adId, publish]);
+    }, [room, publish]);
 
     const accept = useCallback(async () => {
         if (!confirm("Dikkat! Bu teqlifi kabul edip satışı tamamlıyorsunuz?")) return;
@@ -326,7 +326,7 @@ export function useAuction({
             const res = await fetch("/api/livekit/finalize", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ adId, isQuickLive }),
+                body: JSON.stringify({ adId: activeAdIdRef.current, isQuickLive }),
             });
             if (!res.ok) {
                 const data = await res.json();
@@ -340,7 +340,7 @@ export function useAuction({
         } finally {
             setLoading(false);
         }
-    }, [adId, isQuickLive, notify]);
+    }, [isQuickLive, notify]);
 
     const reject = useCallback(async () => {
         if (!highestBidId) return;
@@ -368,7 +368,7 @@ export function useAuction({
             const res = await fetch("/api/conversations", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ userId: sellerId, adId }),
+                body: JSON.stringify({ userId: sellerId, adId: activeAdIdRef.current }),
             });
             if (res.ok) {
                 const conversation = await res.json();
@@ -379,7 +379,7 @@ export function useAuction({
         } finally {
             setLoading(false);
         }
-    }, [sellerId, adId, router]);
+    }, [sellerId, router]);
 
     return {
         // State
