@@ -145,7 +145,7 @@ export function CustomArenaLayout({
         onItemPinned: (data) => {
             // İki hook'u koordineli güncelle: channelSync activeItem'ı tutar, auction state'i sıfırlar.
             channelSync.onItemPinned(data.activeItem);
-            auction.onItemPinned(data);
+            auction.onItemPinned({ adId: data.activeItem.id, startingBid: data.startingBid });
             chat.addMessage({
                 id: Date.now().toString(),
                 text: `📦 Yeni ürün sahnede! Teklif verebilirsiniz.`,
