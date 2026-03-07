@@ -89,22 +89,21 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // Rol Belirleme
+    // Rol Belirleme — isHost kontrolü kesin; izleyiciler asla publish edemez.
+    // Not: sahneye davet (guest/co-host) yetkisi token'dan değil, stage API'nin
+    // roomService.updateParticipant çağrısından (sunucu tarafı) alınır.
     const isHost = hostIdOfRoom === userId;
-    const isGuest = roleParam === 'guest'; // Co-Host daveti almış izleyici
 
     const at = new AccessToken(apiKey, apiSecret, {
       identity: userId,
       name: userName,
     });
 
-    const canPublish = isHost || isGuest;
-
     at.addGrant({
       roomJoin: true,
       room: effectiveRoom,
-      canPublish: canPublish,
-      canPublishData: true,
+      canPublish: isHost,          // Sadece host yayınlayabilir
+      canPublishData: true,        // Herkes data (chat/bid) gönderebilir
       canSubscribe: true,
     });
 

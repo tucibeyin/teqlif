@@ -6,7 +6,21 @@ const LiveArena = dynamic(() => import("./LiveArena"), { ssr: false });
 
 import { useState } from "react";
 
-export default function LiveArenaWrapper(props: any) {
+interface LiveArenaWrapperProps {
+    roomId: string;
+    adId: string;
+    sellerId: string;
+    isOwner: boolean;
+    buyItNowPrice?: number | null;
+    startingBid?: number | null;
+    minBidStep?: number;
+    initialHighestBid?: number;
+    initialIsAuctionActive?: boolean;
+    adOwnerName?: string;
+    isQuickLive?: boolean;
+}
+
+export default function LiveArenaWrapper(props: LiveArenaWrapperProps) {
     const [hasJoined, setHasJoined] = useState(false);
 
     // Host (owner) autojoins. Viewers must click to join.
