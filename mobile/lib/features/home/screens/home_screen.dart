@@ -10,6 +10,7 @@ import '../../../core/api/endpoints.dart';
 import '../../../core/models/ad.dart';
 import '../../../core/constants/categories.dart';
 import '../widgets/live_stories.dart';
+import '../providers/live_streams_provider.dart';
 
 // ── Static data ────────────────────────────────────────────────────────────
 // (categoryTree artık categories.dart'tan geliyor)
@@ -649,7 +650,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
             Expanded(
               child: RefreshIndicator(
                 onRefresh: () async {
-                  ref.invalidate(liveAdsProvider);
+                  ref.invalidate(liveStreamsProvider);
                   return ref.refresh(adsProvider(filter).future);
                 },
                 child: isSearchActive
