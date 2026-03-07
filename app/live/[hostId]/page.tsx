@@ -15,7 +15,7 @@ export default async function LiveChannelPage({
     const [host, session] = await Promise.all([
         prisma.user.findUnique({
             where: { id: hostId },
-            select: { id: true, name: true, image: true },
+            select: { id: true, name: true, avatar: true },
         }),
         auth(),
     ]);
