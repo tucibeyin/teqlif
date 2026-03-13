@@ -82,7 +82,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       await room.localParticipant?.setMicrophoneEnabled(true);
 
       // Eğer track zaten publish edildiyse
-      for (final pub in room.localParticipant!.videoTrackPublications.values) {
+      for (final pub in room.localParticipant!.videoTrackPublications) {
         if (pub.track != null) {
           _localVideoTrack = pub.track as VideoTrack;
           break;
@@ -154,7 +154,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             Positioned.fill(
               child: VideoTrackRenderer(
                 _localVideoTrack!,
-                fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitCover,
               ),
             ),
 

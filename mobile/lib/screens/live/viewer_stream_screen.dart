@@ -75,7 +75,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
 
       // Zaten yayınlanan track'leri kontrol et (race condition fix)
       for (final participant in room.remoteParticipants.values) {
-        for (final pub in participant.videoTrackPublications.values) {
+        for (final pub in participant.videoTrackPublications) {
           if (pub.track != null) {
             _remoteVideoTrack = pub.track as VideoTrack;
             break;
@@ -114,7 +114,6 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
             Positioned.fill(
               child: VideoTrackRenderer(
                 _remoteVideoTrack!,
-                fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
               ),
             ),
 
