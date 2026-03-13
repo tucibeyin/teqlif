@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kayıt Ol — Teqlif</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">Teqlif</a>
+        <div class="nav-links">
+            <a href="/giris.html">Giriş Yap</a>
+        </div>
+    </nav>
+
+    <div class="page-center">
+        <div class="form-card">
+            <h2>Hesap oluştur</h2>
+            <p class="subtitle">Ücretsiz kayıt ol, hemen başla</p>
+
+            <div class="alert" id="alert"></div>
+
+            <form id="registerForm">
+                <div class="form-group">
+                    <label for="full_name">Ad Soyad</label>
+                    <input type="text" id="full_name" placeholder="Adınız Soyadınız" required autocomplete="name">
+                </div>
+                <div class="form-group">
+                    <label for="username">Kullanıcı Adı</label>
+                    <input type="text" id="username" placeholder="ornek_kullanici" required autocomplete="username">
+                    <small style="color:var(--text-muted);font-size:0.78rem;">Küçük harf, rakam ve alt çizgi kullanabilirsin</small>
+                </div>
+                <div class="form-group">
+                    <label for="email">E-posta</label>
+                    <input type="email" id="email" placeholder="ornek@mail.com" required autocomplete="email">
+                </div>
+                <div class="form-group">
+                    <label for="password">Şifre</label>
+                    <input type="password" id="password" placeholder="En az 8 karakter" required autocomplete="new-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-full btn-lg" id="submitBtn">
+                    Kayıt Ol
+                </button>
+            </form>
+
+            <div class="form-footer">
+                Zaten hesabın var mı? <a href="/giris.html">Giriş yap</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        if (Auth.getToken()) window.location.href = '/';
+
+        document.getElementById('registerForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            const alertEl = document.getElementById('alert');
+            alertEl.className = 'alert';
+
+            btn.disabled = true;
+            btn.textContent = 'Kaydediliyor...';
+
+            try {
+                await Auth.register({
+                    full_name: document.getElementById('full_name').value,
+                    username: document.getElementById('username').value,
+                    email: document.getElementById('email').value,
+                    password: document.getElementById('password').value,
+                });
+                window.location.href = '/';
+            } catch (err) {
+                alertEl.textContent = err.detail || 'Bir hata oluştu';
+                alertEl.className = 'alert alert-error show';
+                btn.disabled = false;
+                btn.textContent = 'Kayıt Ol';
+            }
+        });
+    </script>
+</body>
+</html>
