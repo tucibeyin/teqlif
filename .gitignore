@@ -20,8 +20,8 @@ venv/
 dist/
 build/
 
-# Alembic
-backend/alembic/versions/*.py
+# Alembic (migration dosyaları commit'lenir, __pycache__ hariç)
+backend/alembic/versions/__pycache__/
 
 # Yüklemeler (uploads)
 uploads/
