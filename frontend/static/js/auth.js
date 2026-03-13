@@ -3,12 +3,17 @@ const Auth = (() => {
     const USER_KEY = 'teqlif_user';
 
     function getToken() {
-        return localStorage.getItem(TOKEN_KEY);
+        const t = localStorage.getItem(TOKEN_KEY);
+        return t && t !== 'undefined' ? t : null;
     }
 
     function getUser() {
-        const u = localStorage.getItem(USER_KEY);
-        return u ? JSON.parse(u) : null;
+        try {
+            const u = localStorage.getItem(USER_KEY);
+            return u && u !== 'undefined' ? JSON.parse(u) : null;
+        } catch {
+            return null;
+        }
     }
 
     function _save(data) {
@@ -56,11 +61,12 @@ const Auth = (() => {
 
 // Nav'ı kullanıcı durumuna göre güncelle
 (function updateNav() {
+    const token = Auth.getToken();
     const user = Auth.getUser();
     const navLinks = document.querySelector('.nav-links');
     if (!navLinks) return;
 
-    if (user) {
+    if (token && user) {
         navLinks.innerHTML = `
             <a href="/ilanlar.html">İlanlar</a>
             <a href="/ilan-ver.html">İlan Ver</a>
@@ -69,5 +75,8 @@ const Auth = (() => {
             </span>
             <a href="#" onclick="Auth.logout();return false;" class="btn-nav">Çıkış</a>
         `;
+    } else if (token && !user) {
+        // Bozuk oturum — temizle
+        Auth.logout();
     }
 })();
