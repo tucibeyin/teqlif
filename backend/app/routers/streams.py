@@ -22,20 +22,28 @@ VIEWER_TTL = 8 * 3600  # 8 saat
 
 
 def _make_token(room_name: str, user: User, can_publish: bool) -> str:
-    grant = VideoGrants(
-        room_join=True,
-        room=room_name,
-        can_publish=can_publish,
-        can_subscribe=True,
-        can_publish_data=can_publish,
-    )
-    token = (
-        AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
-        .with_identity(str(user.id))
-        .with_name(user.username)
-        .with_grants(grant)
-    )
-    return token.to_jwt()
+    try:
+        grant = VideoGrants(
+            room_join=True,
+            room=room_name,
+            can_publish=can_publish,
+            can_subscribe=True,
+            can_publish_data=can_publish,
+        )
+        token = (
+            AccessToken(settings.livekit_api_key, settings.livekit_api_secret)
+            .with_identity(str(user.id))
+            .with_name(user.username)
+            .with_grants(grant)
+        )
+        return token.to_jwt()
+    except Exception:
+        logger.error(
+            "LiveKit token oluşturulamadı | user_id=%s room=%s can_publish=%s",
+            user.id, room_name, can_publish,
+            exc_info=True,
+        )
+        raise
 
 
 @router.post("/start", response_model=StreamTokenOut, status_code=status.HTTP_201_CREATED)
@@ -44,7 +52,6 @@ async def start_stream(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Kullanıcının aktif yayını var mı?
     result = await db.execute(
         select(LiveStream).where(
             LiveStream.host_id == current_user.id,
@@ -52,20 +59,30 @@ async def start_stream(
         )
     )
     if result.scalar_one_or_none():
+        logger.warning("Kullanıcının zaten aktif yayını var | user_id=%s", current_user.id)
         raise HTTPException(status_code=400, detail="Zaten aktif bir yayınınız var")
 
     room_name = f"stream_{current_user.id}_{uuid.uuid4().hex[:8]}"
 
-    stream = LiveStream(
-        room_name=room_name,
-        title=data.title,
-        host_id=current_user.id,
-    )
-    db.add(stream)
-    await db.commit()
-    await db.refresh(stream)
+    try:
+        stream = LiveStream(
+            room_name=room_name,
+            title=data.title,
+            host_id=current_user.id,
+        )
+        db.add(stream)
+        await db.commit()
+        await db.refresh(stream)
+    except Exception:
+        logger.error(
+            "Yayın DB'ye kaydedilemedi | user_id=%s room=%s",
+            current_user.id, room_name,
+            exc_info=True,
+        )
+        raise HTTPException(status_code=500, detail="Yayın başlatılamadı")
 
     token = _make_token(room_name, current_user, can_publish=True)
+    logger.info("Yayın başlatıldı | stream_id=%s user_id=%s room=%s", stream.id, current_user.id, room_name)
 
     return StreamTokenOut(
         stream_id=stream.id,
@@ -85,20 +102,33 @@ async def end_stream(
     stream = result.scalar_one_or_none()
 
     if not stream:
+        logger.warning("Yayın sonlandırma: bulunamadı | stream_id=%s user_id=%s", stream_id, current_user.id)
         raise HTTPException(status_code=404, detail="Yayın bulunamadı")
     if stream.host_id != current_user.id:
+        logger.warning(
+            "Yayın sonlandırma: yetkisiz erişim | stream_id=%s host_id=%s user_id=%s",
+            stream_id, stream.host_id, current_user.id,
+        )
         raise HTTPException(status_code=403, detail="Bu yayını sonlandırma yetkiniz yok")
     if not stream.is_live:
         raise HTTPException(status_code=400, detail="Yayın zaten sonlanmış")
 
     stream.is_live = False
     stream.ended_at = datetime.now(timezone.utc)
-    await db.commit()
 
-    # Redis viewer count temizle
-    redis = await get_redis()
-    await redis.delete(f"live:viewers:{stream.room_name}")
+    try:
+        await db.commit()
+    except Exception:
+        logger.error("Yayın sonlandırma DB hatası | stream_id=%s", stream_id, exc_info=True)
+        raise HTTPException(status_code=500, detail="Yayın sonlandırılamadı")
 
+    try:
+        redis = await get_redis()
+        await redis.delete(f"live:viewers:{stream.room_name}")
+    except Exception:
+        logger.error("Redis viewer key silinemedi | room=%s", stream.room_name, exc_info=True)
+
+    logger.info("Yayın sonlandırıldı | stream_id=%s user_id=%s", stream_id, current_user.id)
     return {"message": "Yayın sonlandırıldı"}
 
 
@@ -114,19 +144,22 @@ async def join_stream(
     stream = result.scalar_one_or_none()
 
     if not stream or not stream.is_live:
+        logger.warning("Yayına katılma: aktif yayın yok | stream_id=%s user_id=%s", stream_id, current_user.id)
         raise HTTPException(status_code=404, detail="Aktif yayın bulunamadı")
 
-    # Host kendi yayınına izleyici olarak katılamaz
     if stream.host_id == current_user.id:
         raise HTTPException(status_code=400, detail="Kendi yayınınıza izleyici olarak katılamazsınız")
 
-    # Redis'te viewer sayısını artır
-    redis = await get_redis()
-    viewer_key = f"live:viewers:{stream.room_name}"
-    await redis.incr(viewer_key)
-    await redis.expire(viewer_key, VIEWER_TTL)
+    try:
+        redis = await get_redis()
+        viewer_key = f"live:viewers:{stream.room_name}"
+        await redis.incr(viewer_key)
+        await redis.expire(viewer_key, VIEWER_TTL)
+    except Exception:
+        logger.error("Redis viewer artırma hatası | stream_id=%s room=%s", stream_id, stream.room_name, exc_info=True)
 
     token = _make_token(stream.room_name, current_user, can_publish=False)
+    logger.info("Yayına katılındı | stream_id=%s user_id=%s", stream_id, current_user.id)
 
     return JoinTokenOut(
         stream_id=stream.id,
@@ -148,27 +181,36 @@ async def leave_stream(
     stream = result.scalar_one_or_none()
 
     if stream:
-        redis = await get_redis()
-        viewer_key = f"live:viewers:{stream.room_name}"
-        count = await redis.decr(viewer_key)
-        if count < 0:
-            await redis.set(viewer_key, 0)
+        try:
+            redis = await get_redis()
+            viewer_key = f"live:viewers:{stream.room_name}"
+            count = await redis.decr(viewer_key)
+            if count < 0:
+                await redis.set(viewer_key, 0)
+        except Exception:
+            logger.error("Redis viewer azaltma hatası | stream_id=%s room=%s", stream_id, stream.room_name, exc_info=True)
+
+        logger.info("Yayından ayrılındı | stream_id=%s user_id=%s", stream_id, current_user.id)
 
 
 @router.get("/active", response_model=list[StreamOut])
 async def get_active_streams(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(LiveStream).where(LiveStream.is_live == True)  # noqa: E712
-        .order_by(LiveStream.started_at.desc())
-    )
-    streams = result.scalars().all()
+    try:
+        result = await db.execute(
+            select(LiveStream).where(LiveStream.is_live == True)  # noqa: E712
+            .order_by(LiveStream.started_at.desc())
+        )
+        streams = result.scalars().all()
+    except Exception:
+        logger.error("Aktif yayın listesi DB hatası", exc_info=True)
+        raise HTTPException(status_code=500, detail="Yayın listesi alınamadı")
 
-    redis = await get_redis()
-    for stream in streams:
-        try:
+    try:
+        redis = await get_redis()
+        for stream in streams:
             count = await redis.get(f"live:viewers:{stream.room_name}")
             stream.viewer_count = int(count) if count else 0
-        except Exception:
-            pass
+    except Exception:
+        logger.error("Redis viewer count okunamadı", exc_info=True)
 
     return streams
