@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Canlı Yayınlar — teqlif</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        .page-header {
+            padding: 2rem 2rem 0;
+            max-width: 1100px;
+            margin: 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .page-header h1 {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .live-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ef4444;
+            display: inline-block;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+        }
+
+        .streams-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 1.25rem;
+            padding: 1.5rem 2rem 3rem;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+
+        .stream-card {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            transition: box-shadow 0.15s, transform 0.15s;
+        }
+
+        .stream-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
+
+        .stream-thumb {
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-light) 100%);
+            height: 160px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .stream-thumb .live-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+
+        .stream-thumb .viewer-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0,0,0,0.5);
+            color: #fff;
+            font-size: 0.78rem;
+            padding: 2px 8px;
+            border-radius: 20px;
+        }
+
+        .stream-thumb svg {
+            opacity: 0.3;
+        }
+
+        .stream-info {
+            padding: 1rem;
+        }
+
+        .stream-title {
+            font-weight: 600;
+            font-size: 0.95rem;
+            margin-bottom: 0.35rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stream-host {
+            font-size: 0.82rem;
+            color: var(--text-muted);
+            margin-bottom: 0.9rem;
+        }
+
+        /* Modal */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--white);
+            border-radius: 14px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            margin: 1rem;
+        }
+
+        .modal h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+        }
+
+        .modal input {
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            margin-bottom: 1rem;
+            transition: border-color 0.15s;
+        }
+
+        .modal input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13,148,136,0.12);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
+        }
+
+        .empty-state svg {
+            margin-bottom: 1rem;
+            opacity: 0.35;
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">teqlif</a>
+        <div class="nav-links">
+            <a href="/ilanlar.html">İlanlar</a>
+            <a href="/canli.html" style="color:var(--primary);font-weight:600;">Canlı</a>
+            <a href="/giris.html">Giriş Yap</a>
+            <a href="/kayit.html" class="btn-nav">Kayıt Ol</a>
+        </div>
+    </nav>
+
+    <div class="page-header">
+        <h1><span class="live-dot"></span> Canlı Yayınlar</h1>
+        <button id="btnStartStream" class="btn btn-primary" style="display:none;">
+            + Yayın Başlat
+        </button>
+    </div>
+
+    <div id="alert" class="alert alert-error" style="max-width:1100px;margin:1rem auto 0;display:none;"></div>
+
+    <div class="streams-grid" id="streamsGrid">
+        <div class="empty-state" style="grid-column:1/-1" id="loadingState">
+            <p>Yükleniyor...</p>
+        </div>
+    </div>
+
+    <!-- Yayın Başlat Modal -->
+    <div class="modal-overlay" id="startModal">
+        <div class="modal">
+            <h3>Yayın Başlat</h3>
+            <div id="modalAlert" class="alert alert-error" style="display:none;"></div>
+            <input type="text" id="streamTitle" placeholder="Yayın başlığı (örn: Araba Satışı)" maxlength="200">
+            <div class="modal-actions">
+                <button class="btn btn-primary btn-full" id="btnConfirmStart">Başlat</button>
+                <button class="btn btn-outline" id="btnCancelModal" style="min-width:90px;">İptal</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+    <script src="/static/js/stream.js"></script>
+    <script>
+        const grid = document.getElementById('streamsGrid');
+        const loadingState = document.getElementById('loadingState');
+        const btnStart = document.getElementById('btnStartStream');
+        const startModal = document.getElementById('startModal');
+        const modalAlert = document.getElementById('modalAlert');
+        const alertEl = document.getElementById('alert');
+
+        // Giriş yapmışsa yayın başlat butonunu göster
+        if (Auth.getToken()) {
+            btnStart.style.display = '';
+        }
+
+        // Nav Canlı linkini aktif yap
+        document.querySelectorAll('.nav-links a').forEach(a => {
+            if (a.href.includes('canli')) a.style.color = 'var(--primary)';
+        });
+
+        async function loadStreams() {
+            try {
+                const streams = await apiFetch('/streams/active');
+                loadingState.remove();
+
+                if (!streams.length) {
+                    grid.innerHTML = `
+                        <div class="empty-state" style="grid-column:1/-1">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                                <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                            </svg>
+                            <p>Şu an aktif yayın yok.</p>
+                        </div>`;
+                    return;
+                }
+
+                grid.innerHTML = streams.map(s => `
+                    <div class="stream-card">
+                        <div class="stream-thumb">
+                            <span class="live-badge">CANLI</span>
+                            <span class="viewer-badge">👁 ${s.viewer_count}</span>
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                                <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                            </svg>
+                        </div>
+                        <div class="stream-info">
+                            <div class="stream-title">${escHtml(s.title)}</div>
+                            <div class="stream-host">@${escHtml(s.host.username)}</div>
+                            <button class="btn btn-primary btn-full" onclick="joinStream(${s.id})">
+                                Katıl
+                            </button>
+                        </div>
+                    </div>`).join('');
+
+            } catch (err) {
+                loadingState.innerHTML = '<p>Yayınlar yüklenemedi.</p>';
+            }
+        }
+
+        function escHtml(str) {
+            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        async function joinStream(id) {
+            if (!Auth.getToken()) {
+                window.location.href = '/giris.html';
+                return;
+            }
+            try {
+                await Stream.joinStream(id);
+                window.location.href = `/yayin.html?id=${id}`;
+            } catch (err) {
+                showAlert(err.detail || 'Yayına katılınamadı');
+            }
+        }
+
+        function showAlert(msg) {
+            alertEl.textContent = msg;
+            alertEl.style.display = 'block';
+            setTimeout(() => alertEl.style.display = 'none', 4000);
+        }
+
+        // Modal
+        btnStart.addEventListener('click', () => {
+            startModal.classList.add('open');
+            document.getElementById('streamTitle').focus();
+        });
+
+        document.getElementById('btnCancelModal').addEventListener('click', () => {
+            startModal.classList.remove('open');
+        });
+
+        startModal.addEventListener('click', (e) => {
+            if (e.target === startModal) startModal.classList.remove('open');
+        });
+
+        document.getElementById('btnConfirmStart').addEventListener('click', async () => {
+            const title = document.getElementById('streamTitle').value.trim();
+            if (!title) {
+                modalAlert.textContent = 'Yayın başlığı girin';
+                modalAlert.style.display = 'block';
+                return;
+            }
+            modalAlert.style.display = 'none';
+            const btn = document.getElementById('btnConfirmStart');
+            btn.disabled = true;
+            btn.textContent = 'Başlatılıyor...';
+            try {
+                const data = await Stream.startStream(title);
+                window.location.href = `/yayin.html?id=${data.stream_id}&host=1`;
+            } catch (err) {
+                modalAlert.textContent = err.detail || 'Yayın başlatılamadı';
+                modalAlert.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Başlat';
+            }
+        });
+
+        loadStreams();
+    </script>
+</body>
+</html>
