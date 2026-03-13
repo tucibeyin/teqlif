@@ -47,6 +47,10 @@
 			</array>
 		</dict>
 	</dict>
+	<key>NSCameraUsageDescription</key>
+	<string>Canlı yayın için kameranıza erişim gerekiyor</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Canlı yayın için mikrofonunuza erişim gerekiyor</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UILaunchStoryboardName</key>
