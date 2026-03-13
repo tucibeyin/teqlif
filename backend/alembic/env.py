@@ -15,6 +15,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 from app.config import settings
 from app.database import Base
 import app.models.user  # Modelleri import et ki metadata'ya girsin
+import app.models.stream
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
