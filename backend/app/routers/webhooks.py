@@ -14,10 +14,7 @@ from app.config import settings
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/webhooks", tags=["webhooks"])
 
-_receiver = WebhookReceiver(
-    api_key=settings.livekit_api_key,
-    api_secret=settings.livekit_api_secret,
-)
+_receiver = WebhookReceiver(settings.livekit_api_key, settings.livekit_api_secret)
 
 
 @router.post("/livekit", include_in_schema=False)
