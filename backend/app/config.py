@@ -10,7 +10,10 @@ class Settings(BaseSettings):
     upload_dir: str = "/var/www/teqlif/uploads"
     brevo_api_key: str = ""
     brevo_sender_email: str = "noreply@teqlif.com"
-    brevo_sender_name: str = "Teqlif"
+    brevo_sender_name: str = "teqlif"
+    livekit_url: str = "wss://teqlif.com/rtc"
+    livekit_api_key: str = ""
+    livekit_api_secret: str = ""
 
     class Config:
         env_file = ".env"
