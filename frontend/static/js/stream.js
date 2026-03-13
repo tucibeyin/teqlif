@@ -26,7 +26,6 @@ const Stream = (() => {
             method: 'POST',
             body: JSON.stringify({ title }),
         });
-        // data: { stream_id, room_name, livekit_url, token }
         save({ ...data, is_host: true, title });
         return data;
     }
@@ -35,7 +34,6 @@ const Stream = (() => {
         const data = await apiFetch(`/streams/${streamId}/join`, {
             method: 'POST',
         });
-        // data: { stream_id, room_name, livekit_url, token, title, host_username }
         save({ ...data, is_host: false });
         return data;
     }
@@ -55,7 +53,7 @@ const Stream = (() => {
 /* ── LiveKit Oda Yönetimi ── */
 let _room = null;
 
-async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVideoEl, remoteAudioEl, onViewerCount, onDisconnect }) {
+async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVideoEl, remoteAudioEl, onDisconnect, onRemoteVideo }) {
     const { Room, RoomEvent, Track } = LivekitClient;
 
     _room = new Room({
@@ -63,10 +61,11 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
         dynacast: true,
     });
 
-    // Uzak katılımcı track'i geldiğinde
+    // Uzak track geldiğinde (yeni katılanlar veya bağlantı sonrası)
     _room.on(RoomEvent.TrackSubscribed, (track, _pub, _participant) => {
         if (track.kind === Track.Kind.Video && remoteVideoEl) {
             track.attach(remoteVideoEl);
+            if (onRemoteVideo) onRemoteVideo();
         } else if (track.kind === Track.Kind.Audio && remoteAudioEl) {
             track.attach(remoteAudioEl);
         }
@@ -80,25 +79,40 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
         if (onDisconnect) onDisconnect();
     });
 
-    // Bağlan
-    await _room.connect(livekit_url, token);
+    // Viewer: kamera/mikrofonu hiç açma
+    const connectOpts = isHost ? {} : {
+        audio: false,
+        video: false,
+    };
+
+    await _room.connect(livekit_url, token, connectOpts);
 
     if (isHost) {
-        // Kamera + Mikrofon aç
         await _room.localParticipant.setCameraEnabled(true);
         await _room.localParticipant.setMicrophoneEnabled(true);
 
-        // Lokal önizleme
         if (localVideoEl) {
-            const { Track: T } = LivekitClient;
             _room.localParticipant.on('localTrackPublished', (pub) => {
-                if (pub.track && pub.track.kind === T.Kind.Video) {
+                if (pub.track && pub.track.kind === Track.Kind.Video) {
                     pub.track.attach(localVideoEl);
                 }
             });
-            // Eğer zaten yayınlandıysa
+            // Zaten yayınlandıysa hemen bağla
             for (const pub of _room.localParticipant.videoTrackPublications.values()) {
                 if (pub.track) pub.track.attach(localVideoEl);
+            }
+        }
+    } else {
+        // Bağlantı sonrası mevcut yayınlanan track'leri kontrol et (race condition fix)
+        for (const participant of _room.remoteParticipants.values()) {
+            for (const pub of participant.trackPublications.values()) {
+                if (!pub.isSubscribed || !pub.track) continue;
+                if (pub.track.kind === Track.Kind.Video && remoteVideoEl) {
+                    pub.track.attach(remoteVideoEl);
+                    if (onRemoteVideo) onRemoteVideo();
+                } else if (pub.track.kind === Track.Kind.Audio && remoteAudioEl) {
+                    pub.track.attach(remoteAudioEl);
+                }
             }
         }
     }

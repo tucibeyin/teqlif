@@ -320,21 +320,18 @@
                         Stream.clear();
                         setTimeout(() => window.location.href = '/canli.html', 2500);
                     },
+                    onRemoteVideo: () => {
+                        showVideo();
+                        setStatus('');
+                    },
                 });
 
                 if (isHost) {
                     showVideo();
                     setStatus('Yayın canlı. İzleyiciler sizi görebilir.');
                 } else {
-                    // Uzak video gelene kadar placeholder göster
+                    // Uzak video gelene kadar placeholder göster (onRemoteVideo gelince kapanır)
                     showPlaceholder('Yayına bağlanıldı, video bekleniyor...');
-                    const { RoomEvent, Track } = LivekitClient;
-                    room.on(RoomEvent.TrackSubscribed, (track) => {
-                        if (track.kind === Track.Kind.Video) {
-                            showVideo();
-                            setStatus('');
-                        }
-                    });
                 }
 
                 viewerCount.textContent = `👁 ${info.viewer_count ?? 0}`;
