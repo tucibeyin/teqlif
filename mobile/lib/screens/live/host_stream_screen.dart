@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart' show Helper;
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../config/theme.dart';
@@ -25,7 +25,7 @@ class HostStreamScreen extends StatefulWidget {
 class _HostStreamScreenState extends State<HostStreamScreen> {
   Room? _room;
   EventsListener<RoomEvent>? _listener;
-  VideoTrack? _localVideoTrack;
+  LocalVideoTrack? _localVideoTrack;
   bool _micEnabled = true;
   bool _cameraEnabled = true;
   bool _connecting = true;
@@ -63,9 +63,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       _listener = room.createListener();
 
       _listener!.on<LocalTrackPublishedEvent>((event) {
-        if (event.publication.track is VideoTrack) {
+        if (event.publication.track is LocalVideoTrack) {
           setState(() {
-            _localVideoTrack = event.publication.track as VideoTrack;
+            _localVideoTrack = event.publication.track as LocalVideoTrack;
           });
         }
       });
@@ -85,7 +85,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       // Eğer track zaten publish edildiyse
       for (final pub in room.localParticipant!.videoTrackPublications) {
         if (pub.track != null) {
-          _localVideoTrack = pub.track as VideoTrack;
+          _localVideoTrack = pub.track as LocalVideoTrack;
           break;
         }
       }
@@ -112,6 +112,11 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     _cameraEnabled = !_cameraEnabled;
     await _room?.localParticipant?.setCameraEnabled(_cameraEnabled);
     setState(() {});
+  }
+
+  Future<void> _switchCamera() async {
+    if (_localVideoTrack == null) return;
+    await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
   }
 
   Future<void> _endStream() async {
@@ -155,7 +160,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             Positioned.fill(
               child: VideoTrackRenderer(
                 _localVideoTrack!,
-                fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+                fit: VideoViewFit.contain,
               ),
             ),
 
@@ -259,6 +264,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                         : Icons.videocam_off,
                     label: _cameraEnabled ? 'Kamera' : 'Kamera Kapalı',
                     onTap: _toggleCamera,
+                  ),
+                  const SizedBox(width: 20),
+                  _RoundButton(
+                    icon: Icons.flip_camera_ios,
+                    label: 'Kamera Çevir',
+                    onTap: _switchCamera,
                   ),
                   const SizedBox(width: 20),
                   _RoundButton(

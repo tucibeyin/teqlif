@@ -317,9 +317,10 @@
                     remoteVideoEl: isHost ? null : mainVideo,
                     remoteAudioEl: isHost ? null : remoteAudio,
                     onDisconnect: () => {
-                        setStatus('Bağlantı kesildi', true);
-                        Stream.clear();
-                        setTimeout(() => window.location.href = '/canli.html', 2500);
+                        if (!isHost) {
+                            Stream.clear();
+                            setTimeout(() => window.location.href = '/', 2000);
+                        }
                     },
                     onRemoteVideo: () => {
                         showVideo();

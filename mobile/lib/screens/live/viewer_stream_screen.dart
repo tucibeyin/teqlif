@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:livekit_client/livekit_client.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
@@ -62,7 +61,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Yayın sona erdi')),
           );
-          Navigator.pop(context);
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
         }
       });
 
@@ -101,7 +100,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
       await StreamService.leaveStream(widget.joinToken.streamId);
     } catch (_) {}
     await _room?.disconnect();
-    if (mounted) Navigator.pop(context);
+    if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
   }
 
   @override
@@ -115,7 +114,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
             Positioned.fill(
               child: VideoTrackRenderer(
                 _remoteVideoTrack!,
-                fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
+                fit: VideoViewFit.contain,
               ),
             ),
 
