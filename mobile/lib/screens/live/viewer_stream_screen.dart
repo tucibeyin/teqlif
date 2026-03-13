@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:livekit_client/livekit_client.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
@@ -114,6 +115,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
             Positioned.fill(
               child: VideoTrackRenderer(
                 _remoteVideoTrack!,
+                fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
               ),
             ),
 

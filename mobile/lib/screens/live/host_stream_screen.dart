@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:livekit_client/livekit_client.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../../config/theme.dart';
@@ -154,6 +155,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             Positioned.fill(
               child: VideoTrackRenderer(
                 _localVideoTrack!,
+                fit: RTCVideoViewObjectFit.RTCVideoViewObjectFitContain,
               ),
             ),
 
