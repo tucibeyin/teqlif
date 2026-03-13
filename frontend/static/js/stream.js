@@ -51,7 +51,7 @@ const Stream = (() => {
 
 
 /* ── LiveKit Oda Yönetimi ── */
-let _room = null;
+var _room = null;
 
 async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVideoEl, remoteAudioEl, onDisconnect, onRemoteVideo }) {
     const { Room, RoomEvent, Track } = LivekitClient;

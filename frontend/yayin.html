@@ -360,10 +360,8 @@
         document.getElementById('btnToggleMic').addEventListener('click', async () => {
             const btn = document.getElementById('btnToggleMic');
             micEnabled = !micEnabled;
-            const { LivekitClient: lk } = window;
-            // _room global olarak stream.js'de tanımlı
-            if (window._room) {
-                await window._room.localParticipant.setMicrophoneEnabled(micEnabled);
+            if (_room) {
+                await _room.localParticipant.setMicrophoneEnabled(micEnabled);
             }
             btn.textContent = micEnabled ? '🎙 Mikrofon Kapat' : '🔇 Mikrofon Aç';
         });
