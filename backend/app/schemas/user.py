@@ -57,3 +57,7 @@ class TokenOut(BaseModel):
 class VerifyEmail(BaseModel):
     email: EmailStr
     code: str
+
+
+class ResendCode(BaseModel):
+    email: EmailStr

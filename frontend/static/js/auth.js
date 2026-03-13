@@ -32,9 +32,16 @@ const Auth = (() => {
     }
 
     async function register(payload) {
-        const data = await apiFetch('/auth/register', {
+        return apiFetch('/auth/register', {
             method: 'POST',
             body: JSON.stringify(payload),
+        });
+    }
+
+    async function verify(email, code) {
+        const data = await apiFetch('/auth/verify', {
+            method: 'POST',
+            body: JSON.stringify({ email, code }),
         });
         _save(data);
         return data;
@@ -44,7 +51,7 @@ const Auth = (() => {
         return apiFetch('/auth/me');
     }
 
-    return { getToken, getUser, login, register, logout, me };
+    return { getToken, getUser, login, register, verify, logout, me };
 })();
 
 // Nav'ı kullanıcı durumuna göre güncelle

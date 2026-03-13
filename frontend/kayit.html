@@ -16,37 +16,67 @@
 
     <div class="page-center">
         <div class="form-card">
-            <h2>Hesap oluştur</h2>
-            <p class="subtitle">Ücretsiz kayıt ol, hemen başla</p>
 
-            <div class="alert" id="alert"></div>
+            <!-- Adım 1: Kayıt Formu -->
+            <div id="stepRegister">
+                <h2>Hesap oluştur</h2>
+                <p class="subtitle">Ücretsiz kayıt ol, hemen başla</p>
 
-            <form id="registerForm">
-                <div class="form-group">
-                    <label for="full_name">Ad Soyad</label>
-                    <input type="text" id="full_name" placeholder="Adınız Soyadınız" required autocomplete="name">
-                </div>
-                <div class="form-group">
-                    <label for="username">Kullanıcı Adı</label>
-                    <input type="text" id="username" placeholder="ornek_kullanici" required autocomplete="username">
-                    <small style="color:var(--text-muted);font-size:0.78rem;">Küçük harf, rakam ve alt çizgi kullanabilirsin</small>
-                </div>
-                <div class="form-group">
-                    <label for="email">E-posta</label>
-                    <input type="email" id="email" placeholder="ornek@mail.com" required autocomplete="email">
-                </div>
-                <div class="form-group">
-                    <label for="password">Şifre</label>
-                    <input type="password" id="password" placeholder="En az 8 karakter" required autocomplete="new-password">
-                </div>
-                <button type="submit" class="btn btn-primary btn-full btn-lg" id="submitBtn">
-                    Kayıt Ol
-                </button>
-            </form>
+                <div class="alert" id="alertRegister"></div>
 
-            <div class="form-footer">
-                Zaten hesabın var mı? <a href="/giris.html">Giriş yap</a>
+                <form id="registerForm">
+                    <div class="form-group">
+                        <label for="full_name">Ad Soyad</label>
+                        <input type="text" id="full_name" placeholder="Adınız Soyadınız" required autocomplete="name">
+                    </div>
+                    <div class="form-group">
+                        <label for="username">Kullanıcı Adı</label>
+                        <input type="text" id="username" placeholder="ornek_kullanici" required autocomplete="username">
+                        <small style="color:var(--text-muted);font-size:0.78rem;">Küçük harf, rakam ve alt çizgi kullanabilirsin</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="email">E-posta</label>
+                        <input type="email" id="email" placeholder="ornek@mail.com" required autocomplete="email">
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Şifre</label>
+                        <input type="password" id="password" placeholder="En az 8 karakter" required autocomplete="new-password">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="registerBtn">
+                        Kayıt Ol
+                    </button>
+                </form>
+
+                <div class="form-footer">
+                    Zaten hesabın var mı? <a href="/giris.html">Giriş yap</a>
+                </div>
             </div>
+
+            <!-- Adım 2: Kod Doğrulama -->
+            <div id="stepVerify" style="display:none;">
+                <h2>E-postanı doğrula</h2>
+                <p class="subtitle" id="verifySubtitle"></p>
+
+                <div class="alert" id="alertVerify"></div>
+
+                <form id="verifyForm">
+                    <div class="form-group">
+                        <label for="code">Doğrulama Kodu</label>
+                        <input type="text" id="code" placeholder="6 haneli kodu gir"
+                               maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
+                               required autocomplete="one-time-code"
+                               style="font-size:1.5rem;letter-spacing:0.4rem;text-align:center;">
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="verifyBtn">
+                        Doğrula
+                    </button>
+                </form>
+
+                <div class="form-footer">
+                    <a href="#" id="resendLink">Kodu tekrar gönder</a>
+                </div>
+            </div>
+
         </div>
     </div>
 
@@ -55,28 +85,72 @@
     <script>
         if (Auth.getToken()) window.location.href = '/';
 
+        let registeredEmail = '';
+
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
-            const btn = document.getElementById('submitBtn');
-            const alertEl = document.getElementById('alert');
+            const btn = document.getElementById('registerBtn');
+            const alertEl = document.getElementById('alertRegister');
             alertEl.className = 'alert';
 
             btn.disabled = true;
             btn.textContent = 'Kaydediliyor...';
 
             try {
+                registeredEmail = document.getElementById('email').value;
                 await Auth.register({
                     full_name: document.getElementById('full_name').value,
                     username: document.getElementById('username').value,
-                    email: document.getElementById('email').value,
+                    email: registeredEmail,
                     password: document.getElementById('password').value,
                 });
-                window.location.href = '/';
+
+                document.getElementById('stepRegister').style.display = 'none';
+                document.getElementById('stepVerify').style.display = 'block';
+                document.getElementById('verifySubtitle').textContent =
+                    registeredEmail + ' adresine 6 haneli doğrulama kodu gönderdik.';
+                document.getElementById('code').focus();
             } catch (err) {
                 alertEl.textContent = err.detail || 'Bir hata oluştu';
                 alertEl.className = 'alert alert-error show';
                 btn.disabled = false;
                 btn.textContent = 'Kayıt Ol';
+            }
+        });
+
+        document.getElementById('verifyForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('verifyBtn');
+            const alertEl = document.getElementById('alertVerify');
+            alertEl.className = 'alert';
+
+            btn.disabled = true;
+            btn.textContent = 'Doğrulanıyor...';
+
+            try {
+                await Auth.verify(registeredEmail, document.getElementById('code').value);
+                window.location.href = '/';
+            } catch (err) {
+                alertEl.textContent = err.detail || 'Kod hatalı veya süresi dolmuş';
+                alertEl.className = 'alert alert-error show';
+                btn.disabled = false;
+                btn.textContent = 'Doğrula';
+            }
+        });
+
+        document.getElementById('resendLink').addEventListener('click', async (e) => {
+            e.preventDefault();
+            const alertEl = document.getElementById('alertVerify');
+            try {
+                await apiFetch('/auth/resend-code', {
+                    method: 'POST',
+                    body: JSON.stringify({ email: registeredEmail }),
+                });
+                alertEl.textContent = 'Kod tekrar gönderildi.';
+                alertEl.className = 'alert alert-success show';
+            } catch (err) {
+                alertEl.textContent = err.detail || 'Gönderim başarısız';
+                alertEl.className = 'alert alert-error show';
             }
         });
     </script>

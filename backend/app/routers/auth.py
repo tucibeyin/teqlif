@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail
+from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode
 from app.utils.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.utils.email import send_verification_code
 from app.utils.redis_client import get_redis
@@ -88,6 +88,25 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
 
     token = create_access_token(user.id)
     return TokenOut(access_token=token, user=UserOut.model_validate(user))
+
+
+@router.post("/resend-code")
+async def resend_code(data: ResendCode, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(select(User).where(User.email == data.email))
+    user = result.scalar_one_or_none()
+    if not user or user.is_verified:
+        raise HTTPException(status_code=400, detail="Geçersiz istek")
+
+    code = str(random.randint(100000, 999999))
+    redis = await get_redis()
+    await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
+
+    try:
+        await send_verification_code(data.email, user.full_name, code)
+    except Exception:
+        raise HTTPException(status_code=500, detail="E-posta gönderilemedi")
+
+    return {"message": "Kod tekrar gönderildi"}
 
 
 @router.get("/me", response_model=UserOut)
