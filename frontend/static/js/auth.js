@@ -73,7 +73,7 @@ const Auth = (() => {
             <span style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);">
                 @${user.username}
             </span>
-            <a href="#" onclick="Auth.logout();return false;" class="btn-nav">Çıkış</a>
+            <a href="#" onclick="Auth.logout();return false;" class="btn-nav">çıkış</a>
         `;
     } else if (token && !user) {
         // Bozuk oturum — temizle

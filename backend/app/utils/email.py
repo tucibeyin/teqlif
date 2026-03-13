@@ -9,10 +9,10 @@ async def send_verification_code(email: str, full_name: str, code: str) -> None:
             "email": settings.brevo_sender_email,
         },
         "to": [{"email": email, "name": full_name}],
-        "subject": "Teqlif - E-posta Doğrulama Kodu",
+        "subject": "teqlif - E-posta Doğrulama Kodu",
         "htmlContent": (
             f"<p>Merhaba <strong>{full_name}</strong>,</p>"
-            f"<p>Teqlif hesabınızı doğrulamak için aşağıdaki kodu kullanın:</p>"
+            f"<p>teqlif hesabınızı doğrulamak için aşağıdaki kodu kullanın:</p>"
             f"<h2 style='letter-spacing:6px;color:#0d9488;'>{code}</h2>"
             f"<p>Bu kod <strong>10 dakika</strong> geçerlidir.</p>"
             f"<p>Bu isteği siz yapmadıysanız bu e-postayı yok sayabilirsiniz.</p>"
