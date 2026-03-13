@@ -4,7 +4,7 @@
 
 set -e
 
-REPO_DIR="/var/www/teqlif"
+REPO_DIR="/var/www/teqlif.com"
 DOMAIN="teqlif.com"
 
 echo "=== Teqlif VPS Kurulumu ==="

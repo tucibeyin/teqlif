@@ -5,9 +5,9 @@ After=network.target postgresql.service redis.service
 [Service]
 User=www-data
 Group=www-data
-WorkingDirectory=/var/www/teqlif/backend
-EnvironmentFile=/var/www/teqlif/backend/.env
-ExecStart=/var/www/teqlif/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
+WorkingDirectory=/var/www/teqlif.com/backend
+EnvironmentFile=/var/www/teqlif.com/backend/.env
+ExecStart=/var/www/teqlif.com/venv/bin/uvicorn main:app --host 127.0.0.1 --port 8000 --workers 2
 Restart=always
 RestartSec=5
 StandardOutput=journal
