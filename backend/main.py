@@ -1,11 +1,17 @@
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+import logging
+import traceback
 import os
 
+from fastapi import FastAPI, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse, JSONResponse
+
 from app.config import settings
+from app.logging_config import setup_logging
 from app.routers import auth
+
+logger = setup_logging()
 
 app = FastAPI(title="Teqlif API", version="0.1.0")
 
@@ -16,6 +22,29 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_errors(request: Request, call_next):
+    try:
+        response = await call_next(request)
+        if response.status_code >= 500:
+            logger.error(
+                "HTTP %s %s → %s",
+                request.method,
+                request.url.path,
+                response.status_code,
+            )
+        return response
+    except Exception:
+        logger.error(
+            "Beklenmeyen hata: %s %s\n%s",
+            request.method,
+            request.url.path,
+            traceback.format_exc(),
+        )
+        return JSONResponse(status_code=500, content={"detail": "Sunucu hatası"})
+
 
 # Router'ları kaydet
 app.include_router(auth.router)

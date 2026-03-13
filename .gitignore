@@ -26,6 +26,10 @@ backend/alembic/versions/*.py
 # Yüklemeler (uploads)
 uploads/
 
+# Loglar (klasörü tut, dosyaları tutma)
+backend/logs/*.log
+backend/logs/*.log.*
+
 # IDE
 .vscode/
 .idea/
