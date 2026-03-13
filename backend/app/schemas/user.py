@@ -52,3 +52,8 @@ class TokenOut(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserOut
+
+
+class VerifyEmail(BaseModel):
+    email: EmailStr
+    code: str
