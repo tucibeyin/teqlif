@@ -1,0 +1,49 @@
+import 'package:shared_preferences/shared_preferences.dart';
+
+class StorageService {
+  static const _tokenKey = 'teqlif_token';
+  static const _userEmailKey = 'teqlif_user_email';
+  static const _userNameKey = 'teqlif_user_name';
+  static const _userFullNameKey = 'teqlif_user_fullname';
+  static const _userIdKey = 'teqlif_user_id';
+
+  static Future<void> saveToken(String token) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  static Future<String?> getToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
+
+  static Future<void> saveUserInfo({
+    required int id,
+    required String email,
+    required String username,
+    required String fullName,
+  }) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt(_userIdKey, id);
+    await prefs.setString(_userEmailKey, email);
+    await prefs.setString(_userNameKey, username);
+    await prefs.setString(_userFullNameKey, fullName);
+  }
+
+  static Future<Map<String, dynamic>?> getUserInfo() async {
+    final prefs = await SharedPreferences.getInstance();
+    final id = prefs.getInt(_userIdKey);
+    if (id == null) return null;
+    return {
+      'id': id,
+      'email': prefs.getString(_userEmailKey) ?? '',
+      'username': prefs.getString(_userNameKey) ?? '',
+      'full_name': prefs.getString(_userFullNameKey) ?? '',
+    };
+  }
+
+  static Future<void> clear() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+  }
+}
