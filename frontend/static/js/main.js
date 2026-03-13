@@ -1,7 +1,7 @@
 const API = '/api';
 
 async function apiFetch(path, options = {}) {
-    const token = localStorage.getItem('token');
+    const token = localStorage.getItem('teqlif_token');
     const headers = { 'Content-Type': 'application/json', ...options.headers };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
