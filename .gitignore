@@ -7,3 +7,32 @@
 
 # Mac'e özgü gereksiz dosyalar
 .DS_Store
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+venv/
+.venv/
+*.egg-info/
+dist/
+build/
+
+# Alembic
+backend/alembic/versions/*.py
+
+# Yüklemeler (uploads)
+uploads/
+
+# IDE
+.vscode/
+.idea/
+
+# Flutter/Dart
+mobile/.dart_tool/
+mobile/.flutter-plugins
+mobile/.flutter-plugins-dependencies
+mobile/build/
+mobile/*.g.dart
