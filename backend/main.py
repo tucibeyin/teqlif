@@ -9,7 +9,7 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.config import settings
 from app.logging_config import setup_logging
-from app.routers import auth, streams
+from app.routers import auth, streams, webhooks
 
 logger = setup_logging()
 
@@ -49,6 +49,7 @@ async def log_errors(request: Request, call_next):
 # Router'ları kaydet
 app.include_router(auth.router)
 app.include_router(streams.router)
+app.include_router(webhooks.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):
