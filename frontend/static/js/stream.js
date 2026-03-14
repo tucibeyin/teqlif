@@ -62,13 +62,28 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
     });
 
     // Uzak track geldiğinde (yeni katılanlar veya bağlantı sonrası)
-    _room.on(RoomEvent.TrackSubscribed, (track, _pub, _participant) => {
+    _room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
+        console.log('[LiveKit] TrackSubscribed:', track.kind, 'participant:', participant.identity);
         if (track.kind === Track.Kind.Video && remoteVideoEl) {
             track.attach(remoteVideoEl);
             if (onRemoteVideo) onRemoteVideo();
         } else if (track.kind === Track.Kind.Audio && remoteAudioEl) {
             track.attach(remoteAudioEl);
         }
+    });
+
+    // Track yayınlandığında ama henüz abone olunmadıysa (auto-subscribe devre dışıysa fallback)
+    if (!isHost) {
+        _room.on(RoomEvent.TrackPublished, (pub, participant) => {
+            console.log('[LiveKit] TrackPublished:', pub.kind, 'isSubscribed:', pub.isSubscribed, 'participant:', participant.identity);
+            if (!pub.isSubscribed) {
+                pub.setSubscribed(true);
+            }
+        });
+    }
+
+    _room.on(RoomEvent.ConnectionStateChanged, (state) => {
+        console.log('[LiveKit] ConnectionStateChanged:', state);
     });
 
     _room.on(RoomEvent.TrackUnsubscribed, (track) => {
@@ -86,6 +101,7 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
     };
 
     await _room.connect(livekit_url, token, connectOpts);
+    console.log('[LiveKit] Bağlandı. RemoteParticipants:', _room.remoteParticipants.size);
 
     if (isHost) {
         await _room.localParticipant.setCameraEnabled(true);
@@ -105,13 +121,19 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
     } else {
         // Bağlantı sonrası mevcut yayınlanan track'leri kontrol et (race condition fix)
         for (const participant of _room.remoteParticipants.values()) {
+            console.log('[LiveKit] Mevcut katılımcı:', participant.identity, '| trackPublications:', participant.trackPublications.size);
             for (const pub of participant.trackPublications.values()) {
-                if (!pub.isSubscribed || !pub.track) continue;
-                if (pub.track.kind === Track.Kind.Video && remoteVideoEl) {
-                    pub.track.attach(remoteVideoEl);
-                    if (onRemoteVideo) onRemoteVideo();
-                } else if (pub.track.kind === Track.Kind.Audio && remoteAudioEl) {
-                    pub.track.attach(remoteAudioEl);
+                console.log('[LiveKit] Track:', pub.kind, 'isSubscribed:', pub.isSubscribed, 'track:', !!pub.track);
+                if (pub.isSubscribed && pub.track) {
+                    if (pub.track.kind === Track.Kind.Video && remoteVideoEl) {
+                        pub.track.attach(remoteVideoEl);
+                        if (onRemoteVideo) onRemoteVideo();
+                    } else if (pub.track.kind === Track.Kind.Audio && remoteAudioEl) {
+                        pub.track.attach(remoteAudioEl);
+                    }
+                } else if (!pub.isSubscribed) {
+                    // Auto-subscribe devre dışıysa manuel abone ol
+                    pub.setSubscribed(true);
                 }
             }
         }
