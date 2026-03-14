@@ -63,19 +63,17 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Yayın sona erdi')),
           );
-          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+          Navigator.pushNamedAndRemoveUntil(
+              context, '/home', (route) => false);
         }
       });
 
       await room.connect(
         widget.joinToken.livekitUrl,
         widget.joinToken.token,
-        connectOptions: const ConnectOptions(
-          autoSubscribe: true,
-        ),
+        connectOptions: const ConnectOptions(autoSubscribe: true),
       );
 
-      // Zaten yayınlanan track'leri kontrol et (race condition fix)
       for (final participant in room.remoteParticipants.values) {
         for (final pub in participant.videoTrackPublications) {
           if (pub.track != null) {
@@ -102,20 +100,23 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
       await StreamService.leaveStream(widget.joinToken.streamId);
     } catch (_) {}
     await _room?.disconnect();
-    if (mounted) Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
-    final showPanel = !_connecting && _error == null;
+    final connected = !_connecting && _error == null;
 
     return Scaffold(
       backgroundColor: Colors.black,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // ── Video ──────────────────────────────────────────────────────────
+          // ── Video (tam ekran) ───────────────────────────────────────────
           if (_remoteVideoTrack != null)
             Positioned.fill(
               child: VideoTrackRenderer(
@@ -124,7 +125,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               ),
             ),
 
-          // ── Bağlanıyor ─────────────────────────────────────────────────────
+          // ── Bağlanıyor ─────────────────────────────────────────────────
           if (_connecting && _error == null)
             const Positioned.fill(
               child: ColoredBox(
@@ -136,15 +137,16 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       CircularProgressIndicator(color: kPrimary),
                       SizedBox(height: 16),
                       Text('Yayına bağlanıyor...',
-                          style: TextStyle(color: Colors.white70, fontSize: 14)),
+                          style:
+                              TextStyle(color: Colors.white70, fontSize: 14)),
                     ],
                   ),
                 ),
               ),
             ),
 
-          // ── Video bekleniyor ───────────────────────────────────────────────
-          if (!_connecting && _remoteVideoTrack == null && _error == null)
+          // ── Video bekleniyor ───────────────────────────────────────────
+          if (connected && _remoteVideoTrack == null)
             const Positioned.fill(
               child: ColoredBox(
                 color: Colors.black,
@@ -153,17 +155,18 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       Icon(Icons.videocam_off_outlined,
-                          color: Colors.white38, size: 48),
+                          color: Colors.white24, size: 52),
                       SizedBox(height: 12),
                       Text('Video bekleniyor...',
-                          style: TextStyle(color: Colors.white54, fontSize: 14)),
+                          style:
+                              TextStyle(color: Colors.white38, fontSize: 14)),
                     ],
                   ),
                 ),
               ),
             ),
 
-          // ── Hata ───────────────────────────────────────────────────────────
+          // ── Hata ───────────────────────────────────────────────────────
           if (_error != null)
             Positioned.fill(
               child: ColoredBox(
@@ -175,7 +178,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.error_outline,
-                            color: Colors.red, size: 48),
+                            color: Colors.red, size: 52),
                         const SizedBox(height: 12),
                         Text(_error!,
                             style: const TextStyle(
@@ -193,80 +196,96 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               ),
             ),
 
-          // ── Üst bar ────────────────────────────────────────────────────────
+          // ── Üst gradient bar ────────────────────────────────────────────
           Positioned(
-            top: 0, left: 0, right: 0,
+            top: 0,
+            left: 0,
+            right: 0,
             child: Container(
               padding: EdgeInsets.only(
-                top: topPad + 12, left: 16, right: 12, bottom: 20,
-              ),
+                  top: topPad + 14, left: 16, right: 16, bottom: 32),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xDD000000), Colors.transparent],
+                  colors: [Color(0xBB000000), Colors.transparent],
                 ),
               ),
               child: Row(
                 children: [
+                  // Geri
                   GestureDetector(
                     onTap: _leave,
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 20),
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.black38,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Icon(Icons.arrow_back_ios_new,
+                          color: Colors.white, size: 16),
+                    ),
                   ),
                   const SizedBox(width: 10),
+                  // LIVE badge
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 7, vertical: 3),
+                        horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                         color: Colors.red,
-                        borderRadius: BorderRadius.circular(4)),
+                        borderRadius: BorderRadius.circular(5)),
                     child: const Text('CANLI',
                         style: TextStyle(
                             color: Colors.white,
                             fontSize: 10,
-                            fontWeight: FontWeight.w800)),
+                            fontWeight: FontWeight.w800,
+                            letterSpacing: 0.5)),
                   ),
                   const SizedBox(width: 10),
+                  // Başlık + host
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(widget.joinToken.title,
-                            style: const TextStyle(
-                                color: Colors.white,
-                                fontWeight: FontWeight.w600,
-                                fontSize: 13),
-                            overflow: TextOverflow.ellipsis),
-                        Text('@${widget.joinToken.hostUsername}',
-                            style: const TextStyle(
-                                color: Colors.white60, fontSize: 11)),
+                        Text(
+                          widget.joinToken.title,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 13,
+                            shadows: [
+                              Shadow(blurRadius: 6, color: Colors.black)
+                            ],
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        Text(
+                          '@${widget.joinToken.hostUsername}',
+                          style: const TextStyle(
+                              color: Colors.white60, fontSize: 11),
+                        ),
                       ],
                     ),
                   ),
-                  // Ayrıl — üst sağ köşede küçük buton
+                  // Ayrıl
                   GestureDetector(
                     onTap: _leave,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 12, vertical: 7),
+                          horizontal: 14, vertical: 8),
                       decoration: BoxDecoration(
                         color: Colors.black45,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(color: Colors.white24),
                       ),
-                      child: const Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(Icons.exit_to_app,
-                              color: Colors.white70, size: 15),
-                          SizedBox(width: 4),
-                          Text('Ayrıl',
-                              style: TextStyle(
-                                  color: Colors.white70, fontSize: 12)),
-                        ],
-                      ),
+                      child: const Text('Ayrıl',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600)),
                     ),
                   ),
                 ],
@@ -274,32 +293,38 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
             ),
           ),
 
-          // ── Alt panel: Açık artırma + (ileride: chat) ──────────────────────
-          Positioned(
-            bottom: 0, left: 0, right: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Color(0xEE000000), Colors.transparent],
+          // ── Alt panel: sohbet + açık artırma ───────────────────────────
+          if (connected)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.only(bottom: botPad + 8),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Color(0xCC000000), Colors.transparent],
+                    stops: [0.0, 1.0],
+                  ),
                 ),
-              ),
-              padding: EdgeInsets.only(bottom: botPad),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  if (showPanel) ...[
-                    ChatPanel(streamId: widget.joinToken.streamId),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Açık artırma (sadece aktifse görünür)
                     AuctionPanel(
                       streamId: widget.joinToken.streamId,
                       isHost: false,
                     ),
+                    // Sohbet
+                    ChatPanel(streamId: widget.joinToken.streamId),
+                    const SizedBox(height: 4),
                   ],
-                ],
+                ),
               ),
             ),
-          ),
         ],
       ),
     );

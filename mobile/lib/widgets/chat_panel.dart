@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
-import '../config/theme.dart';
 import '../models/chat.dart';
 import '../services/storage_service.dart';
 
@@ -20,16 +19,21 @@ class _ChatPanelState extends State<ChatPanel> {
   final List<ChatMessage> _messages = [];
   final _scrollCtrl = ScrollController();
   final _inputCtrl = TextEditingController();
+  final _focusNode = FocusNode();
 
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
   Timer? _heartbeat;
   bool _reconnecting = false;
   String? _token;
+  bool _inputFocused = false;
 
   @override
   void initState() {
     super.initState();
+    _focusNode.addListener(() {
+      if (mounted) setState(() => _inputFocused = _focusNode.hasFocus);
+    });
     _init();
   }
 
@@ -48,6 +52,7 @@ class _ChatPanelState extends State<ChatPanel> {
     } catch (_) {}
     _scrollCtrl.dispose();
     _inputCtrl.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -138,71 +143,87 @@ class _ChatPanelState extends State<ChatPanel> {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(16, 0, 16, 8),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          // Mesaj listesi
-          if (_messages.isNotEmpty)
-            ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 150),
-              child: ListView.builder(
-                controller: _scrollCtrl,
-                shrinkWrap: true,
-                itemCount: _messages.length,
-                itemBuilder: (_, i) => _MessageItem(_messages[i]),
-              ),
+    // Son 6 mesajı göster (daha fazlası videoyu kapatır)
+    final visibleMessages = _messages.length > 6
+        ? _messages.sublist(_messages.length - 6)
+        : _messages;
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Mesaj listesi — sol tarafa yaslı, transparan
+        if (visibleMessages.isNotEmpty)
+          ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 260, maxHeight: 180),
+            child: ListView.builder(
+              controller: _scrollCtrl,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+              itemCount: visibleMessages.length,
+              itemBuilder: (_, i) => _MessageItem(visibleMessages[i]),
             ),
-          const SizedBox(height: 6),
-          // Input satırı
-          if (_token != null)
-            Row(
+          ),
+
+        // Input satırı
+        if (_token != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+            child: Row(
               children: [
                 Expanded(
-                  child: TextField(
-                    controller: _inputCtrl,
-                    style:
-                        const TextStyle(color: Colors.white, fontSize: 13),
-                    maxLength: 200,
-                    maxLines: 1,
-                    textInputAction: TextInputAction.send,
-                    decoration: InputDecoration(
-                      hintText: 'Mesaj yaz...',
-                      hintStyle: const TextStyle(
-                          color: Color(0xFF64748B), fontSize: 12),
-                      counterText: '',
-                      filled: true,
-                      fillColor: const Color(0x99000000),
-                      contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 9),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(20),
-                        borderSide: BorderSide.none,
+                  child: Container(
+                    height: 40,
+                    decoration: BoxDecoration(
+                      color: _inputFocused
+                          ? const Color(0xCC000000)
+                          : const Color(0x88000000),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(
+                        color: _inputFocused
+                            ? Colors.white38
+                            : Colors.transparent,
                       ),
                     ),
-                    onSubmitted: (_) => _sendMessage(),
+                    child: TextField(
+                      controller: _inputCtrl,
+                      focusNode: _focusNode,
+                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      maxLength: 200,
+                      maxLines: 1,
+                      textInputAction: TextInputAction.send,
+                      decoration: const InputDecoration(
+                        hintText: 'Mesaj yaz...',
+                        hintStyle:
+                            TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                        counterText: '',
+                        border: InputBorder.none,
+                        contentPadding:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      ),
+                      onSubmitted: (_) => _sendMessage(),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
                   onTap: _sendMessage,
                   child: Container(
-                    width: 36,
-                    height: 36,
+                    width: 38,
+                    height: 38,
                     decoration: const BoxDecoration(
-                      color: kPrimary,
+                      color: Color(0xFF0D9488),
                       shape: BoxShape.circle,
                     ),
-                    child:
-                        const Icon(Icons.send, color: Colors.white, size: 17),
+                    child: const Icon(Icons.send_rounded,
+                        color: Colors.white, size: 16),
                   ),
                 ),
               ],
             ),
-        ],
-      ),
+          ),
+      ],
     );
   }
 }
@@ -215,24 +236,30 @@ class _MessageItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 1.5),
+      padding: const EdgeInsets.symmetric(vertical: 2),
       child: RichText(
         text: TextSpan(
-          style: const TextStyle(fontSize: 12, height: 1.3),
+          style: const TextStyle(fontSize: 12.5, height: 1.35),
           children: [
             TextSpan(
               text: '@${message.username} ',
               style: const TextStyle(
                 color: Color(0xFF60A5FA),
                 fontWeight: FontWeight.w700,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black)],
+                shadows: [
+                  Shadow(blurRadius: 6, color: Colors.black),
+                  Shadow(blurRadius: 12, color: Colors.black),
+                ],
               ),
             ),
             TextSpan(
               text: message.content,
               style: const TextStyle(
                 color: Colors.white,
-                shadows: [Shadow(blurRadius: 4, color: Colors.black)],
+                shadows: [
+                  Shadow(blurRadius: 6, color: Colors.black),
+                  Shadow(blurRadius: 12, color: Colors.black),
+                ],
               ),
             ),
           ],

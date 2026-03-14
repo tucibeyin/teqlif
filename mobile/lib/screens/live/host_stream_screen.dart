@@ -6,7 +6,6 @@ import 'package:permission_handler/permission_handler.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/stream_service.dart';
-import '../../services/auth_service.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 
@@ -84,7 +83,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       await room.localParticipant?.setCameraEnabled(true);
       await room.localParticipant?.setMicrophoneEnabled(true);
 
-      // Eğer track zaten publish edildiyse
       for (final pub in room.localParticipant!.videoTrackPublications) {
         if (pub.track != null) {
           _localVideoTrack = pub.track as LocalVideoTrack;
@@ -125,17 +123,26 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Yayını Bitir'),
-        content: const Text('Yayını sonlandırmak istediğinizden emin misiniz?'),
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Yayını Bitir',
+            style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: const Text('Yayını sonlandırmak istiyor musunuz?',
+            style: TextStyle(color: Color(0xFF94A3B8))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('İptal'),
+            child: const Text('İptal',
+                style: TextStyle(color: Color(0xFF64748B))),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Bitir', style: TextStyle(color: Colors.white)),
+            child: const Text('Bitir',
+                style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -153,11 +160,16 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
+    final botPad = MediaQuery.of(context).padding.bottom;
+    final live = !_connecting && _error == null;
+
     return Scaffold(
       backgroundColor: Colors.black,
+      resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // Kamera önizleme
+          // ── Kamera önizleme (tam ekran) ─────────────────────────────────
           if (_localVideoTrack != null)
             Positioned.fill(
               child: VideoTrackRenderer(
@@ -166,7 +178,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // Bağlanıyor overlay
+          // ── Bağlanıyor ──────────────────────────────────────────────────
           if (_connecting)
             const Positioned.fill(
               child: ColoredBox(
@@ -177,17 +189,16 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     children: [
                       CircularProgressIndicator(color: kPrimary),
                       SizedBox(height: 16),
-                      Text(
-                        'Yayın başlatılıyor...',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
+                      Text('Yayın başlatılıyor...',
+                          style:
+                              TextStyle(color: Colors.white70, fontSize: 14)),
                     ],
                   ),
                 ),
               ),
             ),
 
-          // Hata
+          // ── Hata ────────────────────────────────────────────────────────
           if (_error != null)
             Positioned.fill(
               child: ColoredBox(
@@ -199,14 +210,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       mainAxisSize: MainAxisSize.min,
                       children: [
                         const Icon(Icons.error_outline,
-                            color: Colors.red, size: 48),
+                            color: Colors.red, size: 52),
                         const SizedBox(height: 12),
-                        Text(
-                          _error!,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 14),
-                          textAlign: TextAlign.center,
-                        ),
+                        Text(_error!,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 14),
+                            textAlign: TextAlign.center),
                         const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () => Navigator.pop(context),
@@ -219,92 +228,128 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // Üst bar
-          if (!_connecting && _error == null)
+          // ── Üst bar: LIVE + başlık + kontrol ikonları ──────────────────
+          if (live)
             Positioned(
-              top: MediaQuery.of(context).padding.top + 12,
-              left: 16,
-              right: 16,
-              child: Row(
-                children: [
-                  _LiveBadge(),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      widget.title,
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                        fontSize: 15,
-                        shadows: [Shadow(blurRadius: 4, color: Colors.black54)],
-                      ),
-                      overflow: TextOverflow.ellipsis,
-                    ),
+              top: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.only(
+                    top: topPad + 14, left: 16, right: 16, bottom: 32),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xBB000000), Colors.transparent],
                   ),
-                ],
+                ),
+                child: Row(
+                  children: [
+                    // LIVE badge
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                          color: Colors.red,
+                          borderRadius: BorderRadius.circular(5)),
+                      child: const Text('CANLI',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.5)),
+                    ),
+                    const SizedBox(width: 10),
+                    // Başlık
+                    Expanded(
+                      child: Text(
+                        widget.title,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                          shadows: [
+                            Shadow(blurRadius: 6, color: Colors.black)
+                          ],
+                        ),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                    const SizedBox(width: 6),
+                    // Mikrofon
+                    _TopIconBtn(
+                      icon: _micEnabled ? Icons.mic_rounded : Icons.mic_off_rounded,
+                      active: _micEnabled,
+                      onTap: _toggleMic,
+                    ),
+                    const SizedBox(width: 6),
+                    // Kamera
+                    _TopIconBtn(
+                      icon: _cameraEnabled
+                          ? Icons.videocam_rounded
+                          : Icons.videocam_off_rounded,
+                      active: _cameraEnabled,
+                      onTap: _toggleCamera,
+                    ),
+                    const SizedBox(width: 6),
+                    // Kamera çevir
+                    _TopIconBtn(
+                      icon: Icons.flip_camera_ios_rounded,
+                      active: true,
+                      onTap: _switchCamera,
+                    ),
+                    const SizedBox(width: 10),
+                    // Yayını Bitir
+                    GestureDetector(
+                      onTap: _endStream,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 8),
+                        decoration: BoxDecoration(
+                          color: Colors.red.withOpacity(0.85),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: const Text('Bitir',
+                            style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700)),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
 
-          // Alt panel: kontroller + açık artırma
-          if (!_connecting && _error == null)
+          // ── Alt panel: sohbet + açık artırma ───────────────────────────
+          if (live)
             Positioned(
-              bottom: 0, left: 0, right: 0,
+              bottom: 0,
+              left: 0,
+              right: 0,
               child: Container(
+                padding: EdgeInsets.only(bottom: botPad + 8),
                 decoration: const BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.bottomCenter,
                     end: Alignment.topCenter,
-                    colors: [Color(0xEE000000), Colors.transparent],
+                    colors: [Color(0xCC000000), Colors.transparent],
+                    stops: [0.0, 1.0],
                   ),
-                ),
-                padding: EdgeInsets.only(
-                  bottom: MediaQuery.of(context).padding.bottom,
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Kamera kontrol butonları
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          _RoundButton(
-                            icon: _micEnabled ? Icons.mic : Icons.mic_off,
-                            label: _micEnabled ? 'Mikrofon' : 'Sessiz',
-                            onTap: _toggleMic,
-                          ),
-                          const SizedBox(width: 20),
-                          _RoundButton(
-                            icon: _cameraEnabled
-                                ? Icons.videocam
-                                : Icons.videocam_off,
-                            label: _cameraEnabled ? 'Kamera' : 'Kapalı',
-                            onTap: _toggleCamera,
-                          ),
-                          const SizedBox(width: 20),
-                          _RoundButton(
-                            icon: Icons.flip_camera_ios,
-                            label: 'Çevir',
-                            onTap: _switchCamera,
-                          ),
-                          const SizedBox(width: 20),
-                          _RoundButton(
-                            icon: Icons.call_end,
-                            label: 'Bitir',
-                            color: Colors.red,
-                            onTap: _endStream,
-                          ),
-                        ],
-                      ),
-                    ),
-                    // Sohbet paneli
-                    ChatPanel(streamId: widget.streamToken.streamId),
-                    // Açık artırma paneli
+                    // Açık artırma yönetim şeridi
                     AuctionPanel(
                       streamId: widget.streamToken.streamId,
                       isHost: true,
                     ),
+                    // Sohbet
+                    ChatPanel(streamId: widget.streamToken.streamId),
+                    const SizedBox(height: 4),
                   ],
                 ),
               ),
@@ -315,38 +360,16 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   }
 }
 
-class _LiveBadge extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-      decoration: BoxDecoration(
-        color: Colors.red,
-        borderRadius: BorderRadius.circular(5),
-      ),
-      child: const Text(
-        'CANLI',
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 12,
-          fontWeight: FontWeight.w800,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-}
+// ── Yardımcı widget'lar ────────────────────────────────────────────────────
 
-class _RoundButton extends StatelessWidget {
+class _TopIconBtn extends StatelessWidget {
   final IconData icon;
-  final String label;
-  final Color color;
+  final bool active;
   final VoidCallback onTap;
 
-  const _RoundButton({
+  const _TopIconBtn({
     required this.icon,
-    required this.label,
-    this.color = const Color(0x99000000),
+    required this.active,
     required this.onTap,
   });
 
@@ -354,28 +377,16 @@ class _RoundButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              color: color,
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: Colors.white, size: 24),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white70,
-              fontSize: 11,
-              shadows: [Shadow(blurRadius: 4, color: Colors.black)],
-            ),
-          ),
-        ],
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: active ? Colors.black45 : Colors.red.withOpacity(0.75),
+          shape: BoxShape.circle,
+          border: Border.all(
+              color: active ? Colors.white30 : Colors.transparent),
+        ),
+        child: Icon(icon, color: Colors.white, size: 18),
       ),
     );
   }

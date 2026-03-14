@@ -38,13 +38,14 @@ class _AuctionPanelState extends State<AuctionPanel> {
     _reconnecting = false;
     _heartbeat?.cancel();
     _sub?.cancel();
-    try { _channel?.sink.close(); } catch (_) {}
+    try {
+      _channel?.sink.close();
+    } catch (_) {}
     _customBidCtrl.dispose();
     super.dispose();
   }
 
   String get _wsBaseUrl {
-    // kBaseUrl: 'https://teqlif.com/api' → 'wss://teqlif.com/api'
     return kBaseUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
@@ -70,10 +71,11 @@ class _AuctionPanelState extends State<AuctionPanel> {
         onError: (_) => _scheduleReconnect(),
         cancelOnError: false,
       );
-      // Bağlantıyı canlı tutmak için her 25s'de bir ping gönder
       _heartbeat = Timer.periodic(const Duration(seconds: 25), (_) {
         if (!mounted) return;
-        try { _channel?.sink.add('ping'); } catch (_) {}
+        try {
+          _channel?.sink.add('ping');
+        } catch (_) {}
       });
     } catch (_) {
       _scheduleReconnect();
@@ -88,20 +90,24 @@ class _AuctionPanelState extends State<AuctionPanel> {
       if (!mounted) return;
       _reconnecting = false;
       _sub?.cancel();
-      try { _channel?.sink.close(); } catch (_) {}
+      try {
+        _channel?.sink.close();
+      } catch (_) {}
       _connectWS();
     });
   }
 
   void _setMsg(String msg, {bool error = false}) {
     if (!mounted) return;
-    setState(() { _msg = msg; _msgError = error; });
+    setState(() {
+      _msg = msg;
+      _msgError = error;
+    });
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) setState(() => _msg = null);
     });
   }
 
-  // ── Host: Başlat dialog ─────────────────────────────────────────────────
   Future<void> _showStartDialog() async {
     final itemCtrl = TextEditingController();
     final priceCtrl = TextEditingController();
@@ -117,8 +123,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
           children: [
             _dialogInput(itemCtrl, 'Ürün adı'),
             const SizedBox(height: 12),
-            _dialogInput(priceCtrl, 'Başlangıç fiyatı (₺)',
-                isNumber: true),
+            _dialogInput(priceCtrl, 'Başlangıç fiyatı (₺)', isNumber: true),
           ],
         ),
         actions: [
@@ -139,8 +144,8 @@ class _AuctionPanelState extends State<AuctionPanel> {
               if (item.isEmpty || price == null || price < 0) return;
               Navigator.pop(ctx, {'item': item, 'price': price});
             },
-            child: const Text('Başlat',
-                style: TextStyle(color: Colors.white)),
+            child:
+                const Text('Başlat', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -176,20 +181,25 @@ class _AuctionPanelState extends State<AuctionPanel> {
             borderSide: const BorderSide(color: Color(0xFF334155))),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF6366F1))),
+            borderSide: const BorderSide(color: Color(0xFF0D9488))),
       ),
     );
   }
 
-  // ── Host: Duraklat / Devam / Bitir ────────────────────────────────────────
   Future<void> _pauseAuction() async {
-    try { await AuctionService.pauseAuction(widget.streamId); }
-    catch (e) { _setMsg(e.toString(), error: true); }
+    try {
+      await AuctionService.pauseAuction(widget.streamId);
+    } catch (e) {
+      _setMsg(e.toString(), error: true);
+    }
   }
 
   Future<void> _resumeAuction() async {
-    try { await AuctionService.resumeAuction(widget.streamId); }
-    catch (e) { _setMsg(e.toString(), error: true); }
+    try {
+      await AuctionService.resumeAuction(widget.streamId);
+    } catch (e) {
+      _setMsg(e.toString(), error: true);
+    }
   }
 
   Future<void> _endAuction() async {
@@ -212,22 +222,23 @@ class _AuctionPanelState extends State<AuctionPanel> {
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8))),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Bitir',
-                style: TextStyle(color: Colors.white)),
+            child:
+                const Text('Bitir', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
     if (ok != true) return;
-    try { await AuctionService.endAuction(widget.streamId); }
-    catch (e) { _setMsg(e.toString(), error: true); }
+    try {
+      await AuctionService.endAuction(widget.streamId);
+    } catch (e) {
+      _setMsg(e.toString(), error: true);
+    }
   }
 
-  // ── Viewer: Teklif ────────────────────────────────────────────────────────
   Future<void> _placeBid(double amount) async {
     try {
       final newState = await AuctionService.placeBid(widget.streamId, amount);
-      // REST response'dan anlık güncelle (pub/sub'u beklemeden)
       if (mounted) setState(() => _state = newState);
       _setMsg('₺${_fmt(amount)} teklifiniz alındı!');
       _customBidCtrl.clear();
@@ -238,222 +249,330 @@ class _AuctionPanelState extends State<AuctionPanel> {
 
   String _fmt(double? v) {
     if (v == null) return '—';
-    return v.toStringAsFixed(0).replaceAllMapped(
-        RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
+    return v
+        .toStringAsFixed(0)
+        .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(14),
-      ),
+    // Viewer için artırma yoksa gösterme
+    if (!widget.isHost && (_state.isIdle || _state.isEnded)) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
         mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _header(),
-          if (_state.currentBid != null || _state.startPrice != null) ...[
-            const SizedBox(height: 10),
-            _bidInfo(),
-          ],
-          const SizedBox(height: 10),
-          if (widget.isHost) _hostControls() else _viewerControls(),
-          if (_msg != null) ...[
-            const SizedBox(height: 6),
-            Text(_msg!,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+            decoration: BoxDecoration(
+              color: const Color(0xCC000000),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Row(
+              children: [
+                // Status badge
+                _statusBadge(),
+                const SizedBox(width: 8),
+                // Ürün + fiyat
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        _state.itemName ?? 'Açık Artırma',
+                        style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700,
+                            fontSize: 12),
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      if (_state.currentBid != null ||
+                          _state.startPrice != null)
+                        Text(
+                          '₺${_fmt(_state.currentBid ?? _state.startPrice)}'
+                          '${_state.currentBidder != null ? ' · @${_state.currentBidder}' : ''}',
+                          style: const TextStyle(
+                              color: Color(0xFF4ADE80), fontSize: 11),
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                // Host inline kontroller
+                if (widget.isHost) _hostInlineControls(),
+                // Viewer: teklif butonu
+                if (!widget.isHost && _state.isActive)
+                  _viewerBidButton(context),
+              ],
+            ),
+          ),
+          // Mesaj/hata çıktısı
+          if (_msg != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 4, left: 14),
+              child: Text(
+                _msg!,
                 style: TextStyle(
                     fontSize: 11,
-                    color: _msgError ? Colors.redAccent : Colors.greenAccent)),
-          ],
+                    color: _msgError ? Colors.redAccent : Colors.greenAccent,
+                    shadows: const [Shadow(blurRadius: 4, color: Colors.black)]),
+              ),
+            ),
         ],
       ),
     );
   }
 
-  Widget _header() {
+  Widget _statusBadge() {
     final (label, color) = switch (_state.status) {
       'active' => ('AKTİF', Colors.green),
-      'paused' => ('DURAKLATILDI', Colors.amber),
-      'ended'  => ('TAMAMLANDI', Colors.red),
-      _        => ('AÇIK ARTIRMA', const Color(0xFF475569)),
+      'paused' => ('DURAKLADI', Colors.amber),
+      'ended' => ('BİTTİ', Colors.red),
+      _ => ('AÇIK ARTIRMA', const Color(0xFF475569)),
     };
-    return Row(children: [
-      Expanded(
-        child: Text(
-          _state.itemName ?? 'Açık Artırma',
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      decoration:
+          BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
+      child: Text(label,
           style: const TextStyle(
-              color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
-          overflow: TextOverflow.ellipsis,
-        ),
-      ),
-      Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration:
-            BoxDecoration(color: color, borderRadius: BorderRadius.circular(4)),
-        child: Text(label,
-            style: const TextStyle(
-                fontSize: 10, fontWeight: FontWeight.w800, color: Colors.white)),
-      ),
-    ]);
+              fontSize: 9, fontWeight: FontWeight.w800, color: Colors.white)),
+    );
   }
 
-  Widget _bidInfo() {
-    final price = _state.currentBid ?? _state.startPrice;
-    return Column(children: [
-      Text('₺${_fmt(price)}',
-          style: const TextStyle(
-              color: Color(0xFF4ADE80),
-              fontSize: 26,
-              fontWeight: FontWeight.w800)),
-      if (_state.currentBidder != null)
-        Text('@${_state.currentBidder} en yüksek teklif',
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11))
-      else if (_state.startPrice != null)
-        Text('Başlangıç fiyatı',
-            style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
-      if (_state.bidCount > 0)
-        Text('${_state.bidCount} teklif',
-            style: const TextStyle(color: Color(0xFF475569), fontSize: 11)),
-    ]);
-  }
-
-  Widget _hostControls() {
+  Widget _hostInlineControls() {
     if (_state.isIdle || _state.isEnded) {
-      return _btn('▶  Açık Artırma Başlat', Colors.green, _showStartDialog);
+      return _pillBtn('▶ Başlat', Colors.green, _showStartDialog);
     }
     if (_state.isActive) {
-      return Row(children: [
-        Expanded(child: _btn('⏸  Duraklat', const Color(0xFFD97706), _pauseAuction)),
-        const SizedBox(width: 8),
-        Expanded(child: _btn('⏹  Bitir', Colors.red, _endAuction)),
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        _iconBtn(Icons.pause_rounded, Colors.amber, _pauseAuction),
+        const SizedBox(width: 6),
+        _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
       ]);
     }
     if (_state.isPaused) {
-      return Row(children: [
-        Expanded(child: _btn('▶  Devam', Colors.green, _resumeAuction)),
-        const SizedBox(width: 8),
-        Expanded(child: _btn('⏹  Bitir', Colors.red, _endAuction)),
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        _iconBtn(Icons.play_arrow_rounded, Colors.green, _resumeAuction),
+        const SizedBox(width: 6),
+        _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
       ]);
     }
     return const SizedBox.shrink();
   }
 
-  Widget _viewerControls() {
-    if (!_state.isActive) {
-      return Text(
-        _state.isEnded ? 'Açık artırma tamamlandı.' : 'Açık artırma henüz başlamadı.',
-        style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
-      );
-    }
-    final base = _state.currentBid ?? _state.startPrice ?? 0;
-
-    // Preset butonlar: 2x2 grid (her satırda 2 buton, eşit genişlikte)
-    final presets = [
-      ('+₺100', base + 100),
-      ('+₺250', base + 250),
-      ('+₺500', base + 500),
-      ('+₺1000', base + 1000),
-    ];
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        // Satır 1: ilk 2 preset
-        Row(children: [
-          Expanded(child: _bidBtn(presets[0].$1, presets[0].$2)),
-          const SizedBox(width: 8),
-          Expanded(child: _bidBtn(presets[1].$1, presets[1].$2)),
-        ]),
-        const SizedBox(height: 6),
-        // Satır 2: son 2 preset
-        Row(children: [
-          Expanded(child: _bidBtn(presets[2].$1, presets[2].$2)),
-          const SizedBox(width: 8),
-          Expanded(child: _bidBtn(presets[3].$1, presets[3].$2)),
-        ]),
-        const SizedBox(height: 8),
-        // Özel teklif input (tam genişlik)
-        TextField(
-          controller: _customBidCtrl,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          style: const TextStyle(color: Colors.white, fontSize: 13),
-          decoration: InputDecoration(
-            hintText: 'Özel teklif tutarı (₺)',
-            hintStyle: const TextStyle(color: Color(0xFF475569), fontSize: 12),
-            filled: true,
-            fillColor: const Color(0xFF0F172A),
-            contentPadding:
-                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-            border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF334155))),
-            enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF334155))),
-            focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(8),
-                borderSide: const BorderSide(color: Color(0xFF6366F1))),
-          ),
+  Widget _viewerBidButton(BuildContext context) {
+    return GestureDetector(
+      onTap: () => _showBidSheet(context),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        decoration: BoxDecoration(
+          color: const Color(0xFF16A34A),
+          borderRadius: BorderRadius.circular(20),
         ),
-        const SizedBox(height: 6),
-        // Teklif Ver butonu (tam genişlik — Expanded olmadan infinite width olmaz)
-        ElevatedButton(
-          onPressed: () {
-            final v = double.tryParse(_customBidCtrl.text);
-            if (v == null || v <= 0) return _setMsg('Geçerli tutar girin', error: true);
-            _placeBid(v);
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF16A34A),
-            minimumSize: const Size(0, 44),
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          ),
-          child: const Text('Teklif Ver',
-              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
-        ),
-      ],
+        child: const Text('Teklif Ver',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      ),
     );
   }
 
-  Widget _bidBtn(String label, double amount) {
+  void _showBidSheet(BuildContext outerContext) {
+    final base = _state.currentBid ?? _state.startPrice ?? 0;
+    showModalBottomSheet(
+      context: outerContext,
+      backgroundColor: const Color(0xF01E293B),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      isScrollControlled: true,
+      builder: (ctx) => Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 38,
+                height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 18),
+            // Başlık + fiyat
+            Row(children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _state.itemName ?? 'Teklif Ver',
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 16),
+                    ),
+                    if (_state.currentBidder != null)
+                      Text('@${_state.currentBidder} en yüksek teklif sahibi',
+                          style: const TextStyle(
+                              color: Color(0xFF64748B), fontSize: 12))
+                    else
+                      const Text('İlk teklifi sen ver!',
+                          style: TextStyle(
+                              color: Color(0xFF64748B), fontSize: 12)),
+                  ],
+                ),
+              ),
+              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+                Text(
+                  '₺${_fmt(_state.currentBid ?? _state.startPrice)}',
+                  style: const TextStyle(
+                      color: Color(0xFF4ADE80),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 22),
+                ),
+                if (_state.bidCount > 0)
+                  Text('${_state.bidCount} teklif',
+                      style: const TextStyle(
+                          color: Color(0xFF64748B), fontSize: 11)),
+              ]),
+            ]),
+            const SizedBox(height: 18),
+            // 2×2 preset grid
+            Row(children: [
+              Expanded(child: _sheetBidBtn('+₺100', base + 100, ctx)),
+              const SizedBox(width: 8),
+              Expanded(child: _sheetBidBtn('+₺250', base + 250, ctx)),
+            ]),
+            const SizedBox(height: 8),
+            Row(children: [
+              Expanded(child: _sheetBidBtn('+₺500', base + 500, ctx)),
+              const SizedBox(width: 8),
+              Expanded(child: _sheetBidBtn('+₺1000', base + 1000, ctx)),
+            ]),
+            const SizedBox(height: 14),
+            // Özel teklif
+            Row(children: [
+              Expanded(
+                child: TextField(
+                  controller: _customBidCtrl,
+                  keyboardType:
+                      const TextInputType.numberWithOptions(decimal: true),
+                  style:
+                      const TextStyle(color: Colors.white, fontSize: 14),
+                  decoration: InputDecoration(
+                    hintText: 'Özel tutar (₺)',
+                    hintStyle: const TextStyle(
+                        color: Color(0xFF475569), fontSize: 13),
+                    filled: true,
+                    fillColor: const Color(0xFF0F172A),
+                    contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 14, vertical: 13),
+                    border: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                            const BorderSide(color: Color(0xFF334155))),
+                    enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                            const BorderSide(color: Color(0xFF334155))),
+                    focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide:
+                            const BorderSide(color: Color(0xFF0D9488))),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              ElevatedButton(
+                onPressed: () {
+                  final v = double.tryParse(_customBidCtrl.text);
+                  if (v == null || v <= 0) {
+                    _setMsg('Geçerli tutar girin', error: true);
+                    return;
+                  }
+                  _placeBid(v);
+                  Navigator.pop(ctx);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 20, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: const Text('Teklif Ver',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w700)),
+              ),
+            ]),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sheetBidBtn(String label, double amount, BuildContext sheetCtx) {
     return GestureDetector(
-      onTap: () => _placeBid(amount),
+      onTap: () {
+        _placeBid(amount);
+        Navigator.pop(sheetCtx);
+      },
       child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+        padding: const EdgeInsets.symmetric(vertical: 13),
         decoration: BoxDecoration(
             color: const Color(0xFF334155),
-            borderRadius: BorderRadius.circular(8)),
+            borderRadius: BorderRadius.circular(10)),
         child: Text(label,
             textAlign: TextAlign.center,
             style: const TextStyle(
                 color: Colors.white,
-                fontSize: 11,
+                fontSize: 13,
                 fontWeight: FontWeight.w600)),
       ),
     );
   }
 
-  Widget _btn(String label, Color color, VoidCallback onTap) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: onTap,
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          padding: const EdgeInsets.symmetric(vertical: 11),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        ),
+  Widget _pillBtn(String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+        decoration:
+            BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
         child: Text(label,
             style: const TextStyle(
                 color: Colors.white,
-                fontWeight: FontWeight.w600,
-                fontSize: 13)),
+                fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+
+  Widget _iconBtn(IconData icon, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(7),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.2),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.5)),
+        ),
+        child: Icon(icon, color: color, size: 16),
       ),
     );
   }
