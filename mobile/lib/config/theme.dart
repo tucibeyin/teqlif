@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-const kPrimary = Color(0xFF0D9488);
-const kPrimaryDark = Color(0xFF0F766E);
-const kPrimaryLight = Color(0xFF14B8A6);
-const kPrimaryBg = Color(0xFFF0FDFA);
+const kPrimary = Color(0xFF06B6D4);
+const kPrimaryDark = Color(0xFF0891B2);
+const kPrimaryLight = Color(0xFF22D3EE);
+const kPrimaryBg = Color(0xFFECFEFF);
 
 final ThemeData appTheme = ThemeData(
   useMaterial3: true,

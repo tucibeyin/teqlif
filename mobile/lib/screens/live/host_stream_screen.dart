@@ -176,12 +176,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           // ── Kamera önizleme (tam ekran) ─────────────────────────────────
           if (_localVideoTrack != null)
             Positioned.fill(
-              child: Transform.scale(
-                scaleX: -1,
-                child: VideoTrackRenderer(
-                  _localVideoTrack!,
-                  fit: VideoViewFit.contain,
-                ),
+              child: VideoTrackRenderer(
+                _localVideoTrack!,
+                fit: VideoViewFit.contain,
               ),
             ),
 
