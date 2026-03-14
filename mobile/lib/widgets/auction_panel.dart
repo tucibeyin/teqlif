@@ -20,6 +20,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
   AuctionState _state = AuctionState.idle();
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
+  Timer? _heartbeat;
   bool _reconnecting = false;
 
   final _customBidCtrl = TextEditingController();
@@ -35,8 +36,9 @@ class _AuctionPanelState extends State<AuctionPanel> {
   @override
   void dispose() {
     _reconnecting = false;
+    _heartbeat?.cancel();
     _sub?.cancel();
-    _channel?.sink.close();
+    try { _channel?.sink.close(); } catch (_) {}
     _customBidCtrl.dispose();
     super.dispose();
   }
@@ -50,6 +52,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
 
   void _connectWS() {
     if (!mounted) return;
+    _heartbeat?.cancel();
     try {
       final uri = Uri.parse('$_wsBaseUrl/auction/${widget.streamId}/ws');
       _channel = WebSocketChannel.connect(uri);
@@ -67,6 +70,11 @@ class _AuctionPanelState extends State<AuctionPanel> {
         onError: (_) => _scheduleReconnect(),
         cancelOnError: false,
       );
+      // Bağlantıyı canlı tutmak için her 25s'de bir ping gönder
+      _heartbeat = Timer.periodic(const Duration(seconds: 25), (_) {
+        if (!mounted) return;
+        try { _channel?.sink.add('ping'); } catch (_) {}
+      });
     } catch (_) {
       _scheduleReconnect();
     }
@@ -75,6 +83,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
   void _scheduleReconnect() {
     if (_reconnecting || !mounted) return;
     _reconnecting = true;
+    _heartbeat?.cancel();
     Future.delayed(const Duration(seconds: 4), () {
       if (!mounted) return;
       _reconnecting = false;
@@ -238,6 +247,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
   @override
   Widget build(BuildContext context) {
     return Container(
+      width: double.infinity,
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(

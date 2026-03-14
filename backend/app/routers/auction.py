@@ -57,7 +57,7 @@ async def _get_state(stream_id: int) -> dict:
         "item_name": data.get("item_name"),
         "start_price": float(data["start_price"]) if data.get("start_price") else None,
         "current_bid": float(data["current_bid"]) if data.get("current_bid") else None,
-        "current_bidder": data.get("current_bidder_name"),
+        "current_bidder": data.get("current_bidder_name") or None,
         "bid_count": int(data.get("bid_count", 0)),
     }
 
@@ -258,10 +258,14 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
         state = await _get_state(stream_id)
         await websocket.send_json({"type": "state", **state})
 
-        # Bağlantıyı açık tut (ping/pong veya client mesajı bekle)
+        # Bağlantıyı açık tut; client'tan gelen ping mesajlarını yoksay
         while True:
-            await websocket.receive_text()
+            msg = await websocket.receive()
+            if msg.get("type") == "websocket.disconnect":
+                break
     except WebSocketDisconnect:
+        pass
+    except Exception:
         pass
     finally:
         manager.disconnect(websocket, stream_id)
