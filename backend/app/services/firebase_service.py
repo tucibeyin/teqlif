@@ -1,11 +1,9 @@
 import asyncio
 import logging
-from functools import lru_cache
 
 logger = logging.getLogger(__name__)
 
 
-@lru_cache(maxsize=1)
 def _get_firebase_app():
     from app.config import settings
     if not settings.firebase_service_account:
@@ -14,10 +12,11 @@ def _get_firebase_app():
     try:
         import firebase_admin
         from firebase_admin import credentials
-        cred = credentials.Certificate(settings.firebase_service_account)
-        app = firebase_admin.initialize_app(cred)
-        logger.info("[FCM] Firebase başarıyla başlatıldı")
-        return app
+        if not firebase_admin._apps:
+            cred = credentials.Certificate(settings.firebase_service_account)
+            firebase_admin.initialize_app(cred)
+            logger.info("[FCM] Firebase başarıyla başlatıldı")
+        return firebase_admin.get_app()
     except Exception as exc:
         logger.warning("[FCM] Firebase init failed: %s", exc)
         return None
@@ -48,10 +47,12 @@ async def send_push(
             notification=messaging.Notification(title=title, body=body),
             data=data,
             token=token,
+            android=messaging.AndroidConfig(priority="high"),
             apns=messaging.APNSConfig(
+                headers={"apns-priority": "10"},
                 payload=messaging.APNSPayload(
                     aps=messaging.Aps(sound="default", badge=badge)
-                )
+                ),
             ),
         )
         result = await asyncio.get_event_loop().run_in_executor(
