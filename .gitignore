@@ -5,6 +5,15 @@
 .env.test.local
 .env.production.local
 
+# Firebase servis hesabı anahtarı (asla commit edilmemeli!)
+firebase-key.json
+*-service-account.json
+*serviceAccount*.json
+
+# Firebase config dosyalarının kök klasördeki kopyaları
+/GoogleService-Info.plist
+/google-services.json
+
 # Mac'e özgü gereksiz dosyalar
 .DS_Store
 

@@ -11,6 +11,7 @@ from app.models.user import User
 from app.models.notification import Notification
 from app.schemas.notification import NotificationOut, UnreadCountOut
 from app.utils.auth import get_current_user, decode_token
+from app.services.firebase_service import send_push
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
@@ -32,6 +33,13 @@ async def push_notification(user_id: int, notif: dict) -> None:
         db.add(n)
         await db.commit()
         await db.refresh(n)
+
+    # FCM push (always, regardless of WS connection)
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if user and user.fcm_token:
+            await send_push(user.fcm_token, notif.get("title", ""), notif.get("body"))
 
     # Push to WS connections
     targets = list(_notif_connections.get(user_id, set()))

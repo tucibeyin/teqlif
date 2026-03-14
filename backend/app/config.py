@@ -14,6 +14,7 @@ class Settings(BaseSettings):
     livekit_url: str = "wss://teqlif.com/rtc"
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
+    firebase_service_account: str = ""  # path to service account JSON
 
     class Config:
         env_file = ".env"

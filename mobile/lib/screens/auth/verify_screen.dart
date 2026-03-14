@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
+import '../../services/push_notification_service.dart';
 
 class VerifyScreen extends StatefulWidget {
   final String email;
@@ -35,6 +36,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
         email: widget.email,
         code: _codeCtrl.text.trim(),
       );
+      PushNotificationService.initialize();
       if (mounted) Navigator.of(context).pushReplacementNamed('/home');
     } on ApiException catch (e) {
       setState(() => _error = e.message);

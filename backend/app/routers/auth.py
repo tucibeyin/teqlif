@@ -112,3 +112,16 @@ async def resend_code(data: ResendCode, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+
+@router.post("/fcm-token")
+async def save_fcm_token(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    token = payload.get("token")
+    if token:
+        current_user.fcm_token = token
+        await db.commit()
+    return {"ok": True}

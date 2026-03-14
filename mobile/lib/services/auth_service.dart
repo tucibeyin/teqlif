@@ -123,6 +123,15 @@ class AuthService {
     await StorageService.clear();
   }
 
+  static Future<void> saveFcmToken(String token) async {
+    final response = await http.post(
+      Uri.parse('$kBaseUrl/auth/fcm-token'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'token': token}),
+    );
+    _checkError(response);
+  }
+
   static Future<void> logout() async {
     await StorageService.clear();
   }
