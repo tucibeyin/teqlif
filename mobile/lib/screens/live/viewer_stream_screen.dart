@@ -4,6 +4,7 @@ import 'package:livekit_client/livekit_client.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/stream_service.dart';
+import '../../widgets/auction_panel.dart';
 
 class ViewerStreamScreen extends StatefulWidget {
   final JoinTokenOut joinToken;
@@ -107,6 +108,9 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      bottomSheet: (!_connecting && _error == null)
+          ? AuctionPanel(streamId: widget.joinToken.streamId, isHost: false)
+          : null,
       body: Stack(
         children: [
           // Uzak video

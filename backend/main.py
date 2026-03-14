@@ -2,6 +2,7 @@ import logging
 import traceback
 import os
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -9,11 +10,21 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.config import settings
 from app.logging_config import setup_logging
-from app.routers import auth, streams, webhooks
+from app.routers import auth, streams, webhooks, auction
+from app.database import engine, Base
+import app.models.auction  # noqa: F401 — tablo kaydı için
 
 logger = setup_logging()
 
-app = FastAPI(title="Teqlif API", version="0.1.0")
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
+app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -50,6 +61,7 @@ async def log_errors(request: Request, call_next):
 app.include_router(auth.router)
 app.include_router(streams.router)
 app.include_router(webhooks.router)
+app.include_router(auction.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):

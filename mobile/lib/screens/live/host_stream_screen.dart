@@ -7,6 +7,7 @@ import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/stream_service.dart';
 import '../../services/auth_service.dart';
+import '../../widgets/auction_panel.dart';
 
 class HostStreamScreen extends StatefulWidget {
   final StreamTokenOut streamToken;
@@ -153,6 +154,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
+      bottomSheet: (!_connecting && _error == null)
+          ? AuctionPanel(streamId: widget.streamToken.streamId, isHost: true)
+          : null,
       body: Stack(
         children: [
           // Kamera önizleme

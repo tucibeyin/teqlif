@@ -181,6 +181,135 @@
         @keyframes spin {
             to { transform: rotate(360deg); }
         }
+
+        /* ── Açık Artırma Paneli ── */
+        .auction-panel {
+            width: 100%;
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1.25rem;
+            display: none;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .auction-panel.visible { display: flex; }
+
+        .auction-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+        }
+        .auction-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #e2e8f0;
+        }
+        .auction-status-badge {
+            font-size: 0.72rem;
+            font-weight: 700;
+            padding: 3px 10px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+        }
+        .badge-active   { background: #22c55e; color: #fff; }
+        .badge-paused   { background: #f59e0b; color: #000; }
+        .badge-idle     { background: #475569; color: #fff; }
+        .badge-ended    { background: #ef4444; color: #fff; }
+
+        .auction-bid-info {
+            text-align: center;
+        }
+        .auction-current-price {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #22c55e;
+        }
+        .auction-current-bidder {
+            font-size: 0.82rem;
+            color: #64748b;
+            margin-top: 0.2rem;
+        }
+        .auction-bid-count {
+            font-size: 0.8rem;
+            color: #475569;
+        }
+
+        /* Host setup formu */
+        .auction-setup {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .auction-setup input {
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.9rem;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        .auction-setup input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        /* Host kontrol butonları */
+        .auction-host-controls {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+        .auction-host-controls .btn { flex: 1; min-width: 90px; }
+
+        /* Viewer teklif butonları */
+        .auction-viewer-controls {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .bid-presets {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .bid-presets .btn { flex: 1; font-size: 0.82rem; }
+        .bid-custom-row {
+            display: flex;
+            gap: 0.5rem;
+        }
+        .bid-custom-row input {
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            border-radius: 8px;
+            padding: 0.6rem 0.9rem;
+            font-size: 0.9rem;
+        }
+        .bid-custom-row input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+        .btn-green {
+            background: #16a34a;
+            color: #fff;
+        }
+        .btn-green:hover { background: #15803d; }
+        .btn-amber {
+            background: #d97706;
+            color: #fff;
+        }
+        .btn-amber:hover { background: #b45309; }
+        #auctionMsg {
+            font-size: 0.82rem;
+            color: #94a3b8;
+            text-align: center;
+        }
+        #auctionMsg.error { color: #f87171; }
+        #auctionMsg.success { color: #4ade80; }
     </style>
 </head>
 <body>
@@ -217,6 +346,50 @@
             </div>
         </div>
 
+        <!-- ── Açık Artırma Paneli ── -->
+        <div class="auction-panel" id="auctionPanel">
+            <div class="auction-header">
+                <span class="auction-title" id="auctionItemName">Açık Artırma</span>
+                <span class="auction-status-badge badge-idle" id="auctionBadge">Bekleniyor</span>
+            </div>
+
+            <div class="auction-bid-info" id="auctionBidInfo" style="display:none;">
+                <div class="auction-current-price" id="auctionPrice">—</div>
+                <div class="auction-current-bidder" id="auctionBidder"></div>
+                <div class="auction-bid-count" id="auctionBidCount"></div>
+            </div>
+
+            <!-- HOST: Setup formu (idle durumunda göster) -->
+            <div class="auction-setup" id="hostSetup" style="display:none;">
+                <input type="text" id="auctionItemInput" placeholder="Ürün adı (örn: iPhone 15 Pro)" maxlength="200">
+                <input type="number" id="auctionStartPrice" placeholder="Başlangıç fiyatı (₺)" min="0" step="1">
+            </div>
+
+            <!-- HOST: Kontrol butonları -->
+            <div class="auction-host-controls" id="hostControls" style="display:none;">
+                <button class="btn btn-green" id="btnAuctionStart">▶ Başlat</button>
+                <button class="btn btn-amber" id="btnAuctionPause" style="display:none;">⏸ Duraklat</button>
+                <button class="btn btn-slate" id="btnAuctionResume" style="display:none;">▶ Devam</button>
+                <button class="btn btn-danger" id="btnAuctionEnd" style="display:none;">⏹ Bitir</button>
+            </div>
+
+            <!-- VIEWER: Teklif butonları -->
+            <div class="auction-viewer-controls" id="viewerControls" style="display:none;">
+                <div class="bid-presets">
+                    <button class="btn btn-slate" onclick="quickBid(100)">+₺100</button>
+                    <button class="btn btn-slate" onclick="quickBid(200)">+₺200</button>
+                    <button class="btn btn-slate" onclick="quickBid(500)">+₺500</button>
+                    <button class="btn btn-slate" onclick="quickBid(1000)">+₺1000</button>
+                </div>
+                <div class="bid-custom-row">
+                    <input type="number" id="customBidInput" placeholder="Özel teklif (₺)" min="1" step="1">
+                    <button class="btn btn-green" id="btnCustomBid">Teklif Ver</button>
+                </div>
+            </div>
+
+            <div id="auctionMsg"></div>
+        </div>
+
         <div class="stream-meta" id="streamMeta" style="display:none;">
             <div class="stream-meta-info">
                 <h2 id="metaTitle">—</h2>
@@ -236,6 +409,7 @@
     <script src="/static/js/auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/stream.js"></script>
+    <script src="/static/js/auction.js"></script>
     <script>
         const params = new URLSearchParams(location.search);
         const streamIdParam = parseInt(params.get('id'));
@@ -338,6 +512,9 @@
 
                 viewerCount.textContent = `👁 ${info.viewer_count ?? 0}`;
 
+                // Açık artırmayı başlat
+                initAuction(streamId, isHost);
+
             } catch (err) {
                 console.error(err);
                 setStatus('Bağlantı kurulamadı: ' + (err.message || 'Bilinmeyen hata'), true);
@@ -380,6 +557,145 @@
             Stream.clear();
             window.location.href = '/canli.html';
         });
+
+        // ── Açık Artırma ────────────────────────────────────────────────────
+
+        let _currentAuctionStatus = 'idle';
+        let _currentBid = 0;
+
+        function updateAuctionUI(state) {
+            _currentAuctionStatus = state.status;
+            const panel = document.getElementById('auctionPanel');
+            const badge = document.getElementById('auctionBadge');
+            const bidInfo = document.getElementById('auctionBidInfo');
+            const hostSetup = document.getElementById('hostSetup');
+            const hostControls = document.getElementById('hostControls');
+            const viewerControls = document.getElementById('viewerControls');
+
+            panel.classList.add('visible');
+            badge.textContent = Auction.STATUS_LABELS[state.status] || state.status;
+            badge.className = 'auction-status-badge badge-' + state.status;
+
+            if (state.item_name) document.getElementById('auctionItemName').textContent = state.item_name;
+
+            if (state.current_bid != null) {
+                _currentBid = state.current_bid;
+                document.getElementById('auctionPrice').textContent = '₺' + Number(state.current_bid).toLocaleString('tr-TR');
+                document.getElementById('auctionBidder').textContent = state.current_bidder
+                    ? `@${state.current_bidder} en yüksek teklif sahibi`
+                    : (state.start_price != null ? `Başlangıç fiyatı: ₺${Number(state.start_price).toLocaleString('tr-TR')}` : '');
+                document.getElementById('auctionBidCount').textContent = state.bid_count > 0 ? `${state.bid_count} teklif` : '';
+                bidInfo.style.display = 'block';
+            }
+
+            const isHost = document.getElementById('hostSetup') !== null && _isHostPage;
+
+            if (isHost) {
+                hostControls.style.display = 'flex';
+                if (state.status === 'idle') {
+                    hostSetup.style.display = 'flex';
+                    document.getElementById('btnAuctionStart').style.display = '';
+                    document.getElementById('btnAuctionPause').style.display = 'none';
+                    document.getElementById('btnAuctionResume').style.display = 'none';
+                    document.getElementById('btnAuctionEnd').style.display = 'none';
+                } else if (state.status === 'active') {
+                    hostSetup.style.display = 'none';
+                    document.getElementById('btnAuctionStart').style.display = 'none';
+                    document.getElementById('btnAuctionPause').style.display = '';
+                    document.getElementById('btnAuctionResume').style.display = 'none';
+                    document.getElementById('btnAuctionEnd').style.display = '';
+                } else if (state.status === 'paused') {
+                    hostSetup.style.display = 'none';
+                    document.getElementById('btnAuctionStart').style.display = 'none';
+                    document.getElementById('btnAuctionPause').style.display = 'none';
+                    document.getElementById('btnAuctionResume').style.display = '';
+                    document.getElementById('btnAuctionEnd').style.display = '';
+                } else if (state.status === 'ended') {
+                    hostSetup.style.display = 'flex';
+                    document.getElementById('btnAuctionStart').style.display = '';
+                    document.getElementById('btnAuctionPause').style.display = 'none';
+                    document.getElementById('btnAuctionResume').style.display = 'none';
+                    document.getElementById('btnAuctionEnd').style.display = 'none';
+                }
+            } else {
+                // Viewer
+                viewerControls.style.display = (state.status === 'active') ? 'flex' : 'none';
+            }
+        }
+
+        function setAuctionMsg(msg, type = '') {
+            const el = document.getElementById('auctionMsg');
+            el.textContent = msg;
+            el.className = type;
+        }
+
+        let _isHostPage = false;
+
+        function initAuction(sid, isHost) {
+            _isHostPage = isHost;
+            Auction.connect(sid, isHost, (state) => updateAuctionUI(state));
+            document.getElementById('auctionPanel').classList.add('visible');
+
+            if (!isHost) {
+                document.getElementById('hostSetup').remove();
+                document.getElementById('hostControls').remove();
+            } else {
+                document.getElementById('viewerControls').remove();
+            }
+        }
+
+        // HOST: Başlat
+        document.getElementById('btnAuctionStart')?.addEventListener('click', async () => {
+            const itemName = document.getElementById('auctionItemInput').value.trim();
+            const startPrice = parseFloat(document.getElementById('auctionStartPrice').value);
+            if (!itemName) return setAuctionMsg('Ürün adı girin', 'error');
+            if (isNaN(startPrice) || startPrice < 0) return setAuctionMsg('Geçerli başlangıç fiyatı girin', 'error');
+            try {
+                await Auction.startAuction(itemName, startPrice);
+                setAuctionMsg('Açık artırma başladı!', 'success');
+            } catch (e) { setAuctionMsg(e.message, 'error'); }
+        });
+
+        // HOST: Duraklat
+        document.getElementById('btnAuctionPause')?.addEventListener('click', async () => {
+            try { await Auction.pauseAuction(); setAuctionMsg('Duraklatıldı', ''); }
+            catch (e) { setAuctionMsg(e.message, 'error'); }
+        });
+
+        // HOST: Devam
+        document.getElementById('btnAuctionResume')?.addEventListener('click', async () => {
+            try { await Auction.resumeAuction(); setAuctionMsg('Devam ediyor', 'success'); }
+            catch (e) { setAuctionMsg(e.message, 'error'); }
+        });
+
+        // HOST: Bitir
+        document.getElementById('btnAuctionEnd')?.addEventListener('click', async () => {
+            if (!confirm('Açık artırmayı bitirmek istediğinizden emin misiniz?')) return;
+            try { await Auction.endAuction(); setAuctionMsg('Açık artırma tamamlandı', ''); }
+            catch (e) { setAuctionMsg(e.message, 'error'); }
+        });
+
+        // VIEWER: Preset teklif
+        async function quickBid(increment) {
+            if (_currentAuctionStatus !== 'active') return setAuctionMsg('Açık artırma aktif değil', 'error');
+            const amount = _currentBid + increment;
+            await submitBid(amount);
+        }
+
+        // VIEWER: Custom teklif
+        document.getElementById('btnCustomBid')?.addEventListener('click', async () => {
+            const val = parseFloat(document.getElementById('customBidInput').value);
+            if (isNaN(val) || val <= 0) return setAuctionMsg('Geçerli tutar girin', 'error');
+            await submitBid(val);
+        });
+
+        async function submitBid(amount) {
+            try {
+                await Auction.placeBid(amount);
+                setAuctionMsg(`₺${Number(amount).toLocaleString('tr-TR')} teklifiniz alındı!`, 'success');
+                document.getElementById('customBidInput') && (document.getElementById('customBidInput').value = '');
+            } catch (e) { setAuctionMsg(e.message, 'error'); }
+        }
 
         init();
     </script>
