@@ -579,6 +579,7 @@
                 mainVideo.muted = false;
             }
 
+            let videoStarted = false;
             try {
                 const room = await connectRoom({
                     livekit_url: info.livekit_url,
@@ -594,6 +595,7 @@
                         }
                     },
                     onRemoteVideo: () => {
+                        videoStarted = true;
                         showVideo();
                         setStatus('');
                     },
@@ -602,8 +604,8 @@
                 if (isHost) {
                     showVideo();
                     setStatus('Yayın canlı. İzleyiciler sizi görebilir.');
-                } else {
-                    // Uzak video gelene kadar placeholder göster (onRemoteVideo gelince kapanır)
+                } else if (!videoStarted) {
+                    // Video henüz gelmediyse placeholder göster (onRemoteVideo gelince kapanır)
                     showPlaceholder('Yayına bağlanıldı, video bekleniyor...');
                 }
 
