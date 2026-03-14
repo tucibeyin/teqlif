@@ -405,7 +405,7 @@ class _SettingsScreen extends StatelessWidget {
                 icon: Icons.help_outline,
                 label: 'Destek Merkezi',
                 onTap: () async {
-                  final uri = Uri.parse('https://teqlif.com/support');
+                  final uri = Uri.parse('https://teqlif.com/support.html');
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
