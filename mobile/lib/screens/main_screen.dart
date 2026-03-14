@@ -3,8 +3,8 @@ import '../config/theme.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'create_listing_screen.dart';
-import 'messages_screen.dart';
 import 'notifications_screen.dart';
+import 'live/live_list_screen.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -17,8 +17,8 @@ class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
 
   final _screens = const [
+    LiveListScreen(),
     HomeScreen(),
-    MessagesScreen(),
     CreateListingScreen(),
     NotificationsScreen(),
     ProfileScreen(),
@@ -36,14 +36,14 @@ class _MainScreenState extends State<MainScreen> {
         onTap: (i) => setState(() => _currentIndex = i),
         items: const [
           BottomNavigationBarItem(
-            icon: Icon(Icons.home_outlined),
-            activeIcon: Icon(Icons.home),
-            label: 'Anasayfa',
+            icon: Icon(Icons.videocam_outlined),
+            activeIcon: Icon(Icons.videocam),
+            label: 'Canlı',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
-            label: 'Mesajlar',
+            icon: Icon(Icons.grid_view_outlined),
+            activeIcon: Icon(Icons.grid_view),
+            label: 'İlanlar',
           ),
           BottomNavigationBarItem(
             icon: _AddIcon(),

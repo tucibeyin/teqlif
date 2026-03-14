@@ -132,6 +132,7 @@ class _LiveListScreenState extends State<LiveListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Row(
           children: [
             Container(
@@ -143,7 +144,10 @@ class _LiveListScreenState extends State<LiveListScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            const Text('Canlı Yayınlar'),
+            const Text(
+              'Canlı Yayınlar',
+              style: TextStyle(fontWeight: FontWeight.w700),
+            ),
           ],
         ),
         actions: [
