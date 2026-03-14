@@ -118,14 +118,14 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
 
         # Mesaj döngüsü
         while True:
-            msg = await websocket.receive()
-            if msg.get("type") == "websocket.disconnect":
+            try:
+                text = await websocket.receive_text()
+            except WebSocketDisconnect:
                 break
-            data = msg.get("text") or msg.get("bytes")
-            if not data:
+            if not text or text.strip() == "ping":
                 continue
             try:
-                payload = json.loads(data)
+                payload = json.loads(text)
                 if payload.get("type") == "message":
                     content = str(payload.get("content", "")).strip()[:500]
                     if not content:
@@ -147,8 +147,8 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                         "[CHAT] stream_id=%s user=%s | mesaj gönderildi",
                         stream_id, username,
                     )
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("[CHAT WS] Mesaj işleme hatası | stream_id=%s | %s", stream_id, exc)
     except WebSocketDisconnect:
         pass
     except Exception as exc:
