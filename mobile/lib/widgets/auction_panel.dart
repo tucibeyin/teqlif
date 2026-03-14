@@ -354,43 +354,57 @@ class _AuctionPanelState extends State<AuctionPanel> {
       );
     }
     final base = _state.currentBid ?? _state.startPrice ?? 0;
-    return Column(children: [
-      Row(children: [
-        Expanded(child: _bidBtn('+₺100', base + 100)),
-        const SizedBox(width: 6),
-        Expanded(child: _bidBtn('+₺200', base + 200)),
-        const SizedBox(width: 6),
-        Expanded(child: _bidBtn('+₺500', base + 500)),
-        const SizedBox(width: 6),
-        Expanded(child: _bidBtn('+₺1000', base + 1000)),
-      ]),
-      const SizedBox(height: 8),
-      Row(children: [
-        Expanded(
-          child: TextField(
-            controller: _customBidCtrl,
-            keyboardType: TextInputType.number,
-            style: const TextStyle(color: Colors.white, fontSize: 13),
-            decoration: InputDecoration(
-              hintText: 'Özel teklif (₺)',
-              hintStyle: const TextStyle(color: Color(0xFF475569), fontSize: 12),
-              filled: true,
-              fillColor: const Color(0xFF0F172A),
-              contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-              border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF334155))),
-              enabledBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF334155))),
-              focusedBorder: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
-                  borderSide: const BorderSide(color: Color(0xFF6366F1))),
-            ),
+
+    // Preset butonlar: 2x2 grid (her satırda 2 buton, eşit genişlikte)
+    final presets = [
+      ('+₺100', base + 100),
+      ('+₺250', base + 250),
+      ('+₺500', base + 500),
+      ('+₺1000', base + 1000),
+    ];
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        // Satır 1: ilk 2 preset
+        Row(children: [
+          Expanded(child: _bidBtn(presets[0].$1, presets[0].$2)),
+          const SizedBox(width: 8),
+          Expanded(child: _bidBtn(presets[1].$1, presets[1].$2)),
+        ]),
+        const SizedBox(height: 6),
+        // Satır 2: son 2 preset
+        Row(children: [
+          Expanded(child: _bidBtn(presets[2].$1, presets[2].$2)),
+          const SizedBox(width: 8),
+          Expanded(child: _bidBtn(presets[3].$1, presets[3].$2)),
+        ]),
+        const SizedBox(height: 8),
+        // Özel teklif input (tam genişlik)
+        TextField(
+          controller: _customBidCtrl,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          style: const TextStyle(color: Colors.white, fontSize: 13),
+          decoration: InputDecoration(
+            hintText: 'Özel teklif tutarı (₺)',
+            hintStyle: const TextStyle(color: Color(0xFF475569), fontSize: 12),
+            filled: true,
+            fillColor: const Color(0xFF0F172A),
+            contentPadding:
+                const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF334155))),
+            enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF334155))),
+            focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+                borderSide: const BorderSide(color: Color(0xFF6366F1))),
           ),
         ),
-        const SizedBox(width: 8),
+        const SizedBox(height: 6),
+        // Teklif Ver butonu (tam genişlik — Expanded olmadan infinite width olmaz)
         ElevatedButton(
           onPressed: () {
             final v = double.tryParse(_customBidCtrl.text);
@@ -399,14 +413,15 @@ class _AuctionPanelState extends State<AuctionPanel> {
           },
           style: ElevatedButton.styleFrom(
             backgroundColor: const Color(0xFF16A34A),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            minimumSize: const Size(0, 44),
+            padding: const EdgeInsets.symmetric(horizontal: 16),
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
           child: const Text('Teklif Ver',
-              style: TextStyle(color: Colors.white, fontSize: 12)),
+              style: TextStyle(color: Colors.white, fontSize: 13, fontWeight: FontWeight.w600)),
         ),
-      ]),
-    ]);
+      ],
+    );
   }
 
   Widget _bidBtn(String label, double amount) {
