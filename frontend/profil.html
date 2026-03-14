@@ -74,13 +74,33 @@
             stroke-linejoin: round;
         }
 
-        .profile-own {
-            font-size: 0.88rem;
-            color: var(--text-muted);
-            margin-top: 1.5rem;
+        .btn-settings {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.7rem 2rem;
+            background: #f1f5f9;
+            color: #334155;
+            border: none;
+            border-radius: 10px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: none;
+            transition: background 0.15s;
         }
 
-        .profile-own a { color: var(--primary); }
+        .btn-settings:hover { background: #e2e8f0; }
+
+        .btn-settings svg {
+            width: 17px;
+            height: 17px;
+            fill: none;
+            stroke: #334155;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
 
         .profile-error {
             text-align: center;
@@ -124,7 +144,11 @@
 
                 let actionHtml = '';
                 if (isOwn) {
-                    actionHtml = `<p class="profile-own">Bu senin profilin. <a href="/hesabim.html">Hesabımı Düzenle →</a></p>`;
+                    actionHtml = `
+                        <a class="btn-settings" href="/hesabim.html">
+                            <svg viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+                            Ayarlar
+                        </a>`;
                 } else if (Auth.getToken()) {
                     const toName = encodeURIComponent(user.full_name || user.username);
                     const toHandle = encodeURIComponent(user.username);
