@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
+import '../config/theme.dart';
 import '../models/auction.dart';
 import '../services/auction_service.dart';
 
@@ -181,7 +182,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
             borderSide: const BorderSide(color: Color(0xFF334155))),
         focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF0D9488))),
+            borderSide: const BorderSide(color: kPrimary)),
       ),
     );
   }
@@ -492,7 +493,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
                     focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(10),
                         borderSide:
-                            const BorderSide(color: Color(0xFF0D9488))),
+                            const BorderSide(color: kPrimary)),
                   ),
                 ),
               ),

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
+import '../config/theme.dart';
 import '../models/chat.dart';
 import '../services/storage_service.dart';
 
@@ -235,7 +236,7 @@ class _ChatPanelState extends State<ChatPanel> {
                     width: 38,
                     height: 38,
                     decoration: const BoxDecoration(
-                      color: Color(0xFF0D9488),
+                      color: kPrimary,
                       shape: BoxShape.circle,
                     ),
                     child: const Icon(Icons.send_rounded,
