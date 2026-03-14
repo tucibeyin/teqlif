@@ -1,12 +1,12 @@
 import 'dart:io';
 import 'dart:async';
-import 'dart:developer' as dev;
+import 'package:flutter/foundation.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'auth_service.dart';
 
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  dev.log('[FCM] Arka plan mesajı: ${message.messageId} | title=${message.notification?.title}', name: 'FCM');
+  debugPrint('[FCM] Arka plan mesajı: ${message.messageId} | title=${message.notification?.title}');
 }
 
 class PushNotificationService {
@@ -20,117 +20,133 @@ class PushNotificationService {
       StreamController<Map<String, dynamic>>.broadcast();
 
   /// main() içinde çağrılmalı — Firebase hazır olduktan hemen sonra.
-  /// Background handler + foreground presentation options + mesaj dinleyicileri.
-  /// Token almaz; kullanıcı girişi gerekmez.
   static Future<void> initEarly() async {
     if (_earlyDone) return;
     _earlyDone = true;
 
-    dev.log('[FCM] initEarly() başladı', name: 'FCM');
+    debugPrint('[FCM] initEarly() başladı');
 
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-    // iOS: uygulama açıkken de banner + badge + ses göster
-    await _messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    try {
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      debugPrint('[FCM] Foreground presentation options ayarlandı');
+    } catch (e) {
+      debugPrint('[FCM] setForegroundNotificationPresentationOptions HATA: $e');
+    }
 
     // Foreground: uygulama açıkken gelen mesaj
     FirebaseMessaging.onMessage.listen((msg) {
-      dev.log(
-        '[FCM] Foreground mesaj | type=${msg.data["type"]} | title=${msg.notification?.title}',
-        name: 'FCM',
-      );
+      debugPrint('[FCM] Foreground mesaj | type=${msg.data["type"]} | title=${msg.notification?.title}');
       notificationStream.add(msg.data);
     });
 
     // Arka planda bildirime tıklanınca
     FirebaseMessaging.onMessageOpenedApp.listen((msg) {
-      dev.log('[FCM] Bildirime tıklandı (arka plan) | type=${msg.data["type"]} | title=${msg.notification?.title}', name: 'FCM');
+      debugPrint('[FCM] Bildirime tıklandı (arka plan) | type=${msg.data["type"]} | title=${msg.notification?.title}');
       notificationStream.add(msg.data);
     });
 
     // Uygulama kapalıyken bildirime tıklanınca (terminated)
-    final initial = await _messaging.getInitialMessage();
-    if (initial != null) {
-      dev.log('[FCM] Uygulama bildirimle açıldı | type=${initial.data["type"]} | title=${initial.notification?.title}', name: 'FCM');
-      // UI hazır olana kadar kısa bekle
-      Future.delayed(const Duration(milliseconds: 500), () {
-        notificationStream.add(initial.data);
-      });
+    try {
+      final initial = await _messaging.getInitialMessage();
+      if (initial != null) {
+        debugPrint('[FCM] Uygulama bildirimle açıldı | type=${initial.data["type"]} | title=${initial.notification?.title}');
+        Future.delayed(const Duration(milliseconds: 500), () {
+          notificationStream.add(initial.data);
+        });
+      } else {
+        debugPrint('[FCM] getInitialMessage: null (normal açılış)');
+      }
+    } catch (e) {
+      debugPrint('[FCM] getInitialMessage HATA: $e');
     }
 
-    dev.log('[FCM] initEarly() tamamlandı', name: 'FCM');
+    debugPrint('[FCM] initEarly() tamamlandı');
   }
 
   /// Kullanıcı giriş yaptıktan sonra çağrılmalı.
-  /// İzin ister, FCM token alır ve backend'e kaydeder.
   static Future<void> initialize() async {
+    debugPrint('[FCM] initialize() çağrıldı');
     await initEarly(); // idempotent
     if (_fullDone) return;
     _fullDone = true;
 
-    dev.log('[FCM] initialize() başladı', name: 'FCM');
+    debugPrint('[FCM] initialize() başladı — izin isteniyor');
 
-    final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    NotificationSettings settings;
+    try {
+      settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    } catch (e) {
+      debugPrint('[FCM] requestPermission HATA: $e');
+      return;
+    }
 
-    dev.log('[FCM] İzin durumu: ${settings.authorizationStatus}', name: 'FCM');
+    debugPrint('[FCM] İzin durumu: ${settings.authorizationStatus}');
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized ||
         settings.authorizationStatus == AuthorizationStatus.provisional) {
+      debugPrint('[FCM] İzin verildi — token alınıyor');
       await _registerToken();
       _messaging.onTokenRefresh.listen((token) {
-        dev.log('[FCM] Token yenilendi: ${token.substring(0, 12)}…', name: 'FCM');
+        debugPrint('[FCM] Token yenilendi: ${token.substring(0, 12)}…');
         _sendTokenToBackend(token);
       });
     } else {
-      dev.log('[FCM] İzin verilmedi — push çalışmayacak', name: 'FCM');
+      debugPrint('[FCM] İzin VERİLMEDİ (${settings.authorizationStatus}) — push çalışmayacak');
     }
   }
 
   static Future<void> _registerToken() async {
+    debugPrint('[FCM] _registerToken() başladı');
     try {
       if (Platform.isIOS) {
-        dev.log('[FCM] iOS: APNS token bekleniyor…', name: 'FCM');
+        debugPrint('[FCM] iOS: APNS token bekleniyor…');
         String? apns;
         for (var i = 0; i < 10 && apns == null; i++) {
           apns = await _messaging.getAPNSToken();
+          debugPrint('[FCM] iOS: APNS token deneme ${i + 1}/10 = ${apns != null ? apns.substring(0, 8) + "…" : "null"}');
           if (apns == null) {
-            dev.log('[FCM] iOS: APNS token yok (${i + 1}/10)…', name: 'FCM');
             await Future.delayed(const Duration(seconds: 1));
           }
         }
         if (apns == null) {
-          dev.log('[FCM] iOS: APNS token hiç gelmedi — FCM token alınamıyor', name: 'FCM');
+          debugPrint('[FCM] iOS: APNS token 10 denemede hiç gelmedi — FCM token alınamıyor');
+          debugPrint('[FCM] iOS: Bu genellikle APNs sandbox sertifikası eksikliğinden kaynaklanır');
           return;
         }
-        dev.log('[FCM] iOS: APNS token alındı', name: 'FCM');
+        debugPrint('[FCM] iOS: APNS token alındı: ${apns.substring(0, 8)}…');
       }
+
+      debugPrint('[FCM] FCM token alınıyor…');
       final token = await _messaging.getToken();
       if (token != null) {
-        dev.log('[FCM] FCM token alındı: ${token.substring(0, 12)}…', name: 'FCM');
+        debugPrint('[FCM] FCM token alındı: ${token.substring(0, 16)}…');
         await _sendTokenToBackend(token);
       } else {
-        dev.log('[FCM] FCM token null — backend\'e gönderilemedi', name: 'FCM');
+        debugPrint('[FCM] FCM token null — backend\'e gönderilemedi');
       }
-    } catch (e) {
-      dev.log('[FCM] _registerToken hata: $e', name: 'FCM');
+    } catch (e, stack) {
+      debugPrint('[FCM] _registerToken HATA: $e');
+      debugPrint('[FCM] Stack: $stack');
     }
   }
 
   static Future<void> _sendTokenToBackend(String token) async {
+    debugPrint('[FCM] Token backend\'e gönderiliyor: ${token.substring(0, 16)}…');
     try {
-      dev.log('[FCM] Token backend\'e gönderiliyor…', name: 'FCM');
       await AuthService.saveFcmToken(token);
-      dev.log('[FCM] Token backend\'e kaydedildi', name: 'FCM');
+      debugPrint('[FCM] Token backend\'e başarıyla kaydedildi');
     } catch (e) {
-      dev.log('[FCM] Token backend\'e gönderilemedi: $e', name: 'FCM');
+      debugPrint('[FCM] Token backend\'e gönderilemedi: $e');
     }
   }
 }

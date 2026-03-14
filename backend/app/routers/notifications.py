@@ -38,12 +38,15 @@ async def push_notification(user_id: int, notif: dict) -> None:
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
+        logger.info("[FCM] Push kontrolü | user_id=%s | fcm_token=%s", user_id, "VAR" if user and user.fcm_token else "YOK")
         if user and user.fcm_token:
+            logger.info("[FCM] Token bulundu | user_id=%s | token=%s…", user_id, user.fcm_token[:12])
             # Count total unread notifications + messages for iOS badge
             unread_notifs = await db.scalar(
                 select(func.count()).where(
                     Notification.user_id == user_id,
                     Notification.is_read == False,  # noqa: E712
+                    Notification.type != "message",  # DM'ler zaten ayrı sayılıyor
                 )
             ) or 0
             from app.models.message import DirectMessage
