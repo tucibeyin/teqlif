@@ -1,5 +1,8 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
+import '../services/notification_service.dart';
+import '../services/storage_service.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'create_listing_screen.dart';
@@ -20,6 +23,11 @@ class _MainScreenState extends State<MainScreen> {
   // Nav bar indeksi: 0=Canlı, 1=İlanlar, 2=Plus, 3=Mesajlar, 4=Profilim
   int _navIndex = 0;
 
+  int _unreadMessages = 0;
+  int _unreadNotifs = 0;
+
+  Timer? _badgeTimer;
+
   final _liveKey = GlobalKey<LiveListScreenState>();
 
   late final List<Widget> _screens;
@@ -33,6 +41,29 @@ class _MainScreenState extends State<MainScreen> {
       const MessagesScreen(),
       const ProfileScreen(),
     ];
+    _refreshBadges();
+    _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBadges());
+  }
+
+  @override
+  void dispose() {
+    _badgeTimer?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _refreshBadges() async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    try {
+      final msgs = await NotificationService.getUnreadMessageCount();
+      final notifs = await NotificationService.getUnreadNotifCount();
+      if (mounted) {
+        setState(() {
+          _unreadMessages = msgs;
+          _unreadNotifs = notifs;
+        });
+      }
+    } catch (_) {}
   }
 
   void _onNavTap(int navIndex) {
@@ -53,6 +84,66 @@ class _MainScreenState extends State<MainScreen> {
       _pageIndex = pageIndex;
       _navIndex = navIndex;
     });
+    // Refresh badges when switching to messages tab
+    if (pageIndex == 2) {
+      Future.delayed(const Duration(milliseconds: 500), _refreshBadges);
+    }
+  }
+
+  Widget _buildMessageIcon() {
+    final count = _unreadMessages + _unreadNotifs;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.chat_bubble_outline),
+        if (count > 0)
+          Positioned(
+            right: -6,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                '$count',
+                style: const TextStyle(color: Colors.white, fontSize: 9),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildMessageActiveIcon() {
+    final count = _unreadMessages + _unreadNotifs;
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        const Icon(Icons.chat_bubble),
+        if (count > 0)
+          Positioned(
+            right: -6,
+            top: -4,
+            child: Container(
+              padding: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
+              ),
+              constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+              child: Text(
+                '$count',
+                style: const TextStyle(color: Colors.white, fontSize: 9),
+                textAlign: TextAlign.center,
+              ),
+            ),
+          ),
+      ],
+    );
   }
 
   @override
@@ -80,9 +171,9 @@ class _MainScreenState extends State<MainScreen> {
             icon: _PlusIcon(isLive: _pageIndex == 0),
             label: _pageIndex == 0 ? 'Yayın Aç' : 'İlan Ver',
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            activeIcon: Icon(Icons.chat_bubble),
+          BottomNavigationBarItem(
+            icon: _buildMessageIcon(),
+            activeIcon: _buildMessageActiveIcon(),
             label: 'Mesajlar',
           ),
           const BottomNavigationBarItem(

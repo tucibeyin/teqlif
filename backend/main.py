@@ -14,8 +14,11 @@ from app.logging_config import setup_logging
 from app.routers import auth, streams, webhooks, auction, chat
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener
+from app.routers import notifications, messages
 from app.database import engine, Base
 import app.models.auction  # noqa: F401 — tablo kaydı için
+import app.models.notification  # noqa: F401 — tablo kaydı için
+import app.models.message  # noqa: F401 — tablo kaydı için
 
 logger = setup_logging()
 
@@ -73,6 +76,8 @@ app.include_router(streams.router)
 app.include_router(webhooks.router)
 app.include_router(auction.router)
 app.include_router(chat.router)
+app.include_router(notifications.router)
+app.include_router(messages.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):

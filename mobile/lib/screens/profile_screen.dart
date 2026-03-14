@@ -45,10 +45,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     setState(() => _listings = []);
   }
 
-  Future<void> _logout() async {
-    await AuthService.logout();
-    if (mounted) Navigator.of(context).pushReplacementNamed('/login');
-  }
 
   void _openSettings() {
     Navigator.push(

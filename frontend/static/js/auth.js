@@ -59,6 +59,43 @@ const Auth = (() => {
     return { getToken, getUser, login, register, verify, logout, me };
 })();
 
+// ── Unread count helper ────────────────────────────────────────────────────────
+async function getUnreadCount() {
+    try {
+        const [notifResp, msgResp] = await Promise.all([
+            fetch('/api/notifications/unread-count', {
+                headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
+            }),
+            fetch('/api/messages/unread-count', {
+                headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
+            }),
+        ]);
+        let total = 0;
+        if (notifResp.ok) {
+            const d = await notifResp.json();
+            total += (d.count || 0);
+        }
+        if (msgResp.ok) {
+            const d = await msgResp.json();
+            total += (d.count || 0);
+        }
+        return total;
+    } catch {
+        return 0;
+    }
+}
+
+function _updateNavBadge(count) {
+    const badge = document.getElementById('navBadge');
+    if (!badge) return;
+    if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : String(count);
+        badge.style.display = 'flex';
+    } else {
+        badge.style.display = 'none';
+    }
+}
+
 // Nav'ı kullanıcı durumuna göre güncelle
 (function updateNav() {
     const token = Auth.getToken();
@@ -68,11 +105,20 @@ const Auth = (() => {
 
     if (token && user) {
         navLinks.innerHTML = `
-            <a href="/hesabim.html" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;">
+            <a href="/mesajlar.html" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;">
+                Mesajlar
+            </a>
+            <a href="/hesabim.html" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;position:relative;">
                 @${user.username}
+                <span id="navBadge" style="display:none;position:absolute;top:-4px;right:-8px;background:red;color:white;border-radius:50%;min-width:14px;height:14px;font-size:9px;display:none;align-items:center;justify-content:center;padding:0 2px;line-height:14px;text-align:center;"></span>
             </a>
             <a href="#" onclick="Auth.logout();return false;" class="btn-nav">çıkış</a>
         `;
+
+        // Initial badge fetch
+        getUnreadCount().then(_updateNavBadge);
+        // Poll every 60 seconds
+        setInterval(() => getUnreadCount().then(_updateNavBadge), 60000);
     } else if (token && !user) {
         // Bozuk oturum — temizle
         Auth.logout();
