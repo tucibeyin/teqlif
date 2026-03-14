@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'auth_service.dart';
 
@@ -26,8 +27,19 @@ class PushNotificationService {
   }
 
   static Future<void> _registerToken() async {
-    final token = await _messaging.getToken();
-    if (token != null) await _sendTokenToBackend(token);
+    try {
+      // iOS requires APNS token before FCM token — wait up to 10s
+      if (Platform.isIOS) {
+        String? apns;
+        for (var i = 0; i < 10 && apns == null; i++) {
+          apns = await _messaging.getAPNSToken();
+          if (apns == null) await Future.delayed(const Duration(seconds: 1));
+        }
+        if (apns == null) return; // APNS never arrived, skip
+      }
+      final token = await _messaging.getToken();
+      if (token != null) await _sendTokenToBackend(token);
+    } catch (_) {}
   }
 
   static Future<void> _sendTokenToBackend(String token) async {
