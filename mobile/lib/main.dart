@@ -13,8 +13,9 @@ void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  // Background handler + foreground options + mesaj dinleyicileri hemen kur
-  await PushNotificationService.initEarly();
+  // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
+  // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
+  PushNotificationService.initEarly();
   runApp(const TeqlifApp());
 }
 
