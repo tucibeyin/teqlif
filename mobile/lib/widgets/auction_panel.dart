@@ -399,7 +399,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
             20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
         child: Column(
           mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // Handle bar
             Center(
@@ -497,26 +497,29 @@ class _AuctionPanelState extends State<AuctionPanel> {
                 ),
               ),
               const SizedBox(width: 10),
-              ElevatedButton(
-                onPressed: () {
-                  final v = double.tryParse(_customBidCtrl.text);
-                  if (v == null || v <= 0) {
-                    _setMsg('Geçerli tutar girin', error: true);
-                    return;
-                  }
-                  _placeBid(v);
-                  Navigator.pop(ctx);
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF16A34A),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 15),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
+              SizedBox(
+                height: 50,
+                child: ElevatedButton(
+                  onPressed: () {
+                    final v = double.tryParse(_customBidCtrl.text);
+                    if (v == null || v <= 0) {
+                      _setMsg('Geçerli tutar girin', error: true);
+                      return;
+                    }
+                    _placeBid(v);
+                    Navigator.pop(ctx);
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A),
+                    minimumSize: Size.zero,
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                  ),
+                  child: const Text('Teklif Ver',
+                      style: TextStyle(
+                          color: Colors.white, fontWeight: FontWeight.w700)),
                 ),
-                child: const Text('Teklif Ver',
-                    style: TextStyle(
-                        color: Colors.white, fontWeight: FontWeight.w700)),
               ),
             ]),
           ],
