@@ -632,8 +632,7 @@
                 document.getElementById('btnToggleMic').style.display = '';
             } else {
                 document.getElementById('btnLeave').style.display = '';
-                // Viewer ise ses için mute değil
-                mainVideo.muted = false;
+                // mainVideo daima muted — ses remoteAudio elementi üzerinden çıkar
             }
 
             let videoStarted = false;
