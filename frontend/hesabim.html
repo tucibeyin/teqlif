@@ -189,6 +189,13 @@
         </div>
 
         <div class="menu-section" id="menuDanger" style="display:none;">
+            <a href="#" class="menu-item" id="menuDeleteAccount">
+                <span class="menu-item-icon" style="background:#fef2f2;">
+                    <svg viewBox="0 0 24 24" style="stroke:#ef4444;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;width:18px;height:18px;"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </span>
+                <span class="menu-item-label" style="color:#ef4444;">Hesabı Sil</span>
+                <span class="menu-item-chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+            </a>
             <a href="#" class="menu-item danger" onclick="Auth.logout();return false;">
                 <span class="menu-item-icon">
                     <svg viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
@@ -213,6 +220,29 @@
                 <div style="display:flex;gap:0.75rem;margin-top:1rem;">
                     <button class="btn btn-primary btn-full" id="btnSaveProfile">Kaydet</button>
                     <button class="btn btn-outline" onclick="closeModal('editModal')" style="min-width:90px;">İptal</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hesabı Sil modal -->
+        <div class="modal-overlay" id="deleteModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:14px;padding:2rem;width:100%;max-width:420px;margin:1rem;">
+                <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:0.5rem;color:#ef4444;">Hesabı Kalıcı Olarak Sil</h3>
+                <p style="font-size:0.87rem;color:#6b7280;margin-bottom:1.25rem;line-height:1.55;">
+                    Bu işlem <strong>geri alınamaz</strong>. Tüm ilanlarınız, yayın geçmişiniz ve kişisel verileriniz
+                    30 gün içinde kalıcı olarak silinecektir. Devam etmek istiyorsanız şifrenizi girin.
+                </p>
+                <div id="deleteAlert" class="alert alert-error" style="display:none;margin-bottom:1rem;"></div>
+                <div class="form-group">
+                    <label>Şifreniz</label>
+                    <input type="password" id="deletePass" placeholder="Şifrenizi onaylayın">
+                </div>
+                <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+                    <button class="btn btn-full" id="btnConfirmDelete"
+                        style="background:#ef4444;color:#fff;border:none;border-radius:10px;padding:0.75rem;font-size:0.95rem;font-weight:600;cursor:pointer;">
+                        Hesabı Sil
+                    </button>
+                    <button class="btn btn-outline" onclick="closeModal('deleteModal')" style="min-width:90px;">İptal</button>
                 </div>
             </div>
         </div>
@@ -381,8 +411,45 @@
             }
         });
 
+        // Hesabı Sil
+        document.getElementById('menuDeleteAccount').addEventListener('click', (e) => {
+            e.preventDefault();
+            document.getElementById('deletePass').value = '';
+            document.getElementById('deleteAlert').style.display = 'none';
+            openModal('deleteModal');
+        });
+
+        document.getElementById('btnConfirmDelete').addEventListener('click', async () => {
+            const btn = document.getElementById('btnConfirmDelete');
+            const alertEl = document.getElementById('deleteAlert');
+            const pass = document.getElementById('deletePass').value;
+
+            if (!pass) {
+                alertEl.textContent = 'Şifrenizi girin.';
+                alertEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Siliniyor...';
+            alertEl.style.display = 'none';
+
+            try {
+                await apiFetch('/auth/delete-account', {
+                    method: 'DELETE',
+                    body: JSON.stringify({ password: pass }),
+                });
+                Auth.logout();
+            } catch (err) {
+                alertEl.textContent = err.detail || 'Hesap silinemedi. Şifrenizi kontrol edin.';
+                alertEl.style.display = 'block';
+                btn.disabled = false;
+                btn.textContent = 'Hesabı Sil';
+            }
+        });
+
         // Modal dışına tıklayınca kapat
-        ['editModal', 'passModal'].forEach(id => {
+        ['editModal', 'passModal', 'deleteModal'].forEach(id => {
             document.getElementById(id).addEventListener('click', (e) => {
                 if (e.target.id === id) closeModal(id);
             });

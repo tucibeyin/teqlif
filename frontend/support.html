@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Destek — teqlif</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        .support-wrap {
+            max-width: 760px;
+            margin: 2.5rem auto;
+            padding: 0 1.25rem 4rem;
+        }
+        .support-hero {
+            text-align: center;
+            margin-bottom: 2.5rem;
+        }
+        .support-hero h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 0.5rem;
+        }
+        .support-hero p {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+        .support-section {
+            background: var(--white);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 1.75rem;
+            margin-bottom: 1.25rem;
+        }
+        .support-section h2 {
+            font-size: 1.05rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+            color: var(--text);
+        }
+        .faq-item {
+            border-top: 1px solid #f1f5f9;
+            padding: 0.9rem 0;
+        }
+        .faq-item:first-of-type { border-top: none; }
+        .faq-q {
+            font-weight: 600;
+            font-size: 0.92rem;
+            margin-bottom: 0.35rem;
+        }
+        .faq-a {
+            font-size: 0.87rem;
+            color: var(--text-muted);
+            line-height: 1.55;
+        }
+        .contact-row {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.75rem 0;
+            border-top: 1px solid #f1f5f9;
+            text-decoration: none;
+            color: inherit;
+        }
+        .contact-row:first-of-type { border-top: none; }
+        .contact-icon {
+            width: 38px; height: 38px;
+            border-radius: 10px;
+            background: var(--primary-bg);
+            display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0;
+        }
+        .contact-icon svg { width: 18px; height: 18px; stroke: var(--primary); fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+        .contact-label { font-size: 0.93rem; }
+        .contact-value { font-size: 0.82rem; color: var(--text-muted); }
+        .links-row {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+        }
+        .links-row a {
+            font-size: 0.88rem;
+            color: var(--primary);
+            text-decoration: none;
+        }
+        .links-row a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">teqlif</a>
+        <div class="nav-links" id="navLinks"></div>
+    </nav>
+
+    <div class="support-wrap">
+        <div class="support-hero">
+            <h1>Destek Merkezi</h1>
+            <p>Sorularınız için buradayız. Size yardımcı olmaktan mutluluk duyarız.</p>
+        </div>
+
+        <!-- Sık Sorulan Sorular -->
+        <div class="support-section">
+            <h2>Sık Sorulan Sorular</h2>
+
+            <div class="faq-item">
+                <div class="faq-q">Hesabımı nasıl silebilirim?</div>
+                <div class="faq-a">
+                    Hesabım &gt; Hesap &gt; Hesabı Sil yolunu izleyerek hesabınızı kalıcı olarak silebilirsiniz.
+                    Bu işlem geri alınamaz; tüm verileriniz sistemden kaldırılır.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Uygunsuz içeriği veya kullanıcıyı nasıl şikâyet ederim?</div>
+                <div class="faq-a">
+                    Bir yayın veya kullanıcı sayfasında "Şikâyet Et" düğmesini kullanabilirsiniz.
+                    Ayrıca <a href="mailto:destek@teqlif.com">destek@teqlif.com</a> adresine e-posta gönderebilirsiniz.
+                    Tüm şikâyetler 24 saat içinde incelenir.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Bir kullanıcıyı nasıl engellerim?</div>
+                <div class="faq-a">
+                    Kullanıcı profilinde "Engelle" seçeneğine tıklayarak o kullanıcının size mesaj göndermesini
+                    ve içeriklerinizi görmesini engelleyebilirsiniz.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Şifremi unuttum, ne yapmalıyım?</div>
+                <div class="faq-a">
+                    Giriş ekranında "Şifremi Unuttum" bağlantısına tıklayın; e-posta adresinize sıfırlama bağlantısı gönderilecektir.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Canlı yayın başlatmak için ne gerekiyor?</div>
+                <div class="faq-a">
+                    Kayıtlı ve doğrulanmış bir hesap yeterlidir. Mobil uygulamada veya web sitesinde
+                    "+ Yayın Başlat" düğmesine tıklayarak hemen yayına geçebilirsiniz.
+                </div>
+            </div>
+
+            <div class="faq-item">
+                <div class="faq-q">Verilerimi nasıl koruyorsunuz?</div>
+                <div class="faq-a">
+                    Tüm bağlantılar HTTPS/TLS ile şifrelenmektedir. Şifreler asla düz metin olarak saklanmaz.
+                    Daha fazla bilgi için <a href="/kullanim-sartlari.html">Kullanım Şartları</a> sayfamızı inceleyin.
+                </div>
+            </div>
+        </div>
+
+        <!-- İletişim -->
+        <div class="support-section">
+            <h2>Bize Ulaşın</h2>
+
+            <a class="contact-row" href="mailto:destek@teqlif.com">
+                <span class="contact-icon">
+                    <svg viewBox="0 0 24 24"><path d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
+                </span>
+                <div>
+                    <div class="contact-label">E-posta Desteği</div>
+                    <div class="contact-value">destek@teqlif.com</div>
+                </div>
+            </a>
+
+            <a class="contact-row" href="mailto:guvenlik@teqlif.com">
+                <span class="contact-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </span>
+                <div>
+                    <div class="contact-label">Güvenlik & Abuse</div>
+                    <div class="contact-value">guvenlik@teqlif.com</div>
+                </div>
+            </a>
+
+            <div class="contact-row" style="cursor:default;">
+                <span class="contact-icon">
+                    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                </span>
+                <div>
+                    <div class="contact-label">Yanıt Süresi</div>
+                    <div class="contact-value">Genellikle 24 saat içinde yanıtlanır</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Bağlantılar -->
+        <div class="support-section">
+            <h2>Faydalı Bağlantılar</h2>
+            <div class="links-row">
+                <a href="/kullanim-sartlari.html">Kullanım Şartları & EULA</a>
+                <a href="mailto:destek@teqlif.com">Şikâyet Gönder</a>
+                <a href="mailto:guvenlik@teqlif.com">Güvenlik İhlali Bildir</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Nav güncelle (giriş yapılmışsa kullanıcı adı)
+        if (typeof Auth !== 'undefined') Auth.updateNav?.();
+    </script>
+</body>
+</html>
