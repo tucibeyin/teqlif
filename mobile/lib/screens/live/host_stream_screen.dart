@@ -154,9 +154,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      bottomSheet: (!_connecting && _error == null)
-          ? AuctionPanel(streamId: widget.streamToken.streamId, isHost: true)
-          : null,
       body: Stack(
         children: [
           // Kamera önizleme
@@ -247,42 +244,66 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // Alt kontroller
+          // Alt panel: kontroller + açık artırma
           if (!_connecting && _error == null)
             Positioned(
-              bottom: MediaQuery.of(context).padding.bottom + 32,
-              left: 24,
-              right: 24,
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  _RoundButton(
-                    icon: _micEnabled ? Icons.mic : Icons.mic_off,
-                    label: _micEnabled ? 'Mikrofon' : 'Sessiz',
-                    onTap: _toggleMic,
+              bottom: 0, left: 0, right: 0,
+              child: Container(
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Color(0xEE000000), Colors.transparent],
                   ),
-                  const SizedBox(width: 20),
-                  _RoundButton(
-                    icon: _cameraEnabled
-                        ? Icons.videocam
-                        : Icons.videocam_off,
-                    label: _cameraEnabled ? 'Kamera' : 'Kamera Kapalı',
-                    onTap: _toggleCamera,
-                  ),
-                  const SizedBox(width: 20),
-                  _RoundButton(
-                    icon: Icons.flip_camera_ios,
-                    label: 'Kamera Çevir',
-                    onTap: _switchCamera,
-                  ),
-                  const SizedBox(width: 20),
-                  _RoundButton(
-                    icon: Icons.call_end,
-                    label: 'Bitir',
-                    color: Colors.red,
-                    onTap: _endStream,
-                  ),
-                ],
+                ),
+                padding: EdgeInsets.only(
+                  bottom: MediaQuery.of(context).padding.bottom,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    // Kamera kontrol butonları
+                    Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          _RoundButton(
+                            icon: _micEnabled ? Icons.mic : Icons.mic_off,
+                            label: _micEnabled ? 'Mikrofon' : 'Sessiz',
+                            onTap: _toggleMic,
+                          ),
+                          const SizedBox(width: 20),
+                          _RoundButton(
+                            icon: _cameraEnabled
+                                ? Icons.videocam
+                                : Icons.videocam_off,
+                            label: _cameraEnabled ? 'Kamera' : 'Kapalı',
+                            onTap: _toggleCamera,
+                          ),
+                          const SizedBox(width: 20),
+                          _RoundButton(
+                            icon: Icons.flip_camera_ios,
+                            label: 'Çevir',
+                            onTap: _switchCamera,
+                          ),
+                          const SizedBox(width: 20),
+                          _RoundButton(
+                            icon: Icons.call_end,
+                            label: 'Bitir',
+                            color: Colors.red,
+                            onTap: _endStream,
+                          ),
+                        ],
+                      ),
+                    ),
+                    // Açık artırma paneli
+                    AuctionPanel(
+                      streamId: widget.streamToken.streamId,
+                      isHost: true,
+                    ),
+                  ],
+                ),
               ),
             ),
         ],

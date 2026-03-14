@@ -106,14 +106,15 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final topPad = MediaQuery.of(context).padding.top;
+    final botPad = MediaQuery.of(context).padding.bottom;
+    final showPanel = !_connecting && _error == null;
+
     return Scaffold(
       backgroundColor: Colors.black,
-      bottomSheet: (!_connecting && _error == null)
-          ? AuctionPanel(streamId: widget.joinToken.streamId, isHost: false)
-          : null,
       body: Stack(
         children: [
-          // Uzak video
+          // ── Video ──────────────────────────────────────────────────────────
           if (_remoteVideoTrack != null)
             Positioned.fill(
               child: VideoTrackRenderer(
@@ -122,7 +123,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               ),
             ),
 
-          // Bağlanıyor overlay
+          // ── Bağlanıyor ─────────────────────────────────────────────────────
           if (_connecting && _error == null)
             const Positioned.fill(
               child: ColoredBox(
@@ -133,17 +134,15 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                     children: [
                       CircularProgressIndicator(color: kPrimary),
                       SizedBox(height: 16),
-                      Text(
-                        'Yayına bağlanıyor...',
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
-                      ),
+                      Text('Yayına bağlanıyor...',
+                          style: TextStyle(color: Colors.white70, fontSize: 14)),
                     ],
                   ),
                 ),
               ),
             ),
 
-          // Video yok ama bağlı
+          // ── Video bekleniyor ───────────────────────────────────────────────
           if (!_connecting && _remoteVideoTrack == null && _error == null)
             const Positioned.fill(
               child: ColoredBox(
@@ -155,17 +154,15 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       Icon(Icons.videocam_off_outlined,
                           color: Colors.white38, size: 48),
                       SizedBox(height: 12),
-                      Text(
-                        'Video bekleniyor...',
-                        style: TextStyle(color: Colors.white54, fontSize: 14),
-                      ),
+                      Text('Video bekleniyor...',
+                          style: TextStyle(color: Colors.white54, fontSize: 14)),
                     ],
                   ),
                 ),
               ),
             ),
 
-          // Hata
+          // ── Hata ───────────────────────────────────────────────────────────
           if (_error != null)
             Positioned.fill(
               child: ColoredBox(
@@ -179,12 +176,10 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                         const Icon(Icons.error_outline,
                             color: Colors.red, size: 48),
                         const SizedBox(height: 12),
-                        Text(
-                          _error!,
-                          style: const TextStyle(
-                              color: Colors.white70, fontSize: 14),
-                          textAlign: TextAlign.center,
-                        ),
+                        Text(_error!,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 14),
+                            textAlign: TextAlign.center),
                         const SizedBox(height: 20),
                         ElevatedButton(
                           onPressed: () => Navigator.pop(context),
@@ -197,49 +192,39 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               ),
             ),
 
-          // Üst bar (gradient + bilgi)
+          // ── Üst bar ────────────────────────────────────────────────────────
           Positioned(
-            top: 0,
-            left: 0,
-            right: 0,
+            top: 0, left: 0, right: 0,
             child: Container(
               padding: EdgeInsets.only(
-                top: MediaQuery.of(context).padding.top + 12,
-                left: 16,
-                right: 16,
-                bottom: 24,
+                top: topPad + 12, left: 16, right: 12, bottom: 20,
               ),
               decoration: const BoxDecoration(
                 gradient: LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
-                  colors: [Color(0xCC000000), Colors.transparent],
+                  colors: [Color(0xDD000000), Colors.transparent],
                 ),
               ),
               child: Row(
                 children: [
-                  // Geri
                   GestureDetector(
                     onTap: _leave,
                     child: const Icon(Icons.arrow_back_ios_new,
                         color: Colors.white, size: 20),
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   Container(
                     padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 3),
+                        horizontal: 7, vertical: 3),
                     decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: const Text(
-                      'CANLI',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 11,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(4)),
+                    child: const Text('CANLI',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 10,
+                            fontWeight: FontWeight.w800)),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
@@ -247,23 +232,40 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Text(
-                          widget.joinToken.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w600,
-                            fontSize: 14,
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '@${widget.joinToken.hostUsername}',
-                          style: const TextStyle(
-                            color: Colors.white70,
-                            fontSize: 12,
-                          ),
-                        ),
+                        Text(widget.joinToken.title,
+                            style: const TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13),
+                            overflow: TextOverflow.ellipsis),
+                        Text('@${widget.joinToken.hostUsername}',
+                            style: const TextStyle(
+                                color: Colors.white60, fontSize: 11)),
                       ],
+                    ),
+                  ),
+                  // Ayrıl — üst sağ köşede küçük buton
+                  GestureDetector(
+                    onTap: _leave,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                      decoration: BoxDecoration(
+                        color: Colors.black45,
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.exit_to_app,
+                              color: Colors.white70, size: 15),
+                          SizedBox(width: 4),
+                          Text('Ayrıl',
+                              style: TextStyle(
+                                  color: Colors.white70, fontSize: 12)),
+                        ],
+                      ),
                     ),
                   ),
                 ],
@@ -271,26 +273,28 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
             ),
           ),
 
-          // Alt — Ayrıl butonu
+          // ── Alt panel: Açık artırma + (ileride: chat) ──────────────────────
           Positioned(
-            bottom: MediaQuery.of(context).padding.bottom + 32,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: ElevatedButton.icon(
-                icon: const Icon(Icons.exit_to_app, size: 18),
-                label: const Text('Yayından Ayrıl'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.black54,
-                  foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 24, vertical: 12),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(30),
-                    side: const BorderSide(color: Colors.white24),
-                  ),
+            bottom: 0, left: 0, right: 0,
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.bottomCenter,
+                  end: Alignment.topCenter,
+                  colors: [Color(0xEE000000), Colors.transparent],
                 ),
-                onPressed: _leave,
+              ),
+              padding: EdgeInsets.only(bottom: botPad),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // TODO: Chat mesajları buraya gelecek
+                  if (showPanel)
+                    AuctionPanel(
+                      streamId: widget.joinToken.streamId,
+                      isHost: false,
+                    ),
+                ],
               ),
             ),
           ),
