@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import 'verify_screen.dart';
@@ -19,6 +20,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _loading = false;
   String? _error;
   bool _obscure = true;
+  bool _eulaAccepted = false;
 
   @override
   void dispose() {
@@ -29,8 +31,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  void _openUrl(String url) async {
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (!_eulaAccepted) {
+      setState(() => _error = 'Kullanım Şartları\'nı kabul etmelisiniz.');
+      return;
+    }
     setState(() { _loading = true; _error = null; });
     try {
       await AuthService.register(
@@ -141,7 +152,56 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
+                    // EULA onay
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Checkbox(
+                          value: _eulaAccepted,
+                          activeColor: kPrimary,
+                          onChanged: (v) => setState(() => _eulaAccepted = v ?? false),
+                          materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                          visualDensity: VisualDensity.compact,
+                        ),
+                        Expanded(
+                          child: GestureDetector(
+                            onTap: () => setState(() => _eulaAccepted = !_eulaAccepted),
+                            child: Padding(
+                              padding: const EdgeInsets.only(top: 10),
+                              child: RichText(
+                                text: TextSpan(
+                                  style: const TextStyle(
+                                    fontSize: 12.5,
+                                    color: Color(0xFF6B7280),
+                                  ),
+                                  children: [
+                                    const TextSpan(text: 'teqlif '),
+                                    WidgetSpan(
+                                      child: GestureDetector(
+                                        onTap: () => _openUrl('https://teqlif.com/kullanim-sartlari.html'),
+                                        child: const Text(
+                                          'Kullanım Şartları ve EULA',
+                                          style: TextStyle(
+                                            fontSize: 12.5,
+                                            color: kPrimary,
+                                            fontWeight: FontWeight.w600,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                    const TextSpan(
+                                      text: '\'nı okudum, kabul ediyorum. Uygunsuz içeriklere sıfır tolerans politikasını anladım.',
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 20),
                     ElevatedButton(
                       onPressed: _loading ? null : _submit,
                       child: _loading

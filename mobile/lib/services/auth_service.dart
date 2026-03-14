@@ -113,6 +113,16 @@ class AuthService {
     return User.fromJson(jsonDecode(response.body));
   }
 
+  static Future<void> deleteAccount(String password) async {
+    final response = await http.delete(
+      Uri.parse('$kBaseUrl/auth/delete-account'),
+      headers: await _headers(auth: true),
+      body: jsonEncode({'password': password}),
+    );
+    _checkError(response);
+    await StorageService.clear();
+  }
+
   static Future<void> logout() async {
     await StorageService.clear();
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
@@ -278,6 +279,80 @@ class _ListingGridItem extends StatelessWidget {
 class _SettingsScreen extends StatelessWidget {
   const _SettingsScreen();
 
+  Future<void> _showDeleteAccountDialog(BuildContext context) async {
+    final passCtrl = TextEditingController();
+    String? error;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          backgroundColor: Colors.white,
+          title: const Text(
+            'Hesabı Kalıcı Olarak Sil',
+            style: TextStyle(color: Color(0xFFEF4444), fontSize: 16),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Bu işlem geri alınamaz. Tüm verileriniz 30 gün içinde kalıcı olarak silinecektir.',
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: passCtrl,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Şifreniz',
+                  hintText: 'Onaylamak için şifrenizi girin',
+                ),
+              ),
+              if (error != null) ...[
+                const SizedBox(height: 8),
+                Text(error!, style: const TextStyle(color: Color(0xFFEF4444), fontSize: 12)),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('İptal', style: TextStyle(color: Color(0xFF6B7280))),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFFEF4444),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                minimumSize: const Size(0, 38),
+              ),
+              onPressed: () async {
+                if (passCtrl.text.isEmpty) {
+                  setS(() => error = 'Şifrenizi girin.');
+                  return;
+                }
+                try {
+                  await AuthService.deleteAccount(passCtrl.text);
+                  if (ctx.mounted) {
+                    Navigator.of(ctx).pop();
+                    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
+                  }
+                } on ApiException catch (e) {
+                  setS(() => error = e.message);
+                } catch (_) {
+                  setS(() => error = 'Hesap silinemedi. Şifrenizi kontrol edin.');
+                }
+              },
+              child: const Text('Hesabı Sil', style: TextStyle(color: Colors.white)),
+            ),
+          ],
+        ),
+      ),
+    );
+    passCtrl.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -323,22 +398,64 @@ class _SettingsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
+          _SettingsSection(
+            title: 'Destek',
+            items: [
+              _SettingsTile(
+                icon: Icons.help_outline,
+                label: 'Destek Merkezi',
+                onTap: () async {
+                  final uri = Uri.parse('https://teqlif.com/support');
+                  if (await canLaunchUrl(uri)) {
+                    launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+              _SettingsTile(
+                icon: Icons.description_outlined,
+                label: 'Kullanım Şartları & EULA',
+                onTap: () async {
+                  final uri = Uri.parse('https://teqlif.com/kullanim-sartlari.html');
+                  if (await canLaunchUrl(uri)) {
+                    launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
           Container(
             color: Colors.white,
-            child: ListTile(
-              leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
-              title: const Text(
-                'Çıkış Yap',
-                style: TextStyle(
-                  color: Color(0xFFEF4444),
-                  fontWeight: FontWeight.w600,
+            child: Column(
+              children: [
+                ListTile(
+                  leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
+                  title: const Text(
+                    'Hesabı Sil',
+                    style: TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onTap: () => _showDeleteAccountDialog(context),
                 ),
-              ),
-              onTap: () async {
-                final nav = Navigator.of(context);
-                await AuthService.logout();
-                nav.pushNamedAndRemoveUntil('/login', (_) => false);
-              },
+                const Divider(height: 1, indent: 56),
+                ListTile(
+                  leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
+                  title: const Text(
+                    'Çıkış Yap',
+                    style: TextStyle(
+                      color: Color(0xFFEF4444),
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  onTap: () async {
+                    final nav = Navigator.of(context);
+                    await AuthService.logout();
+                    nav.pushNamedAndRemoveUntil('/login', (_) => false);
+                  },
+                ),
+              ],
             ),
           ),
           const SizedBox(height: 24),
