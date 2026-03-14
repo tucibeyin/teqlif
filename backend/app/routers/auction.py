@@ -29,19 +29,46 @@ class _Manager:
     async def connect(self, ws: WebSocket, stream_id: int):
         await ws.accept()
         self._conns.setdefault(stream_id, set()).add(ws)
+        total = len(self._conns[stream_id])
+        client = getattr(ws, "client", None)
+        origin = ws.headers.get("origin", "native/mobile")
+        logger.info(
+            "[WS] BAĞLANDI | stream_id=%s origin=%s client=%s | toplam=%s bağlı",
+            stream_id, origin, client, total,
+        )
 
     def disconnect(self, ws: WebSocket, stream_id: int):
         self._conns.get(stream_id, set()).discard(ws)
+        total = len(self._conns.get(stream_id, set()))
+        logger.info(
+            "[WS] AYRILDI   | stream_id=%s | kalan=%s bağlı",
+            stream_id, total,
+        )
 
     async def broadcast(self, stream_id: int, payload: dict):
+        targets = list(self._conns.get(stream_id, set()))
+        logger.info(
+            "[WS] BROADCAST | stream_id=%s status=%s | hedef=%s bağlantı",
+            stream_id, payload.get("status"), len(targets),
+        )
         dead = set()
-        for ws in list(self._conns.get(stream_id, set())):
+        for ws in targets:
             try:
                 await ws.send_json(payload)
-            except Exception:
+            except Exception as exc:
+                logger.warning(
+                    "[WS] BROADCAST HATA | stream_id=%s | %s", stream_id, exc
+                )
                 dead.add(ws)
+        if dead:
+            logger.warning(
+                "[WS] %s ölü bağlantı temizlendi | stream_id=%s", len(dead), stream_id
+            )
         for ws in dead:
             self._conns.get(stream_id, set()).discard(ws)
+
+    def conn_count(self, stream_id: int) -> int:
+        return len(self._conns.get(stream_id, set()))
 
 
 manager = _Manager()
@@ -130,7 +157,10 @@ async def start_auction(
 
     state = await _get_state(stream_id)
     await manager.broadcast(stream_id, {"type": "state", **state})
-    logger.info("Açık artırma başlatıldı | stream_id=%s item=%s", stream_id, data.item_name)
+    logger.info(
+        "[AÇIK ARTIRMA] BAŞLADI | stream_id=%s item=%r start_price=%s | ws_hedef=%s",
+        stream_id, data.item_name, data.start_price, manager.conn_count(stream_id),
+    )
     return state
 
 
@@ -150,6 +180,8 @@ async def pause_auction(
     await redis.hset(key, "status", "paused")
     state = await _get_state(stream_id)
     await manager.broadcast(stream_id, {"type": "state", **state})
+    logger.info("[AÇIK ARTIRMA] DURAKLATILDI | stream_id=%s | ws_hedef=%s",
+                stream_id, manager.conn_count(stream_id))
     return state
 
 
@@ -169,6 +201,8 @@ async def resume_auction(
     await redis.hset(key, "status", "active")
     state = await _get_state(stream_id)
     await manager.broadcast(stream_id, {"type": "state", **state})
+    logger.info("[AÇIK ARTIRMA] DEVAM ETTİ | stream_id=%s | ws_hedef=%s",
+                stream_id, manager.conn_count(stream_id))
     return state
 
 
@@ -213,7 +247,10 @@ async def end_auction(
              "current_bid": final_price if data.get("current_bidder_id") else None,
              "current_bidder": data.get("current_bidder_name") or None, "start_price": float(data.get("start_price", 0))}
     await manager.broadcast(stream_id, {"type": "state", **state})
-    logger.info("Açık artırma bitti | stream_id=%s winner=%s price=%s", stream_id, state["current_bidder"], state["current_bid"])
+    logger.info(
+        "[AÇIK ARTIRMA] BİTTİ | stream_id=%s winner=%s price=%s bid_count=%s",
+        stream_id, state["current_bidder"], state["current_bid"], state["bid_count"],
+    )
     return state
 
 
@@ -245,6 +282,10 @@ async def place_bid(
 
     state = await _get_state(stream_id)
     await manager.broadcast(stream_id, {"type": "state", **state})
+    logger.info(
+        "[TEKLİF] stream_id=%s user=%s amount=%s | ws_hedef=%s",
+        stream_id, current_user.username, data.amount, manager.conn_count(stream_id),
+    )
     return state
 
 
@@ -256,6 +297,10 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
     try:
         # Bağlanınca mevcut state'i gönder
         state = await _get_state(stream_id)
+        logger.info(
+            "[WS] İLK STATE GÖNDERİLDİ | stream_id=%s status=%s",
+            stream_id, state.get("status"),
+        )
         await websocket.send_json({"type": "state", **state})
 
         # Bağlantıyı açık tut; client'tan gelen ping mesajlarını yoksay
@@ -265,7 +310,7 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
                 break
     except WebSocketDisconnect:
         pass
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning("[WS] BEKLENMEYEN HATA | stream_id=%s | %s", stream_id, exc)
     finally:
         manager.disconnect(websocket, stream_id)
