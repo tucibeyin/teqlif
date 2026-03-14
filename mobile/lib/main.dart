@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'config/theme.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'services/storage_service.dart';
 
 void main() {
+  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   runApp(const TeqlifApp());
 }
 
@@ -41,8 +44,8 @@ class _SplashGateState extends State<_SplashGate> {
   }
 
   Future<void> _check() async {
-    await Future.delayed(const Duration(milliseconds: 300));
     final token = await StorageService.getToken();
+    FlutterNativeSplash.remove();
     if (!mounted) return;
     if (token != null) {
       Navigator.of(context).pushReplacementNamed('/home');
