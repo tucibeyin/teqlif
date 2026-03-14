@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="/static/css/main.css">
     <style>
         .profile-wrap {
-            max-width: 480px;
+            max-width: 420px;
             margin: 2.5rem auto;
             padding: 0 1.25rem 4rem;
         }
@@ -16,43 +16,47 @@
             background: var(--white);
             border-radius: 16px;
             box-shadow: var(--shadow-md);
-            padding: 2.5rem 2rem;
-            text-align: center;
+            padding: 2.5rem 2rem 2rem;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         }
 
         .profile-avatar {
-            width: 80px;
-            height: 80px;
+            width: 88px;
+            height: 88px;
             border-radius: 50%;
             background: var(--primary-bg);
             color: var(--primary);
-            font-size: 2rem;
+            font-size: 2.25rem;
             font-weight: 700;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin: 0 auto 1.25rem;
+            margin-bottom: 1rem;
         }
 
         .profile-name {
-            font-size: 1.3rem;
+            font-size: 1.25rem;
             font-weight: 700;
             margin-bottom: 0.25rem;
+            text-align: center;
         }
 
         .profile-username {
-            font-size: 0.9rem;
+            font-size: 0.88rem;
             color: var(--text-muted);
             margin-bottom: 2rem;
+            text-align: center;
         }
 
-        .btn-msg {
-            display: inline-flex;
+        .btn-action {
+            display: flex;
             align-items: center;
+            justify-content: center;
             gap: 0.5rem;
-            padding: 0.7rem 2rem;
-            background: var(--primary);
-            color: #fff;
+            width: 100%;
+            padding: 0.8rem 1rem;
             border: none;
             border-radius: 10px;
             font-size: 0.95rem;
@@ -62,44 +66,29 @@
             transition: background 0.15s;
         }
 
-        .btn-msg:hover { background: var(--primary-dark); }
+        .btn-action.primary {
+            background: var(--primary);
+            color: #fff;
+        }
 
-        .btn-msg svg {
+        .btn-action.primary:hover { background: var(--primary-dark); }
+
+        .btn-action.secondary {
+            background: #f1f5f9;
+            color: #334155;
+        }
+
+        .btn-action.secondary:hover { background: #e2e8f0; }
+
+        .btn-action svg {
             width: 18px;
             height: 18px;
             fill: none;
-            stroke: #fff;
+            stroke: currentColor;
             stroke-width: 2;
             stroke-linecap: round;
             stroke-linejoin: round;
-        }
-
-        .btn-settings {
-            display: inline-flex;
-            align-items: center;
-            gap: 0.5rem;
-            padding: 0.7rem 2rem;
-            background: #f1f5f9;
-            color: #334155;
-            border: none;
-            border-radius: 10px;
-            font-size: 0.95rem;
-            font-weight: 600;
-            cursor: pointer;
-            text-decoration: none;
-            transition: background 0.15s;
-        }
-
-        .btn-settings:hover { background: #e2e8f0; }
-
-        .btn-settings svg {
-            width: 17px;
-            height: 17px;
-            fill: none;
-            stroke: #334155;
-            stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
+            flex-shrink: 0;
         }
 
         .profile-error {
@@ -130,9 +119,7 @@
         const params = new URLSearchParams(window.location.search);
         const username = params.get('u');
 
-        if (!username) {
-            window.location.href = '/';
-        }
+        if (!username) window.location.href = '/';
 
         async function loadProfile() {
             const content = document.getElementById('profileContent');
@@ -145,7 +132,7 @@
                 let actionHtml = '';
                 if (isOwn) {
                     actionHtml = `
-                        <a class="btn-settings" href="/hesabim.html">
+                        <a class="btn-action secondary" href="/hesabim.html">
                             <svg viewBox="0 0 24 24"><path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
                             Ayarlar
                         </a>`;
@@ -153,12 +140,12 @@
                     const toName = encodeURIComponent(user.full_name || user.username);
                     const toHandle = encodeURIComponent(user.username);
                     actionHtml = `
-                        <a class="btn-msg" href="/mesajlar.html?to_id=${user.id}&to_name=${toName}&to_handle=${toHandle}">
+                        <a class="btn-action primary" href="/mesajlar.html?to_id=${user.id}&to_name=${toName}&to_handle=${toHandle}">
                             <svg viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
                             Mesaj Gönder
                         </a>`;
                 } else {
-                    actionHtml = `<a class="btn-msg" href="/giris.html">Mesaj göndermek için giriş yap</a>`;
+                    actionHtml = `<a class="btn-action primary" href="/giris.html">Mesaj göndermek için giriş yap</a>`;
                 }
 
                 content.innerHTML = `
