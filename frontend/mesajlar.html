@@ -413,7 +413,7 @@
             _currentOtherUserId = userId;
             _currentOtherUsername = username;
             document.getElementById('listView').style.display = 'none';
-            document.getElementById('chatView').style.display = '';
+            document.getElementById('chatView').style.display = 'block';
             const titleEl = document.getElementById('chatTitle');
             if (handle) {
                 titleEl.innerHTML = `<a href="/profil.html?u=${encodeURIComponent(handle)}" style="color:inherit;text-decoration:none;">${escHtml(username)}</a>`;
