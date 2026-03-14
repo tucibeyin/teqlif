@@ -29,6 +29,7 @@ app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["https://teqlif.com", "https://www.teqlif.com", "http://localhost:8000"],
+    allow_origin_regex=r".*",  # WebSocket (mobile/native) için tüm origin'lere izin ver
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
