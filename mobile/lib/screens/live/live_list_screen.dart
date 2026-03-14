@@ -11,10 +11,10 @@ class LiveListScreen extends StatefulWidget {
   const LiveListScreen({super.key});
 
   @override
-  State<LiveListScreen> createState() => _LiveListScreenState();
+  State<LiveListScreen> createState() => LiveListScreenState();
 }
 
-class _LiveListScreenState extends State<LiveListScreen> {
+class LiveListScreenState extends State<LiveListScreen> {
   List<StreamOut> _streams = [];
   bool _loading = true;
   String? _error;
@@ -24,6 +24,8 @@ class _LiveListScreenState extends State<LiveListScreen> {
     super.initState();
     _load();
   }
+
+  void triggerStartDialog() => _showStartDialog();
 
   Future<void> _load() async {
     if (!mounted) return;
@@ -201,16 +203,7 @@ class _LiveListScreenState extends State<LiveListScreen> {
             ),
           ],
         ),
-        actions: [
-          TextButton.icon(
-            icon: const Icon(Icons.videocam_outlined, color: kPrimary),
-            label: const Text(
-              'Yayın Başlat',
-              style: TextStyle(color: kPrimary, fontWeight: FontWeight.w600),
-            ),
-            onPressed: _showStartDialog,
-          ),
-        ],
+        actions: const [],
       ),
       body: RefreshIndicator(
         color: kPrimary,

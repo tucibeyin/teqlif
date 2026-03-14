@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
-import '../models/user.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 
@@ -12,35 +11,37 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
-  User? _user;
+  Map<String, dynamic>? _user;
+  List<dynamic> _listings = [];
   bool _loading = true;
 
   @override
   void initState() {
     super.initState();
-    _loadUser();
+    _load();
   }
 
-  Future<void> _loadUser() async {
+  Future<void> _load() async {
+    setState(() => _loading = true);
     try {
       final info = await StorageService.getUserInfo();
-      if (info != null && mounted) {
-        setState(() {
-          _user = User(
-            id: info['id'] as int,
-            email: info['email'] as String,
-            username: info['username'] as String,
-            fullName: info['full_name'] as String,
-            isVerified: true,
-          );
-          _loading = false;
-        });
-      } else {
-        setState(() => _loading = false);
-      }
+      if (!mounted) return;
+      setState(() {
+        _user = info;
+        _loading = false;
+      });
+      // İlanları yüklemeyi dene (API hazır değilse boş kalır)
+      _loadListings();
     } catch (_) {
+      if (!mounted) return;
       setState(() => _loading = false);
     }
+  }
+
+  Future<void> _loadListings() async {
+    // Backend'de /listings/mine hazır olduğunda buraya bağlanacak
+    // Şimdilik boş liste
+    setState(() => _listings = []);
   }
 
   Future<void> _logout() async {
@@ -48,159 +49,309 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (mounted) Navigator.of(context).pushReplacementNamed('/login');
   }
 
+  void _openSettings() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const _SettingsScreen()),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (_loading) {
+      return const Scaffold(
+        body: Center(child: CircularProgressIndicator(color: kPrimary)),
+      );
+    }
+
+    final fullName = _user?['full_name'] ?? _user?['username'] ?? 'Kullanıcı';
+    final username = _user?['username'] ?? '';
+    final email = _user?['email'] ?? '';
+    final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
+
     return Scaffold(
+      backgroundColor: Colors.white,
       appBar: AppBar(
-        title: const Text('Hesabım'),
+        automaticallyImplyLeading: false,
+        backgroundColor: Colors.white,
+        title: Text(
+          '@$username',
+          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.settings_outlined),
-            onPressed: () {},
+            onPressed: _openSettings,
           ),
         ],
       ),
-      body: _loading
-          ? const Center(child: CircularProgressIndicator(color: kPrimary))
-          : _user == null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Text('Oturum açılmamış'),
-                      const SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: () =>
-                            Navigator.of(context).pushReplacementNamed('/login'),
-                        style: ElevatedButton.styleFrom(
-                          minimumSize: const Size(160, 44),
-                        ),
-                        child: const Text('Giriş Yap'),
-                      ),
-                    ],
-                  ),
-                )
-              : ListView(
-                  children: [
-                    // Avatar + Name
-                    Container(
-                      padding: const EdgeInsets.all(24),
-                      color: Colors.white,
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 36,
-                            backgroundColor: kPrimaryBg,
-                            child: Text(
-                              _user!.fullName.isNotEmpty
-                                  ? _user!.fullName[0].toUpperCase()
-                                  : '?',
-                              style: const TextStyle(
-                                fontSize: 28,
-                                fontWeight: FontWeight.w700,
-                                color: kPrimary,
-                              ),
+      body: RefreshIndicator(
+        color: kPrimary,
+        onRefresh: _load,
+        child: CustomScrollView(
+          slivers: [
+            SliverToBoxAdapter(
+              child: Column(
+                children: [
+                  // ── Profil başlık bölümü ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Avatar
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: kPrimaryBg,
+                          child: Text(
+                            initial,
+                            style: const TextStyle(
+                              fontSize: 30,
+                              fontWeight: FontWeight.w700,
+                              color: kPrimary,
                             ),
                           ),
-                          const SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  _user!.fullName,
-                                  style: const TextStyle(
-                                    fontSize: 18,
-                                    fontWeight: FontWeight.w700,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  '@${_user!.username}',
-                                  style: const TextStyle(
-                                    color: Color(0xFF6B7280),
-                                    fontSize: 14,
-                                  ),
-                                ),
-                                const SizedBox(height: 2),
-                                Text(
-                                  _user!.email,
-                                  style: const TextStyle(
-                                    color: Color(0xFF6B7280),
-                                    fontSize: 13,
-                                  ),
-                                ),
-                              ],
+                        ),
+                        const SizedBox(width: 20),
+                        // İstatistikler
+                        Expanded(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _StatItem(count: _listings.length, label: 'İlan'),
+                              const _StatItem(count: 0, label: 'Takipçi'),
+                              const _StatItem(count: 0, label: 'Takip'),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Ad ve email
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 10, 16, 0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          fullName,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w700,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (email.isNotEmpty)
+                          Text(
+                            email,
+                            style: const TextStyle(
+                              fontSize: 12,
+                              color: Color(0xFF9CA3AF),
+                            ),
+                          ),
+                      ],
+                    ),
+                  ),
+                  // Profili Düzenle butonu
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => _EditProfileScreen(user: _user),
+                        ),
+                      ).then((_) => _load()),
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 36),
+                        side: const BorderSide(color: Color(0xFFD1D5DB)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        foregroundColor: const Color(0xFF1A1A1A),
+                        textStyle: const TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      child: const Text('Profili Düzenle'),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  // Separator
+                  const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                ],
+              ),
+            ),
+            // ── İlanlar grid ──
+            _listings.isEmpty
+                ? const SliverFillRemaining(
+                    child: Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.grid_off_outlined,
+                              size: 52, color: Color(0xFFD1D5DB)),
+                          SizedBox(height: 12),
+                          Text(
+                            'Henüz ilan yok',
+                            style: TextStyle(
+                              color: Color(0xFF6B7280),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          SizedBox(height: 4),
+                          Text(
+                            'İlk ilanını ver!',
+                            style: TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 13,
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    _MenuSection(
-                      title: 'İlanlarım',
-                      items: [
-                        _MenuItem(
-                          icon: Icons.list_alt_outlined,
-                          label: 'Aktif İlanlarım',
-                          onTap: () {},
-                        ),
-                        _MenuItem(
-                          icon: Icons.archive_outlined,
-                          label: 'Pasif İlanlarım',
-                          onTap: () {},
-                        ),
-                        _MenuItem(
-                          icon: Icons.favorite_outline,
-                          label: 'Favorilerim',
-                          onTap: () {},
-                        ),
-                      ],
+                  )
+                : SliverGrid(
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) => _ListingGridItem(listing: _listings[i]),
+                      childCount: _listings.length,
                     ),
-                    const SizedBox(height: 8),
-                    _MenuSection(
-                      title: 'Hesap',
-                      items: [
-                        _MenuItem(
-                          icon: Icons.person_outline,
-                          label: 'Profili Düzenle',
-                          onTap: () {},
-                        ),
-                        _MenuItem(
-                          icon: Icons.lock_outline,
-                          label: 'Şifre Değiştir',
-                          onTap: () {},
-                        ),
-                        _MenuItem(
-                          icon: Icons.notifications_outlined,
-                          label: 'Bildirim Ayarları',
-                          onTap: () {},
-                        ),
-                      ],
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3,
+                      crossAxisSpacing: 2,
+                      mainAxisSpacing: 2,
                     ),
-                    const SizedBox(height: 8),
-                    Container(
-                      color: Colors.white,
-                      child: ListTile(
-                        leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
-                        title: const Text(
-                          'çıkış yap',
-                          style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.w600),
-                        ),
-                        onTap: _logout,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                  ),
+          ],
+        ),
+      ),
     );
   }
 }
 
-class _MenuSection extends StatelessWidget {
+class _StatItem extends StatelessWidget {
+  final int count;
+  final String label;
+  const _StatItem({required this.count, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          '$count',
+          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+        ),
+      ],
+    );
+  }
+}
+
+class _ListingGridItem extends StatelessWidget {
+  final dynamic listing;
+  const _ListingGridItem({required this.listing});
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = listing['image_url'];
+    return Container(
+      color: const Color(0xFFF3F4F6),
+      child: imageUrl != null
+          ? Image.network(imageUrl, fit: BoxFit.cover)
+          : const Center(
+              child: Icon(Icons.image_outlined,
+                  size: 28, color: Color(0xFFD1D5DB)),
+            ),
+    );
+  }
+}
+
+// ── Ayarlar ekranı ────────────────────────────────────────────────────────────
+
+class _SettingsScreen extends StatelessWidget {
+  const _SettingsScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Ayarlar')),
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: ListView(
+        children: [
+          const SizedBox(height: 8),
+          _SettingsSection(
+            title: 'İlanlarım',
+            items: [
+              _SettingsTile(
+                icon: Icons.list_alt_outlined,
+                label: 'Aktif İlanlarım',
+                onTap: () {},
+              ),
+              _SettingsTile(
+                icon: Icons.archive_outlined,
+                label: 'Pasif İlanlarım',
+                onTap: () {},
+              ),
+              _SettingsTile(
+                icon: Icons.favorite_outline,
+                label: 'Favorilerim',
+                onTap: () {},
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _SettingsSection(
+            title: 'Hesap',
+            items: [
+              _SettingsTile(
+                icon: Icons.lock_outline,
+                label: 'Şifre Değiştir',
+                onTap: () {},
+              ),
+              _SettingsTile(
+                icon: Icons.notifications_outlined,
+                label: 'Bildirim Ayarları',
+                onTap: () {},
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Container(
+            color: Colors.white,
+            child: ListTile(
+              leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
+              title: const Text(
+                'Çıkış Yap',
+                style: TextStyle(
+                  color: Color(0xFFEF4444),
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              onTap: () async {
+                final nav = Navigator.of(context);
+                await AuthService.logout();
+                nav.pushNamedAndRemoveUntil('/login', (_) => false);
+              },
+            ),
+          ),
+          const SizedBox(height: 24),
+        ],
+      ),
+    );
+  }
+}
+
+class _SettingsSection extends StatelessWidget {
   final String title;
-  final List<_MenuItem> items;
-  const _MenuSection({required this.title, required this.items});
+  final List<Widget> items;
+  const _SettingsSection({required this.title, required this.items});
 
   @override
   Widget build(BuildContext context) {
@@ -212,9 +363,9 @@ class _MenuSection extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
-              title,
+              title.toUpperCase(),
               style: const TextStyle(
-                fontSize: 12,
+                fontSize: 11,
                 fontWeight: FontWeight.w600,
                 color: Color(0xFF9CA3AF),
                 letterSpacing: 0.5,
@@ -228,19 +379,126 @@ class _MenuSection extends StatelessWidget {
   }
 }
 
-class _MenuItem extends StatelessWidget {
+class _SettingsTile extends StatelessWidget {
   final IconData icon;
   final String label;
   final VoidCallback onTap;
-  const _MenuItem({required this.icon, required this.label, required this.onTap});
+  const _SettingsTile(
+      {required this.icon, required this.label, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       leading: Icon(icon, color: const Color(0xFF374151)),
-      title: Text(label, style: const TextStyle(fontSize: 15)),
-      trailing: const Icon(Icons.chevron_right, color: Color(0xFFD1D5DB)),
+      title: Text(label, style: const TextStyle(fontSize: 14)),
+      trailing:
+          const Icon(Icons.chevron_right, color: Color(0xFFD1D5DB), size: 20),
       onTap: onTap,
+    );
+  }
+}
+
+// ── Profil düzenle ekranı ──────────────────────────────────────────────────
+
+class _EditProfileScreen extends StatefulWidget {
+  final Map<String, dynamic>? user;
+  const _EditProfileScreen({required this.user});
+
+  @override
+  State<_EditProfileScreen> createState() => _EditProfileScreenState();
+}
+
+class _EditProfileScreenState extends State<_EditProfileScreen> {
+  late final TextEditingController _nameCtrl;
+  late final TextEditingController _usernameCtrl;
+  bool _saving = false;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _nameCtrl = TextEditingController(
+        text: widget.user?['full_name'] ?? '');
+    _usernameCtrl = TextEditingController(
+        text: widget.user?['username'] ?? '');
+  }
+
+  @override
+  void dispose() {
+    _nameCtrl.dispose();
+    _usernameCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _save() async {
+    final name = _nameCtrl.text.trim();
+    final username = _usernameCtrl.text.trim();
+    if (name.isEmpty || username.isEmpty) {
+      setState(() => _error = 'Tüm alanları doldurun');
+      return;
+    }
+    setState(() { _saving = true; _error = null; });
+    // TODO: API call when PATCH /auth/me is available
+    await Future.delayed(const Duration(milliseconds: 300));
+    if (mounted) Navigator.pop(context);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Profili Düzenle'),
+        actions: [
+          TextButton(
+            onPressed: _saving ? null : _save,
+            child: Text(
+              'Kaydet',
+              style: TextStyle(
+                color: _saving ? Colors.grey : kPrimary,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+        ],
+      ),
+      body: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          children: [
+            // Avatar büyük
+            CircleAvatar(
+              radius: 44,
+              backgroundColor: kPrimaryBg,
+              child: Text(
+                (_nameCtrl.text.isNotEmpty
+                        ? _nameCtrl.text[0]
+                        : '?')
+                    .toUpperCase(),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.w700,
+                  color: kPrimary,
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            if (_error != null) ...[
+              Text(_error!,
+                  style: const TextStyle(color: Colors.red, fontSize: 13)),
+              const SizedBox(height: 12),
+            ],
+            TextField(
+              controller: _nameCtrl,
+              decoration: const InputDecoration(labelText: 'Ad Soyad'),
+            ),
+            const SizedBox(height: 14),
+            TextField(
+              controller: _usernameCtrl,
+              decoration: const InputDecoration(labelText: 'Kullanıcı Adı'),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
