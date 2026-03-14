@@ -439,7 +439,7 @@
                         </div>
                         <div class="stream-info">
                             <div class="stream-title">${escHtml(s.title)}</div>
-                            <div class="stream-host">@${escHtml(s.host.username)}</div>
+                            <div class="stream-host"><a href="/profil.html?u=${encodeURIComponent(s.host.username)}" onclick="event.stopPropagation()" style="color:var(--primary);text-decoration:none;">@${escHtml(s.host.username)}</a></div>
                             <button class="btn btn-primary btn-full" onclick="joinStream(${s.id})">Katıl</button>
                         </div>
                     </div>`).join('');

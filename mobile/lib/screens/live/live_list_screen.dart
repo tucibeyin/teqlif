@@ -4,6 +4,7 @@ import '../../models/stream.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/auth_service.dart';
+import '../public_profile_screen.dart';
 import 'host_stream_screen.dart';
 import 'viewer_stream_screen.dart';
 
@@ -337,11 +338,23 @@ class _StreamCard extends StatelessWidget {
                       overflow: TextOverflow.ellipsis,
                     ),
                     const SizedBox(height: 3),
-                    Text(
-                      '@${stream.host.username}',
-                      style: const TextStyle(
-                        color: Color(0xFF6B7280),
-                        fontSize: 12,
+                    GestureDetector(
+                      onTap: () => Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => PublicProfileScreen(
+                            username: stream.host.username,
+                            userId: stream.host.id,
+                          ),
+                        ),
+                      ),
+                      child: Text(
+                        '@${stream.host.username}',
+                        style: const TextStyle(
+                          color: kPrimary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 6),

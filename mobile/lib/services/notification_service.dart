@@ -80,6 +80,17 @@ class NotificationService {
     return [];
   }
 
+  static Future<Map<String, dynamic>?> getUserByUsername(String username) async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/users/$username'),
+        headers: await _headers(),
+      );
+      if (resp.statusCode == 200) return jsonDecode(resp.body) as Map<String, dynamic>;
+    } catch (_) {}
+    return null;
+  }
+
   static Future<bool> sendMessage(int receiverId, String content) async {
     try {
       final resp = await http.post(

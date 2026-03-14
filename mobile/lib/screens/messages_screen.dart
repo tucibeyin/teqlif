@@ -6,6 +6,7 @@ import '../config/theme.dart';
 import '../config/api.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import 'public_profile_screen.dart';
 
 class MessagesScreen extends StatelessWidget {
   const MessagesScreen({super.key});
@@ -184,9 +185,10 @@ class _MessagesTabState extends State<_MessagesTab> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => _ChatScreen(
+                  builder: (_) => DirectChatScreen(
                     otherUserId: otherId,
-                    otherUsername: fullName,
+                    displayName: fullName,
+                    otherHandle: username,
                   ),
                 ),
               ).then((_) => _load());
@@ -350,20 +352,23 @@ class _NotificationsTabState extends State<_NotificationsTab> {
 
 // ── Chat Screen ───────────────────────────────────────────────────────────────
 
-class _ChatScreen extends StatefulWidget {
+class DirectChatScreen extends StatefulWidget {
   final int otherUserId;
-  final String otherUsername;
+  final String displayName;
+  final String otherHandle;
 
-  const _ChatScreen({
+  const DirectChatScreen({
+    super.key,
     required this.otherUserId,
-    required this.otherUsername,
+    required this.displayName,
+    required this.otherHandle,
   });
 
   @override
-  State<_ChatScreen> createState() => _ChatScreenState();
+  State<DirectChatScreen> createState() => _DirectChatScreenState();
 }
 
-class _ChatScreenState extends State<_ChatScreen> {
+class _DirectChatScreenState extends State<DirectChatScreen> {
   final _textCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<Map<String, dynamic>> _messages = [];
@@ -486,7 +491,7 @@ class _ChatScreenState extends State<_ChatScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.otherUsername),
+        title: Text(widget.displayName),
         leading: const BackButton(),
       ),
       body: Column(
@@ -628,5 +633,23 @@ class _ChatScreenState extends State<_ChatScreen> {
         ],
       ),
     );
+  }
+}
+
+// Inline profile navigation wrapper (avoids circular import)
+class _ProfileView extends StatelessWidget {
+  final String username;
+  final int userId;
+  final String displayName;
+
+  const _ProfileView({
+    required this.username,
+    required this.userId,
+    required this.displayName,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PublicProfileScreen(username: username, userId: userId);
   }
 }

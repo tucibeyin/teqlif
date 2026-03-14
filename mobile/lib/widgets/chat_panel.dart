@@ -5,6 +5,7 @@ import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../models/chat.dart';
+import '../screens/public_profile_screen.dart';
 import '../services/storage_service.dart';
 
 class _TimedMessage {
@@ -258,35 +259,42 @@ class _MessageItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    const shadow = [
+      Shadow(blurRadius: 6, color: Colors.black),
+      Shadow(blurRadius: 12, color: Colors.black),
+    ];
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      child: RichText(
-        text: TextSpan(
-          style: const TextStyle(fontSize: 12.5, height: 1.35),
-          children: [
-            TextSpan(
-              text: '@${message.username} ',
+      child: Wrap(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => PublicProfileScreen(username: message.username),
+              ),
+            ),
+            child: Text(
+              '@${message.username} ',
               style: const TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
                 color: Color(0xFF60A5FA),
                 fontWeight: FontWeight.w700,
-                shadows: [
-                  Shadow(blurRadius: 6, color: Colors.black),
-                  Shadow(blurRadius: 12, color: Colors.black),
-                ],
+                shadows: shadow,
               ),
             ),
-            TextSpan(
-              text: message.content,
-              style: const TextStyle(
-                color: Colors.white,
-                shadows: [
-                  Shadow(blurRadius: 6, color: Colors.black),
-                  Shadow(blurRadius: 12, color: Colors.black),
-                ],
-              ),
+          ),
+          Text(
+            message.content,
+            style: const TextStyle(
+              fontSize: 12.5,
+              height: 1.35,
+              color: Colors.white,
+              shadows: shadow,
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

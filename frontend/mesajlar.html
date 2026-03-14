@@ -409,12 +409,17 @@
             _currentOtherUserId = null;
         }
 
-        function showChat(userId, username) {
+        function showChat(userId, username, handle) {
             _currentOtherUserId = userId;
             _currentOtherUsername = username;
             document.getElementById('listView').style.display = 'none';
             document.getElementById('chatView').style.display = '';
-            document.getElementById('chatTitle').textContent = username;
+            const titleEl = document.getElementById('chatTitle');
+            if (handle) {
+                titleEl.innerHTML = `<a href="/profil.html?u=${encodeURIComponent(handle)}" style="color:inherit;text-decoration:none;">${escHtml(username)}</a>`;
+            } else {
+                titleEl.textContent = username;
+            }
             loadMessages(userId);
         }
 
@@ -484,7 +489,7 @@
                             </div>
                         </div>
                     `;
-                    item.addEventListener('click', () => showChat(conv.user_id, conv.full_name || conv.username));
+                    item.addEventListener('click', () => showChat(conv.user_id, conv.full_name || conv.username, conv.username));
                     convList.appendChild(item);
                 });
             } catch (e) {
@@ -602,6 +607,17 @@
         // ── Init ───────────────────────────────────────────────────────────────
         loadConversations();
         loadNotifications();
+
+        // Auto-open chat if URL has ?to_id=&to_name= (e.g. from profil.html)
+        (function checkUrlParams() {
+            const p = new URLSearchParams(window.location.search);
+            const toId = parseInt(p.get('to_id'), 10);
+            const toName = p.get('to_name') || '';
+            const toHandle = p.get('to_handle') || '';
+            if (toId && toName) {
+                showChat(toId, toName, toHandle);
+            }
+        })();
     </script>
 </body>
 </html>
