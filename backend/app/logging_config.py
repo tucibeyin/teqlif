@@ -33,9 +33,9 @@ def setup_logging() -> logging.Logger:
     error_handler.setLevel(logging.ERROR)
     error_handler.setFormatter(fmt)
 
-    # Konsol (uvicorn'un zaten basar, sadece ERROR göster)
+    # Konsol (uvicorn'un zaten basar, WARNING+ göster)
     console_handler = logging.StreamHandler()
-    console_handler.setLevel(logging.ERROR)
+    console_handler.setLevel(logging.WARNING)
     console_handler.setFormatter(fmt)
 
     root = logging.getLogger()
