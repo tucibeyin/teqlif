@@ -119,10 +119,12 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
           // ── Video (tam ekran) ───────────────────────────────────────────
           if (_remoteVideoTrack != null)
             Positioned.fill(
-              child: VideoTrackRenderer(
-                _remoteVideoTrack!,
-                fit: VideoViewFit.contain,
-                mirror: true,
+              child: Transform.scale(
+                scaleX: -1,
+                child: VideoTrackRenderer(
+                  _remoteVideoTrack!,
+                  fit: VideoViewFit.contain,
+                ),
               ),
             ),
 
