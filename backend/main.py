@@ -11,8 +11,9 @@ from fastapi.responses import FileResponse, JSONResponse
 
 from app.config import settings
 from app.logging_config import setup_logging
-from app.routers import auth, streams, webhooks, auction
+from app.routers import auth, streams, webhooks, auction, chat
 from app.routers.auction import pubsub_listener
+from app.routers.chat import chat_pubsub_listener
 from app.database import engine, Base
 import app.models.auction  # noqa: F401 — tablo kaydı için
 
@@ -25,12 +26,11 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     # Her worker'da Redis pub/sub dinleyicisini başlat
     task = asyncio.create_task(pubsub_listener())
+    chat_task = asyncio.create_task(chat_pubsub_listener())
     yield
     task.cancel()
-    try:
-        await task
-    except asyncio.CancelledError:
-        pass
+    chat_task.cancel()
+    await asyncio.gather(task, chat_task, return_exceptions=True)
 
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
@@ -72,6 +72,7 @@ app.include_router(auth.router)
 app.include_router(streams.router)
 app.include_router(webhooks.router)
 app.include_router(auction.router)
+app.include_router(chat.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):

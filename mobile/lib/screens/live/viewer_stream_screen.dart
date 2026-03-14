@@ -5,6 +5,7 @@ import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/stream_service.dart';
 import '../../widgets/auction_panel.dart';
+import '../../widgets/chat_panel.dart';
 
 class ViewerStreamScreen extends StatefulWidget {
   final JoinTokenOut joinToken;
@@ -288,12 +289,13 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  // TODO: Chat mesajları buraya gelecek
-                  if (showPanel)
+                  if (showPanel) ...[
+                    ChatPanel(streamId: widget.joinToken.streamId),
                     AuctionPanel(
                       streamId: widget.joinToken.streamId,
                       isHost: false,
                     ),
+                  ],
                 ],
               ),
             ),

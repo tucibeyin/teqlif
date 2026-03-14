@@ -8,6 +8,7 @@ import '../../models/stream.dart';
 import '../../services/stream_service.dart';
 import '../../services/auth_service.dart';
 import '../../widgets/auction_panel.dart';
+import '../../widgets/chat_panel.dart';
 
 class HostStreamScreen extends StatefulWidget {
   final StreamTokenOut streamToken;
@@ -297,6 +298,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                         ],
                       ),
                     ),
+                    // Sohbet paneli
+                    ChatPanel(streamId: widget.streamToken.streamId),
                     // Açık artırma paneli
                     AuctionPanel(
                       streamId: widget.streamToken.streamId,

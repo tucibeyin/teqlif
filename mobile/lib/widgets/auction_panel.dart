@@ -146,9 +146,6 @@ class _AuctionPanelState extends State<AuctionPanel> {
       ),
     );
 
-    itemCtrl.dispose();
-    priceCtrl.dispose();
-
     if (result == null) return;
     try {
       await AuctionService.startAuction(
