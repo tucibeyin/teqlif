@@ -617,7 +617,7 @@
                     document.getElementById('btnAuctionResume').style.display = 'none';
                     document.getElementById('btnAuctionEnd').style.display = 'none';
                 }
-            } else {
+            } else if (viewerControls) {
                 // Viewer
                 viewerControls.style.display = (state.status === 'active') ? 'flex' : 'none';
             }
@@ -633,15 +633,21 @@
 
         function initAuction(sid, isHost) {
             _isHostPage = isHost;
-            Auction.connect(sid, isHost, (state) => updateAuctionUI(state));
             document.getElementById('auctionPanel').classList.add('visible');
 
+            // Önce gereksiz elementleri kaldır
             if (!isHost) {
                 document.getElementById('hostSetup').remove();
                 document.getElementById('hostControls').remove();
             } else {
                 document.getElementById('viewerControls').remove();
             }
+
+            // Hemen varsayılan idle state ile render et (WS'yi bekleme)
+            updateAuctionUI({ status: 'idle', bid_count: 0 });
+
+            // WebSocket bağlan, güncelleme gelince yeniden render et
+            Auction.connect(sid, isHost, (state) => updateAuctionUI(state));
         }
 
         // HOST: Başlat
