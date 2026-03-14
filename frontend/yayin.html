@@ -6,160 +6,68 @@
     <title>Canlı Yayın — teqlif</title>
     <link rel="stylesheet" href="/static/css/main.css">
     <style>
+        /* ── Reset & full-viewport ─────────────────────────────────────── */
+        html, body {
+            height: 100%;
+            overflow: hidden;
+        }
+
         body {
             background: #0f172a;
             color: #e2e8f0;
+            display: flex;
+            flex-direction: column;
         }
 
         nav {
+            flex-shrink: 0;
             background: #1e293b;
             border-bottom-color: #334155;
         }
 
-        .logo {
-            color: var(--primary-light);
+        .logo  { color: var(--primary-light); }
+        .nav-links a { color: #94a3b8; }
+        .nav-links a:hover { background: #334155; color: var(--primary-light); }
+
+        /* ── Ana kapsayıcı ─────────────────────────────────────────────── */
+        .stream-root {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+            min-height: 0;
         }
 
-        .nav-links a {
-            color: #94a3b8;
-        }
-
-        .nav-links a:hover {
-            background: #334155;
-            color: var(--primary-light);
-        }
-
-        .stream-layout {
+        /* ── Video sütunu ──────────────────────────────────────────────── */
+        .video-col {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            align-items: center;
-            padding: 1.5rem 1rem 2rem;
-            max-width: 960px;
-            margin: 0 auto;
-            gap: 1rem;
-        }
-
-        .video-container {
-            position: relative;
-            width: 100%;
-            background: #000;
-            border-radius: 12px;
             overflow: hidden;
-            aspect-ratio: 16/9;
+            min-width: 0;
         }
 
-        .video-container video {
+        /* Video wrap: kalan alanı doldurur */
+        .video-wrap {
+            flex: 1;
+            position: relative;
+            background: #000;
+            overflow: hidden;
+            min-height: 0;
+        }
+
+        .video-wrap video {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
             object-fit: contain;
         }
 
-        .video-overlay {
-            position: absolute;
-            top: 0; left: 0; right: 0;
-            padding: 0.75rem 1rem;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-        }
-
-        .live-badge {
-            background: #ef4444;
-            color: #fff;
-            font-size: 0.72rem;
-            font-weight: 700;
-            padding: 3px 10px;
-            border-radius: 4px;
-            letter-spacing: 0.5px;
-        }
-
-        .viewer-count {
-            background: rgba(0,0,0,0.5);
-            color: #fff;
-            font-size: 0.82rem;
-            padding: 3px 10px;
-            border-radius: 20px;
-        }
-
-        .video-placeholder {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            gap: 0.75rem;
-            color: #64748b;
-        }
-
-        .video-placeholder svg {
-            opacity: 0.4;
-        }
-
-        .stream-meta {
-            width: 100%;
-            background: #1e293b;
-            border-radius: 10px;
-            padding: 1rem 1.25rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-        }
-
-        .stream-meta-info h2 {
-            font-size: 1rem;
-            font-weight: 600;
-            color: #e2e8f0;
-            margin-bottom: 0.2rem;
-        }
-
-        .stream-meta-info span {
-            font-size: 0.82rem;
-            color: #64748b;
-        }
-
-        .controls {
-            display: flex;
-            gap: 0.75rem;
-            flex-wrap: wrap;
-        }
-
-        .btn-danger {
-            background: #ef4444;
-            color: #fff;
-        }
-
-        .btn-danger:hover {
-            background: #dc2626;
-        }
-
-        .btn-slate {
-            background: #334155;
-            color: #e2e8f0;
-        }
-
-        .btn-slate:hover {
-            background: #475569;
-        }
-
-        #statusMsg {
-            font-size: 0.9rem;
-            color: #94a3b8;
-            text-align: center;
-            padding: 0.5rem 0;
-        }
-
-        #statusMsg.error {
-            color: #f87171;
-        }
-
+        /* Bağlanıyor overlay */
         .connecting-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0,0,0,0.8);
+            background: rgba(0,0,0,0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -167,6 +75,7 @@
             gap: 0.75rem;
             color: #94a3b8;
             font-size: 0.9rem;
+            z-index: 10;
         }
 
         .spinner {
@@ -178,209 +87,344 @@
             animation: spin 0.8s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── Açık Artırma Paneli ── */
-        .auction-panel {
-            width: 100%;
-            background: #1e293b;
-            border-radius: 12px;
-            padding: 1.25rem;
-            display: none;
+        /* Video placeholder (host yok) */
+        .video-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
             flex-direction: column;
-            gap: 1rem;
+            align-items: center;
+            justify-content: center;
+            gap: 0.75rem;
+            color: #64748b;
+            z-index: 5;
         }
-        .auction-panel.visible { display: flex; }
 
-        .auction-header {
+        .video-placeholder svg { opacity: 0.4; }
+
+        /* ── Video overlay: üst bar (LIVE + viewer) ─────────────────── */
+        #videoOverlay {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            padding: 0.75rem 1rem;
+            background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
-            gap: 0.5rem;
+            z-index: 6;
         }
-        .auction-title {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #e2e8f0;
-        }
-        .auction-status-badge {
-            font-size: 0.72rem;
-            font-weight: 700;
+
+        .live-badge {
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 800;
             padding: 3px 10px;
             border-radius: 4px;
-            letter-spacing: 0.5px;
+            letter-spacing: 0.6px;
         }
-        .badge-active   { background: #22c55e; color: #fff; }
-        .badge-paused   { background: #f59e0b; color: #000; }
-        .badge-idle     { background: #475569; color: #fff; }
-        .badge-ended    { background: #ef4444; color: #fff; }
 
-        .auction-bid-info {
-            text-align: center;
+        .viewer-count {
+            background: rgba(0,0,0,0.55);
+            color: #fff;
+            font-size: 0.8rem;
+            padding: 3px 10px;
+            border-radius: 20px;
         }
+
+        /* Üst bar içinde küçük status mesajı */
+        #statusMsg {
+            font-size: 0.78rem;
+            color: #94a3b8;
+            background: rgba(0,0,0,0.45);
+            padding: 2px 10px;
+            border-radius: 12px;
+            max-width: 280px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        #statusMsg:empty { display: none; }
+        #statusMsg.error { color: #f87171; }
+
+        /* ── Video overlay: alt bar (başlık + kontroller) ───────────── */
+        #streamMeta {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            padding: 0.8rem 1rem;
+            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+            z-index: 6;
+        }
+
+        .stream-meta-info h2 {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 0.1rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 300px;
+        }
+
+        .stream-meta-info span {
+            font-size: 0.75rem;
+            color: #94a3b8;
+        }
+
+        .stream-meta-controls {
+            display: flex;
+            gap: 0.5rem;
+            flex-shrink: 0;
+            align-items: center;
+        }
+
+        /* Overlay butonları küçük */
+        .stream-meta-controls .btn {
+            padding: 0.4rem 0.85rem;
+            font-size: 0.8rem;
+            border-radius: 7px;
+        }
+
+        .btn-danger { background: #ef4444; color: #fff; }
+        .btn-danger:hover { background: #dc2626; }
+        .btn-slate  { background: rgba(51,65,85,0.85); color: #e2e8f0; backdrop-filter: blur(4px); }
+        .btn-slate:hover { background: rgba(71,85,105,0.9); }
+
+        /* ── Açık Artırma Şeridi (video-col altında) ────────────────── */
+        .auction-panel {
+            display: none;
+            flex-shrink: 0;
+            background: #1e293b;
+            border-top: 1px solid #334155;
+        }
+
+        .auction-panel.visible {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            padding: 0.6rem 1rem;
+            flex-wrap: wrap;
+            min-height: 56px;
+        }
+
+        .auction-status-badge {
+            font-size: 0.65rem;
+            font-weight: 800;
+            padding: 3px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
+            flex-shrink: 0;
+            white-space: nowrap;
+        }
+
+        .badge-active  { background: #22c55e; color: #fff; }
+        .badge-paused  { background: #f59e0b; color: #000; }
+        .badge-idle    { background: #475569; color: #fff; }
+        .badge-ended   { background: #ef4444; color: #fff; }
+
+        .auction-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: #e2e8f0;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 160px;
+            flex-shrink: 0;
+        }
+
+        /* Fiyat bilgisi — şerit içinde yatay */
+        .auction-bid-info {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
         .auction-current-price {
-            font-size: 2rem;
+            font-size: 1.25rem;
             font-weight: 800;
             color: #22c55e;
-        }
-        .auction-current-bidder {
-            font-size: 0.82rem;
-            color: #64748b;
-            margin-top: 0.2rem;
-        }
-        .auction-bid-count {
-            font-size: 0.8rem;
-            color: #475569;
+            line-height: 1;
         }
 
-        /* Host setup formu */
+        .auction-current-bidder,
+        .auction-bid-count {
+            font-size: 0.72rem;
+            color: #64748b;
+            line-height: 1.3;
+        }
+
+        /* Host setup formu — şerit içinde yatay */
         .auction-setup {
             display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
+            gap: 0.5rem;
+            align-items: center;
+            flex: 1;
         }
+
         .auction-setup input {
             background: #0f172a;
             border: 1px solid #334155;
             color: #e2e8f0;
-            border-radius: 8px;
-            padding: 0.6rem 0.9rem;
-            font-size: 0.9rem;
-            width: 100%;
-            box-sizing: border-box;
-        }
-        .auction-setup input:focus {
+            border-radius: 6px;
+            padding: 0.35rem 0.65rem;
+            font-size: 0.8rem;
             outline: none;
-            border-color: var(--primary);
+            min-width: 0;
         }
+
+        .auction-setup input:first-child { flex: 2; }
+        .auction-setup input:last-child  { flex: 1; }
+
+        .auction-setup input:focus { border-color: var(--primary); }
 
         /* Host kontrol butonları */
         .auction-host-controls {
             display: flex;
-            gap: 0.5rem;
-            flex-wrap: wrap;
+            gap: 0.4rem;
+            align-items: center;
         }
-        .auction-host-controls .btn { flex: 1; min-width: 90px; }
+
+        .auction-host-controls .btn,
+        .auction-viewer-controls .btn {
+            padding: 0.35rem 0.75rem;
+            font-size: 0.78rem;
+            border-radius: 6px;
+        }
+
+        .btn-green { background: #16a34a; color: #fff; }
+        .btn-green:hover { background: #15803d; }
+        .btn-amber { background: #d97706; color: #fff; }
+        .btn-amber:hover { background: #b45309; }
 
         /* Viewer teklif butonları */
         .auction-viewer-controls {
             display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
+            align-items: center;
+            gap: 0.4rem;
+            flex-wrap: wrap;
         }
-        .bid-presets {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .bid-presets .btn { flex: 1; font-size: 0.82rem; }
-        .bid-custom-row {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .bid-custom-row input {
-            flex: 1;
+
+        .auction-viewer-controls input {
             background: #0f172a;
             border: 1px solid #334155;
             color: #e2e8f0;
-            border-radius: 8px;
-            padding: 0.6rem 0.9rem;
-            font-size: 0.9rem;
-        }
-        .bid-custom-row input:focus {
+            border-radius: 6px;
+            padding: 0.35rem 0.65rem;
+            font-size: 0.8rem;
+            width: 100px;
             outline: none;
-            border-color: var(--primary);
         }
-        .btn-green {
-            background: #16a34a;
-            color: #fff;
-        }
-        .btn-green:hover { background: #15803d; }
-        .btn-amber {
-            background: #d97706;
-            color: #fff;
-        }
-        .btn-amber:hover { background: #b45309; }
+
+        .auction-viewer-controls input:focus { border-color: var(--primary); }
+
         #auctionMsg {
-            font-size: 0.82rem;
+            font-size: 0.75rem;
             color: #94a3b8;
-            text-align: center;
+            margin-left: auto;
         }
-        #auctionMsg.error { color: #f87171; }
+
+        #auctionMsg.error   { color: #f87171; }
         #auctionMsg.success { color: #4ade80; }
 
-        /* ── Sohbet Paneli ── */
-        .chat-panel {
-            width: 100%;
+        /* ── Sohbet sütunu ─────────────────────────────────────────────── */
+        .chat-col {
+            width: 290px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
             background: #1e293b;
-            border-radius: 12px;
-            padding: 1rem 1.25rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.75rem;
+            border-left: 1px solid #334155;
+            overflow: hidden;
         }
-        .chat-label {
-            font-size: 0.72rem;
-            font-weight: 700;
+
+        .chat-col-header {
+            flex-shrink: 0;
+            padding: 0.65rem 1rem;
+            border-bottom: 1px solid #334155;
+            font-size: 0.68rem;
+            font-weight: 800;
             color: #64748b;
-            letter-spacing: 0.6px;
+            letter-spacing: 0.7px;
         }
-        #chatMessages {
-            height: 180px;
-            overflow-y: auto;
+
+        /* chatPanel: JS panel.style.display = '' yaptığında CSS flex devreye girer */
+        #chatPanel {
+            flex: 1;
             display: flex;
             flex-direction: column;
-            gap: 0.2rem;
-            padding-right: 0.25rem;
+            overflow: hidden;
+            min-height: 0;
         }
+
+        #chatMessages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            min-height: 0;
+        }
+
         #chatMessages::-webkit-scrollbar { width: 3px; }
         #chatMessages::-webkit-scrollbar-track { background: transparent; }
         #chatMessages::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+
         .chat-msg {
-            font-size: 0.83rem;
+            font-size: 0.82rem;
             line-height: 1.45;
             word-break: break-word;
         }
-        .chat-username {
-            color: #60a5fa;
-            font-weight: 700;
-        }
-        .chat-content {
-            color: #e2e8f0;
-        }
+
+        .chat-username { color: #60a5fa; font-weight: 700; }
+        .chat-content  { color: #e2e8f0; }
+
         .chat-empty {
-            font-size: 0.82rem;
+            font-size: 0.8rem;
             color: #475569;
             text-align: center;
             margin-top: 0.5rem;
         }
+
         .chat-input-row {
+            flex-shrink: 0;
             display: flex;
             gap: 0.5rem;
             align-items: center;
+            padding: 0.65rem 0.75rem;
+            border-top: 1px solid #334155;
         }
+
         .chat-input-row input {
             flex: 1;
             background: #0f172a;
             border: 1px solid #334155;
             color: #e2e8f0;
             border-radius: 20px;
-            padding: 0.5rem 1rem;
-            font-size: 0.85rem;
+            padding: 0.45rem 0.9rem;
+            font-size: 0.83rem;
             outline: none;
+            min-width: 0;
         }
-        .chat-input-row input:focus {
-            border-color: var(--primary);
-        }
+
+        .chat-input-row input:focus { border-color: var(--primary); }
+
         .chat-send-btn {
             background: var(--primary);
             color: #fff;
             border: none;
             border-radius: 50%;
-            width: 34px;
-            height: 34px;
+            width: 32px;
+            height: 32px;
             cursor: pointer;
             display: flex;
             align-items: center;
@@ -388,6 +432,7 @@
             flex-shrink: 0;
             transition: background 0.15s;
         }
+
         .chat-send-btn:hover { background: var(--primary-dark); }
     </style>
 </head>
@@ -399,107 +444,119 @@
         </div>
     </nav>
 
-    <div class="stream-layout">
-        <div id="statusMsg"></div>
+    <div class="stream-root">
 
-        <div class="video-container" id="videoContainer">
-            <div class="connecting-overlay" id="connectingOverlay">
-                <div class="spinner"></div>
-                <span>Bağlanıyor...</span>
-            </div>
+        <!-- ── Sol: Video + Açık Artırma ───────────────────────────── -->
+        <div class="video-col">
 
-            <!-- Host: lokal video; Viewer: uzak video -->
-            <video id="mainVideo" autoplay playsinline muted style="display:none;"></video>
-            <audio id="remoteAudio" autoplay style="display:none;"></audio>
+            <div class="video-wrap" id="videoContainer">
 
-            <div class="video-overlay" id="videoOverlay" style="display:none;">
-                <span class="live-badge">CANLI</span>
-                <span class="viewer-count" id="viewerCount">👁 0</span>
-            </div>
+                <!-- Medya elementleri -->
+                <video id="mainVideo" autoplay playsinline muted style="display:none;"></video>
+                <audio id="remoteAudio" autoplay style="display:none;"></audio>
 
-            <div class="video-placeholder" id="videoPlaceholder" style="display:none;">
-                <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-                    <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-                </svg>
-                <span id="placeholderText">Yayın bekleniyor...</span>
-            </div>
-        </div>
+                <!-- Bağlanıyor spinner -->
+                <div class="connecting-overlay" id="connectingOverlay">
+                    <div class="spinner"></div>
+                    <span>Bağlanıyor...</span>
+                </div>
 
-        <!-- ── Sohbet Paneli ── -->
-        <div class="chat-panel" id="chatPanel" style="display:none;">
-            <div class="chat-label">CANLI SOHBET</div>
-            <div id="chatMessages">
-                <div class="chat-empty" id="chatEmpty">Henüz mesaj yok. İlk mesajı sen gönder!</div>
-            </div>
-            <div class="chat-input-row" id="chatInputRow" style="display:none;">
-                <input type="text" id="chatInput" placeholder="Mesaj yaz..." maxlength="200" autocomplete="off">
-                <button class="chat-send-btn" id="chatSendBtn" title="Gönder">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                        <line x1="22" y1="2" x2="11" y2="13"></line>
-                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                <!-- Video placeholder (host yok / bekleniyor) -->
+                <div class="video-placeholder" id="videoPlaceholder" style="display:none;">
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+                        <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
                     </svg>
-                </button>
-            </div>
-        </div>
+                    <span id="placeholderText">Yayın bekleniyor...</span>
+                </div>
 
-        <!-- ── Açık Artırma Paneli ── -->
-        <div class="auction-panel" id="auctionPanel">
-            <div class="auction-header">
-                <span class="auction-title" id="auctionItemName">Açık Artırma</span>
+                <!-- Üst bar: LIVE + izleyici + status -->
+                <div id="videoOverlay" style="display:none;">
+                    <span class="live-badge">CANLI</span>
+                    <div id="statusMsg"></div>
+                    <span class="viewer-count" id="viewerCount">👁 0</span>
+                </div>
+
+                <!-- Alt bar: başlık + kontrol butonları -->
+                <div id="streamMeta" style="display:none;">
+                    <div class="stream-meta-info">
+                        <h2 id="metaTitle">—</h2>
+                        <span id="metaHost"></span>
+                    </div>
+                    <div class="stream-meta-controls">
+                        <button class="btn btn-slate" id="btnToggleMic" style="display:none;">🎙 Mikrofon Kapat</button>
+                        <button class="btn btn-danger" id="btnEndStream" style="display:none;">Yayını Bitir</button>
+                        <button class="btn btn-slate" id="btnLeave" style="display:none;">Ayrıl</button>
+                    </div>
+                </div>
+
+            </div><!-- /.video-wrap -->
+
+            <!-- ── Açık Artırma Şeridi ───────────────────────────── -->
+            <div class="auction-panel" id="auctionPanel">
+
                 <span class="auction-status-badge badge-idle" id="auctionBadge">Bekleniyor</span>
-            </div>
+                <span class="auction-title" id="auctionItemName">Açık Artırma</span>
 
-            <div class="auction-bid-info" id="auctionBidInfo" style="display:none;">
-                <div class="auction-current-price" id="auctionPrice">—</div>
-                <div class="auction-current-bidder" id="auctionBidder"></div>
-                <div class="auction-bid-count" id="auctionBidCount"></div>
-            </div>
+                <!-- Fiyat bilgisi (active/paused/ended) -->
+                <div class="auction-bid-info" id="auctionBidInfo" style="display:none;">
+                    <div class="auction-current-price" id="auctionPrice">—</div>
+                    <div>
+                        <div class="auction-current-bidder" id="auctionBidder"></div>
+                        <div class="auction-bid-count" id="auctionBidCount"></div>
+                    </div>
+                </div>
 
-            <!-- HOST: Setup formu (idle durumunda göster) -->
-            <div class="auction-setup" id="hostSetup" style="display:none;">
-                <input type="text" id="auctionItemInput" placeholder="Ürün adı (örn: iPhone 15 Pro)" maxlength="200">
-                <input type="number" id="auctionStartPrice" placeholder="Başlangıç fiyatı (₺)" min="0" step="1">
-            </div>
+                <!-- HOST: ürün girişi (idle) -->
+                <div class="auction-setup" id="hostSetup" style="display:none;">
+                    <input type="text" id="auctionItemInput" placeholder="Ürün adı" maxlength="200">
+                    <input type="number" id="auctionStartPrice" placeholder="Başlangıç (₺)" min="0" step="1">
+                </div>
 
-            <!-- HOST: Kontrol butonları -->
-            <div class="auction-host-controls" id="hostControls" style="display:none;">
-                <button class="btn btn-green" id="btnAuctionStart">▶ Başlat</button>
-                <button class="btn btn-amber" id="btnAuctionPause" style="display:none;">⏸ Duraklat</button>
-                <button class="btn btn-slate" id="btnAuctionResume" style="display:none;">▶ Devam</button>
-                <button class="btn btn-danger" id="btnAuctionEnd" style="display:none;">⏹ Bitir</button>
-            </div>
+                <!-- HOST: kontrol butonları -->
+                <div class="auction-host-controls" id="hostControls" style="display:none;">
+                    <button class="btn btn-green" id="btnAuctionStart">▶ Başlat</button>
+                    <button class="btn btn-amber" id="btnAuctionPause" style="display:none;">⏸ Duraklat</button>
+                    <button class="btn btn-slate" id="btnAuctionResume" style="display:none;">▶ Devam</button>
+                    <button class="btn btn-danger" id="btnAuctionEnd" style="display:none;">⏹ Bitir</button>
+                </div>
 
-            <!-- VIEWER: Teklif butonları -->
-            <div class="auction-viewer-controls" id="viewerControls" style="display:none;">
-                <div class="bid-presets">
+                <!-- VIEWER: teklif butonları -->
+                <div class="auction-viewer-controls" id="viewerControls" style="display:none;">
                     <button class="btn btn-slate" onclick="quickBid(100)">+₺100</button>
                     <button class="btn btn-slate" onclick="quickBid(200)">+₺200</button>
                     <button class="btn btn-slate" onclick="quickBid(500)">+₺500</button>
                     <button class="btn btn-slate" onclick="quickBid(1000)">+₺1000</button>
-                </div>
-                <div class="bid-custom-row">
-                    <input type="number" id="customBidInput" placeholder="Özel teklif (₺)" min="1" step="1">
+                    <input type="number" id="customBidInput" placeholder="Özel (₺)" min="1" step="1">
                     <button class="btn btn-green" id="btnCustomBid">Teklif Ver</button>
                 </div>
-            </div>
 
-            <div id="auctionMsg"></div>
-        </div>
+                <div id="auctionMsg"></div>
 
-        <div class="stream-meta" id="streamMeta" style="display:none;">
-            <div class="stream-meta-info">
-                <h2 id="metaTitle">—</h2>
-                <span id="metaHost"></span>
+            </div><!-- /#auctionPanel -->
+
+        </div><!-- /.video-col -->
+
+        <!-- ── Sağ: Canlı Sohbet ─────────────────────────────────── -->
+        <div class="chat-col">
+            <div class="chat-col-header">CANLI SOHBET</div>
+
+            <div id="chatPanel" style="display:none;">
+                <div id="chatMessages">
+                    <div class="chat-empty" id="chatEmpty">Henüz mesaj yok. İlk mesajı sen gönder!</div>
+                </div>
+                <div class="chat-input-row" id="chatInputRow" style="display:none;">
+                    <input type="text" id="chatInput" placeholder="Mesaj yaz..." maxlength="200" autocomplete="off">
+                    <button class="chat-send-btn" id="chatSendBtn" title="Gönder">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="22" y1="2" x2="11" y2="13"></line>
+                            <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                        </svg>
+                    </button>
+                </div>
             </div>
-            <div class="controls">
-                <!-- Host kontrolleri -->
-                <button class="btn btn-slate" id="btnToggleMic" style="display:none;">🎙 Mikrofon Kapat</button>
-                <button class="btn btn-danger" id="btnEndStream" style="display:none;">Yayını Bitir</button>
-                <!-- Viewer kontrolleri -->
-                <button class="btn btn-slate" id="btnLeave" style="display:none;">Ayrıl</button>
-            </div>
-        </div>
-    </div>
+        </div><!-- /.chat-col -->
+
+    </div><!-- /.stream-root -->
 
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
@@ -662,7 +719,7 @@
             window.location.href = '/canli.html';
         });
 
-        // ── Açık Artırma ────────────────────────────────────────────────────
+        // ── Açık Artırma ────────────────────────────────────────────────
 
         let _currentAuctionStatus = 'idle';
         let _currentBid = 0;
@@ -687,7 +744,7 @@
                 document.getElementById('auctionPrice').textContent = '₺' + Number(state.current_bid).toLocaleString('tr-TR');
                 document.getElementById('auctionBidder').textContent = state.current_bidder
                     ? `@${state.current_bidder} en yüksek teklif sahibi`
-                    : (state.start_price != null ? `Başlangıç fiyatı: ₺${Number(state.start_price).toLocaleString('tr-TR')}` : '');
+                    : (state.start_price != null ? `Başlangıç: ₺${Number(state.start_price).toLocaleString('tr-TR')}` : '');
                 document.getElementById('auctionBidCount').textContent = state.bid_count > 0 ? `${state.bid_count} teklif` : '';
                 bidInfo.style.display = 'block';
             }
@@ -802,14 +859,13 @@
         async function submitBid(amount) {
             try {
                 const state = await Auction.placeBid(amount);
-                // REST response'dan anlık güncelle (pub/sub'u beklemeden)
                 if (state) updateAuctionUI(state);
                 setAuctionMsg(`₺${Number(amount).toLocaleString('tr-TR')} teklifiniz alındı!`, 'success');
                 document.getElementById('customBidInput') && (document.getElementById('customBidInput').value = '');
             } catch (e) { setAuctionMsg(e.message, 'error'); }
         }
 
-        // ── Sohbet ──────────────────────────────────────────────────────────
+        // ── Sohbet ──────────────────────────────────────────────────────
 
         function initChat(sid) {
             const panel = document.getElementById('chatPanel');
@@ -822,7 +878,6 @@
             Chat.connect(sid);
 
             // İlk mesaj gelince "empty" yazısını kaldır
-            const origAppend = Chat._appendForWeb;
             const messages = document.getElementById('chatMessages');
             const observer = new MutationObserver(() => {
                 const empty = document.getElementById('chatEmpty');
