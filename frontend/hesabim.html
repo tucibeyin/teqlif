@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hesabım — teqlif</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        .profile-wrap {
+            max-width: 680px;
+            margin: 2.5rem auto;
+            padding: 0 1.25rem 4rem;
+        }
+
+        /* ── Profil kartı ─────────────────────────────────────────── */
+        .profile-card {
+            background: var(--white);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            padding: 1.75rem;
+            display: flex;
+            align-items: center;
+            gap: 1.25rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .profile-avatar {
+            width: 72px;
+            height: 72px;
+            border-radius: 50%;
+            background: var(--primary-bg, #f0fdfa);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--primary);
+            flex-shrink: 0;
+        }
+
+        .profile-info { flex: 1; min-width: 0; }
+
+        .profile-name {
+            font-size: 1.15rem;
+            font-weight: 700;
+            margin-bottom: 0.2rem;
+        }
+
+        .profile-username {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            margin-bottom: 0.15rem;
+        }
+
+        .profile-email {
+            font-size: 0.82rem;
+            color: #94a3b8;
+        }
+
+        /* ── Menü bölümleri ───────────────────────────────────────── */
+        .menu-section {
+            background: var(--white);
+            border-radius: 14px;
+            box-shadow: var(--shadow);
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .menu-section-title {
+            padding: 0.75rem 1.25rem 0.35rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #9ca3af;
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+
+        .menu-item {
+            display: flex;
+            align-items: center;
+            gap: 0.85rem;
+            padding: 0.9rem 1.25rem;
+            text-decoration: none;
+            color: inherit;
+            border-top: 1px solid #f8fafc;
+            transition: background 0.1s;
+            cursor: pointer;
+        }
+        .menu-item:hover { background: #f8fafc; }
+
+        .menu-item-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 9px;
+            background: #f1f5f9;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .menu-item-icon svg { width: 18px; height: 18px; stroke: #374151; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+        .menu-item-label { flex: 1; font-size: 0.93rem; }
+
+        .menu-item-chevron { color: #d1d5db; }
+        .menu-item-chevron svg { width: 16px; height: 16px; stroke: #d1d5db; fill: none; stroke-width: 2; }
+
+        /* Çıkış */
+        .menu-item.danger .menu-item-icon { background: #fef2f2; }
+        .menu-item.danger .menu-item-icon svg { stroke: #ef4444; }
+        .menu-item.danger .menu-item-label { color: #ef4444; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">teqlif</a>
+        <div class="nav-links">
+            <a href="/giris.html" id="navGiris">Giriş Yap</a>
+            <a href="/kayit.html" class="btn-nav" id="navKayit">Kayıt Ol</a>
+        </div>
+    </nav>
+
+    <div class="profile-wrap">
+        <!-- Profil kartı -->
+        <div class="profile-card" id="profileCard" style="display:none;">
+            <div class="profile-avatar" id="avatarEl">?</div>
+            <div class="profile-info">
+                <div class="profile-name" id="fullNameEl">—</div>
+                <div class="profile-username" id="usernameEl">—</div>
+                <div class="profile-email" id="emailEl">—</div>
+            </div>
+        </div>
+
+        <!-- Yükleniyor -->
+        <div id="loadingState" style="text-align:center;padding:3rem;color:var(--text-muted);">
+            Yükleniyor...
+        </div>
+
+        <!-- İlanlarım -->
+        <div class="menu-section" id="menuSections" style="display:none;">
+            <div class="menu-section-title">İlanlarım</div>
+            <a href="#" class="menu-item">
+                <span class="menu-item-icon">
+                    <svg viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/></svg>
+                </span>
+                <span class="menu-item-label">Aktif İlanlarım</span>
+                <span class="menu-item-chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+            </a>
+            <a href="#" class="menu-item">
+                <span class="menu-item-icon">
+                    <svg viewBox="0 0 24 24"><path d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4"/></svg>
+                </span>
+                <span class="menu-item-label">Pasif İlanlarım</span>
+                <span class="menu-item-chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+            </a>
+            <a href="#" class="menu-item">
+                <span class="menu-item-icon">
+                    <svg viewBox="0 0 24 24"><path d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"/></svg>
+                </span>
+                <span class="menu-item-label">Favorilerim</span>
+                <span class="menu-item-chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+            </a>
+        </div>
+
+        <div class="menu-section" id="menuAccount" style="display:none;">
+            <div class="menu-section-title">Hesap</div>
+            <a href="#" class="menu-item" id="menuEditProfile">
+                <span class="menu-item-icon">
+                    <svg viewBox="0 0 24 24"><path d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/></svg>
+                </span>
+                <span class="menu-item-label">Profili Düzenle</span>
+                <span class="menu-item-chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+            </a>
+            <a href="#" class="menu-item" id="menuChangePass">
+                <span class="menu-item-icon">
+                    <svg viewBox="0 0 24 24"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                </span>
+                <span class="menu-item-label">Şifre Değiştir</span>
+                <span class="menu-item-chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+            </a>
+            <a href="#" class="menu-item">
+                <span class="menu-item-icon">
+                    <svg viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                </span>
+                <span class="menu-item-label">Bildirim Ayarları</span>
+                <span class="menu-item-chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
+            </a>
+        </div>
+
+        <div class="menu-section" id="menuDanger" style="display:none;">
+            <a href="#" class="menu-item danger" onclick="Auth.logout();return false;">
+                <span class="menu-item-icon">
+                    <svg viewBox="0 0 24 24"><path d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
+                </span>
+                <span class="menu-item-label">Çıkış Yap</span>
+            </a>
+        </div>
+
+        <!-- Profil Düzenle modal -->
+        <div class="modal-overlay" id="editModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:14px;padding:2rem;width:100%;max-width:420px;margin:1rem;">
+                <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem;">Profili Düzenle</h3>
+                <div id="editAlert" class="alert alert-error" style="display:none;margin-bottom:1rem;"></div>
+                <div class="form-group">
+                    <label>Ad Soyad</label>
+                    <input type="text" id="editFullName" placeholder="Ad Soyad">
+                </div>
+                <div class="form-group">
+                    <label>Kullanıcı Adı</label>
+                    <input type="text" id="editUsername" placeholder="kullanici_adi">
+                </div>
+                <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+                    <button class="btn btn-primary btn-full" id="btnSaveProfile">Kaydet</button>
+                    <button class="btn btn-outline" onclick="closeModal('editModal')" style="min-width:90px;">İptal</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Şifre Değiştir modal -->
+        <div class="modal-overlay" id="passModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;align-items:center;justify-content:center;">
+            <div style="background:#fff;border-radius:14px;padding:2rem;width:100%;max-width:420px;margin:1rem;">
+                <h3 style="font-size:1.1rem;font-weight:700;margin-bottom:1.25rem;">Şifre Değiştir</h3>
+                <div id="passAlert" class="alert alert-error" style="display:none;margin-bottom:1rem;"></div>
+                <div class="form-group">
+                    <label>Mevcut Şifre</label>
+                    <input type="password" id="currentPass" placeholder="Mevcut şifreniz">
+                </div>
+                <div class="form-group">
+                    <label>Yeni Şifre</label>
+                    <input type="password" id="newPass" placeholder="En az 6 karakter">
+                </div>
+                <div class="form-group">
+                    <label>Yeni Şifre (Tekrar)</label>
+                    <input type="password" id="newPass2" placeholder="Yeni şifrenizi tekrar girin">
+                </div>
+                <div style="display:flex;gap:0.75rem;margin-top:1rem;">
+                    <button class="btn btn-primary btn-full" id="btnSavePass">Değiştir</button>
+                    <button class="btn btn-outline" onclick="closeModal('passModal')" style="min-width:90px;">İptal</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        if (!Auth.getToken()) window.location.href = '/giris.html';
+
+        const user = Auth.getUser();
+
+        function renderProfile(u) {
+            if (!u) return;
+            document.getElementById('loadingState').style.display = 'none';
+            document.getElementById('profileCard').style.display = '';
+            document.getElementById('menuSections').style.display = '';
+            document.getElementById('menuAccount').style.display = '';
+            document.getElementById('menuDanger').style.display = '';
+
+            const initial = (u.full_name || u.username || '?')[0].toUpperCase();
+            document.getElementById('avatarEl').textContent = initial;
+            document.getElementById('fullNameEl').textContent = u.full_name || u.username;
+            document.getElementById('usernameEl').textContent = '@' + u.username;
+            document.getElementById('emailEl').textContent = u.email || '';
+
+            // Formlara doldur
+            document.getElementById('editFullName').value = u.full_name || '';
+            document.getElementById('editUsername').value = u.username || '';
+        }
+
+        // Önce localStorage'dan hızlı render
+        if (user) renderProfile(user);
+
+        // Sonra API'den taze veri al
+        Auth.me().then(u => renderProfile(u)).catch(() => {
+            document.getElementById('loadingState').style.display = 'none';
+        });
+
+        /* ── Modal yardımcıları ─────────────────────────────────────── */
+        function openModal(id) {
+            const m = document.getElementById(id);
+            m.style.display = 'flex';
+        }
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // Profil düzenle
+        document.getElementById('menuEditProfile').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal('editModal');
+        });
+
+        document.getElementById('btnSaveProfile').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSaveProfile');
+            const alertEl = document.getElementById('editAlert');
+            const fullName = document.getElementById('editFullName').value.trim();
+            const username = document.getElementById('editUsername').value.trim();
+
+            if (!fullName || !username) {
+                alertEl.textContent = 'Tüm alanları doldurun.';
+                alertEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Kaydediliyor...';
+            alertEl.style.display = 'none';
+
+            try {
+                const updated = await apiFetch('/auth/me', {
+                    method: 'PATCH',
+                    body: JSON.stringify({ full_name: fullName, username }),
+                });
+                // localStorage güncelle
+                const stored = Auth.getUser();
+                if (stored) {
+                    stored.full_name = updated.full_name || fullName;
+                    stored.username = updated.username || username;
+                    localStorage.setItem('teqlif_user', JSON.stringify(stored));
+                }
+                renderProfile(updated);
+                closeModal('editModal');
+            } catch (err) {
+                alertEl.textContent = err.detail || 'Kaydedilemedi.';
+                alertEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Kaydet';
+            }
+        });
+
+        // Şifre değiştir
+        document.getElementById('menuChangePass').addEventListener('click', (e) => {
+            e.preventDefault();
+            openModal('passModal');
+        });
+
+        document.getElementById('btnSavePass').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSavePass');
+            const alertEl = document.getElementById('passAlert');
+            const current = document.getElementById('currentPass').value;
+            const next = document.getElementById('newPass').value;
+            const next2 = document.getElementById('newPass2').value;
+
+            if (!current || !next || !next2) {
+                alertEl.textContent = 'Tüm alanları doldurun.';
+                alertEl.style.display = 'block';
+                return;
+            }
+            if (next !== next2) {
+                alertEl.textContent = 'Yeni şifreler eşleşmiyor.';
+                alertEl.style.display = 'block';
+                return;
+            }
+            if (next.length < 6) {
+                alertEl.textContent = 'Şifre en az 6 karakter olmalı.';
+                alertEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Değiştiriliyor...';
+            alertEl.style.display = 'none';
+
+            try {
+                await apiFetch('/auth/change-password', {
+                    method: 'POST',
+                    body: JSON.stringify({ current_password: current, new_password: next }),
+                });
+                document.getElementById('currentPass').value = '';
+                document.getElementById('newPass').value = '';
+                document.getElementById('newPass2').value = '';
+                closeModal('passModal');
+            } catch (err) {
+                alertEl.textContent = err.detail || 'Şifre değiştirilemedi.';
+                alertEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Değiştir';
+            }
+        });
+
+        // Modal dışına tıklayınca kapat
+        ['editModal', 'passModal'].forEach(id => {
+            document.getElementById(id).addEventListener('click', (e) => {
+                if (e.target.id === id) closeModal(id);
+            });
+        });
+    </script>
+</body>
+</html>

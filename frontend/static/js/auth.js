@@ -68,9 +68,9 @@ const Auth = (() => {
 
     if (token && user) {
         navLinks.innerHTML = `
-            <span style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);">
+            <a href="/hesabim.html" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;">
                 @${user.username}
-            </span>
+            </a>
             <a href="#" onclick="Auth.logout();return false;" class="btn-nav">çıkış</a>
         `;
     } else if (token && !user) {
