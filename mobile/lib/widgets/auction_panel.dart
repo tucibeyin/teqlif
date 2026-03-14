@@ -246,17 +246,24 @@ class _AuctionPanelState extends State<AuctionPanel> {
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1E293B),
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
+    return LayoutBuilder(builder: (context, constraints) {
+      // bottomSheet bazı durumlarda unconstrained width verebilir;
+      // sınırsız gelirse ekran genişliğini kullan.
+      final w = constraints.hasBoundedWidth
+          ? constraints.maxWidth
+          : MediaQuery.of(context).size.width;
+      return SizedBox(
+        width: w,
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1E293B),
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
         children: [
           _header(),
           if (_state.currentBid != null || _state.startPrice != null) ...[
@@ -273,8 +280,10 @@ class _AuctionPanelState extends State<AuctionPanel> {
                     color: _msgError ? Colors.redAccent : Colors.greenAccent)),
           ],
         ],
-      ),
-    );
+          ),
+        ),
+      );
+    });
   }
 
   Widget _header() {
