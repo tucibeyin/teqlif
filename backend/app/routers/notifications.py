@@ -39,7 +39,22 @@ async def push_notification(user_id: int, notif: dict) -> None:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
         if user and user.fcm_token:
-            await send_push(user.fcm_token, notif.get("title", ""), notif.get("body"))
+            # Count total unread notifications + messages for iOS badge
+            unread_notifs = await db.scalar(
+                select(func.count()).where(
+                    Notification.user_id == user_id,
+                    Notification.is_read == False,  # noqa: E712
+                )
+            ) or 0
+            from app.models.message import DirectMessage
+            unread_msgs = await db.scalar(
+                select(func.count()).where(
+                    DirectMessage.receiver_id == user_id,
+                    DirectMessage.is_read == False,  # noqa: E712
+                )
+            ) or 0
+            badge = unread_notifs + unread_msgs
+            await send_push(user.fcm_token, notif.get("title", ""), notif.get("body"), badge=badge)
 
     # Push to WS connections
     targets = list(_notif_connections.get(user_id, set()))

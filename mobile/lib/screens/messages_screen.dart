@@ -426,7 +426,16 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                 final msgId = data['id'];
                 final exists = _messages.any((m) => m['id'] == msgId);
                 if (!exists && mounted) {
-                  setState(() => _messages.add(data));
+                  setState(() {
+                    // Replace temp optimistic message from me with real server data
+                    if (senderId == _myUserId) {
+                      _messages.removeWhere((m) =>
+                          (m['id'] as int) < 0 &&
+                          m['content'] == data['content'] &&
+                          m['sender_id'] == _myUserId);
+                    }
+                    _messages.add(data);
+                  });
                   _scrollToBottom();
                 }
               }
@@ -456,10 +465,27 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
     if (text.isEmpty || _sending) return;
     setState(() => _sending = true);
     _textCtrl.clear();
+
+    // Optimistically add message to UI immediately
+    final tempId = -DateTime.now().millisecondsSinceEpoch;
+    if (_myUserId != null && mounted) {
+      setState(() => _messages.add({
+        'id': tempId,
+        'sender_id': _myUserId,
+        'receiver_id': widget.otherUserId,
+        'content': text,
+        'is_read': false,
+        'created_at': DateTime.now().toUtc().toIso8601String(),
+      }));
+      _scrollToBottom();
+    }
+
     final ok = await NotificationService.sendMessage(widget.otherUserId, text);
     if (mounted) {
       setState(() => _sending = false);
       if (!ok) {
+        // Remove temp message on failure
+        setState(() => _messages.removeWhere((m) => m['id'] == tempId));
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Mesaj gönderilemedi')),
         );

@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import '../config/theme.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
@@ -27,6 +28,7 @@ class _MainScreenState extends State<MainScreen> {
   int _unreadNotifs = 0;
 
   Timer? _badgeTimer;
+  StreamSubscription<RemoteMessage>? _fcmSub;
 
   final _liveKey = GlobalKey<LiveListScreenState>();
 
@@ -43,11 +45,14 @@ class _MainScreenState extends State<MainScreen> {
     ];
     _refreshBadges();
     _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBadges());
+    // Refresh badge immediately when a push notification arrives in foreground
+    _fcmSub = FirebaseMessaging.onMessage.listen((_) => _refreshBadges());
   }
 
   @override
   void dispose() {
     _badgeTimer?.cancel();
+    _fcmSub?.cancel();
     super.dispose();
   }
 

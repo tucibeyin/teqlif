@@ -20,7 +20,7 @@ def _get_firebase_app():
         return None
 
 
-async def send_push(token: str, title: str, body: str | None = None) -> None:
+async def send_push(token: str, title: str, body: str | None = None, badge: int | None = None) -> None:
     if not token:
         return
     app = _get_firebase_app()
@@ -33,7 +33,7 @@ async def send_push(token: str, title: str, body: str | None = None) -> None:
             token=token,
             apns=messaging.APNSConfig(
                 payload=messaging.APNSPayload(
-                    aps=messaging.Aps(sound="default")
+                    aps=messaging.Aps(sound="default", badge=badge)
                 )
             ),
         )
