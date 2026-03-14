@@ -68,9 +68,6 @@ const Auth = (() => {
 
     if (token && user) {
         navLinks.innerHTML = `
-            <a href="/" style="color:var(--primary);font-weight:600;">Canlı Yayınlar</a>
-            <a href="/ilanlar.html">İlanlar</a>
-            <a href="/ilan-ver.html">İlan Ver</a>
             <span style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);">
                 @${user.username}
             </span>

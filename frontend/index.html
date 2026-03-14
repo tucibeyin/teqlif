@@ -3,34 +3,28 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>teqlif — Canlı Yayınlar</title>
+    <title>teqlif</title>
     <link rel="stylesheet" href="/static/css/main.css">
     <style>
-        .page-header {
-            padding: 2rem 2rem 0;
-            max-width: 1100px;
+        /* ── Tab bar ─────────────────────────────────────────────────── */
+        .tab-bar {
+            padding: 1.5rem 2rem 0;
+            max-width: 1200px;
             margin: 0 auto;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            flex-wrap: wrap;
             gap: 1rem;
+            flex-wrap: wrap;
         }
 
-        /* Tab bar */
-        .tab-bar {
-            padding: 1.5rem 2rem 0;
-            max-width: 1100px;
-            margin: 0 auto;
-            display: flex;
-            gap: 0.5rem;
-        }
+        .tab-pills { display: flex; gap: 0.4rem; }
 
         .tab-btn {
-            display: flex;
+            display: inline-flex;
             align-items: center;
             gap: 0.4rem;
-            padding: 0.45rem 1.1rem;
+            padding: 0.48rem 1.1rem;
             border-radius: 20px;
             font-size: 0.88rem;
             font-weight: 600;
@@ -40,45 +34,31 @@
             transition: background 0.15s, color 0.15s;
         }
 
-        .tab-btn.active {
-            background: var(--primary);
-            color: #fff;
-        }
-
-        .tab-btn:not(.active) {
-            background: #f1f5f9;
-            color: #64748b;
-        }
-
-        .tab-btn:not(.active):hover {
-            background: #e2e8f0;
-            color: #334155;
-        }
+        .tab-btn.active { background: var(--primary); color: #fff; }
+        .tab-btn:not(.active) { background: #f1f5f9; color: #64748b; }
+        .tab-btn:not(.active):hover { background: #e2e8f0; color: #334155; }
 
         .live-dot {
-            width: 8px;
-            height: 8px;
+            width: 8px; height: 8px;
             border-radius: 50%;
-            background: currentColor;
+            background: #fff;
             display: inline-block;
             animation: pulse 1.5s infinite;
         }
-
-        .tab-btn.active .live-dot {
-            background: #fff;
-        }
+        .tab-btn:not(.active) .live-dot { background: #ef4444; }
 
         @keyframes pulse {
             0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.5; transform: scale(1.2); }
+            50% { opacity: 0.55; transform: scale(1.25); }
         }
 
+        /* ── Canlı yayın kartları ────────────────────────────────────── */
         .streams-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
             gap: 1.25rem;
             padding: 1.5rem 2rem 3rem;
-            max-width: 1100px;
+            max-width: 1200px;
             margin: 0 auto;
         }
 
@@ -89,150 +69,292 @@
             overflow: hidden;
             transition: box-shadow 0.15s, transform 0.15s;
         }
-
-        .stream-card:hover {
-            box-shadow: var(--shadow-md);
-            transform: translateY(-2px);
-        }
+        .stream-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
 
         .stream-thumb {
             background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-light) 100%);
-            height: 160px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            height: 155px;
+            display: flex; align-items: center; justify-content: center;
             position: relative;
         }
-
         .stream-thumb .live-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background: #ef4444;
-            color: #fff;
-            font-size: 0.72rem;
-            font-weight: 700;
-            padding: 2px 8px;
-            border-radius: 4px;
-            letter-spacing: 0.5px;
+            position: absolute; top: 10px; left: 10px;
+            background: #ef4444; color: #fff;
+            font-size: 0.7rem; font-weight: 700;
+            padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px;
         }
-
         .stream-thumb .viewer-badge {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.5);
-            color: #fff;
-            font-size: 0.78rem;
-            padding: 2px 8px;
-            border-radius: 20px;
+            position: absolute; top: 10px; right: 10px;
+            background: rgba(0,0,0,0.5); color: #fff;
+            font-size: 0.78rem; padding: 2px 8px; border-radius: 20px;
         }
-
-        .stream-thumb svg { opacity: 0.3; }
-
+        .stream-thumb svg { opacity: 0.28; }
         .stream-info { padding: 1rem; }
-
         .stream-title {
-            font-weight: 600;
-            font-size: 0.95rem;
-            margin-bottom: 0.35rem;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            font-weight: 600; font-size: 0.93rem; margin-bottom: 0.3rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .stream-host { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem; }
+
+        /* ── İlanlar bölümü ─────────────────────────────────────────── */
+        #section-ilanlar {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 1.5rem 2rem 3rem;
         }
 
-        .stream-host {
-            font-size: 0.82rem;
-            color: var(--text-muted);
-            margin-bottom: 0.9rem;
+        /* Arama */
+        .listing-search {
+            display: flex;
+            gap: 0.6rem;
+            margin-bottom: 1.5rem;
         }
-
-        .modal-overlay {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.45);
-            z-index: 200;
-            align-items: center;
-            justify-content: center;
-        }
-
-        .modal-overlay.open { display: flex; }
-
-        .modal {
-            background: var(--white);
-            border-radius: 14px;
-            padding: 2rem;
-            width: 100%;
-            max-width: 400px;
-            margin: 1rem;
-        }
-
-        .modal h3 {
-            font-size: 1.2rem;
-            font-weight: 700;
-            margin-bottom: 1.25rem;
-        }
-
-        .modal input {
-            width: 100%;
-            padding: 0.65rem 0.9rem;
+        .listing-search input {
+            flex: 1;
+            padding: 0.7rem 1.1rem;
             border: 1.5px solid var(--border);
             border-radius: 8px;
             font-size: 0.95rem;
             outline: none;
-            margin-bottom: 1rem;
             transition: border-color 0.15s;
         }
+        .listing-search input:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(13,148,136,0.1);
+        }
+        .listing-search button {
+            padding: 0.7rem 1.4rem;
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.9rem;
+            cursor: pointer;
+            white-space: nowrap;
+        }
 
+        /* Kategoriler */
+        .listing-cats {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1.5rem;
+        }
+        .cat-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.38rem 0.85rem;
+            background: #f8fafc;
+            border: 1.5px solid #e2e8f0;
+            border-radius: 20px;
+            font-size: 0.82rem;
+            font-weight: 500;
+            color: #334155;
+            cursor: pointer;
+            transition: all 0.12s;
+            text-decoration: none;
+        }
+        .cat-pill:hover, .cat-pill.active {
+            background: var(--primary);
+            border-color: var(--primary);
+            color: #fff;
+        }
+
+        /* Filtre bar + sıralama */
+        .listing-toolbar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 1rem;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+        }
+        .listing-count { font-size: 0.85rem; color: var(--text-muted); }
+        .listing-sort {
+            padding: 0.38rem 0.7rem;
+            border: 1.5px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.84rem;
+            color: #334155;
+            background: #fff;
+            cursor: pointer;
+        }
+
+        /* İlan listesi */
+        .listing-list { display: flex; flex-direction: column; gap: 0; }
+
+        .listing-item {
+            display: flex;
+            gap: 0;
+            background: var(--white);
+            border-radius: 0;
+            border-bottom: 1px solid #f1f5f9;
+            transition: background 0.1s;
+            cursor: pointer;
+            text-decoration: none;
+            color: inherit;
+        }
+        .listing-item:first-child { border-top: 1px solid #f1f5f9; border-radius: 10px 10px 0 0; }
+        .listing-item:last-child { border-radius: 0 0 10px 10px; }
+        .listing-item:hover { background: #f8fafc; }
+
+        .listing-img {
+            width: 130px;
+            height: 100px;
+            flex-shrink: 0;
+            background: #e2e8f0;
+            display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+            margin: 10px 0 10px 10px;
+            border-radius: 6px;
+        }
+        .listing-img svg { opacity: 0.3; }
+
+        .listing-body {
+            flex: 1;
+            padding: 0.8rem 1rem;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-width: 0;
+        }
+        .listing-item-title {
+            font-weight: 600;
+            font-size: 0.93rem;
+            margin-bottom: 0.25rem;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .listing-item-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            margin-bottom: 0.4rem;
+        }
+        .listing-item-meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.3rem;
+        }
+        .listing-item-price {
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+        .listing-item-info {
+            font-size: 0.76rem;
+            color: #94a3b8;
+        }
+
+        /* Boş durum */
+        .empty-state {
+            text-align: center; padding: 4rem 2rem; color: var(--text-muted);
+        }
+        .empty-state svg { margin-bottom: 1rem; opacity: 0.35; }
+        .empty-state p { font-size: 1rem; }
+
+        /* Modal */
+        .modal-overlay {
+            display: none; position: fixed; inset: 0;
+            background: rgba(0,0,0,0.45); z-index: 200;
+            align-items: center; justify-content: center;
+        }
+        .modal-overlay.open { display: flex; }
+        .modal {
+            background: var(--white); border-radius: 14px;
+            padding: 2rem; width: 100%; max-width: 400px; margin: 1rem;
+        }
+        .modal h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem; }
+        .modal input {
+            width: 100%; padding: 0.65rem 0.9rem;
+            border: 1.5px solid var(--border); border-radius: 8px;
+            font-size: 0.95rem; outline: none; margin-bottom: 1rem;
+            transition: border-color 0.15s;
+        }
         .modal input:focus {
             border-color: var(--primary);
             box-shadow: 0 0 0 3px rgba(13,148,136,0.12);
         }
-
         .modal-actions { display: flex; gap: 0.75rem; }
-
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            color: var(--text-muted);
-        }
-
-        .empty-state svg { margin-bottom: 1rem; opacity: 0.35; }
-        .empty-state p { font-size: 1rem; }
     </style>
 </head>
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
         <div class="nav-links">
-            <a href="/" style="color:var(--primary);font-weight:600;">Canlı Yayınlar</a>
-            <a href="/ilanlar.html">İlanlar</a>
             <a href="/giris.html" id="navGiris">Giriş Yap</a>
             <a href="/kayit.html" class="btn-nav" id="navKayit">Kayıt Ol</a>
         </div>
     </nav>
 
-    <!-- Tab bar -->
+    <!-- Tab bar + Yayın Başlat -->
     <div class="tab-bar">
-        <span class="tab-btn active">
-            <span class="live-dot"></span> Canlı Yayınlar
-        </span>
-        <a href="/ilanlar.html" class="tab-btn">İlanlar</a>
-    </div>
-
-    <!-- Yayın başlat butonu -->
-    <div style="max-width:1100px;margin:1rem 2rem 0;display:flex;justify-content:flex-end;">
+        <div class="tab-pills">
+            <button class="tab-btn active" id="tab-canli" onclick="switchTab('canli')">
+                <span class="live-dot"></span> Canlı Yayınlar
+            </button>
+            <button class="tab-btn" id="tab-ilanlar" onclick="switchTab('ilanlar')">
+                İlanlar
+            </button>
+        </div>
         <button id="btnStartStream" class="btn btn-primary" style="display:none;">
             + Yayın Başlat
         </button>
     </div>
 
-    <div id="alert" class="alert alert-error" style="max-width:1100px;margin:1rem auto 0;display:none;"></div>
+    <div id="alert" class="alert alert-error" style="max-width:1200px;margin:1rem auto 0;padding:0 2rem;display:none;"></div>
 
-    <div class="streams-grid" id="streamsGrid">
-        <div class="empty-state" style="grid-column:1/-1" id="loadingState">
-            <p>Yükleniyor...</p>
+    <!-- ── Canlı Yayınlar bölümü ──────────────────────────────────────── -->
+    <div id="section-canli">
+        <div class="streams-grid" id="streamsGrid">
+            <div class="empty-state" style="grid-column:1/-1" id="loadingState">
+                <p>Yükleniyor...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- ── İlanlar bölümü ────────────────────────────────────────────── -->
+    <div id="section-ilanlar" style="display:none;">
+        <!-- Arama -->
+        <div class="listing-search">
+            <input type="text" id="listingSearch" placeholder="Ne arıyorsunuz? (telefon, araba, ev...)">
+            <button onclick="searchListings()">Ara</button>
+        </div>
+
+        <!-- Kategoriler -->
+        <div class="listing-cats">
+            <a class="cat-pill active" data-cat="" onclick="filterCat(this, '')">Tümü</a>
+            <a class="cat-pill" data-cat="elektronik" onclick="filterCat(this, 'elektronik')">📱 Elektronik</a>
+            <a class="cat-pill" data-cat="vasita" onclick="filterCat(this, 'vasita')">🚗 Vasıta</a>
+            <a class="cat-pill" data-cat="emlak" onclick="filterCat(this, 'emlak')">🏠 Emlak</a>
+            <a class="cat-pill" data-cat="giyim" onclick="filterCat(this, 'giyim')">👗 Giyim</a>
+            <a class="cat-pill" data-cat="spor" onclick="filterCat(this, 'spor')">⚽ Spor</a>
+            <a class="cat-pill" data-cat="kitap" onclick="filterCat(this, 'kitap')">📚 Kitap & Müzik</a>
+            <a class="cat-pill" data-cat="ev" onclick="filterCat(this, 'ev')">🛋 Ev & Bahçe</a>
+            <a class="cat-pill" data-cat="diger" onclick="filterCat(this, 'diger')">📦 Diğer</a>
+        </div>
+
+        <!-- Toolbar -->
+        <div class="listing-toolbar">
+            <span class="listing-count" id="listingCount">İlanlar yükleniyor...</span>
+            <select class="listing-sort" id="listingSort" onchange="sortListings()">
+                <option value="newest">En Yeni</option>
+                <option value="price_asc">Fiyat: Düşükten Yükseğe</option>
+                <option value="price_desc">Fiyat: Yüksekten Düşüğe</option>
+            </select>
+        </div>
+
+        <!-- Listing listesi -->
+        <div class="listing-list" id="listingList">
+            <div class="empty-state" id="listingLoading">
+                <p>İlanlar yükleniyor...</p>
+            </div>
         </div>
     </div>
 
@@ -254,22 +376,32 @@
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/stream.js"></script>
     <script>
-        const grid = document.getElementById('streamsGrid');
-        const loadingState = document.getElementById('loadingState');
-        const btnStart = document.getElementById('btnStartStream');
+        const alertEl   = document.getElementById('alert');
+        const btnStart  = document.getElementById('btnStartStream');
         const startModal = document.getElementById('startModal');
         const modalAlert = document.getElementById('modalAlert');
-        const alertEl = document.getElementById('alert');
 
-        if (Auth.getToken()) {
-            btnStart.style.display = '';
+        if (Auth.getToken()) btnStart.style.display = '';
+
+        /* ── Tab geçişi ─────────────────────────────────────────────── */
+        function switchTab(tab) {
+            const isCanli = tab === 'canli';
+            document.getElementById('section-canli').style.display   = isCanli ? '' : 'none';
+            document.getElementById('section-ilanlar').style.display  = isCanli ? 'none' : '';
+            document.getElementById('tab-canli').classList.toggle('active', isCanli);
+            document.getElementById('tab-ilanlar').classList.toggle('active', !isCanli);
+            btnStart.style.display = (isCanli && Auth.getToken()) ? '' : 'none';
+            if (!isCanli && !_listingsLoaded) loadListings();
         }
+
+        /* ── Canlı yayınlar ─────────────────────────────────────────── */
+        const grid = document.getElementById('streamsGrid');
+        const loadingState = document.getElementById('loadingState');
 
         async function loadStreams() {
             try {
                 const streams = await apiFetch('/streams/active');
                 loadingState.remove();
-
                 if (!streams.length) {
                     grid.innerHTML = `
                         <div class="empty-state" style="grid-column:1/-1">
@@ -281,7 +413,6 @@
                         </div>`;
                     return;
                 }
-
                 grid.innerHTML = streams.map(s => `
                     <div class="stream-card">
                         <div class="stream-thumb">
@@ -294,32 +425,121 @@
                         <div class="stream-info">
                             <div class="stream-title">${escHtml(s.title)}</div>
                             <div class="stream-host">@${escHtml(s.host.username)}</div>
-                            <button class="btn btn-primary btn-full" onclick="joinStream(${s.id})">
-                                Katıl
-                            </button>
+                            <button class="btn btn-primary btn-full" onclick="joinStream(${s.id})">Katıl</button>
                         </div>
                     </div>`).join('');
-
             } catch (err) {
                 loadingState.innerHTML = '<p>Yayınlar yüklenemedi.</p>';
             }
         }
 
-        function escHtml(str) {
-            return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-        }
-
         async function joinStream(id) {
-            if (!Auth.getToken()) {
-                window.location.href = '/giris.html';
-                return;
-            }
+            if (!Auth.getToken()) { window.location.href = '/giris.html'; return; }
             try {
                 await Stream.joinStream(id);
                 window.location.href = `/yayin.html?id=${id}`;
-            } catch (err) {
-                showAlert(err.detail || 'Yayına katılınamadı');
+            } catch (err) { showAlert(err.detail || 'Yayına katılınamadı'); }
+        }
+
+        /* ── İlanlar ────────────────────────────────────────────────── */
+        let _allListings = [];
+        let _filteredListings = [];
+        let _listingsLoaded = false;
+        let _activeCat = '';
+
+        async function loadListings() {
+            _listingsLoaded = true;
+            try {
+                const data = await apiFetch('/listings');
+                _allListings = data;
+                _filteredListings = data;
+                renderListings();
+            } catch (_) {
+                // Henüz API yoksa placeholder göster
+                _allListings = [];
+                _filteredListings = [];
+                renderListings();
             }
+        }
+
+        function filterCat(el, cat) {
+            document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            _activeCat = cat;
+            _filteredListings = cat
+                ? _allListings.filter(l => l.category === cat)
+                : _allListings;
+            renderListings();
+        }
+
+        function searchListings() {
+            const q = document.getElementById('listingSearch').value.trim().toLowerCase();
+            _filteredListings = _allListings.filter(l =>
+                (!_activeCat || l.category === _activeCat) &&
+                (!q || l.title.toLowerCase().includes(q) || (l.description||'').toLowerCase().includes(q))
+            );
+            renderListings();
+        }
+
+        function sortListings() {
+            const sort = document.getElementById('listingSort').value;
+            if (sort === 'price_asc') _filteredListings.sort((a,b) => (a.price||0)-(b.price||0));
+            else if (sort === 'price_desc') _filteredListings.sort((a,b) => (b.price||0)-(a.price||0));
+            else _filteredListings.sort((a,b) => new Date(b.created_at||0)-new Date(a.created_at||0));
+            renderListings();
+        }
+
+        function renderListings() {
+            const list = document.getElementById('listingList');
+            const count = document.getElementById('listingCount');
+            count.textContent = `${_filteredListings.length} ilan`;
+
+            if (!_filteredListings.length) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                            <rect x="3" y="3" width="18" height="18" rx="2"/>
+                            <path d="M3 9h18M9 21V9"/>
+                        </svg>
+                        <p>Bu kategoride ilan bulunamadı.</p>
+                    </div>`;
+                return;
+            }
+
+            list.innerHTML = _filteredListings.map(l => `
+                <div class="listing-item" onclick="window.location='/ilan/${l.id}'">
+                    <div class="listing-img">
+                        ${l.image_url
+                            ? `<img src="${escHtml(l.image_url)}" style="width:100%;height:100%;object-fit:cover;">`
+                            : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`
+                        }
+                    </div>
+                    <div class="listing-body">
+                        <div>
+                            <div class="listing-item-title">${escHtml(l.title)}</div>
+                            <div class="listing-item-desc">${escHtml(l.description || '')}</div>
+                        </div>
+                        <div class="listing-item-meta">
+                            <span class="listing-item-price">${l.price ? l.price.toLocaleString('tr-TR') + ' ₺' : 'Fiyat belirtilmemiş'}</span>
+                            <span class="listing-item-info">${escHtml(l.location || '')} · ${formatDate(l.created_at)}</span>
+                        </div>
+                    </div>
+                </div>`).join('');
+        }
+
+        function formatDate(dateStr) {
+            if (!dateStr) return '';
+            const d = new Date(dateStr);
+            const diff = (Date.now() - d) / 1000;
+            if (diff < 3600) return Math.floor(diff/60) + ' dk önce';
+            if (diff < 86400) return Math.floor(diff/3600) + ' sa önce';
+            return Math.floor(diff/86400) + ' gün önce';
+        }
+
+        /* ── Yardımcılar ────────────────────────────────────────────── */
+        function escHtml(str) {
+            if (!str) return '';
+            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
         function showAlert(msg) {
@@ -328,19 +548,17 @@
             setTimeout(() => alertEl.style.display = 'none', 4000);
         }
 
+        /* ── Yayın başlat modal ─────────────────────────────────────── */
         btnStart.addEventListener('click', () => {
             startModal.classList.add('open');
             document.getElementById('streamTitle').focus();
         });
-
         document.getElementById('btnCancelModal').addEventListener('click', () => {
             startModal.classList.remove('open');
         });
-
-        startModal.addEventListener('click', (e) => {
+        startModal.addEventListener('click', e => {
             if (e.target === startModal) startModal.classList.remove('open');
         });
-
         document.getElementById('btnConfirmStart').addEventListener('click', async () => {
             const title = document.getElementById('streamTitle').value.trim();
             if (!title) {
@@ -350,16 +568,14 @@
             }
             modalAlert.style.display = 'none';
             const btn = document.getElementById('btnConfirmStart');
-            btn.disabled = true;
-            btn.textContent = 'Başlatılıyor...';
+            btn.disabled = true; btn.textContent = 'Başlatılıyor...';
             try {
                 const data = await Stream.startStream(title);
                 window.location.href = `/yayin.html?id=${data.stream_id}&host=1`;
             } catch (err) {
                 modalAlert.textContent = err.detail || 'Yayın başlatılamadı';
                 modalAlert.style.display = 'block';
-                btn.disabled = false;
-                btn.textContent = 'Başlat';
+                btn.disabled = false; btn.textContent = 'Başlat';
             }
         });
 
