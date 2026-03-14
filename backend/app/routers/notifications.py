@@ -103,6 +103,7 @@ async def unread_count(
         select(func.count()).where(
             Notification.user_id == current_user.id,
             Notification.is_read == False,  # noqa: E712
+            Notification.type != "message",  # DM'ler zaten ayrı sayılıyor
         )
     )
     count = result.scalar_one()
