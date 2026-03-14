@@ -121,7 +121,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             msg = await websocket.receive()
             if msg.get("type") == "websocket.disconnect":
                 break
-            data = msg.get("data")
+            data = msg.get("text") or msg.get("bytes")
             if not data:
                 continue
             try:
