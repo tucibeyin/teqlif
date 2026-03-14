@@ -68,6 +68,7 @@ async def start_stream(
         stream = LiveStream(
             room_name=room_name,
             title=data.title,
+            category=data.category,
             host_id=current_user.id,
         )
         db.add(stream)

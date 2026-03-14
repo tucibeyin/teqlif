@@ -31,11 +31,11 @@ class StreamService {
     return list.map((e) => StreamOut.fromJson(e)).toList();
   }
 
-  static Future<StreamTokenOut> startStream(String title) async {
+  static Future<StreamTokenOut> startStream(String title, String category) async {
     final res = await http.post(
       Uri.parse('$kBaseUrl/streams/start'),
       headers: await _headers(),
-      body: jsonEncode({'title': title}),
+      body: jsonEncode({'title': title, 'category': category}),
     );
     _checkError(res);
     return StreamTokenOut.fromJson(jsonDecode(res.body));

@@ -21,12 +21,12 @@ const Stream = (() => {
         sessionStorage.removeItem(STORAGE_KEY);
     }
 
-    async function startStream(title) {
+    async function startStream(title, category) {
         const data = await apiFetch('/streams/start', {
             method: 'POST',
-            body: JSON.stringify({ title }),
+            body: JSON.stringify({ title, category }),
         });
-        save({ ...data, is_host: true, title });
+        save({ ...data, is_host: true, title, category });
         return data;
     }
 

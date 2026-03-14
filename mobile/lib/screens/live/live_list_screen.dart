@@ -47,6 +47,16 @@ class _LiveListScreenState extends State<LiveListScreen> {
     }
   }
 
+  static const _categories = [
+    ('elektronik', '📱 Elektronik'),
+    ('giyim', '👗 Giyim'),
+    ('ev', '🛋 Ev & Bahçe'),
+    ('vasita', '🚗 Vasıta'),
+    ('spor', '⚽ Spor'),
+    ('kitap', '📚 Kitap & Müzik'),
+    ('diger', '📦 Diğer'),
+  ];
+
   Future<void> _showStartDialog() async {
     final token = await StorageService.getToken();
     if (token == null) {
@@ -57,45 +67,86 @@ class _LiveListScreenState extends State<LiveListScreen> {
       return;
     }
 
-    final controller = TextEditingController();
-    final title = await showDialog<String>(
+    final titleController = TextEditingController();
+    String? selectedCategory;
+    String? errorText;
+
+    final result = await showDialog<(String, String)?>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: const Text('Yayın Başlat'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 200,
-          decoration: const InputDecoration(
-            hintText: 'Yayın başlığı',
-            border: OutlineInputBorder(),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setStateDialog) => AlertDialog(
+          title: const Text('Yayın Başlat'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              TextField(
+                controller: titleController,
+                autofocus: true,
+                maxLength: 200,
+                decoration: const InputDecoration(
+                  hintText: 'Yayın başlığı',
+                  labelText: 'Başlık *',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              DropdownButtonFormField<String>(
+                value: selectedCategory,
+                decoration: const InputDecoration(
+                  labelText: 'Kategori *',
+                  border: OutlineInputBorder(),
+                ),
+                hint: const Text('Kategori seç'),
+                items: _categories
+                    .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
+                    .toList(),
+                onChanged: (v) => setStateDialog(() => selectedCategory = v),
+              ),
+              if (errorText != null) ...[
+                const SizedBox(height: 8),
+                Text(errorText!, style: const TextStyle(color: Colors.red, fontSize: 12)),
+              ],
+            ],
           ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('İptal'),
+            ),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+              onPressed: () {
+                final t = titleController.text.trim();
+                if (t.isEmpty) {
+                  setStateDialog(() => errorText = 'Yayın başlığı zorunludur');
+                  return;
+                }
+                if (selectedCategory == null) {
+                  setStateDialog(() => errorText = 'Kategori seçimi zorunludur');
+                  return;
+                }
+                Navigator.pop(ctx, (t, selectedCategory!));
+              },
+              child: const Text('Başlat', style: TextStyle(color: Colors.white)),
+            ),
+          ],
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('İptal'),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
-            onPressed: () => Navigator.pop(ctx, controller.text.trim()),
-            child: const Text('Başlat', style: TextStyle(color: Colors.white)),
-          ),
-        ],
       ),
     );
 
-    if (title == null || title.isEmpty) return;
+    if (result == null) return;
+    final (title, category) = result;
 
     if (!mounted) return;
     final messenger = ScaffoldMessenger.of(context);
     try {
-      final result = await StreamService.startStream(title);
+      final streamToken = await StreamService.startStream(title, category);
       if (!mounted) return;
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => HostStreamScreen(streamToken: result, title: title),
+          builder: (_) => HostStreamScreen(streamToken: streamToken, title: title),
         ),
       ).then((_) => _load());
     } on ApiException catch (e) {

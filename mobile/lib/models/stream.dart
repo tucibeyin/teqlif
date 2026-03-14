@@ -14,6 +14,7 @@ class StreamOut {
   final int id;
   final String roomName;
   final String title;
+  final String category;
   final int viewerCount;
   final StreamHost host;
 
@@ -21,6 +22,7 @@ class StreamOut {
     required this.id,
     required this.roomName,
     required this.title,
+    required this.category,
     required this.viewerCount,
     required this.host,
   });
@@ -29,6 +31,7 @@ class StreamOut {
         id: json['id'],
         roomName: json['room_name'],
         title: json['title'],
+        category: json['category'] ?? 'diger',
         viewerCount: json['viewer_count'] ?? 0,
         host: StreamHost.fromJson(json['host']),
       );
