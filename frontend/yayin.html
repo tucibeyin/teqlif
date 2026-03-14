@@ -310,6 +310,85 @@
         }
         #auctionMsg.error { color: #f87171; }
         #auctionMsg.success { color: #4ade80; }
+
+        /* ── Sohbet Paneli ── */
+        .chat-panel {
+            width: 100%;
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+        .chat-label {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #64748b;
+            letter-spacing: 0.6px;
+        }
+        #chatMessages {
+            height: 180px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+            padding-right: 0.25rem;
+        }
+        #chatMessages::-webkit-scrollbar { width: 3px; }
+        #chatMessages::-webkit-scrollbar-track { background: transparent; }
+        #chatMessages::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+        .chat-msg {
+            font-size: 0.83rem;
+            line-height: 1.45;
+            word-break: break-word;
+        }
+        .chat-username {
+            color: #60a5fa;
+            font-weight: 700;
+        }
+        .chat-content {
+            color: #e2e8f0;
+        }
+        .chat-empty {
+            font-size: 0.82rem;
+            color: #475569;
+            text-align: center;
+            margin-top: 0.5rem;
+        }
+        .chat-input-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+        .chat-input-row input {
+            flex: 1;
+            background: #0f172a;
+            border: 1px solid #334155;
+            color: #e2e8f0;
+            border-radius: 20px;
+            padding: 0.5rem 1rem;
+            font-size: 0.85rem;
+            outline: none;
+        }
+        .chat-input-row input:focus {
+            border-color: var(--primary);
+        }
+        .chat-send-btn {
+            background: var(--primary);
+            color: #fff;
+            border: none;
+            border-radius: 50%;
+            width: 34px;
+            height: 34px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            transition: background 0.15s;
+        }
+        .chat-send-btn:hover { background: var(--primary-dark); }
     </style>
 </head>
 <body>
@@ -343,6 +422,23 @@
                     <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
                 </svg>
                 <span id="placeholderText">Yayın bekleniyor...</span>
+            </div>
+        </div>
+
+        <!-- ── Sohbet Paneli ── -->
+        <div class="chat-panel" id="chatPanel" style="display:none;">
+            <div class="chat-label">CANLI SOHBET</div>
+            <div id="chatMessages">
+                <div class="chat-empty" id="chatEmpty">Henüz mesaj yok. İlk mesajı sen gönder!</div>
+            </div>
+            <div class="chat-input-row" id="chatInputRow" style="display:none;">
+                <input type="text" id="chatInput" placeholder="Mesaj yaz..." maxlength="200" autocomplete="off">
+                <button class="chat-send-btn" id="chatSendBtn" title="Gönder">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="22" y1="2" x2="11" y2="13"></line>
+                        <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+                    </svg>
+                </button>
             </div>
         </div>
 
@@ -410,6 +506,7 @@
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/stream.js"></script>
     <script src="/static/js/auction.js"></script>
+    <script src="/static/js/chat.js"></script>
     <script>
         const params = new URLSearchParams(location.search);
         const streamIdParam = parseInt(params.get('id'));
@@ -515,6 +612,9 @@
                 // Açık artırmayı başlat
                 initAuction(streamId, isHost);
 
+                // Sohbeti başlat
+                initChat(streamId);
+
             } catch (err) {
                 console.error(err);
                 setStatus('Bağlantı kurulamadı: ' + (err.message || 'Bilinmeyen hata'), true);
@@ -530,6 +630,7 @@
             try {
                 await Stream.endStream(streamId);
             } catch (_) {}
+            Chat.disconnect();
             await disconnectRoom();
             Stream.clear();
             window.location.href = '/canli.html';
@@ -553,6 +654,7 @@
             try {
                 await Stream.leaveStream(streamId);
             } catch (_) {}
+            Chat.disconnect();
             await disconnectRoom();
             Stream.clear();
             window.location.href = '/canli.html';
@@ -703,6 +805,43 @@
                 setAuctionMsg(`₺${Number(amount).toLocaleString('tr-TR')} teklifiniz alındı!`, 'success');
                 document.getElementById('customBidInput') && (document.getElementById('customBidInput').value = '');
             } catch (e) { setAuctionMsg(e.message, 'error'); }
+        }
+
+        // ── Sohbet ──────────────────────────────────────────────────────────
+
+        function initChat(sid) {
+            const panel = document.getElementById('chatPanel');
+            panel.style.display = '';
+
+            if (Auth.getToken()) {
+                document.getElementById('chatInputRow').style.display = 'flex';
+            }
+
+            Chat.connect(sid);
+
+            // İlk mesaj gelince "empty" yazısını kaldır
+            const origAppend = Chat._appendForWeb;
+            const messages = document.getElementById('chatMessages');
+            const observer = new MutationObserver(() => {
+                const empty = document.getElementById('chatEmpty');
+                if (empty && messages.children.length > 1) empty.remove();
+            });
+            observer.observe(messages, { childList: true });
+
+            const input = document.getElementById('chatInput');
+            const sendBtn = document.getElementById('chatSendBtn');
+
+            function doSend() {
+                const content = input.value.trim();
+                if (!content) return;
+                Chat.sendMessage(content);
+                input.value = '';
+            }
+
+            sendBtn.addEventListener('click', doSend);
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') doSend();
+            });
         }
 
         init();
