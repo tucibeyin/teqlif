@@ -1,3 +1,4 @@
+import asyncio
 import logging
 import traceback
 import os
@@ -11,6 +12,7 @@ from fastapi.responses import FileResponse, JSONResponse
 from app.config import settings
 from app.logging_config import setup_logging
 from app.routers import auth, streams, webhooks, auction
+from app.routers.auction import pubsub_listener
 from app.database import engine, Base
 import app.models.auction  # noqa: F401 — tablo kaydı için
 
@@ -21,7 +23,14 @@ logger = setup_logging()
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    # Her worker'da Redis pub/sub dinleyicisini başlat
+    task = asyncio.create_task(pubsub_listener())
     yield
+    task.cancel()
+    try:
+        await task
+    except asyncio.CancelledError:
+        pass
 
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)

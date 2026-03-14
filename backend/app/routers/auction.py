@@ -1,3 +1,5 @@
+import asyncio
+import json
 import logging
 from datetime import datetime, timezone
 from typing import Dict, Set
@@ -17,11 +19,13 @@ from app.utils.redis_client import get_redis
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auction", tags=["auction"])
 
+_PUBSUB_CHANNEL = "auction_broadcast"
+
 # ── Redis keys ──────────────────────────────────────────────────────────────
 def _key(stream_id: int) -> str:
     return f"auction:{stream_id}"
 
-# ── WebSocket bağlantı yöneticisi ────────────────────────────────────────────
+# ── WebSocket bağlantı yöneticisi (her worker'a özel) ───────────────────────
 class _Manager:
     def __init__(self):
         self._conns: Dict[int, Set[WebSocket]] = {}
@@ -30,48 +34,79 @@ class _Manager:
         await ws.accept()
         self._conns.setdefault(stream_id, set()).add(ws)
         total = len(self._conns[stream_id])
-        client = getattr(ws, "client", None)
         origin = ws.headers.get("origin", "native/mobile")
         logger.info(
-            "[WS] BAĞLANDI | stream_id=%s origin=%s client=%s | toplam=%s bağlı",
-            stream_id, origin, client, total,
+            "[WS] BAĞLANDI | stream_id=%s origin=%s | bu_worker=%s bağlı",
+            stream_id, origin, total,
         )
 
     def disconnect(self, ws: WebSocket, stream_id: int):
         self._conns.get(stream_id, set()).discard(ws)
         total = len(self._conns.get(stream_id, set()))
-        logger.info(
-            "[WS] AYRILDI   | stream_id=%s | kalan=%s bağlı",
-            stream_id, total,
-        )
+        logger.info("[WS] AYRILDI | stream_id=%s | bu_worker=%s bağlı", stream_id, total)
 
-    async def broadcast(self, stream_id: int, payload: dict):
+    async def local_broadcast(self, stream_id: int, payload: dict):
+        """Sadece bu worker'daki WS bağlantılarına gönder."""
         targets = list(self._conns.get(stream_id, set()))
-        logger.info(
-            "[WS] BROADCAST | stream_id=%s status=%s | hedef=%s bağlantı",
-            stream_id, payload.get("status"), len(targets),
-        )
+        if not targets:
+            return
         dead = set()
         for ws in targets:
             try:
                 await ws.send_json(payload)
             except Exception as exc:
-                logger.warning(
-                    "[WS] BROADCAST HATA | stream_id=%s | %s", stream_id, exc
-                )
+                logger.warning("[WS] SEND HATA | stream_id=%s | %s", stream_id, exc)
                 dead.add(ws)
         if dead:
-            logger.warning(
-                "[WS] %s ölü bağlantı temizlendi | stream_id=%s", len(dead), stream_id
-            )
-        for ws in dead:
-            self._conns.get(stream_id, set()).discard(ws)
+            logger.warning("[WS] %s ölü bağlantı temizlendi | stream_id=%s", len(dead), stream_id)
+            for ws in dead:
+                self._conns.get(stream_id, set()).discard(ws)
 
     def conn_count(self, stream_id: int) -> int:
         return len(self._conns.get(stream_id, set()))
 
+    def total_conns(self) -> int:
+        return sum(len(v) for v in self._conns.values())
+
 
 manager = _Manager()
+
+
+async def _publish(stream_id: int, payload: dict):
+    """Tüm worker'lara Redis pub/sub üzerinden yayınla."""
+    redis = await get_redis()
+    data = json.dumps({"_stream_id": stream_id, **payload})
+    await redis.publish(_PUBSUB_CHANNEL, data)
+    logger.info(
+        "[PUBSUB] YAYINLANDI | stream_id=%s status=%s | bu_worker_ws=%s",
+        stream_id, payload.get("status"), manager.conn_count(stream_id),
+    )
+
+
+async def pubsub_listener():
+    """Her worker için tek seferlik başlatılan arka plan görevi."""
+    import redis.asyncio as aioredis
+    from app.config import settings
+    # Pub/sub için ayrı bağlantı (subscribe modunda kalır)
+    r = aioredis.from_url(settings.redis_url, decode_responses=True)
+    pubsub = r.pubsub()
+    await pubsub.subscribe(_PUBSUB_CHANNEL)
+    logger.info("[PUBSUB] Dinleyici başladı (worker)")
+    try:
+        async for message in pubsub.listen():
+            if message["type"] != "message":
+                continue
+            try:
+                data = json.loads(message["data"])
+                stream_id = data.pop("_stream_id")
+                await manager.local_broadcast(stream_id, data)
+            except Exception as exc:
+                logger.warning("[PUBSUB] Mesaj işleme hatası: %s", exc)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await pubsub.unsubscribe(_PUBSUB_CHANNEL)
+        await r.aclose()
 
 # ── Yardımcı: Redis'ten state oku ───────────────────────────────────────────
 async def _get_state(stream_id: int) -> dict:
@@ -156,7 +191,7 @@ async def start_auction(
     await redis.expire(key, 24 * 3600)
 
     state = await _get_state(stream_id)
-    await manager.broadcast(stream_id, {"type": "state", **state})
+    await _publish(stream_id, {"type": "state", **state})
     logger.info(
         "[AÇIK ARTIRMA] BAŞLADI | stream_id=%s item=%r start_price=%s | ws_hedef=%s",
         stream_id, data.item_name, data.start_price, manager.conn_count(stream_id),
@@ -179,7 +214,7 @@ async def pause_auction(
 
     await redis.hset(key, "status", "paused")
     state = await _get_state(stream_id)
-    await manager.broadcast(stream_id, {"type": "state", **state})
+    await _publish(stream_id, {"type": "state", **state})
     logger.info("[AÇIK ARTIRMA] DURAKLATILDI | stream_id=%s | ws_hedef=%s",
                 stream_id, manager.conn_count(stream_id))
     return state
@@ -200,7 +235,7 @@ async def resume_auction(
 
     await redis.hset(key, "status", "active")
     state = await _get_state(stream_id)
-    await manager.broadcast(stream_id, {"type": "state", **state})
+    await _publish(stream_id, {"type": "state", **state})
     logger.info("[AÇIK ARTIRMA] DEVAM ETTİ | stream_id=%s | ws_hedef=%s",
                 stream_id, manager.conn_count(stream_id))
     return state
@@ -246,7 +281,7 @@ async def end_auction(
     state = {"status": "ended", "item_name": data.get("item_name"), "bid_count": int(data.get("bid_count", 0)),
              "current_bid": final_price if data.get("current_bidder_id") else None,
              "current_bidder": data.get("current_bidder_name") or None, "start_price": float(data.get("start_price", 0))}
-    await manager.broadcast(stream_id, {"type": "state", **state})
+    await _publish(stream_id, {"type": "state", **state})
     logger.info(
         "[AÇIK ARTIRMA] BİTTİ | stream_id=%s winner=%s price=%s bid_count=%s",
         stream_id, state["current_bidder"], state["current_bid"], state["bid_count"],
@@ -281,7 +316,7 @@ async def place_bid(
         raise HTTPException(status_code=400, detail="Teklifiniz mevcut tekliften yüksek olmalı")
 
     state = await _get_state(stream_id)
-    await manager.broadcast(stream_id, {"type": "state", **state})
+    await _publish(stream_id, {"type": "state", **state})
     logger.info(
         "[TEKLİF] stream_id=%s user=%s amount=%s | ws_hedef=%s",
         stream_id, current_user.username, data.amount, manager.conn_count(stream_id),

@@ -697,7 +697,9 @@
 
         async function submitBid(amount) {
             try {
-                await Auction.placeBid(amount);
+                const state = await Auction.placeBid(amount);
+                // REST response'dan anlık güncelle (pub/sub'u beklemeden)
+                if (state) updateAuctionUI(state);
                 setAuctionMsg(`₺${Number(amount).toLocaleString('tr-TR')} teklifiniz alındı!`, 'success');
                 document.getElementById('customBidInput') && (document.getElementById('customBidInput').value = '');
             } catch (e) { setAuctionMsg(e.message, 'error'); }

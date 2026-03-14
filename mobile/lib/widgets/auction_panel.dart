@@ -229,7 +229,9 @@ class _AuctionPanelState extends State<AuctionPanel> {
   // ── Viewer: Teklif ────────────────────────────────────────────────────────
   Future<void> _placeBid(double amount) async {
     try {
-      await AuctionService.placeBid(widget.streamId, amount);
+      final newState = await AuctionService.placeBid(widget.streamId, amount);
+      // REST response'dan anlık güncelle (pub/sub'u beklemeden)
+      if (mounted) setState(() => _state = newState);
       _setMsg('₺${_fmt(amount)} teklifiniz alındı!');
       _customBidCtrl.clear();
     } catch (e) {
@@ -246,24 +248,16 @@ class _AuctionPanelState extends State<AuctionPanel> {
   // ── Build ─────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (context, constraints) {
-      // bottomSheet bazı durumlarda unconstrained width verebilir;
-      // sınırsız gelirse ekran genişliğini kullan.
-      final w = constraints.hasBoundedWidth
-          ? constraints.maxWidth
-          : MediaQuery.of(context).size.width;
-      return SizedBox(
-        width: w,
-        child: Container(
-          margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          padding: const EdgeInsets.all(14),
-          decoration: BoxDecoration(
-            color: const Color(0xFF1E293B),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(14),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        mainAxisSize: MainAxisSize.min,
         children: [
           _header(),
           if (_state.currentBid != null || _state.startPrice != null) ...[
@@ -280,10 +274,8 @@ class _AuctionPanelState extends State<AuctionPanel> {
                     color: _msgError ? Colors.redAccent : Colors.greenAccent)),
           ],
         ],
-          ),
-        ),
-      );
-    });
+      ),
+    );
   }
 
   Widget _header() {
