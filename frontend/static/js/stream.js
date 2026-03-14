@@ -110,11 +110,7 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
 
     if (isHost) {
         await _room.localParticipant.setCameraEnabled(true);
-        await _room.localParticipant.setMicrophoneEnabled(true, {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-        });
+        await _room.localParticipant.setMicrophoneEnabled(true);
 
         if (localVideoEl) {
             _room.localParticipant.on('localTrackPublished', (pub) => {
