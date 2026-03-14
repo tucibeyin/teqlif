@@ -306,6 +306,9 @@
         <button id="btnStartStream" class="btn btn-primary" style="display:none;">
             + Yayın Başlat
         </button>
+        <a href="/ilan-ver.html" id="btnIlanVer" class="btn btn-primary" style="display:none;">
+            + İlan Ver
+        </a>
     </div>
 
     <div id="alert" class="alert alert-error" style="max-width:1200px;margin:1rem auto 0;padding:0 2rem;display:none;"></div>
@@ -376,8 +379,9 @@
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/stream.js"></script>
     <script>
-        const alertEl   = document.getElementById('alert');
-        const btnStart  = document.getElementById('btnStartStream');
+        const alertEl    = document.getElementById('alert');
+        const btnStart   = document.getElementById('btnStartStream');
+        const btnIlanVer = document.getElementById('btnIlanVer');
         const startModal = document.getElementById('startModal');
         const modalAlert = document.getElementById('modalAlert');
 
@@ -390,7 +394,8 @@
             document.getElementById('section-ilanlar').style.display  = isCanli ? 'none' : '';
             document.getElementById('tab-canli').classList.toggle('active', isCanli);
             document.getElementById('tab-ilanlar').classList.toggle('active', !isCanli);
-            btnStart.style.display = (isCanli && Auth.getToken()) ? '' : 'none';
+            btnStart.style.display   = (isCanli && Auth.getToken()) ? '' : 'none';
+            btnIlanVer.style.display = !isCanli ? '' : 'none';
             if (!isCanli && !_listingsLoaded) loadListings();
         }
 
