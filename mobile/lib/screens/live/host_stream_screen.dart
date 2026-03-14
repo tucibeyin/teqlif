@@ -342,13 +342,13 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Açık artırma yönetim şeridi
+                    // Sohbet (mesajlar üstte yüzer)
+                    ChatPanel(streamId: widget.streamToken.streamId),
+                    // Açık artırma şeridi (altta sabit)
                     AuctionPanel(
                       streamId: widget.streamToken.streamId,
                       isHost: true,
                     ),
-                    // Sohbet
-                    ChatPanel(streamId: widget.streamToken.streamId),
                     const SizedBox(height: 4),
                   ],
                 ),

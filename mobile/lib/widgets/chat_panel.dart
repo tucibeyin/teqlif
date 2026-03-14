@@ -6,6 +6,22 @@ import '../config/api.dart';
 import '../models/chat.dart';
 import '../services/storage_service.dart';
 
+class _TimedMessage {
+  final ChatMessage message;
+  final ValueNotifier<double> opacity = ValueNotifier(1.0);
+
+  _TimedMessage(this.message, VoidCallback onExpired) {
+    Future.delayed(const Duration(seconds: 6), () {
+      opacity.value = 0.0;
+      Future.delayed(const Duration(milliseconds: 700), onExpired);
+    });
+  }
+
+  void dispose() {
+    opacity.dispose();
+  }
+}
+
 class ChatPanel extends StatefulWidget {
   final int streamId;
 
@@ -16,8 +32,7 @@ class ChatPanel extends StatefulWidget {
 }
 
 class _ChatPanelState extends State<ChatPanel> {
-  final List<ChatMessage> _messages = [];
-  final _scrollCtrl = ScrollController();
+  final List<_TimedMessage> _messages = [];
   final _inputCtrl = TextEditingController();
   final _focusNode = FocusNode();
 
@@ -50,7 +65,9 @@ class _ChatPanelState extends State<ChatPanel> {
     try {
       _channel?.sink.close();
     } catch (_) {}
-    _scrollCtrl.dispose();
+    for (final m in _messages) {
+      m.dispose();
+    }
     _inputCtrl.dispose();
     _focusNode.dispose();
     super.dispose();
@@ -60,6 +77,21 @@ class _ChatPanelState extends State<ChatPanel> {
     return kBaseUrl
         .replaceFirst('https://', 'wss://')
         .replaceFirst('http://', 'ws://');
+  }
+
+  void _addMessage(ChatMessage msg) {
+    if (!mounted) return;
+    final timed = _TimedMessage(msg, () {
+      if (mounted) {
+        setState(() => _messages.removeWhere((m) => m.message == msg));
+      }
+    });
+    setState(() {
+      _messages.add(timed);
+      if (_messages.length > 20) {
+        _messages.removeAt(0).dispose();
+      }
+    });
   }
 
   void _connectWS() {
@@ -76,17 +108,14 @@ class _ChatPanelState extends State<ChatPanel> {
           try {
             final json = jsonDecode(data as String) as Map<String, dynamic>;
             if (json['type'] == 'message') {
-              setState(() {
-                _messages.add(ChatMessage.fromJson(json));
-                if (_messages.length > 50) _messages.removeAt(0);
-              });
-              _scrollToBottom();
+              _addMessage(ChatMessage.fromJson(json));
             } else if (json['type'] == 'history') {
               final msgs = (json['messages'] as List)
                   .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
                   .toList();
-              setState(() => _messages.addAll(msgs));
-              _scrollToBottom();
+              for (final m in msgs) {
+                _addMessage(m);
+              }
             }
           } catch (_) {}
         },
@@ -120,18 +149,6 @@ class _ChatPanelState extends State<ChatPanel> {
     });
   }
 
-  void _scrollToBottom() {
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (_scrollCtrl.hasClients) {
-        _scrollCtrl.animateTo(
-          _scrollCtrl.position.maxScrollExtent,
-          duration: const Duration(milliseconds: 200),
-          curve: Curves.easeOut,
-        );
-      }
-    });
-  }
-
   void _sendMessage() {
     final content = _inputCtrl.text.trim();
     if (content.isEmpty) return;
@@ -143,8 +160,7 @@ class _ChatPanelState extends State<ChatPanel> {
 
   @override
   Widget build(BuildContext context) {
-    // Son 6 mesajı göster (daha fazlası videoyu kapatır)
-    final visibleMessages = _messages.length > 6
+    final visible = _messages.length > 6
         ? _messages.sublist(_messages.length - 6)
         : _messages;
 
@@ -152,21 +168,26 @@ class _ChatPanelState extends State<ChatPanel> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Mesaj listesi — sol tarafa yaslı, transparan
-        if (visibleMessages.isNotEmpty)
-          ConstrainedBox(
-            constraints: const BoxConstraints(maxWidth: 260, maxHeight: 180),
-            child: ListView.builder(
-              controller: _scrollCtrl,
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
-              itemCount: visibleMessages.length,
-              itemBuilder: (_, i) => _MessageItem(visibleMessages[i]),
+        if (visible.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: visible
+                  .map(
+                    (m) => ValueListenableBuilder<double>(
+                      valueListenable: m.opacity,
+                      builder: (_, op, __) => AnimatedOpacity(
+                        opacity: op,
+                        duration: const Duration(milliseconds: 700),
+                        child: _MessageItem(m.message),
+                      ),
+                    ),
+                  )
+                  .toList(),
             ),
           ),
-
-        // Input satırı
         if (_token != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
@@ -189,18 +210,19 @@ class _ChatPanelState extends State<ChatPanel> {
                     child: TextField(
                       controller: _inputCtrl,
                       focusNode: _focusNode,
-                      style: const TextStyle(color: Colors.white, fontSize: 13),
+                      style:
+                          const TextStyle(color: Colors.white, fontSize: 13),
                       maxLength: 200,
                       maxLines: 1,
                       textInputAction: TextInputAction.send,
                       decoration: const InputDecoration(
                         hintText: 'Mesaj yaz...',
-                        hintStyle:
-                            TextStyle(color: Color(0xFF94A3B8), fontSize: 12),
+                        hintStyle: TextStyle(
+                            color: Color(0xFF94A3B8), fontSize: 12),
                         counterText: '',
                         border: InputBorder.none,
-                        contentPadding:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                        contentPadding: EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 10),
                       ),
                       onSubmitted: (_) => _sendMessage(),
                     ),

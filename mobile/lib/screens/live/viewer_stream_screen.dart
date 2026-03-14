@@ -313,13 +313,13 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Açık artırma (sadece aktifse görünür)
+                    // Sohbet (mesajlar üstte yüzer)
+                    ChatPanel(streamId: widget.joinToken.streamId),
+                    // Açık artırma (sadece aktifse, altta sabit)
                     AuctionPanel(
                       streamId: widget.joinToken.streamId,
                       isHost: false,
                     ),
-                    // Sohbet
-                    ChatPanel(streamId: widget.joinToken.streamId),
                     const SizedBox(height: 4),
                   ],
                 ),
