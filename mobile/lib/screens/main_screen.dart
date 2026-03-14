@@ -5,6 +5,7 @@ import 'package:app_badge_plus/app_badge_plus.dart';
 import '../config/theme.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/push_notification_service.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'create_listing_screen.dart';
@@ -30,6 +31,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   Timer? _badgeTimer;
   StreamSubscription<RemoteMessage>? _fcmSub;
+  StreamSubscription<Map<String, dynamic>>? _notifStreamSub;
 
   final _liveKey = GlobalKey<LiveListScreenState>();
 
@@ -47,8 +49,12 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _refreshBadges();
     _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBadges());
-    // Refresh badge immediately when a push notification arrives in foreground
+    // FCM foreground mesajı (FirebaseMessaging.onMessage) için hızlı badge güncelleme
     _fcmSub = FirebaseMessaging.onMessage.listen((_) => _refreshBadges());
+    // notificationStream: tüm FCM durumları (foreground/background/terminated)
+    _notifStreamSub = PushNotificationService.notificationStream.stream.listen((data) {
+      _refreshBadges();
+    });
   }
 
   @override
@@ -56,6 +62,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.removeObserver(this);
     _badgeTimer?.cancel();
     _fcmSub?.cancel();
+    _notifStreamSub?.cancel();
     super.dispose();
   }
 

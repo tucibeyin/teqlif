@@ -54,7 +54,7 @@ async def push_notification(user_id: int, notif: dict) -> None:
                 )
             ) or 0
             badge = unread_notifs + unread_msgs
-            await send_push(user.fcm_token, notif.get("title", ""), notif.get("body"), badge=badge)
+            await send_push(user.fcm_token, notif.get("title", ""), notif.get("body"), badge=badge, notif_type=notif.get("type"))
 
     # Push to WS connections
     targets = list(_notif_connections.get(user_id, set()))

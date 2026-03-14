@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'dart:developer' as dev;
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'auth_service.dart';
@@ -12,6 +13,11 @@ class PushNotificationService {
   static final _messaging = FirebaseMessaging.instance;
   static bool _earlyDone = false;
   static bool _fullDone = false;
+
+  /// Gelen FCM mesaj verisini broadcast eden stream.
+  /// UI katmanları bunu dinleyerek anında güncellenir.
+  static final StreamController<Map<String, dynamic>> notificationStream =
+      StreamController<Map<String, dynamic>>.broadcast();
 
   /// main() içinde çağrılmalı — Firebase hazır olduktan hemen sonra.
   /// Background handler + foreground presentation options + mesaj dinleyicileri.
@@ -31,23 +37,29 @@ class PushNotificationService {
       sound: true,
     );
 
-    // Foreground mesaj dinleyicisi
+    // Foreground: uygulama açıkken gelen mesaj
     FirebaseMessaging.onMessage.listen((msg) {
       dev.log(
-        '[FCM] Foreground mesaj | title=${msg.notification?.title} | body=${msg.notification?.body}',
+        '[FCM] Foreground mesaj | type=${msg.data["type"]} | title=${msg.notification?.title}',
         name: 'FCM',
       );
+      notificationStream.add(msg.data);
     });
 
     // Arka planda bildirime tıklanınca
     FirebaseMessaging.onMessageOpenedApp.listen((msg) {
-      dev.log('[FCM] Bildirime tıklandı (arka plan) | title=${msg.notification?.title}', name: 'FCM');
+      dev.log('[FCM] Bildirime tıklandı (arka plan) | type=${msg.data["type"]} | title=${msg.notification?.title}', name: 'FCM');
+      notificationStream.add(msg.data);
     });
 
-    // Uygulama kapalıyken bildirime tıklanınca
+    // Uygulama kapalıyken bildirime tıklanınca (terminated)
     final initial = await _messaging.getInitialMessage();
     if (initial != null) {
-      dev.log('[FCM] Uygulama bildirimle açıldı | title=${initial.notification?.title}', name: 'FCM');
+      dev.log('[FCM] Uygulama bildirimle açıldı | type=${initial.data["type"]} | title=${initial.notification?.title}', name: 'FCM');
+      // UI hazır olana kadar kısa bekle
+      Future.delayed(const Duration(milliseconds: 500), () {
+        notificationStream.add(initial.data);
+      });
     }
 
     dev.log('[FCM] initEarly() tamamlandı', name: 'FCM');

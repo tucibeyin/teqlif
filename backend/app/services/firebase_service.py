@@ -23,7 +23,13 @@ def _get_firebase_app():
         return None
 
 
-async def send_push(token: str, title: str, body: str | None = None, badge: int | None = None) -> None:
+async def send_push(
+    token: str,
+    title: str,
+    body: str | None = None,
+    badge: int | None = None,
+    notif_type: str | None = None,
+) -> None:
     if not token:
         logger.warning("[FCM] send_push çağrıldı ama token boş")
         return
@@ -31,11 +37,16 @@ async def send_push(token: str, title: str, body: str | None = None, badge: int 
     if app is None:
         logger.warning("[FCM] Firebase app yok — push gönderilemiyor")
         return
-    logger.info("[FCM] Push gönderiliyor | token=%s… | title=%r | badge=%s", token[:12], title, badge)
+    logger.info("[FCM] Push gönderiliyor | token=%s… | title=%r | type=%s | badge=%s", token[:12], title, notif_type, badge)
     try:
         from firebase_admin import messaging
+        # data payload: Flutter tarafı bu alanı okuyarak UI'ı anında günceller
+        data: dict[str, str] = {}
+        if notif_type:
+            data["type"] = notif_type
         msg = messaging.Message(
             notification=messaging.Notification(title=title, body=body),
+            data=data,
             token=token,
             apns=messaging.APNSConfig(
                 payload=messaging.APNSPayload(
