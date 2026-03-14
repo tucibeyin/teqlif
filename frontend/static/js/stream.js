@@ -67,8 +67,13 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
         if (track.kind === Track.Kind.Video && remoteVideoEl) {
             track.attach(remoteVideoEl);
             if (onRemoteVideo) onRemoteVideo();
-        } else if (track.kind === Track.Kind.Audio && remoteAudioEl) {
-            track.attach(remoteAudioEl);
+        } else if (track.kind === Track.Kind.Audio) {
+            if (!isHost && remoteAudioEl) {
+                track.attach(remoteAudioEl);
+            } else if (isHost) {
+                // Host kendi sesini duymamalı — SDK'nın iç AudioManager'ını sıfırla
+                try { track.setVolume(0); } catch (_) {}
+            }
         }
     });
 
@@ -105,7 +110,11 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
 
     if (isHost) {
         await _room.localParticipant.setCameraEnabled(true);
-        await _room.localParticipant.setMicrophoneEnabled(true);
+        await _room.localParticipant.setMicrophoneEnabled(true, {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+        });
 
         if (localVideoEl) {
             _room.localParticipant.on('localTrackPublished', (pub) => {
