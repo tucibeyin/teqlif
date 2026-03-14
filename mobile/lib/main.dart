@@ -52,10 +52,11 @@ class _SplashGateState extends State<_SplashGate> {
 
   Future<void> _check() async {
     final token = await StorageService.getToken();
-    // Uygulama açılışında rozeti sıfırla
-    final supported = await AppBadgePlus.isSupported();
-    if (supported) await AppBadgePlus.updateBadge(0);
     FlutterNativeSplash.remove();
+    // Rozeti sıfırla (non-blocking)
+    AppBadgePlus.isSupported().then((ok) {
+      if (ok) AppBadgePlus.updateBadge(0);
+    });
     if (!mounted) return;
     if (token != null) {
       PushNotificationService.initialize();
