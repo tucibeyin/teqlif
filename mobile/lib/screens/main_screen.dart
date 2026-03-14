@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:app_badge_plus/app_badge_plus.dart';
 import '../config/theme.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
@@ -67,6 +68,12 @@ class _MainScreenState extends State<MainScreen> {
           _unreadMessages = msgs;
           _unreadNotifs = notifs;
         });
+      }
+      // Uygulama ikonu badge'ini güncelle
+      final total = msgs + notifs;
+      final supported = await AppBadgePlus.isSupported();
+      if (supported) {
+        await AppBadgePlus.updateBadge(total);
       }
     } catch (_) {}
   }

@@ -15,6 +15,13 @@ class PushNotificationService {
     dev.log('[FCM] initialize() başladı', name: 'FCM');
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
+    // iOS: uygulama açıkken de bildirim banner + badge + ses göster
+    await _messaging.setForegroundNotificationPresentationOptions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
+
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,
