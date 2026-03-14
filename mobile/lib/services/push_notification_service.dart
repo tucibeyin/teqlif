@@ -10,17 +10,57 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 
 class PushNotificationService {
   static final _messaging = FirebaseMessaging.instance;
+  static bool _earlyDone = false;
+  static bool _fullDone = false;
 
-  static Future<void> initialize() async {
-    dev.log('[FCM] initialize() başladı', name: 'FCM');
+  /// main() içinde çağrılmalı — Firebase hazır olduktan hemen sonra.
+  /// Background handler + foreground presentation options + mesaj dinleyicileri.
+  /// Token almaz; kullanıcı girişi gerekmez.
+  static Future<void> initEarly() async {
+    if (_earlyDone) return;
+    _earlyDone = true;
+
+    dev.log('[FCM] initEarly() başladı', name: 'FCM');
+
     FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
-    // iOS: uygulama açıkken de bildirim banner + badge + ses göster
+    // iOS: uygulama açıkken de banner + badge + ses göster
     await _messaging.setForegroundNotificationPresentationOptions(
       alert: true,
       badge: true,
       sound: true,
     );
+
+    // Foreground mesaj dinleyicisi
+    FirebaseMessaging.onMessage.listen((msg) {
+      dev.log(
+        '[FCM] Foreground mesaj | title=${msg.notification?.title} | body=${msg.notification?.body}',
+        name: 'FCM',
+      );
+    });
+
+    // Arka planda bildirime tıklanınca
+    FirebaseMessaging.onMessageOpenedApp.listen((msg) {
+      dev.log('[FCM] Bildirime tıklandı (arka plan) | title=${msg.notification?.title}', name: 'FCM');
+    });
+
+    // Uygulama kapalıyken bildirime tıklanınca
+    final initial = await _messaging.getInitialMessage();
+    if (initial != null) {
+      dev.log('[FCM] Uygulama bildirimle açıldı | title=${initial.notification?.title}', name: 'FCM');
+    }
+
+    dev.log('[FCM] initEarly() tamamlandı', name: 'FCM');
+  }
+
+  /// Kullanıcı giriş yaptıktan sonra çağrılmalı.
+  /// İzin ister, FCM token alır ve backend'e kaydeder.
+  static Future<void> initialize() async {
+    await initEarly(); // idempotent
+    if (_fullDone) return;
+    _fullDone = true;
+
+    dev.log('[FCM] initialize() başladı', name: 'FCM');
 
     final settings = await _messaging.requestPermission(
       alert: true,
@@ -39,25 +79,6 @@ class PushNotificationService {
       });
     } else {
       dev.log('[FCM] İzin verilmedi — push çalışmayacak', name: 'FCM');
-    }
-
-    // Foreground mesaj geldiğinde logla
-    FirebaseMessaging.onMessage.listen((msg) {
-      dev.log(
-        '[FCM] Foreground mesaj geldi | title=${msg.notification?.title} | body=${msg.notification?.body}',
-        name: 'FCM',
-      );
-    });
-
-    // Uygulama arka plandayken bildirime tıklanınca logla
-    FirebaseMessaging.onMessageOpenedApp.listen((msg) {
-      dev.log('[FCM] Bildirime tıklandı (arka plan): ${msg.notification?.title}', name: 'FCM');
-    });
-
-    // Uygulama kapalıyken bildirime tıklanınca logla
-    final initial = await _messaging.getInitialMessage();
-    if (initial != null) {
-      dev.log('[FCM] Uygulama bildirimle açıldı: ${initial.notification?.title}', name: 'FCM');
     }
   }
 

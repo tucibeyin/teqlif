@@ -52,7 +52,12 @@
 				</array>
 			</dict>
 		</dict>
-		<key>NSCameraUsageDescription</key>
+		<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+	</array>
+	<key>NSCameraUsageDescription</key>
 		<string>Canlı yayın için kameranıza erişim gerekiyor</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>Canlı yayın için mikrofonunuza erişim gerekiyor</string>
