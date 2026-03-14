@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:app_badge_plus/app_badge_plus.dart';
 import 'config/theme.dart';
 import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
@@ -51,6 +52,9 @@ class _SplashGateState extends State<_SplashGate> {
 
   Future<void> _check() async {
     final token = await StorageService.getToken();
+    // Uygulama açılışında rozeti sıfırla
+    final supported = await AppBadgePlus.isSupported();
+    if (supported) await AppBadgePlus.updateBadge(0);
     FlutterNativeSplash.remove();
     if (!mounted) return;
     if (token != null) {

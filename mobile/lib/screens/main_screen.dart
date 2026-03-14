@@ -18,7 +18,7 @@ class MainScreen extends StatefulWidget {
   State<MainScreen> createState() => _MainScreenState();
 }
 
-class _MainScreenState extends State<MainScreen> {
+class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   // Gerçek sayfa indeksi: 0=Canlı, 1=İlanlar, 2=Mesajlar, 3=Profilim
   int _pageIndex = 0;
 
@@ -44,6 +44,7 @@ class _MainScreenState extends State<MainScreen> {
       const MessagesScreen(),
       const ProfileScreen(),
     ];
+    WidgetsBinding.instance.addObserver(this);
     _refreshBadges();
     _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBadges());
     // Refresh badge immediately when a push notification arrives in foreground
@@ -52,9 +53,21 @@ class _MainScreenState extends State<MainScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _badgeTimer?.cancel();
     _fcmSub?.cancel();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Uygulama ön plana gelince badge'i sıfırla ve sayıları güncelle
+      AppBadgePlus.isSupported().then((ok) {
+        if (ok) AppBadgePlus.updateBadge(0);
+      });
+      _refreshBadges();
+    }
   }
 
   Future<void> _refreshBadges() async {
