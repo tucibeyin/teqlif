@@ -122,6 +122,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               child: VideoTrackRenderer(
                 _remoteVideoTrack!,
                 fit: VideoViewFit.contain,
+                mirror: true,
               ),
             ),
 

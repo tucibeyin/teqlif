@@ -179,6 +179,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               child: VideoTrackRenderer(
                 _localVideoTrack!,
                 fit: VideoViewFit.contain,
+                mirror: true,
               ),
             ),
 
