@@ -72,7 +72,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       });
 
       _listener!.on<RoomDisconnectedEvent>((_) {
-        if (mounted) Navigator.pop(context);
+        if (mounted) {
+          Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        }
       });
 
       await room.connect(
@@ -155,7 +157,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     } catch (_) {}
 
     await _room?.disconnect();
-    if (mounted) Navigator.pop(context);
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    }
   }
 
   @override
@@ -218,7 +222,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                             textAlign: TextAlign.center),
                         const SizedBox(height: 20),
                         ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
+                          onPressed: () => Navigator.pushNamedAndRemoveUntil(
+                              context, '/home', (route) => false),
                           child: const Text('Geri Dön'),
                         ),
                       ],
