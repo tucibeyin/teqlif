@@ -223,6 +223,17 @@
             <h3>Yayın Başlat</h3>
             <div id="modalAlert" class="alert alert-error" style="display:none;"></div>
             <input type="text" id="streamTitle" placeholder="Yayın başlığı (örn: Araba Satışı)" maxlength="200">
+            <select id="streamCategory" style="width:100%;padding:0.65rem 0.9rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.95rem;outline:none;margin-bottom:1rem;background:#fff;color:#1a1a1a;">
+                <option value="">— Kategori seç —</option>
+                <option value="elektronik">📱 Elektronik</option>
+                <option value="giyim">👗 Giyim</option>
+                <option value="ev">🏠 Ev & Yaşam</option>
+                <option value="vasita">🚗 Vasıta</option>
+                <option value="spor">⚽ Spor</option>
+                <option value="kitap">📚 Kitap</option>
+                <option value="emlak">🏘️ Emlak</option>
+                <option value="diger">📦 Diğer</option>
+            </select>
             <div class="modal-actions">
                 <button class="btn btn-primary btn-full" id="btnConfirmStart">Başlat</button>
                 <button class="btn btn-outline" id="btnCancelModal" style="min-width:90px;">İptal</button>
@@ -329,9 +340,15 @@
         });
 
         document.getElementById('btnConfirmStart').addEventListener('click', async () => {
-            const title = document.getElementById('streamTitle').value.trim();
+            const title    = document.getElementById('streamTitle').value.trim();
+            const category = document.getElementById('streamCategory').value;
             if (!title) {
                 modalAlert.textContent = 'Yayın başlığı girin';
+                modalAlert.style.display = 'block';
+                return;
+            }
+            if (!category) {
+                modalAlert.textContent = 'Kategori seçimi zorunludur';
                 modalAlert.style.display = 'block';
                 return;
             }
@@ -340,10 +357,13 @@
             btn.disabled = true;
             btn.textContent = 'Başlatılıyor...';
             try {
-                const data = await Stream.startStream(title);
+                const data = await Stream.startStream(title, category);
                 window.location.href = `/yayin.html?id=${data.stream_id}&host=1`;
             } catch (err) {
-                modalAlert.textContent = err.detail || 'Yayın başlatılamadı';
+                const msg = Array.isArray(err.detail)
+                    ? err.detail.map(e => e.msg).join(', ')
+                    : (err.detail || 'Yayın başlatılamadı');
+                modalAlert.textContent = msg;
                 modalAlert.style.display = 'block';
                 btn.disabled = false;
                 btn.textContent = 'Başlat';
