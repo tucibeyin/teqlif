@@ -9,8 +9,8 @@ import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
-import 'create_listing_screen.dart';
 import 'messages_screen.dart';
+import 'search_screen.dart';
 import 'live/live_list_screen.dart';
 
 class MainScreen extends StatefulWidget {
@@ -21,11 +21,7 @@ class MainScreen extends StatefulWidget {
 }
 
 class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
-  // Gerçek sayfa indeksi: 0=Canlı, 1=İlanlar, 2=Mesajlar, 3=Profilim
-  int _pageIndex = 0;
-
-  // Nav bar indeksi: 0=Canlı, 1=İlanlar, 2=Plus, 3=Mesajlar, 4=Profilim
-  int _navIndex = 0;
+  int _currentIndex = 0;
 
   int _unreadMessages = 0;
   int _unreadNotifs = 0;
@@ -35,16 +31,15 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   StreamSubscription<Map<String, dynamic>>? _notifStreamSub;
   StreamSubscription<void>? _badgeRefreshSub;
 
-  final _liveKey = GlobalKey<LiveListScreenState>();
-
   late final List<Widget> _screens;
 
   @override
   void initState() {
     super.initState();
     _screens = [
-      LiveListScreen(key: _liveKey),
+      const LiveListScreen(),
       const HomeScreen(),
+      const SearchScreen(),
       const MessagesScreen(),
       const ProfileScreen(),
     ];
@@ -52,13 +47,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     WsService.connect();
     _refreshBadges();
     _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBadges());
-    // FCM foreground mesajı (FirebaseMessaging.onMessage) için hızlı badge güncelleme
     _fcmSub = FirebaseMessaging.onMessage.listen((_) => _refreshBadges());
-    // notificationStream: tüm FCM durumları (foreground/background/terminated)
     _notifStreamSub = PushNotificationService.notificationStream.stream.listen((_) {
       _refreshBadges();
     });
-    // badgeRefreshNeeded: mesaj okunduğunda veya liste yenilendiğinde
     _badgeRefreshSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) {
       _refreshBadges();
     });
@@ -78,12 +70,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Uygulama ön plana gelince badge'i sıfırla ve sayıları güncelle
       AppBadgePlus.isSupported().then((ok) {
         if (ok) AppBadgePlus.updateBadge(0);
       });
       _refreshBadges();
-      // WebSocket'i yeniden bağla ve listeyi güncelle
       WsService.connect();
       PushNotificationService.notificationStream.add({});
     }
@@ -101,7 +91,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
           _unreadNotifs = notifs;
         });
       }
-      // Uygulama ikonu badge'ini güncelle
       final total = msgs + notifs;
       final supported = await AppBadgePlus.isSupported();
       if (supported) {
@@ -110,33 +99,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     } catch (_) {}
   }
 
-  void _onNavTap(int navIndex) {
-    if (navIndex == 2) {
-      // Plus butonu: bağlama göre farklı aksiyon
-      if (_pageIndex == 0) {
-        _liveKey.currentState?.triggerStartDialog();
-      } else {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const CreateListingScreen()),
-        );
-      }
-      return;
-    }
-    final pageIndex = navIndex > 2 ? navIndex - 1 : navIndex;
-    setState(() {
-      _pageIndex = pageIndex;
-      _navIndex = navIndex;
-    });
+  void _onNavTap(int index) {
+    setState(() => _currentIndex = index);
     // Mesajlar tabına geçince listeyi ve badge'i güncelle
-    if (pageIndex == 2) {
+    if (index == 3) {
       PushNotificationService.notificationStream.add({});
       Future.delayed(const Duration(milliseconds: 300), _refreshBadges);
     }
   }
 
   Widget _buildMessageIcon() {
-    // Badge sayısı: DM mesajları (kırmızı sayı) + bildirimleri nokta olarak göster
     final dmCount = _unreadMessages;
     final hasNotifs = _unreadNotifs > 0;
     return Stack(
@@ -224,11 +196,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
-        index: _pageIndex,
+        index: _currentIndex,
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _navIndex,
+        currentIndex: _currentIndex,
         onTap: _onNavTap,
         items: [
           const BottomNavigationBarItem(
@@ -241,9 +213,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             activeIcon: Icon(Icons.grid_view),
             label: 'İlanlar',
           ),
-          BottomNavigationBarItem(
-            icon: _PlusIcon(isLive: _pageIndex == 0),
-            label: _pageIndex == 0 ? 'Yayın Aç' : 'İlan Ver',
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.search_outlined),
+            activeIcon: Icon(Icons.search),
+            label: 'Ara',
           ),
           BottomNavigationBarItem(
             icon: _buildMessageIcon(),
@@ -256,28 +229,6 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             label: 'Profilim',
           ),
         ],
-      ),
-    );
-  }
-}
-
-class _PlusIcon extends StatelessWidget {
-  final bool isLive;
-  const _PlusIcon({required this.isLive});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      width: 40,
-      height: 40,
-      decoration: BoxDecoration(
-        color: isLive ? Colors.red : kPrimary,
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Icon(
-        isLive ? Icons.videocam_outlined : Icons.add,
-        color: Colors.white,
-        size: 20,
       ),
     );
   }

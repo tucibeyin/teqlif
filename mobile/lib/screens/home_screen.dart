@@ -5,6 +5,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/city_service.dart';
+import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -88,6 +89,16 @@ class _HomeScreenState extends State<HomeScreen> {
               backgroundColor: AppColors.surface(context),
               floating: true,
               snap: true,
+              actions: [
+                IconButton(
+                  icon: const Icon(Icons.add),
+                  tooltip: 'İlan Ver',
+                  onPressed: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const CreateListingScreen()),
+                  ),
+                ),
+              ],
             ),
             SliverToBoxAdapter(
               child: Column(
