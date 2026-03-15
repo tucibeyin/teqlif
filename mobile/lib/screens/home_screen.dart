@@ -167,16 +167,21 @@ class _HomeScreenState extends State<HomeScreen> {
               )
             else
               SliverPadding(
-                padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-                sliver: SliverList(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                sliver: SliverGrid(
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 2,
+                    mainAxisSpacing: 2,
+                  ),
                   delegate: SliverChildBuilderDelegate(
-                    (context, i) => _ListingCard(
+                    (context, i) => _GridItem(
                       listing: _listings[i],
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              ListingDetailScreen(listing: _listings[i]),
+                          builder: (_) => ListingDetailScreen(
+                              listing: Map<String, dynamic>.from(_listings[i])),
                         ),
                       ),
                     ),
@@ -191,15 +196,14 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class _ListingCard extends StatelessWidget {
+class _GridItem extends StatelessWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
-  const _ListingCard({required this.listing, required this.onTap});
+  const _GridItem({required this.listing, required this.onTap});
 
   String _fmt(dynamic price) {
-    if (price == null) return 'Fiyat Yok';
-    final n = (price as num).toInt();
-    final s = n.toString();
+    if (price == null) return '';
+    final s = (price as num).toInt().toString();
     final buf = StringBuffer();
     for (int i = 0; i < s.length; i++) {
       if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
@@ -211,97 +215,61 @@ class _ListingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imgs = listing['image_urls'] as List? ?? [];
-    final _raw = imgs.isNotEmpty
+    final raw = imgs.isNotEmpty
         ? imgs[0] as String
         : (listing['image_url'] as String?);
-    final photoUrl = _raw != null ? imgUrl(_raw) : null;
-    final user = listing['user'] as Map<String, dynamic>?;
+    final photo = raw != null ? imgUrl(raw) : null;
+    final price = _fmt(listing['price']);
 
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(12),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
-        child: Row(
-          children: [
-            ClipRRect(
-              borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(12)),
-              child: photoUrl != null
-                  ? Image.network(
-                      photoUrl,
-                      width: 90,
-                      height: 90,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _noImg(),
-                    )
-                  : _noImg(),
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.all(12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      listing['title'] ?? '',
-                      style: const TextStyle(
-                          fontWeight: FontWeight.w600, fontSize: 14),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 4),
-                    if (listing['location'] != null)
-                      Text(
-                        listing['location'],
-                        style: const TextStyle(
-                            color: Colors.grey, fontSize: 12),
-                      ),
-                    const SizedBox(height: 6),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          _fmt(listing['price']),
-                          style: const TextStyle(
-                            color: kPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 15,
-                          ),
-                        ),
-                        if (user != null)
-                          Text(
-                            user['username'] ?? '',
-                            style: const TextStyle(
-                                color: Colors.grey, fontSize: 11),
-                          ),
-                      ],
-                    ),
-                  ],
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          photo != null
+              ? Image.network(
+                  photo,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _placeholder(),
+                )
+              : _placeholder(),
+          // Alt gradient + fiyat
+          if (price.isNotEmpty)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black54],
+                  ),
+                ),
+                child: Text(
+                  price,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ),
-          ],
-        ),
+        ],
       ),
     );
   }
 
-  Widget _noImg() => Container(
-        width: 90,
-        height: 90,
+  Widget _placeholder() => Container(
         color: const Color(0xFFF3F4F6),
-        child: const Icon(Icons.image_outlined,
-            color: Color(0xFFD1D5DB), size: 28),
+        child: const Center(
+          child: Icon(Icons.image_outlined,
+              size: 28, color: Color(0xFFD1D5DB)),
+        ),
       );
 }
