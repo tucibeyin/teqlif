@@ -80,6 +80,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         if (ok) AppBadgePlus.updateBadge(0);
       });
       _refreshBadges();
+      // Arka planda gelen mesajları listeye yansıt
+      PushNotificationService.notificationStream.add({});
     }
   }
 
@@ -122,9 +124,10 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       _pageIndex = pageIndex;
       _navIndex = navIndex;
     });
-    // Refresh badges when switching to messages tab
+    // Mesajlar tabına geçince listeyi ve badge'i güncelle
     if (pageIndex == 2) {
-      Future.delayed(const Duration(milliseconds: 500), _refreshBadges);
+      PushNotificationService.notificationStream.add({});
+      Future.delayed(const Duration(milliseconds: 300), _refreshBadges);
     }
   }
 
