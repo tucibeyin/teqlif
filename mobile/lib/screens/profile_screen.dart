@@ -1,5 +1,8 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
@@ -30,16 +33,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       final info = await StorageService.getUserInfo();
       if (!mounted) return;
       final username = info?['username'] as String?;
+      Map<String, dynamic>? profile;
       if (username != null) {
-        final profile = await NotificationService.getUserByUsername(username);
-        if (mounted) {
-          setState(() {
-            _user = profile ?? info;
-            _loading = false;
-          });
-        }
-      } else {
-        setState(() { _user = info; _loading = false; });
+        profile = await NotificationService.getUserByUsername(username);
+      }
+      final userId = (profile ?? info)?['id'] as int?;
+      List<dynamic> listings = [];
+      if (userId != null) {
+        final token = await StorageService.getToken();
+        final resp = await http.get(
+          Uri.parse('$kBaseUrl/listings?user_id=$userId'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+          },
+        );
+        if (resp.statusCode == 200) listings = jsonDecode(resp.body) as List;
+      }
+      if (mounted) {
+        setState(() {
+          _user = profile ?? info;
+          _listings = listings;
+          _loading = false;
+        });
       }
     } catch (_) {
       if (!mounted) return;
