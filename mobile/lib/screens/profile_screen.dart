@@ -5,6 +5,7 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/auth_service.dart';
+import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import 'follow_list_screen.dart';
@@ -388,8 +389,45 @@ class _ListingGridItem extends StatelessWidget {
 
 // ── Ayarlar ekranı ────────────────────────────────────────────────────────────
 
-class _SettingsScreen extends StatelessWidget {
+class _SettingsScreen extends StatefulWidget {
   const _SettingsScreen();
+
+  @override
+  State<_SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<_SettingsScreen> {
+  bool _biometricEnabled = false;
+  bool _biometricAvailable = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadBiometricState();
+  }
+
+  Future<void> _loadBiometricState() async {
+    final available = await BiometricService.isAvailable();
+    final enabled = await StorageService.isBiometricEnabled();
+    if (mounted) {
+      setState(() {
+        _biometricAvailable = available;
+        _biometricEnabled = enabled;
+      });
+    }
+  }
+
+  Future<void> _toggleBiometric(bool value) async {
+    if (value) {
+      // Açarken bir kez doğrula
+      final ok = await BiometricService.authenticate(
+        reason: 'Face ID\'yi etkinleştirmek için doğrulayın',
+      );
+      if (!ok) return;
+    }
+    await StorageService.setBiometricEnabled(value);
+    if (mounted) setState(() => _biometricEnabled = value);
+  }
 
   Future<void> _showDeleteAccountDialog(BuildContext context) async {
     final passCtrl = TextEditingController();
@@ -507,6 +545,21 @@ class _SettingsScreen extends StatelessWidget {
                 label: 'Bildirim Ayarları',
                 onTap: () {},
               ),
+              if (_biometricAvailable)
+                SwitchListTile(
+                  secondary: const Icon(Icons.face_outlined,
+                      color: Color(0xFF374151)),
+                  title: const Text('Face ID ile Giriş',
+                      style: TextStyle(fontSize: 14)),
+                  subtitle: Text(
+                    _biometricEnabled ? 'Açık' : 'Kapalı',
+                    style: const TextStyle(
+                        fontSize: 12, color: Color(0xFF9CA3AF)),
+                  ),
+                  value: _biometricEnabled,
+                  activeColor: kPrimary,
+                  onChanged: _toggleBiometric,
+                ),
             ],
           ),
           const SizedBox(height: 8),
