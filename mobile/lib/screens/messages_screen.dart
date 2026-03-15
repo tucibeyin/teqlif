@@ -6,6 +6,7 @@ import '../config/theme.dart';
 import '../config/api.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
+import '../services/push_notification_service.dart';
 import 'public_profile_screen.dart';
 
 class MessagesScreen extends StatelessWidget {
@@ -51,11 +52,19 @@ class _MessagesTab extends StatefulWidget {
 class _MessagesTabState extends State<_MessagesTab> {
   List<dynamic> _conversations = [];
   bool _loading = true;
+  StreamSubscription<Map<String, dynamic>>? _sub;
 
   @override
   void initState() {
     super.initState();
     _load();
+    _sub = PushNotificationService.notificationStream.stream.listen((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
@@ -212,12 +221,20 @@ class _NotificationsTab extends StatefulWidget {
 class _NotificationsTabState extends State<_NotificationsTab> {
   List<dynamic> _notifications = [];
   bool _loading = true;
+  StreamSubscription<Map<String, dynamic>>? _sub;
 
   @override
   void initState() {
     super.initState();
     _load();
     NotificationService.markAllRead();
+    _sub = PushNotificationService.notificationStream.stream.listen((_) => _load());
+  }
+
+  @override
+  void dispose() {
+    _sub?.cancel();
+    super.dispose();
   }
 
   Future<void> _load() async {
