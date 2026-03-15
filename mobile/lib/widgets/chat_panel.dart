@@ -56,7 +56,9 @@ class _ChatPanelState extends State<ChatPanel> {
 
   Future<void> _init() async {
     _token = await StorageService.getToken();
-    if (mounted) _connectWS();
+    if (!mounted) return;
+    setState(() {});
+    _connectWS();
   }
 
   @override
