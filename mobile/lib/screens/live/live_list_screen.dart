@@ -4,6 +4,7 @@ import '../../models/stream.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/auth_service.dart';
+import '../../services/category_service.dart';
 import '../public_profile_screen.dart';
 import 'host_stream_screen.dart';
 import 'viewer_stream_screen.dart';
@@ -50,17 +51,8 @@ class LiveListScreenState extends State<LiveListScreen> {
     }
   }
 
-  static const _categories = [
-    ('elektronik', '📱 Elektronik'),
-    ('giyim', '👗 Giyim'),
-    ('ev', '🛋 Ev & Bahçe'),
-    ('vasita', '🚗 Vasıta'),
-    ('spor', '⚽ Spor'),
-    ('kitap', '📚 Kitap & Müzik'),
-    ('diger', '📦 Diğer'),
-  ];
-
   Future<void> _showStartDialog() async {
+    final categories = await CategoryService.getCategories();
     final token = await StorageService.getToken();
     if (token == null) {
       if (!mounted) return;
@@ -101,7 +93,7 @@ class LiveListScreenState extends State<LiveListScreen> {
                   border: OutlineInputBorder(),
                 ),
                 hint: const Text('Kategori seç'),
-                items: _categories
+                items: categories
                     .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                     .toList(),
                 onChanged: (v) => setStateDialog(() => selectedCategory = v),

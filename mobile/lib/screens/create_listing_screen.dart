@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../config/theme.dart';
+import '../services/category_service.dart';
 
 class CreateListingScreen extends StatefulWidget {
   const CreateListingScreen({super.key});
@@ -14,17 +15,21 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
-  String _selectedCategory = 'elektronik';
+  String? _selectedCategory;
+  List<(String, String)> _categories = [];
 
-  static const _categories = [
-    ('elektronik', '📱 Elektronik'),
-    ('giyim', '👗 Giyim'),
-    ('ev', '🛋 Ev & Bahçe'),
-    ('vasita', '🚗 Vasıta'),
-    ('spor', '⚽ Spor'),
-    ('kitap', '📚 Kitap & Müzik'),
-    ('diger', '📦 Diğer'),
-  ];
+  @override
+  void initState() {
+    super.initState();
+    CategoryService.getCategories().then((cats) {
+      if (mounted) {
+        setState(() {
+          _categories = cats;
+          if (cats.isNotEmpty) _selectedCategory = cats.first.$1;
+        });
+      }
+    });
+  }
 
   @override
   void dispose() {
@@ -103,6 +108,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         .toList(),
                     onChanged: (v) =>
                         setState(() => _selectedCategory = v ?? _selectedCategory),
+                    validator: (v) => v == null ? 'Kategori seçiniz' : null,
                   ),
                   const SizedBox(height: 14),
                   TextFormField(

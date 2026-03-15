@@ -14,21 +14,45 @@ from app.logging_config import setup_logging
 from app.routers import auth, streams, webhooks, auction, chat
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener
-from app.routers import notifications, messages, users, listings, follows
-from app.database import engine, Base
+from app.routers import notifications, messages, users, listings, follows, categories
+from app.database import engine, Base, AsyncSessionLocal
+from sqlalchemy import select
 import app.models.auction  # noqa: F401 — tablo kaydı için
 import app.models.notification  # noqa: F401 — tablo kaydı için
 import app.models.message  # noqa: F401 — tablo kaydı için
 import app.models.listing  # noqa: F401 — tablo kaydı için
 import app.models.follow  # noqa: F401 — tablo kaydı için
+import app.models.category  # noqa: F401 — tablo kaydı için
 
 logger = setup_logging()
+
+
+_SEED_CATEGORIES = [
+    ("elektronik", "📱 Elektronik", 0),
+    ("giyim", "👗 Giyim", 1),
+    ("ev", "🛋 Ev & Bahçe", 2),
+    ("vasita", "🚗 Vasıta", 3),
+    ("spor", "⚽ Spor", 4),
+    ("kitap", "📚 Kitap & Müzik", 5),
+    ("diger", "📦 Diğer", 6),
+]
+
+
+async def _seed_categories():
+    from app.models.category import Category
+    async with AsyncSessionLocal() as db:
+        for key, label, order in _SEED_CATEGORIES:
+            existing = await db.scalar(select(Category).where(Category.key == key))
+            if not existing:
+                db.add(Category(key=key, label=label, sort_order=order))
+        await db.commit()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    await _seed_categories()
     # Her worker'da Redis pub/sub dinleyicisini başlat
     task = asyncio.create_task(pubsub_listener())
     chat_task = asyncio.create_task(chat_pubsub_listener())
@@ -83,6 +107,7 @@ app.include_router(messages.router)
 app.include_router(users.router)
 app.include_router(listings.router)
 app.include_router(follows.router)
+app.include_router(categories.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):
