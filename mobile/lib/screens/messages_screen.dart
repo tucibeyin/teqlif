@@ -1,12 +1,11 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/theme.dart';
 import '../config/api.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
+import '../services/ws_service.dart';
 import 'public_profile_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
@@ -111,18 +110,28 @@ class _MessagesTab extends StatefulWidget {
 class _MessagesTabState extends State<_MessagesTab> {
   List<dynamic> _conversations = [];
   bool _loading = true;
-  StreamSubscription<Map<String, dynamic>>? _sub;
+  StreamSubscription<Map<String, dynamic>>? _fcmSub;
+  StreamSubscription<Map<String, dynamic>>? _wsSub;
 
   @override
   void initState() {
     super.initState();
     _load();
-    _sub = PushNotificationService.notificationStream.stream.listen((_) => _load(silent: true));
+    // FCM / app-resume olayları (arka plan → ön plan geçişi)
+    _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => _load(silent: true));
+    // WebSocket: yeni mesaj gelince anında güncelle
+    _wsSub = WsService.messageStream.listen((data) {
+      if (data['type'] == 'message') {
+        _load(silent: true);
+        PushNotificationService.badgeRefreshNeeded.add(null);
+      }
+    });
   }
 
   @override
   void dispose() {
-    _sub?.cancel();
+    _fcmSub?.cancel();
+    _wsSub?.cancel();
     super.dispose();
   }
 
@@ -452,7 +461,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
   List<Map<String, dynamic>> _messages = [];
   bool _loading = true;
   bool _sending = false;
-  WebSocketChannel? _channel;
+  StreamSubscription<Map<String, dynamic>>? _wsSub;
   int? _myUserId;
 
   @override
@@ -465,7 +474,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
     final info = await StorageService.getUserInfo();
     _myUserId = info?['id'] as int?;
     await _loadMessages();
-    _connectWs();
+    _listenWs();
   }
 
   Future<void> _loadMessages() async {
@@ -480,50 +489,29 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
     }
   }
 
-  void _connectWs() async {
-    final token = await StorageService.getToken();
-    if (token == null) return;
-    final wsUrl = kBaseUrl
-        .replaceFirst('https://', 'wss://')
-        .replaceFirst('http://', 'ws://');
-    try {
-      _channel = WebSocketChannel.connect(
-        Uri.parse('$wsUrl/messages/ws?token=$token'),
-      );
-      _channel!.stream.listen(
-        (raw) {
-          try {
-            final data = jsonDecode(raw as String) as Map<String, dynamic>;
-            if (data['type'] == 'message') {
-              final senderId = data['sender_id'] as int?;
-              final receiverId = data['receiver_id'] as int?;
-              // Only add message if it belongs to this conversation
-              if ((senderId == _myUserId && receiverId == widget.otherUserId) ||
-                  (senderId == widget.otherUserId && receiverId == _myUserId)) {
-                // Avoid duplicate if we already have it
-                final msgId = data['id'];
-                final exists = _messages.any((m) => m['id'] == msgId);
-                if (!exists && mounted) {
-                  setState(() {
-                    // Replace temp optimistic message from me with real server data
-                    if (senderId == _myUserId) {
-                      _messages.removeWhere((m) =>
-                          (m['id'] as int) < 0 &&
-                          m['content'] == data['content'] &&
-                          m['sender_id'] == _myUserId);
-                    }
-                    _messages.add(data);
-                  });
-                  _scrollToBottom();
-                }
-              }
+  void _listenWs() {
+    _wsSub = WsService.messageStream.listen((data) {
+      if (data['type'] != 'message') return;
+      final senderId = data['sender_id'] as int?;
+      final receiverId = data['receiver_id'] as int?;
+      if ((senderId == _myUserId && receiverId == widget.otherUserId) ||
+          (senderId == widget.otherUserId && receiverId == _myUserId)) {
+        final msgId = data['id'];
+        final exists = _messages.any((m) => m['id'] == msgId);
+        if (!exists && mounted) {
+          setState(() {
+            if (senderId == _myUserId) {
+              _messages.removeWhere((m) =>
+                  (m['id'] as int) < 0 &&
+                  m['content'] == data['content'] &&
+                  m['sender_id'] == _myUserId);
             }
-          } catch (_) {}
-        },
-        onDone: () {},
-        onError: (_) {},
-      );
-    } catch (_) {}
+            _messages.add(data);
+          });
+          _scrollToBottom();
+        }
+      }
+    });
   }
 
   void _scrollToBottom() {
@@ -585,7 +573,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
 
   @override
   void dispose() {
-    _channel?.sink.close();
+    _wsSub?.cancel();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();

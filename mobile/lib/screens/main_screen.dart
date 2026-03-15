@@ -6,6 +6,7 @@ import '../config/theme.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
+import '../services/ws_service.dart';
 import 'home_screen.dart';
 import 'profile_screen.dart';
 import 'create_listing_screen.dart';
@@ -48,6 +49,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       const ProfileScreen(),
     ];
     WidgetsBinding.instance.addObserver(this);
+    WsService.connect();
     _refreshBadges();
     _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBadges());
     // FCM foreground mesajı (FirebaseMessaging.onMessage) için hızlı badge güncelleme
@@ -65,6 +67,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    WsService.disconnect();
     _badgeTimer?.cancel();
     _fcmSub?.cancel();
     _notifStreamSub?.cancel();
@@ -80,7 +83,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         if (ok) AppBadgePlus.updateBadge(0);
       });
       _refreshBadges();
-      // Arka planda gelen mesajları listeye yansıt
+      // WebSocket'i yeniden bağla ve listeyi güncelle
+      WsService.connect();
       PushNotificationService.notificationStream.add({});
     }
   }
