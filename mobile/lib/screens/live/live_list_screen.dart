@@ -189,7 +189,7 @@ class LiveListScreenState extends State<LiveListScreen> {
   @override
   Widget build(BuildContext context) {
     final cats = _categories;
-    final showFilter = !_loading && _error == null && cats.length >= 2;
+    final showFilter = !_loading && _error == null && cats.length >= 1;
     final filtered = _filtered;
 
     return Scaffold(
@@ -283,74 +283,45 @@ class LiveListScreenState extends State<LiveListScreen> {
   }
 
   Widget _buildSectioned(List<String> cats, List<StreamOut> all) {
-    // Her kategori için streams listesi
     final groups = {for (var c in cats) c: all.where((s) => s.category == c).toList()};
-
-    final items = <Object>[];
-    for (final c in cats) {
-      final list = groups[c]!;
-      if (list.isEmpty) continue;
-      items.add(c); // section header
-      items.addAll(list);
-    }
 
     return CustomScrollView(
       slivers: [
-        SliverPadding(
-          padding: const EdgeInsets.all(12),
-          sliver: SliverList(
-            delegate: SliverChildBuilderDelegate(
-              (ctx, idx) {
-                final item = items[idx];
-                if (item is String && !item.contains(' ')) {
-                  // category key → section header
-                  return Padding(
-                    padding: const EdgeInsets.only(top: 8, bottom: 6),
-                    child: Text(
-                      _kCatLabels[item] ?? item,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 13,
-                        color: Color(0xFF6B7280),
-                        letterSpacing: 0.3,
-                      ),
-                    ),
-                  );
-                }
-                final stream = item as StreamOut;
-                // Pair up: render 2 cards per row manually using Row
-                // We use a grid via a simpler approach: wrap rows of 2
-                final catItems = groups[stream.category]!;
-                final pos = catItems.indexOf(stream);
-                if (pos.isOdd) return const SizedBox.shrink(); // already rendered in pair
-                final next = pos + 1 < catItems.length ? catItems[pos + 1] : null;
-                return Padding(
-                  padding: const EdgeInsets.only(bottom: 10),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: _StreamGridTile(
-                          stream: stream,
-                          onTap: () => _joinStream(stream),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: next != null
-                            ? _StreamGridTile(
-                                stream: next,
-                                onTap: () => _joinStream(next),
-                              )
-                            : const SizedBox.shrink(),
-                      ),
-                    ],
+        for (final c in cats)
+          if (groups[c]!.isNotEmpty) ...[
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+                child: Text(
+                  _kCatLabels[c] ?? c,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.w700,
+                    fontSize: 13,
+                    color: Color(0xFF6B7280),
+                    letterSpacing: 0.3,
                   ),
-                );
-              },
-              childCount: items.length,
+                ),
+              ),
             ),
-          ),
-        ),
+            SliverPadding(
+              padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                  childAspectRatio: 0.78,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (ctx, i) => _StreamGridTile(
+                    stream: groups[c]![i],
+                    onTap: () => _joinStream(groups[c]![i]),
+                  ),
+                  childCount: groups[c]!.length,
+                ),
+              ),
+            ),
+          ],
       ],
     );
   }
