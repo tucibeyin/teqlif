@@ -322,11 +322,30 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                         child: const Center(
                             child: CircularProgressIndicator(strokeWidth: 2)),
                       ),
-                errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFFF3F4F6),
-                  child: const Icon(Icons.broken_image_outlined,
-                      size: 48, color: Color(0xFFD1D5DB)),
-                ),
+                errorBuilder: (_, err, stack) {
+                  debugPrint('IMG HATA [${_images[i]}]: $err');
+                  return Container(
+                    color: const Color(0xFFF3F4F6),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.broken_image_outlined,
+                            size: 48, color: Color(0xFFD1D5DB)),
+                        const SizedBox(height: 8),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 8),
+                          child: Text(
+                            _images[i],
+                            style: const TextStyle(
+                                fontSize: 9, color: Color(0xFF9CA3AF)),
+                            textAlign: TextAlign.center,
+                            maxLines: 3,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
               ),
             ),
           ),
