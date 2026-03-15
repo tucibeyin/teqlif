@@ -68,6 +68,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 
+  String _buildImageUrl(String url) {
+    if (url.startsWith('http')) return url;
+    final origin = kBaseUrl.replaceFirst(RegExp(r'/api.*'), '');
+    return '$origin$url';
+  }
+
   Future<void> _pickAndUploadAvatar() async {
     final source = await showModalBottomSheet<ImageSource>(
       context: context,
@@ -193,7 +199,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 radius: 40,
                                 backgroundColor: kPrimaryBg,
                                 backgroundImage: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
-                                    ? NetworkImage(_user!['profile_image_url'] as String)
+                                    ? NetworkImage(_buildImageUrl(_user!['profile_image_url'] as String))
                                     : null,
                                 child: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
                                     ? null
