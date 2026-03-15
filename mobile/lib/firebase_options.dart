@@ -27,10 +27,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions ios = FirebaseOptions(
     apiKey: 'AIzaSyB4pHo_Pq3yTlsAsb0b1tJoO1wfipD6lUE',
-    appId: '1:232766108005:ios:df83bb877e95d34b51b18c',
+    appId: '1:232766108005:ios:71bf8e062c4a16c051b18c',
     messagingSenderId: '232766108005',
     projectId: 'teqlif-a24ee',
     storageBucket: 'teqlif-a24ee.firebasestorage.app',
     iosBundleId: 'teqlif',
   );
+
 }
