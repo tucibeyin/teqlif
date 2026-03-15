@@ -120,7 +120,7 @@ class _MessagesTabState extends State<_MessagesTab> {
     // FCM / app-resume olayları (arka plan → ön plan geçişi)
     _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => _load(silent: true));
     // WebSocket: yeni mesaj gelince anında güncelle
-    _wsSub = WsService.messageStream.listen((data) {
+    _wsSub = WsService.messageStream.stream.listen((data) {
       if (data['type'] == 'message') {
         _load(silent: true);
         PushNotificationService.badgeRefreshNeeded.add(null);
@@ -490,7 +490,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
   }
 
   void _listenWs() {
-    _wsSub = WsService.messageStream.listen((data) {
+    _wsSub = WsService.messageStream.stream.listen((data) {
       if (data['type'] != 'message') return;
       final senderId = data['sender_id'] as int?;
       final receiverId = data['receiver_id'] as int?;
