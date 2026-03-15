@@ -93,14 +93,9 @@ class _SplashGateState extends State<_SplashGate> {
     return const Scaffold(
       backgroundColor: kPrimary,
       body: Center(
-        child: Text(
-          'teqlif',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.w300,
-            color: Colors.white,
-            letterSpacing: 1.0,
-          ),
+        child: Image(
+          image: AssetImage('assets/splash.png'),
+          width: 220,
         ),
       ),
     );
