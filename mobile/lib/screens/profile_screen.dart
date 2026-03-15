@@ -5,7 +5,9 @@ import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/api.dart';
+import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
@@ -95,10 +97,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: Colors.white,
+        backgroundColor: AppColors.surface(context),
         title: Text(
           '@$username',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),
@@ -127,7 +129,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // Avatar
                         CircleAvatar(
                           radius: 40,
-                          backgroundColor: kPrimaryBg,
+                          backgroundColor: AppColors.primaryBg(context),
                           backgroundImage: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
                               ? NetworkImage(_buildImageUrl(_user!['profile_image_url'] as String))
                               : null,
@@ -207,9 +209,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         if (email.isNotEmpty)
                           Text(
                             email,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 12,
-                              color: Color(0xFF9CA3AF),
+                              color: AppColors.textTertiary(context),
                             ),
                           ),
                       ],
@@ -227,11 +229,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ).then((_) => _load()),
                       style: OutlinedButton.styleFrom(
                         minimumSize: const Size(double.infinity, 36),
-                        side: const BorderSide(color: Color(0xFFD1D5DB)),
+                        side: BorderSide(color: AppColors.border(context)),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        foregroundColor: const Color(0xFF1A1A1A),
+                        foregroundColor: AppColors.textPrimary(context),
                         textStyle: const TextStyle(
                           fontSize: 13,
                           fontWeight: FontWeight.w600,
@@ -242,7 +244,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 16),
                   // Separator
-                  const Divider(height: 1, color: Color(0xFFF3F4F6)),
+                  Divider(height: 1, color: AppColors.divider(context)),
                 ],
               ),
             ),
@@ -306,12 +308,12 @@ class _StatItem extends StatelessWidget {
       children: [
         Text(
           '$count',
-          style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
+          style: TextStyle(fontSize: 17, fontWeight: FontWeight.w700, color: AppColors.textPrimary(context)),
         ),
         const SizedBox(height: 2),
         Text(
           label,
-          style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+          style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
         ),
       ],
     );
@@ -357,9 +359,9 @@ class _ListingGridItem extends StatelessWidget {
               ? Image.network(
                   imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _placeholder(),
+                  errorBuilder: (_, __, ___) => _placeholder(context),
                 )
-              : _placeholder(),
+              : _placeholder(context),
           if (price.isNotEmpty)
             Positioned(
               left: 0,
@@ -391,11 +393,11 @@ class _ListingGridItem extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-        color: const Color(0xFFF3F4F6),
-        child: const Center(
+  Widget _placeholder(BuildContext context) => Container(
+        color: AppColors.surfaceVariant(context),
+        child: Center(
           child: Icon(Icons.image_outlined,
-              size: 28, color: Color(0xFFD1D5DB)),
+              size: 28, color: AppColors.border(context)),
         ),
       );
 }
@@ -520,7 +522,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Ayarlar')),
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.bg(context),
       body: ListView(
         children: [
           const SizedBox(height: 8),
@@ -563,19 +565,33 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               ),
               if (_biometricAvailable)
                 SwitchListTile(
-                  secondary: const Icon(Icons.face_outlined,
-                      color: Color(0xFF374151)),
-                  title: const Text('Face ID ile Giriş',
-                      style: TextStyle(fontSize: 14)),
+                  secondary: Icon(Icons.face_outlined,
+                      color: AppColors.iconColor(context)),
+                  title: Text('Face ID ile Giriş',
+                      style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
                   subtitle: Text(
                     _biometricEnabled ? 'Açık' : 'Kapalı',
-                    style: const TextStyle(
-                        fontSize: 12, color: Color(0xFF9CA3AF)),
+                    style: TextStyle(
+                        fontSize: 12, color: AppColors.textSecondary(context)),
                   ),
                   value: _biometricEnabled,
                   activeColor: kPrimary,
                   onChanged: _toggleBiometric,
                 ),
+              SwitchListTile(
+                secondary: Icon(Icons.dark_mode_outlined, color: AppColors.iconColor(context)),
+                title: Text('Karanlık Mod', style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
+                subtitle: Text(
+                  ThemeProvider.instance.isDark ? 'Açık' : 'Kapalı',
+                  style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
+                ),
+                value: ThemeProvider.instance.isDark,
+                activeColor: kPrimary,
+                onChanged: (_) async {
+                  await ThemeProvider.instance.toggle();
+                  if (mounted) setState(() {});
+                },
+              ),
             ],
           ),
           const SizedBox(height: 8),
@@ -616,7 +632,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
           ),
           const SizedBox(height: 8),
           Container(
-            color: Colors.white,
+            color: AppColors.surface(context),
             child: Column(
               children: [
                 ListTile(
@@ -664,7 +680,7 @@ class _SettingsSection extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.white,
+      color: AppColors.surface(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -672,10 +688,10 @@ class _SettingsSection extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
             child: Text(
               title.toUpperCase(),
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 11,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF9CA3AF),
+                color: AppColors.textTertiary(context),
                 letterSpacing: 0.5,
               ),
             ),
@@ -697,10 +713,9 @@ class _SettingsTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListTile(
-      leading: Icon(icon, color: const Color(0xFF374151)),
-      title: Text(label, style: const TextStyle(fontSize: 14)),
-      trailing:
-          const Icon(Icons.chevron_right, color: Color(0xFFD1D5DB), size: 20),
+      leading: Icon(icon, color: AppColors.iconColor(context)),
+      title: Text(label, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
+      trailing: Icon(Icons.chevron_right, color: AppColors.border(context), size: 20),
       onTap: onTap,
     );
   }
@@ -873,7 +888,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
                 children: [
                   CircleAvatar(
                     radius: 44,
-                    backgroundColor: kPrimaryBg,
+                    backgroundColor: AppColors.primaryBg(context),
                     backgroundImage: (_profileImageUrl?.isNotEmpty == true)
                         ? NetworkImage(_buildImageUrl(_profileImageUrl!))
                         : null,
@@ -1022,7 +1037,7 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: Text(widget.active ? 'Aktif İlanlarım' : 'Pasif İlanlarım')),
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.bg(context),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _listings.isEmpty
@@ -1104,10 +1119,12 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
     );
   }
 
-  Widget _imgPlaceholder() => Container(
-        width: 60, height: 60,
-        color: const Color(0xFFF3F4F6),
-        child: const Icon(Icons.image_outlined, color: Color(0xFFD1D5DB)),
+  Widget _imgPlaceholder() => Builder(
+        builder: (context) => Container(
+          width: 60, height: 60,
+          color: AppColors.surfaceVariant(context),
+          child: Icon(Icons.image_outlined, color: AppColors.border(context)),
+        ),
       );
 }
 
@@ -1175,7 +1192,7 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Favorilerim')),
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.bg(context),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _listings.isEmpty
@@ -1254,3 +1271,4 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
         child: const Icon(Icons.image_outlined, color: Color(0xFFD1D5DB)),
       );
 }
+

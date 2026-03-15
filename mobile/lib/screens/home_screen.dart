@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
+import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/city_service.dart';
 import 'listing_detail_screen.dart';
@@ -84,7 +85,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 'İlanlar',
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
               ),
-              backgroundColor: Colors.white,
+              backgroundColor: AppColors.surface(context),
               floating: true,
               snap: true,
             ),
@@ -113,7 +114,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   width: 50,
                                   height: 50,
                                   decoration: BoxDecoration(
-                                    color: kPrimaryBg,
+                                    color: AppColors.primaryBg(context),
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Icon(cat['icon'] as IconData,
@@ -144,16 +145,16 @@ class _HomeScreenState extends State<HomeScreen> {
                         height: 40,
                         padding: const EdgeInsets.symmetric(horizontal: 12),
                         decoration: BoxDecoration(
-                          color: Colors.white,
+                          color: AppColors.surface(context),
                           borderRadius: BorderRadius.circular(10),
-                          border: Border.all(color: Colors.grey.shade300),
+                          border: Border.all(color: AppColors.border(context)),
                         ),
                         child: DropdownButtonHideUnderline(
                           child: DropdownButton<String?>(
                             value: _selectedCity,
                             isExpanded: true,
                             icon: const Icon(Icons.keyboard_arrow_down, size: 20),
-                            style: const TextStyle(fontSize: 13, color: Color(0xFF1A1A1A)),
+                            style: TextStyle(fontSize: 13, color: AppColors.textPrimary(context)),
                             items: [
                               const DropdownMenuItem<String?>(
                                 value: null,
@@ -310,11 +311,13 @@ class _GridItem extends StatelessWidget {
     );
   }
 
-  Widget _placeholder() => Container(
-        color: const Color(0xFFF3F4F6),
-        child: const Center(
-          child: Icon(Icons.image_outlined,
-              size: 28, color: Color(0xFFD1D5DB)),
+  Widget _placeholder() => Builder(
+        builder: (context) => Container(
+          color: AppColors.surfaceVariant(context),
+          child: Center(
+            child: Icon(Icons.image_outlined,
+                size: 28, color: AppColors.border(context)),
+          ),
         ),
       );
 }

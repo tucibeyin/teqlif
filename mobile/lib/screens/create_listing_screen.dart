@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import '../config/api.dart';
+import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/category_service.dart';
 import '../services/city_service.dart';
@@ -240,17 +241,18 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         itemBuilder: (ctx, i) {
                           if (i == _images.length) {
                             // Add button at end
-                            return GestureDetector(
+                            return Builder(
+                              builder: (context) => GestureDetector(
                               onTap: _showImageSourceSheet,
                               child: Container(
                                 width: 90,
                                 decoration: BoxDecoration(
-                                  border: Border.all(color: Colors.grey.shade300),
+                                  border: Border.all(color: AppColors.border(context)),
                                   borderRadius: BorderRadius.circular(8),
                                 ),
-                                child: const Icon(Icons.add, color: Colors.grey),
+                                child: Icon(Icons.add, color: AppColors.textSecondary(context)),
                               ),
-                            );
+                            ));
                           }
                           return Stack(
                             children: [
@@ -305,29 +307,30 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     const SizedBox(height: 8),
                     GestureDetector(
                       onTap: _showImageSourceSheet,
-                      child: Container(
+                      child: Builder(
+                        builder: (context) => Container(
                         height: 90,
                         decoration: BoxDecoration(
                           border: Border.all(
-                              color: Colors.grey.shade300,
+                              color: AppColors.border(context),
                               style: BorderStyle.solid),
                           borderRadius: BorderRadius.circular(8),
-                          color: Colors.grey.shade50,
+                          color: AppColors.surfaceVariant(context),
                         ),
-                        child: const Center(
+                        child: Center(
                           child: Column(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Icon(Icons.add_photo_alternate_outlined,
-                                  color: Colors.grey, size: 28),
-                              SizedBox(height: 4),
+                                  color: AppColors.textSecondary(context), size: 28),
+                              const SizedBox(height: 4),
                               Text('Fotoğraf ekle',
                                   style: TextStyle(
-                                      color: Colors.grey, fontSize: 12)),
+                                      color: AppColors.textSecondary(context), fontSize: 12)),
                             ],
                           ),
                         ),
-                      ),
+                      ),),
                     ),
                   ],
                 ],
@@ -448,7 +451,7 @@ class _SectionCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surface(context),
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(

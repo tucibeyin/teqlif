@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
+import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
 import 'public_profile_screen.dart';
@@ -111,7 +112,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                         widget.type == FollowListType.followers
                             ? 'Henüz takipçi yok'
                             : 'Henüz takip edilen yok',
-                        style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
+                        style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15),
                       ),
                     ],
                   ),
@@ -163,7 +164,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                       ),
                       subtitle: Text(
                         '@$username',
-                        style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                        style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                       ),
                       trailing: isMe
                           ? null
@@ -173,9 +174,9 @@ class _FollowListScreenState extends State<FollowListScreen> {
                                 onPressed: () => _toggleFollow(i),
                                 style: OutlinedButton.styleFrom(
                                   backgroundColor: isFollowing ? null : kPrimary,
-                                  foregroundColor: isFollowing ? const Color(0xFF374151) : Colors.white,
+                                  foregroundColor: isFollowing ? AppColors.textPrimary(context) : Colors.white,
                                   side: BorderSide(
-                                    color: isFollowing ? const Color(0xFFD1D5DB) : kPrimary,
+                                    color: isFollowing ? AppColors.border(context) : kPrimary,
                                   ),
                                   padding: const EdgeInsets.symmetric(vertical: 6),
                                   shape: RoundedRectangleBorder(

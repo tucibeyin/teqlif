@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/push_notification_service.dart';
@@ -79,7 +80,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
             const SizedBox(height: 6),
             Text(
               '${widget.email} adresine 6 haneli doğrulama kodu gönderdik.',
-              style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+              style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 28),
             if (_error != null) ...[

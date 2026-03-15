@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../config/api.dart';
 import '../services/notification_service.dart';
@@ -187,14 +188,12 @@ class _MessagesTabState extends State<_MessagesTab> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280),
               ),
             ),
             SizedBox(height: 8),
             Text(
               'Bir ilanla ilgilendiğinde\nburada görüntülenecek',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
             ),
           ],
         ),
@@ -236,7 +235,7 @@ class _MessagesTabState extends State<_MessagesTab> {
                 ),
                 Text(
                   _timeAgo(lastAt),
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                  style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)), // color handled by theme
                 ),
               ],
             ),
@@ -374,13 +373,11 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280),
               ),
             ),
             SizedBox(height: 8),
             Text(
               'Yeni bildirimler burada görünecek',
-              style: TextStyle(fontSize: 13, color: Color(0xFF9CA3AF)),
             ),
           ],
         ),
@@ -406,14 +403,14 @@ class _NotificationsTabState extends State<_NotificationsTab> {
               height: 40,
               decoration: BoxDecoration(
                 color: isRead
-                    ? const Color(0xFFF3F4F6)
+                    ? AppColors.surfaceVariant(context)
                     : kPrimary.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(10),
               ),
               child: Icon(
                 _iconForType(type),
                 size: 20,
-                color: isRead ? const Color(0xFF6B7280) : kPrimary,
+                color: isRead ? AppColors.iconSecondary(context) : kPrimary,
               ),
             ),
             title: Text(
@@ -431,11 +428,11 @@ class _NotificationsTabState extends State<_NotificationsTab> {
                     body,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+                    style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                   ),
                 Text(
                   _timeAgo(createdAt),
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
+                  style: TextStyle(fontSize: 11, color: AppColors.textTertiary(context)),
                 ),
               ],
             ),
@@ -636,7 +633,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                               decoration: BoxDecoration(
                                 color: isMe
                                     ? kPrimary
-                                    : const Color(0xFFE5E7EB),
+                                    : AppColors.card(context),
                                 borderRadius: BorderRadius.only(
                                   topLeft: const Radius.circular(16),
                                   topRight: const Radius.circular(16),
@@ -672,11 +669,12 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                         },
                       ),
           ),
-          Container(
+          Builder(
+            builder: (context) => Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            decoration: const BoxDecoration(
-              color: Colors.white,
-              border: Border(top: BorderSide(color: Color(0xFFE5E7EB))),
+            decoration: BoxDecoration(
+              color: AppColors.surface(context),
+              border: Border(top: BorderSide(color: AppColors.border(context))),
             ),
             child: SafeArea(
               top: false,
@@ -690,9 +688,9 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                       decoration: InputDecoration(
                         hintText: 'Mesaj yaz...',
                         hintStyle:
-                            const TextStyle(color: Color(0xFF9CA3AF)),
+                            TextStyle(color: AppColors.textTertiary(context)),
                         filled: true,
-                        fillColor: const Color(0xFFF3F4F6),
+                        fillColor: AppColors.inputFill(context),
                         contentPadding: const EdgeInsets.symmetric(
                             horizontal: 14, vertical: 10),
                         border: OutlineInputBorder(
@@ -726,7 +724,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                 ],
               ),
             ),
-          ),
+          ),),
         ],
       ),
     );
@@ -761,7 +759,7 @@ class _MessageText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final normalColor = isMe ? Colors.white : const Color(0xFF1F2937);
+    final normalColor = isMe ? Colors.white : AppColors.textPrimary(context);
     const linkColor = Color(0xFF38BDF8); // açık mavi — her iki balonda görünür
 
     final matches = _urlRegex.allMatches(content).toList();
