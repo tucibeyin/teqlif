@@ -1,7 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/category_service.dart';
+import '../services/storage_service.dart';
 
 class CreateListingScreen extends StatefulWidget {
   const CreateListingScreen({super.key});
@@ -15,8 +19,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
+  final _locationCtrl = TextEditingController();
   String? _selectedCategory;
   List<(String, String)> _categories = [];
+  bool _submitting = false;
 
   @override
   void initState() {
@@ -36,7 +42,54 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
+    _locationCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _submit() async {
+    if (!_formKey.currentState!.validate()) return;
+    setState(() => _submitting = true);
+    try {
+      final token = await StorageService.getToken();
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/listings'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'title': _titleCtrl.text.trim(),
+          'description': _descCtrl.text.trim(),
+          'price': double.tryParse(_priceCtrl.text.trim()),
+          'category': _selectedCategory,
+          if (_locationCtrl.text.trim().isNotEmpty)
+            'location': _locationCtrl.text.trim(),
+        }),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('İlan yayına alındı!'),
+            backgroundColor: kPrimary,
+          ),
+        );
+        Navigator.pop(context, true);
+      } else {
+        final err = jsonDecode(resp.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(err['detail'] ?? 'Bir hata oluştu')),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bağlantı hatası')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
   }
 
   @override
@@ -50,47 +103,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Fotoğraf ekleme
-              GestureDetector(
-                onTap: () {},
-                child: Container(
-                  width: double.infinity,
-                  height: 160,
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(
-                      color: const Color(0xFFE5E7EB),
-                      style: BorderStyle.solid,
-                      width: 2,
-                    ),
-                  ),
-                  child: const Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.add_photo_alternate_outlined,
-                          size: 40, color: kPrimary),
-                      SizedBox(height: 8),
-                      Text(
-                        'Fotoğraf Ekle',
-                        style: TextStyle(
-                          color: kPrimary,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        'En fazla 8 fotoğraf',
-                        style: TextStyle(
-                          color: Color(0xFF9CA3AF),
-                          fontSize: 12,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-              const SizedBox(height: 16),
               _SectionCard(
                 children: [
                   TextFormField(
@@ -124,6 +136,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     validator: (v) =>
                         v == null || v.isEmpty ? 'Fiyat giriniz' : null,
                   ),
+                  const SizedBox(height: 14),
+                  TextFormField(
+                    controller: _locationCtrl,
+                    decoration: const InputDecoration(
+                      labelText: 'Konum (isteğe bağlı)',
+                      hintText: 'İstanbul, Ankara...',
+                    ),
+                  ),
                 ],
               ),
               const SizedBox(height: 12),
@@ -142,18 +162,19 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                 ],
               ),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: () {
-                  if (_formKey.currentState!.validate()) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text('İlan yayına alındı!'),
-                        backgroundColor: kPrimary,
-                      ),
-                    );
-                  }
-                },
-                child: const Text('İlanı Yayınla'),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  onPressed: _submitting ? null : _submit,
+                  child: _submitting
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                              color: Colors.white, strokeWidth: 2),
+                        )
+                      : const Text('İlanı Yayınla'),
+                ),
               ),
               const SizedBox(height: 24),
             ],

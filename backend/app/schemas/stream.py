@@ -3,7 +3,7 @@ from pydantic import BaseModel, field_validator
 
 
 VALID_CATEGORIES = {
-    "elektronik", "giyim", "ev", "vasita", "spor", "kitap", "diger"
+    "elektronik", "giyim", "ev", "vasita", "spor", "kitap", "emlak", "diger"
 }
 
 

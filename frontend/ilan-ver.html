@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>İlan Ver — teqlif</title>
+    <link rel="stylesheet" href="/static/css/main.css">
+    <style>
+        .form-page {
+            min-height: calc(100vh - 60px);
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+            padding: 2rem 1rem 4rem;
+            background: var(--bg, #f8fafc);
+        }
+
+        .form-inner {
+            width: 100%;
+            max-width: 520px;
+        }
+
+        .form-inner h1 {
+            font-size: 1.4rem;
+            font-weight: 700;
+            margin: 0 0 1.5rem;
+        }
+
+        .form-card {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 2px 10px rgba(0,0,0,.06);
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.1rem;
+        }
+
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+
+        .form-group label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 0.4rem;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 0.65rem 0.875rem;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-family: inherit;
+            color: #111;
+            background: #fff;
+            box-sizing: border-box;
+            transition: border-color .15s;
+            outline: none;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            border-color: var(--primary, #06b6d4);
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 120px;
+        }
+
+        .price-wrap {
+            position: relative;
+        }
+
+        .price-wrap span {
+            position: absolute;
+            left: 0.875rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+            font-size: 0.95rem;
+            pointer-events: none;
+        }
+
+        .price-wrap input {
+            padding-left: 2rem;
+        }
+
+        .btn-submit {
+            width: 100%;
+            padding: 0.85rem;
+            background: var(--primary, #06b6d4);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .15s;
+            margin-top: 0.5rem;
+        }
+
+        .btn-submit:hover { opacity: .88; }
+        .btn-submit:disabled { opacity: .6; cursor: not-allowed; }
+
+        .alert-msg {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+            display: none;
+        }
+
+        .alert-msg.error { background: #fee2e2; color: #b91c1c; }
+        .alert-msg.success { background: #dcfce7; color: #15803d; }
+    </style>
+</head>
+<body>
+    <nav>
+        <a href="/" class="logo">teqlif</a>
+        <div class="nav-links">
+            <a href="/giris.html" id="navGiris">Giriş Yap</a>
+            <a href="/kayit.html" class="btn-nav" id="navKayit">Kayıt Ol</a>
+        </div>
+    </nav>
+
+    <div class="form-page">
+        <div class="form-inner">
+            <h1>İlan Ver</h1>
+
+            <div class="alert-msg" id="alertMsg"></div>
+
+            <form id="ilanForm" onsubmit="submitForm(event)">
+                <div class="form-card">
+                    <div class="form-group">
+                        <label for="title">İlan Başlığı *</label>
+                        <input type="text" id="title" placeholder="Örn: iPhone 14 Pro, Deri Kanepe..." maxlength="200" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="category">Kategori *</label>
+                        <select id="category" required>
+                            <option value="">— Kategori seçin —</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="price">Fiyat (₺) *</label>
+                        <div class="price-wrap">
+                            <span>₺</span>
+                            <input type="number" id="price" min="0" step="0.01" placeholder="0" required>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label for="location">Konum (isteğe bağlı)</label>
+                        <input type="text" id="location" placeholder="İstanbul, Ankara...">
+                    </div>
+                </div>
+
+                <div class="form-card">
+                    <div class="form-group">
+                        <label for="description">Açıklama *</label>
+                        <textarea id="description" placeholder="İlanınızı detaylı açıklayın..." required></textarea>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn-submit" id="submitBtn">İlanı Yayınla</button>
+            </form>
+        </div>
+    </div>
+
+    <script src="/static/js/main.js"></script>
+    <script src="/static/js/auth.js"></script>
+    <script>
+        // Giriş yapılmamışsa yönlendir
+        (function () {
+            const token = localStorage.getItem('teqlif_token');
+            if (!token) {
+                window.location.href = '/giris.html?next=/ilan-ver.html';
+            }
+        })();
+
+        // Kategorileri API'den çek
+        async function loadCategories() {
+            try {
+                const cats = await apiFetch('/categories');
+                const sel = document.getElementById('category');
+                cats.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.key;
+                    opt.textContent = c.label;
+                    sel.appendChild(opt);
+                });
+            } catch (_) {
+                // Fallback
+                const fallback = [
+                    ['elektronik', '📱 Elektronik'],
+                    ['vasita', '🚗 Vasıta'],
+                    ['emlak', '🏠 Emlak'],
+                    ['giyim', '👗 Giyim'],
+                    ['spor', '⚽ Spor'],
+                    ['kitap', '📚 Kitap & Müzik'],
+                    ['ev', '🛋 Ev & Bahçe'],
+                    ['diger', '📦 Diğer'],
+                ];
+                const sel = document.getElementById('category');
+                fallback.forEach(([k, l]) => {
+                    const opt = document.createElement('option');
+                    opt.value = k;
+                    opt.textContent = l;
+                    sel.appendChild(opt);
+                });
+            }
+        }
+
+        function showAlert(msg, type) {
+            const el = document.getElementById('alertMsg');
+            el.textContent = msg;
+            el.className = 'alert-msg ' + type;
+            el.style.display = 'block';
+            el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        async function submitForm(e) {
+            e.preventDefault();
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            btn.textContent = 'Yayınlanıyor...';
+            document.getElementById('alertMsg').style.display = 'none';
+
+            const title = document.getElementById('title').value.trim();
+            const category = document.getElementById('category').value;
+            const price = parseFloat(document.getElementById('price').value);
+            const location = document.getElementById('location').value.trim() || null;
+            const description = document.getElementById('description').value.trim();
+
+            try {
+                await apiFetch('/listings', {
+                    method: 'POST',
+                    body: JSON.stringify({ title, category, price, location, description }),
+                });
+                showAlert('İlanınız başarıyla yayına alındı!', 'success');
+                document.getElementById('ilanForm').reset();
+                setTimeout(() => window.location.href = '/?tab=ilanlar', 1500);
+            } catch (err) {
+                showAlert(err.detail || 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'İlanı Yayınla';
+            }
+        }
+
+        loadCategories();
+    </script>
+</body>
+</html>
