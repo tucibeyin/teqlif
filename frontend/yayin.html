@@ -809,8 +809,7 @@
                     remoteAudioEl: isHost ? null : remoteAudio,
                     onDisconnect: () => {
                         if (!isHost) {
-                            Stream.clear();
-                            setTimeout(() => window.location.href = '/', 2000);
+                            _onStreamEndedViewer();
                         }
                     },
                     onRemoteVideo: () => {
@@ -900,20 +899,23 @@
             btn.textContent = micEnabled ? '🎙 Mikrofon Kapat' : '🔇 Mikrofon Aç';
         });
 
-        // Yayın sona erdi — viewer bilgilendirme
+        // Yayın sona erdi — viewer tam sayfa bildirim + yönlendirme
+        let _streamEndedHandled = false;
         function _onStreamEndedViewer() {
+            if (_streamEndedHandled) return;
+            _streamEndedHandled = true;
             Chat.disconnect();
-            const overlay = document.getElementById('connectingOverlay');
-            if (overlay) {
-                overlay.style.display = 'flex';
-                overlay.innerHTML = `
-                    <div style="text-align:center; padding:2rem;">
-                        <div style="font-size:3rem; margin-bottom:1rem;">📺</div>
-                        <div style="font-size:1.1rem; font-weight:700; margin-bottom:0.5rem;">Yayın Sona Erdi</div>
-                        <div style="color:#94a3b8; margin-bottom:1.5rem;">Bu yayın yayıncı tarafından sonlandırıldı.</div>
-                        <a href="/canli.html" class="btn btn-primary" style="text-decoration:none;">Diğer Yayınlara Bak</a>
-                    </div>`;
-            }
+            const el = document.createElement('div');
+            el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
+            el.innerHTML = `
+                <div style="text-align:center;color:#fff;padding:2rem;">
+                    <div style="font-size:3.5rem;margin-bottom:1rem;">📺</div>
+                    <div style="font-size:1.3rem;font-weight:700;margin-bottom:0.5rem;">Yayın Sona Erdi</div>
+                    <div style="color:#94a3b8;margin-bottom:1.5rem;">Bu yayın yayıncı tarafından sonlandırıldı.</div>
+                    <div style="color:#64748b;font-size:0.85rem;">Canlı yayınlara yönlendiriliyorsunuz...</div>
+                </div>`;
+            document.body.appendChild(el);
+            setTimeout(() => { window.location.href = '/canli.html'; }, 3000);
         }
 
         // Ayrıl (Viewer)
