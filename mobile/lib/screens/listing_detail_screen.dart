@@ -1,16 +1,9 @@
 import 'package:flutter/material.dart';
+import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
 import 'public_profile_screen.dart';
 import 'messages_screen.dart';
-
-// teqlif.com/api → teqlif.com
-const String _kBaseHost = 'https://teqlif.com';
-
-String _imgUrl(String path) {
-  if (path.startsWith('http')) return path;
-  return '$_kBaseHost$path';
-}
 
 class ListingDetailScreen extends StatefulWidget {
   final Map<String, dynamic> listing;
@@ -31,9 +24,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     super.initState();
     _pageCtrl = PageController();
     final imgs = widget.listing['image_urls'] as List? ?? [];
-    _images = imgs.cast<String>().map(_imgUrl).toList();
+    _images = imgs.cast<String>().map(imgUrl).toList();
     if (_images.isEmpty && widget.listing['image_url'] != null) {
-      _images.add(_imgUrl(widget.listing['image_url'] as String));
+      _images.add(imgUrl(widget.listing['image_url'] as String));
     }
     _loadMyId();
   }

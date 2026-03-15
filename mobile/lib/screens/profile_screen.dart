@@ -322,9 +322,10 @@ class _ListingGridItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imgs = listing['image_urls'] as List? ?? [];
-    final imageUrl = imgs.isNotEmpty
+    final _raw = imgs.isNotEmpty
         ? imgs[0] as String
         : listing['image_url'] as String?;
+    final imageUrl = _raw != null ? imgUrl(_raw) : null;
     final price = _fmt(listing['price']);
 
     return GestureDetector(

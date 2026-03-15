@@ -211,9 +211,10 @@ class _ListingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final imgs = listing['image_urls'] as List? ?? [];
-    final imgUrl = imgs.isNotEmpty
+    final _raw = imgs.isNotEmpty
         ? imgs[0] as String
         : (listing['image_url'] as String?);
+    final photoUrl = _raw != null ? imgUrl(_raw) : null;
     final user = listing['user'] as Map<String, dynamic>?;
 
     return GestureDetector(
@@ -236,9 +237,9 @@ class _ListingCard extends StatelessWidget {
             ClipRRect(
               borderRadius: const BorderRadius.horizontal(
                   left: Radius.circular(12)),
-              child: imgUrl != null
+              child: photoUrl != null
                   ? Image.network(
-                      imgUrl,
+                      photoUrl,
                       width: 90,
                       height: 90,
                       fit: BoxFit.cover,
