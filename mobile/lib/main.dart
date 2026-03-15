@@ -90,12 +90,13 @@ class _SplashGateState extends State<_SplashGate> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    final w = MediaQuery.sizeOf(context).width;
+    return Scaffold(
       backgroundColor: kPrimary,
       body: Center(
         child: Image(
-          image: AssetImage('assets/splash.png'),
-          width: 220,
+          image: const AssetImage('assets/splash.png'),
+          width: w * 0.6,
         ),
       ),
     );
