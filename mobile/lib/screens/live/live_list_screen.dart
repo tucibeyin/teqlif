@@ -213,10 +213,13 @@ class LiveListScreenState extends State<LiveListScreen> {
           ],
         ),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.videocam_outlined),
-            tooltip: 'Yayın Aç',
+          TextButton.icon(
             onPressed: _showStartDialog,
+            icon: const Icon(Icons.videocam_outlined, size: 18, color: Colors.red),
+            label: const Text(
+              'Yayın Aç',
+              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 13),
+            ),
           ),
         ],
       ),

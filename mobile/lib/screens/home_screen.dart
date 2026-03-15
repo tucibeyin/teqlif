@@ -90,12 +90,18 @@ class _HomeScreenState extends State<HomeScreen> {
               floating: true,
               snap: true,
               actions: [
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  tooltip: 'İlan Ver',
+                TextButton.icon(
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(builder: (_) => const CreateListingScreen()),
+                  ),
+                  icon: const Icon(Icons.add, size: 18, color: Color(0xFFF59E0B)),
+                  label: const Text(
+                    'İlan Ver',
+                    style: TextStyle(
+                        color: Color(0xFFF59E0B),
+                        fontWeight: FontWeight.w600,
+                        fontSize: 13),
                   ),
                 ),
               ],
