@@ -589,6 +589,16 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   }
                 },
               ),
+              _SettingsTile(
+                icon: Icons.lock_outline,
+                label: 'Gizlilik Politikası',
+                onTap: () async {
+                  final uri = Uri.parse('https://teqlif.com/gizlilik-politikasi');
+                  if (await canLaunchUrl(uri)) {
+                    launchUrl(uri, mode: LaunchMode.externalApplication);
+                  }
+                },
+              ),
             ],
           ),
           const SizedBox(height: 8),
