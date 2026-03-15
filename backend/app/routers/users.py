@@ -7,21 +7,31 @@ from app.database import get_db
 from app.models.user import User
 from app.models.listing import Listing
 from app.models.follow import Follow
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, bearer_scheme, decode_token
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 
-async def _optional_user(db: AsyncSession = Depends(get_db)):
-    """Returns None if not authenticated."""
-    return None
+async def _optional_user(
+    credentials=Depends(bearer_scheme),
+    db: AsyncSession = Depends(get_db),
+) -> Optional[User]:
+    if not credentials:
+        return None
+    user_id = decode_token(credentials.credentials)
+    if not user_id:
+        return None
+    result = await db.execute(
+        select(User).where(User.id == user_id, User.is_active == True)  # noqa: E712
+    )
+    return result.scalar_one_or_none()
 
 
 @router.get("/{username}")
 async def get_user_profile(
     username: str,
+    current_user: Optional[User] = Depends(_optional_user),
     db: AsyncSession = Depends(get_db),
-    # optional auth — we try to read token manually below
 ):
     result = await db.execute(
         select(User).where(User.username == username, User.is_active == True)  # noqa: E712
@@ -30,23 +40,27 @@ async def get_user_profile(
     if not user:
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
 
-    # Count listings
-    listing_count_result = await db.execute(
+    listing_count = await db.scalar(
         select(func.count()).where(Listing.user_id == user.id, Listing.is_active == True)  # noqa: E712
-    )
-    listing_count = listing_count_result.scalar() or 0
+    ) or 0
 
-    # Count followers
-    follower_count_result = await db.execute(
+    follower_count = await db.scalar(
         select(func.count()).where(Follow.followed_id == user.id)
-    )
-    follower_count = follower_count_result.scalar() or 0
+    ) or 0
 
-    # Count following
-    following_count_result = await db.execute(
+    following_count = await db.scalar(
         select(func.count()).where(Follow.follower_id == user.id)
-    )
-    following_count = following_count_result.scalar() or 0
+    ) or 0
+
+    is_following = False
+    if current_user and current_user.id != user.id:
+        chk = await db.scalar(
+            select(Follow).where(
+                Follow.follower_id == current_user.id,
+                Follow.followed_id == user.id,
+            )
+        )
+        is_following = chk is not None
 
     return {
         "id": user.id,
@@ -55,20 +69,5 @@ async def get_user_profile(
         "listing_count": listing_count,
         "follower_count": follower_count,
         "following_count": following_count,
+        "is_following": is_following,
     }
-
-
-@router.get("/{username}/is-following")
-async def check_is_following(
-    username: str,
-    current_user: User = Depends(get_current_user),
-    db: AsyncSession = Depends(get_db),
-):
-    result = await db.execute(select(User).where(User.username == username))
-    target = result.scalar_one_or_none()
-    if not target:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
-    follow = await db.execute(
-        select(Follow).where(Follow.follower_id == current_user.id, Follow.followed_id == target.id)
-    )
-    return {"is_following": follow.scalar_one_or_none() is not None}

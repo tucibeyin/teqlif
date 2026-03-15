@@ -3,6 +3,8 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/theme.dart';
 import '../services/auth_service.dart';
 import '../services/storage_service.dart';
+import '../services/notification_service.dart';
+import 'follow_list_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -27,22 +29,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       final info = await StorageService.getUserInfo();
       if (!mounted) return;
-      setState(() {
-        _user = info;
-        _loading = false;
-      });
-      // İlanları yüklemeyi dene (API hazır değilse boş kalır)
-      _loadListings();
+      final username = info?['username'] as String?;
+      if (username != null) {
+        final profile = await NotificationService.getUserByUsername(username);
+        if (mounted) {
+          setState(() {
+            _user = profile ?? info;
+            _loading = false;
+          });
+        }
+      } else {
+        setState(() { _user = info; _loading = false; });
+      }
     } catch (_) {
       if (!mounted) return;
       setState(() => _loading = false);
     }
-  }
-
-  Future<void> _loadListings() async {
-    // Backend'de /listings/mine hazır olduğunda buraya bağlanacak
-    // Şimdilik boş liste
-    setState(() => _listings = []);
   }
 
 
@@ -116,8 +118,42 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
                               _StatItem(count: _listings.length, label: 'İlan'),
-                              const _StatItem(count: 0, label: 'Takipçi'),
-                              const _StatItem(count: 0, label: 'Takip'),
+                              GestureDetector(
+                                onTap: _user?['id'] != null
+                                    ? () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => FollowListScreen(
+                                              userId: _user!['id'] as int,
+                                              type: FollowListType.followers,
+                                              title: 'Takipçiler',
+                                            ),
+                                          ),
+                                        )
+                                    : null,
+                                child: _StatItem(
+                                  count: (_user?['follower_count'] as int?) ?? 0,
+                                  label: 'Takipçi',
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _user?['id'] != null
+                                    ? () => Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) => FollowListScreen(
+                                              userId: _user!['id'] as int,
+                                              type: FollowListType.following,
+                                              title: 'Takip Edilenler',
+                                            ),
+                                          ),
+                                        )
+                                    : null,
+                                child: _StatItem(
+                                  count: (_user?['following_count'] as int?) ?? 0,
+                                  label: 'Takip',
+                                ),
+                              ),
                             ],
                           ),
                         ),

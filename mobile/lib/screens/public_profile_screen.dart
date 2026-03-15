@@ -6,6 +6,7 @@ import '../config/api.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import 'messages_screen.dart';
+import 'follow_list_screen.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String username;
@@ -57,18 +58,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         if (resp.statusCode == 200) listings = jsonDecode(resp.body) as List;
       } catch (_) {}
 
-      // Check follow status
-      if (!isOwn && info != null) {
-        try {
-          final headers = await _authHeaders();
-          final resp = await http.get(
-            Uri.parse('$kBaseUrl/users/${widget.username}/is-following'),
-            headers: headers,
-          );
-          if (resp.statusCode == 200) {
-            isFollowing = (jsonDecode(resp.body)['is_following'] as bool?) ?? false;
-          }
-        } catch (_) {}
+      // is_following is now included in the profile response
+      if (!isOwn && info != null && data != null) {
+        isFollowing = (data['is_following'] as bool?) ?? false;
       }
     }
 
@@ -173,9 +165,33 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     children: [
                       _statCell('İlanlar', listingCount),
                       _divider(),
-                      _statCell('Takipçi', followerCount),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FollowListScreen(
+                              userId: userId,
+                              type: FollowListType.followers,
+                              title: 'Takipçiler',
+                            ),
+                          ),
+                        ),
+                        child: _statCell('Takipçi', followerCount),
+                      ),
                       _divider(),
-                      _statCell('Takip', followingCount),
+                      GestureDetector(
+                        onTap: () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => FollowListScreen(
+                              userId: userId,
+                              type: FollowListType.following,
+                              title: 'Takip Edilenler',
+                            ),
+                          ),
+                        ),
+                        child: _statCell('Takip', followingCount),
+                      ),
                     ],
                   ),
                 ),
