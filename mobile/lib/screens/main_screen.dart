@@ -136,12 +136,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildMessageIcon() {
-    final count = _unreadMessages;
+    // Badge sayısı: DM mesajları (kırmızı sayı) + bildirimleri nokta olarak göster
+    final dmCount = _unreadMessages;
+    final hasNotifs = _unreadNotifs > 0;
     return Stack(
       clipBehavior: Clip.none,
       children: [
         const Icon(Icons.chat_bubble_outline),
-        if (count > 0)
+        if (dmCount > 0)
           Positioned(
             right: -6,
             top: -4,
@@ -153,9 +155,22 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               ),
               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
-                '$count',
+                '$dmCount',
                 style: const TextStyle(color: Colors.white, fontSize: 9),
                 textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else if (hasNotifs)
+          Positioned(
+            right: -3,
+            top: -2,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
               ),
             ),
           ),
@@ -164,12 +179,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildMessageActiveIcon() {
-    final count = _unreadMessages;
+    final dmCount = _unreadMessages;
+    final hasNotifs = _unreadNotifs > 0;
     return Stack(
       clipBehavior: Clip.none,
       children: [
         const Icon(Icons.chat_bubble),
-        if (count > 0)
+        if (dmCount > 0)
           Positioned(
             right: -6,
             top: -4,
@@ -181,9 +197,22 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
               ),
               constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
               child: Text(
-                '$count',
+                '$dmCount',
                 style: const TextStyle(color: Colors.white, fontSize: 9),
                 textAlign: TextAlign.center,
+              ),
+            ),
+          )
+        else if (hasNotifs)
+          Positioned(
+            right: -3,
+            top: -2,
+            child: Container(
+              width: 8,
+              height: 8,
+              decoration: const BoxDecoration(
+                color: Colors.red,
+                shape: BoxShape.circle,
               ),
             ),
           ),

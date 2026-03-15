@@ -20,6 +20,7 @@ class _MessagesScreenState extends State<MessagesScreen>
   late TabController _tabController;
   int _unreadNotifs = 0;
   StreamSubscription<void>? _badgeSub;
+  StreamSubscription<Map<String, dynamic>>? _fcmSub;
 
   @override
   void initState() {
@@ -27,7 +28,11 @@ class _MessagesScreenState extends State<MessagesScreen>
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(_onTabChanged);
     _loadUnreadNotifs();
+    // badgeRefreshNeeded: mesaj okunduğunda (chat kapandığında)
     _badgeSub = PushNotificationService.badgeRefreshNeeded.stream
+        .listen((_) => _loadUnreadNotifs());
+    // notificationStream: yeni FCM bildirimi gelince (follow, bid, vb.) noktayı güncelle
+    _fcmSub = PushNotificationService.notificationStream.stream
         .listen((_) => _loadUnreadNotifs());
   }
 
@@ -36,6 +41,7 @@ class _MessagesScreenState extends State<MessagesScreen>
     _tabController.removeListener(_onTabChanged);
     _tabController.dispose();
     _badgeSub?.cancel();
+    _fcmSub?.cancel();
     super.dispose();
   }
 
