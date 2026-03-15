@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/biometric_service.dart';
@@ -91,7 +92,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.bg(context),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(
@@ -114,9 +115,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
-                const Text(
+                Text(
                   'Hesabına giriş yap',
-                  style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
                 ),
                 const SizedBox(height: 28),
                 if (_error != null) ...[
@@ -184,9 +185,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Text(
+                    Text(
                       'Hesabın yok mu? ',
-                      style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                      style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
                     ),
                     GestureDetector(
                       onTap: () => Navigator.of(context).push(

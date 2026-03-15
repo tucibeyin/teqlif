@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../config/api.dart';
 import '../services/storage_service.dart';
@@ -146,13 +147,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 const SizedBox(height: 4),
                 Text(
                   '@${widget.username}',
-                  style: const TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                  style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
                 ),
                 const SizedBox(height: 20),
                 // Stats row
                 Container(
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: AppColors.surface(context),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -255,7 +256,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 padding: const EdgeInsets.all(32),
                 child: Text(
                   'Henüz ilan yok',
-                  style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
+                  style: TextStyle(color: AppColors.textTertiary(context), fontSize: 14),
                 ),
               ),
             ),
@@ -303,17 +304,18 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                             ? Image.network(
                                 photo,
                                 fit: BoxFit.cover,
-                                errorBuilder: (_, __, ___) => Container(
-                                  color: const Color(0xFFF3F4F6),
-                                  child: const Icon(Icons.image_outlined,
-                                      size: 28, color: Color(0xFFD1D5DB)),
+                                errorBuilder: (ctx, __, ___) => Container(
+                                  color: AppColors.surfaceVariant(ctx),
+                                  child: Icon(Icons.image_outlined,
+                                      size: 28, color: AppColors.border(ctx)),
                                 ),
                               )
-                            : Container(
-                                color: const Color(0xFFF3F4F6),
-                                child: const Icon(Icons.image_outlined,
-                                    size: 28, color: Color(0xFFD1D5DB)),
-                              ),
+                            : Builder(
+                                builder: (ctx) => Container(
+                                color: AppColors.surfaceVariant(ctx),
+                                child: Icon(Icons.image_outlined,
+                                    size: 28, color: AppColors.border(ctx)),
+                              )),
                         if (priceStr.isNotEmpty)
                           Positioned(
                             left: 0,
@@ -352,28 +354,31 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
-  Widget _statCell(String label, dynamic count) => Padding(
+  Widget _statCell(String label, dynamic count) => Builder(
+    builder: (context) => Padding(
         padding: const EdgeInsets.symmetric(vertical: 14),
         child: Column(
           children: [
             Text(
               '$count',
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700,
+                  color: AppColors.textPrimary(context)),
             ),
             const SizedBox(height: 2),
             Text(
               label,
-              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+              style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
             ),
           ],
         ),
-      );
+      ));
 
-  Widget _divider() => Container(
+  Widget _divider() => Builder(
+    builder: (context) => Container(
         width: 1,
         height: 36,
-        color: const Color(0xFFE5E7EB),
-      );
+        color: AppColors.border(context),
+      ));
 
   Widget _actionButton({
     required String label,
@@ -381,21 +386,22 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     required bool primary,
     VoidCallback? onPressed,
   }) {
-    return SizedBox(
+    return Builder(
+      builder: (context) => SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
         icon: Icon(icon, size: 18),
         label: Text(label),
         style: ElevatedButton.styleFrom(
-          backgroundColor: primary ? kPrimary : const Color(0xFFF1F5F9),
-          foregroundColor: primary ? Colors.white : const Color(0xFF334155),
+          backgroundColor: primary ? kPrimary : AppColors.surfaceVariant(context),
+          foregroundColor: primary ? Colors.white : AppColors.textPrimary(context),
           elevation: 0,
           padding: const EdgeInsets.symmetric(vertical: 14),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
         ),
         onPressed: onPressed,
       ),
-    );
+    ));
   }
 
 }

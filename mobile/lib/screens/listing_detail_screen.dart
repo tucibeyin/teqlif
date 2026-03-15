@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
+import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
 import 'profile_screen.dart';
@@ -336,10 +337,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     final isMine = _myUserId != null && user?['id'] == _myUserId;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7F8FA),
+      backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        backgroundColor: Colors.white,
-        foregroundColor: const Color(0xFF1A1A1A),
+        backgroundColor: AppColors.surface(context),
+        foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
         title: Text(
           listing['title'] ?? '',
@@ -387,7 +388,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
             // Başlık & Fiyat
             Container(
-              color: Colors.white,
+              color: AppColors.surface(context),
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               child: Column(
@@ -411,13 +412,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     const SizedBox(height: 8),
                     Row(
                       children: [
-                        const Icon(Icons.location_on_outlined,
-                            size: 16, color: Colors.grey),
+                        Icon(Icons.location_on_outlined,
+                            size: 16, color: AppColors.textSecondary(context)),
                         const SizedBox(width: 4),
                         Text(
                           listing['location'],
-                          style: const TextStyle(
-                              color: Colors.grey, fontSize: 13),
+                          style: TextStyle(
+                              color: AppColors.textSecondary(context), fontSize: 13),
                         ),
                       ],
                     ),
@@ -431,21 +432,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             if (listing['description'] != null &&
                 (listing['description'] as String).isNotEmpty)
               Container(
-                color: Colors.white,
+                color: AppColors.surface(context),
                 width: double.infinity,
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Açıklama',
+                    Text('Açıklama',
                         style: TextStyle(
-                            fontSize: 14, fontWeight: FontWeight.w700)),
+                            fontSize: 14, fontWeight: FontWeight.w700,
+                            color: AppColors.textPrimary(context))),
                     const SizedBox(height: 8),
                     Text(
                       listing['description'],
-                      style: const TextStyle(
+                      style: TextStyle(
                           fontSize: 14,
-                          color: Color(0xFF444444),
+                          color: AppColors.textSecondary(context),
                           height: 1.5),
                     ),
                   ],
@@ -455,15 +457,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
             // İlan Bilgileri
             Container(
-              color: Colors.white,
+              color: AppColors.surface(context),
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('İlan Bilgileri',
+                  Text('İlan Bilgileri',
                       style: TextStyle(
-                          fontSize: 14, fontWeight: FontWeight.w700)),
+                          fontSize: 14, fontWeight: FontWeight.w700,
+                          color: AppColors.textPrimary(context))),
                   const SizedBox(height: 12),
                   _infoRow('Kategori', listing['category'] ?? '-'),
                   if (listing['location'] != null)
@@ -478,14 +481,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               InkWell(
                 onTap: _goToProfile,
                 child: Container(
-                  color: Colors.white,
+                  color: AppColors.surface(context),
                   width: double.infinity,
                   padding: const EdgeInsets.all(16),
                   child: Row(
                     children: [
                       CircleAvatar(
                         radius: 24,
-                        backgroundColor: kPrimaryBg,
+                        backgroundColor: AppColors.primaryBg(context),
                         child: Text(
                           ((user['full_name'] as String?) ??
                                   (user['username'] as String?) ??
@@ -510,14 +513,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                             ),
                             Text(
                               '@${user['username'] ?? ''}',
-                              style: const TextStyle(
-                                  color: Colors.grey, fontSize: 12),
+                              style: TextStyle(
+                                  color: AppColors.textSecondary(context), fontSize: 12),
                             ),
                           ],
                         ),
                       ),
-                      const Icon(Icons.chevron_right,
-                          color: Colors.grey, size: 20),
+                      Icon(Icons.chevron_right,
+                          color: AppColors.textSecondary(context), size: 20),
                     ],
                   ),
                 ),
@@ -552,12 +555,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   Widget _buildGallery() {
     if (_images.isEmpty) {
-      return Container(
-        height: 260,
-        color: const Color(0xFFF3F4F6),
-        child: const Center(
-          child: Icon(Icons.image_outlined,
-              size: 64, color: Color(0xFFD1D5DB)),
+      return Builder(
+        builder: (context) => Container(
+          height: 260,
+          color: AppColors.surfaceVariant(context),
+          child: Center(
+            child: Icon(Icons.image_outlined,
+                size: 64, color: AppColors.border(context)),
+          ),
         ),
       );
     }
@@ -576,29 +581,29 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 _images[i],
                 fit: BoxFit.cover,
                 width: double.infinity,
-                loadingBuilder: (_, child, progress) => progress == null
+                loadingBuilder: (ctx, child, progress) => progress == null
                     ? child
                     : Container(
-                        color: const Color(0xFFF3F4F6),
+                        color: AppColors.surfaceVariant(ctx),
                         child: const Center(
                             child: CircularProgressIndicator(strokeWidth: 2)),
                       ),
-                errorBuilder: (_, err, stack) {
+                errorBuilder: (ctx, err, stack) {
                   debugPrint('IMG HATA [${_images[i]}]: $err');
                   return Container(
-                    color: const Color(0xFFF3F4F6),
+                    color: AppColors.surfaceVariant(ctx),
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.broken_image_outlined,
-                            size: 48, color: Color(0xFFD1D5DB)),
+                        Icon(Icons.broken_image_outlined,
+                            size: 48, color: AppColors.border(ctx)),
                         const SizedBox(height: 8),
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 8),
                           child: Text(
                             _images[i],
-                            style: const TextStyle(
-                                fontSize: 9, color: Color(0xFF9CA3AF)),
+                            style: TextStyle(
+                                fontSize: 9, color: AppColors.textTertiary(ctx)),
                             textAlign: TextAlign.center,
                             maxLines: 3,
                           ),
@@ -657,23 +662,25 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         ),
       );
 
-  Widget _infoRow(String label, String value) => Padding(
+  Widget _infoRow(String label, String value) => Builder(
+        builder: (context) => Padding(
         padding: const EdgeInsets.only(bottom: 10),
         child: Row(
           children: [
             SizedBox(
               width: 90,
               child: Text(label,
-                  style: const TextStyle(color: Colors.grey, fontSize: 13)),
+                  style: TextStyle(color: AppColors.textSecondary(context), fontSize: 13)),
             ),
             Expanded(
               child: Text(value,
-                  style: const TextStyle(
-                      fontWeight: FontWeight.w500, fontSize: 13)),
+                  style: TextStyle(
+                      fontWeight: FontWeight.w500, fontSize: 13,
+                      color: AppColors.textPrimary(context))),
             ),
           ],
         ),
-      );
+      ));
 
   void _openFullscreen(int startIndex) {
     Navigator.push(

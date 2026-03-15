@@ -13,7 +13,7 @@ class NotificationsScreen extends StatelessWidget {
             onPressed: () {},
             child: const Text(
               'Tümünü oku',
-              style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+              style: TextStyle(fontSize: 13),
             ),
           ),
         ],
@@ -29,7 +29,6 @@ class NotificationsScreen extends StatelessWidget {
               style: TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF6B7280),
               ),
             ),
             SizedBox(height: 8),
@@ -37,7 +36,6 @@ class NotificationsScreen extends StatelessWidget {
               'Yeni bildirimler burada görünecek',
               style: TextStyle(
                 fontSize: 13,
-                color: Color(0xFF9CA3AF),
               ),
             ),
           ],

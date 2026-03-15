@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import 'verify_screen.dart';
@@ -69,7 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF9FAFB),
+      backgroundColor: AppColors.bg(context),
       appBar: AppBar(title: const Text('Kayıt Ol')),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -82,9 +83,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
-              const Text(
+              Text(
                 'teqlif\'e katıl',
-                style: TextStyle(fontSize: 14, color: Color(0xFF6B7280)),
+                style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
               ),
               const SizedBox(height: 28),
               if (_error != null) ...[
@@ -171,9 +172,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               padding: const EdgeInsets.only(top: 10),
                               child: RichText(
                                 text: TextSpan(
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 12.5,
-                                    color: Color(0xFF6B7280),
+                                    color: AppColors.textSecondary(context),
                                   ),
                                   children: [
                                     const TextSpan(text: 'teqlif '),
@@ -222,9 +223,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Text(
+                  Text(
                     'Zaten hesabın var mı? ',
-                    style: TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+                    style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
                   ),
                   GestureDetector(
                     onTap: () => Navigator.of(context).pop(),

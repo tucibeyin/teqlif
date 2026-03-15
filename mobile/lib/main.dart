@@ -4,6 +4,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import 'config/theme.dart';
 import 'firebase_options.dart';
+import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_screen.dart';
 import 'services/biometric_service.dart';
@@ -14,6 +15,7 @@ void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
   FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await ThemeProvider.instance.load();
   // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
   // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
   PushNotificationService.initEarly();
@@ -25,15 +27,20 @@ class TeqlifApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'teqlif',
-      theme: appTheme,
-      debugShowCheckedModeBanner: false,
-      home: const _SplashGate(),
-      routes: {
-        '/login': (_) => const LoginScreen(),
-        '/home': (_) => const MainScreen(),
-      },
+    return ListenableBuilder(
+      listenable: ThemeProvider.instance,
+      builder: (context, _) => MaterialApp(
+        title: 'teqlif',
+        theme: appTheme,
+        darkTheme: darkTheme,
+        themeMode: ThemeProvider.instance.themeMode,
+        debugShowCheckedModeBanner: false,
+        home: const _SplashGate(),
+        routes: {
+          '/login': (_) => const LoginScreen(),
+          '/home': (_) => const MainScreen(),
+        },
+      ),
     );
   }
 }

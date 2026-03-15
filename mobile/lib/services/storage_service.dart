@@ -58,4 +58,16 @@ class StorageService {
     final prefs = await SharedPreferences.getInstance();
     await prefs.clear();
   }
+
+  static const _darkModeKey = 'teqlif_dark_mode';
+
+  static Future<bool> isDarkModeEnabled() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_darkModeKey) ?? false;
+  }
+
+  static Future<void> setDarkModeEnabled(bool value) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_darkModeKey, value);
+  }
 }
