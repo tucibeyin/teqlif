@@ -1,5 +1,16 @@
 import 'package:flutter/material.dart';
 import '../config/theme.dart';
+import '../services/storage_service.dart';
+import 'public_profile_screen.dart';
+import 'messages_screen.dart';
+
+// teqlif.com/api → teqlif.com
+const String _kBaseHost = 'https://teqlif.com';
+
+String _imgUrl(String path) {
+  if (path.startsWith('http')) return path;
+  return '$_kBaseHost$path';
+}
 
 class ListingDetailScreen extends StatefulWidget {
   final Map<String, dynamic> listing;
@@ -13,16 +24,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   int _currentImg = 0;
   late final PageController _pageCtrl;
   late final List<String> _images;
+  int? _myUserId;
 
   @override
   void initState() {
     super.initState();
     _pageCtrl = PageController();
     final imgs = widget.listing['image_urls'] as List? ?? [];
-    _images = imgs.cast<String>();
+    _images = imgs.cast<String>().map(_imgUrl).toList();
     if (_images.isEmpty && widget.listing['image_url'] != null) {
-      _images.add(widget.listing['image_url'] as String);
+      _images.add(_imgUrl(widget.listing['image_url'] as String));
     }
+    _loadMyId();
+  }
+
+  Future<void> _loadMyId() async {
+    final info = await StorageService.getUserInfo();
+    if (mounted) setState(() => _myUserId = info?['id'] as int?);
   }
 
   @override
@@ -33,8 +51,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   String _fmt(dynamic price) {
     if (price == null) return 'Fiyat Belirtilmemiş';
-    final n = (price as num).toInt();
-    final s = n.toString();
+    final s = (price as num).toInt().toString();
     final buf = StringBuffer();
     for (int i = 0; i < s.length; i++) {
       if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
@@ -43,10 +60,57 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     return '${buf.toString()} ₺';
   }
 
+  void _goToProfile() {
+    final user = widget.listing['user'] as Map<String, dynamic>?;
+    if (user == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => PublicProfileScreen(
+          username: user['username'] as String,
+          userId: user['id'] as int?,
+        ),
+      ),
+    );
+  }
+
+  void _openChat() async {
+    final user = widget.listing['user'] as Map<String, dynamic>?;
+    if (user == null) return;
+    final otherId = user['id'] as int?;
+    if (otherId == null) return;
+
+    if (_myUserId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Mesaj göndermek için giriş yapmalısınız')),
+      );
+      return;
+    }
+    if (_myUserId == otherId) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Kendi ilanınıza mesaj gönderemezsiniz')),
+      );
+      return;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => DirectChatScreen(
+          otherUserId: otherId,
+          displayName: user['full_name'] as String? ??
+              user['username'] as String? ?? '',
+          otherHandle: user['username'] as String? ?? '',
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final listing = widget.listing;
     final user = listing['user'] as Map<String, dynamic>?;
+    final isMine = _myUserId != null && user?['id'] == _myUserId;
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7F8FA),
@@ -65,7 +129,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Fotoğraf galerisi
             _buildGallery(),
 
             // Başlık & Fiyat
@@ -156,70 +219,80 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             ),
             const SizedBox(height: 8),
 
-            // Satıcı
+            // Satıcı — tıklanabilir
             if (user != null)
-              Container(
-                color: Colors.white,
-                width: double.infinity,
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  children: [
-                    CircleAvatar(
-                      radius: 24,
-                      backgroundColor: kPrimaryBg,
-                      child: Text(
-                        ((user['full_name'] as String?) ??
-                                (user['username'] as String?) ??
-                                '?')
-                            .substring(0, 1)
-                            .toUpperCase(),
-                        style: const TextStyle(
-                            color: kPrimary,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 18),
+              InkWell(
+                onTap: _goToProfile,
+                child: Container(
+                  color: Colors.white,
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(16),
+                  child: Row(
+                    children: [
+                      CircleAvatar(
+                        radius: 24,
+                        backgroundColor: kPrimaryBg,
+                        child: Text(
+                          ((user['full_name'] as String?) ??
+                                  (user['username'] as String?) ??
+                                  '?')
+                              .substring(0, 1)
+                              .toUpperCase(),
+                          style: const TextStyle(
+                              color: kPrimary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 18),
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user['full_name'] ?? user['username'] ?? '',
-                          style: const TextStyle(
-                              fontWeight: FontWeight.w600, fontSize: 14),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              user['full_name'] ?? user['username'] ?? '',
+                              style: const TextStyle(
+                                  fontWeight: FontWeight.w600, fontSize: 14),
+                            ),
+                            Text(
+                              '@${user['username'] ?? ''}',
+                              style: const TextStyle(
+                                  color: Colors.grey, fontSize: 12),
+                            ),
+                          ],
                         ),
-                        Text(
-                          '@${user['username'] ?? ''}',
-                          style: const TextStyle(
-                              color: Colors.grey, fontSize: 12),
-                        ),
-                      ],
-                    ),
-                  ],
+                      ),
+                      const Icon(Icons.chevron_right,
+                          color: Colors.grey, size: 20),
+                    ],
+                  ),
                 ),
               ),
             const SizedBox(height: 90),
           ],
         ),
       ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.all(12),
-          child: ElevatedButton(
-            onPressed: () {},
-            style: ElevatedButton.styleFrom(
-              backgroundColor: kPrimary,
-              foregroundColor: Colors.white,
-              minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12)),
-              textStyle: const TextStyle(
-                  fontSize: 16, fontWeight: FontWeight.w600),
+      bottomNavigationBar: isMine
+          ? null
+          : SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: ElevatedButton.icon(
+                  onPressed: _openChat,
+                  icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                  label: const Text('Satıcıya Mesaj Gönder'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimary,
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12)),
+                    textStyle: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
             ),
-            child: const Text('Satıcıyla İletişime Geç'),
-          ),
-        ),
-      ),
     );
   }
 
@@ -249,6 +322,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 _images[i],
                 fit: BoxFit.cover,
                 width: double.infinity,
+                loadingBuilder: (_, child, progress) => progress == null
+                    ? child
+                    : Container(
+                        color: const Color(0xFFF3F4F6),
+                        child: const Center(
+                            child: CircularProgressIndicator(strokeWidth: 2)),
+                      ),
                 errorBuilder: (_, __, ___) => Container(
                   color: const Color(0xFFF3F4F6),
                   child: const Icon(Icons.broken_image_outlined,
@@ -258,38 +338,28 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             ),
           ),
         ),
-        // Sol ok
         if (_images.length > 1 && _currentImg > 0)
           Positioned(
-            left: 8,
-            top: 0,
-            bottom: 0,
+            left: 8, top: 0, bottom: 0,
             child: Center(child: _arrowBtn(Icons.chevron_left, -1)),
           ),
-        // Sağ ok
         if (_images.length > 1 && _currentImg < _images.length - 1)
           Positioned(
-            right: 8,
-            top: 0,
-            bottom: 0,
+            right: 8, top: 0, bottom: 0,
             child: Center(child: _arrowBtn(Icons.chevron_right, 1)),
           ),
-        // Sayaç
         if (_images.length > 1)
           Positioned(
-            bottom: 10,
-            right: 12,
+            bottom: 10, right: 12,
             child: Container(
-              padding:
-                  const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
                 color: Colors.black54,
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
                 '${_currentImg + 1}/${_images.length}',
-                style: const TextStyle(
-                    color: Colors.white, fontSize: 12),
+                style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ),
           ),
@@ -306,7 +376,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         child: Container(
           width: 36,
           height: 36,
-          decoration: BoxDecoration(
+          decoration: const BoxDecoration(
             color: Colors.black45,
             shape: BoxShape.circle,
           ),
@@ -321,8 +391,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             SizedBox(
               width: 90,
               child: Text(label,
-                  style: const TextStyle(
-                      color: Colors.grey, fontSize: 13)),
+                  style: const TextStyle(color: Colors.grey, fontSize: 13)),
             ),
             Expanded(
               child: Text(value,
@@ -377,10 +446,8 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Text(
-          '${_current + 1} / ${widget.images.length}',
-          style: const TextStyle(color: Colors.white),
-        ),
+        title: Text('${_current + 1} / ${widget.images.length}',
+            style: const TextStyle(color: Colors.white)),
       ),
       body: PageView.builder(
         controller: _ctrl,
