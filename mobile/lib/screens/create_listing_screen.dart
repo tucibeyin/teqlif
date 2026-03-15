@@ -102,15 +102,40 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   Future<String?> _uploadImage(File file, String token) async {
-    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
-    req.headers['Authorization'] = 'Bearer $token';
-    req.files.add(await http.MultipartFile.fromPath('file', file.path));
-    final streamed = await req.send();
-    final body = await streamed.stream.bytesToString();
-    if (streamed.statusCode == 200) {
-      return jsonDecode(body)['url'] as String?;
+    try {
+      final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
+      req.headers['Authorization'] = 'Bearer $token';
+      req.files.add(await http.MultipartFile.fromPath('file', file.path));
+      final streamed = await req.send();
+      final body = await streamed.stream.bytesToString();
+      debugPrint('UPLOAD [${streamed.statusCode}] ${file.path} → $body');
+      if (streamed.statusCode == 200) {
+        return jsonDecode(body)['url'] as String?;
+      }
+      // Hata detayını göster
+      if (mounted) {
+        final detail = _safeDetail(body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fotoğraf yüklenemedi: $detail')),
+        );
+      }
+    } catch (e) {
+      debugPrint('UPLOAD EXCEPTION: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Fotoğraf yüklenemedi: $e')),
+        );
+      }
     }
     return null;
+  }
+
+  String _safeDetail(String body) {
+    try {
+      return jsonDecode(body)['detail']?.toString() ?? body;
+    } catch (_) {
+      return body.length > 80 ? body.substring(0, 80) : body;
+    }
   }
 
   Future<void> _submit() async {
