@@ -137,16 +137,25 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         body = body.decode("utf-8")
     except Exception:
         pass
+    errors = exc.errors(include_url=False)
+    # Pydantic v2'de ctx içindeki ValueError JSON serialize edilemiyor
+    safe_errors = [
+        {**{k: str(v) if not isinstance(v, (str, int, float, bool, list, dict, type(None))) else v
+            for k, v in e.items()
+            if k != "ctx"},
+         **({"ctx": {ck: str(cv) for ck, cv in e["ctx"].items()}} if "ctx" in e else {})}
+        for e in errors
+    ]
     logger.error(
         "[422] %s %s | body=%s | errors=%s",
         request.method,
         request.url.path,
         body,
-        exc.errors(),
+        safe_errors,
     )
     return JSONResponse(
         status_code=422,
-        content={"detail": exc.errors()},
+        content={"detail": safe_errors},
     )
 
 
