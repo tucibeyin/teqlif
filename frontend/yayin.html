@@ -295,8 +295,32 @@
         .auction-setup input:focus,
         .auction-setup select:focus { border-color: var(--primary); }
 
-        #listingSelect { flex: 1; cursor: pointer; }
-        #listingSelect option { background: #1e293b; }
+        /* Custom listing picker */
+        #listingPicker { flex: 1; position: relative; min-width: 0; }
+        #listingPickerTrigger {
+            display: flex; align-items: center; gap: 7px;
+            padding: 0.38rem 0.7rem;
+            background: #1e293b; border: 1.5px solid #334155;
+            border-radius: 8px; cursor: pointer; font-size: 0.8rem; color: #e2e8f0;
+        }
+        #listingPickerTrigger:hover { border-color: var(--primary); }
+        #listingPickerTrigger.open { border-color: var(--primary); }
+        #listingPickerTrigger img { width: 26px; height: 26px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
+        #listingPickerTrigger span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        #listingPickerDropdown {
+            display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 150;
+            background: #1e293b; border: 1.5px solid #334155; border-radius: 10px;
+            max-height: 210px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        #listingPickerDropdown.open { display: block; }
+        .lp-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; }
+        .lp-item:hover { background: #334155; }
+        .lp-item.selected { background: rgba(6,182,212,0.12); }
+        .lp-item img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
+        .lp-img-placeholder { width: 36px; height: 36px; background: #334155; border-radius: 6px; flex-shrink: 0; display:flex; align-items:center; justify-content:center; font-size:14px; }
+        .lp-info { flex: 1; min-width: 0; }
+        .lp-title { font-size: 0.78rem; font-weight: 600; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .lp-price { font-size: 0.7rem; color: #4ade80; }
 
         .auction-mode-toggle {
             background: none; border: 1px solid #475569; color: #94a3b8;
@@ -564,10 +588,14 @@
                 <div class="auction-setup" id="hostSetup" style="display:none;">
                     <!-- İlan seçici toggle -->
                     <button class="auction-mode-toggle" id="btnListingMode" title="İlanlarımdan seç">📋 İlanlarımdan</button>
-                    <!-- Listing select (listing modda görünür) -->
-                    <select id="listingSelect" style="display:none;">
-                        <option value="">— İlan seçin —</option>
-                    </select>
+                    <!-- Custom listing picker (listing modda görünür) -->
+                    <div id="listingPicker" style="display:none;">
+                        <div id="listingPickerTrigger" onclick="toggleListingPicker()">
+                            <span id="listingPickerText">— İlan seçin —</span>
+                            <span style="color:#64748b;font-size:10px;">▾</span>
+                        </div>
+                        <div id="listingPickerDropdown"></div>
+                    </div>
                     <!-- Manuel giriş alanları -->
                     <div id="manualInputs">
                         <input type="text" id="auctionItemInput" placeholder="Ürün adı" maxlength="200">
@@ -893,58 +921,111 @@
                 loadHostListings();
                 // Host: listing mode toggle
                 document.getElementById('btnListingMode')?.addEventListener('click', toggleListingMode);
-                // Host: listing select değişince
-                document.getElementById('listingSelect')?.addEventListener('change', onListingSelected);
+                // Picker dışına tıklayınca kapat
+                document.addEventListener('click', (e) => {
+                    const picker = document.getElementById('listingPicker');
+                    if (picker && !picker.contains(e.target)) _closeListingPicker();
+                });
             }
 
             updateAuctionUI({ status: 'idle', bid_count: 0 });
             Auction.connect(sid, isHost, (state) => updateAuctionUI(state));
         }
 
-        // ── Host: ilan listesi yükleme ───────────────────────────────
+        // ── Host: ilan listesi yükleme (custom picker) ───────────────
+        let _hostListings = [];
+
         async function loadHostListings() {
             try {
-                const listings = await apiFetch('/listings/my?active=true');
-                const sel = document.getElementById('listingSelect');
-                if (!sel || !listings.length) return;
-                listings.forEach(l => {
-                    const opt = document.createElement('option');
-                    opt.value = l.id;
-                    opt.textContent = `${l.title}${l.price ? ' — ₺' + Number(l.price).toLocaleString('tr-TR') : ''}`;
-                    sel.appendChild(opt);
-                });
+                _hostListings = await apiFetch('/listings/my?active=true');
+                _buildPickerItems();
             } catch (_) {}
+        }
+
+        function _buildPickerItems() {
+            const dd = document.getElementById('listingPickerDropdown');
+            if (!dd) return;
+            dd.innerHTML = '';
+            if (!_hostListings.length) {
+                dd.innerHTML = '<div style="padding:12px;text-align:center;color:#64748b;font-size:0.8rem;">Aktif ilanınız yok</div>';
+                return;
+            }
+            _hostListings.forEach(l => {
+                const imgs = l.image_urls || [];
+                const rawImg = imgs.length ? imgs[0] : (l.image_url || null);
+                const imgSrc = rawImg ? (rawImg.startsWith('http') ? rawImg : `/uploads/${rawImg}`) : null;
+                const priceStr = l.price ? '₺' + Number(l.price).toLocaleString('tr-TR') : '';
+                const item = document.createElement('div');
+                item.className = 'lp-item';
+                item.dataset.id = l.id;
+                item.innerHTML = imgSrc
+                    ? `<img src="${imgSrc}" alt="" onerror="this.style.display='none'">`
+                    : `<div class="lp-img-placeholder">📦</div>`;
+                item.innerHTML += `<div class="lp-info"><div class="lp-title">${l.title}</div>${priceStr ? `<div class="lp-price">${priceStr}</div>` : ''}</div>`;
+                item.addEventListener('click', () => _selectListing(l.id, l.title, imgSrc, l.price));
+                dd.appendChild(item);
+            });
+        }
+
+        function toggleListingPicker() {
+            const dd = document.getElementById('listingPickerDropdown');
+            const trigger = document.getElementById('listingPickerTrigger');
+            if (!dd) return;
+            const open = dd.classList.toggle('open');
+            trigger.classList.toggle('open', open);
+        }
+
+        function _closeListingPicker() {
+            document.getElementById('listingPickerDropdown')?.classList.remove('open');
+            document.getElementById('listingPickerTrigger')?.classList.remove('open');
+        }
+
+        function _selectListing(id, title, imgSrc, price) {
+            _selectedListingId = id;
+            // Trigger güncelle
+            const trigger = document.getElementById('listingPickerTrigger');
+            const priceStr = price ? ' — ₺' + Number(price).toLocaleString('tr-TR') : '';
+            trigger.innerHTML = imgSrc
+                ? `<img src="${imgSrc}" alt="">`
+                : `<div style="width:26px;height:26px;background:#334155;border-radius:4px;flex-shrink:0;"></div>`;
+            trigger.innerHTML += `<span>${title}${priceStr}</span><span style="color:#64748b;font-size:10px;">▾</span>`;
+            trigger.onclick = toggleListingPicker;
+            // Seçili item'ı işaretle
+            document.querySelectorAll('.lp-item').forEach(el => el.classList.toggle('selected', parseInt(el.dataset.id) === id));
+            _closeListingPicker();
         }
 
         function toggleListingMode() {
             _listingMode = !_listingMode;
             const btn = document.getElementById('btnListingMode');
-            const sel = document.getElementById('listingSelect');
+            const picker = document.getElementById('listingPicker');
             const itemInput = document.getElementById('auctionItemInput');
             btn.classList.toggle('active', _listingMode);
-            sel.style.display = _listingMode ? '' : 'none';
-            // listing modda sadece ürün adını gizle, fiyat her zaman görünür
+            picker.style.display = _listingMode ? '' : 'none';
             itemInput.style.display = _listingMode ? 'none' : '';
             if (!_listingMode) {
                 _selectedListingId = null;
-                sel.value = '';
+                // Picker'ı sıfırla
+                const trigger = document.getElementById('listingPickerTrigger');
+                if (trigger) { trigger.innerHTML = '<span id="listingPickerText">— İlan seçin —</span><span style="color:#64748b;font-size:10px;">▾</span>'; trigger.onclick = toggleListingPicker; }
+                document.querySelectorAll('.lp-item').forEach(el => el.classList.remove('selected'));
+                _closeListingPicker();
             }
-        }
-
-        function onListingSelected() {
-            const sel = document.getElementById('listingSelect');
-            _selectedListingId = sel.value ? parseInt(sel.value) : null;
         }
 
         function _resetListingMode() {
             _listingMode = false;
             _selectedListingId = null;
             const btn = document.getElementById('btnListingMode');
-            const sel = document.getElementById('listingSelect');
+            const picker = document.getElementById('listingPicker');
             const itemInput = document.getElementById('auctionItemInput');
             if (btn) btn.classList.remove('active');
-            if (sel) { sel.style.display = 'none'; sel.value = ''; }
+            if (picker) picker.style.display = 'none';
             if (itemInput) itemInput.style.display = '';
+            const trigger = document.getElementById('listingPickerTrigger');
+            if (trigger) { trigger.innerHTML = '<span id="listingPickerText">— İlan seçin —</span><span style="color:#64748b;font-size:10px;">▾</span>'; trigger.onclick = toggleListingPicker; }
+            document.querySelectorAll('.lp-item').forEach(el => el.classList.remove('selected'));
+            _closeListingPicker();
         }
 
         // HOST: Başlat

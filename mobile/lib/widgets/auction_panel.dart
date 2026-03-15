@@ -767,6 +767,20 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                             ),
                           ),
                           child: Row(children: [
+                            // Küçük fotoğraf
+                            Builder(builder: (_) {
+                              final imgs = l['image_urls'] as List? ?? [];
+                              final rawImg = imgs.isNotEmpty ? imgs[0] as String : (l['image_url'] as String?);
+                              final url = rawImg != null ? imgUrl(rawImg) : null;
+                              return ClipRRect(
+                                borderRadius: BorderRadius.circular(6),
+                                child: url != null && url.isNotEmpty
+                                    ? Image.network(url, width: 38, height: 38, fit: BoxFit.cover,
+                                        errorBuilder: (_, __, ___) => _lpPlaceholder())
+                                    : _lpPlaceholder(),
+                              );
+                            }),
+                            const SizedBox(width: 8),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -852,6 +866,12 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
       ),
     );
   }
+
+  Widget _lpPlaceholder() => Container(
+        width: 38, height: 38,
+        decoration: BoxDecoration(color: const Color(0xFF334155), borderRadius: BorderRadius.circular(6)),
+        child: const Icon(Icons.image_outlined, color: Color(0xFF475569), size: 18),
+      );
 
   Widget _inputField(TextEditingController ctrl, String hint, {bool isNumber = false}) {
     return TextField(
