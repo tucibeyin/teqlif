@@ -5,6 +5,7 @@ import os
 
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse, JSONResponse, Response
@@ -126,6 +127,28 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    body = None
+    try:
+        body = await request.body()
+        body = body.decode("utf-8")
+    except Exception:
+        pass
+    logger.error(
+        "[422] %s %s | body=%s | errors=%s",
+        request.method,
+        request.url.path,
+        body,
+        exc.errors(),
+    )
+    return JSONResponse(
+        status_code=422,
+        content={"detail": exc.errors()},
+    )
+
 
 app.add_middleware(
     CORSMiddleware,
