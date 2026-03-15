@@ -72,8 +72,9 @@ class ResendCode(BaseModel):
 
 
 class ChangePasswordConfirm(BaseModel):
-    code: str
+    current_password: str
     new_password: str
+    code: str
 
     @field_validator("new_password")
     @classmethod

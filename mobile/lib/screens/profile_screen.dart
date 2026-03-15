@@ -445,9 +445,10 @@ class _SettingsScreenState extends State<_SettingsScreen> {
   }
 
   Future<void> _showChangePasswordDialog(BuildContext context) async {
-    final codeCtrl = TextEditingController();
+    final currentPassCtrl = TextEditingController();
     final newPassCtrl = TextEditingController();
     final confirmPassCtrl = TextEditingController();
+    final codeCtrl = TextEditingController();
     bool codeSent = false;
     bool loading = false;
     String? error;
@@ -468,32 +469,17 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 fontSize: 16,
                 fontWeight: FontWeight.w600),
           ),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              if (!codeSent) ...[
-                Text(
-                  'E-posta adresinize 6 haneli doğrulama kodu gönderilecek.',
-                  style: TextStyle(
-                      fontSize: 13, color: AppColors.textSecondary(ctx)),
-                ),
-                if (error != null) ...[
-                  const SizedBox(height: 8),
-                  Text(error!,
-                      style: const TextStyle(
-                          color: Color(0xFFEF4444), fontSize: 12)),
-                ],
-              ] else ...[
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
                 TextField(
-                  controller: codeCtrl,
-                  keyboardType: TextInputType.number,
-                  maxLength: 6,
+                  controller: currentPassCtrl,
+                  obscureText: true,
                   decoration: InputDecoration(
-                    labelText: 'Doğrulama Kodu',
-                    labelStyle:
-                        TextStyle(color: AppColors.textSecondary(ctx)),
-                    counterText: '',
+                    labelText: 'Mevcut Şifre',
+                    labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -502,8 +488,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: 'Yeni Şifre',
-                    labelStyle:
-                        TextStyle(color: AppColors.textSecondary(ctx)),
+                    labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
                   ),
                 ),
                 const SizedBox(height: 10),
@@ -512,10 +497,22 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   obscureText: true,
                   decoration: InputDecoration(
                     labelText: 'Yeni Şifre (Tekrar)',
-                    labelStyle:
-                        TextStyle(color: AppColors.textSecondary(ctx)),
+                    labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
                   ),
                 ),
+                if (codeSent) ...[
+                  const SizedBox(height: 10),
+                  TextField(
+                    controller: codeCtrl,
+                    keyboardType: TextInputType.number,
+                    maxLength: 6,
+                    decoration: InputDecoration(
+                      labelText: 'E-posta Doğrulama Kodu',
+                      labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
+                      counterText: '',
+                    ),
+                  ),
+                ],
                 if (error != null) ...[
                   const SizedBox(height: 8),
                   Text(error!,
@@ -523,7 +520,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                           color: Color(0xFFEF4444), fontSize: 12)),
                 ],
               ],
-            ],
+            ),
           ),
           actions: [
             TextButton(
@@ -539,8 +536,34 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                         error = null;
                         loading = true;
                       });
+
+                      // Temel validasyon
+                      if (currentPassCtrl.text.isEmpty ||
+                          newPassCtrl.text.isEmpty ||
+                          confirmPassCtrl.text.isEmpty) {
+                        setS(() {
+                          error = 'Tüm alanları doldurun.';
+                          loading = false;
+                        });
+                        return;
+                      }
+                      if (newPassCtrl.text.length < 8) {
+                        setS(() {
+                          error = 'Yeni şifre en az 8 karakter olmalı.';
+                          loading = false;
+                        });
+                        return;
+                      }
+                      if (newPassCtrl.text != confirmPassCtrl.text) {
+                        setS(() {
+                          error = 'Yeni şifreler eşleşmiyor.';
+                          loading = false;
+                        });
+                        return;
+                      }
+
                       if (!codeSent) {
-                        // Kodu gönder
+                        // Doğrulama kodunu gönder
                         try {
                           final resp = await http.post(
                             Uri.parse('$kBaseUrl/auth/change-password/send-code'),
@@ -566,16 +589,9 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                         }
                       } else {
                         // Kodu doğrula ve şifreyi değiştir
-                        if (newPassCtrl.text.length < 8) {
+                        if (codeCtrl.text.trim().length != 6) {
                           setS(() {
-                            error = 'Şifre en az 8 karakter olmalı.';
-                            loading = false;
-                          });
-                          return;
-                        }
-                        if (newPassCtrl.text != confirmPassCtrl.text) {
-                          setS(() {
-                            error = 'Şifreler eşleşmiyor.';
+                            error = 'Doğrulama kodunu girin.';
                             loading = false;
                           });
                           return;
@@ -588,8 +604,9 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                               'Authorization': 'Bearer $token',
                             },
                             body: jsonEncode({
-                              'code': codeCtrl.text.trim(),
+                              'current_password': currentPassCtrl.text,
                               'new_password': newPassCtrl.text,
+                              'code': codeCtrl.text.trim(),
                             }),
                           );
                           if (resp.statusCode == 200) {

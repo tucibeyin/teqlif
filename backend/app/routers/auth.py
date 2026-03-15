@@ -165,10 +165,12 @@ async def change_password_confirm(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
+    if not verify_password(data.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Mevcut şifreniz hatalı")
     redis = await get_redis()
     stored_code = await redis.get(f"chpwd:{current_user.id}")
     if not stored_code or stored_code != data.code:
-        raise HTTPException(status_code=400, detail="Kod hatalı veya süresi dolmuş")
+        raise HTTPException(status_code=400, detail="Doğrulama kodu hatalı veya süresi dolmuş")
     current_user.hashed_password = hash_password(data.new_password)
     await db.commit()
     await redis.delete(f"chpwd:{current_user.id}")
