@@ -379,8 +379,18 @@
 
     <!-- ── Canlı Yayınlar bölümü ──────────────────────────────────────── -->
     <div id="section-canli">
-        <!-- Kategori filtre barı (JS ile doldurulur, 2+ kategori varsa gösterilir) -->
-        <div class="stream-cat-bar" id="streamCatBar" style="display:none;"></div>
+        <!-- Kategori filtre barı -->
+        <div class="stream-cat-bar" id="streamCatBar">
+            <a class="cat-pill active" data-cat="" onclick="filterStreamCat(this, '')">Tümü</a>
+            <a class="cat-pill" data-cat="elektronik" onclick="filterStreamCat(this, 'elektronik')">📱 Elektronik</a>
+            <a class="cat-pill" data-cat="vasita" onclick="filterStreamCat(this, 'vasita')">🚗 Vasıta</a>
+            <a class="cat-pill" data-cat="emlak" onclick="filterStreamCat(this, 'emlak')">🏠 Emlak</a>
+            <a class="cat-pill" data-cat="giyim" onclick="filterStreamCat(this, 'giyim')">👗 Giyim</a>
+            <a class="cat-pill" data-cat="spor" onclick="filterStreamCat(this, 'spor')">⚽ Spor</a>
+            <a class="cat-pill" data-cat="kitap" onclick="filterStreamCat(this, 'kitap')">📚 Kitap & Müzik</a>
+            <a class="cat-pill" data-cat="ev" onclick="filterStreamCat(this, 'ev')">🛋 Ev & Bahçe</a>
+            <a class="cat-pill" data-cat="diger" onclick="filterStreamCat(this, 'diger')">📦 Diğer</a>
+        </div>
         <div class="streams-grid" id="streamsGrid">
             <div class="empty-state" style="grid-column:1/-1" id="loadingState">
                 <p>Yükleniyor...</p>
@@ -550,22 +560,11 @@
             }
         }
 
-        function _buildStreamCatBar(streams) {
-            const cats = [...new Set(streams.map(s => s.category))];
-            if (cats.length < 2) { streamCatBar.style.display = 'none'; return; }
-
-            streamCatBar.style.display = '';
-            streamCatBar.innerHTML =
-                `<a class="cat-pill active" data-cat="">Tümü</a>` +
-                cats.map(c => `<a class="cat-pill" data-cat="${escHtml(c)}">${STREAM_CAT_LABELS[c] || c}</a>`).join('');
-
-            streamCatBar.addEventListener('click', (e) => {
-                const pill = e.target.closest('.cat-pill');
-                if (!pill) return;
-                _activeCatStream = pill.dataset.cat;
-                streamCatBar.querySelectorAll('.cat-pill').forEach(p => p.classList.toggle('active', p === pill));
-                _renderStreams();
-            });
+        function filterStreamCat(el, cat) {
+            document.querySelectorAll('#streamCatBar .cat-pill').forEach(p => p.classList.remove('active'));
+            el.classList.add('active');
+            _activeCatStream = cat;
+            _renderStreams();
         }
 
         async function loadStreams() {
@@ -573,17 +572,6 @@
                 const streams = await apiFetch('/streams/active');
                 loadingState.remove();
                 _allStreams = streams;
-
-                if (!streams.length) {
-                    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
-                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
-                        <p>Şu an aktif yayın yok.</p>
-                        <p style="font-size:0.85rem;margin-top:0.5rem;">İlk yayını sen başlat!</p>
-                    </div>`;
-                    return;
-                }
-
-                _buildStreamCatBar(streams);
                 _renderStreams();
             } catch (err) {
                 loadingState.innerHTML = '<p>Yayınlar yüklenemedi.</p>';
@@ -641,7 +629,7 @@
         }
 
         function filterCat(el, cat) {
-            document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
+            document.querySelectorAll('.listing-cats .cat-pill').forEach(p => p.classList.remove('active'));
             el.classList.add('active');
             _activeCat = cat;
             _applyFilters();
