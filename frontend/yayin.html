@@ -957,16 +957,28 @@
                 const imgSrc = rawImg ? (rawImg.startsWith('http') || rawImg.startsWith('/') ? rawImg : `/uploads/${rawImg}`) : null;
                 const priceStr = l.price ? '₺' + Number(l.price).toLocaleString('tr-TR') : '';
                 const imgHtml = imgSrc
-                    ? `<img src="${imgSrc}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display='none'">`
-                    : `<div class="lp-img-placeholder">📦</div>`;
-                const infoHtml = `<div class="lp-info"><div class="lp-title">${l.title}</div>${priceStr ? `<div class="lp-price">${priceStr}</div>` : ''}</div>`;
+                    ? `<img src="${imgSrc}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;pointer-events:none;" onerror="this.style.display='none'">`
+                    : `<div class="lp-img-placeholder" style="pointer-events:none;">📦</div>`;
+                const infoHtml = `<div class="lp-info" style="pointer-events:none;"><div class="lp-title">${l.title}</div>${priceStr ? `<div class="lp-price">${priceStr}</div>` : ''}</div>`;
                 const item = document.createElement('div');
                 item.className = 'lp-item';
-                item.dataset.id = l.id;
+                item.dataset.id = String(l.id);
                 item.innerHTML = imgHtml + infoHtml;
-                item.addEventListener('click', () => _selectListing(l.id, l.title, imgSrc, l.price));
                 dd.appendChild(item);
             });
+            // Event delegation: tüm tıklamalar tek listenerdan
+            dd.onclick = (e) => {
+                const item = e.target.closest('.lp-item');
+                if (!item) return;
+                const id = parseInt(item.dataset.id, 10);
+                const l = _hostListings.find(x => x.id === id);
+                if (!l) return;
+                let imgs = l.image_urls || [];
+                if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs); } catch(_) { imgs = []; } }
+                const rawImg = imgs.length ? imgs[0] : (l.image_url || null);
+                const imgSrc = rawImg ? (rawImg.startsWith('http') || rawImg.startsWith('/') ? rawImg : `/uploads/${rawImg}`) : null;
+                _selectListing(id, l.title, imgSrc, l.price);
+            };
         }
 
         function toggleListingPicker() {
