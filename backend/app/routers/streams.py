@@ -1,8 +1,9 @@
+import os
 import uuid
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from livekit.api import AccessToken, VideoGrants
@@ -14,6 +15,7 @@ from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinToken
 from app.utils.auth import get_current_user
 from app.utils.redis_client import get_redis
 from app.config import settings
+from app.routers.upload import _detect_image_type
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/streams", tags=["streams"])
@@ -192,6 +194,41 @@ async def leave_stream(
             logger.error("Redis viewer azaltma hatası | stream_id=%s room=%s", stream_id, stream.room_name, exc_info=True)
 
         logger.info("Yayından ayrılındı | stream_id=%s user_id=%s", stream_id, current_user.id)
+
+
+@router.patch("/{stream_id}/thumbnail")
+async def update_thumbnail(
+    stream_id: int,
+    file: UploadFile = File(...),
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+    stream = result.scalar_one_or_none()
+    if not stream:
+        raise HTTPException(status_code=404, detail="Yayın bulunamadı")
+    if stream.host_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Bu yayını düzenleme yetkiniz yok")
+    if not stream.is_live:
+        raise HTTPException(status_code=400, detail="Yayın aktif değil")
+
+    data = await file.read()
+    if len(data) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=422, detail="Dosya 10 MB'ı geçemez")
+
+    ext = _detect_image_type(data)
+    if ext is None:
+        raise HTTPException(status_code=422, detail="Sadece JPEG, PNG veya WebP yüklenebilir")
+
+    filename = f"thumb_{uuid.uuid4().hex}.{ext}"
+    os.makedirs(settings.upload_dir, exist_ok=True)
+    with open(os.path.join(settings.upload_dir, filename), "wb") as f:
+        f.write(data)
+
+    stream.thumbnail_url = f"/uploads/{filename}"
+    await db.commit()
+    logger.info("Stream thumbnail güncellendi | stream_id=%s", stream_id)
+    return {"thumbnail_url": stream.thumbnail_url}
 
 
 @router.get("/active", response_model=list[StreamOut])

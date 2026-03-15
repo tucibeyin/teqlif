@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, field_validator
 
 
@@ -45,6 +46,7 @@ class StreamOut(BaseModel):
     host: StreamHostOut
     viewer_count: int
     started_at: datetime
+    thumbnail_url: Optional[str] = None
     model_config = {"from_attributes": True}
 
 

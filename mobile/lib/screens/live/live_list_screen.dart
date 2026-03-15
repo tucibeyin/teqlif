@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../config/api.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/storage_service.dart';
@@ -207,10 +208,17 @@ class LiveListScreenState extends State<LiveListScreen> {
                 ? Center(child: Text(_error!))
                 : _streams.isEmpty
                     ? const _EmptyState()
-                    : ListView.builder(
-                        padding: const EdgeInsets.all(16),
+                    : GridView.builder(
+                        padding: const EdgeInsets.all(12),
+                        gridDelegate:
+                            const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 10,
+                          mainAxisSpacing: 10,
+                          childAspectRatio: 0.78,
+                        ),
                         itemCount: _streams.length,
-                        itemBuilder: (_, i) => _StreamCard(
+                        itemBuilder: (_, i) => _StreamGridTile(
                           stream: _streams[i],
                           onTap: () => _joinStream(_streams[i]),
                         ),
@@ -248,130 +256,139 @@ class _EmptyState extends StatelessWidget {
   }
 }
 
-class _StreamCard extends StatelessWidget {
+class _StreamGridTile extends StatelessWidget {
   final StreamOut stream;
   final VoidCallback onTap;
 
-  const _StreamCard({required this.stream, required this.onTap});
+  const _StreamGridTile({required this.stream, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withValues(alpha: 0.05),
-            blurRadius: 8,
-            offset: const Offset(0, 2),
-          ),
-        ],
-      ),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(14),
-          child: Row(
-            children: [
-              // Thumbnail
-              Container(
-                width: 64,
-                height: 64,
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: [kPrimaryDark, kPrimaryLight],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
+    final hasThumbnail = stream.thumbnailUrl != null && stream.thumbnailUrl!.isNotEmpty;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.07),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Square thumbnail area
+            Expanded(
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  // Background
+                  if (hasThumbnail)
+                    Image.network(
+                      '$kBaseUrl${stream.thumbnailUrl}',
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _gradientBox(),
+                    )
+                  else
+                    _gradientBox(),
+                  // CANLI badge
+                  Positioned(
+                    top: 8,
+                    left: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.red,
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: const Text(
+                        'CANLI',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
                   ),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Stack(
-                  children: [
-                    const Center(
-                      child: Icon(Icons.videocam, color: Colors.white38, size: 28),
-                    ),
-                    Positioned(
-                      top: 4,
-                      left: 4,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(3),
-                        ),
-                        child: const Text(
-                          'CANLI',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      stream.title,
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 3),
-                    GestureDetector(
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => PublicProfileScreen(
-                            username: stream.host.username,
-                            userId: stream.host.id,
-                          ),
-                        ),
+                  // Viewer badge
+                  Positioned(
+                    top: 8,
+                    right: 8,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        borderRadius: BorderRadius.circular(20),
                       ),
                       child: Text(
-                        '@${stream.host.username}',
+                        '👁 ${stream.viewerCount}',
                         style: const TextStyle(
-                          color: kPrimary,
-                          fontSize: 12,
-                          fontWeight: FontWeight.w500,
+                          color: Colors.white,
+                          fontSize: 10,
                         ),
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        const Icon(Icons.visibility_outlined,
-                            size: 14, color: Color(0xFF9CA3AF)),
-                        const SizedBox(width: 3),
-                        Text(
-                          '${stream.viewerCount} izleyici',
-                          style: const TextStyle(
-                            color: Color(0xFF9CA3AF),
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              const Icon(Icons.chevron_right, color: Color(0xFFD1D5DB)),
-            ],
-          ),
+            ),
+            // Info section
+            Padding(
+              padding: const EdgeInsets.fromLTRB(8, 7, 8, 8),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    stream.title,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 12.5,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    '@${stream.host.username}',
+                    style: const TextStyle(
+                      color: kPrimary,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
+
+  Widget _gradientBox() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          colors: [kPrimaryDark, kPrimaryLight],
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+        ),
+      ),
+      child: const Center(
+        child: Icon(Icons.videocam_rounded, color: Colors.white30, size: 36),
+      ),
+    );
+  }
+
 }

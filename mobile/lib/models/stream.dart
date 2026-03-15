@@ -17,6 +17,7 @@ class StreamOut {
   final String category;
   final int viewerCount;
   final StreamHost host;
+  final String? thumbnailUrl;
 
   StreamOut({
     required this.id,
@@ -25,6 +26,7 @@ class StreamOut {
     required this.category,
     required this.viewerCount,
     required this.host,
+    this.thumbnailUrl,
   });
 
   factory StreamOut.fromJson(Map<String, dynamic> json) => StreamOut(
@@ -34,6 +36,7 @@ class StreamOut {
         category: json['category'] ?? 'diger',
         viewerCount: json['viewer_count'] ?? 0,
         host: StreamHost.fromJson(json['host']),
+        thumbnailUrl: json['thumbnail_url'] as String?,
       );
 }
 

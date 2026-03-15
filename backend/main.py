@@ -115,6 +115,11 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE auctions ADD COLUMN IF NOT EXISTS listing_id INTEGER REFERENCES listings(id)"
             )
         )
+        await conn.execute(
+            __import__("sqlalchemy").text(
+                "ALTER TABLE live_streams ADD COLUMN IF NOT EXISTS thumbnail_url TEXT"
+            )
+        )
     await _seed_categories()
     await _seed_cities()
     # Her worker'da Redis pub/sub dinleyicisini başlat

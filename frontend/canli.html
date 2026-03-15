@@ -48,11 +48,15 @@
 
         .streams-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.25rem;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
             padding: 1.5rem 2rem 3rem;
             max-width: 1100px;
             margin: 0 auto;
+        }
+
+        @media (max-width: 700px) {
+            .streams-grid { grid-template-columns: repeat(2, 1fr); gap: 0.6rem; padding: 1rem 0.75rem 3rem; }
         }
 
         .stream-card {
@@ -60,6 +64,7 @@
             border-radius: 12px;
             box-shadow: var(--shadow);
             overflow: hidden;
+            cursor: pointer;
             transition: box-shadow 0.15s, transform 0.15s;
         }
 
@@ -68,37 +73,53 @@
             transform: translateY(-2px);
         }
 
+        /* Square 1:1 thumbnail */
         .stream-thumb {
+            position: relative;
+            width: 100%;
+            padding-bottom: 100%;
             background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-light) 100%);
-            height: 160px;
+            overflow: hidden;
+        }
+
+        .stream-thumb-inner {
+            position: absolute;
+            inset: 0;
             display: flex;
             align-items: center;
             justify-content: center;
-            position: relative;
+        }
+
+        .stream-thumb-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
         }
 
         .stream-thumb .live-badge {
             position: absolute;
-            top: 10px;
-            left: 10px;
+            top: 8px;
+            left: 8px;
             background: #ef4444;
             color: #fff;
-            font-size: 0.72rem;
+            font-size: 0.68rem;
             font-weight: 700;
-            padding: 2px 8px;
+            padding: 2px 7px;
             border-radius: 4px;
             letter-spacing: 0.5px;
+            z-index: 1;
         }
 
         .stream-thumb .viewer-badge {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0,0,0,0.5);
+            top: 8px;
+            right: 8px;
+            background: rgba(0,0,0,0.55);
             color: #fff;
-            font-size: 0.78rem;
-            padding: 2px 8px;
+            font-size: 0.75rem;
+            padding: 2px 7px;
             border-radius: 20px;
+            z-index: 1;
         }
 
         .stream-thumb svg {
@@ -106,22 +127,22 @@
         }
 
         .stream-info {
-            padding: 1rem;
+            padding: 0.6rem 0.75rem 0.75rem;
         }
 
         .stream-title {
             font-weight: 600;
-            font-size: 0.95rem;
-            margin-bottom: 0.35rem;
+            font-size: 0.88rem;
+            margin-bottom: 0.15rem;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
         }
 
         .stream-host {
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             color: var(--text-muted);
-            margin-bottom: 0.9rem;
+            margin-bottom: 0;
         }
 
         /* Modal */
@@ -280,20 +301,22 @@
                 }
 
                 grid.innerHTML = streams.map(s => `
-                    <div class="stream-card">
+                    <div class="stream-card" onclick="joinStream(${s.id})">
                         <div class="stream-thumb">
                             <span class="live-badge">CANLI</span>
                             <span class="viewer-badge">👁 ${s.viewer_count}</span>
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
-                                <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-                            </svg>
+                            <div class="stream-thumb-inner">
+                                ${s.thumbnail_url
+                                    ? `<img class="stream-thumb-img" src="${escHtml(s.thumbnail_url)}" alt="${escHtml(s.title)}" loading="lazy">`
+                                    : `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
+                                        <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                                       </svg>`
+                                }
+                            </div>
                         </div>
                         <div class="stream-info">
                             <div class="stream-title">${escHtml(s.title)}</div>
                             <div class="stream-host">@${escHtml(s.host.username)}</div>
-                            <button class="btn btn-primary btn-full" onclick="joinStream(${s.id})">
-                                Katıl
-                            </button>
                         </div>
                     </div>`).join('');
 
