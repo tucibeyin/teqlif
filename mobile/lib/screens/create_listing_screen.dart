@@ -135,7 +135,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         body: jsonEncode({
           'title': _titleCtrl.text.trim(),
           'description': _descCtrl.text.trim(),
-          'price': double.tryParse(_priceCtrl.text.trim()),
+          'price': double.tryParse(_priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.')),
           'category': _selectedCategory,
           if (_locationCtrl.text.trim().isNotEmpty)
             'location': _locationCtrl.text.trim(),
@@ -326,10 +326,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   const SizedBox(height: 14),
                   TextFormField(
                     controller: _priceCtrl,
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                    inputFormatters: [
-                      FilteringTextInputFormatter.allow(RegExp(r'^\d+\.?\d{0,2}')),
-                    ],
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [_ThousandSeparatorFormatter()],
                     decoration: const InputDecoration(
                       labelText: 'Fiyat',
                       prefixText: '₺ ',
@@ -383,6 +381,29 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         ),
       ),
     );
+  }
+}
+
+class _ThousandSeparatorFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    final digits = newValue.text.replaceAll('.', '');
+    if (digits.isEmpty) return newValue.copyWith(text: '');
+    final formatted = _addDots(digits);
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+
+  String _addDots(String digits) {
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
+      buf.write(digits[i]);
+    }
+    return buf.toString();
   }
 }
 
