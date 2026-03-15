@@ -17,10 +17,22 @@ class LiveListScreen extends StatefulWidget {
   State<LiveListScreen> createState() => LiveListScreenState();
 }
 
+const _kCatLabels = {
+  'elektronik': '📱 Elektronik',
+  'giyim': '👗 Giyim',
+  'ev': '🏠 Ev & Yaşam',
+  'vasita': '🚗 Vasıta',
+  'spor': '⚽ Spor',
+  'kitap': '📚 Kitap',
+  'emlak': '🏘️ Emlak',
+  'diger': '📦 Diğer',
+};
+
 class LiveListScreenState extends State<LiveListScreen> {
   List<StreamOut> _streams = [];
   bool _loading = true;
   String? _error;
+  String? _selectedCategory; // null = Tümü
 
   @override
   void initState() {
@@ -165,8 +177,21 @@ class LiveListScreenState extends State<LiveListScreen> {
     ).then((_) => _load());
   }
 
+  List<String> get _categories {
+    final seen = <String>{};
+    return _streams.map((s) => s.category).where(seen.add).toList();
+  }
+
+  List<StreamOut> get _filtered => _selectedCategory == null
+      ? _streams
+      : _streams.where((s) => s.category == _selectedCategory).toList();
+
   @override
   Widget build(BuildContext context) {
+    final cats = _categories;
+    final showFilter = !_loading && _error == null && cats.length >= 2;
+    final filtered = _filtered;
+
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
@@ -189,30 +214,170 @@ class LiveListScreenState extends State<LiveListScreen> {
         ),
         actions: const [],
       ),
-      body: RefreshIndicator(
-        color: kPrimary,
-        onRefresh: _load,
-        child: _loading
-            ? const Center(child: CircularProgressIndicator(color: kPrimary))
-            : _error != null
-                ? Center(child: Text(_error!))
-                : _streams.isEmpty
-                    ? const _EmptyState()
-                    : GridView.builder(
-                        padding: const EdgeInsets.all(12),
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                          crossAxisCount: 2,
-                          crossAxisSpacing: 10,
-                          mainAxisSpacing: 10,
-                          childAspectRatio: 0.78,
-                        ),
-                        itemCount: _streams.length,
-                        itemBuilder: (_, i) => _StreamGridTile(
-                          stream: _streams[i],
-                          onTap: () => _joinStream(_streams[i]),
+      body: Column(
+        children: [
+          // ── Kategori filtre çubuğu ──────────────────────────────
+          if (showFilter)
+            SizedBox(
+              height: 44,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                children: [
+                  _CategoryChip(
+                    label: 'Tümü',
+                    active: _selectedCategory == null,
+                    onTap: () => setState(() => _selectedCategory = null),
+                  ),
+                  ...cats.map((c) => _CategoryChip(
+                        label: _kCatLabels[c] ?? c,
+                        active: _selectedCategory == c,
+                        onTap: () => setState(() => _selectedCategory = c),
+                      )),
+                ],
+              ),
+            ),
+          // ── İçerik ──────────────────────────────────────────────
+          Expanded(
+            child: RefreshIndicator(
+              color: kPrimary,
+              onRefresh: _load,
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator(color: kPrimary))
+                  : _error != null
+                      ? Center(child: Text(_error!))
+                      : filtered.isEmpty
+                          ? const _EmptyState()
+                          : _selectedCategory != null || cats.length < 2
+                              // Tek kategori veya filtre seçili: düz grid
+                              ? GridView.builder(
+                                  padding: const EdgeInsets.all(12),
+                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                                    crossAxisCount: 2,
+                                    crossAxisSpacing: 10,
+                                    mainAxisSpacing: 10,
+                                    childAspectRatio: 0.78,
+                                  ),
+                                  itemCount: filtered.length,
+                                  itemBuilder: (_, i) => _StreamGridTile(
+                                    stream: filtered[i],
+                                    onTap: () => _joinStream(filtered[i]),
+                                  ),
+                                )
+                              // Tümü seçili + birden fazla kategori: section'lara böl
+                              : _buildSectioned(cats, filtered),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSectioned(List<String> cats, List<StreamOut> all) {
+    // Her kategori için streams listesi
+    final groups = {for (var c in cats) c: all.where((s) => s.category == c).toList()};
+
+    final items = <Object>[];
+    for (final c in cats) {
+      final list = groups[c]!;
+      if (list.isEmpty) continue;
+      items.add(c); // section header
+      items.addAll(list);
+    }
+
+    return CustomScrollView(
+      slivers: [
+        SliverPadding(
+          padding: const EdgeInsets.all(12),
+          sliver: SliverList(
+            delegate: SliverChildBuilderDelegate(
+              (ctx, idx) {
+                final item = items[idx];
+                if (item is String && !item.contains(' ')) {
+                  // category key → section header
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 8, bottom: 6),
+                    child: Text(
+                      _kCatLabels[item] ?? item,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        fontSize: 13,
+                        color: Color(0xFF6B7280),
+                        letterSpacing: 0.3,
+                      ),
+                    ),
+                  );
+                }
+                final stream = item as StreamOut;
+                // Pair up: render 2 cards per row manually using Row
+                // We use a grid via a simpler approach: wrap rows of 2
+                final catItems = groups[stream.category]!;
+                final pos = catItems.indexOf(stream);
+                if (pos.isOdd) return const SizedBox.shrink(); // already rendered in pair
+                final next = pos + 1 < catItems.length ? catItems[pos + 1] : null;
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _StreamGridTile(
+                          stream: stream,
+                          onTap: () => _joinStream(stream),
                         ),
                       ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: next != null
+                            ? _StreamGridTile(
+                                stream: next,
+                                onTap: () => _joinStream(next),
+                              )
+                            : const SizedBox.shrink(),
+                      ),
+                    ],
+                  ),
+                );
+              },
+              childCount: items.length,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _CategoryChip extends StatelessWidget {
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _CategoryChip({required this.label, required this.active, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 150),
+        margin: const EdgeInsets.only(right: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 5),
+        decoration: BoxDecoration(
+          color: active ? kPrimary : Colors.transparent,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(
+            color: active ? kPrimary : const Color(0xFFD1D5DB),
+            width: 1.5,
+          ),
+        ),
+        child: Text(
+          label,
+          style: TextStyle(
+            fontSize: 12.5,
+            fontWeight: active ? FontWeight.w600 : FontWeight.w500,
+            color: active ? Colors.white : const Color(0xFF6B7280),
+          ),
+        ),
       ),
     );
   }

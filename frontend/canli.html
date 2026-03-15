@@ -210,6 +210,52 @@
         .empty-state p {
             font-size: 1rem;
         }
+
+        /* ── Kategori filtre çubuğu ──────────────────────────────── */
+        .cat-filter-bar {
+            display: flex;
+            gap: 0.5rem;
+            padding: 1rem 2rem 0;
+            max-width: 1100px;
+            margin: 0 auto;
+            overflow-x: auto;
+            scrollbar-width: none;
+            -ms-overflow-style: none;
+        }
+        .cat-filter-bar::-webkit-scrollbar { display: none; }
+
+        .cat-chip {
+            flex-shrink: 0;
+            padding: 0.3rem 0.85rem;
+            border-radius: 20px;
+            border: 1.5px solid var(--border);
+            background: var(--white);
+            color: var(--text-muted);
+            font-size: 0.82rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+        .cat-chip:hover { border-color: var(--primary); color: var(--primary); }
+        .cat-chip.active {
+            border-color: var(--primary);
+            background: var(--primary);
+            color: #fff;
+            font-weight: 600;
+        }
+
+        /* ── Kategori section başlığı ────────────────────────────── */
+        .cat-section-title {
+            grid-column: 1 / -1;
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.3px;
+            padding: 0.25rem 0 0.1rem;
+            border-bottom: 1px solid var(--border);
+            margin-bottom: 0.25rem;
+        }
     </style>
 </head>
 <body>
@@ -228,6 +274,11 @@
         <button id="btnStartStream" class="btn btn-primary" style="display:none;">
             + Yayın Başlat
         </button>
+    </div>
+
+    <!-- Kategori filtre çubuğu -->
+    <div class="cat-filter-bar" id="catFilterBar" style="display:none;">
+        <button class="cat-chip active" data-cat="">Tümü</button>
     </div>
 
     <div id="alert" class="alert alert-error" style="max-width:1100px;margin:1rem auto 0;display:none;"></div>
@@ -273,6 +324,21 @@
         const startModal = document.getElementById('startModal');
         const modalAlert = document.getElementById('modalAlert');
         const alertEl = document.getElementById('alert');
+        const catFilterBar = document.getElementById('catFilterBar');
+
+        const CAT_LABELS = {
+            elektronik: '📱 Elektronik',
+            giyim: '👗 Giyim',
+            ev: '🏠 Ev & Yaşam',
+            vasita: '🚗 Vasıta',
+            spor: '⚽ Spor',
+            kitap: '📚 Kitap',
+            emlak: '🏘️ Emlak',
+            diger: '📦 Diğer',
+        };
+
+        let _allStreams = [];
+        let _activeCategory = '';
 
         // Giriş yapmışsa yayın başlat butonunu göster
         if (Auth.getToken()) {
@@ -284,41 +350,89 @@
             if (a.href.includes('canli')) a.style.color = 'var(--primary)';
         });
 
+        function _streamCardHtml(s) {
+            return `<div class="stream-card" onclick="joinStream(${s.id})">
+                <div class="stream-thumb">
+                    <span class="live-badge">CANLI</span>
+                    <span class="viewer-badge">👁 ${s.viewer_count}</span>
+                    <div class="stream-thumb-inner">
+                        ${s.thumbnail_url
+                            ? `<img class="stream-thumb-img" src="${escHtml(s.thumbnail_url)}" alt="${escHtml(s.title)}" loading="lazy">`
+                            : `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5"><path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>`
+                        }
+                    </div>
+                </div>
+                <div class="stream-info">
+                    <div class="stream-title">${escHtml(s.title)}</div>
+                    <div class="stream-host">@${escHtml(s.host.username)}</div>
+                </div>
+            </div>`;
+        }
+
+        function renderGrid() {
+            const filtered = _activeCategory
+                ? _allStreams.filter(s => s.category === _activeCategory)
+                : _allStreams;
+
+            if (!filtered.length) {
+                grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+                    <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+                    <p>${_activeCategory ? 'Bu kategoride aktif yayın yok.' : 'Şu an aktif yayın yok.'}</p>
+                </div>`;
+                return;
+            }
+
+            if (_activeCategory) {
+                // Tek kategori seçiliyse düz grid
+                grid.innerHTML = filtered.map(_streamCardHtml).join('');
+            } else {
+                // "Tümü" — kategoriye göre section'lara böl (birden fazla kategori varsa)
+                const cats = [...new Set(filtered.map(s => s.category))];
+                if (cats.length === 1) {
+                    grid.innerHTML = filtered.map(_streamCardHtml).join('');
+                } else {
+                    grid.innerHTML = cats.map(cat => {
+                        const label = CAT_LABELS[cat] || cat;
+                        const items = filtered.filter(s => s.category === cat);
+                        return `<div class="cat-section-title">${label}</div>` + items.map(_streamCardHtml).join('');
+                    }).join('');
+                }
+            }
+        }
+
+        function buildFilterBar(streams) {
+            const cats = [...new Set(streams.map(s => s.category))];
+            if (cats.length < 2) { catFilterBar.style.display = 'none'; return; }
+
+            catFilterBar.style.display = '';
+            catFilterBar.innerHTML = `<button class="cat-chip active" data-cat="">Tümü</button>` +
+                cats.map(c => `<button class="cat-chip" data-cat="${escHtml(c)}">${CAT_LABELS[c] || c}</button>`).join('');
+
+            catFilterBar.addEventListener('click', (e) => {
+                const chip = e.target.closest('.cat-chip');
+                if (!chip) return;
+                _activeCategory = chip.dataset.cat;
+                catFilterBar.querySelectorAll('.cat-chip').forEach(b => b.classList.toggle('active', b === chip));
+                renderGrid();
+            });
+        }
+
         async function loadStreams() {
             try {
                 const streams = await apiFetch('/streams/active');
                 loadingState.remove();
+                _allStreams = streams;
 
                 if (!streams.length) {
-                    grid.innerHTML = `
-                        <div class="empty-state" style="grid-column:1/-1">
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                                <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-                            </svg>
-                            <p>Şu an aktif yayın yok.</p>
-                        </div>`;
+                    grid.innerHTML = `<div class="empty-state" style="grid-column:1/-1">
+                        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/></svg>
+                        <p>Şu an aktif yayın yok.</p>
+                    </div>`;
                     return;
                 }
 
-                grid.innerHTML = streams.map(s => `
-                    <div class="stream-card" onclick="joinStream(${s.id})">
-                        <div class="stream-thumb">
-                            <span class="live-badge">CANLI</span>
-                            <span class="viewer-badge">👁 ${s.viewer_count}</span>
-                            <div class="stream-thumb-inner">
-                                ${s.thumbnail_url
-                                    ? `<img class="stream-thumb-img" src="${escHtml(s.thumbnail_url)}" alt="${escHtml(s.title)}" loading="lazy">`
-                                    : `<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
-                                        <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
-                                       </svg>`
-                                }
-                            </div>
-                        </div>
-                        <div class="stream-info">
-                            <div class="stream-title">${escHtml(s.title)}</div>
-                            <div class="stream-host">@${escHtml(s.host.username)}</div>
-                        </div>
-                    </div>`).join('');
+                buildFilterBar(streams);
+                renderGrid();
 
             } catch (err) {
                 loadingState.innerHTML = '<p>Yayınlar yüklenemedi.</p>';
