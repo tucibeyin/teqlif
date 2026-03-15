@@ -8,6 +8,7 @@ import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import 'follow_list_screen.dart';
+import 'listing_detail_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -309,15 +310,30 @@ class _ListingGridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imageUrl = listing['image_url'];
-    return Container(
-      color: const Color(0xFFF3F4F6),
-      child: imageUrl != null
-          ? Image.network(imageUrl, fit: BoxFit.cover)
-          : const Center(
-              child: Icon(Icons.image_outlined,
-                  size: 28, color: Color(0xFFD1D5DB)),
-            ),
+    final imgs = listing['image_urls'] as List? ?? [];
+    final imageUrl = imgs.isNotEmpty
+        ? imgs[0] as String
+        : listing['image_url'] as String?;
+    return GestureDetector(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ListingDetailScreen(
+              listing: Map<String, dynamic>.from(listing)),
+        ),
+      ),
+      child: Container(
+        color: const Color(0xFFF3F4F6),
+        child: imageUrl != null
+            ? Image.network(imageUrl, fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => const Center(
+                    child: Icon(Icons.image_outlined,
+                        size: 28, color: Color(0xFFD1D5DB))))
+            : const Center(
+                child: Icon(Icons.image_outlined,
+                    size: 28, color: Color(0xFFD1D5DB)),
+              ),
+      ),
     );
   }
 }
