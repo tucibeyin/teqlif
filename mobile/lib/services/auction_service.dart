@@ -38,7 +38,7 @@ class AuctionService {
     int? listingId,
   }) async {
     final Map<String, dynamic> body = listingId != null
-        ? {'listing_id': listingId}
+        ? {'listing_id': listingId, 'start_price': startPrice!}
         : {'item_name': itemName!, 'start_price': startPrice!};
     final res = await http.post(
       Uri.parse('$kBaseUrl/auction/$streamId/start'),

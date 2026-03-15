@@ -41,7 +41,7 @@ const Auction = (() => {
 
     async function startAuction(itemName, startPrice, listingId) {
         const body = listingId
-            ? { listing_id: listingId }
+            ? { listing_id: listingId, start_price: parseFloat(startPrice) }
             : { item_name: itemName, start_price: parseFloat(startPrice) };
         return await apiFetch(`/auction/${_streamId}/start`, {
             method: 'POST',

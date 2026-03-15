@@ -746,7 +746,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                 )
               else
                 ConstrainedBox(
-                  constraints: const BoxConstraints(maxHeight: 240),
+                  constraints: const BoxConstraints(maxHeight: 200),
                   child: ListView.builder(
                     shrinkWrap: true,
                     itemCount: _listings.length,
@@ -793,6 +793,10 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                     },
                   ),
                 ),
+              if (_fromListing) ...[
+                const SizedBox(height: 10),
+                _inputField(_priceCtrl, 'Başlangıç fiyatı (₺)', isNumber: true),
+              ],
             ],
           ],
         ),
@@ -811,7 +815,9 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
           onPressed: () {
             if (_fromListing) {
               if (_selectedListing == null) return;
-              Navigator.pop(context, {'listing_id': _selectedListing['id'] as int});
+              final price = double.tryParse(_priceCtrl.text.replaceAll(',', '.'));
+              if (price == null || price < 0) return;
+              Navigator.pop(context, {'listing_id': _selectedListing['id'] as int, 'price': price});
             } else {
               final item = _itemCtrl.text.trim();
               final price = double.tryParse(_priceCtrl.text.replaceAll(',', '.'));

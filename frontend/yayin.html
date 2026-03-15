@@ -920,10 +920,11 @@
             _listingMode = !_listingMode;
             const btn = document.getElementById('btnListingMode');
             const sel = document.getElementById('listingSelect');
-            const manual = document.getElementById('manualInputs');
+            const itemInput = document.getElementById('auctionItemInput');
             btn.classList.toggle('active', _listingMode);
             sel.style.display = _listingMode ? '' : 'none';
-            manual.style.display = _listingMode ? 'none' : 'flex';
+            // listing modda sadece ürün adını gizle, fiyat her zaman görünür
+            itemInput.style.display = _listingMode ? 'none' : '';
             if (!_listingMode) {
                 _selectedListingId = null;
                 sel.value = '';
@@ -940,30 +941,30 @@
             _selectedListingId = null;
             const btn = document.getElementById('btnListingMode');
             const sel = document.getElementById('listingSelect');
-            const manual = document.getElementById('manualInputs');
+            const itemInput = document.getElementById('auctionItemInput');
             if (btn) btn.classList.remove('active');
             if (sel) { sel.style.display = 'none'; sel.value = ''; }
-            if (manual) manual.style.display = 'flex';
+            if (itemInput) itemInput.style.display = '';
         }
 
         // HOST: Başlat
         document.getElementById('btnAuctionStart')?.addEventListener('click', async () => {
+            const startPrice = parseFloat(document.getElementById('auctionStartPrice').value);
+            if (isNaN(startPrice) || startPrice < 0) return setAuctionMsg('Geçerli başlangıç fiyatı girin', 'error');
             if (_listingMode) {
                 if (!_selectedListingId) return setAuctionMsg('Bir ilan seçin', 'error');
                 try {
-                    await Auction.startAuction(null, null, _selectedListingId);
+                    await Auction.startAuction(null, startPrice, _selectedListingId);
                     setAuctionMsg('Açık artırma başladı!', 'success');
-                } catch (e) { setAuctionMsg(e.message, 'error'); }
+                } catch (e) { setAuctionMsg(e.detail || e.message || 'Hata', 'error'); }
                 return;
             }
             const itemName = document.getElementById('auctionItemInput').value.trim();
-            const startPrice = parseFloat(document.getElementById('auctionStartPrice').value);
             if (!itemName) return setAuctionMsg('Ürün adı girin', 'error');
-            if (isNaN(startPrice) || startPrice < 0) return setAuctionMsg('Geçerli başlangıç fiyatı girin', 'error');
             try {
                 await Auction.startAuction(itemName, startPrice);
                 setAuctionMsg('Açık artırma başladı!', 'success');
-            } catch (e) { setAuctionMsg(e.message, 'error'); }
+            } catch (e) { setAuctionMsg(e.detail || e.message || 'Hata', 'error'); }
         });
 
         // ── Viewer: ilan popup ───────────────────────────────────────

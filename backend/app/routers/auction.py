@@ -180,8 +180,9 @@ async def start_auction(
     if existing_status == "active":
         raise HTTPException(status_code=400, detail="Zaten aktif bir açık artırma var")
 
-    # listing_id verilmişse listingden title/price al
+    # listing_id verilmişse başlığı oradan al, fiyat her zaman request'ten gelir
     listing_id_val = data.listing_id
+    start_price = float(data.start_price)
     if listing_id_val:
         listing = await db.scalar(
             select(Listing).where(Listing.id == listing_id_val, Listing.is_deleted == False)  # noqa: E712
@@ -189,10 +190,8 @@ async def start_auction(
         if not listing:
             raise HTTPException(status_code=404, detail="İlan bulunamadı")
         item_name = listing.title
-        start_price = float(listing.price or 0)
     else:
         item_name = data.item_name
-        start_price = float(data.start_price)
         listing_id_val = None
 
     await redis.hset(key, mapping={

@@ -4,14 +4,13 @@ from pydantic import BaseModel, field_validator, model_validator
 
 class AuctionStart(BaseModel):
     item_name: Optional[str] = None
-    start_price: Optional[float] = None
-    listing_id: Optional[int] = None
+    start_price: float  # her zaman zorunlu
+    listing_id: Optional[int] = None  # seçilince başlık buradan gelir
 
     @model_validator(mode="after")
     def check_source(self):
-        if self.listing_id is None:
-            if not self.item_name or self.start_price is None:
-                raise ValueError("Ürün adı ve fiyat girilmeli (veya ilan seçilmeli)")
+        if self.listing_id is None and not self.item_name:
+            raise ValueError("Ürün adı girilmeli veya ilan seçilmeli")
         return self
 
     @field_validator("item_name")
@@ -25,8 +24,8 @@ class AuctionStart(BaseModel):
 
     @field_validator("start_price")
     @classmethod
-    def price_valid(cls, v: Optional[float]) -> Optional[float]:
-        if v is not None and v < 0:
+    def price_valid(cls, v: float) -> float:
+        if v < 0:
             raise ValueError("Başlangıç fiyatı negatif olamaz")
         return v
 
