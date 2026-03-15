@@ -13,12 +13,14 @@ router = APIRouter(prefix="/api/listings", tags=["listings"])
 
 
 @router.get("")
-async def get_listings(user_id: Optional[int] = None, category: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+async def get_listings(user_id: Optional[int] = None, category: Optional[str] = None, location: Optional[str] = None, db: AsyncSession = Depends(get_db)):
     q = select(Listing, User).join(User, User.id == Listing.user_id).where(Listing.is_active == True)  # noqa: E712
     if user_id:
         q = q.where(Listing.user_id == user_id)
     if category:
         q = q.where(Listing.category == category)
+    if location:
+        q = q.where(Listing.location == location)
     q = q.order_by(Listing.created_at.desc())
     result = await db.execute(q)
     rows = result.all()

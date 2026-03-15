@@ -380,11 +380,16 @@
         <!-- Toolbar -->
         <div class="listing-toolbar">
             <span class="listing-count" id="listingCount">İlanlar yükleniyor...</span>
-            <select class="listing-sort" id="listingSort" onchange="sortListings()">
-                <option value="newest">En Yeni</option>
-                <option value="price_asc">Fiyat: Düşükten Yükseğe</option>
-                <option value="price_desc">Fiyat: Yüksekten Düşüğe</option>
-            </select>
+            <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
+                <select class="listing-sort" id="locationFilter" onchange="filterLocation()" style="min-width:130px;">
+                    <option value="">Tüm Şehirler</option>
+                </select>
+                <select class="listing-sort" id="listingSort" onchange="sortListings()">
+                    <option value="newest">En Yeni</option>
+                    <option value="price_asc">Fiyat: Düşükten Yükseğe</option>
+                    <option value="price_desc">Fiyat: Yüksekten Düşüğe</option>
+                </select>
+            </div>
         </div>
 
         <!-- Listing listesi -->
@@ -440,7 +445,7 @@
             document.getElementById('tab-ilanlar').classList.toggle('active', !isCanli);
             btnStart.style.display   = (isCanli && Auth.getToken()) ? '' : 'none';
             btnIlanVer.style.display = !isCanli ? '' : 'none';
-            if (!isCanli && !_listingsLoaded) loadListings();
+            if (!isCanli && !_listingsLoaded) { loadListings(); loadCityOptions(); }
         }
 
         /* ── Canlı yayınlar ─────────────────────────────────────────── */
@@ -495,39 +500,57 @@
         let _filteredListings = [];
         let _listingsLoaded = false;
         let _activeCat = '';
+        let _activeLocation = '';
 
         async function loadListings() {
             _listingsLoaded = true;
             try {
                 const data = await apiFetch('/listings');
                 _allListings = data;
-                _filteredListings = data;
-                renderListings();
+                _applyFilters();
             } catch (_) {
-                // Henüz API yoksa placeholder göster
                 _allListings = [];
-                _filteredListings = [];
-                renderListings();
+                _applyFilters();
             }
+        }
+
+        async function loadCityOptions() {
+            try {
+                const cities = await apiFetch('/cities');
+                const sel = document.getElementById('locationFilter');
+                cities.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    sel.appendChild(opt);
+                });
+            } catch (_) {}
+        }
+
+        function _applyFilters() {
+            const q = document.getElementById('listingSearch').value.trim().toLowerCase();
+            _filteredListings = _allListings.filter(l =>
+                (!_activeCat || l.category === _activeCat) &&
+                (!_activeLocation || l.location === _activeLocation) &&
+                (!q || l.title.toLowerCase().includes(q) || (l.description||'').toLowerCase().includes(q))
+            );
+            sortListings();
         }
 
         function filterCat(el, cat) {
             document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
             el.classList.add('active');
             _activeCat = cat;
-            _filteredListings = cat
-                ? _allListings.filter(l => l.category === cat)
-                : _allListings;
-            renderListings();
+            _applyFilters();
+        }
+
+        function filterLocation() {
+            _activeLocation = document.getElementById('locationFilter').value;
+            _applyFilters();
         }
 
         function searchListings() {
-            const q = document.getElementById('listingSearch').value.trim().toLowerCase();
-            _filteredListings = _allListings.filter(l =>
-                (!_activeCat || l.category === _activeCat) &&
-                (!q || l.title.toLowerCase().includes(q) || (l.description||'').toLowerCase().includes(q))
-            );
-            renderListings();
+            _applyFilters();
         }
 
         function sortListings() {
@@ -537,6 +560,7 @@
             else _filteredListings.sort((a,b) => new Date(b.created_at||0)-new Date(a.created_at||0));
             renderListings();
         }
+
 
         function renderListings() {
             const list = document.getElementById('listingList');

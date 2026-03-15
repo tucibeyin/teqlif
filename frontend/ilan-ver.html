@@ -283,7 +283,9 @@
                     </div>
                     <div class="form-group">
                         <label for="location">Konum (isteğe bağlı)</label>
-                        <input type="text" id="location" placeholder="İstanbul, Ankara...">
+                        <select id="location">
+                            <option value="">-- Şehir seçin --</option>
+                        </select>
                     </div>
                 </div>
 
@@ -501,7 +503,21 @@
             });
         })();
 
+        async function loadCities() {
+            try {
+                const cities = await apiFetch('/cities');
+                const sel = document.getElementById('location');
+                cities.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c;
+                    opt.textContent = c;
+                    sel.appendChild(opt);
+                });
+            } catch (_) {}
+        }
+
         loadCategories();
+        loadCities();
     </script>
 </body>
 </html>

@@ -7,6 +7,7 @@ import 'package:image_picker/image_picker.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/category_service.dart';
+import '../services/city_service.dart';
 import '../services/storage_service.dart';
 
 class CreateListingScreen extends StatefulWidget {
@@ -21,9 +22,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
-  final _locationCtrl = TextEditingController();
   String? _selectedCategory;
+  String? _selectedCity;
   List<(String, String)> _categories = [];
+  List<String> _cities = [];
   bool _submitting = false;
   final List<File> _images = [];
   final _picker = ImagePicker();
@@ -41,6 +43,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         });
       }
     });
+    CityService.getCities().then((c) {
+      if (mounted) setState(() => _cities = c);
+    });
   }
 
   @override
@@ -48,7 +53,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
-    _locationCtrl.dispose();
     super.dispose();
   }
 
@@ -162,8 +166,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           'description': _descCtrl.text.trim(),
           'price': double.tryParse(_priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.')),
           'category': _selectedCategory,
-          if (_locationCtrl.text.trim().isNotEmpty)
-            'location': _locationCtrl.text.trim(),
+          if (_selectedCity != null && _selectedCity!.isNotEmpty)
+            'location': _selectedCity,
           'image_urls': imageUrls,
           if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
         }),
@@ -361,12 +365,15 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         v == null || v.isEmpty ? 'Fiyat giriniz' : null,
                   ),
                   const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _locationCtrl,
-                    decoration: const InputDecoration(
-                      labelText: 'Konum (isteğe bağlı)',
-                      hintText: 'İstanbul, Ankara...',
-                    ),
+                  DropdownButtonFormField<String>(
+                    value: _selectedCity,
+                    decoration: const InputDecoration(labelText: 'Konum (isteğe bağlı)'),
+                    hint: const Text('Şehir seçin'),
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('-- Seçiniz --')),
+                      ..._cities.map((c) => DropdownMenuItem(value: c, child: Text(c))),
+                    ],
+                    onChanged: (v) => setState(() => _selectedCity = v),
                   ),
                 ],
               ),

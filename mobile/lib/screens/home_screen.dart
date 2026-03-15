@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/theme.dart';
+import '../services/city_service.dart';
 import 'listing_detail_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,6 +17,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<dynamic> _listings = [];
   bool _loading = true;
   String? _error;
+  String? _selectedCity;
+  List<String> _cities = [];
 
   static const _categories = [
     {'slug': 'elektronik', 'label': 'Elektronik', 'icon': Icons.devices_outlined},
@@ -32,6 +35,9 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _load();
+    CityService.getCities().then((c) {
+      if (mounted) setState(() => _cities = c);
+    });
   }
 
   Future<void> _load({String? category}) async {
@@ -40,7 +46,10 @@ class _HomeScreenState extends State<HomeScreen> {
       _error = null;
     });
     try {
-      final uri = Uri.parse('$kBaseUrl/listings${category != null ? '?category=$category' : ''}');
+      final params = <String, String>{};
+      if (category != null) params['category'] = category;
+      if (_selectedCity != null) params['location'] = _selectedCity!;
+      final uri = Uri.parse('$kBaseUrl/listings').replace(queryParameters: params.isEmpty ? null : params);
       final resp = await http.get(uri);
       if (!mounted) return;
       if (resp.statusCode == 200) {
@@ -127,8 +136,57 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                   ),
+                  // Konum filtresi
+                  if (_cities.isNotEmpty)
+                    Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+                      child: SizedBox(
+                        height: 36,
+                        child: ListView.builder(
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _cities.length + 1,
+                          itemBuilder: (context, i) {
+                            final isAll = i == 0;
+                            final city = isAll ? null : _cities[i - 1];
+                            final isSelected = isAll
+                                ? _selectedCity == null
+                                : _selectedCity == city;
+                            return GestureDetector(
+                              onTap: () {
+                                setState(() => _selectedCity = city);
+                                _load();
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(right: 8),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 12, vertical: 6),
+                                decoration: BoxDecoration(
+                                  color: isSelected ? kPrimary : Colors.white,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? kPrimary
+                                        : Colors.grey.shade300,
+                                  ),
+                                ),
+                                child: Text(
+                                  isAll ? 'Tümü' : city!,
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    fontWeight: FontWeight.w500,
+                                    color: isSelected
+                                        ? Colors.white
+                                        : Colors.grey.shade700,
+                                  ),
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
                   const Padding(
-                    padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                    padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
                     child: Text(
                       'Son İlanlar',
                       style: TextStyle(
