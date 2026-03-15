@@ -7,6 +7,7 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import 'messages_screen.dart';
 import 'follow_list_screen.dart';
+import 'listing_detail_screen.dart';
 
 class PublicProfileScreen extends StatefulWidget {
   final String username;
@@ -247,24 +248,106 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             ),
           ),
         ),
-        _listings.isEmpty
-            ? SliverToBoxAdapter(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(32),
-                    child: Text(
-                      'Henüz ilan yok',
-                      style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
-                    ),
-                  ),
-                ),
-              )
-            : SliverList(
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, i) => _listingCard(_listings[i] as Map<String, dynamic>),
-                  childCount: _listings.length,
+        if (_listings.isEmpty)
+          SliverToBoxAdapter(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(32),
+                child: Text(
+                  'Henüz ilan yok',
+                  style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 14),
                 ),
               ),
+            ),
+          )
+        else
+          SliverPadding(
+            padding: const EdgeInsets.symmetric(horizontal: 2),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 2,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) {
+                  final listing = Map<String, dynamic>.from(_listings[i]);
+                  final imgs = listing['image_urls'] as List? ?? [];
+                  final raw = imgs.isNotEmpty
+                      ? imgs[0] as String
+                      : listing['image_url'] as String?;
+                  final photo = raw != null ? imgUrl(raw) : null;
+                  final price = listing['price'];
+                  final priceStr = price != null
+                      ? () {
+                          final s = (price as num).toInt().toString();
+                          final buf = StringBuffer();
+                          for (int j = 0; j < s.length; j++) {
+                            if (j > 0 && (s.length - j) % 3 == 0) buf.write('.');
+                            buf.write(s[j]);
+                          }
+                          return '${buf.toString()} ₺';
+                        }()
+                      : '';
+                  return GestureDetector(
+                    onTap: () => Navigator.push(
+                      ctx,
+                      MaterialPageRoute(
+                        builder: (_) => ListingDetailScreen(listing: listing),
+                      ),
+                    ),
+                    child: Stack(
+                      fit: StackFit.expand,
+                      children: [
+                        photo != null
+                            ? Image.network(
+                                photo,
+                                fit: BoxFit.cover,
+                                errorBuilder: (_, __, ___) => Container(
+                                  color: const Color(0xFFF3F4F6),
+                                  child: const Icon(Icons.image_outlined,
+                                      size: 28, color: Color(0xFFD1D5DB)),
+                                ),
+                              )
+                            : Container(
+                                color: const Color(0xFFF3F4F6),
+                                child: const Icon(Icons.image_outlined,
+                                    size: 28, color: Color(0xFFD1D5DB)),
+                              ),
+                        if (priceStr.isNotEmpty)
+                          Positioned(
+                            left: 0,
+                            right: 0,
+                            bottom: 0,
+                            child: Container(
+                              padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.topCenter,
+                                  end: Alignment.bottomCenter,
+                                  colors: [Colors.transparent, Colors.black54],
+                                ),
+                              ),
+                              child: Text(
+                                priceStr,
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                },
+                childCount: _listings.length,
+              ),
+            ),
+          ),
       ],
     );
   }
@@ -315,57 +398,4 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
-  Widget _listingCard(Map<String, dynamic> listing) {
-    final price = listing['price'];
-    final priceStr = price != null ? '${(price as num).toStringAsFixed(0)} ₺' : 'Fiyat yok';
-    final cat = listing['category'] as String? ?? '';
-    return Container(
-      margin: const EdgeInsets.fromLTRB(24, 0, 24, 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        border: Border.all(color: const Color(0xFFE5E7EB)),
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  listing['title'] as String? ?? '',
-                  style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 4),
-                Row(
-                  children: [
-                    if (cat.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: kPrimary.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        child: Text(
-                          cat,
-                          style: const TextStyle(fontSize: 11, color: kPrimary),
-                        ),
-                      ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 12),
-          Text(
-            priceStr,
-            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w700, color: kPrimary),
-          ),
-        ],
-      ),
-    );
-  }
 }
