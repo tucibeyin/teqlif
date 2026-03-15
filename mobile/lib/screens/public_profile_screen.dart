@@ -163,34 +163,38 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      _statCell('İlanlar', listingCount),
+                      Expanded(child: _statCell('İlanlar', listingCount)),
                       _divider(),
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => FollowListScreen(
-                              userId: userId,
-                              type: FollowListType.followers,
-                              title: 'Takipçiler',
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FollowListScreen(
+                                userId: userId,
+                                type: FollowListType.followers,
+                                title: 'Takipçiler',
+                              ),
                             ),
                           ),
+                          child: _statCell('Takipçi', followerCount),
                         ),
-                        child: _statCell('Takipçi', followerCount),
                       ),
                       _divider(),
-                      GestureDetector(
-                        onTap: () => Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => FollowListScreen(
-                              userId: userId,
-                              type: FollowListType.following,
-                              title: 'Takip Edilenler',
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => FollowListScreen(
+                                userId: userId,
+                                type: FollowListType.following,
+                                title: 'Takip Edilenler',
+                              ),
                             ),
                           ),
+                          child: _statCell('Takip', followingCount),
                         ),
-                        child: _statCell('Takip', followingCount),
                       ),
                     ],
                   ),
@@ -265,22 +269,20 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     );
   }
 
-  Widget _statCell(String label, dynamic count) => Expanded(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          child: Column(
-            children: [
-              Text(
-                '$count',
-                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                label,
-                style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
-              ),
-            ],
-          ),
+  Widget _statCell(String label, dynamic count) => Padding(
+        padding: const EdgeInsets.symmetric(vertical: 14),
+        child: Column(
+          children: [
+            Text(
+              '$count',
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 2),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF6B7280)),
+            ),
+          ],
         ),
       );
 
