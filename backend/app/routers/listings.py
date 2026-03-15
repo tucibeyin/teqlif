@@ -39,6 +39,30 @@ async def get_listings(user_id: Optional[int] = None, category: Optional[str] = 
     ]
 
 
+@router.get("/{listing_id}")
+async def get_listing(listing_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Listing, User).join(User, User.id == Listing.user_id)
+        .where(Listing.id == listing_id, Listing.is_active == True)  # noqa: E712
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="İlan bulunamadı")
+    l, u = row
+    return {
+        "id": l.id,
+        "title": l.title,
+        "description": l.description,
+        "price": l.price,
+        "category": l.category,
+        "location": l.location,
+        "image_url": l.image_url,
+        "image_urls": json.loads(l.image_urls) if l.image_urls else [],
+        "created_at": l.created_at.isoformat() if l.created_at else None,
+        "user": {"id": u.id, "username": u.username, "full_name": u.full_name},
+    }
+
+
 @router.post("")
 async def create_listing(payload: dict, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     category = (payload.get("category") or "diger").strip().lower()
