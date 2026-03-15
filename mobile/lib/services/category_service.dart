@@ -20,11 +20,12 @@ class CategoryService {
     // Fallback: hardcoded liste (offline veya sunucu hatası)
     _cache = const [
       ('elektronik', '📱 Elektronik'),
-      ('giyim', '👗 Giyim'),
-      ('ev', '🛋 Ev & Bahçe'),
       ('vasita', '🚗 Vasıta'),
+      ('emlak', '🏠 Emlak'),
+      ('giyim', '👗 Giyim'),
       ('spor', '⚽ Spor'),
       ('kitap', '📚 Kitap & Müzik'),
+      ('ev', '🛋 Ev & Bahçe'),
       ('diger', '📦 Diğer'),
     ];
     return _cache!;

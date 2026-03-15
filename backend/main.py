@@ -29,12 +29,13 @@ logger = setup_logging()
 
 _SEED_CATEGORIES = [
     ("elektronik", "📱 Elektronik", 0),
-    ("giyim", "👗 Giyim", 1),
-    ("ev", "🛋 Ev & Bahçe", 2),
-    ("vasita", "🚗 Vasıta", 3),
+    ("vasita", "🚗 Vasıta", 1),
+    ("emlak", "🏠 Emlak", 2),
+    ("giyim", "👗 Giyim", 3),
     ("spor", "⚽ Spor", 4),
     ("kitap", "📚 Kitap & Müzik", 5),
-    ("diger", "📦 Diğer", 6),
+    ("ev", "🛋 Ev & Bahçe", 6),
+    ("diger", "📦 Diğer", 7),
 ]
 
 
@@ -43,7 +44,10 @@ async def _seed_categories():
     async with AsyncSessionLocal() as db:
         for key, label, order in _SEED_CATEGORIES:
             existing = await db.scalar(select(Category).where(Category.key == key))
-            if not existing:
+            if existing:
+                existing.label = label
+                existing.sort_order = order
+            else:
                 db.add(Category(key=key, label=label, sort_order=order))
         await db.commit()
 
