@@ -4,6 +4,12 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Profil — teqlif</title>
+    <meta name="robots" content="index, follow">
+    <meta name="description" content="teqlif kullanıcı profili — ilanları ve satışları incele.">
+    <meta property="og:type" content="profile">
+    <meta property="og:site_name" content="teqlif">
+    <meta property="og:locale" content="tr_TR">
+    <meta name="twitter:card" content="summary">
     <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
     <link rel="apple-touch-icon" href="/static/icons/icon.svg">
     <link rel="manifest" href="/static/icons/manifest.json">
@@ -458,6 +464,26 @@
             try {
                 const user = await apiFetch(`/users/${encodeURIComponent(username)}`);
                 _profileUser = user;
+
+                // ── Dynamic SEO ──
+                const _pName = user.full_name || user.username;
+                const _pDesc = `${_pName} (@${user.username}) teqlif profilini görüntüle — ${user.listing_count ?? 0} ilan`;
+                const _pUrl = `https://teqlif.com/profil/${encodeURIComponent(user.username)}`;
+                document.title = `${_pName} (@${user.username}) — teqlif`;
+                const _sm = (prop, val, attr = 'property') => {
+                    let el = document.querySelector(`meta[${attr}="${prop}"]`);
+                    if (!el) { el = document.createElement('meta'); el.setAttribute(attr, prop); document.head.appendChild(el); }
+                    el.setAttribute('content', val);
+                };
+                let _c = document.querySelector('link[rel="canonical"]');
+                if (!_c) { _c = document.createElement('link'); _c.rel = 'canonical'; document.head.appendChild(_c); }
+                _c.href = _pUrl;
+                _sm('description', _pDesc, 'name');
+                _sm('og:url', _pUrl);
+                _sm('og:title', document.title);
+                _sm('og:description', _pDesc);
+                _sm('twitter:title', document.title, 'name');
+                _sm('twitter:description', _pDesc, 'name');
 
                 const myUser = Auth.getUser();
                 const isOwn = myUser && myUser.username === user.username;

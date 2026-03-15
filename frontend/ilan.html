@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>İlan — teqlif</title>
+    <meta name="robots" content="index, follow">
+    <meta name="description" content="teqlif'te satılık ilan detaylarını incele ve satıcıyla iletişime geç.">
+    <!-- Open Graph (dynamic, updated via JS after data load) -->
+    <meta property="og:type" content="product">
+    <meta property="og:site_name" content="teqlif">
+    <meta property="og:locale" content="tr_TR">
+    <meta name="twitter:card" content="summary_large_image">
     <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
     <link rel="apple-touch-icon" href="/static/icons/icon.svg">
     <link rel="manifest" href="/static/icons/manifest.json">
@@ -574,6 +581,55 @@
                 _cur = 0;
 
                 document.title = `${data.title} — teqlif`;
+
+                // ── Dynamic SEO meta tags ──
+                const _ogImg = (data.image_urls && data.image_urls[0])
+                    ? `https://teqlif.com${data.image_urls[0]}`
+                    : (data.image_url ? `https://teqlif.com${data.image_url}` : 'https://teqlif.com/static/icons/icon.svg');
+                const _ogDesc = data.description
+                    ? data.description.slice(0, 160)
+                    : `${data.title} — teqlif'te satılık ilan`;
+                const _canonUrl = `https://teqlif.com/ilan/${listingId}`;
+                const _setMeta = (prop, val, attr = 'property') => {
+                    let el = document.querySelector(`meta[${attr}="${prop}"]`);
+                    if (!el) { el = document.createElement('meta'); el.setAttribute(attr, prop); document.head.appendChild(el); }
+                    el.setAttribute('content', val);
+                };
+                let _canon = document.querySelector('link[rel="canonical"]');
+                if (!_canon) { _canon = document.createElement('link'); _canon.rel = 'canonical'; document.head.appendChild(_canon); }
+                _canon.href = _canonUrl;
+                _setMeta('description', _ogDesc, 'name');
+                _setMeta('og:url', _canonUrl);
+                _setMeta('og:title', document.title);
+                _setMeta('og:description', _ogDesc);
+                _setMeta('og:image', _ogImg);
+                _setMeta('twitter:title', document.title, 'name');
+                _setMeta('twitter:description', _ogDesc, 'name');
+                _setMeta('twitter:image', _ogImg, 'name');
+                // JSON-LD Product schema
+                const _ldEl = document.getElementById('ld-json') || (() => {
+                    const s = document.createElement('script');
+                    s.id = 'ld-json'; s.type = 'application/ld+json';
+                    document.head.appendChild(s); return s;
+                })();
+                _ldEl.textContent = JSON.stringify({
+                    '@context': 'https://schema.org',
+                    '@type': 'Product',
+                    'name': data.title,
+                    'description': data.description || data.title,
+                    'image': _ogImg,
+                    'url': _canonUrl,
+                    'offers': {
+                        '@type': 'Offer',
+                        'price': data.price ?? 0,
+                        'priceCurrency': 'TRY',
+                        'availability': 'https://schema.org/InStock',
+                        'seller': {
+                            '@type': 'Person',
+                            'name': data.user.full_name || data.user.username
+                        }
+                    }
+                });
 
                 const catLabel = CAT[data.category] || data.category || '';
                 const initials = (data.user.full_name || data.user.username || '?')[0].toUpperCase();

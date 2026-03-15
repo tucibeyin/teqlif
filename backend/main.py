@@ -7,7 +7,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from app.config import settings
 from app.logging_config import setup_logging
@@ -150,6 +150,56 @@ if os.path.exists(frontend_dir):
         if os.path.exists(path):
             return FileResponse(path)
         return FileResponse(os.path.join(frontend_dir, "index.html"))
+
+
+@app.get("/robots.txt", include_in_schema=False)
+async def robots_txt():
+    content = (
+        "User-agent: *\n"
+        "Allow: /\n"
+        "Disallow: /api/\n"
+        "Disallow: /mesajlar\n"
+        "Disallow: /mesajlar.html\n"
+        "Disallow: /hesabim.html\n"
+        "Disallow: /yayin.html\n"
+        "Disallow: /ilan-ver.html\n\n"
+        "Sitemap: https://teqlif.com/sitemap.xml\n"
+    )
+    return Response(content=content, media_type="text/plain")
+
+
+@app.get("/sitemap.xml", include_in_schema=False)
+async def sitemap_xml():
+    from app.models.listing import Listing
+    from app.database import get_db
+    from sqlalchemy.ext.asyncio import AsyncSession
+    async with AsyncSessionLocal() as db:
+        result = await db.execute(
+            select(Listing.id, Listing.created_at)
+            .where(Listing.is_active.is_(True))
+            .order_by(Listing.created_at.desc())
+        )
+        listings = result.all()
+
+    urls = [
+        "<url><loc>https://teqlif.com/</loc>"
+        "<changefreq>daily</changefreq><priority>1.0</priority></url>",
+    ]
+    for row in listings:
+        lastmod = row.created_at.strftime("%Y-%m-%d") if row.created_at else ""
+        urls.append(
+            f"<url><loc>https://teqlif.com/ilan/{row.id}</loc>"
+            f"<lastmod>{lastmod}</lastmod>"
+            "<changefreq>weekly</changefreq><priority>0.8</priority></url>"
+        )
+
+    xml = (
+        '<?xml version="1.0" encoding="UTF-8"?>\n'
+        '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
+        + "\n".join(urls)
+        + "\n</urlset>"
+    )
+    return Response(content=xml, media_type="application/xml")
 
 
 @app.get("/api/health")
