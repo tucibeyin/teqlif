@@ -104,6 +104,11 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE listings ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"
             )
         )
+        await conn.execute(
+            __import__("sqlalchemy").text(
+                "UPDATE listings SET is_deleted = FALSE WHERE is_deleted IS NULL"
+            )
+        )
     await _seed_categories()
     await _seed_cities()
     # Her worker'da Redis pub/sub dinleyicisini başlat
