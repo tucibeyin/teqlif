@@ -6,6 +6,7 @@ import 'config/theme.dart';
 import 'firebase_options.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_screen.dart';
+import 'services/biometric_service.dart';
 import 'services/storage_service.dart';
 import 'services/push_notification_service.dart';
 
@@ -60,6 +61,19 @@ class _SplashGateState extends State<_SplashGate> {
     });
     if (!mounted) return;
     if (token != null) {
+      // Face ID aktifse doğrula
+      final biometricEnabled = await StorageService.isBiometricEnabled();
+      if (biometricEnabled) {
+        final ok = await BiometricService.authenticate(
+          reason: 'teqlif hesabınıza giriş yapmak için doğrulayın',
+        );
+        if (!mounted) return;
+        if (!ok) {
+          // Doğrulama başarısız → login ekranına yönlendir (token silinmez)
+          Navigator.of(context).pushReplacementNamed('/login');
+          return;
+        }
+      }
       PushNotificationService.initialize();
       Navigator.of(context).pushReplacementNamed('/home');
     } else {

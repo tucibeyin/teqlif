@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
+import '../../services/biometric_service.dart';
 import '../../services/push_notification_service.dart';
+import '../../services/storage_service.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -35,6 +37,12 @@ class _LoginScreenState extends State<LoginScreen> {
         password: _passCtrl.text,
       );
       PushNotificationService.initialize();
+      if (!mounted) return;
+      // Biyometrik henüz etkin değilse ve cihaz destekliyorsa teklif et
+      final alreadyEnabled = await StorageService.isBiometricEnabled();
+      if (!alreadyEnabled && await BiometricService.isAvailable() && mounted) {
+        await _offerBiometric();
+      }
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
@@ -44,6 +52,39 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() { _error = 'Bağlantı hatası. Lütfen tekrar deneyin.'; });
     } finally {
       if (mounted) setState(() { _loading = false; });
+    }
+  }
+
+  Future<void> _offerBiometric() async {
+    final enable = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => AlertDialog(
+        title: const Row(
+          children: [
+            Text('🔒 ', style: TextStyle(fontSize: 20)),
+            Text('Face ID ile Giriş'),
+          ],
+        ),
+        content: const Text(
+          'Bir sonraki girişinizde şifre yazmadan Face ID ile hızlıca giriş yapabilirsiniz.',
+          style: TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Şimdi Değil', style: TextStyle(color: Color(0xFF6B7280))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Etkinleştir', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (enable == true) {
+      await StorageService.setBiometricEnabled(true);
     }
   }
 
