@@ -607,7 +607,7 @@
                                 <div class="price-tag">${fmt(data.price)}</div>
                                 <div class="price-note">KDV dahil</div>
                                 ${isLoggedIn
-                                    ? `<a href="/mesajlar?user=${esc(data.user.username)}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
+                                    ? `<a href="/mesajlar?to_id=${data.user.id}&to_name=${encodeURIComponent(data.user.full_name || data.user.username)}&to_handle=${encodeURIComponent(data.user.username)}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
                                     : `<a href="/giris.html?next=/ilan/${listingId}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
                                 }
                                 <a href="/profil/${esc(data.user.username)}" class="btn-msg">Profili Gör</a>
