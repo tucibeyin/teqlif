@@ -345,10 +345,15 @@
             width: 38px; height: 4px; background: #334155;
             border-radius: 2px; margin: 0 auto 16px;
         }
-        .listing-modal img {
-            width: 100%; height: 180px; object-fit: cover;
-            border-radius: 12px; margin-bottom: 14px;
-        }
+        /* Fotoğraf slider */
+        .lm-slider { position: relative; width: 100%; height: 190px; border-radius: 12px; overflow: hidden; margin-bottom: 14px; background: #0f172a; }
+        .lm-track { display: flex; height: 100%; transition: transform 0.28s ease; will-change: transform; }
+        .lm-track img { width: 100%; flex-shrink: 0; object-fit: cover; }
+        .lm-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.55); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 14px; z-index: 2; display: flex; align-items: center; justify-content: center; }
+        .lm-arrow-l { left: 8px; } .lm-arrow-r { right: 8px; }
+        .lm-dots { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
+        .lm-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); transition: background .2s; }
+        .lm-dot.active { background: #fff; }
         .listing-modal-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
         .listing-modal-price { font-size: 1.25rem; font-weight: 800; color: #4ade80; margin-bottom: 4px; }
         .listing-modal-seller { font-size: 0.78rem; color: #64748b; margin-bottom: 12px; }
@@ -656,7 +661,12 @@
     <div class="listing-modal-overlay" id="listingModalOverlay" style="display:none;" onclick="closeListingModal(event)">
         <div class="listing-modal" id="listingModal">
             <div class="listing-modal-handle"></div>
-            <img id="listingModalImg" src="" alt="" style="display:none;">
+            <div class="lm-slider" id="listingModalSlider" style="display:none;">
+                <div class="lm-track" id="listingModalTrack"></div>
+                <button class="lm-arrow lm-arrow-l" id="lmArrowL" onclick="lmSlide(-1)">‹</button>
+                <button class="lm-arrow lm-arrow-r" id="lmArrowR" onclick="lmSlide(1)">›</button>
+                <div class="lm-dots" id="lmDots"></div>
+            </div>
             <div class="listing-modal-title" id="listingModalTitle"></div>
             <div class="listing-modal-price" id="listingModalPrice"></div>
             <div class="listing-modal-seller" id="listingModalSeller"></div>
@@ -1068,32 +1078,54 @@
         });
 
         // ── Viewer: ilan popup ───────────────────────────────────────
+        let _lmImgs = [], _lmIdx = 0;
+
+        function lmSlide(dir) {
+            if (_lmImgs.length < 2) return;
+            _lmIdx = (_lmIdx + dir + _lmImgs.length) % _lmImgs.length;
+            document.getElementById('listingModalTrack').style.transform = `translateX(-${_lmIdx * 100}%)`;
+            document.querySelectorAll('.lm-dot').forEach((d, i) => d.classList.toggle('active', i === _lmIdx));
+            document.getElementById('lmArrowL').style.display = _lmIdx === 0 ? 'none' : 'flex';
+            document.getElementById('lmArrowR').style.display = _lmIdx === _lmImgs.length - 1 ? 'none' : 'flex';
+        }
+
         async function showListingModal(e) {
             if (e) e.preventDefault();
             if (!_currentListingId) return;
             try {
                 const listing = await apiFetch(`/listings/${_currentListingId}`);
-                const imgs = listing.image_urls && listing.image_urls.length ? listing.image_urls : (listing.image_url ? [listing.image_url] : []);
-                const imgEl = document.getElementById('listingModalImg');
-                if (imgs.length) {
-                    imgEl.src = imgs[0].startsWith('http') ? imgs[0] : `https://teqlif.com${imgs[0]}`;
-                    imgEl.style.display = 'block';
+                let raw = listing.image_urls || [];
+                if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch(_) { raw = []; } }
+                if (!raw.length && listing.image_url) raw = [listing.image_url];
+                _lmImgs = raw.map(r => r.startsWith('http') || r.startsWith('/') ? r : `/uploads/${r}`);
+                _lmIdx = 0;
+
+                const slider = document.getElementById('listingModalSlider');
+                const track  = document.getElementById('listingModalTrack');
+                const dots   = document.getElementById('lmDots');
+                if (_lmImgs.length) {
+                    track.innerHTML = _lmImgs.map(src => `<img src="${src}" alt="">`).join('');
+                    track.style.transform = 'translateX(0)';
+                    dots.innerHTML = _lmImgs.length > 1
+                        ? _lmImgs.map((_, i) => `<div class="lm-dot${i === 0 ? ' active' : ''}"></div>`).join('')
+                        : '';
+                    document.getElementById('lmArrowL').style.display = 'none';
+                    document.getElementById('lmArrowR').style.display = _lmImgs.length > 1 ? 'flex' : 'none';
+                    let tx = 0;
+                    track.ontouchstart = ev => { tx = ev.touches[0].clientX; };
+                    track.ontouchend   = ev => { const dx = ev.changedTouches[0].clientX - tx; if (Math.abs(dx) > 40) lmSlide(dx < 0 ? 1 : -1); };
+                    slider.style.display = 'block';
                 } else {
-                    imgEl.style.display = 'none';
+                    slider.style.display = 'none';
                 }
                 document.getElementById('listingModalTitle').textContent = listing.title || '';
                 document.getElementById('listingModalPrice').textContent = listing.price != null
                     ? '₺ ' + Number(listing.price).toLocaleString('tr-TR')
                     : 'Fiyat Belirtilmemiş';
-                const seller = listing.user?.username ? `@${listing.user.username}` : '';
-                document.getElementById('listingModalSeller').textContent = seller;
+                document.getElementById('listingModalSeller').textContent = listing.user?.username ? `@${listing.user.username}` : '';
                 const descEl = document.getElementById('listingModalDesc');
-                if (listing.description) {
-                    descEl.textContent = listing.description;
-                    descEl.style.display = 'block';
-                } else {
-                    descEl.style.display = 'none';
-                }
+                if (listing.description) { descEl.textContent = listing.description; descEl.style.display = 'block'; }
+                else descEl.style.display = 'none';
                 document.getElementById('listingModalOverlay').style.display = 'flex';
             } catch (_) {}
         }

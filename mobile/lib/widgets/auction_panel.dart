@@ -314,9 +314,16 @@ class _AuctionPanelState extends State<AuctionPanel> {
   }
 
   void _openListingSheet(BuildContext context, Map<String, dynamic> listing) {
-    final imgs = listing['image_urls'] as List? ?? [];
-    final rawImg = imgs.isNotEmpty ? imgs[0] as String : listing['image_url'] as String?;
-    final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+    final rawImgs = listing['image_urls'] as List? ?? [];
+    final imageUrls = rawImgs
+        .map((e) => imgUrl(e as String))
+        .where((u) => u.isNotEmpty)
+        .toList();
+    if (imageUrls.isEmpty) {
+      final single = listing['image_url'] as String?;
+      if (single != null) imageUrls.add(imgUrl(single));
+    }
+
     final price = listing['price'];
     final priceStr = price != null
         ? '₺ ${(price as num).toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}'
@@ -334,73 +341,114 @@ class _AuctionPanelState extends State<AuctionPanel> {
         initialChildSize: 0.55,
         minChildSize: 0.3,
         maxChildSize: 0.85,
-        builder: (_, scrollCtrl) => ListView(
-          controller: scrollCtrl,
-          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 38, height: 4,
-                decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 16),
-            // Resim
-            if (imageUrl != null && imageUrl.isNotEmpty)
-              ClipRRect(
-                borderRadius: BorderRadius.circular(12),
-                child: Image.network(
-                  imageUrl,
-                  height: 180,
-                  width: double.infinity,
-                  fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => Container(
-                    height: 180,
-                    color: const Color(0xFF0F172A),
-                    child: const Icon(Icons.image_outlined,
-                        color: Color(0xFF475569), size: 48),
+        builder: (_, scrollCtrl) {
+          final pageCtrl = PageController();
+          final pageIdx = [0]; // mutable single-element list
+          return StatefulBuilder(
+          builder: (_, setSt) {
+            return ListView(
+              controller: scrollCtrl,
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+              children: [
+                // Handle bar
+                Center(
+                  child: Container(
+                    width: 38, height: 4,
+                    decoration: BoxDecoration(
+                        color: Colors.white24,
+                        borderRadius: BorderRadius.circular(2)),
                   ),
                 ),
-              ),
-            const SizedBox(height: 14),
-            // Başlık
-            Text(
-              listing['title'] ?? '',
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.w700,
-                  fontSize: 17),
-            ),
-            const SizedBox(height: 6),
-            // Fiyat
-            Text(
-              priceStr,
-              style: const TextStyle(
-                  color: Color(0xFF4ADE80),
-                  fontWeight: FontWeight.w800,
-                  fontSize: 20),
-            ),
-            if (seller.isNotEmpty) ...[
-              const SizedBox(height: 4),
-              Text('@$seller',
+                const SizedBox(height: 16),
+                // Resim slider
+                if (imageUrls.isNotEmpty)
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: SizedBox(
+                      height: 200,
+                      child: Stack(
+                        children: [
+                          PageView.builder(
+                            controller: pageCtrl,
+                            itemCount: imageUrls.length,
+                            onPageChanged: (i) => setSt(() => pageIdx[0] = i),
+                            itemBuilder: (_, i) => Image.network(
+                              imageUrls[i],
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              errorBuilder: (_, __, ___) => Container(
+                                color: const Color(0xFF0F172A),
+                                child: const Icon(Icons.image_outlined,
+                                    color: Color(0xFF475569), size: 48),
+                              ),
+                            ),
+                          ),
+                          // Dot indicators
+                          if (imageUrls.length > 1)
+                            Positioned(
+                              bottom: 8,
+                              left: 0,
+                              right: 0,
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: List.generate(imageUrls.length, (i) {
+                                  final active = i == pageIdx[0];
+                                  return AnimatedContainer(
+                                    duration: const Duration(milliseconds: 200),
+                                    margin: const EdgeInsets.symmetric(horizontal: 3),
+                                    width: active ? 16 : 6,
+                                    height: 6,
+                                    decoration: BoxDecoration(
+                                      color: active ? Colors.white : Colors.white38,
+                                      borderRadius: BorderRadius.circular(3),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 14),
+                // Başlık
+                Text(
+                  listing['title'] ?? '',
                   style: const TextStyle(
-                      color: Color(0xFF64748B), fontSize: 13)),
-            ],
-            if ((listing['description'] as String?)?.isNotEmpty == true) ...[
-              const SizedBox(height: 12),
-              const Divider(color: Color(0xFF334155)),
-              const SizedBox(height: 8),
-              Text(
-                listing['description'] as String,
-                style: const TextStyle(
-                    color: Color(0xFF94A3B8), fontSize: 13, height: 1.5),
-              ),
-            ],
-          ],
-        ),
+                      color: Colors.white,
+                      fontWeight: FontWeight.w700,
+                      fontSize: 17),
+                ),
+                const SizedBox(height: 6),
+                // Fiyat
+                Text(
+                  priceStr,
+                  style: const TextStyle(
+                      color: Color(0xFF4ADE80),
+                      fontWeight: FontWeight.w800,
+                      fontSize: 20),
+                ),
+                if (seller.isNotEmpty) ...[
+                  const SizedBox(height: 4),
+                  Text('@$seller',
+                      style: const TextStyle(
+                          color: Color(0xFF64748B), fontSize: 13)),
+                ],
+                if ((listing['description'] as String?)?.isNotEmpty == true) ...[
+                  const SizedBox(height: 12),
+                  const Divider(color: Color(0xFF334155)),
+                  const SizedBox(height: 8),
+                  Text(
+                    listing['description'] as String,
+                    style: const TextStyle(
+                        color: Color(0xFF94A3B8), fontSize: 13, height: 1.5),
+                  ),
+                ],
+              ],
+            );
+          },
+        );
+        },
       ),
     );
   }
