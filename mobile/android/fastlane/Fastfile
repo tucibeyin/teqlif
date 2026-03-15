@@ -1,0 +1,20 @@
+default_platform(:android)
+
+platform :android do
+  desc "Sürümü artır, derle ve Internal Test'e gönder"
+  lane :deploy_internal do
+    # 1. pubspec.yaml içindeki sürüm kodunu otomatik olarak 1 artırır
+    # Örn: 1.0.0+5 -> 1.0.0+6
+    sh("perl -i -pe 's/version: (\\d+\\.\\d+\\.\\d+)\\+(\\d+)/\"version: $1+\" . ($2 + 1)/e' ../pubspec.yaml")
+
+    # 2. Temizlik ve Derleme
+    sh("cd .. && flutter clean && flutter pub get && flutter build appbundle")
+
+    # 3. Yükleme
+    upload_to_play_store(
+      track: 'internal',
+      aab: '../build/app/outputs/bundle/release/app-release.aab',
+      release_status: 'draft'
+    )
+  end
+end

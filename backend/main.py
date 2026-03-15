@@ -228,6 +228,14 @@ if os.path.exists(frontend_dir):
     async def serve_messages_page():
         return FileResponse(os.path.join(frontend_dir, "mesajlar.html"))
 
+    @app.get("/support", include_in_schema=False)
+    async def serve_support_page():
+        return FileResponse(os.path.join(frontend_dir, "support.html"))
+
+    @app.get("/gizlilik-politikasi", include_in_schema=False)
+    async def serve_privacy_page():
+        return FileResponse(os.path.join(frontend_dir, "gizlilik-politikasi.html"))
+
     @app.get("/{page}.html", include_in_schema=False)
     async def serve_page(page: str):
         path = os.path.join(frontend_dir, f"{page}.html")

@@ -9,6 +9,7 @@
 firebase-key.json
 *-service-account.json
 *serviceAccount*.json
+api-key.json
 
 # Firebase config dosyalarının kök klasördeki kopyaları
 /GoogleService-Info.plist

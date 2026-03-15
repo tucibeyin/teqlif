@@ -1,7 +1,7 @@
 name: teqlif
 description: "teqlif — İlan ve Açık Artırma"
 publish_to: 'none'
-version: 1.0.0+1
+version: 1.0.0+6
 
 environment:
   sdk: ^3.11.0

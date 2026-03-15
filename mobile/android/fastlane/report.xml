@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="fastlane.lanes">
+    
+    
+    
+      
+      <testcase classname="fastlane.lanes" name="0: default_platform" time="0.000167">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="1: perl -i -pe &apos;s/version: (\d+\.\d+\.\d+)\+(\d+)/&quot;version: $1+&quot; . ($2 + 1)/e&apos; ../pubspec.yaml" time="0.016232">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="2: cd .. &amp;&amp; flutter clean &amp;&amp; flutter pub get &amp;&amp; flutter build appbundle" time="36.589626">
+        
+      </testcase>
+    
+      
+      <testcase classname="fastlane.lanes" name="3: upload_to_play_store" time="214.26412">
+        
+      </testcase>
+    
+  </testsuite>
+</testsuites>
