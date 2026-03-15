@@ -95,11 +95,11 @@ class _HomeScreenState extends State<HomeScreen> {
                     context,
                     MaterialPageRoute(builder: (_) => const CreateListingScreen()),
                   ),
-                  icon: const Icon(Icons.add, size: 18, color: Color(0xFFF59E0B)),
+                  icon: const Icon(Icons.add, size: 18, color: kPrimary),
                   label: const Text(
                     'İlan Ver',
                     style: TextStyle(
-                        color: Color(0xFFF59E0B),
+                        color: kPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 13),
                   ),
