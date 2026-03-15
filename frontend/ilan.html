@@ -768,13 +768,13 @@
 
                             <div class="seller-block">
                                 <div class="sec-label" style="margin-bottom:.75rem">Satıcı</div>
-                                <a href="/profil/${esc(data.user.username)}" class="seller-row">
+                                <a href="${isOwner ? '/hesabim.html' : '/profil/' + esc(data.user.username)}" class="seller-row">
                                     <div class="seller-avatar">${esc(initials)}</div>
                                     <div>
                                         <div class="seller-name">${esc(data.user.full_name || data.user.username)}</div>
                                         <div class="seller-username">@${esc(data.user.username)}</div>
                                     </div>
-                                    <span class="seller-goto">Profile Git →</span>
+                                    <span class="seller-goto">${isOwner ? 'Hesabım →' : 'Profile Git →'}</span>
                                 </a>
                             </div>
                         </div>

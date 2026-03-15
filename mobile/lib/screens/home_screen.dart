@@ -136,52 +136,39 @@ class _HomeScreenState extends State<HomeScreen> {
                       },
                     ),
                   ),
-                  // Konum filtresi
+                  // Konum filtresi — dropdown
                   if (_cities.isNotEmpty)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
-                      child: SizedBox(
-                        height: 36,
-                        child: ListView.builder(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: _cities.length + 1,
-                          itemBuilder: (context, i) {
-                            final isAll = i == 0;
-                            final city = isAll ? null : _cities[i - 1];
-                            final isSelected = isAll
-                                ? _selectedCity == null
-                                : _selectedCity == city;
-                            return GestureDetector(
-                              onTap: () {
-                                setState(() => _selectedCity = city);
-                                _load();
-                              },
-                              child: Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 12, vertical: 6),
-                                decoration: BoxDecoration(
-                                  color: isSelected ? kPrimary : Colors.white,
-                                  borderRadius: BorderRadius.circular(18),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? kPrimary
-                                        : Colors.grey.shade300,
-                                  ),
-                                ),
-                                child: Text(
-                                  isAll ? 'Tümü' : city!,
-                                  style: TextStyle(
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w500,
-                                    color: isSelected
-                                        ? Colors.white
-                                        : Colors.grey.shade700,
-                                  ),
-                                ),
+                      padding: const EdgeInsets.fromLTRB(16, 6, 16, 0),
+                      child: Container(
+                        height: 40,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: Colors.grey.shade300),
+                        ),
+                        child: DropdownButtonHideUnderline(
+                          child: DropdownButton<String?>(
+                            value: _selectedCity,
+                            isExpanded: true,
+                            icon: const Icon(Icons.keyboard_arrow_down, size: 20),
+                            style: const TextStyle(fontSize: 13, color: Color(0xFF1A1A1A)),
+                            items: [
+                              const DropdownMenuItem<String?>(
+                                value: null,
+                                child: Text('Tüm Şehirler'),
                               ),
-                            );
-                          },
+                              ..._cities.map((c) => DropdownMenuItem<String?>(
+                                    value: c,
+                                    child: Text(c),
+                                  )),
+                            ],
+                            onChanged: (v) {
+                              setState(() => _selectedCity = v);
+                              _load();
+                            },
+                          ),
                         ),
                       ),
                     ),

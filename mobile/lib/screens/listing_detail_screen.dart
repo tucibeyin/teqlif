@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
+import 'profile_screen.dart';
 import 'public_profile_screen.dart';
 import 'messages_screen.dart';
 
@@ -58,6 +59,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   void _goToProfile() {
     final user = widget.listing['user'] as Map<String, dynamic>?;
     if (user == null) return;
+    // Kendi ilanıysa kendi profil ekranına git (loop'u önle)
+    if (_myUserId != null && user['id'] == _myUserId) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+      );
+      return;
+    }
     Navigator.push(
       context,
       MaterialPageRoute(
