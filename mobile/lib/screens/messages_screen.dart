@@ -1,5 +1,8 @@
 import 'dart:async';
+import 'dart:convert';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../config/theme.dart';
 import '../config/api.dart';
 import '../services/notification_service.dart';
@@ -7,6 +10,7 @@ import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
 import 'public_profile_screen.dart';
+import 'listing_detail_screen.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -647,14 +651,9 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.end,
                                 children: [
-                                  Text(
-                                    content,
-                                    style: TextStyle(
-                                      color: isMe
-                                          ? Colors.white
-                                          : const Color(0xFF1F2937),
-                                      fontSize: 14.5,
-                                    ),
+                                  _MessageText(
+                                    content: content,
+                                    isMe: isMe,
                                   ),
                                   const SizedBox(height: 2),
                                   Text(
@@ -731,6 +730,83 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
         ],
       ),
     );
+  }
+}
+
+// ── Tıklanabilir URL'li mesaj metni ──────────────────────────────────────────
+
+class _MessageText extends StatelessWidget {
+  final String content;
+  final bool isMe;
+
+  const _MessageText({required this.content, required this.isMe});
+
+  // teqlif.com/ilan/{id} URL'lerini tespit et
+  static final _urlRegex = RegExp(r'https?://[^\s]+/ilan/(\d+)');
+
+  Future<void> _openListing(BuildContext context, int listingId) async {
+    try {
+      final resp = await http.get(Uri.parse('$kBaseUrl/listings/$listingId'));
+      if (resp.statusCode == 200 && context.mounted) {
+        final listing = jsonDecode(resp.body) as Map<String, dynamic>;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ListingDetailScreen(listing: listing),
+          ),
+        );
+      }
+    } catch (_) {}
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final normalColor = isMe ? Colors.white : const Color(0xFF1F2937);
+    const linkColor = Color(0xFF38BDF8); // açık mavi — her iki balonda görünür
+
+    final matches = _urlRegex.allMatches(content).toList();
+    if (matches.isEmpty) {
+      return Text(content,
+          style: TextStyle(color: normalColor, fontSize: 14.5));
+    }
+
+    final spans = <TextSpan>[];
+    int cursor = 0;
+
+    for (final match in matches) {
+      // URL öncesi düz metin
+      if (match.start > cursor) {
+        spans.add(TextSpan(
+          text: content.substring(cursor, match.start),
+          style: TextStyle(color: normalColor, fontSize: 14.5),
+        ));
+      }
+      // Tıklanabilir ilan linki
+      final listingId = int.parse(match.group(1)!);
+      spans.add(TextSpan(
+        text: '📌 İlana Git',
+        style: const TextStyle(
+          color: linkColor,
+          fontSize: 14.5,
+          fontWeight: FontWeight.w700,
+          decoration: TextDecoration.underline,
+          decorationColor: linkColor,
+        ),
+        recognizer: TapGestureRecognizer()
+          ..onTap = () => _openListing(context, listingId),
+      ));
+      cursor = match.end;
+    }
+
+    // URL sonrası kalan metin
+    if (cursor < content.length) {
+      spans.add(TextSpan(
+        text: content.substring(cursor),
+        style: TextStyle(color: normalColor, fontSize: 14.5),
+      ));
+    }
+
+    return RichText(text: TextSpan(children: spans));
   }
 }
 
