@@ -6,6 +6,7 @@ from app.database import get_db
 from app.models.listing import Listing
 from app.models.user import User
 from app.utils.auth import get_current_user
+from app.schemas.stream import VALID_CATEGORIES
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
@@ -38,12 +39,15 @@ async def get_listings(user_id: Optional[int] = None, category: Optional[str] = 
 
 @router.post("")
 async def create_listing(payload: dict, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    category = (payload.get("category") or "diger").strip().lower()
+    if category not in VALID_CATEGORIES:
+        raise HTTPException(status_code=422, detail=f"Geçersiz kategori: {category}")
     listing = Listing(
         user_id=current_user.id,
         title=payload.get("title", ""),
         description=payload.get("description"),
         price=payload.get("price"),
-        category=payload.get("category"),
+        category=category,
         location=payload.get("location"),
         image_url=payload.get("image_url"),
     )

@@ -14,11 +14,16 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   final _titleCtrl = TextEditingController();
   final _descCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
-  String _selectedCategory = 'Elektronik';
+  String _selectedCategory = 'elektronik';
 
-  final _categories = [
-    'Elektronik', 'Giyim', 'Ev & Yaşam', 'Araç',
-    'Spor', 'Kitap', 'Oyuncak', 'Diğer',
+  static const _categories = [
+    ('elektronik', '📱 Elektronik'),
+    ('giyim', '👗 Giyim'),
+    ('ev', '🛋 Ev & Bahçe'),
+    ('vasita', '🚗 Vasıta'),
+    ('spor', '⚽ Spor'),
+    ('kitap', '📚 Kitap & Müzik'),
+    ('diger', '📦 Diğer'),
   ];
 
   @override
@@ -91,10 +96,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
-                    initialValue: _selectedCategory,
+                    value: _selectedCategory,
                     decoration: const InputDecoration(labelText: 'Kategori'),
                     items: _categories
-                        .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                        .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                         .toList(),
                     onChanged: (v) =>
                         setState(() => _selectedCategory = v ?? _selectedCategory),
