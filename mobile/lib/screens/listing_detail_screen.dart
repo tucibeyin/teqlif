@@ -21,6 +21,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   late final PageController _pageCtrl;
   late final List<String> _images;
   int? _myUserId;
+  bool _isFavorited = false;
+  bool _isActive = true;
 
   @override
   void initState() {
@@ -31,12 +33,76 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     if (_images.isEmpty && widget.listing['image_url'] != null) {
       _images.add(imgUrl(widget.listing['image_url'] as String));
     }
+    _isActive = widget.listing['is_active'] as bool? ?? true;
     _loadMyId();
   }
 
   Future<void> _loadMyId() async {
     final info = await StorageService.getUserInfo();
-    if (mounted) setState(() => _myUserId = info?['id'] as int?);
+    final token = await StorageService.getToken();
+    if (!mounted) return;
+    setState(() => _myUserId = info?['id'] as int?);
+    if (token != null && _myUserId != null) {
+      final listingUserId = (widget.listing['user'] as Map?)?['id'];
+      if (listingUserId != _myUserId) {
+        _loadFavoriteStatus(token);
+      }
+    }
+  }
+
+  Future<void> _loadFavoriteStatus(String token) async {
+    final id = widget.listing['id'];
+    try {
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/favorites/$id'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        setState(() => _isFavorited = data['is_favorited'] as bool? ?? false);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleFavorite() async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    final id = widget.listing['id'];
+    try {
+      if (_isFavorited) {
+        await http.delete(
+          Uri.parse('$kBaseUrl/favorites/$id'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        if (mounted) setState(() => _isFavorited = false);
+      } else {
+        await http.post(
+          Uri.parse('$kBaseUrl/favorites/$id'),
+          headers: {'Authorization': 'Bearer $token'},
+        );
+        if (mounted) setState(() => _isFavorited = true);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _toggleActive() async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    final id = widget.listing['id'];
+    try {
+      final resp = await http.patch(
+        Uri.parse('$kBaseUrl/listings/$id/toggle'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200 && mounted) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final newActive = data['is_active'] as bool? ?? !_isActive;
+        setState(() => _isActive = newActive);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(newActive ? 'İlan aktif yapıldı' : 'İlan pasife alındı')),
+        );
+      }
+    } catch (_) {}
   }
 
   @override
@@ -282,18 +348,35 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          if (isMine)
+          if (isMine) ...[
+            IconButton(
+              icon: Icon(
+                _isActive ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                color: _isActive ? const Color(0xFF6B7280) : kPrimary,
+              ),
+              tooltip: _isActive ? 'Pasife Al' : 'Aktif Yap',
+              onPressed: _toggleActive,
+            ),
             IconButton(
               icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
               tooltip: 'İlanı Sil',
               onPressed: () => _confirmDelete(context),
-            )
-          else if (_myUserId != null)
+            ),
+          ] else if (_myUserId != null) ...[
+            IconButton(
+              icon: Icon(
+                _isFavorited ? Icons.favorite : Icons.favorite_border,
+                color: _isFavorited ? Colors.red : const Color(0xFF9CA3AF),
+              ),
+              tooltip: _isFavorited ? 'Favoriden Çıkar' : 'Favorile',
+              onPressed: _toggleFavorite,
+            ),
             IconButton(
               icon: const Icon(Icons.flag_outlined, color: Color(0xFF9CA3AF), size: 22),
               tooltip: 'Şikayet Et',
               onPressed: () => _openReport(context),
             ),
+          ],
         ],
       ),
       body: SingleChildScrollView(

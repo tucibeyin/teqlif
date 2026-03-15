@@ -14,7 +14,7 @@ from app.logging_config import setup_logging
 from app.routers import auth, streams, webhooks, auction, chat
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener
-from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports
+from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 import app.models.auction  # noqa: F401 — tablo kaydı için
@@ -25,6 +25,7 @@ import app.models.follow  # noqa: F401 — tablo kaydı için
 import app.models.category  # noqa: F401 — tablo kaydı için
 import app.models.city  # noqa: F401 — tablo kaydı için
 import app.models.report  # noqa: F401 — tablo kaydı için
+import app.models.favorite  # noqa: F401 — tablo kaydı için
 
 logger = setup_logging()
 
@@ -98,6 +99,11 @@ async def lifespan(app: FastAPI):
                 "ALTER TABLE listings ADD COLUMN IF NOT EXISTS image_urls TEXT"
             )
         )
+        await conn.execute(
+            __import__("sqlalchemy").text(
+                "ALTER TABLE listings ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"
+            )
+        )
     await _seed_categories()
     await _seed_cities()
     # Her worker'da Redis pub/sub dinleyicisini başlat
@@ -157,6 +163,7 @@ app.include_router(follows.router)
 app.include_router(categories.router)
 app.include_router(cities.router)
 app.include_router(reports.router)
+app.include_router(favorites.router)
 app.include_router(upload.router)
 
 # Upload klasörü varsa static olarak sun

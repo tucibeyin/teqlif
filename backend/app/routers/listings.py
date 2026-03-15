@@ -12,45 +12,7 @@ from app.schemas.stream import VALID_CATEGORIES
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
 
-@router.get("")
-async def get_listings(user_id: Optional[int] = None, category: Optional[str] = None, location: Optional[str] = None, db: AsyncSession = Depends(get_db)):
-    q = select(Listing, User).join(User, User.id == Listing.user_id).where(Listing.is_active == True)  # noqa: E712
-    if user_id:
-        q = q.where(Listing.user_id == user_id)
-    if category:
-        q = q.where(Listing.category == category)
-    if location:
-        q = q.where(Listing.location == location)
-    q = q.order_by(Listing.created_at.desc())
-    result = await db.execute(q)
-    rows = result.all()
-    return [
-        {
-            "id": l.id,
-            "title": l.title,
-            "description": l.description,
-            "price": l.price,
-            "category": l.category,
-            "location": l.location,
-            "image_url": l.image_url,
-            "image_urls": json.loads(l.image_urls) if l.image_urls else [],
-            "created_at": l.created_at.isoformat() if l.created_at else None,
-            "user": {"id": u.id, "username": u.username, "full_name": u.full_name},
-        }
-        for l, u in rows
-    ]
-
-
-@router.get("/{listing_id}")
-async def get_listing(listing_id: int, db: AsyncSession = Depends(get_db)):
-    result = await db.execute(
-        select(Listing, User).join(User, User.id == Listing.user_id)
-        .where(Listing.id == listing_id, Listing.is_active == True)  # noqa: E712
-    )
-    row = result.first()
-    if not row:
-        raise HTTPException(status_code=404, detail="İlan bulunamadı")
-    l, u = row
+def _row_dict(l: Listing, u: User) -> dict:
     return {
         "id": l.id,
         "title": l.title,
@@ -61,8 +23,55 @@ async def get_listing(listing_id: int, db: AsyncSession = Depends(get_db)):
         "image_url": l.image_url,
         "image_urls": json.loads(l.image_urls) if l.image_urls else [],
         "created_at": l.created_at.isoformat() if l.created_at else None,
+        "is_active": l.is_active,
         "user": {"id": u.id, "username": u.username, "full_name": u.full_name},
     }
+
+
+@router.get("")
+async def get_listings(user_id: Optional[int] = None, category: Optional[str] = None, location: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+    q = (
+        select(Listing, User)
+        .join(User, User.id == Listing.user_id)
+        .where(Listing.is_active == True, Listing.is_deleted == False)  # noqa: E712
+    )
+    if user_id:
+        q = q.where(Listing.user_id == user_id)
+    if category:
+        q = q.where(Listing.category == category)
+    if location:
+        q = q.where(Listing.location == location)
+    q = q.order_by(Listing.created_at.desc())
+    result = await db.execute(q)
+    return [_row_dict(l, u) for l, u in result.all()]
+
+
+@router.get("/my")
+async def get_my_listings(active: Optional[bool] = None, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    q = (
+        select(Listing, User)
+        .join(User, User.id == Listing.user_id)
+        .where(Listing.user_id == current_user.id, Listing.is_deleted == False)  # noqa: E712
+    )
+    if active is not None:
+        q = q.where(Listing.is_active == active)  # noqa: E712
+    q = q.order_by(Listing.created_at.desc())
+    result = await db.execute(q)
+    return [_row_dict(l, u) for l, u in result.all()]
+
+
+@router.get("/{listing_id}")
+async def get_listing(listing_id: int, db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Listing, User)
+        .join(User, User.id == Listing.user_id)
+        .where(Listing.id == listing_id, Listing.is_deleted == False)  # noqa: E712
+    )
+    row = result.first()
+    if not row:
+        raise HTTPException(status_code=404, detail="İlan bulunamadı")
+    l, u = row
+    return _row_dict(l, u)
 
 
 @router.post("")
@@ -86,12 +95,26 @@ async def create_listing(payload: dict, current_user: User = Depends(get_current
     return {"id": listing.id}
 
 
+@router.patch("/{listing_id}/toggle")
+async def toggle_listing(listing_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+    result = await db.execute(
+        select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id, Listing.is_deleted == False)  # noqa: E712
+    )
+    listing = result.scalar_one_or_none()
+    if not listing:
+        raise HTTPException(status_code=404, detail="İlan bulunamadı")
+    listing.is_active = not listing.is_active
+    await db.commit()
+    return {"is_active": listing.is_active}
+
+
 @router.delete("/{listing_id}")
 async def delete_listing(listing_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id))
     listing = result.scalar_one_or_none()
     if not listing:
         raise HTTPException(status_code=404, detail="İlan bulunamadı")
+    listing.is_deleted = True
     listing.is_active = False
     await db.commit()
     return {"ok": True}

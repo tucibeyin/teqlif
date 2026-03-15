@@ -517,17 +517,20 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.list_alt_outlined,
                 label: 'Aktif İlanlarım',
-                onTap: () {},
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const _MyListingsScreen(active: true))),
               ),
               _SettingsTile(
                 icon: Icons.archive_outlined,
                 label: 'Pasif İlanlarım',
-                onTap: () {},
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const _MyListingsScreen(active: false))),
               ),
               _SettingsTile(
                 icon: Icons.favorite_outline,
                 label: 'Favorilerim',
-                onTap: () {},
+                onTap: () => Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const _FavoritesScreen())),
               ),
             ],
           ),
@@ -783,4 +786,332 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       ),
     );
   }
+}
+
+// ── Aktif / Pasif ilanlarım ekranı ────────────────────────────────────────────
+
+class _MyListingsScreen extends StatefulWidget {
+  final bool active;
+  const _MyListingsScreen({required this.active});
+
+  @override
+  State<_MyListingsScreen> createState() => _MyListingsScreenState();
+}
+
+class _MyListingsScreenState extends State<_MyListingsScreen> {
+  List<dynamic> _listings = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final activeParam = widget.active ? 'true' : 'false';
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/my?active=$activeParam'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200 && mounted) {
+        setState(() => _listings = jsonDecode(resp.body) as List);
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _toggle(dynamic listing) async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    final id = listing['id'];
+    try {
+      final resp = await http.patch(
+        Uri.parse('$kBaseUrl/listings/$id/toggle'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) await _load();
+    } catch (_) {}
+  }
+
+  Future<void> _delete(dynamic listing) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('İlanı Sil'),
+        content: const Text('Bu ilanı kalıcı olarak silmek istiyor musunuz?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Vazgeç')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sil', style: TextStyle(color: Color(0xFFDC2626))),
+          ),
+        ],
+      ),
+    );
+    if (confirm != true) return;
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    final id = listing['id'];
+    try {
+      final resp = await http.delete(
+        Uri.parse('$kBaseUrl/listings/$id'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) await _load();
+    } catch (_) {}
+  }
+
+  String _fmt(dynamic price) {
+    if (price == null) return '';
+    final s = (price as num).toInt().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()} ₺';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(widget.active ? 'Aktif İlanlarım' : 'Pasif İlanlarım')),
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: kPrimary))
+          : _listings.isEmpty
+              ? Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(widget.active ? Icons.list_alt_outlined : Icons.archive_outlined,
+                          size: 52, color: const Color(0xFFD1D5DB)),
+                      const SizedBox(height: 12),
+                      Text(
+                        widget.active ? 'Aktif ilan yok' : 'Pasif ilan yok',
+                        style: const TextStyle(color: Color(0xFF6B7280), fontSize: 15),
+                      ),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  color: kPrimary,
+                  onRefresh: _load,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _listings.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (ctx, i) {
+                      final l = _listings[i];
+                      final imgs = l['image_urls'] as List? ?? [];
+                      final rawImg = imgs.isNotEmpty ? imgs[0] as String : l['image_url'] as String?;
+                      final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+                      return Card(
+                        margin: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: imageUrl != null
+                                ? Image.network(imageUrl,
+                                    width: 60, height: 60, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => _imgPlaceholder())
+                                : _imgPlaceholder(),
+                          ),
+                          title: Text(l['title'] ?? '',
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          subtitle: Text(_fmt(l['price']),
+                              style: const TextStyle(color: kPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon: Icon(
+                                  widget.active ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                                  color: widget.active ? const Color(0xFF6B7280) : kPrimary,
+                                  size: 22,
+                                ),
+                                tooltip: widget.active ? 'Pasife Al' : 'Aktif Yap',
+                                onPressed: () => _toggle(l),
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626), size: 22),
+                                tooltip: 'Sil',
+                                onPressed: () => _delete(l),
+                              ),
+                            ],
+                          ),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ListingDetailScreen(
+                                  listing: Map<String, dynamic>.from(l)),
+                            ),
+                          ).then((_) => _load()),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+    );
+  }
+
+  Widget _imgPlaceholder() => Container(
+        width: 60, height: 60,
+        color: const Color(0xFFF3F4F6),
+        child: const Icon(Icons.image_outlined, color: Color(0xFFD1D5DB)),
+      );
+}
+
+// ── Favorilerim ekranı ─────────────────────────────────────────────────────────
+
+class _FavoritesScreen extends StatefulWidget {
+  const _FavoritesScreen();
+
+  @override
+  State<_FavoritesScreen> createState() => _FavoritesScreenState();
+}
+
+class _FavoritesScreenState extends State<_FavoritesScreen> {
+  List<dynamic> _listings = [];
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() => _loading = true);
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/favorites'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200 && mounted) {
+        setState(() => _listings = jsonDecode(resp.body) as List);
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _removeFavorite(dynamic listing) async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    try {
+      await http.delete(
+        Uri.parse('$kBaseUrl/favorites/${listing['id']}'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      await _load();
+    } catch (_) {}
+  }
+
+  String _fmt(dynamic price) {
+    if (price == null) return '';
+    final s = (price as num).toInt().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()} ₺';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Favorilerim')),
+      backgroundColor: const Color(0xFFF9FAFB),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator(color: kPrimary))
+          : _listings.isEmpty
+              ? const Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.favorite_border, size: 52, color: Color(0xFFD1D5DB)),
+                      SizedBox(height: 12),
+                      Text('Henüz favori ilan yok',
+                          style: TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
+                    ],
+                  ),
+                )
+              : RefreshIndicator(
+                  color: kPrimary,
+                  onRefresh: _load,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: _listings.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 8),
+                    itemBuilder: (ctx, i) {
+                      final l = _listings[i];
+                      final imgs = l['image_urls'] as List? ?? [];
+                      final rawImg = imgs.isNotEmpty ? imgs[0] as String : l['image_url'] as String?;
+                      final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+                      return Card(
+                        margin: EdgeInsets.zero,
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        child: ListTile(
+                          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                          leading: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: imageUrl != null
+                                ? Image.network(imageUrl,
+                                    width: 60, height: 60, fit: BoxFit.cover,
+                                    errorBuilder: (_, __, ___) => _imgPlaceholder())
+                                : _imgPlaceholder(),
+                          ),
+                          title: Text(l['title'] ?? '',
+                              maxLines: 1, overflow: TextOverflow.ellipsis,
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14)),
+                          subtitle: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(_fmt(l['price']),
+                                  style: const TextStyle(color: kPrimary, fontWeight: FontWeight.w700, fontSize: 13)),
+                              Text('@${(l['user'] as Map?)?['username'] ?? ''}',
+                                  style: const TextStyle(color: Color(0xFF9CA3AF), fontSize: 12)),
+                            ],
+                          ),
+                          isThreeLine: true,
+                          trailing: IconButton(
+                            icon: const Icon(Icons.favorite, color: Colors.red, size: 22),
+                            tooltip: 'Favoriden Çıkar',
+                            onPressed: () => _removeFavorite(l),
+                          ),
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ListingDetailScreen(
+                                  listing: Map<String, dynamic>.from(l)),
+                            ),
+                          ).then((_) => _load()),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+    );
+  }
+
+  Widget _imgPlaceholder() => Container(
+        width: 60, height: 60,
+        color: const Color(0xFFF3F4F6),
+        child: const Icon(Icons.image_outlined, color: Color(0xFFD1D5DB)),
+      );
 }
