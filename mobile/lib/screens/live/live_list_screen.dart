@@ -8,7 +8,7 @@ import '../../services/auth_service.dart';
 import '../../services/category_service.dart';
 import '../public_profile_screen.dart';
 import 'host_stream_screen.dart';
-import 'viewer_stream_screen.dart';
+import 'swipe_live_screen.dart';
 
 class LiveListScreen extends StatefulWidget {
   const LiveListScreen({super.key});
@@ -156,23 +156,13 @@ class LiveListScreenState extends State<LiveListScreen> {
 
   Future<void> _joinStream(StreamOut stream) async {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
-    try {
-      final joinData = await StreamService.joinStream(stream.id);
-      if (!mounted) return;
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ViewerStreamScreen(joinToken: joinData),
-        ),
-      ).then((_) => _load());
-    } on ApiException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Yayına katılınamadı')),
-      );
-    }
+    final idx = _streams.indexOf(stream);
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SwipeLiveScreen(streams: _streams, initialIndex: idx),
+      ),
+    ).then((_) => _load());
   }
 
   @override
