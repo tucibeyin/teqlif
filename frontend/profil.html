@@ -137,7 +137,7 @@
         }
 
         .listings-section {
-            margin-top: 1.5rem;
+            margin-top: 1rem;
             width: 100%;
         }
 
@@ -148,56 +148,77 @@
             margin-bottom: 0.75rem;
         }
 
-        .listing-card {
-            background: #fff;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 0.85rem;
-            margin-bottom: 0.6rem;
+        /* Instagram tarzı 3 kolonlu kare grid */
+        .listings-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 3px;
+        }
+
+        .listing-square {
+            position: relative;
+            aspect-ratio: 1 / 1;
+            background: #f3f4f6;
+            overflow: hidden;
+            cursor: pointer;
+        }
+
+        .listing-square img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: block;
+            transition: transform 0.2s;
+        }
+
+        .listing-square:hover img {
+            transform: scale(1.04);
+        }
+
+        .listing-square-placeholder {
+            width: 100%;
+            height: 100%;
             display: flex;
-            gap: 0.75rem;
-            align-items: flex-start;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            color: #d1d5db;
+            gap: 6px;
         }
 
-        .listing-card-body {
-            flex: 1;
-            min-width: 0;
+        .listing-square-placeholder svg {
+            width: 32px;
+            height: 32px;
+            stroke: #d1d5db;
         }
 
-        .listing-card-title {
-            font-size: 0.9rem;
-            font-weight: 600;
+        .listing-square-overlay {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.6));
+            color: #fff;
+            padding: 20px 8px 7px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .listing-square:hover .listing-square-overlay {
+            opacity: 1;
+        }
+
+        .listing-square-price {
+            font-size: 0.8rem;
+            font-weight: 700;
+        }
+
+        .listing-square-title {
+            font-size: 0.72rem;
+            opacity: 0.9;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-        }
-
-        .listing-card-meta {
-            font-size: 0.78rem;
-            color: #6b7280;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.5rem;
-            margin-top: 0.25rem;
-            align-items: center;
-        }
-
-        .listing-price {
-            font-size: 0.85rem;
-            color: var(--primary);
-            font-weight: 600;
-            flex-shrink: 0;
-            align-self: flex-start;
-            white-space: nowrap;
-        }
-
-        .cat-badge {
-            font-size: 0.7rem;
-            padding: 2px 7px;
-            background: rgba(6, 182, 212, 0.1);
-            color: var(--primary);
-            border-radius: 10px;
-            line-height: 1.6;
         }
 
         .empty-listings {
@@ -626,22 +647,24 @@
                         Henüz ilan yok
                     </div>`;
             } else {
+                html += `<div class="listings-grid">`;
                 for (const l of listings) {
-                    const price = l.price != null ? `${Number(l.price).toLocaleString('tr-TR')} ₺` : 'Fiyat yok';
-                    const cat = l.category ? `<span class="cat-badge">${escHtml(l.category)}</span>` : '';
-                    const date = l.created_at ? formatDate(l.created_at) : '';
+                    const price = l.price != null ? `${Number(l.price).toLocaleString('tr-TR')} ₺` : '';
+                    const imgs = Array.isArray(l.image_urls) ? l.image_urls : [];
+                    const imgSrc = imgs.length > 0 ? imgs[0] : (l.image_url || null);
+                    const imgHtml = imgSrc
+                        ? `<img src="${escHtml(imgSrc)}" alt="${escHtml(l.title)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'listing-square-placeholder\\'><svg viewBox=\\'0 0 24 24\\'><rect x=\\'2\\' y=\\'7\\' width=\\'20\\' height=\\'14\\' rx=\\'2\\'/></svg></div>'">`
+                        : `<div class="listing-square-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-4 0v2"/></svg></div>`;
                     html += `
-                        <div class="listing-card">
-                            <div class="listing-card-body">
-                                <div class="listing-card-title">${escHtml(l.title)}</div>
-                                <div class="listing-card-meta">
-                                    ${cat}
-                                    ${date ? `<span>${escHtml(date)}</span>` : ''}
-                                </div>
+                        <div class="listing-square" onclick="location.href='/ilan/${l.id}'">
+                            ${imgHtml}
+                            <div class="listing-square-overlay">
+                                ${price ? `<div class="listing-square-price">${escHtml(price)}</div>` : ''}
+                                <div class="listing-square-title">${escHtml(l.title)}</div>
                             </div>
-                            <div class="listing-price">${escHtml(price)}</div>
                         </div>`;
                 }
+                html += `</div>`;
             }
 
             section.innerHTML = html;

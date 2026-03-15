@@ -308,12 +308,25 @@ class _ListingGridItem extends StatelessWidget {
   final dynamic listing;
   const _ListingGridItem({required this.listing});
 
+  String _fmt(dynamic price) {
+    if (price == null) return '';
+    final s = (price as num).toInt().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()} ₺';
+  }
+
   @override
   Widget build(BuildContext context) {
     final imgs = listing['image_urls'] as List? ?? [];
     final imageUrl = imgs.isNotEmpty
         ? imgs[0] as String
         : listing['image_url'] as String?;
+    final price = _fmt(listing['price']);
+
     return GestureDetector(
       onTap: () => Navigator.push(
         context,
@@ -322,20 +335,54 @@ class _ListingGridItem extends StatelessWidget {
               listing: Map<String, dynamic>.from(listing)),
         ),
       ),
-      child: Container(
-        color: const Color(0xFFF3F4F6),
-        child: imageUrl != null
-            ? Image.network(imageUrl, fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => const Center(
-                    child: Icon(Icons.image_outlined,
-                        size: 28, color: Color(0xFFD1D5DB))))
-            : const Center(
-                child: Icon(Icons.image_outlined,
-                    size: 28, color: Color(0xFFD1D5DB)),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          imageUrl != null
+              ? Image.network(
+                  imageUrl,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => _placeholder(),
+                )
+              : _placeholder(),
+          if (price.isNotEmpty)
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: Container(
+                padding: const EdgeInsets.fromLTRB(5, 14, 5, 5),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.transparent, Colors.black54],
+                  ),
+                ),
+                child: Text(
+                  price,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
               ),
+            ),
+        ],
       ),
     );
   }
+
+  Widget _placeholder() => Container(
+        color: const Color(0xFFF3F4F6),
+        child: const Center(
+          child: Icon(Icons.image_outlined,
+              size: 28, color: Color(0xFFD1D5DB)),
+        ),
+      );
 }
 
 // ── Ayarlar ekranı ────────────────────────────────────────────────────────────
