@@ -26,8 +26,9 @@ class _TimedMessage {
 
 class ChatPanel extends StatefulWidget {
   final int streamId;
+  final VoidCallback? onStreamEnded;
 
-  const ChatPanel({super.key, required this.streamId});
+  const ChatPanel({super.key, required this.streamId, this.onStreamEnded});
 
   @override
   State<ChatPanel> createState() => _ChatPanelState();
@@ -42,6 +43,7 @@ class _ChatPanelState extends State<ChatPanel> {
   StreamSubscription? _sub;
   Timer? _heartbeat;
   bool _reconnecting = false;
+  bool _streamEnded = false;
   String? _token;
   bool _inputFocused = false;
 
@@ -120,6 +122,9 @@ class _ChatPanelState extends State<ChatPanel> {
               for (final m in msgs) {
                 _addMessage(m);
               }
+            } else if (json['type'] == 'stream_ended') {
+              _streamEnded = true;
+              widget.onStreamEnded?.call();
             }
           } catch (_) {}
         },
@@ -139,7 +144,7 @@ class _ChatPanelState extends State<ChatPanel> {
   }
 
   void _scheduleReconnect() {
-    if (_reconnecting || !mounted) return;
+    if (_reconnecting || !mounted || _streamEnded) return;
     _reconnecting = true;
     _heartbeat?.cancel();
     Future.delayed(const Duration(seconds: 4), () {

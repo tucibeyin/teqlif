@@ -835,7 +835,7 @@
                 initAuction(streamId, isHost);
 
                 // Sohbeti başlat
-                initChat(streamId);
+                initChat(streamId, isHost);
 
             } catch (err) {
                 console.error(err);
@@ -899,6 +899,22 @@
             }
             btn.textContent = micEnabled ? '🎙 Mikrofon Kapat' : '🔇 Mikrofon Aç';
         });
+
+        // Yayın sona erdi — viewer bilgilendirme
+        function _onStreamEndedViewer() {
+            Chat.disconnect();
+            const overlay = document.getElementById('connectingOverlay');
+            if (overlay) {
+                overlay.style.display = 'flex';
+                overlay.innerHTML = `
+                    <div style="text-align:center; padding:2rem;">
+                        <div style="font-size:3rem; margin-bottom:1rem;">📺</div>
+                        <div style="font-size:1.1rem; font-weight:700; margin-bottom:0.5rem;">Yayın Sona Erdi</div>
+                        <div style="color:#94a3b8; margin-bottom:1.5rem;">Bu yayın yayıncı tarafından sonlandırıldı.</div>
+                        <a href="/canli.html" class="btn btn-primary" style="text-decoration:none;">Diğer Yayınlara Bak</a>
+                    </div>`;
+            }
+        }
 
         // Ayrıl (Viewer)
         document.getElementById('btnLeave').addEventListener('click', async () => {
@@ -1297,7 +1313,7 @@
 
         // ── Sohbet ──────────────────────────────────────────────────────
 
-        function initChat(sid) {
+        function initChat(sid, isHost) {
             const panel = document.getElementById('chatPanel');
             panel.style.display = '';
 
@@ -1305,7 +1321,7 @@
                 document.getElementById('chatInputRow').style.display = 'flex';
             }
 
-            Chat.connect(sid);
+            Chat.connect(sid, isHost ? {} : { onStreamEnded: _onStreamEndedViewer });
 
             // İlk mesaj gelince "empty" yazısını kaldır
             const messages = document.getElementById('chatMessages');

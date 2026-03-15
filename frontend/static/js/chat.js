@@ -5,9 +5,11 @@ const Chat = (() => {
     let _streamId = null;
     let _reconnecting = false;
     let _pingInterval = null;
+    let _onStreamEnded = null;
 
-    function connect(streamId) {
+    function connect(streamId, { onStreamEnded } = {}) {
         _streamId = streamId;
+        _onStreamEnded = onStreamEnded || null;
         _connectWS();
     }
 
@@ -42,6 +44,9 @@ const Chat = (() => {
                     _appendMessage(msg);
                 } else if (msg.type === 'history') {
                     (msg.messages || []).forEach(_appendMessage);
+                } else if (msg.type === 'stream_ended') {
+                    _streamId = null; // yeniden bağlanmayı engelle
+                    if (_onStreamEnded) _onStreamEnded();
                 }
             } catch (_) {}
         };

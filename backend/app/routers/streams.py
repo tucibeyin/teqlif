@@ -16,6 +16,7 @@ from app.utils.auth import get_current_user
 from app.utils.redis_client import get_redis
 from app.config import settings
 from app.routers.upload import _detect_image_type
+from app.routers.chat import _publish_chat
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/streams", tags=["streams"])
@@ -130,6 +131,11 @@ async def end_stream(
         await redis.delete(f"live:viewers:{stream.room_name}")
     except Exception:
         logger.error("Redis viewer key silinemedi | room=%s", stream.room_name, exc_info=True)
+
+    try:
+        await _publish_chat(stream_id, {"type": "stream_ended"})
+    except Exception:
+        logger.error("stream_ended yayınlanamadı | stream_id=%s", stream_id, exc_info=True)
 
     logger.info("Yayın sonlandırıldı | stream_id=%s user_id=%s", stream_id, current_user.id)
     return {"message": "Yayın sonlandırıldı"}

@@ -98,6 +98,37 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     }
   }
 
+  Future<void> _handleStreamEnded() async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('Yayın Sona Erdi',
+            style: TextStyle(color: Colors.white, fontSize: 17)),
+        content: const Text('Bu yayın yayıncı tarafından sonlandırıldı.',
+            style: TextStyle(color: Color(0xFF94A3B8))),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: kPrimary,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child:
+                const Text('Tamam', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+    }
+  }
+
   Future<void> _leave() async {
     try {
       await StreamService.leaveStream(widget.joinToken.streamId);
@@ -317,7 +348,10 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Sohbet (mesajlar üstte yüzer)
-                    ChatPanel(streamId: widget.joinToken.streamId),
+                    ChatPanel(
+                      streamId: widget.joinToken.streamId,
+                      onStreamEnded: _handleStreamEnded,
+                    ),
                     // Açık artırma (sadece aktifse, altta sabit)
                     AuctionPanel(
                       streamId: widget.joinToken.streamId,
