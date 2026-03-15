@@ -14,9 +14,11 @@ from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.auction import Auction
 from app.models.listing import Listing
+from app.models.message import DirectMessage
 from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut
 from app.utils.auth import get_current_user, decode_token
 from app.utils.redis_client import get_redis
+from app.routers.notifications import push_notification
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/auction", tags=["auction"])
@@ -388,7 +390,7 @@ async def accept_bid(
     await db.commit()
     await redis.delete(key)
 
-    # Sohbete özet mesajı gönder
+    # Fiyat formatlama yardımcısı
     def _fmt_price(v: float) -> str:
         s = str(int(v))
         result, i = "", 0
@@ -400,19 +402,53 @@ async def accept_bid(
         return f"₺{result}"
 
     listing_line = f"\n🔗 https://teqlif.com/ilan/{listing_id}" if listing_id else ""
-    chat_content = (
-        f"🏆 Teklif kabul edildi!\n"
+    dm_content = (
+        f"🏆 Tebrikler! Teklifiniz kabul edildi.\n"
         f"📦 Ürün: {item_name}\n"
-        f"💰 Kazanan fiyat: {_fmt_price(final_price)}\n"
-        f"🏅 Kazanan: @{winner_name}"
+        f"💰 Kazanan fiyat: {_fmt_price(final_price)}"
         f"{listing_line}"
+    )
+
+    # Kazanan kullanıcıya DM gönder (kalıcı + push notification)
+    if winner_id_str:
+        try:
+            winner_user_id = int(winner_id_str)
+            dm = DirectMessage(
+                sender_id=current_user.id,
+                receiver_id=winner_user_id,
+                content=dm_content,
+            )
+            db.add(dm)
+            await db.commit()
+            await db.refresh(dm)
+            # Push notification gönder
+            await push_notification(
+                winner_user_id,
+                {
+                    "type": "auction_won",
+                    "title": "🏆 Teklifiniz kabul edildi!",
+                    "body": f"{item_name} — {_fmt_price(final_price)}",
+                    "related_id": listing_id or stream_id,
+                },
+            )
+            logger.info(
+                "[ACCEPT] DM gönderildi | winner_id=%s | item=%r | price=%s",
+                winner_user_id, item_name, final_price,
+            )
+        except Exception as exc:
+            logger.warning("[ACCEPT] DM gönderilemedi | winner_id=%s | %s", winner_id_str, exc)
+
+    # Chat'e herkese görünür özet mesajı da yayınla
+    chat_summary = (
+        f"🏆 Teklif kabul edildi! "
+        f"📦 {item_name} — {_fmt_price(final_price)} — 🏅 @{winner_name}"
+        f"{' 🔗 teqlif.com/ilan/' + str(listing_id) if listing_id else ''}"
     )
     chat_msg = {
         "type": "message",
         "id": str(uuid.uuid4())[:8],
         "username": current_user.username,
-        "content": chat_content,
-        "system": True,
+        "content": chat_summary,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
     _CHAT_KEY = f"chat:{stream_id}:messages"
