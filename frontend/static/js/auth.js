@@ -105,12 +105,12 @@ function _updateNavBadge(count) {
 
     if (token && user) {
         navLinks.innerHTML = `
-            <a href="/mesajlar.html" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;">
+            <a href="/mesajlar.html" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;position:relative;">
                 Mesajlar
+                <span id="navBadge" style="display:none;position:absolute;top:-4px;right:-2px;background:red;color:white;border-radius:50%;min-width:14px;height:14px;font-size:9px;align-items:center;justify-content:center;padding:0 2px;line-height:14px;text-align:center;"></span>
             </a>
-            <a href="/profil.html?u=${user.username}" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;position:relative;">
+            <a href="/profil.html?u=${user.username}" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;">
                 @${user.username}
-                <span id="navBadge" style="display:none;position:absolute;top:-4px;right:-8px;background:red;color:white;border-radius:50%;min-width:14px;height:14px;font-size:9px;display:none;align-items:center;justify-content:center;padding:0 2px;line-height:14px;text-align:center;"></span>
             </a>
             <a href="#" onclick="Auth.logout();return false;" class="btn-nav">çıkış</a>
         `;
