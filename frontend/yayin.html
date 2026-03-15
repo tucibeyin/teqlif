@@ -308,9 +308,9 @@
         #listingPickerTrigger img { width: 26px; height: 26px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
         #listingPickerTrigger span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         #listingPickerDropdown {
-            display: none; position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 150;
+            display: none; position: absolute; bottom: calc(100% + 4px); left: 0; right: 0; z-index: 150;
             background: #1e293b; border: 1.5px solid #334155; border-radius: 10px;
-            max-height: 210px; overflow-y: auto; box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+            max-height: 210px; overflow-y: auto; box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
         }
         #listingPickerDropdown.open { display: block; }
         .lp-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; }
@@ -951,17 +951,19 @@
                 return;
             }
             _hostListings.forEach(l => {
-                const imgs = l.image_urls || [];
+                let imgs = l.image_urls || [];
+                if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs); } catch(_) { imgs = []; } }
                 const rawImg = imgs.length ? imgs[0] : (l.image_url || null);
                 const imgSrc = rawImg ? (rawImg.startsWith('http') || rawImg.startsWith('/') ? rawImg : `/uploads/${rawImg}`) : null;
                 const priceStr = l.price ? '₺' + Number(l.price).toLocaleString('tr-TR') : '';
+                const imgHtml = imgSrc
+                    ? `<img src="${imgSrc}" alt="" style="width:36px;height:36px;object-fit:cover;border-radius:6px;flex-shrink:0;" onerror="this.style.display='none'">`
+                    : `<div class="lp-img-placeholder">📦</div>`;
+                const infoHtml = `<div class="lp-info"><div class="lp-title">${l.title}</div>${priceStr ? `<div class="lp-price">${priceStr}</div>` : ''}</div>`;
                 const item = document.createElement('div');
                 item.className = 'lp-item';
                 item.dataset.id = l.id;
-                item.innerHTML = imgSrc
-                    ? `<img src="${imgSrc}" alt="" onerror="this.style.display='none'">`
-                    : `<div class="lp-img-placeholder">📦</div>`;
-                item.innerHTML += `<div class="lp-info"><div class="lp-title">${l.title}</div>${priceStr ? `<div class="lp-price">${priceStr}</div>` : ''}</div>`;
+                item.innerHTML = imgHtml + infoHtml;
                 item.addEventListener('click', () => _selectListing(l.id, l.title, imgSrc, l.price));
                 dd.appendChild(item);
             });
