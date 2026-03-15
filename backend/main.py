@@ -136,6 +136,10 @@ if os.path.exists(frontend_dir):
     async def serve_listing_page(listing_id: int):
         return FileResponse(os.path.join(frontend_dir, "ilan.html"))
 
+    @app.get("/profil/{username}", include_in_schema=False)
+    async def serve_profile_page(username: str):
+        return FileResponse(os.path.join(frontend_dir, "profil.html"))
+
     @app.get("/{page}.html", include_in_schema=False)
     async def serve_page(page: str):
         path = os.path.join(frontend_dir, f"{page}.html")

@@ -422,8 +422,10 @@
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
     <script>
+        // /profil/username path veya ?u=username query param
+        const _pathMatch = window.location.pathname.match(/^\/profil\/(.+)$/);
         const params = new URLSearchParams(window.location.search);
-        const username = params.get('u');
+        const username = _pathMatch ? decodeURIComponent(_pathMatch[1]) : params.get('u');
         if (!username) window.location.href = '/';
 
         let _profileUser = null;
