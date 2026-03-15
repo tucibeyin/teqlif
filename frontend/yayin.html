@@ -953,7 +953,7 @@
             _hostListings.forEach(l => {
                 const imgs = l.image_urls || [];
                 const rawImg = imgs.length ? imgs[0] : (l.image_url || null);
-                const imgSrc = rawImg ? (rawImg.startsWith('http') ? rawImg : `/uploads/${rawImg}`) : null;
+                const imgSrc = rawImg ? (rawImg.startsWith('http') || rawImg.startsWith('/') ? rawImg : `/uploads/${rawImg}`) : null;
                 const priceStr = l.price ? '₺' + Number(l.price).toLocaleString('tr-TR') : '';
                 const item = document.createElement('div');
                 item.className = 'lp-item';
