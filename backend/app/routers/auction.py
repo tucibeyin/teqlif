@@ -326,6 +326,12 @@ async def place_bid(
         raise HTTPException(status_code=400, detail="Host kendi açık artırmasına teklif veremez")
 
     redis = await get_redis()
+
+    # Önceki teklif sahibini kaydet (outbid bildirimi için)
+    prev_data = await redis.hgetall(_key(stream_id))
+    prev_bidder_id_str = prev_data.get("current_bidder_id", "")
+    prev_item_name = prev_data.get("item_name", "")
+
     # Atomic Lua scripti: bid validate + update
     result = await redis.eval(
         _BID_SCRIPT, 1, _key(stream_id),
@@ -344,6 +350,37 @@ async def place_bid(
         "[TEKLİF] stream_id=%s user=%s amount=%s | ws_hedef=%s",
         stream_id, current_user.username, data.amount, manager.conn_count(stream_id),
     )
+
+    # Host'a new_bid bildirimi
+    if stream and stream.host_id:
+        asyncio.create_task(push_notification(
+            user_id=stream.host_id,
+            notif={
+                "type": "new_bid",
+                "title": f"@{current_user.username} teklif verdi",
+                "body": f"{prev_item_name} — ₺{data.amount:,.0f}" if prev_item_name else f"₺{data.amount:,.0f}",
+                "related_id": stream_id,
+            },
+            pref_key="new_bid",
+        ))
+
+    # Önceki teklif sahibine outbid bildirimi
+    if prev_bidder_id_str and prev_bidder_id_str != str(current_user.id):
+        try:
+            prev_bidder_id = int(prev_bidder_id_str)
+            asyncio.create_task(push_notification(
+                user_id=prev_bidder_id,
+                notif={
+                    "type": "outbid",
+                    "title": "Teklifiniz geçildi!",
+                    "body": f"{prev_item_name} — yeni teklif: ₺{data.amount:,.0f}" if prev_item_name else f"Yeni teklif: ₺{data.amount:,.0f}",
+                    "related_id": stream_id,
+                },
+                pref_key="outbid",
+            ))
+        except ValueError:
+            pass
+
     return state
 
 
@@ -430,6 +467,7 @@ async def accept_bid(
                     "body": f"{item_name} — {_fmt_price(final_price)}",
                     "related_id": listing_id or stream_id,
                 },
+                pref_key="auction_won",
             )
             logger.info(
                 "[ACCEPT] DM gönderildi | winner_id=%s | item=%r | price=%s",

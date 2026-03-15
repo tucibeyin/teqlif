@@ -14,6 +14,7 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
+import 'notification_settings_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -767,7 +768,12 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.notifications_outlined,
                 label: 'Bildirim Ayarları',
-                onTap: () {},
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const NotificationSettingsScreen(),
+                  ),
+                ),
               ),
               if (_biometricAvailable)
                 SwitchListTile(

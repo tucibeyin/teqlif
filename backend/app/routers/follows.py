@@ -61,6 +61,7 @@ async def follow_user(
             "body": None,
             "related_id": current_user.id,
         },
+        pref_key="follows",
     ))
 
     return {"ok": True}

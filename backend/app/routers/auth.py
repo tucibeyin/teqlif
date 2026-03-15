@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm
+from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS
 from app.utils.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.utils.email import send_verification_code
 from app.utils.redis_client import get_redis
@@ -175,6 +175,25 @@ async def change_password_confirm(
     await db.commit()
     await redis.delete(f"chpwd:{current_user.id}")
     return {"message": "Şifreniz başarıyla değiştirildi"}
+
+
+@router.get("/notification-prefs", response_model=NotificationPrefs)
+async def get_notification_prefs(current_user: User = Depends(get_current_user)):
+    prefs = current_user.notification_prefs or {}
+    merged = {**DEFAULT_NOTIF_PREFS, **prefs}
+    return NotificationPrefs(**merged)
+
+
+@router.patch("/notification-prefs", response_model=NotificationPrefs)
+async def update_notification_prefs(
+    data: NotificationPrefs,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    current_user.notification_prefs = data.model_dump()
+    await db.commit()
+    await db.refresh(current_user)
+    return data
 
 
 @router.post("/fcm-token")

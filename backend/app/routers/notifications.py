@@ -20,8 +20,18 @@ router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 _notif_connections: Dict[int, Set[WebSocket]] = {}
 
 
-async def push_notification(user_id: int, notif: dict) -> None:
+async def push_notification(user_id: int, notif: dict, pref_key: str | None = None) -> None:
     """Save notification to DB and push to all active WS connections for the user."""
+    from app.schemas.user import DEFAULT_NOTIF_PREFS
+    if pref_key:
+        async with AsyncSessionLocal() as db:
+            user = await db.get(User, user_id)
+            if user:
+                prefs = user.notification_prefs or {}
+                merged = {**DEFAULT_NOTIF_PREFS, **prefs}
+                if not merged.get(pref_key, True):
+                    return
+
     async with AsyncSessionLocal() as db:
         n = Notification(
             user_id=user_id,

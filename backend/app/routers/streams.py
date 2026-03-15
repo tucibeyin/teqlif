@@ -86,6 +86,29 @@ async def start_stream(
     token = _make_token(room_name, current_user, can_publish=True)
     logger.info("Yayın başlatıldı | stream_id=%s user_id=%s room=%s", stream.id, current_user.id, room_name)
 
+    # Takipçilere stream_started bildirimi gönder (non-blocking)
+    import asyncio as _asyncio
+    from app.models.follow import Follow
+    from app.routers.notifications import push_notification
+
+    async def _notify_followers():
+        followers = await db.scalars(
+            select(Follow.follower_id).where(Follow.followed_id == current_user.id)
+        )
+        for follower_id in followers:
+            _asyncio.create_task(push_notification(
+                user_id=follower_id,
+                notif={
+                    "type": "stream_started",
+                    "title": f"@{current_user.username} canlı yayın açtı",
+                    "body": stream.title or None,
+                    "related_id": stream.id,
+                },
+                pref_key="stream_started",
+            ))
+
+    _asyncio.create_task(_notify_followers())
+
     return StreamTokenOut(
         stream_id=stream.id,
         room_name=room_name,

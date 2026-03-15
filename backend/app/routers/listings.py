@@ -92,6 +92,30 @@ async def create_listing(payload: dict, current_user: User = Depends(get_current
     db.add(listing)
     await db.commit()
     await db.refresh(listing)
+
+    # Takipçilere new_listing bildirimi gönder (non-blocking)
+    import asyncio as _asyncio
+    from app.models.follow import Follow
+    from app.routers.notifications import push_notification
+
+    async def _notify_followers():
+        followers = await db.scalars(
+            select(Follow.follower_id).where(Follow.followed_id == current_user.id)
+        )
+        for follower_id in followers:
+            _asyncio.create_task(push_notification(
+                user_id=follower_id,
+                notif={
+                    "type": "new_listing",
+                    "title": f"@{current_user.username} yeni ilan ekledi",
+                    "body": listing.title or None,
+                    "related_id": listing.id,
+                },
+                pref_key="new_listing",
+            ))
+
+    _asyncio.create_task(_notify_followers())
+
     return {"id": listing.id}
 
 

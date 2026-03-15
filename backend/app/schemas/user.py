@@ -71,6 +71,27 @@ class ResendCode(BaseModel):
     email: EmailStr
 
 
+DEFAULT_NOTIF_PREFS = {
+    "messages": True,
+    "follows": True,
+    "auction_won": True,
+    "stream_started": True,
+    "new_listing": True,
+    "new_bid": True,
+    "outbid": True,
+}
+
+
+class NotificationPrefs(BaseModel):
+    messages: bool = True
+    follows: bool = True
+    auction_won: bool = True
+    stream_started: bool = True
+    new_listing: bool = True
+    new_bid: bool = True
+    outbid: bool = True
+
+
 class ChangePasswordConfirm(BaseModel):
     current_password: str
     new_password: str

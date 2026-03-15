@@ -238,6 +238,7 @@ async def send_message(
             "body": data.content[:100],
             "related_id": uid,
         },
+        pref_key="messages",
     )
 
     return out
