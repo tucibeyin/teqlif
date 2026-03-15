@@ -151,26 +151,73 @@ class _AuctionPanelState extends State<AuctionPanel> {
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Teklifi Kabul Et',
-            style: TextStyle(color: Colors.white)),
-        content: Text(
-          '@${_state.currentBidder} kullanıcısının ₺${_fmt(_state.currentBid)} teklifini kabul edeceksiniz.\nÖzet sohbete gönderilecek ve artırma kapanacak.',
-          style: const TextStyle(color: Color(0xFF94A3B8)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('✅ Teklifi Kabul Et',
+            style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Özet kartı
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(
+                children: [
+                  _acceptRow('Ürün', _state.itemName ?? '—'),
+                  const SizedBox(height: 10),
+                  _acceptRow('Kazanan Fiyat',
+                      '₺${_fmt(_state.currentBid)}',
+                      valueColor: const Color(0xFF4ADE80),
+                      valueBold: true),
+                  const SizedBox(height: 10),
+                  _acceptRow('Teklif Sahibi',
+                      '@${_state.currentBidder ?? '—'}'),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Kabul edildiğinde artırma kapanır ve özet sohbete otomatik mesaj gönderilir.',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+          ],
         ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
         actions: [
-          TextButton(
-              onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('İptal',
-                  style: TextStyle(color: Color(0xFF64748B)))),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF059669),
-                shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8))),
-            onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Kabul Et',
-                style: TextStyle(color: Colors.white)),
-          ),
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF334155)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('İptal Et',
+                    style: TextStyle(color: Color(0xFF94A3B8))),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF059669),
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 12)),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Devam Et',
+                    style: TextStyle(
+                        color: Colors.white, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ]),
         ],
       ),
     );
@@ -730,6 +777,28 @@ class _AuctionPanelState extends State<AuctionPanel> {
                 fontSize: 11,
                 fontWeight: FontWeight.w700)),
       ),
+    );
+  }
+
+  Widget _acceptRow(String label, String value,
+      {Color valueColor = const Color(0xFFE2E8F0), bool valueBold = false}) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(label,
+            style: const TextStyle(
+                color: Color(0xFF64748B), fontSize: 12)),
+        Flexible(
+          child: Text(value,
+              textAlign: TextAlign.end,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                  color: valueColor,
+                  fontSize: 13,
+                  fontWeight:
+                      valueBold ? FontWeight.w800 : FontWeight.w600)),
+        ),
+      ],
     );
   }
 

@@ -841,6 +841,8 @@
 
         let _currentAuctionStatus = 'idle';
         let _currentBid = 0;
+        let _currentBidder = null;
+        let _currentItemName = null;
         let _currentListingId = null;  // viewer için pinlenmiş ilan
         let _selectedListingId = null; // host için seçilen ilan
         let _listingMode = false;      // host: listing mi manual mı
@@ -848,6 +850,8 @@
         function updateAuctionUI(state) {
             _currentAuctionStatus = state.status;
             _currentListingId = state.listing_id || null;
+            _currentBidder = state.current_bidder || null;
+            _currentItemName = state.item_name || null;
 
             const panel = document.getElementById('auctionPanel');
             const badge = document.getElementById('auctionBadge');
@@ -1154,13 +1158,34 @@
             catch (e) { setAuctionMsg(e.message, 'error'); }
         });
 
-        // HOST: Teklifi Kabul Et
-        document.getElementById('btnAuctionAccept')?.addEventListener('click', async () => {
-            if (!confirm('En yüksek teklifi kabul etmek ve açık artırmayı kapatmak istediğinizden emin misiniz?')) return;
+        // HOST: Teklifi Kabul Et — styled modal
+        document.getElementById('btnAuctionAccept')?.addEventListener('click', () => {
+            const modal = document.getElementById('acceptModal');
+            document.getElementById('acceptModalItem').textContent = _currentItemName || '—';
+            document.getElementById('acceptModalPrice').textContent = _currentBid
+                ? '₺' + Number(_currentBid).toLocaleString('tr-TR')
+                : '—';
+            document.getElementById('acceptModalBidder').textContent = _currentBidder
+                ? '@' + _currentBidder : '—';
+            modal.style.display = 'flex';
+        });
+
+        document.getElementById('acceptModalCancel')?.addEventListener('click', () => {
+            document.getElementById('acceptModal').style.display = 'none';
+        });
+
+        document.getElementById('acceptModalConfirm')?.addEventListener('click', async () => {
+            document.getElementById('acceptModal').style.display = 'none';
             try {
                 await Auction.acceptBid();
                 setAuctionMsg('Teklif kabul edildi! Özet sohbete gönderildi.', 'success');
             } catch (e) { setAuctionMsg(e.message, 'error'); }
+        });
+
+        // Modal dışına tıklayınca kapat
+        document.getElementById('acceptModal')?.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('acceptModal'))
+                document.getElementById('acceptModal').style.display = 'none';
         });
 
         // HOST: Bitir
@@ -1231,5 +1256,51 @@
 
         init();
     </script>
+
+    <!-- Teklif Kabul Onay Modalı -->
+    <div id="acceptModal" style="
+        display:none; position:fixed; inset:0; z-index:9999;
+        background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
+        align-items:center; justify-content:center;">
+        <div style="
+            background:#1e293b; border:1px solid #334155; border-radius:16px;
+            padding:28px 24px; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+            <!-- Başlık -->
+            <div style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:18px;">✅ Teklifi Kabul Et</div>
+            <!-- Özet kartı -->
+            <div style="background:#0f172a; border-radius:12px; padding:16px; margin-bottom:20px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#64748b; font-size:0.78rem;">Ürün</span>
+                    <span id="acceptModalItem" style="color:#e2e8f0; font-weight:600; font-size:0.88rem; text-align:right; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</span>
+                </div>
+                <div style="height:1px; background:#1e293b;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#64748b; font-size:0.78rem;">Kazanan Fiyat</span>
+                    <span id="acceptModalPrice" style="color:#4ade80; font-weight:800; font-size:1.05rem;">—</span>
+                </div>
+                <div style="height:1px; background:#1e293b;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#64748b; font-size:0.78rem;">Teklif Sahibi</span>
+                    <span id="acceptModalBidder" style="color:#e2e8f0; font-weight:600; font-size:0.88rem;">—</span>
+                </div>
+            </div>
+            <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 20px; line-height:1.5;">
+                Teklif kabul edildiğinde açık artırma kapanacak ve özet sohbete otomatik mesaj olarak gönderilecek.
+            </p>
+            <!-- Butonlar -->
+            <div style="display:flex; gap:10px;">
+                <button id="acceptModalCancel" style="
+                    flex:1; padding:11px; border:1px solid #334155; background:transparent;
+                    color:#94a3b8; border-radius:10px; cursor:pointer; font-size:0.88rem;">
+                    İptal Et
+                </button>
+                <button id="acceptModalConfirm" style="
+                    flex:1; padding:11px; border:none; background:#059669;
+                    color:#fff; border-radius:10px; cursor:pointer; font-size:0.88rem; font-weight:700;">
+                    Devam Et
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
