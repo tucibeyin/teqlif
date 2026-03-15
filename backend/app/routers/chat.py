@@ -146,12 +146,21 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
         await _update_viewer_count(room_name, stream_id, +1)
 
     try:
-        # Geçmiş mesajları gönder
         redis = await get_redis()
+
+        # Geçmiş mesajları gönder
         history_raw = await redis.lrange(_key(stream_id), -_MAX_HISTORY, -1)
         if history_raw:
             messages = [json.loads(m) for m in history_raw]
             await websocket.send_json({"type": "history", "messages": messages})
+
+        # Güncel izleyici sayısını doğrudan gönder (pub/sub gecikmesini önler)
+        if room_name:
+            count_raw = await redis.get(f"live:viewers:{room_name}")
+            await websocket.send_json({
+                "type": "viewer_count",
+                "count": int(count_raw) if count_raw else 0,
+            })
 
         # Mesaj döngüsü
         while True:
