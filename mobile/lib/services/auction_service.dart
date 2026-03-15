@@ -29,12 +29,21 @@ class AuctionService {
     return AuctionState.fromJson(jsonDecode(res.body));
   }
 
+  /// İlan seçilerek başlatmak için [listingId] gönderilir;
+  /// manuel girildiğinde [itemName] ve [startPrice] gönderilir.
   static Future<AuctionState> startAuction(
-      int streamId, String itemName, double startPrice) async {
+    int streamId, {
+    String? itemName,
+    double? startPrice,
+    int? listingId,
+  }) async {
+    final Map<String, dynamic> body = listingId != null
+        ? {'listing_id': listingId}
+        : {'item_name': itemName!, 'start_price': startPrice!};
     final res = await http.post(
       Uri.parse('$kBaseUrl/auction/$streamId/start'),
       headers: await _headers(),
-      body: jsonEncode({'item_name': itemName, 'start_price': startPrice}),
+      body: jsonEncode(body),
     );
     _checkError(res);
     return AuctionState.fromJson(jsonDecode(res.body));

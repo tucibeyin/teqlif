@@ -11,6 +11,7 @@ class Auction(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     stream_id: Mapped[int] = mapped_column(ForeignKey("live_streams.id"), nullable=False, index=True)
+    listing_id: Mapped[Optional[int]] = mapped_column(ForeignKey("listings.id"), nullable=True)
     item_name: Mapped[str] = mapped_column(String(300), nullable=False)
     start_price: Mapped[float] = mapped_column(Float, nullable=False)
     final_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)

@@ -12,6 +12,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.auction import Auction
+from app.models.listing import Listing
 from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut
 from app.utils.auth import get_current_user, decode_token
 from app.utils.redis_client import get_redis
@@ -114,6 +115,7 @@ async def _get_state(stream_id: int) -> dict:
     data = await redis.hgetall(_key(stream_id))
     if not data:
         return {"status": "idle", "bid_count": 0}
+    listing_id_raw = data.get("listing_id")
     return {
         "status": data.get("status", "idle"),
         "item_name": data.get("item_name"),
@@ -121,6 +123,7 @@ async def _get_state(stream_id: int) -> dict:
         "current_bid": float(data["current_bid"]) if data.get("current_bid") else None,
         "current_bidder": data.get("current_bidder_name") or None,
         "bid_count": int(data.get("bid_count", 0)),
+        "listing_id": int(listing_id_raw) if listing_id_raw else None,
     }
 
 # ── Atomic bid Lua scripti ───────────────────────────────────────────────────
@@ -177,16 +180,32 @@ async def start_auction(
     if existing_status == "active":
         raise HTTPException(status_code=400, detail="Zaten aktif bir açık artırma var")
 
+    # listing_id verilmişse listingden title/price al
+    listing_id_val = data.listing_id
+    if listing_id_val:
+        listing = await db.scalar(
+            select(Listing).where(Listing.id == listing_id_val, Listing.is_deleted == False)  # noqa: E712
+        )
+        if not listing:
+            raise HTTPException(status_code=404, detail="İlan bulunamadı")
+        item_name = listing.title
+        start_price = float(listing.price or 0)
+    else:
+        item_name = data.item_name
+        start_price = float(data.start_price)
+        listing_id_val = None
+
     await redis.hset(key, mapping={
         "status": "active",
-        "item_name": data.item_name,
-        "start_price": str(data.start_price),
-        "current_bid": str(data.start_price),
+        "item_name": item_name,
+        "start_price": str(start_price),
+        "current_bid": str(start_price),
         "current_bidder_id": "",
         "current_bidder_name": "",
         "bid_count": "0",
         "host_id": str(current_user.id),
         "stream_id": str(stream_id),
+        "listing_id": str(listing_id_val) if listing_id_val else "",
     })
     await redis.expire(key, 24 * 3600)
 
@@ -261,8 +280,10 @@ async def end_auction(
     winner_id_str = data.get("current_bidder_id", "")
     final_price = float(data["current_bid"]) if data.get("current_bid") else float(data.get("start_price", 0))
 
+    lid_str = data.get("listing_id", "")
     auction = Auction(
         stream_id=stream_id,
+        listing_id=int(lid_str) if lid_str else None,
         item_name=data.get("item_name", ""),
         start_price=float(data.get("start_price", 0)),
         final_price=final_price if data.get("current_bidder_id") else None,

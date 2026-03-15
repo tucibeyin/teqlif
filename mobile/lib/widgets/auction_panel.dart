@@ -1,11 +1,13 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../models/auction.dart';
 import '../services/auction_service.dart';
+import '../services/storage_service.dart';
 
 class AuctionPanel extends StatefulWidget {
   final int streamId;
@@ -110,81 +112,22 @@ class _AuctionPanelState extends State<AuctionPanel> {
   }
 
   Future<void> _showStartDialog() async {
-    final itemCtrl = TextEditingController();
-    final priceCtrl = TextEditingController();
-
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Açık Artırma Başlat',
-            style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _dialogInput(itemCtrl, 'Ürün adı'),
-            const SizedBox(height: 12),
-            _dialogInput(priceCtrl, 'Başlangıç fiyatı (₺)', isNumber: true),
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('İptal',
-                style: TextStyle(color: Color(0xFF64748B))),
-          ),
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () {
-              final item = itemCtrl.text.trim();
-              final price = double.tryParse(priceCtrl.text);
-              if (item.isEmpty || price == null || price < 0) return;
-              Navigator.pop(ctx, {'item': item, 'price': price});
-            },
-            child:
-                const Text('Başlat', style: TextStyle(color: Colors.white)),
-          ),
-        ],
-      ),
+      builder: (ctx) => _StartAuctionDialog(),
     );
 
     if (result == null) return;
     try {
       await AuctionService.startAuction(
-          widget.streamId, result['item'] as String, result['price'] as double);
+        widget.streamId,
+        itemName: result['item'] as String?,
+        startPrice: result['price'] as double?,
+        listingId: result['listing_id'] as int?,
+      );
     } catch (e) {
       _setMsg(e.toString(), error: true);
     }
-  }
-
-  Widget _dialogInput(TextEditingController ctrl, String hint,
-      {bool isNumber = false}) {
-    return TextField(
-      controller: ctrl,
-      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
-      style: const TextStyle(color: Colors.white),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: const TextStyle(color: Color(0xFF475569)),
-        filled: true,
-        fillColor: const Color(0xFF0F172A),
-        contentPadding:
-            const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-        border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF334155))),
-        enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: Color(0xFF334155))),
-        focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(8),
-            borderSide: const BorderSide(color: kPrimary)),
-      ),
-    );
   }
 
   Future<void> _pauseAuction() async {
@@ -282,27 +225,54 @@ class _AuctionPanelState extends State<AuctionPanel> {
                 const SizedBox(width: 8),
                 // Ürün + fiyat
                 Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        _state.itemName ?? 'Açık Artırma',
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 12),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      if (_state.currentBid != null ||
-                          _state.startPrice != null)
-                        Text(
-                          '₺${_fmt(_state.currentBid ?? _state.startPrice)}'
-                          '${_state.currentBidder != null ? ' · @${_state.currentBidder}' : ''}',
-                          style: const TextStyle(
-                              color: Color(0xFF4ADE80), fontSize: 11),
+                  child: GestureDetector(
+                    onTap: (!widget.isHost && _state.listingId != null)
+                        ? () => _showListingPopup(context)
+                        : null,
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                _state.itemName ?? 'Açık Artırma',
+                                style: const TextStyle(
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 12),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                              if (_state.currentBid != null ||
+                                  _state.startPrice != null)
+                                Text(
+                                  '₺${_fmt(_state.currentBid ?? _state.startPrice)}'
+                                  '${_state.currentBidder != null ? ' · @${_state.currentBidder}' : ''}',
+                                  style: const TextStyle(
+                                      color: Color(0xFF4ADE80), fontSize: 11),
+                                ),
+                            ],
+                          ),
                         ),
-                    ],
+                        // Viewer: pinlenmiş ilan varsa ikon göster
+                        if (!widget.isHost && _state.listingId != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 4),
+                            child: Container(
+                              padding: const EdgeInsets.all(4),
+                              decoration: BoxDecoration(
+                                color: Colors.amber.withOpacity(0.2),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(
+                                    color: Colors.amber.withOpacity(0.6)),
+                              ),
+                              child: const Icon(Icons.open_in_new,
+                                  color: Colors.amber, size: 12),
+                            ),
+                          ),
+                      ],
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
@@ -327,6 +297,110 @@ class _AuctionPanelState extends State<AuctionPanel> {
               ),
             ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _showListingPopup(BuildContext context) async {
+    final id = _state.listingId;
+    if (id == null) return;
+    try {
+      final resp = await http.get(Uri.parse('$kBaseUrl/listings/$id'));
+      if (resp.statusCode != 200 || !mounted) return;
+      final listing = jsonDecode(resp.body) as Map<String, dynamic>;
+      if (!mounted) return;
+      _openListingSheet(context, listing);
+    } catch (_) {}
+  }
+
+  void _openListingSheet(BuildContext context, Map<String, dynamic> listing) {
+    final imgs = listing['image_urls'] as List? ?? [];
+    final rawImg = imgs.isNotEmpty ? imgs[0] as String : listing['image_url'] as String?;
+    final imageUrl = rawImg != null ? imgUrl(rawImg) : null;
+    final price = listing['price'];
+    final priceStr = price != null
+        ? '₺ ${(price as num).toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}'
+        : 'Fiyat Belirtilmemiş';
+    final seller = (listing['user'] as Map?)?['username'] ?? '';
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1E293B),
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
+      isScrollControlled: true,
+      builder: (ctx) => DraggableScrollableSheet(
+        expand: false,
+        initialChildSize: 0.55,
+        minChildSize: 0.3,
+        maxChildSize: 0.85,
+        builder: (_, scrollCtrl) => ListView(
+          controller: scrollCtrl,
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+          children: [
+            // Handle bar
+            Center(
+              child: Container(
+                width: 38, height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 16),
+            // Resim
+            if (imageUrl != null && imageUrl.isNotEmpty)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(
+                  imageUrl,
+                  height: 180,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  errorBuilder: (_, __, ___) => Container(
+                    height: 180,
+                    color: const Color(0xFF0F172A),
+                    child: const Icon(Icons.image_outlined,
+                        color: Color(0xFF475569), size: 48),
+                  ),
+                ),
+              ),
+            const SizedBox(height: 14),
+            // Başlık
+            Text(
+              listing['title'] ?? '',
+              style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 17),
+            ),
+            const SizedBox(height: 6),
+            // Fiyat
+            Text(
+              priceStr,
+              style: const TextStyle(
+                  color: Color(0xFF4ADE80),
+                  fontWeight: FontWeight.w800,
+                  fontSize: 20),
+            ),
+            if (seller.isNotEmpty) ...[
+              const SizedBox(height: 4),
+              Text('@$seller',
+                  style: const TextStyle(
+                      color: Color(0xFF64748B), fontSize: 13)),
+            ],
+            if ((listing['description'] as String?)?.isNotEmpty == true) ...[
+              const SizedBox(height: 12),
+              const Divider(color: Color(0xFF334155)),
+              const SizedBox(height: 8),
+              Text(
+                listing['description'] as String,
+                style: const TextStyle(
+                    color: Color(0xFF94A3B8), fontSize: 13, height: 1.5),
+              ),
+            ],
+          ],
+        ),
       ),
     );
   }
@@ -577,6 +651,222 @@ class _AuctionPanelState extends State<AuctionPanel> {
           border: Border.all(color: color.withOpacity(0.5)),
         ),
         child: Icon(icon, color: color, size: 16),
+      ),
+    );
+  }
+}
+
+// ── Açık artırma başlatma dialogu ─────────────────────────────────────────────
+
+class _StartAuctionDialog extends StatefulWidget {
+  @override
+  State<_StartAuctionDialog> createState() => _StartAuctionDialogState();
+}
+
+class _StartAuctionDialogState extends State<_StartAuctionDialog> {
+  bool _fromListing = false;
+  final _itemCtrl = TextEditingController();
+  final _priceCtrl = TextEditingController();
+  List<dynamic> _listings = [];
+  bool _loadingListings = false;
+  dynamic _selectedListing;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadListings();
+  }
+
+  @override
+  void dispose() {
+    _itemCtrl.dispose();
+    _priceCtrl.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadListings() async {
+    setState(() => _loadingListings = true);
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return;
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/my?active=true'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200 && mounted) {
+        setState(() => _listings = jsonDecode(resp.body) as List);
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _loadingListings = false);
+    }
+  }
+
+  String _fmtPrice(dynamic price) {
+    if (price == null) return '';
+    return '₺ ${(price as num).toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      backgroundColor: const Color(0xFF1E293B),
+      title: const Text('Açık Artırma Başlat',
+          style: TextStyle(color: Colors.white, fontSize: 16)),
+      contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            // Mod seçici
+            Row(children: [
+              Expanded(child: _modeBtn('Manuel Gir', !_fromListing, () => setState(() { _fromListing = false; _selectedListing = null; }))),
+              const SizedBox(width: 8),
+              Expanded(child: _modeBtn('İlanlarımdan', _fromListing, () => setState(() => _fromListing = true))),
+            ]),
+            const SizedBox(height: 14),
+            // İçerik
+            if (!_fromListing) ...[
+              _inputField(_itemCtrl, 'Ürün adı'),
+              const SizedBox(height: 10),
+              _inputField(_priceCtrl, 'Başlangıç fiyatı (₺)', isNumber: true),
+            ] else ...[
+              if (_loadingListings)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Center(child: CircularProgressIndicator(color: kPrimary, strokeWidth: 2)),
+                )
+              else if (_listings.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 20),
+                  child: Text('Aktif ilanınız yok.',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                )
+              else
+                ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 240),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _listings.length,
+                    itemBuilder: (_, i) {
+                      final l = _listings[i];
+                      final isSelected = _selectedListing != null && _selectedListing['id'] == l['id'];
+                      return GestureDetector(
+                        onTap: () => setState(() => _selectedListing = l),
+                        child: Container(
+                          margin: const EdgeInsets.only(bottom: 6),
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                          decoration: BoxDecoration(
+                            color: isSelected ? kPrimary.withOpacity(0.15) : const Color(0xFF0F172A),
+                            borderRadius: BorderRadius.circular(10),
+                            border: Border.all(
+                              color: isSelected ? kPrimary : const Color(0xFF334155),
+                              width: isSelected ? 1.5 : 1,
+                            ),
+                          ),
+                          child: Row(children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(l['title'] ?? '',
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 13)),
+                                  if (l['price'] != null)
+                                    Text(_fmtPrice(l['price']),
+                                        style: const TextStyle(
+                                            color: Color(0xFF4ADE80), fontSize: 12)),
+                                ],
+                              ),
+                            ),
+                            if (isSelected)
+                              const Icon(Icons.check_circle, color: kPrimary, size: 18),
+                          ]),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+      actionsPadding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text('İptal', style: TextStyle(color: Color(0xFF64748B))),
+        ),
+        ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.green,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+          ),
+          onPressed: () {
+            if (_fromListing) {
+              if (_selectedListing == null) return;
+              Navigator.pop(context, {'listing_id': _selectedListing['id'] as int});
+            } else {
+              final item = _itemCtrl.text.trim();
+              final price = double.tryParse(_priceCtrl.text.replaceAll(',', '.'));
+              if (item.length < 2 || price == null || price < 0) return;
+              Navigator.pop(context, {'item': item, 'price': price});
+            }
+          },
+          child: const Text('Başlat', style: TextStyle(color: Colors.white)),
+        ),
+      ],
+    );
+  }
+
+  Widget _modeBtn(String label, bool active, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        decoration: BoxDecoration(
+          color: active ? kPrimary.withOpacity(0.2) : const Color(0xFF0F172A),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(
+              color: active ? kPrimary : const Color(0xFF334155),
+              width: active ? 1.5 : 1),
+        ),
+        child: Text(label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: active ? kPrimary : const Color(0xFF64748B),
+                fontSize: 12,
+                fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
+  Widget _inputField(TextEditingController ctrl, String hint, {bool isNumber = false}) {
+    return TextField(
+      controller: ctrl,
+      keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      style: const TextStyle(color: Colors.white),
+      decoration: InputDecoration(
+        hintText: hint,
+        hintStyle: const TextStyle(color: Color(0xFF475569)),
+        filled: true,
+        fillColor: const Color(0xFF0F172A),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF334155))),
+        enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: Color(0xFF334155))),
+        focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(8),
+            borderSide: const BorderSide(color: kPrimary)),
       ),
     );
   }

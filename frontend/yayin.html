@@ -274,9 +274,10 @@
             gap: 0.5rem;
             align-items: center;
             flex: 1;
+            flex-wrap: wrap;
         }
 
-        .auction-setup input {
+        .auction-setup input, .auction-setup select {
             background: #0f172a;
             border: 1px solid #334155;
             color: #e2e8f0;
@@ -287,10 +288,57 @@
             min-width: 0;
         }
 
-        .auction-setup input:first-child { flex: 2; }
-        .auction-setup input:last-child  { flex: 1; }
+        #manualInputs { display: flex; gap: .5rem; align-items: center; flex: 1; }
+        #manualInputs input:first-child { flex: 2; }
+        #manualInputs input:last-child  { flex: 1; }
 
-        .auction-setup input:focus { border-color: var(--primary); }
+        .auction-setup input:focus,
+        .auction-setup select:focus { border-color: var(--primary); }
+
+        #listingSelect { flex: 1; cursor: pointer; }
+        #listingSelect option { background: #1e293b; }
+
+        .auction-mode-toggle {
+            background: none; border: 1px solid #475569; color: #94a3b8;
+            border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.75rem;
+            cursor: pointer; flex-shrink: 0; white-space: nowrap;
+        }
+        .auction-mode-toggle:hover { border-color: var(--primary); color: var(--primary); }
+        .auction-mode-toggle.active { border-color: var(--primary); color: var(--primary); background: rgba(6,182,212,0.1); }
+
+        /* Listing detail modal */
+        .listing-modal-overlay {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.72); z-index: 200;
+            display: flex; align-items: flex-end; justify-content: center;
+        }
+        .listing-modal {
+            background: #1e293b; border-radius: 22px 22px 0 0;
+            width: 100%; max-width: 480px; max-height: 80vh;
+            overflow-y: auto; padding: 12px 20px 36px;
+        }
+        .listing-modal-handle {
+            width: 38px; height: 4px; background: #334155;
+            border-radius: 2px; margin: 0 auto 16px;
+        }
+        .listing-modal img {
+            width: 100%; height: 180px; object-fit: cover;
+            border-radius: 12px; margin-bottom: 14px;
+        }
+        .listing-modal-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
+        .listing-modal-price { font-size: 1.25rem; font-weight: 800; color: #4ade80; margin-bottom: 4px; }
+        .listing-modal-seller { font-size: 0.78rem; color: #64748b; margin-bottom: 12px; }
+        .listing-modal-desc { font-size: 0.83rem; color: #94a3b8; line-height: 1.55; border-top: 1px solid #334155; padding-top: 10px; }
+
+        /* Viewer: pinlenmiş ilan butonu */
+        #auctionListingBtn {
+            font-size: 0.72rem; font-weight: 600;
+            color: #fbbf24; border: 1px solid rgba(251,191,36,0.4);
+            background: rgba(251,191,36,0.1); border-radius: 6px;
+            padding: 0.25rem 0.6rem; cursor: pointer;
+            text-decoration: none; flex-shrink: 0; white-space: nowrap;
+        }
+        #auctionListingBtn:hover { background: rgba(251,191,36,0.2); }
 
         /* Host kontrol butonları */
         .auction-host-controls {
@@ -514,9 +562,21 @@
 
                 <!-- HOST: ürün girişi (idle) -->
                 <div class="auction-setup" id="hostSetup" style="display:none;">
-                    <input type="text" id="auctionItemInput" placeholder="Ürün adı" maxlength="200">
-                    <input type="number" id="auctionStartPrice" placeholder="Başlangıç (₺)" min="0" step="1">
+                    <!-- İlan seçici toggle -->
+                    <button class="auction-mode-toggle" id="btnListingMode" title="İlanlarımdan seç">📋 İlanlarımdan</button>
+                    <!-- Listing select (listing modda görünür) -->
+                    <select id="listingSelect" style="display:none;">
+                        <option value="">— İlan seçin —</option>
+                    </select>
+                    <!-- Manuel giriş alanları -->
+                    <div id="manualInputs">
+                        <input type="text" id="auctionItemInput" placeholder="Ürün adı" maxlength="200">
+                        <input type="number" id="auctionStartPrice" placeholder="Başlangıç (₺)" min="0" step="1">
+                    </div>
                 </div>
+
+                <!-- Viewer: pinlenmiş ilan butonu (JS ile gösterilir) -->
+                <a id="auctionListingBtn" style="display:none;">📌 İlana Bak</a>
 
                 <!-- HOST: kontrol butonları -->
                 <div class="auction-host-controls" id="hostControls" style="display:none;">
@@ -563,6 +623,18 @@
         </div><!-- /.chat-col -->
 
     </div><!-- /.stream-root -->
+
+    <!-- Listing detail modal (viewer: pinlenmiş ilan) -->
+    <div class="listing-modal-overlay" id="listingModalOverlay" style="display:none;" onclick="closeListingModal(event)">
+        <div class="listing-modal" id="listingModal">
+            <div class="listing-modal-handle"></div>
+            <img id="listingModalImg" src="" alt="" style="display:none;">
+            <div class="listing-modal-title" id="listingModalTitle"></div>
+            <div class="listing-modal-price" id="listingModalPrice"></div>
+            <div class="listing-modal-seller" id="listingModalSeller"></div>
+            <div class="listing-modal-desc" id="listingModalDesc" style="display:none;"></div>
+        </div>
+    </div>
 
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
@@ -728,9 +800,14 @@
 
         let _currentAuctionStatus = 'idle';
         let _currentBid = 0;
+        let _currentListingId = null;  // viewer için pinlenmiş ilan
+        let _selectedListingId = null; // host için seçilen ilan
+        let _listingMode = false;      // host: listing mi manual mı
 
         function updateAuctionUI(state) {
             _currentAuctionStatus = state.status;
+            _currentListingId = state.listing_id || null;
+
             const panel = document.getElementById('auctionPanel');
             const badge = document.getElementById('auctionBadge');
             const bidInfo = document.getElementById('auctionBidInfo');
@@ -754,16 +831,24 @@
                 bidInfo.style.display = 'block';
             }
 
+            // Viewer: pinlenmiş ilan butonu
+            const listingBtn = document.getElementById('auctionListingBtn');
+            if (listingBtn) {
+                listingBtn.style.display = (!_isHostPage && _currentListingId && state.status !== 'idle') ? '' : 'none';
+            }
+
             const isHost = document.getElementById('hostSetup') !== null && _isHostPage;
 
             if (isHost) {
                 hostControls.style.display = 'flex';
-                if (state.status === 'idle') {
+                if (state.status === 'idle' || state.status === 'ended') {
                     hostSetup.style.display = 'flex';
                     document.getElementById('btnAuctionStart').style.display = '';
                     document.getElementById('btnAuctionPause').style.display = 'none';
                     document.getElementById('btnAuctionResume').style.display = 'none';
                     document.getElementById('btnAuctionEnd').style.display = 'none';
+                    // ended sonrası listing seçimini sıfırla
+                    if (state.status === 'ended') _resetListingMode();
                 } else if (state.status === 'active') {
                     hostSetup.style.display = 'none';
                     document.getElementById('btnAuctionStart').style.display = 'none';
@@ -776,15 +861,8 @@
                     document.getElementById('btnAuctionPause').style.display = 'none';
                     document.getElementById('btnAuctionResume').style.display = '';
                     document.getElementById('btnAuctionEnd').style.display = '';
-                } else if (state.status === 'ended') {
-                    hostSetup.style.display = 'flex';
-                    document.getElementById('btnAuctionStart').style.display = '';
-                    document.getElementById('btnAuctionPause').style.display = 'none';
-                    document.getElementById('btnAuctionResume').style.display = 'none';
-                    document.getElementById('btnAuctionEnd').style.display = 'none';
                 }
             } else if (viewerControls) {
-                // Viewer
                 viewerControls.style.display = (state.status === 'active') ? 'flex' : 'none';
             }
         }
@@ -801,23 +879,83 @@
             _isHostPage = isHost;
             document.getElementById('auctionPanel').classList.add('visible');
 
-            // Önce gereksiz elementleri kaldır
             if (!isHost) {
                 document.getElementById('hostSetup').remove();
                 document.getElementById('hostControls').remove();
+                document.getElementById('btnListingMode')?.remove();
+                // Viewer: listing butonu tıklaması
+                const lb = document.getElementById('auctionListingBtn');
+                if (lb) lb.addEventListener('click', showListingModal);
             } else {
                 document.getElementById('viewerControls').remove();
+                document.getElementById('auctionListingBtn')?.remove();
+                // Host: ilanları yükle
+                loadHostListings();
+                // Host: listing mode toggle
+                document.getElementById('btnListingMode')?.addEventListener('click', toggleListingMode);
+                // Host: listing select değişince
+                document.getElementById('listingSelect')?.addEventListener('change', onListingSelected);
             }
 
-            // Hemen varsayılan idle state ile render et (WS'yi bekleme)
             updateAuctionUI({ status: 'idle', bid_count: 0 });
-
-            // WebSocket bağlan, güncelleme gelince yeniden render et
             Auction.connect(sid, isHost, (state) => updateAuctionUI(state));
+        }
+
+        // ── Host: ilan listesi yükleme ───────────────────────────────
+        async function loadHostListings() {
+            try {
+                const listings = await apiFetch('/listings/my?active=true');
+                const sel = document.getElementById('listingSelect');
+                if (!sel || !listings.length) return;
+                listings.forEach(l => {
+                    const opt = document.createElement('option');
+                    opt.value = l.id;
+                    opt.textContent = `${l.title}${l.price ? ' — ₺' + Number(l.price).toLocaleString('tr-TR') : ''}`;
+                    sel.appendChild(opt);
+                });
+            } catch (_) {}
+        }
+
+        function toggleListingMode() {
+            _listingMode = !_listingMode;
+            const btn = document.getElementById('btnListingMode');
+            const sel = document.getElementById('listingSelect');
+            const manual = document.getElementById('manualInputs');
+            btn.classList.toggle('active', _listingMode);
+            sel.style.display = _listingMode ? '' : 'none';
+            manual.style.display = _listingMode ? 'none' : 'flex';
+            if (!_listingMode) {
+                _selectedListingId = null;
+                sel.value = '';
+            }
+        }
+
+        function onListingSelected() {
+            const sel = document.getElementById('listingSelect');
+            _selectedListingId = sel.value ? parseInt(sel.value) : null;
+        }
+
+        function _resetListingMode() {
+            _listingMode = false;
+            _selectedListingId = null;
+            const btn = document.getElementById('btnListingMode');
+            const sel = document.getElementById('listingSelect');
+            const manual = document.getElementById('manualInputs');
+            if (btn) btn.classList.remove('active');
+            if (sel) { sel.style.display = 'none'; sel.value = ''; }
+            if (manual) manual.style.display = 'flex';
         }
 
         // HOST: Başlat
         document.getElementById('btnAuctionStart')?.addEventListener('click', async () => {
+            if (_listingMode) {
+                if (!_selectedListingId) return setAuctionMsg('Bir ilan seçin', 'error');
+                try {
+                    await Auction.startAuction(null, null, _selectedListingId);
+                    setAuctionMsg('Açık artırma başladı!', 'success');
+                } catch (e) { setAuctionMsg(e.message, 'error'); }
+                return;
+            }
             const itemName = document.getElementById('auctionItemInput').value.trim();
             const startPrice = parseFloat(document.getElementById('auctionStartPrice').value);
             if (!itemName) return setAuctionMsg('Ürün adı girin', 'error');
@@ -827,6 +965,43 @@
                 setAuctionMsg('Açık artırma başladı!', 'success');
             } catch (e) { setAuctionMsg(e.message, 'error'); }
         });
+
+        // ── Viewer: ilan popup ───────────────────────────────────────
+        async function showListingModal(e) {
+            if (e) e.preventDefault();
+            if (!_currentListingId) return;
+            try {
+                const listing = await apiFetch(`/listings/${_currentListingId}`);
+                const imgs = listing.image_urls && listing.image_urls.length ? listing.image_urls : (listing.image_url ? [listing.image_url] : []);
+                const imgEl = document.getElementById('listingModalImg');
+                if (imgs.length) {
+                    imgEl.src = imgs[0].startsWith('http') ? imgs[0] : `https://teqlif.com${imgs[0]}`;
+                    imgEl.style.display = 'block';
+                } else {
+                    imgEl.style.display = 'none';
+                }
+                document.getElementById('listingModalTitle').textContent = listing.title || '';
+                document.getElementById('listingModalPrice').textContent = listing.price != null
+                    ? '₺ ' + Number(listing.price).toLocaleString('tr-TR')
+                    : 'Fiyat Belirtilmemiş';
+                const seller = listing.user?.username ? `@${listing.user.username}` : '';
+                document.getElementById('listingModalSeller').textContent = seller;
+                const descEl = document.getElementById('listingModalDesc');
+                if (listing.description) {
+                    descEl.textContent = listing.description;
+                    descEl.style.display = 'block';
+                } else {
+                    descEl.style.display = 'none';
+                }
+                document.getElementById('listingModalOverlay').style.display = 'flex';
+            } catch (_) {}
+        }
+
+        function closeListingModal(e) {
+            if (e.target === document.getElementById('listingModalOverlay')) {
+                document.getElementById('listingModalOverlay').style.display = 'none';
+            }
+        }
 
         // HOST: Duraklat
         document.getElementById('btnAuctionPause')?.addEventListener('click', async () => {

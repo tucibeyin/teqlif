@@ -39,10 +39,13 @@ const Auction = (() => {
         if (_ws) { _ws.close(); _ws = null; }
     }
 
-    async function startAuction(itemName, startPrice) {
+    async function startAuction(itemName, startPrice, listingId) {
+        const body = listingId
+            ? { listing_id: listingId }
+            : { item_name: itemName, start_price: parseFloat(startPrice) };
         return await apiFetch(`/auction/${_streamId}/start`, {
             method: 'POST',
-            body: JSON.stringify({ item_name: itemName, start_price: parseFloat(startPrice) }),
+            body: JSON.stringify(body),
         });
     }
 

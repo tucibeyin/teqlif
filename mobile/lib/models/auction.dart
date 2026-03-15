@@ -5,6 +5,7 @@ class AuctionState {
   final double? currentBid;
   final String? currentBidder;
   final int bidCount;
+  final int? listingId;
 
   const AuctionState({
     required this.status,
@@ -13,6 +14,7 @@ class AuctionState {
     this.currentBid,
     this.currentBidder,
     this.bidCount = 0,
+    this.listingId,
   });
 
   factory AuctionState.idle() => const AuctionState(status: 'idle');
@@ -24,6 +26,7 @@ class AuctionState {
         currentBid: (j['current_bid'] as num?)?.toDouble(),
         currentBidder: j['current_bidder'] as String?,
         bidCount: (j['bid_count'] as num?)?.toInt() ?? 0,
+        listingId: (j['listing_id'] as num?)?.toInt(),
       );
 
   bool get isActive => status == 'active';
