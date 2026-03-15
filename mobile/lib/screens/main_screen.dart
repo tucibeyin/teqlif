@@ -209,8 +209,8 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
             label: 'Canlı',
           ),
           const BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view_outlined, color: Color(0xFFF59E0B)),
-            activeIcon: Icon(Icons.grid_view, color: kPrimary),
+            icon: Icon(Icons.grid_view_outlined),
+            activeIcon: Icon(Icons.grid_view),
             label: 'İlanlar',
           ),
           const BottomNavigationBarItem(
