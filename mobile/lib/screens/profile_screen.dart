@@ -444,6 +444,195 @@ class _SettingsScreenState extends State<_SettingsScreen> {
     if (mounted) setState(() => _biometricEnabled = value);
   }
 
+  Future<void> _showChangePasswordDialog(BuildContext context) async {
+    final codeCtrl = TextEditingController();
+    final newPassCtrl = TextEditingController();
+    final confirmPassCtrl = TextEditingController();
+    bool codeSent = false;
+    bool loading = false;
+    String? error;
+
+    final token = await StorageService.getToken();
+    if (token == null || !mounted) return;
+
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setS) => AlertDialog(
+          backgroundColor: AppColors.card(ctx),
+          title: Text(
+            'Şifre Değiştir',
+            style: TextStyle(
+                color: AppColors.textPrimary(ctx),
+                fontSize: 16,
+                fontWeight: FontWeight.w600),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              if (!codeSent) ...[
+                Text(
+                  'E-posta adresinize 6 haneli doğrulama kodu gönderilecek.',
+                  style: TextStyle(
+                      fontSize: 13, color: AppColors.textSecondary(ctx)),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(error!,
+                      style: const TextStyle(
+                          color: Color(0xFFEF4444), fontSize: 12)),
+                ],
+              ] else ...[
+                TextField(
+                  controller: codeCtrl,
+                  keyboardType: TextInputType.number,
+                  maxLength: 6,
+                  decoration: InputDecoration(
+                    labelText: 'Doğrulama Kodu',
+                    labelStyle:
+                        TextStyle(color: AppColors.textSecondary(ctx)),
+                    counterText: '',
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: newPassCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Yeni Şifre',
+                    labelStyle:
+                        TextStyle(color: AppColors.textSecondary(ctx)),
+                  ),
+                ),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: confirmPassCtrl,
+                  obscureText: true,
+                  decoration: InputDecoration(
+                    labelText: 'Yeni Şifre (Tekrar)',
+                    labelStyle:
+                        TextStyle(color: AppColors.textSecondary(ctx)),
+                  ),
+                ),
+                if (error != null) ...[
+                  const SizedBox(height: 8),
+                  Text(error!,
+                      style: const TextStyle(
+                          color: Color(0xFFEF4444), fontSize: 12)),
+                ],
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: loading ? null : () => Navigator.pop(ctx),
+              child: Text('İptal',
+                  style: TextStyle(color: AppColors.textSecondary(ctx))),
+            ),
+            ElevatedButton(
+              onPressed: loading
+                  ? null
+                  : () async {
+                      setS(() {
+                        error = null;
+                        loading = true;
+                      });
+                      if (!codeSent) {
+                        // Kodu gönder
+                        try {
+                          final resp = await http.post(
+                            Uri.parse('$kBaseUrl/auth/change-password/send-code'),
+                            headers: {'Authorization': 'Bearer $token'},
+                          );
+                          if (resp.statusCode == 200) {
+                            setS(() {
+                              codeSent = true;
+                              loading = false;
+                            });
+                          } else {
+                            final msg = jsonDecode(resp.body)['detail'] as String?;
+                            setS(() {
+                              error = msg ?? 'Kod gönderilemedi.';
+                              loading = false;
+                            });
+                          }
+                        } catch (_) {
+                          setS(() {
+                            error = 'Bağlantı hatası.';
+                            loading = false;
+                          });
+                        }
+                      } else {
+                        // Kodu doğrula ve şifreyi değiştir
+                        if (newPassCtrl.text.length < 8) {
+                          setS(() {
+                            error = 'Şifre en az 8 karakter olmalı.';
+                            loading = false;
+                          });
+                          return;
+                        }
+                        if (newPassCtrl.text != confirmPassCtrl.text) {
+                          setS(() {
+                            error = 'Şifreler eşleşmiyor.';
+                            loading = false;
+                          });
+                          return;
+                        }
+                        try {
+                          final resp = await http.post(
+                            Uri.parse('$kBaseUrl/auth/change-password/confirm'),
+                            headers: {
+                              'Content-Type': 'application/json',
+                              'Authorization': 'Bearer $token',
+                            },
+                            body: jsonEncode({
+                              'code': codeCtrl.text.trim(),
+                              'new_password': newPassCtrl.text,
+                            }),
+                          );
+                          if (resp.statusCode == 200) {
+                            if (ctx.mounted) Navigator.pop(ctx);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                    content: Text('Şifreniz başarıyla değiştirildi.')),
+                              );
+                            }
+                          } else {
+                            final msg = jsonDecode(resp.body)['detail'] as String?;
+                            setS(() {
+                              error = msg ?? 'İşlem başarısız.';
+                              loading = false;
+                            });
+                          }
+                        } catch (_) {
+                          setS(() {
+                            error = 'Bağlantı hatası.';
+                            loading = false;
+                          });
+                        }
+                      }
+                    },
+              style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
+              child: loading
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                          strokeWidth: 2, color: Colors.white))
+                  : Text(
+                      codeSent ? 'Şifremi Değiştir' : 'Kodu Gönder',
+                      style: const TextStyle(color: Colors.white),
+                    ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _showDeleteAccountDialog(BuildContext context) async {
     final passCtrl = TextEditingController();
     String? error;
@@ -556,7 +745,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               _SettingsTile(
                 icon: Icons.lock_outline,
                 label: 'Şifre Değiştir',
-                onTap: () {},
+                onTap: () => _showChangePasswordDialog(context),
               ),
               _SettingsTile(
                 icon: Icons.notifications_outlined,

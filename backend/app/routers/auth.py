@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate
+from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm
 from app.utils.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.utils.email import send_verification_code
 from app.utils.redis_client import get_redis
@@ -143,6 +143,36 @@ async def update_me(
     await db.commit()
     await db.refresh(current_user)
     return current_user
+
+
+@router.post("/change-password/send-code")
+async def change_password_send_code(
+    current_user: User = Depends(get_current_user),
+):
+    code = str(random.randint(100000, 999999))
+    redis = await get_redis()
+    await redis.setex(f"chpwd:{current_user.id}", VERIFY_CODE_TTL, code)
+    try:
+        await send_verification_code(current_user.email, current_user.full_name, code)
+    except Exception:
+        raise HTTPException(status_code=500, detail="E-posta gönderilemedi")
+    return {"message": "Doğrulama kodu e-posta adresinize gönderildi"}
+
+
+@router.post("/change-password/confirm")
+async def change_password_confirm(
+    data: ChangePasswordConfirm,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    redis = await get_redis()
+    stored_code = await redis.get(f"chpwd:{current_user.id}")
+    if not stored_code or stored_code != data.code:
+        raise HTTPException(status_code=400, detail="Kod hatalı veya süresi dolmuş")
+    current_user.hashed_password = hash_password(data.new_password)
+    await db.commit()
+    await redis.delete(f"chpwd:{current_user.id}")
+    return {"message": "Şifreniz başarıyla değiştirildi"}
 
 
 @router.post("/fcm-token")

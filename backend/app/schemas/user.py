@@ -69,3 +69,15 @@ class VerifyEmail(BaseModel):
 
 class ResendCode(BaseModel):
     email: EmailStr
+
+
+class ChangePasswordConfirm(BaseModel):
+    code: str
+    new_password: str
+
+    @field_validator("new_password")
+    @classmethod
+    def password_strong(cls, v: str) -> str:
+        if len(v) < 8:
+            raise ValueError("Şifre en az 8 karakter olmalı")
+        return v
