@@ -664,11 +664,11 @@
         </div>
     </div>
 
-    <script src="/static/js/main.js"></script>
-    <script src="/static/js/auth.js"></script>
+    <script src="/static/js/main.js?v=4"></script>
+    <script src="/static/js/auth.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
-    <script src="/static/js/stream.js"></script>
-    <script src="/static/js/auction.js"></script>
+    <script src="/static/js/stream.js?v=4"></script>
+    <script src="/static/js/auction.js?v=4"></script>
     <script src="/static/js/chat.js"></script>
     <script>
         const params = new URLSearchParams(location.search);
@@ -1047,6 +1047,11 @@
             const startPrice = parseFloat(document.getElementById('auctionStartPrice').value);
             if (isNaN(startPrice) || startPrice < 0) return setAuctionMsg('Geçerli başlangıç fiyatı girin', 'error');
             if (_listingMode) {
+                // DOM'daki seçili item'dan fallback oku
+                if (!_selectedListingId) {
+                    const sel = document.querySelector('#listingPickerDropdown .lp-item.selected');
+                    if (sel) _selectedListingId = parseInt(sel.dataset.id, 10);
+                }
                 if (!_selectedListingId) return setAuctionMsg('Bir ilan seçin', 'error');
                 try {
                     await Auction.startAuction(null, startPrice, _selectedListingId);
