@@ -7,8 +7,20 @@ from app.utils.auth import get_current_user
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
-ALLOWED_TYPES = {"image/jpeg", "image/png", "image/webp", "image/gif"}
 MAX_SIZE = 10 * 1024 * 1024  # 10 MB
+
+
+def _detect_image_type(data: bytes) -> str | None:
+    """Magic bytes ile gerçek resim türünü tespit et."""
+    if data[:3] == b"\xff\xd8\xff":
+        return "jpg"
+    if data[:8] == b"\x89PNG\r\n\x1a\n":
+        return "png"
+    if data[:4] == b"RIFF" and data[8:12] == b"WEBP":
+        return "webp"
+    if data[:6] in (b"GIF87a", b"GIF89a"):
+        return "gif"
+    return None
 
 
 @router.post("")
@@ -16,14 +28,13 @@ async def upload_image(
     file: UploadFile = File(...),
     current_user: User = Depends(get_current_user),
 ):
-    if file.content_type not in ALLOWED_TYPES:
-        raise HTTPException(status_code=422, detail="Sadece JPEG, PNG, WebP veya GIF yüklenebilir")
-
     data = await file.read()
     if len(data) > MAX_SIZE:
         raise HTTPException(status_code=422, detail="Dosya boyutu 10 MB'ı geçemez")
 
-    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else "jpg"
+    ext = _detect_image_type(data)
+    if ext is None:
+        raise HTTPException(status_code=422, detail="Sadece JPEG, PNG, WebP veya GIF yüklenebilir")
     filename = f"{uuid.uuid4().hex}.{ext}"
 
     os.makedirs(settings.upload_dir, exist_ok=True)
