@@ -58,7 +58,7 @@ class _MessagesTabState extends State<_MessagesTab> {
   void initState() {
     super.initState();
     _load();
-    _sub = PushNotificationService.notificationStream.stream.listen((_) => _load());
+    _sub = PushNotificationService.notificationStream.stream.listen((_) => _load(silent: true));
   }
 
   @override
@@ -67,8 +67,8 @@ class _MessagesTabState extends State<_MessagesTab> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     final data = await NotificationService.getConversations();
     if (mounted) {
       setState(() {
@@ -200,7 +200,10 @@ class _MessagesTabState extends State<_MessagesTab> {
                     otherHandle: username,
                   ),
                 ),
-              ).then((_) => _load());
+              ).then((_) {
+              _load(silent: true);
+              PushNotificationService.badgeRefreshNeeded.add(null);
+            });
             },
           );
         },
@@ -228,7 +231,7 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     super.initState();
     _load();
     NotificationService.markAllRead();
-    _sub = PushNotificationService.notificationStream.stream.listen((_) => _load());
+    _sub = PushNotificationService.notificationStream.stream.listen((_) => _load(silent: true));
   }
 
   @override
@@ -237,8 +240,8 @@ class _NotificationsTabState extends State<_NotificationsTab> {
     super.dispose();
   }
 
-  Future<void> _load() async {
-    setState(() => _loading = true);
+  Future<void> _load({bool silent = false}) async {
+    if (!silent) setState(() => _loading = true);
     final data = await NotificationService.getNotifications();
     if (mounted) {
       setState(() {

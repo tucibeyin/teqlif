@@ -18,6 +18,11 @@ class PushNotificationService {
   static final StreamController<Map<String, dynamic>> notificationStream =
       StreamController<Map<String, dynamic>>.broadcast();
 
+  /// Badge güncellenmesi gerektiğinde sinyal gönderir.
+  /// Mesaj okunduğunda veya liste yenilendiğinde emit edilir.
+  static final StreamController<void> badgeRefreshNeeded =
+      StreamController<void>.broadcast();
+
   /// main() içinde çağrılmalı — Firebase hazır olduktan hemen sonra.
   /// Background handler + foreground presentation options + mesaj dinleyicileri.
   /// Token almaz; kullanıcı girişi gerekmez.

@@ -32,6 +32,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Timer? _badgeTimer;
   StreamSubscription<RemoteMessage>? _fcmSub;
   StreamSubscription<Map<String, dynamic>>? _notifStreamSub;
+  StreamSubscription<void>? _badgeRefreshSub;
 
   final _liveKey = GlobalKey<LiveListScreenState>();
 
@@ -52,7 +53,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     // FCM foreground mesajı (FirebaseMessaging.onMessage) için hızlı badge güncelleme
     _fcmSub = FirebaseMessaging.onMessage.listen((_) => _refreshBadges());
     // notificationStream: tüm FCM durumları (foreground/background/terminated)
-    _notifStreamSub = PushNotificationService.notificationStream.stream.listen((data) {
+    _notifStreamSub = PushNotificationService.notificationStream.stream.listen((_) {
+      _refreshBadges();
+    });
+    // badgeRefreshNeeded: mesaj okunduğunda veya liste yenilendiğinde
+    _badgeRefreshSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) {
       _refreshBadges();
     });
   }
@@ -63,6 +68,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _badgeTimer?.cancel();
     _fcmSub?.cancel();
     _notifStreamSub?.cancel();
+    _badgeRefreshSub?.cancel();
     super.dispose();
   }
 
