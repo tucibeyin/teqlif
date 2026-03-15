@@ -11,15 +11,20 @@ import '../services/storage_service.dart';
 class _TimedMessage {
   final ChatMessage message;
   final ValueNotifier<double> opacity = ValueNotifier(1.0);
+  bool _disposed = false;
 
   _TimedMessage(this.message, VoidCallback onExpired) {
     Future.delayed(const Duration(seconds: 6), () {
+      if (_disposed) return;
       opacity.value = 0.0;
-      Future.delayed(const Duration(milliseconds: 700), onExpired);
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (!_disposed) onExpired();
+      });
     });
   }
 
   void dispose() {
+    _disposed = true;
     opacity.dispose();
   }
 }
