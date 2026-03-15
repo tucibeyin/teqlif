@@ -132,7 +132,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildMessageIcon() {
-    final count = _unreadMessages + _unreadNotifs;
+    final count = _unreadMessages;
     return Stack(
       clipBehavior: Clip.none,
       children: [
@@ -160,7 +160,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   }
 
   Widget _buildMessageActiveIcon() {
-    final count = _unreadMessages + _unreadNotifs;
+    final count = _unreadMessages;
     return Stack(
       clipBehavior: Clip.none,
       children: [

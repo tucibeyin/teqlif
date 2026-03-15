@@ -9,32 +9,91 @@ import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
 import 'public_profile_screen.dart';
 
-class MessagesScreen extends StatelessWidget {
+class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
 
   @override
+  State<MessagesScreen> createState() => _MessagesScreenState();
+}
+
+class _MessagesScreenState extends State<MessagesScreen>
+    with SingleTickerProviderStateMixin {
+  late TabController _tabController;
+  int _unreadNotifs = 0;
+  StreamSubscription<void>? _badgeSub;
+
+  @override
+  void initState() {
+    super.initState();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(_onTabChanged);
+    _loadUnreadNotifs();
+    _badgeSub = PushNotificationService.badgeRefreshNeeded.stream
+        .listen((_) => _loadUnreadNotifs());
+  }
+
+  @override
+  void dispose() {
+    _tabController.removeListener(_onTabChanged);
+    _tabController.dispose();
+    _badgeSub?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadUnreadNotifs() async {
+    final count = await NotificationService.getUnreadNotifCount();
+    if (mounted) setState(() => _unreadNotifs = count);
+  }
+
+  void _onTabChanged() {
+    if (!_tabController.indexIsChanging && _tabController.index == 1) {
+      NotificationService.markAllRead().then((_) {
+        if (mounted) setState(() => _unreadNotifs = 0);
+        PushNotificationService.badgeRefreshNeeded.add(null);
+      });
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return DefaultTabController(
-      length: 2,
-      child: Scaffold(
-        appBar: AppBar(
-          title: const Text('Mesajlar'),
-          bottom: const TabBar(
-            labelColor: kPrimary,
-            unselectedLabelColor: Color(0xFF9CA3AF),
-            indicatorColor: kPrimary,
-            tabs: [
-              Tab(text: 'Mesajlar'),
-              Tab(text: 'Bildirimler'),
-            ],
-          ),
-        ),
-        body: const TabBarView(
-          children: [
-            _MessagesTab(),
-            _NotificationsTab(),
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Mesajlar'),
+        bottom: TabBar(
+          controller: _tabController,
+          labelColor: kPrimary,
+          unselectedLabelColor: const Color(0xFF9CA3AF),
+          indicatorColor: kPrimary,
+          tabs: [
+            const Tab(text: 'Mesajlar'),
+            Tab(
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Bildirimler'),
+                  if (_unreadNotifs > 0) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      width: 8,
+                      height: 8,
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
           ],
         ),
+      ),
+      body: TabBarView(
+        controller: _tabController,
+        children: const [
+          _MessagesTab(),
+          _NotificationsTab(),
+        ],
       ),
     );
   }
@@ -230,7 +289,6 @@ class _NotificationsTabState extends State<_NotificationsTab> {
   void initState() {
     super.initState();
     _load();
-    NotificationService.markAllRead();
     _sub = PushNotificationService.notificationStream.stream.listen((_) => _load(silent: true));
   }
 
