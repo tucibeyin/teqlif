@@ -526,7 +526,7 @@
     <nav>
         <a href="/" class="logo">teqlif</a>
         <div class="nav-links">
-            <a href="/canli.html">← Yayınlar</a>
+            <a href="/">← Yayınlar</a>
         </div>
     </nav>
 
@@ -776,7 +776,7 @@
             // Session'da bilgi yoksa ya da ID uyuşmuyorsa
             if (!info || (streamIdParam && info.stream_id !== streamIdParam)) {
                 setStatus('Oturum bilgisi bulunamadı. Yeniden yönlendiriliyor...', true);
-                setTimeout(() => window.location.href = '/canli.html', 2000);
+                setTimeout(() => window.location.href = '/', 2000);
                 return;
             }
 
@@ -887,7 +887,7 @@
             Chat.disconnect();
             await disconnectRoom();
             Stream.clear();
-            window.location.href = '/canli.html';
+            window.location.href = '/';
         });
 
         // Mikrofon Kapat/Aç (Host)
@@ -916,7 +916,7 @@
                     <div style="color:#64748b;font-size:0.85rem;">Canlı yayınlara yönlendiriliyorsunuz...</div>
                 </div>`;
             document.body.appendChild(el);
-            setTimeout(() => { window.location.href = '/canli.html'; }, 3000);
+            setTimeout(() => { window.location.href = '/'; }, 3000);
         }
 
         // Ayrıl (Viewer)
@@ -930,7 +930,7 @@
             Chat.disconnect();
             await disconnectRoom();
             Stream.clear();
-            window.location.href = '/canli.html';
+            window.location.href = '/';
         });
 
         // ── Açık Artırma ────────────────────────────────────────────────
