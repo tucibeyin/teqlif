@@ -131,32 +131,22 @@ app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
-    body = None
     try:
-        body = await request.body()
-        body = body.decode("utf-8")
+        errors = exc.errors()
     except Exception:
-        pass
-    errors = exc.errors(include_url=False)
-    # Pydantic v2'de ctx içindeki ValueError JSON serialize edilemiyor
-    safe_errors = [
-        {**{k: str(v) if not isinstance(v, (str, int, float, bool, list, dict, type(None))) else v
-            for k, v in e.items()
-            if k != "ctx"},
-         **({"ctx": {ck: str(cv) for ck, cv in e["ctx"].items()}} if "ctx" in e else {})}
-        for e in errors
-    ]
-    logger.error(
-        "[422] %s %s | body=%s | errors=%s",
-        request.method,
-        request.url.path,
-        body,
-        safe_errors,
-    )
-    return JSONResponse(
-        status_code=422,
-        content={"detail": safe_errors},
-    )
+        errors = str(exc)
+    # ctx içindeki ValueError gibi serialize edilemeyen nesneleri string'e çevir
+    def _safe(obj):
+        if isinstance(obj, dict):
+            return {k: _safe(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_safe(i) for i in obj]
+        if isinstance(obj, (str, int, float, bool, type(None))):
+            return obj
+        return str(obj)
+    safe_errors = _safe(errors)
+    logger.error("[422] %s %s | errors=%s", request.method, request.url.path, safe_errors)
+    return JSONResponse(status_code=422, content={"detail": safe_errors})
 
 
 app.add_middleware(
