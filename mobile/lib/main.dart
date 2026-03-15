@@ -91,14 +91,15 @@ class _SplashGateState extends State<_SplashGate> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
+      backgroundColor: kPrimary,
       body: Center(
         child: Text(
           'teqlif',
           style: TextStyle(
             fontSize: 32,
-            fontWeight: FontWeight.w800,
-            color: kPrimary,
-            letterSpacing: -0.5,
+            fontWeight: FontWeight.w300,
+            color: Colors.white,
+            letterSpacing: 1.0,
           ),
         ),
       ),
