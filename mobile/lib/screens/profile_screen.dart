@@ -74,71 +74,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return '$origin$url';
   }
 
-  Future<void> _pickAndUploadAvatar() async {
-    final source = await showModalBottomSheet<ImageSource>(
-      context: context,
-      builder: (ctx) => SafeArea(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            ListTile(
-              leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Galeriden Seç'),
-              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
-            ),
-            ListTile(
-              leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Kameradan Çek'),
-              onTap: () => Navigator.pop(ctx, ImageSource.camera),
-            ),
-          ],
-        ),
-      ),
-    );
-    if (source == null || !mounted) return;
-
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: source, imageQuality: 85);
-    if (picked == null || !mounted) return;
-
-    final token = await StorageService.getToken();
-    if (token == null) return;
-
-    try {
-      final file = File(picked.path);
-      final uploadReq = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
-      uploadReq.headers['Authorization'] = 'Bearer $token';
-      uploadReq.files.add(await http.MultipartFile.fromPath('file', file.path));
-      final uploadStream = await uploadReq.send();
-      final uploadBody = await uploadStream.stream.bytesToString();
-      if (uploadStream.statusCode != 200) throw Exception('Upload failed');
-      final imageUrl = (jsonDecode(uploadBody) as Map)['url'] as String;
-
-      final patchResp = await http.patch(
-        Uri.parse('$kBaseUrl/auth/me'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({'profile_image_url': imageUrl}),
-      );
-      if (patchResp.statusCode != 200) throw Exception('Patch failed');
-      final updatedUser = jsonDecode(patchResp.body) as Map<String, dynamic>;
-      await StorageService.saveUserInfo(
-        id: updatedUser['id'] as int,
-        email: updatedUser['email'] as String,
-        username: updatedUser['username'] as String,
-        fullName: updatedUser['full_name'] as String,
-      );
-      if (mounted) setState(() => _user = updatedUser);
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Fotoğraf yüklenemedi. Tekrar deneyin.')),
-      );
-    }
-  }
-
   void _openSettings() {
     Navigator.push(
       context,
@@ -190,44 +125,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Avatar
-                        GestureDetector(
-                          onTap: _pickAndUploadAvatar,
-                          child: Stack(
-                            alignment: Alignment.center,
-                            children: [
-                              CircleAvatar(
-                                radius: 40,
-                                backgroundColor: kPrimaryBg,
-                                backgroundImage: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
-                                    ? NetworkImage(_buildImageUrl(_user!['profile_image_url'] as String))
-                                    : null,
-                                child: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
-                                    ? null
-                                    : Text(
-                                        initial,
-                                        style: const TextStyle(
-                                          fontSize: 30,
-                                          fontWeight: FontWeight.w700,
-                                          color: kPrimary,
-                                        ),
-                                      ),
-                              ),
-                              Positioned(
-                                bottom: 0,
-                                right: 0,
-                                child: Container(
-                                  width: 24,
-                                  height: 24,
-                                  decoration: BoxDecoration(
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: kPrimaryBg,
+                          backgroundImage: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
+                              ? NetworkImage(_buildImageUrl(_user!['profile_image_url'] as String))
+                              : null,
+                          child: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
+                              ? null
+                              : Text(
+                                  initial,
+                                  style: const TextStyle(
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.w700,
                                     color: kPrimary,
-                                    shape: BoxShape.circle,
-                                    border: Border.all(color: Colors.white, width: 2),
                                   ),
-                                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 13),
                                 ),
-                              ),
-                            ],
-                          ),
                         ),
                         const SizedBox(width: 20),
                         // İstatistikler
@@ -808,14 +721,14 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
   late final TextEditingController _usernameCtrl;
   bool _saving = false;
   String? _error;
+  String? _profileImageUrl;
 
   @override
   void initState() {
     super.initState();
-    _nameCtrl = TextEditingController(
-        text: widget.user?['full_name'] ?? '');
-    _usernameCtrl = TextEditingController(
-        text: widget.user?['username'] ?? '');
+    _nameCtrl = TextEditingController(text: widget.user?['full_name'] ?? '');
+    _usernameCtrl = TextEditingController(text: widget.user?['username'] ?? '');
+    _profileImageUrl = widget.user?['profile_image_url'] as String?;
   }
 
   @override
@@ -823,6 +736,77 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     _nameCtrl.dispose();
     _usernameCtrl.dispose();
     super.dispose();
+  }
+
+  String _buildImageUrl(String url) {
+    if (url.startsWith('http')) return url;
+    final origin = kBaseUrl.replaceFirst(RegExp(r'/api.*'), '');
+    return '$origin$url';
+  }
+
+  Future<void> _pickAndUploadAvatar() async {
+    final source = await showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Galeriden Seç'),
+              onTap: () => Navigator.pop(ctx, ImageSource.gallery),
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Kameradan Çek'),
+              onTap: () => Navigator.pop(ctx, ImageSource.camera),
+            ),
+          ],
+        ),
+      ),
+    );
+    if (source == null || !mounted) return;
+
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: source, imageQuality: 85);
+    if (picked == null || !mounted) return;
+
+    final token = await StorageService.getToken();
+    if (token == null) return;
+
+    setState(() => _saving = true);
+    try {
+      final file = File(picked.path);
+      final uploadReq = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
+      uploadReq.headers['Authorization'] = 'Bearer $token';
+      uploadReq.files.add(await http.MultipartFile.fromPath('file', file.path));
+      final uploadStream = await uploadReq.send();
+      final uploadBody = await uploadStream.stream.bytesToString();
+      if (uploadStream.statusCode != 200) throw Exception('Upload failed');
+      final imageUrl = (jsonDecode(uploadBody) as Map)['url'] as String;
+
+      final patchResp = await http.patch(
+        Uri.parse('$kBaseUrl/auth/me'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode({'profile_image_url': imageUrl}),
+      );
+      if (patchResp.statusCode != 200) throw Exception('Patch failed');
+      final updatedUser = jsonDecode(patchResp.body) as Map<String, dynamic>;
+      await StorageService.saveUserInfo(
+        id: updatedUser['id'] as int,
+        email: updatedUser['email'] as String,
+        username: updatedUser['username'] as String,
+        fullName: updatedUser['full_name'] as String,
+      );
+      if (mounted) setState(() => _profileImageUrl = imageUrl);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fotoğraf yüklenemedi. Tekrar deneyin.')),
+      );
+    } finally {
+      if (mounted) setState(() => _saving = false);
+    }
   }
 
   Future<void> _save() async {
@@ -833,13 +817,34 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       return;
     }
     setState(() { _saving = true; _error = null; });
-    // TODO: API call when PATCH /auth/me is available
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (mounted) Navigator.pop(context);
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) throw Exception('No token');
+      final resp = await http.patch(
+        Uri.parse('$kBaseUrl/auth/me'),
+        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+        body: jsonEncode({'full_name': name, 'username': username}),
+      );
+      if (resp.statusCode != 200) {
+        final body = jsonDecode(resp.body);
+        throw Exception(body['detail'] ?? 'Hata');
+      }
+      final updatedUser = jsonDecode(resp.body) as Map<String, dynamic>;
+      await StorageService.saveUserInfo(
+        id: updatedUser['id'] as int,
+        email: updatedUser['email'] as String,
+        username: updatedUser['username'] as String,
+        fullName: updatedUser['full_name'] as String,
+      );
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      setState(() { _saving = false; _error = e.toString().replaceFirst('Exception: ', ''); });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final initial = (_nameCtrl.text.isNotEmpty ? _nameCtrl.text[0] : '?').toUpperCase();
     return Scaffold(
       appBar: AppBar(
         title: const Text('Profili Düzenle'),
@@ -860,20 +865,44 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         padding: const EdgeInsets.all(20),
         child: Column(
           children: [
-            // Avatar büyük
-            CircleAvatar(
-              radius: 44,
-              backgroundColor: kPrimaryBg,
-              child: Text(
-                (_nameCtrl.text.isNotEmpty
-                        ? _nameCtrl.text[0]
-                        : '?')
-                    .toUpperCase(),
-                style: const TextStyle(
-                  fontSize: 32,
-                  fontWeight: FontWeight.w700,
-                  color: kPrimary,
-                ),
+            // Avatar
+            GestureDetector(
+              onTap: _saving ? null : _pickAndUploadAvatar,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  CircleAvatar(
+                    radius: 44,
+                    backgroundColor: kPrimaryBg,
+                    backgroundImage: (_profileImageUrl?.isNotEmpty == true)
+                        ? NetworkImage(_buildImageUrl(_profileImageUrl!))
+                        : null,
+                    child: (_profileImageUrl?.isNotEmpty == true)
+                        ? null
+                        : Text(
+                            initial,
+                            style: const TextStyle(
+                              fontSize: 32,
+                              fontWeight: FontWeight.w700,
+                              color: kPrimary,
+                            ),
+                          ),
+                  ),
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      width: 26,
+                      height: 26,
+                      decoration: BoxDecoration(
+                        color: kPrimary,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: const Icon(Icons.camera_alt, color: Colors.white, size: 14),
+                    ),
+                  ),
+                ],
               ),
             ),
             const SizedBox(height: 24),
