@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../models/stream.dart';
@@ -63,5 +64,22 @@ class StreamService {
       Uri.parse('$kBaseUrl/streams/$streamId/leave'),
       headers: await _headers(),
     );
+  }
+
+  static Future<String> uploadThumbnail(int streamId, Uint8List bytes, String filename) async {
+    final token = await StorageService.getToken();
+    final req = http.MultipartRequest(
+      'PATCH',
+      Uri.parse('$kBaseUrl/streams/$streamId/thumbnail'),
+    );
+    if (token != null) req.headers['Authorization'] = 'Bearer $token';
+    req.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
+    final streamed = await req.send();
+    final body = await streamed.stream.bytesToString();
+    if (streamed.statusCode >= 400) {
+      final decoded = jsonDecode(body);
+      throw ApiException(decoded['detail'] ?? 'Thumbnail yüklenemedi');
+    }
+    return (jsonDecode(body)['thumbnail_url'] as String);
   }
 }

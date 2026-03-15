@@ -1,4 +1,8 @@
+import 'dart:async';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart' show Helper;
 import 'package:livekit_client/livekit_client.dart';
@@ -32,6 +36,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   bool _cameraEnabled = true;
   bool _connecting = true;
   String? _error;
+  final _videoKey = GlobalKey();
+  Timer? _thumbTimer;
 
   @override
   void initState() {
@@ -43,6 +49,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   @override
   void dispose() {
+    _thumbTimer?.cancel();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _listener?.dispose();
@@ -99,6 +106,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         _room = room;
         _connecting = false;
       });
+      // Yayın başladıktan 5 saniye sonra otomatik kapak fotoğrafı çek
+      _thumbTimer = Timer(const Duration(seconds: 5), _autoCaptureThumbnail);
     } catch (e) {
       setState(() {
         _error = 'Bağlantı hatası: ${e.toString()}';
@@ -165,6 +174,27 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     }
   }
 
+  Future<void> _autoCaptureThumbnail() async {
+    if (!mounted || _localVideoTrack == null) return;
+    try {
+      final boundary =
+          _videoKey.currentContext?.findRenderObject() as RenderRepaintBoundary?;
+      if (boundary == null) return;
+      final image = await boundary.toImage(pixelRatio: 0.5);
+      final byteData = await image.toByteData(format: ui.ImageByteFormat.png);
+      if (byteData == null) return;
+      await StreamService.uploadThumbnail(
+        widget.streamToken.streamId,
+        byteData.buffer.asUint8List(),
+        'thumb.png',
+      );
+      // Her 60 saniyede bir güncelle
+      if (mounted) {
+        _thumbTimer = Timer(const Duration(seconds: 60), _autoCaptureThumbnail);
+      }
+    } catch (_) {}
+  }
+
   @override
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
@@ -179,9 +209,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           // ── Kamera önizleme (tam ekran) ─────────────────────────────────
           if (_localVideoTrack != null)
             Positioned.fill(
-              child: VideoTrackRenderer(
-                _localVideoTrack!,
-                fit: VideoViewFit.contain,
+              child: RepaintBoundary(
+                key: _videoKey,
+                child: VideoTrackRenderer(
+                  _localVideoTrack!,
+                  fit: VideoViewFit.contain,
+                ),
               ),
             ),
 

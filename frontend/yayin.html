@@ -823,6 +823,7 @@
                 if (isHost) {
                     showVideo();
                     setStatus('Yayın canlı. İzleyiciler sizi görebilir.');
+                    _scheduleThumbCapture(streamId);
                 } else if (!videoStarted) {
                     // Video henüz gelmediyse placeholder göster (onRemoteVideo gelince kapanır)
                     showPlaceholder('Yayına bağlanıldı, video bekleniyor...');
@@ -843,11 +844,43 @@
             }
         }
 
+        // ── Otomatik kapak fotoğrafı (host) ────────────────────────────────
+        let _thumbInterval = null;
+
+        async function _captureAndUploadThumb(sid) {
+            const video = document.getElementById('mainVideo');
+            if (!video || video.readyState < 2 || video.videoWidth === 0) return;
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = Math.round(video.videoWidth / 2);
+                canvas.height = Math.round(video.videoHeight / 2);
+                canvas.getContext('2d').drawImage(video, 0, 0, canvas.width, canvas.height);
+                const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.8));
+                if (!blob) return;
+                const form = new FormData();
+                form.append('file', blob, 'thumb.jpg');
+                const token = Auth.getToken();
+                await fetch(`/api/streams/${sid}/thumbnail`, {
+                    method: 'PATCH',
+                    headers: token ? { 'Authorization': 'Bearer ' + token } : {},
+                    body: form,
+                });
+            } catch (e) { /* sessiz geç */ }
+        }
+
+        function _scheduleThumbCapture(sid) {
+            setTimeout(async () => {
+                await _captureAndUploadThumb(sid);
+                _thumbInterval = setInterval(() => _captureAndUploadThumb(sid), 60000);
+            }, 5000);
+        }
+
         // Yayını Bitir (Host)
         document.getElementById('btnEndStream').addEventListener('click', async () => {
             const btn = document.getElementById('btnEndStream');
             btn.disabled = true;
             btn.textContent = 'Bitiriliyor...';
+            clearInterval(_thumbInterval);
             try {
                 await Stream.endStream(streamId);
             } catch (_) {}
