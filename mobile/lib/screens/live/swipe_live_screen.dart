@@ -223,7 +223,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
         else if (!widget.isActive && hasThumbnail)
           Positioned.fill(
             child: Image.network(
-              '$kBaseUrl${widget.stream.thumbnailUrl}',
+              imgUrl(widget.stream.thumbnailUrl),
               fit: BoxFit.cover,
               errorBuilder: (_, __, ___) => _darkBg(),
             ),

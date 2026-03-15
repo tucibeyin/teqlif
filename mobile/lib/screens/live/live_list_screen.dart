@@ -282,7 +282,7 @@ class _StreamGridTile extends StatelessWidget {
                   // Background
                   if (hasThumbnail)
                     Image.network(
-                      '$kBaseUrl${stream.thumbnailUrl}',
+                      imgUrl(stream.thumbnailUrl),
                       fit: BoxFit.cover,
                       errorBuilder: (_, __, ___) => _gradientBox(),
                     )
