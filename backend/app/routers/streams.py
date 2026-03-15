@@ -21,8 +21,6 @@ from app.routers.chat import _publish_chat
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/streams", tags=["streams"])
 
-VIEWER_TTL = 8 * 3600  # 8 saat
-
 
 def _make_token(room_name: str, user: User, can_publish: bool) -> str:
     try:
@@ -159,14 +157,6 @@ async def join_stream(
     if stream.host_id == current_user.id:
         raise HTTPException(status_code=400, detail="Kendi yayınınıza izleyici olarak katılamazsınız")
 
-    try:
-        redis = await get_redis()
-        viewer_key = f"live:viewers:{stream.room_name}"
-        await redis.incr(viewer_key)
-        await redis.expire(viewer_key, VIEWER_TTL)
-    except Exception:
-        logger.error("Redis viewer artırma hatası | stream_id=%s room=%s", stream_id, stream.room_name, exc_info=True)
-
     token = _make_token(stream.room_name, current_user, can_publish=False)
     logger.info("Yayına katılındı | stream_id=%s user_id=%s", stream_id, current_user.id)
 
@@ -190,15 +180,6 @@ async def leave_stream(
     stream = result.scalar_one_or_none()
 
     if stream:
-        try:
-            redis = await get_redis()
-            viewer_key = f"live:viewers:{stream.room_name}"
-            count = await redis.decr(viewer_key)
-            if count < 0:
-                await redis.set(viewer_key, 0)
-        except Exception:
-            logger.error("Redis viewer azaltma hatası | stream_id=%s room=%s", stream_id, stream.room_name, exc_info=True)
-
         logger.info("Yayından ayrılındı | stream_id=%s user_id=%s", stream_id, current_user.id)
 
 

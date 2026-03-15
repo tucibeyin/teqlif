@@ -23,6 +23,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   VideoTrack? _remoteVideoTrack;
   bool _connecting = true;
   String? _error;
+  int _viewerCount = 0;
 
   @override
   void initState() {
@@ -277,6 +278,21 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                             fontWeight: FontWeight.w800,
                             letterSpacing: 0.5)),
                   ),
+                  const SizedBox(width: 6),
+                  // İzleyici sayısı
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 8, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: Colors.black45,
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      '👁 $_viewerCount',
+                      style: const TextStyle(
+                          color: Colors.white, fontSize: 11),
+                    ),
+                  ),
                   const SizedBox(width: 10),
                   // Başlık + host
                   Expanded(
@@ -351,6 +367,8 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                     ChatPanel(
                       streamId: widget.joinToken.streamId,
                       onStreamEnded: _handleStreamEnded,
+                      onViewerCountChanged: (n) =>
+                          setState(() => _viewerCount = n),
                     ),
                     // Açık artırma (sadece aktifse, altta sabit)
                     AuctionPanel(

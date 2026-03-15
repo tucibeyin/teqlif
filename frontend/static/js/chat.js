@@ -6,10 +6,12 @@ const Chat = (() => {
     let _reconnecting = false;
     let _pingInterval = null;
     let _onStreamEnded = null;
+    let _onViewerCount = null;
 
-    function connect(streamId, { onStreamEnded } = {}) {
+    function connect(streamId, { onStreamEnded, onViewerCount } = {}) {
         _streamId = streamId;
         _onStreamEnded = onStreamEnded || null;
+        _onViewerCount = onViewerCount || null;
         _connectWS();
     }
 
@@ -44,6 +46,8 @@ const Chat = (() => {
                     _appendMessage(msg);
                 } else if (msg.type === 'history') {
                     (msg.messages || []).forEach(_appendMessage);
+                } else if (msg.type === 'viewer_count') {
+                    if (_onViewerCount) _onViewerCount(msg.count);
                 } else if (msg.type === 'stream_ended') {
                     _streamId = null; // yeniden bağlanmayı engelle
                     if (_onStreamEnded) _onStreamEnded();

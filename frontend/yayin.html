@@ -1321,7 +1321,11 @@
                 document.getElementById('chatInputRow').style.display = 'flex';
             }
 
-            Chat.connect(sid, isHost ? {} : { onStreamEnded: _onStreamEndedViewer });
+            const _viewerCountEl = document.getElementById('viewerCount');
+            const _onViewerCount = (n) => { if (_viewerCountEl) _viewerCountEl.textContent = `👁 ${n}`; };
+            Chat.connect(sid, isHost
+                ? { onViewerCount: _onViewerCount }
+                : { onStreamEnded: _onStreamEndedViewer, onViewerCount: _onViewerCount });
 
             // İlk mesaj gelince "empty" yazısını kaldır
             const messages = document.getElementById('chatMessages');

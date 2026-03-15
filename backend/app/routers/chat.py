@@ -10,6 +10,7 @@ from sqlalchemy import select
 
 from app.database import AsyncSessionLocal
 from app.models.user import User
+from app.models.stream import LiveStream
 from app.utils.auth import decode_token
 from app.utils.redis_client import get_redis
 
@@ -58,6 +59,26 @@ class _ChatManager:
 chat_manager = _ChatManager()
 
 
+async def _update_viewer_count(room_name: str, stream_id: int, delta: int):
+    """Redis'teki izleyici sayısını günceller ve tüm istemcilere yayınlar."""
+    try:
+        redis = await get_redis()
+        key = f"live:viewers:{room_name}"
+        if delta > 0:
+            count = await redis.incr(key)
+        else:
+            count = await redis.decr(key)
+            if count < 0:
+                await redis.set(key, 0)
+                count = 0
+        await _publish_chat(stream_id, {"type": "viewer_count", "count": int(count)})
+    except Exception:
+        logger.error(
+            "Viewer count güncellenemedi | room=%s stream_id=%s delta=%s",
+            room_name, stream_id, delta, exc_info=True,
+        )
+
+
 async def _publish_chat(stream_id: int, payload: dict):
     redis = await get_redis()
     data = json.dumps({"_stream_id": stream_id, **payload})
@@ -98,6 +119,9 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
         await websocket.close(code=4001)
         return
 
+    is_host = False
+    room_name = None
+
     async with AsyncSessionLocal() as db:
         result = await db.execute(select(User).where(User.id == user_id))
         user = result.scalar_one_or_none()
@@ -106,8 +130,21 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             return
         username = user.username
 
+        stream_result = await db.execute(
+            select(LiveStream).where(LiveStream.id == stream_id)
+        )
+        stream = stream_result.scalar_one_or_none()
+        if stream:
+            is_host = stream.host_id == user_id
+            room_name = stream.room_name
+
     # WS kabul et
     await chat_manager.connect(websocket, stream_id)
+
+    # İzleyiciyse sayacı artır
+    if not is_host and room_name:
+        await _update_viewer_count(room_name, stream_id, +1)
+
     try:
         # Geçmiş mesajları gönder
         redis = await get_redis()
@@ -155,3 +192,6 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
         logger.warning("[CHAT WS] BEKLENMEYEN HATA | stream_id=%s | %s", stream_id, exc)
     finally:
         chat_manager.disconnect(websocket, stream_id)
+        # İzleyiciyse sayacı düşür
+        if not is_host and room_name:
+            await _update_viewer_count(room_name, stream_id, -1)

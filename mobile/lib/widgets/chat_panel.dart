@@ -27,8 +27,14 @@ class _TimedMessage {
 class ChatPanel extends StatefulWidget {
   final int streamId;
   final VoidCallback? onStreamEnded;
+  final void Function(int count)? onViewerCountChanged;
 
-  const ChatPanel({super.key, required this.streamId, this.onStreamEnded});
+  const ChatPanel({
+    super.key,
+    required this.streamId,
+    this.onStreamEnded,
+    this.onViewerCountChanged,
+  });
 
   @override
   State<ChatPanel> createState() => _ChatPanelState();
@@ -122,6 +128,9 @@ class _ChatPanelState extends State<ChatPanel> {
               for (final m in msgs) {
                 _addMessage(m);
               }
+            } else if (json['type'] == 'viewer_count') {
+              final count = (json['count'] as num?)?.toInt() ?? 0;
+              widget.onViewerCountChanged?.call(count);
             } else if (json['type'] == 'stream_ended') {
               _streamEnded = true;
               widget.onStreamEnded?.call();

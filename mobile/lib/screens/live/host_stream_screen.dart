@@ -38,6 +38,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   String? _error;
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
+  int _viewerCount = 0;
 
   @override
   void initState() {
@@ -301,6 +302,21 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                               fontWeight: FontWeight.w800,
                               letterSpacing: 0.5)),
                     ),
+                    const SizedBox(width: 6),
+                    // İzleyici sayısı
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: Colors.black45,
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: Text(
+                        '👁 $_viewerCount',
+                        style: const TextStyle(
+                            color: Colors.white, fontSize: 11),
+                      ),
+                    ),
                     const SizedBox(width: 10),
                     // Başlık
                     Expanded(
@@ -384,7 +400,11 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Sohbet (mesajlar üstte yüzer)
-                    ChatPanel(streamId: widget.streamToken.streamId),
+                    ChatPanel(
+                      streamId: widget.streamToken.streamId,
+                      onViewerCountChanged: (n) =>
+                          setState(() => _viewerCount = n),
+                    ),
                     // Açık artırma şeridi (altta sabit)
                     AuctionPanel(
                       streamId: widget.streamToken.streamId,
