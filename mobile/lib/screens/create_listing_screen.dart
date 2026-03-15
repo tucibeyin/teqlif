@@ -1,7 +1,9 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/category_service.dart';
@@ -23,6 +25,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   String? _selectedCategory;
   List<(String, String)> _categories = [];
   bool _submitting = false;
+  final List<File> _images = [];
+  final _picker = ImagePicker();
+
+  static const int _maxImages = 10;
 
   @override
   void initState() {
@@ -46,11 +52,80 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     super.dispose();
   }
 
+  Future<void> _pickImages(ImageSource source) async {
+    if (_images.length >= _maxImages) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('En fazla 10 fotoğraf ekleyebilirsiniz')),
+      );
+      return;
+    }
+    if (source == ImageSource.gallery) {
+      final picked = await _picker.pickMultiImage(imageQuality: 85);
+      if (picked.isEmpty) return;
+      final remaining = _maxImages - _images.length;
+      final toAdd = picked.take(remaining).map((x) => File(x.path)).toList();
+      setState(() => _images.addAll(toAdd));
+    } else {
+      final picked = await _picker.pickImage(source: source, imageQuality: 85);
+      if (picked == null) return;
+      setState(() => _images.add(File(picked.path)));
+    }
+  }
+
+  void _showImageSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Galeriden Seç'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImages(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.camera_alt_outlined),
+              title: const Text('Kamera'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImages(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<String?> _uploadImage(File file, String token) async {
+    final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
+    req.headers['Authorization'] = 'Bearer $token';
+    req.files.add(await http.MultipartFile.fromPath('file', file.path));
+    final streamed = await req.send();
+    final body = await streamed.stream.bytesToString();
+    if (streamed.statusCode == 200) {
+      return jsonDecode(body)['url'] as String?;
+    }
+    return null;
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _submitting = true);
     try {
       final token = await StorageService.getToken();
+
+      // Upload images first
+      final List<String> imageUrls = [];
+      for (final img in _images) {
+        final url = await _uploadImage(img, token ?? '');
+        if (url != null) imageUrls.add(url);
+      }
+
       final resp = await http.post(
         Uri.parse('$kBaseUrl/listings'),
         headers: {
@@ -64,6 +139,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           'category': _selectedCategory,
           if (_locationCtrl.text.trim().isNotEmpty)
             'location': _locationCtrl.text.trim(),
+          'image_urls': imageUrls,
+          if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
         }),
       );
       if (!mounted) return;
@@ -103,6 +180,130 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Photo picker section
+              _SectionCard(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Fotoğraflar (${_images.length}/$_maxImages)',
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 13),
+                      ),
+                      if (_images.length < _maxImages)
+                        TextButton.icon(
+                          onPressed: _showImageSourceSheet,
+                          icon: const Icon(Icons.add_photo_alternate_outlined,
+                              size: 18),
+                          label: const Text('Ekle'),
+                        ),
+                    ],
+                  ),
+                  if (_images.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      height: 90,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _images.length + (_images.length < _maxImages ? 1 : 0),
+                        separatorBuilder: (_, __) => const SizedBox(width: 8),
+                        itemBuilder: (ctx, i) {
+                          if (i == _images.length) {
+                            // Add button at end
+                            return GestureDetector(
+                              onTap: _showImageSourceSheet,
+                              child: Container(
+                                width: 90,
+                                decoration: BoxDecoration(
+                                  border: Border.all(color: Colors.grey.shade300),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Icon(Icons.add, color: Colors.grey),
+                              ),
+                            );
+                          }
+                          return Stack(
+                            children: [
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(8),
+                                child: Image.file(
+                                  _images[i],
+                                  width: 90,
+                                  height: 90,
+                                  fit: BoxFit.cover,
+                                ),
+                              ),
+                              Positioned(
+                                top: 2,
+                                right: 2,
+                                child: GestureDetector(
+                                  onTap: () =>
+                                      setState(() => _images.removeAt(i)),
+                                  child: Container(
+                                    decoration: const BoxDecoration(
+                                      color: Colors.black54,
+                                      shape: BoxShape.circle,
+                                    ),
+                                    padding: const EdgeInsets.all(2),
+                                    child: const Icon(Icons.close,
+                                        color: Colors.white, size: 14),
+                                  ),
+                                ),
+                              ),
+                              if (i == 0)
+                                Positioned(
+                                  bottom: 2,
+                                  left: 2,
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 4, vertical: 1),
+                                    decoration: BoxDecoration(
+                                      color: kPrimary,
+                                      borderRadius: BorderRadius.circular(4),
+                                    ),
+                                    child: const Text('Kapak',
+                                        style: TextStyle(
+                                            color: Colors.white, fontSize: 10)),
+                                  ),
+                                ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ] else ...[
+                    const SizedBox(height: 8),
+                    GestureDetector(
+                      onTap: _showImageSourceSheet,
+                      child: Container(
+                        height: 90,
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: Colors.grey.shade300,
+                              style: BorderStyle.solid),
+                          borderRadius: BorderRadius.circular(8),
+                          color: Colors.grey.shade50,
+                        ),
+                        child: const Center(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.add_photo_alternate_outlined,
+                                  color: Colors.grey, size: 28),
+                              SizedBox(height: 4),
+                              Text('Fotoğraf ekle',
+                                  style: TextStyle(
+                                      color: Colors.grey, fontSize: 12)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
               _SectionCard(
                 children: [
                   TextFormField(

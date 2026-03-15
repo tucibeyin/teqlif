@@ -95,6 +95,89 @@
             padding-left: 2rem;
         }
 
+        /* Photo upload */
+        .photo-drop {
+            border: 2px dashed #e5e7eb;
+            border-radius: 10px;
+            padding: 1.25rem;
+            text-align: center;
+            cursor: pointer;
+            transition: border-color .15s, background .15s;
+        }
+
+        .photo-drop:hover { border-color: var(--primary, #06b6d4); background: #f0fdfe; }
+
+        .photo-drop input { display: none; }
+
+        .photo-drop-label {
+            font-size: 0.88rem;
+            color: #6b7280;
+            pointer-events: none;
+        }
+
+        .photo-drop-label strong {
+            color: var(--primary, #06b6d4);
+        }
+
+        .photo-previews {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 10px;
+        }
+
+        .photo-thumb {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            border-radius: 8px;
+            overflow: hidden;
+            flex-shrink: 0;
+        }
+
+        .photo-thumb img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .photo-thumb .remove-btn {
+            position: absolute;
+            top: 3px;
+            right: 3px;
+            background: rgba(0,0,0,.55);
+            border: none;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-size: 12px;
+            line-height: 1;
+            padding: 0;
+        }
+
+        .photo-thumb .cover-badge {
+            position: absolute;
+            bottom: 3px;
+            left: 3px;
+            background: var(--primary, #06b6d4);
+            color: #fff;
+            font-size: 10px;
+            padding: 1px 4px;
+            border-radius: 4px;
+            font-weight: 600;
+        }
+
+        .photo-count {
+            font-size: 0.78rem;
+            color: #9ca3af;
+            margin-top: 6px;
+        }
+
         .btn-submit {
             width: 100%;
             padding: 0.85rem;
@@ -122,6 +205,21 @@
 
         .alert-msg.error { background: #fee2e2; color: #b91c1c; }
         .alert-msg.success { background: #dcfce7; color: #15803d; }
+
+        .progress-bar-wrap {
+            height: 4px;
+            background: #e5e7eb;
+            border-radius: 4px;
+            margin-top: 8px;
+            display: none;
+        }
+
+        .progress-bar {
+            height: 100%;
+            background: var(--primary, #06b6d4);
+            border-radius: 4px;
+            transition: width .2s;
+        }
     </style>
 </head>
 <body>
@@ -140,6 +238,25 @@
             <div class="alert-msg" id="alertMsg"></div>
 
             <form id="ilanForm" onsubmit="submitForm(event)">
+
+                <!-- Photo upload -->
+                <div class="form-card">
+                    <div class="form-group" style="margin-bottom:0">
+                        <label>Fotoğraflar (isteğe bağlı, max 10)</label>
+                        <div class="photo-drop" id="photoDrop" onclick="document.getElementById('photoInput').click()">
+                            <input type="file" id="photoInput" accept="image/*" multiple>
+                            <div class="photo-drop-label">
+                                <strong>Tıkla</strong> veya sürükle-bırak ile fotoğraf ekle
+                            </div>
+                        </div>
+                        <div class="progress-bar-wrap" id="progressWrap">
+                            <div class="progress-bar" id="progressBar" style="width:0%"></div>
+                        </div>
+                        <div class="photo-previews" id="photoPreviews"></div>
+                        <div class="photo-count" id="photoCount"></div>
+                    </div>
+                </div>
+
                 <div class="form-card">
                     <div class="form-group">
                         <label for="title">İlan Başlığı *</label>
@@ -186,6 +303,90 @@
                 window.location.href = '/giris.html?next=/ilan-ver.html';
             }
         })();
+
+        // --- Photo management ---
+        const MAX_PHOTOS = 10;
+        let selectedFiles = []; // {file, objectUrl}
+
+        const photoInput = document.getElementById('photoInput');
+        const photoPreviews = document.getElementById('photoPreviews');
+        const photoCount = document.getElementById('photoCount');
+        const photoDrop = document.getElementById('photoDrop');
+
+        photoInput.addEventListener('change', (e) => addFiles(Array.from(e.target.files)));
+        photoInput.addEventListener('click', (e) => e.stopPropagation());
+
+        // Drag & drop
+        photoDrop.addEventListener('dragover', (e) => { e.preventDefault(); photoDrop.style.borderColor = 'var(--primary, #06b6d4)'; });
+        photoDrop.addEventListener('dragleave', () => { photoDrop.style.borderColor = ''; });
+        photoDrop.addEventListener('drop', (e) => {
+            e.preventDefault();
+            photoDrop.style.borderColor = '';
+            addFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
+        });
+
+        function addFiles(files) {
+            const remaining = MAX_PHOTOS - selectedFiles.length;
+            if (remaining <= 0) return;
+            const toAdd = files.slice(0, remaining);
+            toAdd.forEach(f => {
+                selectedFiles.push({ file: f, objectUrl: URL.createObjectURL(f) });
+            });
+            renderPreviews();
+            // Reset input so same file can be re-added after removal
+            photoInput.value = '';
+        }
+
+        function removeFile(idx) {
+            URL.revokeObjectURL(selectedFiles[idx].objectUrl);
+            selectedFiles.splice(idx, 1);
+            renderPreviews();
+        }
+
+        function renderPreviews() {
+            photoPreviews.innerHTML = '';
+            selectedFiles.forEach(({ objectUrl }, i) => {
+                const wrap = document.createElement('div');
+                wrap.className = 'photo-thumb';
+
+                const img = document.createElement('img');
+                img.src = objectUrl;
+                wrap.appendChild(img);
+
+                if (i === 0) {
+                    const badge = document.createElement('span');
+                    badge.className = 'cover-badge';
+                    badge.textContent = 'Kapak';
+                    wrap.appendChild(badge);
+                }
+
+                const btn = document.createElement('button');
+                btn.className = 'remove-btn';
+                btn.type = 'button';
+                btn.textContent = '✕';
+                btn.onclick = () => removeFile(i);
+                wrap.appendChild(btn);
+
+                photoPreviews.appendChild(wrap);
+            });
+
+            const count = selectedFiles.length;
+            photoCount.textContent = count > 0 ? `${count} fotoğraf seçildi` : '';
+        }
+
+        // Upload a single file, returns URL string or null
+        async function uploadFile(file, token) {
+            const fd = new FormData();
+            fd.append('file', file);
+            const res = await fetch('/api/upload', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: fd,
+            });
+            if (!res.ok) return null;
+            const data = await res.json();
+            return data.url || null;
+        }
 
         // Kategorileri API'den çek
         async function loadCategories() {
@@ -241,13 +442,36 @@
             const location = document.getElementById('location').value.trim() || null;
             const description = document.getElementById('description').value.trim();
 
+            const token = localStorage.getItem('teqlif_token');
+
             try {
+                // Upload photos
+                const imageUrls = [];
+                if (selectedFiles.length > 0) {
+                    const progressWrap = document.getElementById('progressWrap');
+                    const progressBar = document.getElementById('progressBar');
+                    progressWrap.style.display = 'block';
+
+                    for (let i = 0; i < selectedFiles.length; i++) {
+                        const url = await uploadFile(selectedFiles[i].file, token);
+                        if (url) imageUrls.push(url);
+                        progressBar.style.width = `${Math.round(((i + 1) / selectedFiles.length) * 100)}%`;
+                    }
+                    progressWrap.style.display = 'none';
+                }
+
                 await apiFetch('/listings', {
                     method: 'POST',
-                    body: JSON.stringify({ title, category, price, location, description }),
+                    body: JSON.stringify({
+                        title, category, price, location, description,
+                        image_urls: imageUrls,
+                        ...(imageUrls.length > 0 ? { image_url: imageUrls[0] } : {}),
+                    }),
                 });
                 showAlert('İlanınız başarıyla yayına alındı!', 'success');
                 document.getElementById('ilanForm').reset();
+                selectedFiles = [];
+                renderPreviews();
                 setTimeout(() => window.location.href = '/?tab=ilanlar', 1500);
             } catch (err) {
                 showAlert(err.detail || 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');

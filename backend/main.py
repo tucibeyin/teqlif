@@ -14,7 +14,7 @@ from app.logging_config import setup_logging
 from app.routers import auth, streams, webhooks, auction, chat
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener
-from app.routers import notifications, messages, users, listings, follows, categories
+from app.routers import notifications, messages, users, listings, follows, categories, upload
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 import app.models.auction  # noqa: F401 — tablo kaydı için
@@ -56,6 +56,11 @@ async def _seed_categories():
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+        await conn.execute(
+            __import__("sqlalchemy").text(
+                "ALTER TABLE listings ADD COLUMN IF NOT EXISTS image_urls TEXT"
+            )
+        )
     await _seed_categories()
     # Her worker'da Redis pub/sub dinleyicisini başlat
     task = asyncio.create_task(pubsub_listener())
@@ -112,6 +117,7 @@ app.include_router(users.router)
 app.include_router(listings.router)
 app.include_router(follows.router)
 app.include_router(categories.router)
+app.include_router(upload.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):

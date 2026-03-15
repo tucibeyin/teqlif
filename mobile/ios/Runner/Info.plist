@@ -58,7 +58,9 @@
 		<string>fetch</string>
 	</array>
 	<key>NSCameraUsageDescription</key>
-		<string>Canlı yayın için kameranıza erişim gerekiyor</string>
+		<string>Canlı yayın ve ilan fotoğrafı için kameranıza erişim gerekiyor</string>
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>İlan fotoğrafı eklemek için fotoğraf kitaplığınıza erişim gerekiyor</string>
 		<key>NSMicrophoneUsageDescription</key>
 		<string>Canlı yayın için mikrofonunuza erişim gerekiyor</string>
 		<key>UIApplicationSupportsIndirectInputEvents</key>

@@ -1,3 +1,4 @@
+import json
 from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -30,6 +31,7 @@ async def get_listings(user_id: Optional[int] = None, category: Optional[str] = 
             "category": l.category,
             "location": l.location,
             "image_url": l.image_url,
+            "image_urls": json.loads(l.image_urls) if l.image_urls else [],
             "created_at": l.created_at.isoformat() if l.created_at else None,
             "user": {"id": u.id, "username": u.username, "full_name": u.full_name},
         }
@@ -50,6 +52,7 @@ async def create_listing(payload: dict, current_user: User = Depends(get_current
         category=category,
         location=payload.get("location"),
         image_url=payload.get("image_url"),
+        image_urls=json.dumps(payload.get("image_urls") or []),
     )
     db.add(listing)
     await db.commit()
