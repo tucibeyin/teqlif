@@ -41,7 +41,29 @@
             font-weight: 700;
             color: var(--primary);
             flex-shrink: 0;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
+        .profile-avatar img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .profile-avatar-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            opacity: 0;
+            transition: opacity 0.15s;
+        }
+        .profile-avatar:hover .profile-avatar-overlay { opacity: 1; }
+        .profile-avatar-overlay svg { width: 22px; height: 22px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
         .profile-info { flex: 1; min-width: 0; }
 
@@ -128,8 +150,14 @@
 
     <div class="profile-wrap">
         <!-- Profil kartı -->
+        <input type="file" id="avatarInput" accept="image/*" style="display:none;">
         <div class="profile-card" id="profileCard" style="display:none;">
-            <div class="profile-avatar" id="avatarEl">?</div>
+            <div class="profile-avatar" id="avatarEl" onclick="document.getElementById('avatarInput').click()">
+                <span id="avatarInitial">?</span>
+                <div class="profile-avatar-overlay">
+                    <svg viewBox="0 0 24 24"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+                </div>
+            </div>
             <div class="profile-info">
                 <div class="profile-name" id="fullNameEl">—</div>
                 <div class="profile-username" id="usernameEl">—</div>
@@ -326,7 +354,23 @@
             document.getElementById('menuDanger').style.display = '';
 
             const initial = (u.full_name || u.username || '?')[0].toUpperCase();
-            document.getElementById('avatarEl').textContent = initial;
+            const avatarEl = document.getElementById('avatarEl');
+            const initialEl = document.getElementById('avatarInitial');
+            // Mevcut img varsa kaldır
+            const existingImg = avatarEl.querySelector('img');
+            if (existingImg) existingImg.remove();
+
+            if (u.profile_image_url) {
+                initialEl.style.display = 'none';
+                const img = document.createElement('img');
+                img.src = u.profile_image_url;
+                img.alt = 'Profil fotoğrafı';
+                avatarEl.insertBefore(img, avatarEl.firstChild);
+            } else {
+                initialEl.style.display = '';
+                initialEl.textContent = initial;
+            }
+
             document.getElementById('fullNameEl').textContent = u.full_name || u.username;
             document.getElementById('usernameEl').textContent = '@' + u.username;
             document.getElementById('emailEl').textContent = u.email || '';
@@ -335,6 +379,36 @@
             document.getElementById('editFullName').value = u.full_name || '';
             document.getElementById('editUsername').value = u.username || '';
         }
+
+        // Avatar upload
+        document.getElementById('avatarInput').addEventListener('change', async (e) => {
+            const file = e.target.files[0];
+            if (!file) return;
+            const formData = new FormData();
+            formData.append('file', file);
+            try {
+                const uploadResp = await fetch('/api/upload', {
+                    method: 'POST',
+                    headers: { 'Authorization': 'Bearer ' + Auth.getToken() },
+                    body: formData,
+                });
+                if (!uploadResp.ok) throw new Error('Yükleme başarısız');
+                const { url } = await uploadResp.json();
+                const updated = await apiFetch('/auth/me', {
+                    method: 'PATCH',
+                    body: JSON.stringify({ profile_image_url: url }),
+                });
+                const stored = Auth.getUser();
+                if (stored) {
+                    stored.profile_image_url = updated.profile_image_url;
+                    localStorage.setItem('teqlif_user', JSON.stringify(stored));
+                }
+                renderProfile(updated);
+            } catch (err) {
+                alert('Fotoğraf yüklenemedi. Lütfen tekrar deneyin.');
+            }
+            e.target.value = '';
+        });
 
         // Önce localStorage'dan hızlı render
         if (user) renderProfile(user);

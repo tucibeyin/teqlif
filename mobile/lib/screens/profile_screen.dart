@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
@@ -66,6 +68,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
 
+  Future<void> _pickAndUploadAvatar() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery, imageQuality: 85);
+    if (picked == null || !mounted) return;
+
+    final token = await StorageService.getToken();
+    if (token == null) return;
+
+    try {
+      final file = File(picked.path);
+      final uploadReq = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
+      uploadReq.headers['Authorization'] = 'Bearer $token';
+      uploadReq.files.add(await http.MultipartFile.fromPath('file', file.path));
+      final uploadStream = await uploadReq.send();
+      final uploadBody = await uploadStream.stream.bytesToString();
+      if (uploadStream.statusCode != 200) throw Exception('Upload failed');
+      final imageUrl = (jsonDecode(uploadBody) as Map)['url'] as String;
+
+      final patchResp = await http.patch(
+        Uri.parse('$kBaseUrl/auth/me'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({'profile_image_url': imageUrl}),
+      );
+      if (patchResp.statusCode != 200) throw Exception('Patch failed');
+      final updatedUser = jsonDecode(patchResp.body) as Map<String, dynamic>;
+      await StorageService.saveUserInfo(
+        id: updatedUser['id'] as int,
+        email: updatedUser['email'] as String,
+        username: updatedUser['username'] as String,
+        fullName: updatedUser['full_name'] as String,
+      );
+      if (mounted) setState(() => _user = updatedUser);
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Fotoğraf yüklenemedi. Tekrar deneyin.')),
+      );
+    }
+  }
+
   void _openSettings() {
     Navigator.push(
       context,
@@ -117,16 +162,43 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Avatar
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: kPrimaryBg,
-                          child: Text(
-                            initial,
-                            style: const TextStyle(
-                              fontSize: 30,
-                              fontWeight: FontWeight.w700,
-                              color: kPrimary,
-                            ),
+                        GestureDetector(
+                          onTap: _pickAndUploadAvatar,
+                          child: Stack(
+                            alignment: Alignment.center,
+                            children: [
+                              CircleAvatar(
+                                radius: 40,
+                                backgroundColor: kPrimaryBg,
+                                backgroundImage: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
+                                    ? NetworkImage(_user!['profile_image_url'] as String)
+                                    : null,
+                                child: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
+                                    ? null
+                                    : Text(
+                                        initial,
+                                        style: const TextStyle(
+                                          fontSize: 30,
+                                          fontWeight: FontWeight.w700,
+                                          color: kPrimary,
+                                        ),
+                                      ),
+                              ),
+                              Positioned(
+                                bottom: 0,
+                                right: 0,
+                                child: Container(
+                                  width: 24,
+                                  height: 24,
+                                  decoration: BoxDecoration(
+                                    color: kPrimary,
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 2),
+                                  ),
+                                  child: const Icon(Icons.camera_alt, color: Colors.white, size: 13),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
                         const SizedBox(width: 20),

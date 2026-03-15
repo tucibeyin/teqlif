@@ -66,6 +66,7 @@ async def get_user_profile(
         "id": user.id,
         "username": user.username,
         "full_name": user.full_name,
+        "profile_image_url": user.profile_image_url,
         "listing_count": listing_count,
         "follower_count": follower_count,
         "following_count": following_count,

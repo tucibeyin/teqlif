@@ -1,4 +1,5 @@
 from datetime import datetime
+from typing import Optional
 from pydantic import BaseModel, EmailStr, field_validator
 import re
 
@@ -43,9 +44,16 @@ class UserOut(BaseModel):
     full_name: str
     is_active: bool
     is_verified: bool
+    profile_image_url: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class UserUpdate(BaseModel):
+    full_name: Optional[str] = None
+    username: Optional[str] = None
+    profile_image_url: Optional[str] = None
 
 
 class TokenOut(BaseModel):

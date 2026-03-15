@@ -5,7 +5,7 @@ from sqlalchemy import select
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode
+from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate
 from app.utils.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.utils.email import send_verification_code
 from app.utils.redis_client import get_redis
@@ -111,6 +111,37 @@ async def resend_code(data: ResendCode, db: AsyncSession = Depends(get_db)):
 
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)):
+    return current_user
+
+
+@router.patch("/me", response_model=UserOut)
+async def update_me(
+    data: UserUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    if data.full_name is not None:
+        data.full_name = data.full_name.strip()
+        if len(data.full_name) < 2:
+            raise HTTPException(status_code=400, detail="Ad soyad en az 2 karakter olmalı")
+        current_user.full_name = data.full_name
+
+    if data.username is not None:
+        import re
+        if not re.match(r"^[a-z0-9_]{3,50}$", data.username):
+            raise HTTPException(status_code=400, detail="Kullanıcı adı 3-50 karakter, sadece küçük harf/rakam/alt çizgi")
+        result = await db.execute(
+            select(User).where(User.username == data.username, User.id != current_user.id)
+        )
+        if result.scalar_one_or_none():
+            raise HTTPException(status_code=400, detail="Bu kullanıcı adı zaten alınmış")
+        current_user.username = data.username
+
+    if data.profile_image_url is not None:
+        current_user.profile_image_url = data.profile_image_url
+
+    await db.commit()
+    await db.refresh(current_user)
     return current_user
 
 
