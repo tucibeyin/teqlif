@@ -442,7 +442,6 @@ async def accept_bid(
     chat_summary = (
         f"🏆 Teklif kabul edildi! "
         f"📦 {item_name} — {_fmt_price(final_price)} — 🏅 @{winner_name}"
-        f"{' 🔗 teqlif.com/ilan/' + str(listing_id) if listing_id else ''}"
     )
     chat_msg = {
         "type": "message",
@@ -451,6 +450,8 @@ async def accept_bid(
         "content": chat_summary,
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
+    if listing_id:
+        chat_msg["url"] = f"/ilan/{listing_id}"
     _CHAT_KEY = f"chat:{stream_id}:messages"
     _CHAT_PUBSUB = "chat_broadcast"
     await redis.rpush(_CHAT_KEY, json.dumps(chat_msg))

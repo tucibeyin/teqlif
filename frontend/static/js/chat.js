@@ -81,7 +81,11 @@ const Chat = (() => {
 
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        el.innerHTML = `<span class="chat-username">@${_esc(msg.username)}</span> <span class="chat-content">${_esc(msg.content)}</span>`;
+        let html = `<span class="chat-username">@${_esc(msg.username)}</span> <span class="chat-content">${_esc(msg.content)}</span>`;
+        if (msg.url) {
+            html += ` <a href="${_esc(msg.url)}" target="_blank" style="color:#fbbf24;font-weight:600;text-decoration:underline;white-space:nowrap;">🔗 İlana Bak</a>`;
+        }
+        el.innerHTML = html;
         list.appendChild(el);
 
         // En fazla 50 mesaj göster
