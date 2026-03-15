@@ -1,6 +1,7 @@
 import asyncio
 import json
 import logging
+import uuid
 from datetime import datetime, timezone
 from typing import Dict, Set
 
@@ -340,6 +341,100 @@ async def place_bid(
     logger.info(
         "[TEKLİF] stream_id=%s user=%s amount=%s | ws_hedef=%s",
         stream_id, current_user.username, data.amount, manager.conn_count(stream_id),
+    )
+    return state
+
+
+@router.post("/{stream_id}/accept", response_model=AuctionStateOut)
+async def accept_bid(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    await _get_stream_as_host(stream_id, current_user, db)
+    redis = await get_redis()
+    key = _key(stream_id)
+
+    data = await redis.hgetall(key)
+    if not data or data.get("status") not in ("active", "paused"):
+        raise HTTPException(status_code=400, detail="Aktif açık artırma yok")
+
+    winner_name = data.get("current_bidder_name", "")
+    if not winner_name:
+        raise HTTPException(status_code=400, detail="Kabul edilecek teklif yok (henüz teklif verilmemiş)")
+
+    # Auction'ı bitir — end ile aynı mantık
+    winner_id_str = data.get("current_bidder_id", "")
+    final_price = float(data["current_bid"])
+    lid_str = data.get("listing_id", "")
+    listing_id = int(lid_str) if lid_str else None
+    item_name = data.get("item_name", "")
+
+    await redis.hset(key, "status", "ended")
+
+    auction = Auction(
+        stream_id=stream_id,
+        listing_id=listing_id,
+        item_name=item_name,
+        start_price=float(data.get("start_price", 0)),
+        final_price=final_price,
+        winner_id=int(winner_id_str) if winner_id_str else None,
+        winner_username=winner_name,
+        bid_count=int(data.get("bid_count", 0)),
+        status="completed",
+        ended_at=datetime.now(timezone.utc),
+    )
+    db.add(auction)
+    await db.commit()
+    await redis.delete(key)
+
+    # Sohbete özet mesajı gönder
+    def _fmt_price(v: float) -> str:
+        s = str(int(v))
+        result, i = "", 0
+        for ch in reversed(s):
+            if i and i % 3 == 0:
+                result = "." + result
+            result = ch + result
+            i += 1
+        return f"₺{result}"
+
+    listing_line = f"\n🔗 https://teqlif.com/ilan/{listing_id}" if listing_id else ""
+    chat_content = (
+        f"🏆 Teklif kabul edildi!\n"
+        f"📦 Ürün: {item_name}\n"
+        f"💰 Kazanan fiyat: {_fmt_price(final_price)}\n"
+        f"🏅 Kazanan: @{winner_name}"
+        f"{listing_line}"
+    )
+    chat_msg = {
+        "type": "message",
+        "id": str(uuid.uuid4())[:8],
+        "username": current_user.username,
+        "content": chat_content,
+        "system": True,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    _CHAT_KEY = f"chat:{stream_id}:messages"
+    _CHAT_PUBSUB = "chat_broadcast"
+    await redis.rpush(_CHAT_KEY, json.dumps(chat_msg))
+    await redis.ltrim(_CHAT_KEY, -50, -1)
+    await redis.expire(_CHAT_KEY, 24 * 3600)
+    await redis.publish(_CHAT_PUBSUB, json.dumps({"_stream_id": stream_id, **chat_msg}))
+
+    state = {
+        "status": "ended",
+        "item_name": item_name,
+        "bid_count": int(data.get("bid_count", 0)),
+        "current_bid": final_price,
+        "current_bidder": winner_name,
+        "start_price": float(data.get("start_price", 0)),
+        "listing_id": listing_id,
+    }
+    await _publish(stream_id, {"type": "state", **state})
+    logger.info(
+        "[AÇIK ARTIRMA] TEKLİF KABUL EDİLDİ | stream_id=%s winner=%s price=%s",
+        stream_id, winner_name, final_price,
     )
     return state
 

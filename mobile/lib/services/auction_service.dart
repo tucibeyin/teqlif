@@ -85,4 +85,13 @@ class AuctionService {
     _checkError(res);
     return AuctionState.fromJson(jsonDecode(res.body));
   }
+
+  static Future<AuctionState> acceptBid(int streamId) async {
+    final res = await http.post(
+      Uri.parse('$kBaseUrl/auction/$streamId/accept'),
+      headers: await _headers(),
+    );
+    _checkError(res);
+    return AuctionState.fromJson(jsonDecode(res.body));
+  }
 }

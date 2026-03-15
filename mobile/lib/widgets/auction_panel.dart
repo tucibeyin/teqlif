@@ -146,6 +146,43 @@ class _AuctionPanelState extends State<AuctionPanel> {
     }
   }
 
+  Future<void> _acceptBid() async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        title: const Text('Teklifi Kabul Et',
+            style: TextStyle(color: Colors.white)),
+        content: Text(
+          '@${_state.currentBidder} kullanıcısının ₺${_fmt(_state.currentBid)} teklifini kabul edeceksiniz.\nÖzet sohbete gönderilecek ve artırma kapanacak.',
+          style: const TextStyle(color: Color(0xFF94A3B8)),
+        ),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(ctx, false),
+              child: const Text('İptal',
+                  style: TextStyle(color: Color(0xFF64748B)))),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF059669),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8))),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Kabul Et',
+                style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    try {
+      await AuctionService.acceptBid(widget.streamId);
+      _setMsg('Teklif kabul edildi! Özet sohbete gönderildi.');
+    } catch (e) {
+      _setMsg(e.toString(), error: true);
+    }
+  }
+
   Future<void> _endAuction() async {
     final ok = await showDialog<bool>(
       context: context,
@@ -477,6 +514,10 @@ class _AuctionPanelState extends State<AuctionPanel> {
     if (_state.isActive) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
         _iconBtn(Icons.pause_rounded, Colors.amber, _pauseAuction),
+        if (_state.currentBidder != null) ...[
+          const SizedBox(width: 6),
+          _acceptBtn(),
+        ],
         const SizedBox(width: 6),
         _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
       ]);
@@ -484,6 +525,10 @@ class _AuctionPanelState extends State<AuctionPanel> {
     if (_state.isPaused) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
         _iconBtn(Icons.play_arrow_rounded, Colors.green, _resumeAuction),
+        if (_state.currentBidder != null) ...[
+          const SizedBox(width: 6),
+          _acceptBtn(),
+        ],
         const SizedBox(width: 6),
         _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
       ]);
@@ -683,6 +728,24 @@ class _AuctionPanelState extends State<AuctionPanel> {
             style: const TextStyle(
                 color: Colors.white,
                 fontSize: 11,
+                fontWeight: FontWeight.w700)),
+      ),
+    );
+  }
+
+  Widget _acceptBtn() {
+    return GestureDetector(
+      onTap: _acceptBid,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+        decoration: BoxDecoration(
+          color: const Color(0xFF059669),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: const Text('✅ Kabul',
+            style: TextStyle(
+                color: Colors.white,
+                fontSize: 10,
                 fontWeight: FontWeight.w700)),
       ),
     );

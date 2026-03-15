@@ -68,5 +68,9 @@ const Auction = (() => {
         });
     }
 
-    return { connect, disconnect, startAuction, pauseAuction, resumeAuction, endAuction, placeBid, STATUS_LABELS };
+    async function acceptBid() {
+        return await apiFetch(`/auction/${_streamId}/accept`, { method: 'POST' });
+    }
+
+    return { connect, disconnect, startAuction, pauseAuction, resumeAuction, endAuction, placeBid, acceptBid, STATUS_LABELS };
 })();

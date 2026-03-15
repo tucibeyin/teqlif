@@ -387,6 +387,8 @@
         .btn-green:hover { background: #15803d; }
         .btn-amber { background: #d97706; color: #fff; }
         .btn-amber:hover { background: #b45309; }
+        .btn-success { background: #059669; color: #fff; font-weight: 700; }
+        .btn-success:hover { background: #047857; }
 
         /* Viewer teklif butonları */
         .auction-viewer-controls {
@@ -616,6 +618,7 @@
                     <button class="btn btn-green" id="btnAuctionStart">▶ Başlat</button>
                     <button class="btn btn-amber" id="btnAuctionPause" style="display:none;">⏸ Duraklat</button>
                     <button class="btn btn-slate" id="btnAuctionResume" style="display:none;">▶ Devam</button>
+                    <button class="btn btn-success" id="btnAuctionAccept" style="display:none;">✅ Kabul Et</button>
                     <button class="btn btn-danger" id="btnAuctionEnd" style="display:none;">⏹ Bitir</button>
                 </div>
 
@@ -884,6 +887,7 @@
                     document.getElementById('btnAuctionStart').style.display = '';
                     document.getElementById('btnAuctionPause').style.display = 'none';
                     document.getElementById('btnAuctionResume').style.display = 'none';
+                    document.getElementById('btnAuctionAccept').style.display = 'none';
                     document.getElementById('btnAuctionEnd').style.display = 'none';
                     // ended sonrası listing seçimini sıfırla
                     if (state.status === 'ended') _resetListingMode();
@@ -892,12 +896,14 @@
                     document.getElementById('btnAuctionStart').style.display = 'none';
                     document.getElementById('btnAuctionPause').style.display = '';
                     document.getElementById('btnAuctionResume').style.display = 'none';
+                    document.getElementById('btnAuctionAccept').style.display = state.current_bidder ? '' : 'none';
                     document.getElementById('btnAuctionEnd').style.display = '';
                 } else if (state.status === 'paused') {
                     hostSetup.style.display = 'none';
                     document.getElementById('btnAuctionStart').style.display = 'none';
                     document.getElementById('btnAuctionPause').style.display = 'none';
                     document.getElementById('btnAuctionResume').style.display = '';
+                    document.getElementById('btnAuctionAccept').style.display = state.current_bidder ? '' : 'none';
                     document.getElementById('btnAuctionEnd').style.display = '';
                 }
             } else if (viewerControls) {
@@ -1146,6 +1152,15 @@
         document.getElementById('btnAuctionResume')?.addEventListener('click', async () => {
             try { await Auction.resumeAuction(); setAuctionMsg('Devam ediyor', 'success'); }
             catch (e) { setAuctionMsg(e.message, 'error'); }
+        });
+
+        // HOST: Teklifi Kabul Et
+        document.getElementById('btnAuctionAccept')?.addEventListener('click', async () => {
+            if (!confirm('En yüksek teklifi kabul etmek ve açık artırmayı kapatmak istediğinizden emin misiniz?')) return;
+            try {
+                await Auction.acceptBid();
+                setAuctionMsg('Teklif kabul edildi! Özet sohbete gönderildi.', 'success');
+            } catch (e) { setAuctionMsg(e.message, 'error'); }
         });
 
         // HOST: Bitir
