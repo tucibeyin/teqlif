@@ -109,6 +109,19 @@ async def resend_code(data: ResendCode, db: AsyncSession = Depends(get_db)):
     return {"message": "Kod tekrar gönderildi"}
 
 
+@router.get("/check-username")
+async def check_username(username: str = "", exclude_id: int | None = None, db: AsyncSession = Depends(get_db)):
+    import re
+    if not re.match(r"^[a-z0-9_]{3,50}$", username):
+        return {"available": False, "reason": "format"}
+    q = select(User).where(User.username == username)
+    if exclude_id is not None:
+        q = q.where(User.id != exclude_id)
+    result = await db.execute(q)
+    taken = result.scalar_one_or_none() is not None
+    return {"available": not taken}
+
+
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)):
     return current_user

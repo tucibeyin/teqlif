@@ -40,6 +40,7 @@
                         <label for="username">Kullanıcı Adı</label>
                         <input type="text" id="username" placeholder="ornek_kullanici" required autocomplete="username">
                         <small style="color:var(--text-muted);font-size:0.78rem;">Küçük harf, rakam ve alt çizgi kullanabilirsin</small>
+                        <span id="usernameStatus" style="display:block;font-size:0.78rem;margin-top:3px;min-height:1rem;"></span>
                     </div>
                     <div class="form-group">
                         <label for="email">E-posta</label>
@@ -104,11 +105,63 @@
 
         let registeredEmail = '';
 
+        // ── Kullanıcı adı gerçek zamanlı kontrol ─────────────────────
+        let _unTimer = null;
+        let _unOk = null; // null=kontrol edilmedi/geçersiz, true=uygun, false=alınmış
+        const _unInput = document.getElementById('username');
+        const _unStatus = document.getElementById('usernameStatus');
+
+        _unInput.addEventListener('input', () => {
+            const val = _unInput.value.trim();
+            clearTimeout(_unTimer);
+            _unOk = null;
+            if (!val) { _unStatus.textContent = ''; return; }
+            if (!/^[a-z0-9_]+$/.test(val)) {
+                _unStatus.textContent = '⚠ Sadece küçük harf, rakam ve _ kullanılabilir';
+                _unStatus.style.color = '#ef4444';
+                return;
+            }
+            if (val.length < 3) {
+                _unStatus.textContent = '';
+                return;
+            }
+            _unStatus.textContent = 'Kontrol ediliyor...';
+            _unStatus.style.color = '#6b7280';
+            _unTimer = setTimeout(async () => {
+                try {
+                    const r = await fetch('/api/auth/check-username?username=' + encodeURIComponent(val));
+                    const d = await r.json();
+                    if (d.available) {
+                        _unStatus.textContent = '✓ Kullanıcı adı uygun';
+                        _unStatus.style.color = '#16a34a';
+                        _unOk = true;
+                    } else {
+                        _unStatus.textContent = '✗ Bu kullanıcı adı zaten alınmış';
+                        _unStatus.style.color = '#ef4444';
+                        _unOk = false;
+                    }
+                } catch { _unStatus.textContent = ''; _unOk = null; }
+            }, 600);
+        });
+
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('registerBtn');
             const alertEl = document.getElementById('alertRegister');
             alertEl.className = 'alert';
+
+            // Kullanıcı adı format kontrolü
+            const unVal = _unInput.value.trim();
+            if (!/^[a-z0-9_]{3,50}$/.test(unVal)) {
+                alertEl.textContent = 'Kullanıcı adı geçersiz. Sadece küçük harf, rakam ve _ kullanılabilir (min 3 karakter).';
+                alertEl.className = 'alert alert-error show';
+                return;
+            }
+            if (_unOk === false) {
+                alertEl.textContent = 'Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane seçin.';
+                alertEl.className = 'alert alert-error show';
+                return;
+            }
 
             btn.disabled = true;
             btn.textContent = 'Kaydediliyor...';

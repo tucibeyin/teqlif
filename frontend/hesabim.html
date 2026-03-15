@@ -280,7 +280,9 @@
                 </div>
                 <div class="form-group">
                     <label>Kullanıcı Adı</label>
-                    <input type="text" id="editUsername" placeholder="kullanici_adi">
+                    <input type="text" id="editUsername" placeholder="kullanici_adi" autocomplete="off">
+                    <small style="color:var(--text-muted);font-size:0.78rem;">Küçük harf, rakam ve alt çizgi kullanabilirsin</small>
+                    <span id="editUsernameStatus" style="display:block;font-size:0.78rem;margin-top:3px;min-height:1rem;"></span>
                 </div>
                 <div style="display:flex;gap:0.75rem;margin-top:1rem;">
                     <button class="btn btn-primary btn-full" id="btnSaveProfile">Kaydet</button>
@@ -427,9 +429,56 @@
             document.getElementById(id).style.display = 'none';
         }
 
+        // ── Profil düzenle — kullanıcı adı gerçek zamanlı kontrol ────
+        let _editUnTimer = null;
+        let _editUnOk = null; // null=değişmedi veya kontrol edilmedi, true=uygun, false=alınmış
+        const _editUnInput = document.getElementById('editUsername');
+        const _editUnStatus = document.getElementById('editUsernameStatus');
+
+        _editUnInput.addEventListener('input', () => {
+            const val = _editUnInput.value.trim();
+            const originalUsername = (Auth.getUser() || {}).username || '';
+            clearTimeout(_editUnTimer);
+            _editUnOk = null;
+            _editUnStatus.textContent = '';
+            if (val === originalUsername) return; // Değişmedi, kontrol gerekmiyor
+            if (!/^[a-z0-9_]+$/.test(val)) {
+                if (val) {
+                    _editUnStatus.textContent = '⚠ Sadece küçük harf, rakam ve _ kullanılabilir';
+                    _editUnStatus.style.color = '#ef4444';
+                }
+                return;
+            }
+            if (val.length < 3) return;
+            _editUnStatus.textContent = 'Kontrol ediliyor...';
+            _editUnStatus.style.color = '#6b7280';
+            _editUnTimer = setTimeout(async () => {
+                try {
+                    const currentUser = Auth.getUser();
+                    const excludeId = currentUser ? currentUser.id : '';
+                    const params = new URLSearchParams({ username: val });
+                    if (excludeId) params.append('exclude_id', excludeId);
+                    const r = await fetch('/api/auth/check-username?' + params.toString());
+                    const d = await r.json();
+                    if (d.available) {
+                        _editUnStatus.textContent = '✓ Kullanıcı adı uygun';
+                        _editUnStatus.style.color = '#16a34a';
+                        _editUnOk = true;
+                    } else {
+                        _editUnStatus.textContent = '✗ Bu kullanıcı adı zaten alınmış';
+                        _editUnStatus.style.color = '#ef4444';
+                        _editUnOk = false;
+                    }
+                } catch { _editUnStatus.textContent = ''; _editUnOk = null; }
+            }, 600);
+        });
+
         // Profil düzenle
         document.getElementById('menuEditProfile').addEventListener('click', (e) => {
             e.preventDefault();
+            // Modal açıldığında status sıfırla
+            _editUnOk = null;
+            _editUnStatus.textContent = '';
             openModal('editModal');
         });
 
@@ -441,6 +490,16 @@
 
             if (!fullName || !username) {
                 alertEl.textContent = 'Tüm alanları doldurun.';
+                alertEl.style.display = 'block';
+                return;
+            }
+            if (!/^[a-z0-9_]{3,50}$/.test(username)) {
+                alertEl.textContent = 'Kullanıcı adı geçersiz. Sadece küçük harf, rakam ve _ kullanılabilir (min 3 karakter).';
+                alertEl.style.display = 'block';
+                return;
+            }
+            if (_editUnOk === false) {
+                alertEl.textContent = 'Bu kullanıcı adı zaten alınmış. Lütfen başka bir tane seçin.';
                 alertEl.style.display = 'block';
                 return;
             }

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
@@ -950,19 +951,58 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
   String? _error;
   String? _profileImageUrl;
 
+  // Username availability check
+  String? _usernameStatus; // null | 'checking' | 'available' | 'taken'
+  Timer? _usernameDebounce;
+
   @override
   void initState() {
     super.initState();
     _nameCtrl = TextEditingController(text: widget.user?['full_name'] ?? '');
     _usernameCtrl = TextEditingController(text: widget.user?['username'] ?? '');
     _profileImageUrl = widget.user?['profile_image_url'] as String?;
+    _usernameCtrl.addListener(_onUsernameChanged);
   }
 
   @override
   void dispose() {
+    _usernameDebounce?.cancel();
     _nameCtrl.dispose();
     _usernameCtrl.dispose();
     super.dispose();
+  }
+
+  void _onUsernameChanged() {
+    final val = _usernameCtrl.text.trim();
+    _usernameDebounce?.cancel();
+    if (val == (widget.user?['username'] ?? '')) {
+      setState(() => _usernameStatus = null);
+      return;
+    }
+    if (val.length < 3 || !RegExp(r'^[a-z0-9_]+$').hasMatch(val)) {
+      setState(() => _usernameStatus = null);
+      return;
+    }
+    setState(() => _usernameStatus = 'checking');
+    _usernameDebounce = Timer(const Duration(milliseconds: 600), () => _checkUsername(val));
+  }
+
+  Future<void> _checkUsername(String val) async {
+    try {
+      final excludeId = widget.user?['id'] as int?;
+      final params = {'username': val};
+      if (excludeId != null) params['exclude_id'] = excludeId.toString();
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/auth/check-username').replace(queryParameters: params),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        setState(() => _usernameStatus = (data['available'] as bool) ? 'available' : 'taken');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _usernameStatus = null);
+    }
   }
 
   String _buildImageUrl(String url) {
@@ -1041,6 +1081,18 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     final username = _usernameCtrl.text.trim();
     if (name.isEmpty || username.isEmpty) {
       setState(() => _error = 'Tüm alanları doldurun');
+      return;
+    }
+    if (username.length < 3 || !RegExp(r'^[a-z0-9_]+$').hasMatch(username)) {
+      setState(() => _error = 'Kullanıcı adı geçersiz. Sadece küçük harf, rakam ve _ kullanılabilir.');
+      return;
+    }
+    if (_usernameStatus == 'taken') {
+      setState(() => _error = 'Bu kullanıcı adı zaten alınmış');
+      return;
+    }
+    if (_usernameStatus == 'checking') {
+      setState(() => _error = 'Kullanıcı adı kontrol ediliyor, lütfen bekleyin...');
       return;
     }
     setState(() { _saving = true; _error = null; });
@@ -1145,7 +1197,26 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
             const SizedBox(height: 14),
             TextField(
               controller: _usernameCtrl,
-              decoration: const InputDecoration(labelText: 'Kullanıcı Adı'),
+              autocorrect: false,
+              decoration: InputDecoration(
+                labelText: 'Kullanıcı Adı',
+                helperText: 'Küçük harf, rakam ve _ kullanılabilir',
+                helperStyle: const TextStyle(fontSize: 11),
+                suffixIcon: _usernameStatus == 'checking'
+                    ? const SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: Padding(
+                          padding: EdgeInsets.all(12),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        ),
+                      )
+                    : _usernameStatus == 'available'
+                        ? const Icon(Icons.check_circle, color: Colors.green, size: 20)
+                        : _usernameStatus == 'taken'
+                            ? const Icon(Icons.cancel, color: Colors.red, size: 20)
+                            : null,
+              ),
             ),
           ],
         ),

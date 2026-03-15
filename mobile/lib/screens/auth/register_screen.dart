@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
+import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
@@ -23,13 +27,50 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscure = true;
   bool _eulaAccepted = false;
 
+  // Username availability check
+  String? _usernameStatus; // null | 'checking' | 'available' | 'taken'
+  Timer? _usernameDebounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameCtrl.addListener(_onUsernameChanged);
+  }
+
   @override
   void dispose() {
+    _usernameDebounce?.cancel();
     _emailCtrl.dispose();
     _usernameCtrl.dispose();
     _fullNameCtrl.dispose();
     _passCtrl.dispose();
     super.dispose();
+  }
+
+  void _onUsernameChanged() {
+    final val = _usernameCtrl.text.trim();
+    _usernameDebounce?.cancel();
+    if (val.length < 3 || !RegExp(r'^[a-z0-9_]+$').hasMatch(val)) {
+      setState(() => _usernameStatus = null);
+      return;
+    }
+    setState(() => _usernameStatus = 'checking');
+    _usernameDebounce = Timer(const Duration(milliseconds: 600), () => _checkUsername(val));
+  }
+
+  Future<void> _checkUsername(String val) async {
+    try {
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/auth/check-username').replace(queryParameters: {'username': val}),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        setState(() => _usernameStatus = (data['available'] as bool) ? 'available' : 'taken');
+      }
+    } catch (_) {
+      if (mounted) setState(() => _usernameStatus = null);
+    }
   }
 
   void _openUrl(String url) async {
@@ -118,10 +159,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextFormField(
                       controller: _usernameCtrl,
                       autocorrect: false,
-                      decoration: const InputDecoration(labelText: 'Kullanıcı Adı'),
+                      decoration: InputDecoration(
+                        labelText: 'Kullanıcı Adı',
+                        helperText: 'Küçük harf, rakam ve _ kullanılabilir',
+                        helperStyle: const TextStyle(fontSize: 11),
+                        suffixIcon: _usernameStatus == 'checking'
+                            ? const SizedBox(
+                                width: 20,
+                                height: 20,
+                                child: Padding(
+                                  padding: EdgeInsets.all(12),
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              )
+                            : _usernameStatus == 'available'
+                                ? const Icon(Icons.check_circle, color: Colors.green, size: 20)
+                                : _usernameStatus == 'taken'
+                                    ? const Icon(Icons.cancel, color: Colors.red, size: 20)
+                                    : null,
+                      ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Kullanıcı adı giriniz';
                         if (v.length < 3) return 'En az 3 karakter olmalı';
+                        if (!RegExp(r'^[a-z0-9_]+$').hasMatch(v)) {
+                          return 'Sadece küçük harf, rakam ve _ kullanılabilir';
+                        }
+                        if (_usernameStatus == 'taken') return 'Bu kullanıcı adı zaten alınmış';
+                        if (_usernameStatus == 'checking') return 'Kullanıcı adı kontrol ediliyor...';
                         return null;
                       },
                     ),
