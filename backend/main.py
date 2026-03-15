@@ -14,7 +14,7 @@ from app.logging_config import setup_logging
 from app.routers import auth, streams, webhooks, auction, chat
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener
-from app.routers import notifications, messages, users, listings, follows, categories, upload, cities
+from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 import app.models.auction  # noqa: F401 — tablo kaydı için
@@ -24,6 +24,7 @@ import app.models.listing  # noqa: F401 — tablo kaydı için
 import app.models.follow  # noqa: F401 — tablo kaydı için
 import app.models.category  # noqa: F401 — tablo kaydı için
 import app.models.city  # noqa: F401 — tablo kaydı için
+import app.models.report  # noqa: F401 — tablo kaydı için
 
 logger = setup_logging()
 
@@ -155,6 +156,7 @@ app.include_router(listings.router)
 app.include_router(follows.router)
 app.include_router(categories.router)
 app.include_router(cities.router)
+app.include_router(reports.router)
 app.include_router(upload.router)
 
 # Upload klasörü varsa static olarak sun

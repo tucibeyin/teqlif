@@ -406,6 +406,54 @@
 
         .error-box h2 { margin-bottom: .5rem; }
         .error-box a { color: var(--primary,#06b6d4); }
+
+        /* ── Sil butonu ── */
+        .btn-delete {
+            display: block; width: 100%; padding: .65rem 1rem;
+            background: #fff2f2; color: #dc2626; border: 1.5px solid #fca5a5;
+            border-radius: 10px; font-size: .9rem; font-weight: 600;
+            cursor: pointer; text-align: center; transition: background .15s;
+        }
+        .btn-delete:hover { background: #fee2e2; }
+
+        /* ── Şikayet butonu ── */
+        .btn-report {
+            display: inline-flex; align-items: center; gap: .3rem;
+            padding: .35rem .75rem; font-size: .78rem; color: #9ca3af;
+            background: none; border: 1px solid #e5e7eb; border-radius: 20px;
+            cursor: pointer; transition: color .15s, border-color .15s;
+            margin-top: .5rem;
+        }
+        .btn-report:hover { color: #ef4444; border-color: #fca5a5; }
+
+        /* ── Modal ── */
+        .modal-backdrop {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
+            z-index: 900; align-items: center; justify-content: center;
+        }
+        .modal-backdrop.open { display: flex; }
+        .modal-box {
+            background: #fff; border-radius: 16px; padding: 1.75rem;
+            width: 92%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,.18);
+        }
+        .modal-box h3 { margin: 0 0 1rem; font-size: 1.05rem; }
+        .modal-box select, .modal-box textarea {
+            width: 100%; padding: .6rem .8rem; border: 1.5px solid #e5e7eb;
+            border-radius: 8px; font-size: .9rem; margin-bottom: .75rem;
+            box-sizing: border-box; font-family: inherit;
+        }
+        .modal-box textarea { resize: vertical; min-height: 80px; }
+        .modal-actions { display: flex; gap: .75rem; justify-content: flex-end; }
+        .modal-actions .btn-cancel {
+            padding: .55rem 1.1rem; border: 1.5px solid #e5e7eb; background: #fff;
+            border-radius: 8px; cursor: pointer; font-size: .88rem;
+        }
+        .modal-actions .btn-send {
+            padding: .55rem 1.2rem; background: #06b6d4; color: #fff;
+            border: none; border-radius: 8px; font-size: .88rem; font-weight: 600;
+            cursor: pointer;
+        }
+        .modal-actions .btn-send:disabled { opacity: .5; cursor: default; }
     </style>
 </head>
 <body>
@@ -420,6 +468,40 @@
     <div class="page-wrap">
         <a href="javascript:history.back()" class="back-link">← Geri</a>
         <div id="content"></div>
+    </div>
+
+    <!-- Şikayet Modal -->
+    <div class="modal-backdrop" id="reportModal">
+        <div class="modal-box">
+            <h3>🚩 İlanı Şikayet Et</h3>
+            <select id="reportReason">
+                <option value="">-- Neden seçin --</option>
+                <option value="Yanıltıcı ilan">Yanıltıcı ilan</option>
+                <option value="Yasadışı ürün">Yasadışı ürün</option>
+                <option value="Spam / tekrar ilan">Spam / tekrar ilan</option>
+                <option value="Uygunsuz içerik">Uygunsuz içerik</option>
+                <option value="Dolandırıcılık şüphesi">Dolandırıcılık şüphesi</option>
+                <option value="Diğer">Diğer</option>
+            </select>
+            <textarea id="reportNote" placeholder="Ek açıklama (isteğe bağlı)" rows="3"></textarea>
+            <div id="reportMsg" style="font-size:.83rem;color:#dc2626;margin-bottom:.5rem;display:none;"></div>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeReportModal()">Vazgeç</button>
+                <button class="btn-send" id="reportSendBtn" onclick="submitReport()">Gönder</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Silme Onay Modal -->
+    <div class="modal-backdrop" id="deleteModal">
+        <div class="modal-box">
+            <h3>İlanı Sil</h3>
+            <p style="font-size:.9rem;color:#4b5563;margin:0 0 1.25rem;">Bu ilanı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+            <div class="modal-actions">
+                <button class="btn-cancel" onclick="closeDeleteModal()">Vazgeç</button>
+                <button class="btn-send" style="background:#dc2626;" id="deleteSendBtn" onclick="confirmDelete()">Evet, Sil</button>
+            </div>
+        </div>
     </div>
 
     <!-- Lightbox -->
@@ -635,6 +717,8 @@
                 const initials = (data.user.full_name || data.user.username || '?')[0].toUpperCase();
                 const token = localStorage.getItem('teqlif_token');
                 const isLoggedIn = !!token;
+                const me = Auth.getUser();
+                const isOwner = me && me.id === data.user.id;
 
                 document.getElementById('content').innerHTML = `
                     <div class="detail-grid">
@@ -657,6 +741,13 @@
                                     <hr class="divider">
                                     <div class="sec-label">Açıklama</div>
                                     <div class="detail-desc">${esc(data.description)}</div>` : ''}
+                                    ${!isOwner && isLoggedIn ? `
+                                    <div style="margin-top:1rem;text-align:right;">
+                                        <button class="btn-report" onclick="openReportModal()">
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
+                                            Şikayet Et
+                                        </button>
+                                    </div>` : ''}
                                 </div>
                             </div>
                         </div>
@@ -666,11 +757,13 @@
                             <div class="price-card">
                                 <div class="price-tag">${fmt(data.price)}</div>
                                 <div class="price-note">KDV dahil</div>
-                                ${isLoggedIn
-                                    ? `<a href="/mesajlar?to_id=${data.user.id}&to_name=${encodeURIComponent(data.user.full_name || data.user.username)}&to_handle=${encodeURIComponent(data.user.username)}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
-                                    : `<a href="/giris.html?next=/ilan/${listingId}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
+                                ${isOwner
+                                    ? `<button class="btn-delete" onclick="openDeleteModal()">İlanı Sil</button>`
+                                    : isLoggedIn
+                                        ? `<a href="/mesajlar?to_id=${data.user.id}&to_name=${encodeURIComponent(data.user.full_name || data.user.username)}&to_handle=${encodeURIComponent(data.user.username)}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
+                                        : `<a href="/giris.html?next=/ilan/${listingId}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
                                 }
-                                <a href="/profil/${esc(data.user.username)}" class="btn-msg">Profili Gör</a>
+                                ${!isOwner ? `<a href="/profil/${esc(data.user.username)}" class="btn-msg">Profili Gör</a>` : ''}
                             </div>
 
                             <div class="seller-block">
@@ -694,6 +787,57 @@
                         <h2>İlan bulunamadı</h2>
                         <p><a href="/">Ana sayfaya dön</a></p>
                     </div>`;
+            }
+        }
+
+        /* ── Şikayet ── */
+        function openReportModal() {
+            document.getElementById('reportModal').classList.add('open');
+        }
+        function closeReportModal() {
+            document.getElementById('reportModal').classList.remove('open');
+            document.getElementById('reportReason').value = '';
+            document.getElementById('reportNote').value = '';
+            document.getElementById('reportMsg').style.display = 'none';
+        }
+        async function submitReport() {
+            const reason = document.getElementById('reportReason').value;
+            const note = document.getElementById('reportNote').value.trim();
+            const msg = document.getElementById('reportMsg');
+            if (!reason) { msg.textContent = 'Lütfen bir neden seçin.'; msg.style.display = 'block'; return; }
+            const btn = document.getElementById('reportSendBtn');
+            btn.disabled = true; btn.textContent = 'Gönderiliyor...';
+            try {
+                await apiFetch('/reports', {
+                    method: 'POST',
+                    body: JSON.stringify({ listing_id: listingId, reason: reason + (note ? ': ' + note : '') }),
+                });
+                closeReportModal();
+                alert('Şikayetiniz alındı. Teşekkür ederiz.');
+            } catch (e) {
+                msg.textContent = e.detail || 'Bir hata oluştu.';
+                msg.style.display = 'block';
+                btn.disabled = false; btn.textContent = 'Gönder';
+            }
+        }
+
+        /* ── Silme ── */
+        function openDeleteModal() {
+            document.getElementById('deleteModal').classList.add('open');
+        }
+        function closeDeleteModal() {
+            document.getElementById('deleteModal').classList.remove('open');
+        }
+        async function confirmDelete() {
+            const btn = document.getElementById('deleteSendBtn');
+            btn.disabled = true; btn.textContent = 'Siliniyor...';
+            try {
+                await apiFetch(`/listings/${listingId}`, { method: 'DELETE' });
+                closeDeleteModal();
+                window.location.href = '/';
+            } catch (e) {
+                btn.disabled = false; btn.textContent = 'Evet, Sil';
+                alert(e.detail || 'Silme işlemi başarısız.');
             }
         }
 

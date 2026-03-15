@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
@@ -99,6 +101,159 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     );
   }
 
+  void _confirmDelete(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('İlanı Sil'),
+        content: const Text('Bu ilanı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Vazgeç')),
+          TextButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _deleteListing(context);
+            },
+            child: const Text('Evet, Sil', style: TextStyle(color: Color(0xFFDC2626))),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _deleteListing(BuildContext context) async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    final id = widget.listing['id'];
+    try {
+      final resp = await http.delete(
+        Uri.parse('$kBaseUrl/listings/$id'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        Navigator.pop(context, true);
+      } else {
+        final detail = jsonDecode(resp.body)['detail'] ?? 'Bir hata oluştu';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bağlantı hatası')),
+        );
+      }
+    }
+  }
+
+  void _openReport(BuildContext context) {
+    String? selectedReason;
+    final noteCtrl = TextEditingController();
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (ctx) => StatefulBuilder(
+        builder: (ctx, setModalState) => Padding(
+          padding: EdgeInsets.only(
+            left: 20, right: 20, top: 20,
+            bottom: MediaQuery.of(ctx).viewInsets.bottom + 24,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('🚩 İlanı Şikayet Et',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 16),
+              DropdownButtonFormField<String>(
+                value: selectedReason,
+                hint: const Text('Neden seçin'),
+                decoration: InputDecoration(
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+                items: const [
+                  DropdownMenuItem(value: 'Yanıltıcı ilan', child: Text('Yanıltıcı ilan')),
+                  DropdownMenuItem(value: 'Yasadışı ürün', child: Text('Yasadışı ürün')),
+                  DropdownMenuItem(value: 'Spam / tekrar ilan', child: Text('Spam / tekrar ilan')),
+                  DropdownMenuItem(value: 'Uygunsuz içerik', child: Text('Uygunsuz içerik')),
+                  DropdownMenuItem(value: 'Dolandırıcılık şüphesi', child: Text('Dolandırıcılık şüphesi')),
+                  DropdownMenuItem(value: 'Diğer', child: Text('Diğer')),
+                ],
+                onChanged: (v) => setModalState(() => selectedReason = v),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: noteCtrl,
+                maxLines: 3,
+                decoration: InputDecoration(
+                  hintText: 'Ek açıklama (isteğe bağlı)',
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                ),
+              ),
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: kPrimary,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  ),
+                  onPressed: () async {
+                    if (selectedReason == null) {
+                      ScaffoldMessenger.of(ctx).showSnackBar(
+                        const SnackBar(content: Text('Lütfen bir neden seçin')),
+                      );
+                      return;
+                    }
+                    final note = noteCtrl.text.trim();
+                    final reason = selectedReason! + (note.isNotEmpty ? ': $note' : '');
+                    Navigator.pop(ctx);
+                    await _submitReport(reason);
+                  },
+                  child: const Text('Şikayeti Gönder'),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Future<void> _submitReport(String reason) async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    final id = widget.listing['id'];
+    try {
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/reports'),
+        headers: {'Authorization': 'Bearer $token', 'Content-Type': 'application/json'},
+        body: jsonEncode({'listing_id': id, 'reason': reason}),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Şikayetiniz alındı. Teşekkür ederiz.')),
+        );
+      } else {
+        final detail = jsonDecode(resp.body)['detail'] ?? 'Bir hata oluştu';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(detail)));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bağlantı hatası')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final listing = widget.listing;
@@ -117,6 +272,20 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
+        actions: [
+          if (isMine)
+            IconButton(
+              icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
+              tooltip: 'İlanı Sil',
+              onPressed: () => _confirmDelete(context),
+            )
+          else if (_myUserId != null)
+            IconButton(
+              icon: const Icon(Icons.flag_outlined, color: Color(0xFF9CA3AF), size: 22),
+              tooltip: 'Şikayet Et',
+              onPressed: () => _openReport(context),
+            ),
+        ],
       ),
       body: SingleChildScrollView(
         child: Column(
