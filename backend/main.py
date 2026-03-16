@@ -27,8 +27,19 @@ import app.models.category  # noqa: F401 — tablo kaydı için
 import app.models.city  # noqa: F401 — tablo kaydı için
 import app.models.report  # noqa: F401 — tablo kaydı için
 import app.models.favorite  # noqa: F401 — tablo kaydı için
+import sentry_sdk
 
 logger = setup_logging()
+
+# --- SENTRY ENTEGRASYONU ---
+if settings.sentry_backend_dsn:
+    sentry_sdk.init(
+        dsn=settings.sentry_backend_dsn,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
+    logger.info("Sentry Backend entegrasyonu aktif edildi.")
+# ---------------------------
 
 
 _SEED_CATEGORIES = [

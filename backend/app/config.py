@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
     firebase_service_account: str = ""  # path to service account JSON
+    sentry_backend_dsn: str | None = None
 
     class Config:
         env_file = ".env"
