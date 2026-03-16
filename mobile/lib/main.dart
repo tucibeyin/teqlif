@@ -10,6 +10,7 @@ import 'screens/main_screen.dart';
 import 'services/biometric_service.dart';
 import 'services/storage_service.dart';
 import 'services/push_notification_service.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -19,7 +20,18 @@ void main() async {
   // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
   // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
   PushNotificationService.initEarly();
-  runApp(const TeqlifApp());
+
+// --- SENTRY ENTEGRASYONU BAŞLANGICI ---
+  await SentryFlutter.init(
+    (options) {
+      options.dsn = 'https://d9535262385699cee49c13cc02add8f2@o4511052861538304.ingest.us.sentry.io/4511053904478208';
+      // Üretim ortamı için performansı artırmak adına oranı düşürebilirsiniz (örn: 0.2)
+      options.tracesSampleRate = 1.0; 
+    },
+    // Uygulamamızı Sentry üzerinden başlatıyoruz
+    appRunner: () => runApp(const TeqlifApp()),
+  );
+  // --- SENTRY ENTEGRASYONU BITISI ---
 }
 
 class TeqlifApp extends StatelessWidget {
