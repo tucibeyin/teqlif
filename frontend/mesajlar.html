@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,6 +11,18 @@
     <link rel="manifest" href="/static/icons/manifest.json">
     <meta name="theme-color" content="#06b6d4">
     <link rel="stylesheet" href="/static/css/main.css">
+
+    <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+        Sentry.init({
+            dsn: "https://98dfdd738860420a9c221abf4ddf35cb@o4511052861538304.ingest.us.sentry.io/4511053913391104",
+            integrations: [
+                Sentry.browserTracingIntegration(),
+            ],
+            tracesSampleRate: 1.0,
+        });
+    </script>
+
     <style>
         .msg-wrap {
             max-width: 720px;
@@ -45,8 +58,13 @@
             border-bottom-color: var(--primary);
         }
 
-        .tab-panel { display: none; }
-        .tab-panel.active { display: block; }
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
 
         /* ── Conversation list ── */
         .conv-list {
@@ -68,8 +86,13 @@
             color: inherit;
         }
 
-        .conv-item:hover { background: #f8fafc; }
-        .conv-item:last-child { border-bottom: none; }
+        .conv-item:hover {
+            background: #f8fafc;
+        }
+
+        .conv-item:last-child {
+            border-bottom: none;
+        }
 
         .conv-avatar {
             width: 44px;
@@ -85,7 +108,10 @@
             flex-shrink: 0;
         }
 
-        .conv-body { flex: 1; min-width: 0; }
+        .conv-body {
+            flex: 1;
+            min-width: 0;
+        }
 
         .conv-header {
             display: flex;
@@ -226,7 +252,9 @@
             transition: border-color 0.15s;
         }
 
-        .chat-input:focus { border-color: var(--primary); }
+        .chat-input:focus {
+            border-color: var(--primary);
+        }
 
         .chat-send {
             background: var(--primary);
@@ -242,8 +270,15 @@
             transition: background 0.15s;
         }
 
-        .chat-send:hover { background: var(--primary-dark); }
-        .chat-send svg { width: 18px; height: 18px; fill: white; }
+        .chat-send:hover {
+            background: var(--primary-dark);
+        }
+
+        .chat-send svg {
+            width: 18px;
+            height: 18px;
+            fill: white;
+        }
 
         /* ── Notifications ── */
         .notif-list {
@@ -261,8 +296,13 @@
             border-bottom: 1px solid #f8fafc;
         }
 
-        .notif-item:last-child { border-bottom: none; }
-        .notif-item.unread { background: var(--primary-bg); }
+        .notif-item:last-child {
+            border-bottom: none;
+        }
+
+        .notif-item.unread {
+            background: var(--primary-bg);
+        }
 
         .notif-icon {
             width: 38px;
@@ -285,10 +325,17 @@
             stroke-linejoin: round;
         }
 
-        .notif-item.unread .notif-icon { background: var(--primary-bg); }
-        .notif-item.unread .notif-icon svg { stroke: var(--primary); }
+        .notif-item.unread .notif-icon {
+            background: var(--primary-bg);
+        }
 
-        .notif-body { flex: 1; }
+        .notif-item.unread .notif-icon svg {
+            stroke: var(--primary);
+        }
+
+        .notif-body {
+            flex: 1;
+        }
 
         .notif-title {
             font-size: 0.9rem;
@@ -330,6 +377,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
@@ -349,20 +397,28 @@
         <div id="listView">
             <!-- Messages tab -->
             <div id="panel-messages" class="tab-panel active">
-                <div id="convLoading" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Yükleniyor...</div>
+                <div id="convLoading" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Yükleniyor...
+                </div>
                 <div class="conv-list" id="convList" style="display:none;"></div>
                 <div class="empty-state" id="convEmpty" style="display:none;">
-                    <svg viewBox="0 0 24 24"><path d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                    </svg>
                     <p>Henüz hiç mesaj yok</p>
                 </div>
             </div>
 
             <!-- Notifications tab -->
             <div id="panel-notifications" class="tab-panel">
-                <div id="notifLoading" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Yükleniyor...</div>
+                <div id="notifLoading" style="text-align:center;padding:2.5rem;color:var(--text-muted);">Yükleniyor...
+                </div>
                 <div class="notif-list" id="notifList" style="display:none;"></div>
                 <div class="empty-state" id="notifEmpty" style="display:none;">
-                    <svg viewBox="0 0 24 24"><path d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+                    <svg viewBox="0 0 24 24">
+                        <path
+                            d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                    </svg>
                     <p>Bildirim yok</p>
                 </div>
             </div>
@@ -372,17 +428,21 @@
         <div id="chatView">
             <div class="chat-header">
                 <button class="chat-back" onclick="showList()" title="Geri">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M19 12H5M12 5l-7 7 7 7"/>
+                    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.5"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M19 12H5M12 5l-7 7 7 7" />
                     </svg>
                 </button>
                 <div class="chat-title" id="chatTitle"></div>
             </div>
             <div class="chat-messages" id="chatMessages"></div>
             <div class="chat-input-row">
-                <textarea class="chat-input" id="chatInput" placeholder="Mesaj yaz..." rows="1" onkeydown="handleKey(event)"></textarea>
+                <textarea class="chat-input" id="chatInput" placeholder="Mesaj yaz..." rows="1"
+                    onkeydown="handleKey(event)"></textarea>
                 <button class="chat-send" onclick="sendMsg()" title="Gönder">
-                    <svg viewBox="0 0 24 24"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z"/></svg>
+                    <svg viewBox="0 0 24 24">
+                        <path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" />
+                    </svg>
                 </button>
             </div>
         </div>
@@ -508,7 +568,7 @@
                 const data = await apiFetch('/notifications/');
                 document.getElementById('notifLoading').style.display = 'none';
                 // Mark all as read
-                apiFetch('/notifications/mark-all-read', { method: 'POST' }).catch(() => {});
+                apiFetch('/notifications/mark-all-read', { method: 'POST' }).catch(() => { });
                 if (!data || data.length === 0) {
                     document.getElementById('notifEmpty').style.display = '';
                     return;
@@ -625,4 +685,5 @@
         })();
     </script>
 </body>
+
 </html>

@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Gizlilik Politikası — teqlif</title>
-    <meta name="description" content="teqlif gizlilik politikası — kişisel verilerinizin nasıl toplandığı, kullanıldığı ve korunduğu hakkında bilgi.">
+    <meta name="description"
+        content="teqlif gizlilik politikası — kişisel verilerinizin nasıl toplandığı, kullanıldığı ve korunduğu hakkında bilgi.">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://teqlif.com/gizlilik-politikasi">
     <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
@@ -12,22 +14,37 @@
     <link rel="manifest" href="/static/icons/manifest.json">
     <meta name="theme-color" content="#06b6d4">
     <link rel="stylesheet" href="/static/css/main.css">
+
+    <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+        Sentry.init({
+            dsn: "https://98dfdd738860420a9c221abf4ddf35cb@o4511052861538304.ingest.us.sentry.io/4511053913391104",
+            integrations: [
+                Sentry.browserTracingIntegration(),
+            ],
+            tracesSampleRate: 1.0,
+        });
+    </script>
+
     <style>
         .policy-wrap {
             max-width: 760px;
             margin: 2.5rem auto;
             padding: 0 1.25rem 4rem;
         }
+
         .policy-wrap h1 {
             font-size: 1.7rem;
             font-weight: 800;
             margin-bottom: 0.4rem;
         }
+
         .policy-updated {
             font-size: 0.82rem;
             color: var(--text-muted);
             margin-bottom: 2rem;
         }
+
         .policy-section {
             background: var(--white);
             border-radius: 14px;
@@ -35,23 +52,31 @@
             padding: 1.75rem;
             margin-bottom: 1.25rem;
         }
+
         .policy-section h2 {
             font-size: 1rem;
             font-weight: 700;
             margin-bottom: 0.75rem;
             color: var(--text);
         }
-        .policy-section p, .policy-section li {
+
+        .policy-section p,
+        .policy-section li {
             font-size: 0.88rem;
             color: #374151;
             line-height: 1.65;
             margin-bottom: 0.5rem;
         }
+
         .policy-section ul {
             padding-left: 1.25rem;
             margin-bottom: 0.5rem;
         }
-        .policy-section a { color: var(--primary); }
+
+        .policy-section a {
+            color: var(--primary);
+        }
+
         .info-box {
             background: #f0f9ff;
             border-left: 4px solid #06b6d4;
@@ -59,6 +84,7 @@
             padding: 0.85rem 1rem;
             margin: 0.75rem 0;
         }
+
         .info-box p {
             color: #0e7490 !important;
             font-weight: 600;
@@ -66,6 +92,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
@@ -102,7 +129,8 @@
                 <li><strong>İlan içerikleri:</strong> Yayınladığınız ilan başlıkları, açıklamaları ve fotoğrafları</li>
                 <li><strong>Yayın verileri:</strong> Canlı yayın başlıkları, kategoriler ve yayın süreleri</li>
                 <li><strong>Mesajlaşma:</strong> Kullanıcılar arasındaki mesaj içerikleri</li>
-                <li><strong>Teknik veriler:</strong> IP adresi, tarayıcı bilgisi ve kullanım istatistikleri (anonim)</li>
+                <li><strong>Teknik veriler:</strong> IP adresi, tarayıcı bilgisi ve kullanım istatistikleri (anonim)
+                </li>
             </ul>
         </div>
 
@@ -129,7 +157,8 @@
             </p>
             <ul>
                 <li>Tüm veri iletimi <strong>HTTPS/TLS</strong> ile şifrelenmektedir</li>
-                <li>Şifreler <strong>bcrypt</strong> algoritması ile hashlenerek saklanır; düz metin olarak tutulmaz</li>
+                <li>Şifreler <strong>bcrypt</strong> algoritması ile hashlenerek saklanır; düz metin olarak tutulmaz
+                </li>
                 <li>Veritabanı erişimi kısıtlı ve denetlenen ortamlarda gerçekleştirilir</li>
                 <li>Canlı yayınlar <strong>LiveKit</strong> altyapısı üzerinde güvenli biçimde iletilir</li>
             </ul>
@@ -142,7 +171,8 @@
                 Kişisel verilerinizi aşağıdaki durumlar dışında hiçbir üçüncü tarafla paylaşmıyoruz:
             </p>
             <ul>
-                <li><strong>Altyapı sağlayıcıları:</strong> Hizmet sunumu için zorunlu teknik partnerler (hosting, CDN, bildirim servisi). Bu sağlayıcılar verilerinizi yalnızca bizim adımıza işler.</li>
+                <li><strong>Altyapı sağlayıcıları:</strong> Hizmet sunumu için zorunlu teknik partnerler (hosting, CDN,
+                    bildirim servisi). Bu sağlayıcılar verilerinizi yalnızca bizim adımıza işler.</li>
                 <li><strong>Yasal zorunluluk:</strong> Mahkeme kararı veya yetkili makam talebi halinde</li>
                 <li><strong>Güvenlik:</strong> Dolandırıcılık veya kötüye kullanım tespitinde ilgili makamlarla</li>
             </ul>
@@ -170,7 +200,9 @@
             <ul>
                 <li><strong>Erişim hakkı:</strong> Hakkınızda hangi verileri tuttuğumuzu öğrenebilirsiniz</li>
                 <li><strong>Düzeltme hakkı:</strong> Yanlış verilerin düzeltilmesini talep edebilirsiniz</li>
-                <li><strong>Silme hakkı:</strong> Hesabınızı ve tüm verilerinizi kalıcı olarak silebilirsiniz (Hesabım &gt; Hesap &gt; Hesabı Sil). Silme talebinden sonra verileriniz 30 gün içinde sistemlerimizden kaldırılır.</li>
+                <li><strong>Silme hakkı:</strong> Hesabınızı ve tüm verilerinizi kalıcı olarak silebilirsiniz (Hesabım
+                    &gt; Hesap &gt; Hesabı Sil). Silme talebinden sonra verileriniz 30 gün içinde sistemlerimizden
+                    kaldırılır.</li>
                 <li><strong>İtiraz hakkı:</strong> Veri işleme faaliyetlerimize itiraz edebilirsiniz</li>
             </ul>
             <p>
@@ -229,4 +261,5 @@
         if (typeof Auth !== 'undefined') Auth.updateNav?.();
     </script>
 </body>
+
 </html>

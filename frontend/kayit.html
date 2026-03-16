@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,7 +13,20 @@
     <link rel="manifest" href="/static/icons/manifest.json">
     <meta name="theme-color" content="#06b6d4">
     <link rel="stylesheet" href="/static/css/main.css">
+
+    <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+        Sentry.init({
+            dsn: "https://98dfdd738860420a9c221abf4ddf35cb@o4511052861538304.ingest.us.sentry.io/4511053913391104",
+            integrations: [
+                Sentry.browserTracingIntegration(),
+            ],
+            tracesSampleRate: 1.0,
+        });
+    </script>
+
 </head>
+
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
@@ -39,8 +53,10 @@
                     <div class="form-group">
                         <label for="username">Kullanıcı Adı</label>
                         <input type="text" id="username" placeholder="ornek_kullanici" required autocomplete="username">
-                        <small style="color:var(--text-muted);font-size:0.78rem;">Küçük harf, rakam ve alt çizgi kullanabilirsin</small>
-                        <span id="usernameStatus" style="display:block;font-size:0.78rem;margin-top:3px;min-height:1rem;"></span>
+                        <small style="color:var(--text-muted);font-size:0.78rem;">Küçük harf, rakam ve alt çizgi
+                            kullanabilirsin</small>
+                        <span id="usernameStatus"
+                            style="display:block;font-size:0.78rem;margin-top:3px;min-height:1rem;"></span>
                     </div>
                     <div class="form-group">
                         <label for="email">E-posta</label>
@@ -48,14 +64,17 @@
                     </div>
                     <div class="form-group">
                         <label for="password">Şifre</label>
-                        <input type="password" id="password" placeholder="En az 8 karakter" required autocomplete="new-password">
+                        <input type="password" id="password" placeholder="En az 8 karakter" required
+                            autocomplete="new-password">
                     </div>
                     <div class="form-group" style="margin-bottom:0.5rem;">
-                        <label style="display:flex;align-items:flex-start;gap:0.6rem;cursor:pointer;font-size:0.85rem;color:var(--text-muted);font-weight:400;">
+                        <label
+                            style="display:flex;align-items:flex-start;gap:0.6rem;cursor:pointer;font-size:0.85rem;color:var(--text-muted);font-weight:400;">
                             <input type="checkbox" id="eulaCheck" required
-                                   style="margin-top:2px;accent-color:var(--primary);flex-shrink:0;">
+                                style="margin-top:2px;accent-color:var(--primary);flex-shrink:0;">
                             <span>
-                                <a href="/kullanim-sartlari.html" target="_blank" style="color:var(--primary);">Kullanım Şartları ve EULA</a>'yı
+                                <a href="/kullanim-sartlari.html" target="_blank" style="color:var(--primary);">Kullanım
+                                    Şartları ve EULA</a>'yı
                                 okudum, kabul ediyorum. Uygunsuz içeriklere sıfır tolerans politikasını anladım.
                             </span>
                         </label>
@@ -80,10 +99,9 @@
                 <form id="verifyForm">
                     <div class="form-group">
                         <label for="code">Doğrulama Kodu</label>
-                        <input type="text" id="code" placeholder="6 haneli kodu gir"
-                               maxlength="6" inputmode="numeric" pattern="[0-9]{6}"
-                               required autocomplete="one-time-code"
-                               style="font-size:1.5rem;letter-spacing:0.4rem;text-align:center;">
+                        <input type="text" id="code" placeholder="6 haneli kodu gir" maxlength="6" inputmode="numeric"
+                            pattern="[0-9]{6}" required autocomplete="one-time-code"
+                            style="font-size:1.5rem;letter-spacing:0.4rem;text-align:center;">
                     </div>
                     <button type="submit" class="btn btn-primary btn-full btn-lg" id="verifyBtn">
                         Doğrula
@@ -225,4 +243,5 @@
         });
     </script>
 </body>
+
 </html>

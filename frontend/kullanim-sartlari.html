@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,22 +13,37 @@
     <link rel="manifest" href="/static/icons/manifest.json">
     <meta name="theme-color" content="#06b6d4">
     <link rel="stylesheet" href="/static/css/main.css">
+
+    <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+        Sentry.init({
+            dsn: "https://98dfdd738860420a9c221abf4ddf35cb@o4511052861538304.ingest.us.sentry.io/4511053913391104",
+            integrations: [
+                Sentry.browserTracingIntegration(),
+            ],
+            tracesSampleRate: 1.0,
+        });
+    </script>
+
     <style>
         .terms-wrap {
             max-width: 760px;
             margin: 2.5rem auto;
             padding: 0 1.25rem 4rem;
         }
+
         .terms-wrap h1 {
             font-size: 1.7rem;
             font-weight: 800;
             margin-bottom: 0.4rem;
         }
+
         .terms-updated {
             font-size: 0.82rem;
             color: var(--text-muted);
             margin-bottom: 2rem;
         }
+
         .terms-section {
             background: var(--white);
             border-radius: 14px;
@@ -35,23 +51,31 @@
             padding: 1.75rem;
             margin-bottom: 1.25rem;
         }
+
         .terms-section h2 {
             font-size: 1rem;
             font-weight: 700;
             margin-bottom: 0.75rem;
             color: var(--text);
         }
-        .terms-section p, .terms-section li {
+
+        .terms-section p,
+        .terms-section li {
             font-size: 0.88rem;
             color: #374151;
             line-height: 1.65;
             margin-bottom: 0.5rem;
         }
+
         .terms-section ul {
             padding-left: 1.25rem;
             margin-bottom: 0.5rem;
         }
-        .terms-section a { color: var(--primary); }
+
+        .terms-section a {
+            color: var(--primary);
+        }
+
         .highlight-box {
             background: #fef2f2;
             border-left: 4px solid #ef4444;
@@ -59,6 +83,7 @@
             padding: 0.85rem 1rem;
             margin: 0.75rem 0;
         }
+
         .highlight-box p {
             color: #b91c1c !important;
             font-weight: 600;
@@ -66,6 +91,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
@@ -197,4 +223,5 @@
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
 </body>
+
 </html>

@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -15,6 +16,18 @@
     <link rel="manifest" href="/static/icons/manifest.json">
     <meta name="theme-color" content="#06b6d4">
     <link rel="stylesheet" href="/static/css/main.css">
+
+    <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+        Sentry.init({
+            dsn: "https://98dfdd738860420a9c221abf4ddf35cb@o4511052861538304.ingest.us.sentry.io/4511053913391104",
+            integrations: [
+                Sentry.browserTracingIntegration(),
+            ],
+            tracesSampleRate: 1.0,
+        });
+    </script>
+
     <style>
         .profile-page {
             min-height: calc(100vh - 60px);
@@ -127,13 +140,19 @@
             background: var(--primary);
             color: #fff;
         }
-        .btn-profile.primary:hover { background: var(--primary-dark, #0891b2); }
+
+        .btn-profile.primary:hover {
+            background: var(--primary-dark, #0891b2);
+        }
 
         .btn-profile.secondary {
             background: #f1f5f9;
             color: #334155;
         }
-        .btn-profile.secondary:hover { background: #e2e8f0; }
+
+        .btn-profile.secondary:hover {
+            background: #e2e8f0;
+        }
 
         .btn-profile svg {
             width: 18px;
@@ -207,7 +226,7 @@
             bottom: 0;
             left: 0;
             right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.6));
+            background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
             color: #fff;
             padding: 20px 8px 7px;
             opacity: 0;
@@ -266,19 +285,25 @@
             transition: background 0.12s;
             border-radius: 8px;
         }
-        .stat-item.clickable:hover { background: #f1f5f9; }
+
+        .stat-item.clickable:hover {
+            background: #f1f5f9;
+        }
 
         /* Follow list modal */
         .follow-modal-backdrop {
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,0.4);
+            background: rgba(0, 0, 0, 0.4);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
-        .follow-modal-backdrop.open { display: flex; }
+
+        .follow-modal-backdrop.open {
+            display: flex;
+        }
 
         .follow-modal {
             background: #fff;
@@ -289,7 +314,7 @@
             display: flex;
             flex-direction: column;
             overflow: hidden;
-            box-shadow: 0 8px 32px rgba(0,0,0,0.18);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
             margin: 1rem;
         }
 
@@ -331,13 +356,16 @@
             padding: 0.75rem 1.25rem;
             border-bottom: 1px solid #f3f4f6;
         }
-        .follow-user-row:last-child { border-bottom: none; }
+
+        .follow-user-row:last-child {
+            border-bottom: none;
+        }
 
         .follow-user-avatar {
             width: 42px;
             height: 42px;
             border-radius: 50%;
-            background: rgba(6,182,212,0.12);
+            background: rgba(6, 182, 212, 0.12);
             color: var(--primary);
             font-size: 1.1rem;
             font-weight: 700;
@@ -363,7 +391,10 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
-        .follow-user-name:hover { color: var(--primary); }
+
+        .follow-user-name:hover {
+            color: var(--primary);
+        }
 
         .follow-user-handle {
             font-size: 0.78rem;
@@ -380,18 +411,28 @@
             flex-shrink: 0;
             transition: background 0.12s;
         }
+
         .btn-follow-sm.following {
             background: #f1f5f9;
             color: #334155;
             border-color: #d1d5db;
         }
-        .btn-follow-sm.following:hover { background: #fee2e2; color: #ef4444; border-color: #ef4444; }
+
+        .btn-follow-sm.following:hover {
+            background: #fee2e2;
+            color: #ef4444;
+            border-color: #ef4444;
+        }
+
         .btn-follow-sm.not-following {
             background: var(--primary);
             color: #fff;
             border-color: var(--primary);
         }
-        .btn-follow-sm.not-following:hover { background: var(--primary-dark, #0891b2); }
+
+        .btn-follow-sm.not-following:hover {
+            background: var(--primary-dark, #0891b2);
+        }
 
         .follow-empty {
             text-align: center;
@@ -401,6 +442,7 @@
         }
     </style>
 </head>
+
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
@@ -566,7 +608,7 @@
                     btn.className = 'btn-follow-sm following';
                     btn.textContent = 'Takiptesin';
                 }
-            } catch (_) {}
+            } catch (_) { }
             finally { btn.disabled = false; }
         }
 
@@ -749,4 +791,5 @@
         loadProfile();
     </script>
 </body>
+
 </html>

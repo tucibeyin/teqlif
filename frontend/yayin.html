@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,9 +11,22 @@
     <link rel="manifest" href="/static/icons/manifest.json">
     <meta name="theme-color" content="#06b6d4">
     <link rel="stylesheet" href="/static/css/main.css">
+
+    <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+        Sentry.init({
+            dsn: "https://98dfdd738860420a9c221abf4ddf35cb@o4511052861538304.ingest.us.sentry.io/4511053913391104",
+            integrations: [
+                Sentry.browserTracingIntegration(),
+            ],
+            tracesSampleRate: 1.0,
+        });
+    </script>
+
     <style>
         /* ── Reset & full-viewport ─────────────────────────────────────── */
-        html, body {
+        html,
+        body {
             height: 100%;
             overflow: hidden;
         }
@@ -30,9 +44,18 @@
             border-bottom-color: #334155;
         }
 
-        .logo  { color: var(--primary-light); }
-        .nav-links a { color: #94a3b8; }
-        .nav-links a:hover { background: #334155; color: var(--primary-light); }
+        .logo {
+            color: var(--primary-light);
+        }
+
+        .nav-links a {
+            color: #94a3b8;
+        }
+
+        .nav-links a:hover {
+            background: #334155;
+            color: var(--primary-light);
+        }
 
         /* ── Ana kapsayıcı ─────────────────────────────────────────────── */
         .stream-root {
@@ -73,7 +96,7 @@
         .connecting-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0,0,0,0.85);
+            background: rgba(0, 0, 0, 0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -93,7 +116,11 @@
             animation: spin 0.8s linear infinite;
         }
 
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
 
         /* Video placeholder (host yok) */
         .video-placeholder {
@@ -108,14 +135,18 @@
             z-index: 5;
         }
 
-        .video-placeholder svg { opacity: 0.4; }
+        .video-placeholder svg {
+            opacity: 0.4;
+        }
 
         /* ── Video overlay: üst bar (LIVE + viewer) ─────────────────── */
         #videoOverlay {
             position: absolute;
-            top: 0; left: 0; right: 0;
+            top: 0;
+            left: 0;
+            right: 0;
             padding: 0.75rem 1rem;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.65) 0%, transparent 100%);
+            background: linear-gradient(to bottom, rgba(0, 0, 0, 0.65) 0%, transparent 100%);
             display: flex;
             align-items: center;
             justify-content: space-between;
@@ -133,7 +164,7 @@
         }
 
         .viewer-count {
-            background: rgba(0,0,0,0.55);
+            background: rgba(0, 0, 0, 0.55);
             color: #fff;
             font-size: 0.8rem;
             padding: 3px 10px;
@@ -144,7 +175,7 @@
         #statusMsg {
             font-size: 0.78rem;
             color: #94a3b8;
-            background: rgba(0,0,0,0.45);
+            background: rgba(0, 0, 0, 0.45);
             padding: 2px 10px;
             border-radius: 12px;
             max-width: 280px;
@@ -153,15 +184,22 @@
             text-overflow: ellipsis;
         }
 
-        #statusMsg:empty { display: none; }
-        #statusMsg.error { color: #f87171; }
+        #statusMsg:empty {
+            display: none;
+        }
+
+        #statusMsg.error {
+            color: #f87171;
+        }
 
         /* ── Video overlay: alt bar (başlık + kontroller) ───────────── */
         #streamMeta {
             position: absolute;
-            bottom: 0; left: 0; right: 0;
+            bottom: 0;
+            left: 0;
+            right: 0;
             padding: 0.8rem 1rem;
-            background: linear-gradient(to top, rgba(0,0,0,0.8) 0%, transparent 100%);
+            background: linear-gradient(to top, rgba(0, 0, 0, 0.8) 0%, transparent 100%);
             display: flex;
             align-items: flex-end;
             justify-content: space-between;
@@ -199,10 +237,24 @@
             border-radius: 7px;
         }
 
-        .btn-danger { background: #ef4444; color: #fff; }
-        .btn-danger:hover { background: #dc2626; }
-        .btn-slate  { background: rgba(51,65,85,0.85); color: #e2e8f0; backdrop-filter: blur(4px); }
-        .btn-slate:hover { background: rgba(71,85,105,0.9); }
+        .btn-danger {
+            background: #ef4444;
+            color: #fff;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+        }
+
+        .btn-slate {
+            background: rgba(51, 65, 85, 0.85);
+            color: #e2e8f0;
+            backdrop-filter: blur(4px);
+        }
+
+        .btn-slate:hover {
+            background: rgba(71, 85, 105, 0.9);
+        }
 
         /* ── Açık Artırma Şeridi (video-col altında) ────────────────── */
         .auction-panel {
@@ -231,10 +283,25 @@
             white-space: nowrap;
         }
 
-        .badge-active  { background: #22c55e; color: #fff; }
-        .badge-paused  { background: #f59e0b; color: #000; }
-        .badge-idle    { background: #475569; color: #fff; }
-        .badge-ended   { background: #ef4444; color: #fff; }
+        .badge-active {
+            background: #22c55e;
+            color: #fff;
+        }
+
+        .badge-paused {
+            background: #f59e0b;
+            color: #000;
+        }
+
+        .badge-idle {
+            background: #475569;
+            color: #fff;
+        }
+
+        .badge-ended {
+            background: #ef4444;
+            color: #fff;
+        }
 
         .auction-title {
             font-size: 0.82rem;
@@ -277,7 +344,8 @@
             flex-wrap: wrap;
         }
 
-        .auction-setup input, .auction-setup select {
+        .auction-setup input,
+        .auction-setup select {
             background: #0f172a;
             border: 1px solid #334155;
             color: #e2e8f0;
@@ -288,86 +356,312 @@
             min-width: 0;
         }
 
-        #manualInputs { display: flex; gap: .5rem; align-items: center; flex: 1; }
-        #manualInputs input:first-child { flex: 2; }
-        #manualInputs input:last-child  { flex: 1; }
+        #manualInputs {
+            display: flex;
+            gap: .5rem;
+            align-items: center;
+            flex: 1;
+        }
+
+        #manualInputs input:first-child {
+            flex: 2;
+        }
+
+        #manualInputs input:last-child {
+            flex: 1;
+        }
 
         .auction-setup input:focus,
-        .auction-setup select:focus { border-color: var(--primary); }
+        .auction-setup select:focus {
+            border-color: var(--primary);
+        }
 
         /* Custom listing picker */
-        #listingPicker { flex: 1; position: relative; min-width: 0; }
+        #listingPicker {
+            flex: 1;
+            position: relative;
+            min-width: 0;
+        }
+
         #listingPickerTrigger {
-            display: flex; align-items: center; gap: 7px;
+            display: flex;
+            align-items: center;
+            gap: 7px;
             padding: 0.38rem 0.7rem;
-            background: #1e293b; border: 1.5px solid #334155;
-            border-radius: 8px; cursor: pointer; font-size: 0.8rem; color: #e2e8f0;
+            background: #1e293b;
+            border: 1.5px solid #334155;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            color: #e2e8f0;
         }
-        #listingPickerTrigger:hover { border-color: var(--primary); }
-        #listingPickerTrigger.open { border-color: var(--primary); }
-        #listingPickerTrigger img { width: 26px; height: 26px; object-fit: cover; border-radius: 4px; flex-shrink: 0; }
-        #listingPickerTrigger span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+        #listingPickerTrigger:hover {
+            border-color: var(--primary);
+        }
+
+        #listingPickerTrigger.open {
+            border-color: var(--primary);
+        }
+
+        #listingPickerTrigger img {
+            width: 26px;
+            height: 26px;
+            object-fit: cover;
+            border-radius: 4px;
+            flex-shrink: 0;
+        }
+
+        #listingPickerTrigger span {
+            flex: 1;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
         #listingPickerDropdown {
-            display: none; position: absolute; bottom: calc(100% + 4px); left: 0; right: 0; z-index: 150;
-            background: #1e293b; border: 1.5px solid #334155; border-radius: 10px;
-            max-height: 210px; overflow-y: auto; box-shadow: 0 -8px 24px rgba(0,0,0,0.5);
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 4px);
+            left: 0;
+            right: 0;
+            z-index: 150;
+            background: #1e293b;
+            border: 1.5px solid #334155;
+            border-radius: 10px;
+            max-height: 210px;
+            overflow-y: auto;
+            box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.5);
         }
-        #listingPickerDropdown.open { display: block; }
-        .lp-item { display: flex; align-items: center; gap: 8px; padding: 7px 10px; cursor: pointer; }
-        .lp-item:hover { background: #334155; }
-        .lp-item.selected { background: rgba(6,182,212,0.12); }
-        .lp-item img { width: 36px; height: 36px; object-fit: cover; border-radius: 6px; flex-shrink: 0; }
-        .lp-img-placeholder { width: 36px; height: 36px; background: #334155; border-radius: 6px; flex-shrink: 0; display:flex; align-items:center; justify-content:center; font-size:14px; }
-        .lp-info { flex: 1; min-width: 0; }
-        .lp-title { font-size: 0.78rem; font-weight: 600; color: #e2e8f0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .lp-price { font-size: 0.7rem; color: #4ade80; }
+
+        #listingPickerDropdown.open {
+            display: block;
+        }
+
+        .lp-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            cursor: pointer;
+        }
+
+        .lp-item:hover {
+            background: #334155;
+        }
+
+        .lp-item.selected {
+            background: rgba(6, 182, 212, 0.12);
+        }
+
+        .lp-item img {
+            width: 36px;
+            height: 36px;
+            object-fit: cover;
+            border-radius: 6px;
+            flex-shrink: 0;
+        }
+
+        .lp-img-placeholder {
+            width: 36px;
+            height: 36px;
+            background: #334155;
+            border-radius: 6px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+
+        .lp-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .lp-title {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: #e2e8f0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .lp-price {
+            font-size: 0.7rem;
+            color: #4ade80;
+        }
 
         .auction-mode-toggle {
-            background: none; border: 1px solid #475569; color: #94a3b8;
-            border-radius: 6px; padding: 0.3rem 0.6rem; font-size: 0.75rem;
-            cursor: pointer; flex-shrink: 0; white-space: nowrap;
+            background: none;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            border-radius: 6px;
+            padding: 0.3rem 0.6rem;
+            font-size: 0.75rem;
+            cursor: pointer;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
-        .auction-mode-toggle:hover { border-color: var(--primary); color: var(--primary); }
-        .auction-mode-toggle.active { border-color: var(--primary); color: var(--primary); background: rgba(6,182,212,0.1); }
+
+        .auction-mode-toggle:hover {
+            border-color: var(--primary);
+            color: var(--primary);
+        }
+
+        .auction-mode-toggle.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: rgba(6, 182, 212, 0.1);
+        }
 
         /* Listing detail modal */
         .listing-modal-overlay {
-            position: fixed; inset: 0;
-            background: rgba(0,0,0,0.72); z-index: 200;
-            display: flex; align-items: flex-end; justify-content: center;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.72);
+            z-index: 200;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
         }
+
         .listing-modal {
-            background: #1e293b; border-radius: 22px 22px 0 0;
-            width: 100%; max-width: 480px; max-height: 80vh;
-            overflow-y: auto; padding: 12px 20px 36px;
+            background: #1e293b;
+            border-radius: 22px 22px 0 0;
+            width: 100%;
+            max-width: 480px;
+            max-height: 80vh;
+            overflow-y: auto;
+            padding: 12px 20px 36px;
         }
+
         .listing-modal-handle {
-            width: 38px; height: 4px; background: #334155;
-            border-radius: 2px; margin: 0 auto 16px;
+            width: 38px;
+            height: 4px;
+            background: #334155;
+            border-radius: 2px;
+            margin: 0 auto 16px;
         }
+
         /* Fotoğraf slider */
-        .lm-slider { position: relative; width: 100%; height: 190px; border-radius: 12px; overflow: hidden; margin-bottom: 14px; background: #0f172a; }
-        .lm-track { display: flex; height: 100%; transition: transform 0.28s ease; will-change: transform; }
-        .lm-track img { width: 100%; flex-shrink: 0; object-fit: cover; }
-        .lm-arrow { position: absolute; top: 50%; transform: translateY(-50%); background: rgba(0,0,0,0.55); border: none; color: #fff; width: 30px; height: 30px; border-radius: 50%; cursor: pointer; font-size: 14px; z-index: 2; display: flex; align-items: center; justify-content: center; }
-        .lm-arrow-l { left: 8px; } .lm-arrow-r { right: 8px; }
-        .lm-dots { position: absolute; bottom: 7px; left: 50%; transform: translateX(-50%); display: flex; gap: 5px; }
-        .lm-dot { width: 6px; height: 6px; border-radius: 50%; background: rgba(255,255,255,0.4); transition: background .2s; }
-        .lm-dot.active { background: #fff; }
-        .listing-modal-title { font-size: 1rem; font-weight: 700; color: #f1f5f9; margin-bottom: 6px; }
-        .listing-modal-price { font-size: 1.25rem; font-weight: 800; color: #4ade80; margin-bottom: 4px; }
-        .listing-modal-seller { font-size: 0.78rem; color: #64748b; margin-bottom: 12px; }
-        .listing-modal-desc { font-size: 0.83rem; color: #94a3b8; line-height: 1.55; border-top: 1px solid #334155; padding-top: 10px; }
+        .lm-slider {
+            position: relative;
+            width: 100%;
+            height: 190px;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 14px;
+            background: #0f172a;
+        }
+
+        .lm-track {
+            display: flex;
+            height: 100%;
+            transition: transform 0.28s ease;
+            will-change: transform;
+        }
+
+        .lm-track img {
+            width: 100%;
+            flex-shrink: 0;
+            object-fit: cover;
+        }
+
+        .lm-arrow {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            background: rgba(0, 0, 0, 0.55);
+            border: none;
+            color: #fff;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            z-index: 2;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .lm-arrow-l {
+            left: 8px;
+        }
+
+        .lm-arrow-r {
+            right: 8px;
+        }
+
+        .lm-dots {
+            position: absolute;
+            bottom: 7px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 5px;
+        }
+
+        .lm-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.4);
+            transition: background .2s;
+        }
+
+        .lm-dot.active {
+            background: #fff;
+        }
+
+        .listing-modal-title {
+            font-size: 1rem;
+            font-weight: 700;
+            color: #f1f5f9;
+            margin-bottom: 6px;
+        }
+
+        .listing-modal-price {
+            font-size: 1.25rem;
+            font-weight: 800;
+            color: #4ade80;
+            margin-bottom: 4px;
+        }
+
+        .listing-modal-seller {
+            font-size: 0.78rem;
+            color: #64748b;
+            margin-bottom: 12px;
+        }
+
+        .listing-modal-desc {
+            font-size: 0.83rem;
+            color: #94a3b8;
+            line-height: 1.55;
+            border-top: 1px solid #334155;
+            padding-top: 10px;
+        }
 
         /* Viewer: pinlenmiş ilan butonu */
         #auctionListingBtn {
-            font-size: 0.72rem; font-weight: 600;
-            color: #fbbf24; border: 1px solid rgba(251,191,36,0.4);
-            background: rgba(251,191,36,0.1); border-radius: 6px;
-            padding: 0.25rem 0.6rem; cursor: pointer;
-            text-decoration: none; flex-shrink: 0; white-space: nowrap;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #fbbf24;
+            border: 1px solid rgba(251, 191, 36, 0.4);
+            background: rgba(251, 191, 36, 0.1);
+            border-radius: 6px;
+            padding: 0.25rem 0.6rem;
+            cursor: pointer;
+            text-decoration: none;
+            flex-shrink: 0;
+            white-space: nowrap;
         }
-        #auctionListingBtn:hover { background: rgba(251,191,36,0.2); }
+
+        #auctionListingBtn:hover {
+            background: rgba(251, 191, 36, 0.2);
+        }
 
         /* Host kontrol butonları */
         .auction-host-controls {
@@ -383,12 +677,33 @@
             border-radius: 6px;
         }
 
-        .btn-green { background: #16a34a; color: #fff; }
-        .btn-green:hover { background: #15803d; }
-        .btn-amber { background: #d97706; color: #fff; }
-        .btn-amber:hover { background: #b45309; }
-        .btn-success { background: #059669; color: #fff; font-weight: 700; }
-        .btn-success:hover { background: #047857; }
+        .btn-green {
+            background: #16a34a;
+            color: #fff;
+        }
+
+        .btn-green:hover {
+            background: #15803d;
+        }
+
+        .btn-amber {
+            background: #d97706;
+            color: #fff;
+        }
+
+        .btn-amber:hover {
+            background: #b45309;
+        }
+
+        .btn-success {
+            background: #059669;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .btn-success:hover {
+            background: #047857;
+        }
 
         /* Viewer teklif butonları */
         .auction-viewer-controls {
@@ -409,7 +724,9 @@
             outline: none;
         }
 
-        .auction-viewer-controls input:focus { border-color: var(--primary); }
+        .auction-viewer-controls input:focus {
+            border-color: var(--primary);
+        }
 
         #auctionMsg {
             font-size: 0.75rem;
@@ -417,8 +734,13 @@
             margin-left: auto;
         }
 
-        #auctionMsg.error   { color: #f87171; }
-        #auctionMsg.success { color: #4ade80; }
+        #auctionMsg.error {
+            color: #f87171;
+        }
+
+        #auctionMsg.success {
+            color: #4ade80;
+        }
 
         /* ── Sohbet sütunu ─────────────────────────────────────────────── */
         .chat-col {
@@ -461,9 +783,18 @@
             min-height: 0;
         }
 
-        #chatMessages::-webkit-scrollbar { width: 3px; }
-        #chatMessages::-webkit-scrollbar-track { background: transparent; }
-        #chatMessages::-webkit-scrollbar-thumb { background: #334155; border-radius: 2px; }
+        #chatMessages::-webkit-scrollbar {
+            width: 3px;
+        }
+
+        #chatMessages::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        #chatMessages::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 2px;
+        }
 
         .chat-msg {
             font-size: 0.82rem;
@@ -471,8 +802,14 @@
             word-break: break-word;
         }
 
-        .chat-username { color: #60a5fa; font-weight: 700; }
-        .chat-content  { color: #e2e8f0; }
+        .chat-username {
+            color: #60a5fa;
+            font-weight: 700;
+        }
+
+        .chat-content {
+            color: #e2e8f0;
+        }
 
         .chat-empty {
             font-size: 0.8rem;
@@ -502,7 +839,9 @@
             min-width: 0;
         }
 
-        .chat-input-row input:focus { border-color: var(--primary); }
+        .chat-input-row input:focus {
+            border-color: var(--primary);
+        }
 
         .chat-send-btn {
             background: var(--primary);
@@ -519,9 +858,12 @@
             transition: background 0.15s;
         }
 
-        .chat-send-btn:hover { background: var(--primary-dark); }
+        .chat-send-btn:hover {
+            background: var(--primary-dark);
+        }
     </style>
 </head>
+
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
@@ -549,8 +891,10 @@
 
                 <!-- Video placeholder (host yok / bekleniyor) -->
                 <div class="video-placeholder" id="videoPlaceholder" style="display:none;">
-                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
-                        <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
+                    <svg width="56" height="56" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="1.2">
+                        <path
+                            d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z" />
                     </svg>
                     <span id="placeholderText">Yayın bekleniyor...</span>
                 </div>
@@ -595,7 +939,8 @@
                 <!-- HOST: ürün girişi (idle) -->
                 <div class="auction-setup" id="hostSetup" style="display:none;">
                     <!-- İlan seçici toggle -->
-                    <button class="auction-mode-toggle" id="btnListingMode" title="İlanlarımdan seç">📋 İlanlarımdan</button>
+                    <button class="auction-mode-toggle" id="btnListingMode" title="İlanlarımdan seç">📋
+                        İlanlarımdan</button>
                     <!-- Custom listing picker (listing modda görünür) -->
                     <div id="listingPicker" style="display:none;">
                         <div id="listingPickerTrigger" onclick="toggleListingPicker()">
@@ -650,7 +995,8 @@
                 <div class="chat-input-row" id="chatInputRow" style="display:none;">
                     <input type="text" id="chatInput" placeholder="Mesaj yaz..." maxlength="200" autocomplete="off">
                     <button class="chat-send-btn" id="chatSendBtn" title="Gönder">
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            stroke-width="2.5">
                             <line x1="22" y1="2" x2="11" y2="13"></line>
                             <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
                         </svg>
@@ -662,7 +1008,8 @@
     </div><!-- /.stream-root -->
 
     <!-- Listing detail modal (viewer: pinlenmiş ilan) -->
-    <div class="listing-modal-overlay" id="listingModalOverlay" style="display:none;" onclick="closeListingModal(event)">
+    <div class="listing-modal-overlay" id="listingModalOverlay" style="display:none;"
+        onclick="closeListingModal(event)">
         <div class="listing-modal" id="listingModal">
             <div class="listing-modal-handle"></div>
             <div class="lm-slider" id="listingModalSlider" style="display:none;">
@@ -694,10 +1041,12 @@
             background:#1e293b; border:1px solid #334155; border-radius:16px;
             padding:28px 24px; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
             <div style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:18px;">✅ Teklifi Kabul Et</div>
-            <div style="background:#0f172a; border-radius:12px; padding:16px; margin-bottom:20px; display:flex; flex-direction:column; gap:10px;">
+            <div
+                style="background:#0f172a; border-radius:12px; padding:16px; margin-bottom:20px; display:flex; flex-direction:column; gap:10px;">
                 <div style="display:flex; justify-content:space-between; align-items:center;">
                     <span style="color:#64748b; font-size:0.78rem;">Ürün</span>
-                    <span id="acceptModalItem" style="color:#e2e8f0; font-weight:600; font-size:0.88rem; text-align:right; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</span>
+                    <span id="acceptModalItem"
+                        style="color:#e2e8f0; font-weight:600; font-size:0.88rem; text-align:right; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</span>
                 </div>
                 <div style="height:1px; background:#1e293b;"></div>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -883,7 +1232,7 @@
             clearInterval(_thumbInterval);
             try {
                 await Stream.endStream(streamId);
-            } catch (_) {}
+            } catch (_) { }
             Chat.disconnect();
             await disconnectRoom();
             Stream.clear();
@@ -926,7 +1275,7 @@
             btn.textContent = 'Ayrılıyor...';
             try {
                 await Stream.leaveStream(streamId);
-            } catch (_) {}
+            } catch (_) { }
             Chat.disconnect();
             await disconnectRoom();
             Stream.clear();
@@ -1055,7 +1404,7 @@
             try {
                 _hostListings = await apiFetch('/listings/my?active=true');
                 _buildPickerItems();
-            } catch (_) {}
+            } catch (_) { }
         }
 
         function _buildPickerItems() {
@@ -1068,7 +1417,7 @@
             }
             _hostListings.forEach(l => {
                 let imgs = l.image_urls || [];
-                if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs); } catch(_) { imgs = []; } }
+                if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs); } catch (_) { imgs = []; } }
                 const rawImg = imgs.length ? imgs[0] : (l.image_url || null);
                 const imgSrc = rawImg ? (rawImg.startsWith('http') || rawImg.startsWith('/') ? rawImg : `/uploads/${rawImg}`) : null;
                 const priceStr = l.price ? '₺' + Number(l.price).toLocaleString('tr-TR') : '';
@@ -1090,7 +1439,7 @@
                 const l = _hostListings.find(x => x.id === id);
                 if (!l) return;
                 let imgs = l.image_urls || [];
-                if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs); } catch(_) { imgs = []; } }
+                if (typeof imgs === 'string') { try { imgs = JSON.parse(imgs); } catch (_) { imgs = []; } }
                 const rawImg = imgs.length ? imgs[0] : (l.image_url || null);
                 const imgSrc = rawImg ? (rawImg.startsWith('http') || rawImg.startsWith('/') ? rawImg : `/uploads/${rawImg}`) : null;
                 _selectListing(id, l.title, imgSrc, l.price);
@@ -1201,14 +1550,14 @@
             try {
                 const listing = await apiFetch(`/listings/${_currentListingId}`);
                 let raw = listing.image_urls || [];
-                if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch(_) { raw = []; } }
+                if (typeof raw === 'string') { try { raw = JSON.parse(raw); } catch (_) { raw = []; } }
                 if (!raw.length && listing.image_url) raw = [listing.image_url];
                 _lmImgs = raw.map(r => r.startsWith('http') || r.startsWith('/') ? r : `/uploads/${r}`);
                 _lmIdx = 0;
 
                 const slider = document.getElementById('listingModalSlider');
-                const track  = document.getElementById('listingModalTrack');
-                const dots   = document.getElementById('lmDots');
+                const track = document.getElementById('listingModalTrack');
+                const dots = document.getElementById('lmDots');
                 if (_lmImgs.length) {
                     track.innerHTML = _lmImgs.map(src => `<img src="${src}" alt="">`).join('');
                     track.style.transform = 'translateX(0)';
@@ -1219,7 +1568,7 @@
                     document.getElementById('lmArrowR').style.display = _lmImgs.length > 1 ? 'flex' : 'none';
                     let tx = 0;
                     track.ontouchstart = ev => { tx = ev.touches[0].clientX; };
-                    track.ontouchend   = ev => { const dx = ev.changedTouches[0].clientX - tx; if (Math.abs(dx) > 40) lmSlide(dx < 0 ? 1 : -1); };
+                    track.ontouchend = ev => { const dx = ev.changedTouches[0].clientX - tx; if (Math.abs(dx) > 40) lmSlide(dx < 0 ? 1 : -1); };
                     slider.style.display = 'block';
                 } else {
                     slider.style.display = 'none';
@@ -1233,7 +1582,7 @@
                 if (listing.description) { descEl.textContent = listing.description; descEl.style.display = 'block'; }
                 else descEl.style.display = 'none';
                 document.getElementById('listingModalOverlay').style.display = 'flex';
-            } catch (_) {}
+            } catch (_) { }
         }
 
         function closeListingModal(e) {
@@ -1357,4 +1706,5 @@
         init();
     </script>
 </body>
+
 </html>

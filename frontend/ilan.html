@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -16,10 +17,26 @@
     <link rel="manifest" href="/static/icons/manifest.json">
     <meta name="theme-color" content="#06b6d4">
     <link rel="stylesheet" href="/static/css/main.css">
-    <style>
-        * { box-sizing: border-box; }
 
-        body { background: #f1f3f5; }
+    <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+        Sentry.init({
+            dsn: "https://98dfdd738860420a9c221abf4ddf35cb@o4511052861538304.ingest.us.sentry.io/4511053913391104",
+            integrations: [
+                Sentry.browserTracingIntegration(),
+            ],
+            tracesSampleRate: 1.0,
+        });
+    </script>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background: #f1f3f5;
+        }
 
         .page-wrap {
             max-width: 1100px;
@@ -36,7 +53,10 @@
             text-decoration: none;
             margin-bottom: 1rem;
         }
-        .back-link:hover { color: #111; }
+
+        .back-link:hover {
+            color: #111;
+        }
 
         /* Grid layout */
         .detail-grid {
@@ -47,14 +67,16 @@
         }
 
         @media (max-width: 768px) {
-            .detail-grid { grid-template-columns: 1fr; }
+            .detail-grid {
+                grid-template-columns: 1fr;
+            }
         }
 
         /* ── LEFT COLUMN ── */
         .card {
             background: #fff;
             border-radius: 12px;
-            box-shadow: 0 1px 6px rgba(0,0,0,.07);
+            box-shadow: 0 1px 6px rgba(0, 0, 0, .07);
             overflow: hidden;
         }
 
@@ -75,7 +97,9 @@
             user-select: none;
         }
 
-        .gallery-main img.active { display: block; }
+        .gallery-main img.active {
+            display: block;
+        }
 
         .no-photo {
             width: 100%;
@@ -93,7 +117,7 @@
             position: absolute;
             bottom: 12px;
             right: 14px;
-            background: rgba(0,0,0,.55);
+            background: rgba(0, 0, 0, .55);
             color: #fff;
             font-size: 0.78rem;
             font-weight: 600;
@@ -107,7 +131,7 @@
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background: rgba(0,0,0,.5);
+            background: rgba(0, 0, 0, .5);
             border: none;
             border-radius: 50%;
             width: 42px;
@@ -122,9 +146,17 @@
             z-index: 2;
         }
 
-        .gallery-arrow:hover { background: rgba(0,0,0,.75); }
-        .gallery-arrow.prev { left: 10px; }
-        .gallery-arrow.next { right: 10px; }
+        .gallery-arrow:hover {
+            background: rgba(0, 0, 0, .75);
+        }
+
+        .gallery-arrow.prev {
+            left: 10px;
+        }
+
+        .gallery-arrow.next {
+            right: 10px;
+        }
 
         /* Thumbnails strip */
         .gallery-thumbs {
@@ -154,7 +186,9 @@
         }
 
         /* Detail body */
-        .detail-body { padding: 1.25rem 1.5rem 1.5rem; }
+        .detail-body {
+            padding: 1.25rem 1.5rem 1.5rem;
+        }
 
         .detail-meta {
             display: flex;
@@ -222,7 +256,7 @@
         .price-card {
             background: #fff;
             border-radius: 12px;
-            box-shadow: 0 1px 6px rgba(0,0,0,.07);
+            box-shadow: 0 1px 6px rgba(0, 0, 0, .07);
             padding: 1.4rem;
         }
 
@@ -257,7 +291,9 @@
             margin-bottom: 0.6rem;
         }
 
-        .btn-contact:hover { opacity: .88; }
+        .btn-contact:hover {
+            opacity: .88;
+        }
 
         .btn-msg {
             display: block;
@@ -275,13 +311,15 @@
             transition: background .15s;
         }
 
-        .btn-msg:hover { background: #e5e7eb; }
+        .btn-msg:hover {
+            background: #e5e7eb;
+        }
 
         /* Seller card (right column) */
         .seller-block {
             background: #fff;
             border-radius: 12px;
-            box-shadow: 0 1px 6px rgba(0,0,0,.07);
+            box-shadow: 0 1px 6px rgba(0, 0, 0, .07);
             padding: 1.1rem 1.4rem;
         }
 
@@ -307,8 +345,15 @@
             flex-shrink: 0;
         }
 
-        .seller-name { font-weight: 700; font-size: 0.95rem; }
-        .seller-username { font-size: 0.75rem; color: #9ca3af; }
+        .seller-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .seller-username {
+            font-size: 0.75rem;
+            color: #9ca3af;
+        }
 
         .seller-goto {
             margin-left: auto;
@@ -322,13 +367,15 @@
             display: none;
             position: fixed;
             inset: 0;
-            background: rgba(0,0,0,.92);
+            background: rgba(0, 0, 0, .92);
             z-index: 1000;
             align-items: center;
             justify-content: center;
         }
 
-        .lightbox.open { display: flex; }
+        .lightbox.open {
+            display: flex;
+        }
 
         .lightbox img {
             max-width: 92vw;
@@ -351,13 +398,15 @@
             opacity: .8;
         }
 
-        .lb-close:hover { opacity: 1; }
+        .lb-close:hover {
+            opacity: 1;
+        }
 
         .lb-arrow {
             position: absolute;
             top: 50%;
             transform: translateY(-50%);
-            background: rgba(255,255,255,.12);
+            background: rgba(255, 255, 255, .12);
             border: none;
             border-radius: 50%;
             width: 52px;
@@ -370,30 +419,43 @@
             justify-content: center;
         }
 
-        .lb-arrow:hover { background: rgba(255,255,255,.22); }
-        .lb-arrow.prev { left: 16px; }
-        .lb-arrow.next { right: 16px; }
+        .lb-arrow:hover {
+            background: rgba(255, 255, 255, .22);
+        }
+
+        .lb-arrow.prev {
+            left: 16px;
+        }
+
+        .lb-arrow.next {
+            right: 16px;
+        }
 
         .lb-counter {
             position: absolute;
             bottom: 18px;
             left: 50%;
             transform: translateX(-50%);
-            color: rgba(255,255,255,.7);
+            color: rgba(255, 255, 255, .7);
             font-size: 0.85rem;
         }
 
         /* Skeleton */
         .skeleton {
-            background: linear-gradient(90deg,#f3f4f6 25%,#e5e7eb 50%,#f3f4f6 75%);
+            background: linear-gradient(90deg, #f3f4f6 25%, #e5e7eb 50%, #f3f4f6 75%);
             background-size: 200% 100%;
             animation: shimmer 1.2s infinite;
             border-radius: 6px;
         }
 
         @keyframes shimmer {
-            0%   { background-position: 200% 0; }
-            100% { background-position: -200% 0; }
+            0% {
+                background-position: 200% 0;
+            }
+
+            100% {
+                background-position: -200% 0;
+            }
         }
 
         .error-box {
@@ -404,82 +466,196 @@
             border-radius: 12px;
         }
 
-        .error-box h2 { margin-bottom: .5rem; }
-        .error-box a { color: var(--primary,#06b6d4); }
+        .error-box h2 {
+            margin-bottom: .5rem;
+        }
+
+        .error-box a {
+            color: var(--primary, #06b6d4);
+        }
 
         /* ── Sil butonu ── */
         .btn-delete {
-            display: block; width: 100%; padding: .65rem 1rem;
-            background: #fff2f2; color: #dc2626; border: 1.5px solid #fca5a5;
-            border-radius: 10px; font-size: .9rem; font-weight: 600;
-            cursor: pointer; text-align: center; transition: background .15s;
+            display: block;
+            width: 100%;
+            padding: .65rem 1rem;
+            background: #fff2f2;
+            color: #dc2626;
+            border: 1.5px solid #fca5a5;
+            border-radius: 10px;
+            font-size: .9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: background .15s;
         }
-        .btn-delete:hover { background: #fee2e2; }
+
+        .btn-delete:hover {
+            background: #fee2e2;
+        }
 
         /* ── Favori butonu ── */
         .btn-fav {
-            display: block; width: 100%; padding: .75rem;
-            background: #fff5f5; color: #dc2626; border: 1.5px solid #fca5a5;
-            border-radius: 10px; font-size: .9rem; font-weight: 600;
-            cursor: pointer; text-align: center; transition: background .15s;
+            display: block;
+            width: 100%;
+            padding: .75rem;
+            background: #fff5f5;
+            color: #dc2626;
+            border: 1.5px solid #fca5a5;
+            border-radius: 10px;
+            font-size: .9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: background .15s;
             margin-bottom: .6rem;
         }
-        .btn-fav:hover { background: #fee2e2; }
-        .btn-fav.active { background: #dc2626; color: #fff; border-color: #dc2626; }
-        .btn-fav.active:hover { background: #b91c1c; }
+
+        .btn-fav:hover {
+            background: #fee2e2;
+        }
+
+        .btn-fav.active {
+            background: #dc2626;
+            color: #fff;
+            border-color: #dc2626;
+        }
+
+        .btn-fav.active:hover {
+            background: #b91c1c;
+        }
 
         /* ── Toggle aktif butonu ── */
         .btn-toggle {
-            display: block; width: 100%; padding: .65rem 1rem;
-            background: #f0fdf4; color: #16a34a; border: 1.5px solid #86efac;
-            border-radius: 10px; font-size: .9rem; font-weight: 600;
-            cursor: pointer; text-align: center; transition: background .15s;
+            display: block;
+            width: 100%;
+            padding: .65rem 1rem;
+            background: #f0fdf4;
+            color: #16a34a;
+            border: 1.5px solid #86efac;
+            border-radius: 10px;
+            font-size: .9rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-align: center;
+            transition: background .15s;
             margin-bottom: .6rem;
         }
-        .btn-toggle:hover { background: #dcfce7; }
-        .btn-toggle.passive { background: #fefce8; color: #ca8a04; border-color: #fde68a; }
-        .btn-toggle.passive:hover { background: #fef9c3; }
+
+        .btn-toggle:hover {
+            background: #dcfce7;
+        }
+
+        .btn-toggle.passive {
+            background: #fefce8;
+            color: #ca8a04;
+            border-color: #fde68a;
+        }
+
+        .btn-toggle.passive:hover {
+            background: #fef9c3;
+        }
 
         /* ── Şikayet butonu ── */
         .btn-report {
-            display: inline-flex; align-items: center; gap: .3rem;
-            padding: .35rem .75rem; font-size: .78rem; color: #9ca3af;
-            background: none; border: 1px solid #e5e7eb; border-radius: 20px;
-            cursor: pointer; transition: color .15s, border-color .15s;
+            display: inline-flex;
+            align-items: center;
+            gap: .3rem;
+            padding: .35rem .75rem;
+            font-size: .78rem;
+            color: #9ca3af;
+            background: none;
+            border: 1px solid #e5e7eb;
+            border-radius: 20px;
+            cursor: pointer;
+            transition: color .15s, border-color .15s;
             margin-top: .5rem;
         }
-        .btn-report:hover { color: #ef4444; border-color: #fca5a5; }
+
+        .btn-report:hover {
+            color: #ef4444;
+            border-color: #fca5a5;
+        }
 
         /* ── Modal ── */
         .modal-backdrop {
-            display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45);
-            z-index: 900; align-items: center; justify-content: center;
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .45);
+            z-index: 900;
+            align-items: center;
+            justify-content: center;
         }
-        .modal-backdrop.open { display: flex; }
+
+        .modal-backdrop.open {
+            display: flex;
+        }
+
         .modal-box {
-            background: #fff; border-radius: 16px; padding: 1.75rem;
-            width: 92%; max-width: 400px; box-shadow: 0 8px 32px rgba(0,0,0,.18);
+            background: #fff;
+            border-radius: 16px;
+            padding: 1.75rem;
+            width: 92%;
+            max-width: 400px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, .18);
         }
-        .modal-box h3 { margin: 0 0 1rem; font-size: 1.05rem; }
-        .modal-box select, .modal-box textarea {
-            width: 100%; padding: .6rem .8rem; border: 1.5px solid #e5e7eb;
-            border-radius: 8px; font-size: .9rem; margin-bottom: .75rem;
-            box-sizing: border-box; font-family: inherit;
+
+        .modal-box h3 {
+            margin: 0 0 1rem;
+            font-size: 1.05rem;
         }
-        .modal-box textarea { resize: vertical; min-height: 80px; }
-        .modal-actions { display: flex; gap: .75rem; justify-content: flex-end; }
+
+        .modal-box select,
+        .modal-box textarea {
+            width: 100%;
+            padding: .6rem .8rem;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 8px;
+            font-size: .9rem;
+            margin-bottom: .75rem;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        .modal-box textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: .75rem;
+            justify-content: flex-end;
+        }
+
         .modal-actions .btn-cancel {
-            padding: .55rem 1.1rem; border: 1.5px solid #e5e7eb; background: #fff;
-            border-radius: 8px; cursor: pointer; font-size: .88rem;
+            padding: .55rem 1.1rem;
+            border: 1.5px solid #e5e7eb;
+            background: #fff;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: .88rem;
         }
+
         .modal-actions .btn-send {
-            padding: .55rem 1.2rem; background: #06b6d4; color: #fff;
-            border: none; border-radius: 8px; font-size: .88rem; font-weight: 600;
+            padding: .55rem 1.2rem;
+            background: #06b6d4;
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: .88rem;
+            font-weight: 600;
             cursor: pointer;
         }
-        .modal-actions .btn-send:disabled { opacity: .5; cursor: default; }
+
+        .modal-actions .btn-send:disabled {
+            opacity: .5;
+            cursor: default;
+        }
     </style>
 </head>
+
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
@@ -520,10 +696,12 @@
     <div class="modal-backdrop" id="deleteModal">
         <div class="modal-box">
             <h3>İlanı Sil</h3>
-            <p style="font-size:.9rem;color:#4b5563;margin:0 0 1.25rem;">Bu ilanı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.</p>
+            <p style="font-size:.9rem;color:#4b5563;margin:0 0 1.25rem;">Bu ilanı silmek istediğinize emin misiniz? Bu
+                işlem geri alınamaz.</p>
             <div class="modal-actions">
                 <button class="btn-cancel" onclick="closeDeleteModal()">Vazgeç</button>
-                <button class="btn-send" style="background:#dc2626;" id="deleteSendBtn" onclick="confirmDelete()">Evet, Sil</button>
+                <button class="btn-send" style="background:#dc2626;" id="deleteSendBtn" onclick="confirmDelete()">Evet,
+                    Sil</button>
             </div>
         </div>
     </div>
@@ -554,23 +732,23 @@
 
         function timeAgo(iso) {
             const diff = (Date.now() - new Date(iso)) / 1000;
-            if (diff < 60)      return 'Az önce';
-            if (diff < 3600)    return Math.floor(diff / 60) + ' dk önce';
-            if (diff < 86400)   return Math.floor(diff / 3600) + ' sa önce';
+            if (diff < 60) return 'Az önce';
+            if (diff < 3600) return Math.floor(diff / 60) + ' dk önce';
+            if (diff < 86400) return Math.floor(diff / 3600) + ' sa önce';
             if (diff < 2592000) return Math.floor(diff / 86400) + ' gün önce';
             return new Date(iso).toLocaleDateString('tr-TR');
         }
 
         function esc(s) {
             return String(s ?? '')
-                .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-                .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
         const CAT = {
-            elektronik:'📱 Elektronik', vasita:'🚗 Vasıta', emlak:'🏠 Emlak',
-            giyim:'👗 Giyim', spor:'⚽ Spor', kitap:'📚 Kitap & Müzik',
-            ev:'🛋 Ev & Bahçe', diger:'📦 Diğer',
+            elektronik: '📱 Elektronik', vasita: '🚗 Vasıta', emlak: '🏠 Emlak',
+            giyim: '👗 Giyim', spor: '⚽ Spor', kitap: '📚 Kitap & Müzik',
+            ev: '🛋 Ev & Bahçe', diger: '📦 Diğer',
         };
 
         /* ── Gallery ── */
@@ -612,9 +790,9 @@
         }
 
         function lbKey(e) {
-            if (e.key === 'ArrowLeft')  lbNav(-1);
+            if (e.key === 'ArrowLeft') lbNav(-1);
             if (e.key === 'ArrowRight') lbNav(1);
-            if (e.key === 'Escape')     closeLb();
+            if (e.key === 'Escape') closeLb();
         }
 
         function lbClickOutside(e) {
@@ -627,7 +805,7 @@
                 return `<div class="gallery-main" style="cursor:default"><div class="no-photo">📷</div></div>`;
             }
             const imgs = urls.map((u, i) =>
-                `<img src="${u}" class="${i === 0 ? 'active' : ''}" alt="Fotoğraf ${i+1}" loading="lazy">`
+                `<img src="${u}" class="${i === 0 ? 'active' : ''}" alt="Fotoğraf ${i + 1}" loading="lazy">`
             ).join('');
 
             const arrows = urls.length > 1 ? `
@@ -640,8 +818,8 @@
             const thumbs = urls.length > 1 ? `
                 <div class="gallery-thumbs">
                     ${urls.map((u, i) =>
-                        `<img src="${u}" class="${i===0?'active':''}" onclick="goTo(${i})" alt="">`
-                    ).join('')}
+                `<img src="${u}" class="${i === 0 ? 'active' : ''}" onclick="goTo(${i})" alt="">`
+            ).join('')}
                 </div>` : '';
 
             return `
@@ -752,7 +930,7 @@
                     try {
                         const favResp = await apiFetch(`/favorites/${listingId}`);
                         _isFavorited = favResp.is_favorited || false;
-                    } catch (_) {}
+                    } catch (_) { }
                 }
 
                 document.getElementById('content').innerHTML = `
@@ -793,17 +971,17 @@
                                 <div class="price-tag">${fmt(data.price)}</div>
                                 <div class="price-note">KDV dahil</div>
                                 ${isOwner
-                                    ? `<button class="btn-toggle ${_isActive ? '' : 'passive'}" id="toggleBtn" onclick="toggleActive()">
+                        ? `<button class="btn-toggle ${_isActive ? '' : 'passive'}" id="toggleBtn" onclick="toggleActive()">
                                            ${_isActive ? '✓ Aktif — Pasife Al' : '✕ Pasif — Aktif Yap'}
                                        </button>
                                        <button class="btn-delete" onclick="openDeleteModal()">İlanı Sil</button>`
-                                    : isLoggedIn
-                                        ? `<button class="btn-fav ${_isFavorited ? 'active' : ''}" id="favBtn" onclick="toggleFav()">
+                        : isLoggedIn
+                            ? `<button class="btn-fav ${_isFavorited ? 'active' : ''}" id="favBtn" onclick="toggleFav()">
                                                ${_isFavorited ? '❤ Favorilerimde' : '♡ Favorilere Ekle'}
                                            </button>
                                            <a href="/mesajlar?to_id=${data.user.id}&to_name=${encodeURIComponent(data.user.full_name || data.user.username)}&to_handle=${encodeURIComponent(data.user.username)}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
-                                        : `<a href="/giris.html?next=/ilan/${listingId}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
-                                }
+                            : `<a href="/giris.html?next=/ilan/${listingId}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
+                    }
                                 ${!isOwner ? `<a href="/profil/${esc(data.user.username)}" class="btn-msg">Profili Gör</a>` : ''}
                             </div>
 
@@ -859,7 +1037,7 @@
                     btn.className = 'btn-fav active';
                     btn.textContent = '❤ Favorilerimde';
                 }
-            } catch (_) {}
+            } catch (_) { }
             btn.disabled = false;
         }
 
@@ -878,7 +1056,7 @@
                     btn.className = 'btn-toggle passive';
                     btn.textContent = '✕ Pasif — Aktif Yap';
                 }
-            } catch (_) {}
+            } catch (_) { }
             btn.disabled = false;
         }
 
@@ -926,4 +1104,5 @@
         load();
     </script>
 </body>
+
 </html>

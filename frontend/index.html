@@ -1,10 +1,12 @@
 <!DOCTYPE html>
 <html lang="tr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>teqlif — İlan Ver, Sat, Kazan</title>
-    <meta name="description" content="teqlif'te ücretsiz ilan ver, ikinci el eşyalarını sat ve en iyi fırsatları yakala. Elektronik, vasıta, emlak ve daha fazlası.">
+    <meta name="description"
+        content="teqlif'te ücretsiz ilan ver, ikinci el eşyalarını sat ve en iyi fırsatları yakala. Elektronik, vasıta, emlak ve daha fazlası.">
     <meta name="keywords" content="ilan ver, ikinci el, satılık, al sat, teqlif, elektronik, vasıta, emlak">
     <meta name="robots" content="index, follow">
     <link rel="canonical" href="https://teqlif.com/">
@@ -12,13 +14,15 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://teqlif.com/">
     <meta property="og:title" content="teqlif — İlan Ver, Sat, Kazan">
-    <meta property="og:description" content="teqlif'te ücretsiz ilan ver, ikinci el eşyalarını sat ve en iyi fırsatları yakala.">
+    <meta property="og:description"
+        content="teqlif'te ücretsiz ilan ver, ikinci el eşyalarını sat ve en iyi fırsatları yakala.">
     <meta property="og:image" content="https://teqlif.com/static/icons/icon.svg">
     <meta property="og:locale" content="tr_TR">
     <!-- Twitter Card -->
     <meta name="twitter:card" content="summary">
     <meta name="twitter:title" content="teqlif — İlan Ver, Sat, Kazan">
-    <meta name="twitter:description" content="teqlif'te ücretsiz ilan ver, ikinci el eşyalarını sat ve en iyi fırsatları yakala.">
+    <meta name="twitter:description"
+        content="teqlif'te ücretsiz ilan ver, ikinci el eşyalarını sat ve en iyi fırsatları yakala.">
     <meta name="twitter:image" content="https://teqlif.com/static/icons/icon.svg">
     <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
     <link rel="apple-touch-icon" href="/static/icons/icon.svg">
@@ -38,6 +42,18 @@
       }
     }
     </script>
+
+    <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script>
+        Sentry.init({
+            dsn: "https://98dfdd738860420a9c221abf4ddf35cb@o4511052861538304.ingest.us.sentry.io/4511053913391104",
+            integrations: [
+                Sentry.browserTracingIntegration(),
+            ],
+            tracesSampleRate: 1.0,
+        });
+    </script>
+
     <link rel="stylesheet" href="/static/css/main.css">
     <style>
         /* ── Tab bar ─────────────────────────────────────────────────── */
@@ -52,7 +68,10 @@
             flex-wrap: wrap;
         }
 
-        .tab-pills { display: flex; gap: 0.4rem; }
+        .tab-pills {
+            display: flex;
+            gap: 0.4rem;
+        }
 
         .tab-btn {
             display: inline-flex;
@@ -68,22 +87,46 @@
             transition: background 0.15s, color 0.15s;
         }
 
-        .tab-btn.active { background: var(--primary); color: #fff; }
-        .tab-btn:not(.active) { background: #f1f5f9; color: #64748b; }
-        .tab-btn:not(.active):hover { background: #e2e8f0; color: #334155; }
+        .tab-btn.active {
+            background: var(--primary);
+            color: #fff;
+        }
+
+        .tab-btn:not(.active) {
+            background: #f1f5f9;
+            color: #64748b;
+        }
+
+        .tab-btn:not(.active):hover {
+            background: #e2e8f0;
+            color: #334155;
+        }
 
         .live-dot {
-            width: 8px; height: 8px;
+            width: 8px;
+            height: 8px;
             border-radius: 50%;
             background: #fff;
             display: inline-block;
             animation: pulse 1.5s infinite;
         }
-        .tab-btn:not(.active) .live-dot { background: #ef4444; }
+
+        .tab-btn:not(.active) .live-dot {
+            background: #ef4444;
+        }
 
         @keyframes pulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.55; transform: scale(1.25); }
+
+            0%,
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.55;
+                transform: scale(1.25);
+            }
         }
 
         /* ── Canlı yayın — kategori filtre ─────────────────────────── */
@@ -125,40 +168,78 @@
             overflow: hidden;
             transition: box-shadow 0.15s, transform 0.15s;
         }
-        .stream-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); }
+
+        .stream-card:hover {
+            box-shadow: var(--shadow-md);
+            transform: translateY(-2px);
+        }
 
         .stream-thumb {
             background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-light) 100%);
             height: 155px;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             position: relative;
             overflow: hidden;
         }
+
         .stream-thumb-img {
-            position: absolute; inset: 0;
-            width: 100%; height: 100%;
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
             object-fit: cover;
         }
+
         .stream-thumb .live-badge {
-            position: absolute; top: 10px; left: 10px;
-            background: #ef4444; color: #fff;
-            font-size: 0.7rem; font-weight: 700;
-            padding: 2px 8px; border-radius: 4px; letter-spacing: 0.5px;
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: #ef4444;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 4px;
+            letter-spacing: 0.5px;
             z-index: 1;
         }
+
         .stream-thumb .viewer-badge {
-            position: absolute; top: 10px; right: 10px;
-            background: rgba(0,0,0,0.5); color: #fff;
-            font-size: 0.78rem; padding: 2px 8px; border-radius: 20px;
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            color: #fff;
+            font-size: 0.78rem;
+            padding: 2px 8px;
+            border-radius: 20px;
             z-index: 1;
         }
-        .stream-thumb svg { opacity: 0.28; }
-        .stream-info { padding: 1rem; }
-        .stream-title {
-            font-weight: 600; font-size: 0.93rem; margin-bottom: 0.3rem;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+
+        .stream-thumb svg {
+            opacity: 0.28;
         }
-        .stream-host { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 0.85rem; }
+
+        .stream-info {
+            padding: 1rem;
+        }
+
+        .stream-title {
+            font-weight: 600;
+            font-size: 0.93rem;
+            margin-bottom: 0.3rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .stream-host {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 0.85rem;
+        }
 
         /* ── İlanlar bölümü ─────────────────────────────────────────── */
         #section-ilanlar {
@@ -173,6 +254,7 @@
             gap: 0.6rem;
             margin-bottom: 1.5rem;
         }
+
         .listing-search input {
             flex: 1;
             padding: 0.7rem 1.1rem;
@@ -182,10 +264,12 @@
             outline: none;
             transition: border-color 0.15s;
         }
+
         .listing-search input:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(13,148,136,0.1);
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
         }
+
         .listing-search button {
             padding: 0.7rem 1.4rem;
             background: var(--primary);
@@ -205,6 +289,7 @@
             flex-wrap: wrap;
             margin-bottom: 1.5rem;
         }
+
         .cat-pill {
             display: inline-flex;
             align-items: center;
@@ -220,7 +305,9 @@
             transition: all 0.12s;
             text-decoration: none;
         }
-        .cat-pill:hover, .cat-pill.active {
+
+        .cat-pill:hover,
+        .cat-pill.active {
             background: var(--primary);
             border-color: var(--primary);
             color: #fff;
@@ -235,7 +322,12 @@
             gap: 0.75rem;
             flex-wrap: wrap;
         }
-        .listing-count { font-size: 0.85rem; color: var(--text-muted); }
+
+        .listing-count {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
         .listing-sort {
             padding: 0.38rem 0.7rem;
             border: 1.5px solid var(--border);
@@ -247,7 +339,11 @@
         }
 
         /* İlan listesi */
-        .listing-list { display: flex; flex-direction: column; gap: 0; }
+        .listing-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+        }
 
         .listing-item {
             display: flex;
@@ -260,21 +356,36 @@
             text-decoration: none;
             color: inherit;
         }
-        .listing-item:first-child { border-top: 1px solid #f1f5f9; border-radius: 10px 10px 0 0; }
-        .listing-item:last-child { border-radius: 0 0 10px 10px; }
-        .listing-item:hover { background: #f8fafc; }
+
+        .listing-item:first-child {
+            border-top: 1px solid #f1f5f9;
+            border-radius: 10px 10px 0 0;
+        }
+
+        .listing-item:last-child {
+            border-radius: 0 0 10px 10px;
+        }
+
+        .listing-item:hover {
+            background: #f8fafc;
+        }
 
         .listing-img {
             width: 130px;
             height: 100px;
             flex-shrink: 0;
             background: #e2e8f0;
-            display: flex; align-items: center; justify-content: center;
+            display: flex;
+            align-items: center;
+            justify-content: center;
             overflow: hidden;
             margin: 10px 0 10px 10px;
             border-radius: 6px;
         }
-        .listing-img svg { opacity: 0.3; }
+
+        .listing-img svg {
+            opacity: 0.3;
+        }
 
         .listing-body {
             flex: 1;
@@ -284,12 +395,16 @@
             justify-content: space-between;
             min-width: 0;
         }
+
         .listing-item-title {
             font-weight: 600;
             font-size: 0.93rem;
             margin-bottom: 0.25rem;
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
+
         .listing-item-desc {
             font-size: 0.8rem;
             color: var(--text-muted);
@@ -299,6 +414,7 @@
             -webkit-box-orient: vertical;
             margin-bottom: 0.4rem;
         }
+
         .listing-item-meta {
             display: flex;
             align-items: center;
@@ -306,11 +422,13 @@
             flex-wrap: wrap;
             gap: 0.3rem;
         }
+
         .listing-item-price {
             font-size: 1rem;
             font-weight: 700;
             color: var(--primary);
         }
+
         .listing-item-info {
             font-size: 0.76rem;
             color: #94a3b8;
@@ -318,36 +436,73 @@
 
         /* Boş durum */
         .empty-state {
-            text-align: center; padding: 4rem 2rem; color: var(--text-muted);
+            text-align: center;
+            padding: 4rem 2rem;
+            color: var(--text-muted);
         }
-        .empty-state svg { margin-bottom: 1rem; opacity: 0.35; }
-        .empty-state p { font-size: 1rem; }
+
+        .empty-state svg {
+            margin-bottom: 1rem;
+            opacity: 0.35;
+        }
+
+        .empty-state p {
+            font-size: 1rem;
+        }
 
         /* Modal */
         .modal-overlay {
-            display: none; position: fixed; inset: 0;
-            background: rgba(0,0,0,0.45); z-index: 200;
-            align-items: center; justify-content: center;
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 200;
+            align-items: center;
+            justify-content: center;
         }
-        .modal-overlay.open { display: flex; }
+
+        .modal-overlay.open {
+            display: flex;
+        }
+
         .modal {
-            background: var(--white); border-radius: 14px;
-            padding: 2rem; width: 100%; max-width: 400px; margin: 1rem;
+            background: var(--white);
+            border-radius: 14px;
+            padding: 2rem;
+            width: 100%;
+            max-width: 400px;
+            margin: 1rem;
         }
-        .modal h3 { font-size: 1.2rem; font-weight: 700; margin-bottom: 1.25rem; }
+
+        .modal h3 {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 1.25rem;
+        }
+
         .modal input {
-            width: 100%; padding: 0.65rem 0.9rem;
-            border: 1.5px solid var(--border); border-radius: 8px;
-            font-size: 0.95rem; outline: none; margin-bottom: 1rem;
+            width: 100%;
+            padding: 0.65rem 0.9rem;
+            border: 1.5px solid var(--border);
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+            margin-bottom: 1rem;
             transition: border-color 0.15s;
         }
+
         .modal input:focus {
             border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(13,148,136,0.12);
+            box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.12);
         }
-        .modal-actions { display: flex; gap: 0.75rem; }
+
+        .modal-actions {
+            display: flex;
+            gap: 0.75rem;
+        }
     </style>
 </head>
+
 <body>
     <nav>
         <a href="/" class="logo">teqlif</a>
@@ -375,7 +530,8 @@
         </a>
     </div>
 
-    <div id="alert" class="alert alert-error" style="max-width:1200px;margin:1rem auto 0;padding:0 2rem;display:none;"></div>
+    <div id="alert" class="alert alert-error" style="max-width:1200px;margin:1rem auto 0;padding:0 2rem;display:none;">
+    </div>
 
     <!-- ── Canlı Yayınlar bölümü ──────────────────────────────────────── -->
     <div id="section-canli">
@@ -448,7 +604,8 @@
             <h3>Yayın Başlat</h3>
             <div id="modalAlert" class="alert alert-error" style="display:none;"></div>
             <input type="text" id="streamTitle" placeholder="Yayın başlığı (örn: Araba Satışı)" maxlength="200">
-            <select id="streamCategory" style="width:100%;padding:0.65rem 0.9rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.95rem;outline:none;margin-bottom:1rem;background:#fff;color:#1a1a1a;">
+            <select id="streamCategory"
+                style="width:100%;padding:0.65rem 0.9rem;border:1.5px solid var(--border);border-radius:8px;font-size:0.95rem;outline:none;margin-bottom:1rem;background:#fff;color:#1a1a1a;">
                 <option value="">— Kategori seç —</option>
                 <option value="elektronik">📱 Elektronik</option>
                 <option value="giyim">👗 Giyim</option>
@@ -470,8 +627,8 @@
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/stream.js"></script>
     <script>
-        const alertEl    = document.getElementById('alert');
-        const btnStart   = document.getElementById('btnStartStream');
+        const alertEl = document.getElementById('alert');
+        const btnStart = document.getElementById('btnStartStream');
         const btnIlanVer = document.getElementById('btnIlanVer');
         const startModal = document.getElementById('startModal');
         const modalAlert = document.getElementById('modalAlert');
@@ -481,11 +638,11 @@
         /* ── Tab geçişi ─────────────────────────────────────────────── */
         function switchTab(tab) {
             const isCanli = tab === 'canli';
-            document.getElementById('section-canli').style.display   = isCanli ? '' : 'none';
-            document.getElementById('section-ilanlar').style.display  = isCanli ? 'none' : '';
+            document.getElementById('section-canli').style.display = isCanli ? '' : 'none';
+            document.getElementById('section-ilanlar').style.display = isCanli ? 'none' : '';
             document.getElementById('tab-canli').classList.toggle('active', isCanli);
             document.getElementById('tab-ilanlar').classList.toggle('active', !isCanli);
-            btnStart.style.display   = (isCanli && Auth.getToken()) ? '' : 'none';
+            btnStart.style.display = (isCanli && Auth.getToken()) ? '' : 'none';
             btnIlanVer.style.display = !isCanli ? '' : 'none';
             if (!isCanli && !_listingsLoaded) { loadListings(); loadCityOptions(); }
         }
@@ -515,9 +672,9 @@
                     <span class="live-badge">CANLI</span>
                     <span class="viewer-badge">👁 ${s.viewer_count}</span>
                     ${s.thumbnail_url
-                        ? `<img class="stream-thumb-img" src="${escHtml(s.thumbnail_url)}" alt="${escHtml(s.title)}" loading="lazy" onerror="this.remove()">`
-                        : ''
-                    }
+                    ? `<img class="stream-thumb-img" src="${escHtml(s.thumbnail_url)}" alt="${escHtml(s.title)}" loading="lazy" onerror="this.remove()">`
+                    : ''
+                }
                     <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="1.5">
                         <path d="M15 10l4.553-2.07A1 1 0 0121 8.845v6.31a1 1 0 01-1.447.894L15 14M3 8a2 2 0 012-2h10a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2V8z"/>
                     </svg>
@@ -615,7 +772,7 @@
                     opt.textContent = c;
                     sel.appendChild(opt);
                 });
-            } catch (_) {}
+            } catch (_) { }
         }
 
         function _applyFilters() {
@@ -623,7 +780,7 @@
             _filteredListings = _allListings.filter(l =>
                 (!_activeCat || l.category === _activeCat) &&
                 (!_activeLocation || l.location === _activeLocation) &&
-                (!q || l.title.toLowerCase().includes(q) || (l.description||'').toLowerCase().includes(q))
+                (!q || l.title.toLowerCase().includes(q) || (l.description || '').toLowerCase().includes(q))
             );
             sortListings();
         }
@@ -646,9 +803,9 @@
 
         function sortListings() {
             const sort = document.getElementById('listingSort').value;
-            if (sort === 'price_asc') _filteredListings.sort((a,b) => (a.price||0)-(b.price||0));
-            else if (sort === 'price_desc') _filteredListings.sort((a,b) => (b.price||0)-(a.price||0));
-            else _filteredListings.sort((a,b) => new Date(b.created_at||0)-new Date(a.created_at||0));
+            if (sort === 'price_asc') _filteredListings.sort((a, b) => (a.price || 0) - (b.price || 0));
+            else if (sort === 'price_desc') _filteredListings.sort((a, b) => (b.price || 0) - (a.price || 0));
+            else _filteredListings.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
             renderListings();
         }
 
@@ -674,9 +831,9 @@
                 <div class="listing-item" onclick="window.location='/ilan/${l.id}'">
                     <div class="listing-img">
                         ${l.image_url
-                            ? `<img src="${escHtml(l.image_url)}" style="width:100%;height:100%;object-fit:cover;">`
-                            : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`
-                        }
+                    ? `<img src="${escHtml(l.image_url)}" style="width:100%;height:100%;object-fit:cover;">`
+                    : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`
+                }
                     </div>
                     <div class="listing-body">
                         <div>
@@ -695,15 +852,15 @@
             if (!dateStr) return '';
             const d = new Date(dateStr);
             const diff = (Date.now() - d) / 1000;
-            if (diff < 3600) return Math.floor(diff/60) + ' dk önce';
-            if (diff < 86400) return Math.floor(diff/3600) + ' sa önce';
-            return Math.floor(diff/86400) + ' gün önce';
+            if (diff < 3600) return Math.floor(diff / 60) + ' dk önce';
+            if (diff < 86400) return Math.floor(diff / 3600) + ' sa önce';
+            return Math.floor(diff / 86400) + ' gün önce';
         }
 
         /* ── Yardımcılar ────────────────────────────────────────────── */
         function escHtml(str) {
             if (!str) return '';
-            return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+            return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
         }
 
         function showAlert(msg) {
@@ -724,7 +881,7 @@
             if (e.target === startModal) startModal.classList.remove('open');
         });
         document.getElementById('btnConfirmStart').addEventListener('click', async () => {
-            const title    = document.getElementById('streamTitle').value.trim();
+            const title = document.getElementById('streamTitle').value.trim();
             const category = document.getElementById('streamCategory').value;
             if (!title) {
                 modalAlert.textContent = 'Yayın başlığı zorunludur';
@@ -752,4 +909,5 @@
         loadStreams();
     </script>
 </body>
+
 </html>
