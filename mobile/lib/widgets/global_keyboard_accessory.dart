@@ -1,5 +1,7 @@
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../config/app_colors.dart';
+import '../config/theme.dart';
 
 class GlobalKeyboardAccessory extends StatefulWidget {
   final Widget child;
@@ -28,9 +30,7 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   void _handleFocusChange() {
     final primaryFocus = FocusManager.instance.primaryFocus;
     
-    // We want to find the EditableText relative to the focused node
     if (primaryFocus != null && primaryFocus.context != null) {
-      // Find the nearest EditableTextState to get the controller
       final state = primaryFocus.context!.findAncestorStateOfType<EditableTextState>() ?? 
                     _findEditableInContext(primaryFocus.context!);
 
@@ -85,57 +85,76 @@ class _AccessoryBar extends StatelessWidget {
     final keyboardHeight = MediaQuery.of(context).viewInsets.bottom;
     if (keyboardHeight <= 0) return const SizedBox.shrink();
 
+    final isDark = AppColors.isDark(context);
+
     return Positioned(
       bottom: keyboardHeight,
       left: 0,
       right: 0,
-      child: Material(
-        elevation: 8,
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: AppColors.surface(context),
-            border: Border(
-              top: BorderSide(color: AppColors.border(context), width: 0.5),
+      child: ClipRect(
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            decoration: BoxDecoration(
+              color: AppColors.surface(context).withValues(alpha: isDark ? 0.7 : 0.85),
+              border: Border(
+                top: BorderSide(
+                  color: AppColors.border(context).withValues(alpha: 0.5),
+                  width: 0.5,
+                ),
+              ),
             ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: ValueListenableBuilder<TextEditingValue>(
-                  valueListenable: controller,
-                  builder: (context, value, _) {
-                    final text = value.text.isEmpty ? 'Yazılıyor...' : value.text;
-                    return Text(
-                      text,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+            child: SafeArea(
+              top: false,
+              bottom: false,
+              child: Row(
+                children: [
+                  Expanded(
+                    child: ValueListenableBuilder<TextEditingValue>(
+                      valueListenable: controller,
+                      builder: (context, value, _) {
+                        final text = value.text.isEmpty ? 'Yazılıyor...' : value.text;
+                        return Text(
+                          text,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontStyle: value.text.isEmpty ? FontStyle.italic : FontStyle.normal,
+                            color: value.text.isEmpty 
+                                ? AppColors.textTertiary(context) 
+                                : AppColors.textPrimary(context),
+                            fontSize: 13,
+                            fontWeight: value.text.isEmpty ? FontWeight.normal : FontWeight.w500,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  TextButton(
+                    onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                      minimumSize: Size.zero,
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      foregroundColor: kPrimary,
+                    ),
+                    child: const Text(
+                      'Kapat',
                       style: TextStyle(
-                        fontStyle: value.text.isEmpty ? FontStyle.italic : FontStyle.normal,
-                        color: value.text.isEmpty ? AppColors.textTertiary(context) : AppColors.textPrimary(context),
-                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 14,
                       ),
-                    );
-                  },
-                ),
+                    ),
+                  ),
+                ],
               ),
-              const SizedBox(width: 8),
-              TextButton(
-                onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
-                style: TextButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                ),
-                child: const Text(
-                  'Kapat',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: Colors.blueAccent),
-                ),
-              ),
-            ],
+            ),
           ),
         ),
       ),
     );
   }
 }
+
