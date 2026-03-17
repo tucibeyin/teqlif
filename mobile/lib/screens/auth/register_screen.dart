@@ -151,10 +151,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextFormField(
                       controller: _fullNameCtrl,
                       textCapitalization: TextCapitalization.words,
-                      decoration: const InputDecoration(labelText: 'Ad Soyad'),
+                      maxLength: 100,
+                      decoration: const InputDecoration(
+                        labelText: 'Ad Soyad',
+                        counterText: '',
+                      ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Ad soyad giriniz';
-                        if (v.trim().length < 2) return 'Ad soyad en az 2 karakter olmalı';
+                        if (v.trim().length < 2)
+                          return 'Ad soyad en az 2 karakter olmalı';
+                        if (v.length > 100) return 'Ad soyad en fazla 100 karakter olmalı';
                         return null;
                       },
                     ),
@@ -162,10 +168,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextFormField(
                       controller: _usernameCtrl,
                       autocorrect: false,
+                      maxLength: 50,
                       decoration: InputDecoration(
                         labelText: 'Kullanıcı Adı',
                         helperText: 'Küçük harf, rakam ve _ kullanılabilir',
                         helperStyle: const TextStyle(fontSize: 11),
+                        counterText: '',
                         suffixIcon: _usernameStatus == 'checking'
                             ? const SizedBox(
                                 width: 20,
@@ -176,19 +184,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 ),
                               )
                             : _usernameStatus == 'available'
-                                ? const Icon(Icons.check_circle, color: Colors.green, size: 20)
+                                ? const Icon(Icons.check_circle,
+                                    color: Colors.green, size: 20)
                                 : _usernameStatus == 'taken'
-                                    ? const Icon(Icons.cancel, color: Colors.red, size: 20)
+                                    ? const Icon(Icons.cancel,
+                                        color: Colors.red, size: 20)
                                     : null,
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Kullanıcı adı giriniz';
                         if (v.length < 3) return 'En az 3 karakter olmalı';
+                        if (v.length > 50) return 'En fazla 50 karakter olmalı';
                         if (!RegExp(r'^[a-z0-9_]+$').hasMatch(v)) {
                           return 'Sadece küçük harf, rakam ve _ kullanılabilir';
                         }
-                        if (_usernameStatus == 'taken') return 'Bu kullanıcı adı zaten alınmış';
-                        if (_usernameStatus == 'checking') return 'Kullanıcı adı kontrol ediliyor...';
+                        if (_usernameStatus == 'taken')
+                          return 'Bu kullanıcı adı zaten alınmış';
+                        if (_usernameStatus == 'checking')
+                          return 'Kullanıcı adı kontrol ediliyor...';
                         return null;
                       },
                     ),
@@ -197,9 +210,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
-                      decoration: const InputDecoration(labelText: 'E-posta'),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'E-posta giriniz' : null,
+                      maxLength: 255,
+                      decoration: const InputDecoration(
+                        labelText: 'E-posta',
+                        counterText: '',
+                      ),
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'E-posta giriniz';
+                        if (v.length > 255) return 'E-posta en fazla 255 karakter olmalı';
+                        if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
+                            .hasMatch(v)) {
+                          return 'Geçerli bir e-posta adresi giriniz';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
