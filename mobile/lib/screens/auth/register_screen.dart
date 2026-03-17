@@ -152,8 +152,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _fullNameCtrl,
                       textCapitalization: TextCapitalization.words,
                       decoration: const InputDecoration(labelText: 'Ad Soyad'),
-                      validator: (v) =>
-                          v == null || v.isEmpty ? 'Ad soyad giriniz' : null,
+                      validator: (v) {
+                        if (v == null || v.isEmpty) return 'Ad soyad giriniz';
+                        if (v.trim().length < 2) return 'Ad soyad en az 2 karakter olmalı';
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
