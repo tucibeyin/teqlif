@@ -679,7 +679,7 @@
         const startModal = document.getElementById('startModal');
         const modalAlert = document.getElementById('modalAlert');
 
-        if (Auth.getToken()) btnYayınAc.style.display = '';
+        btnYayınAc.style.display = ''; // Initially show as 'Canlı Yayınlar' is active by default
 
         /* ── Tab geçişi ─────────────────────────────────────────────── */
         function switchTab(tab) {
@@ -688,7 +688,7 @@
             document.getElementById('section-ilanlar').style.display = isCanli ? 'none' : '';
             document.getElementById('tab-canli').classList.toggle('active', isCanli);
             document.getElementById('tab-ilanlar').classList.toggle('active', !isCanli);
-            btnYayınAc.style.display = (isCanli && Auth.getToken()) ? '' : 'none';
+            btnYayınAc.style.display = isCanli ? '' : 'none';
             btnIlanVer.style.display = !isCanli ? '' : 'none';
             if (!isCanli && !_listingsLoaded) { loadListings(); loadCityOptions(); }
         }
@@ -916,7 +916,11 @@
         }
 
         /* ── Yayın başlat modal ─────────────────────────────────────── */
-        btnStart.addEventListener('click', () => {
+        btnYayınAc.addEventListener('click', () => {
+            if (!Auth.getToken()) {
+                window.location.href = '/giris.html?next=/';
+                return;
+            }
             startModal.classList.add('open');
             document.getElementById('streamTitle').focus();
         });
