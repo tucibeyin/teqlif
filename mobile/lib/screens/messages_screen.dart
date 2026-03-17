@@ -684,7 +684,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                     child: TextField(
                       controller: _textCtrl,
                       textCapitalization: TextCapitalization.sentences,
-                      textInputAction: TextInputAction.send,
+                      textInputAction: TextInputAction.newline,
                       maxLines: null,
                       decoration: InputDecoration(
                         hintText: 'Mesaj yaz...',
