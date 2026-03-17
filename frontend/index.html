@@ -56,9 +56,17 @@
 
     <link rel="stylesheet" href="/static/css/main.css">
     <style>
-        /* ── Tab bar ─────────────────────────────────────────────────── */
+        .tab-bar-wrapper {
+            width: 100%;
+            background: var(--white);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 60px; /* Adjust based on nav height if needed */
+            z-index: 100;
+        }
+
         .tab-bar {
-            padding: 1.5rem 2rem 0;
+            padding: 0.75rem 2rem;
             max-width: 1200px;
             margin: 0 auto;
             display: flex;
@@ -135,6 +143,10 @@
             gap: 0.5rem;
             flex-wrap: wrap;
             padding: 1.25rem 2rem 0;
+            justify-content: center;
+        }
+
+        #section-canli {
             max-width: 1200px;
             margin: 0 auto;
         }
@@ -145,8 +157,6 @@
             grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
             gap: 1.25rem;
             padding: 1rem 2rem 3rem;
-            max-width: 1200px;
-            margin: 0 auto;
         }
 
         /* Kategori section başlığı (Tümü görünümünde) */
@@ -288,6 +298,7 @@
             gap: 0.5rem;
             flex-wrap: wrap;
             margin-bottom: 1.5rem;
+            justify-content: center;
         }
 
         .cat-pill {
@@ -514,21 +525,23 @@
     </nav>
 
     <!-- Tab bar + Yayın Başlat -->
-    <div class="tab-bar">
-        <div class="tab-pills">
-            <button class="tab-btn active" id="tab-canli" onclick="switchTab('canli')">
-                <span class="live-dot"></span> Canlı Yayınlar
+    <div class="tab-bar-wrapper">
+        <div class="tab-bar">
+            <div class="tab-pills">
+                <button class="tab-btn active" id="tab-canli" onclick="switchTab('canli')">
+                    <span class="live-dot"></span> Canlı Yayınlar
+                </button>
+                <button class="tab-btn" id="tab-ilanlar" onclick="switchTab('ilanlar')">
+                    İlanlar
+                </button>
+            </div>
+            <button id="btnStartStream" class="btn btn-primary" style="display:none;">
+                + Yayın Başlat
             </button>
-            <button class="tab-btn" id="tab-ilanlar" onclick="switchTab('ilanlar')">
-                İlanlar
-            </button>
+            <a href="/ilan-ver.html" id="btnIlanVer" class="btn btn-primary" style="display:none;">
+                + İlan Ver
+            </a>
         </div>
-        <button id="btnStartStream" class="btn btn-primary" style="display:none;">
-            + Yayın Başlat
-        </button>
-        <a href="/ilan-ver.html" id="btnIlanVer" class="btn btn-primary" style="display:none;">
-            + İlan Ver
-        </a>
     </div>
 
     <div id="alert" class="alert alert-error" style="max-width:1200px;margin:1rem auto 0;padding:0 2rem;display:none;">
