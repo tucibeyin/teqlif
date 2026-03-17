@@ -213,7 +213,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Şifre giriniz';
-                        if (v.length < 6) return 'En az 6 karakter olmalı';
+                        if (v.length < 8) return 'En az 8 karakter olmalı';
                         return null;
                       },
                     ),
