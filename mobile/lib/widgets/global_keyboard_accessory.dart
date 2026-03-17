@@ -65,12 +65,16 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        widget.child,
-        if (_activeController != null)
-          _AccessoryBar(controller: _activeController!),
-      ],
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      behavior: HitTestBehavior.translucent,
+      child: Stack(
+        children: [
+          widget.child,
+          if (_activeController != null)
+            _AccessoryBar(controller: _activeController!),
+        ],
+      ),
     );
   }
 }
