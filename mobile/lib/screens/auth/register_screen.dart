@@ -238,6 +238,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           onPressed: () => setState(() => _obscure = !_obscure),
                         ),
                       ),
+                      textInputAction: TextInputAction.done,
                       validator: (v) {
                         if (v == null || v.isEmpty) return 'Şifre giriniz';
                         if (v.length < 8) return 'En az 8 karakter olmalı';

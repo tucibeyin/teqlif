@@ -386,6 +386,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   TextFormField(
                     controller: _descCtrl,
                     maxLines: 5,
+                    keyboardType: TextInputType.multiline,
+                    textInputAction: TextInputAction.newline,
                     decoration: const InputDecoration(
                       labelText: 'Açıklama',
                       alignLabelWithHint: true,

@@ -10,6 +10,7 @@ import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
+import '../widgets/keyboard_accessory_bar.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
 
@@ -593,138 +594,147 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
         title: Text(widget.displayName),
         leading: const BackButton(),
       ),
-      body: Column(
+      body: Stack(
         children: [
-          Expanded(
-            child: _loading
-                ? const Center(child: CircularProgressIndicator(color: kPrimary))
-                : _messages.isEmpty
-                    ? const Center(
-                        child: Text(
-                          'Henüz mesaj yok.\nİlk mesajı gönder!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFF9CA3AF)),
-                        ),
-                      )
-                    : ListView.builder(
-                        controller: _scrollCtrl,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, i) {
-                          final msg = _messages[i];
-                          final senderId = msg['sender_id'] as int?;
-                          final isMe = senderId == _myUserId;
-                          final content = msg['content'] as String? ?? '';
-                          final time = _timeLabel(msg['created_at'] as String?);
+          Column(
+            children: [
+              Expanded(
+                child: _loading
+                    ? const Center(child: CircularProgressIndicator(color: kPrimary))
+                    : _messages.isEmpty
+                        ? const Center(
+                            child: Text(
+                              'Henüz mesaj yok.\nİlk mesajı gönder!',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(color: Color(0xFF9CA3AF)),
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: _scrollCtrl,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                            itemCount: _messages.length,
+                            itemBuilder: (context, i) {
+                              final msg = _messages[i];
+                              final senderId = msg['sender_id'] as int?;
+                              final isMe = senderId == _myUserId;
+                              final content = msg['content'] as String? ?? '';
+                              final time = _timeLabel(msg['created_at'] as String?);
 
-                          return Align(
-                            alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 3),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.of(context).size.width * 0.72,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isMe
-                                    ? kPrimary
-                                    : AppColors.card(context),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16),
-                                  topRight: const Radius.circular(16),
-                                  bottomLeft: isMe
-                                      ? const Radius.circular(16)
-                                      : const Radius.circular(4),
-                                  bottomRight: isMe
-                                      ? const Radius.circular(4)
-                                      : const Radius.circular(16),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  _MessageText(
-                                    content: content,
-                                    isMe: isMe,
+                              return Align(
+                                alignment: isMe
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width * 0.72,
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    time,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: isMe
-                                          ? Colors.white.withOpacity(0.75)
-                                          : const Color(0xFF9CA3AF),
+                                  decoration: BoxDecoration(
+                                    color: isMe
+                                        ? kPrimary
+                                        : AppColors.card(context),
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: const Radius.circular(16),
+                                      topRight: const Radius.circular(16),
+                                      bottomLeft: isMe
+                                          ? const Radius.circular(16)
+                                          : const Radius.circular(4),
+                                      bottomRight: isMe
+                                          ? const Radius.circular(4)
+                                          : const Radius.circular(16),
                                     ),
                                   ),
-                                ],
-                              ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      _MessageText(
+                                        content: content,
+                                        isMe: isMe,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        time,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: isMe
+                                              ? Colors.white.withOpacity(0.75)
+                                              : const Color(0xFF9CA3AF),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+              ),
+              Builder(
+                builder: (context) => Container(
+                padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface(context),
+                  border: Border(top: BorderSide(color: AppColors.border(context))),
+                ),
+                child: SafeArea(
+                  top: false,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _textCtrl,
+                          textCapitalization: TextCapitalization.sentences,
+                          textInputAction: TextInputAction.send,
+                          maxLines: null,
+                          decoration: InputDecoration(
+                            hintText: 'Mesaj yaz...',
+                            hintStyle:
+                                TextStyle(color: AppColors.textTertiary(context)),
+                            filled: true,
+                            fillColor: AppColors.inputFill(context),
+                            contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(22),
+                              borderSide: BorderSide.none,
                             ),
-                          );
-                        },
-                      ),
-          ),
-          Builder(
-            builder: (context) => Container(
-            padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
-            decoration: BoxDecoration(
-              color: AppColors.surface(context),
-              border: Border(top: BorderSide(color: AppColors.border(context))),
-            ),
-            child: SafeArea(
-              top: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _textCtrl,
-                      textCapitalization: TextCapitalization.sentences,
-                      maxLines: null,
-                      decoration: InputDecoration(
-                        hintText: 'Mesaj yaz...',
-                        hintStyle:
-                            TextStyle(color: AppColors.textTertiary(context)),
-                        filled: true,
-                        fillColor: AppColors.inputFill(context),
-                        contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 10),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(22),
-                          borderSide: BorderSide.none,
+                          ),
+                          onSubmitted: (_) => _send(),
                         ),
                       ),
-                      onSubmitted: (_) => _send(),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  GestureDetector(
-                    onTap: _send,
-                    child: Container(
-                      width: 42,
-                      height: 42,
-                      decoration: const BoxDecoration(
-                        color: kPrimary,
-                        shape: BoxShape.circle,
+                      const SizedBox(width: 8),
+                      GestureDetector(
+                        onTap: _send,
+                        child: Container(
+                          width: 42,
+                          height: 42,
+                          decoration: const BoxDecoration(
+                            color: kPrimary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: _sending
+                              ? const Padding(
+                                  padding: EdgeInsets.all(10),
+                                  child: CircularProgressIndicator(
+                                      color: Colors.white, strokeWidth: 2),
+                                )
+                              : const Icon(Icons.send_rounded,
+                                  color: Colors.white, size: 20),
+                        ),
                       ),
-                      child: _sending
-                          ? const Padding(
-                              padding: EdgeInsets.all(10),
-                              child: CircularProgressIndicator(
-                                  color: Colors.white, strokeWidth: 2),
-                            )
-                          : const Icon(Icons.send_rounded,
-                              color: Colors.white, size: 20),
-                    ),
+                    ],
                   ),
-                ],
-              ),
-            ),
-          ),),
+                ),
+              ),),
+            ],
+          ),
+          KeyboardAccessoryBar(
+            controller: _textCtrl,
+            placeholder: 'Mesaj önizlemesi...',
+          ),
         ],
       ),
     );
