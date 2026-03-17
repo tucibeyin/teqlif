@@ -95,64 +95,69 @@ class _AccessoryBar extends StatelessWidget {
       bottom: keyboardHeight,
       left: 0,
       right: 0,
-      child: ClipRect(
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            decoration: BoxDecoration(
-              color: AppColors.surface(context).withValues(alpha: isDark ? 0.7 : 0.85),
-              border: Border(
-                top: BorderSide(
-                  color: AppColors.border(context).withValues(alpha: 0.5),
-                  width: 0.5,
+      child: Material(
+        type: MaterialType.transparency,
+        child: ClipRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              decoration: BoxDecoration(
+                color: AppColors.surface(context).withValues(alpha: isDark ? 0.7 : 0.85),
+                border: Border(
+                  top: BorderSide(
+                    color: AppColors.border(context).withValues(alpha: 0.5),
+                    width: 0.5,
+                  ),
                 ),
               ),
-            ),
-            child: SafeArea(
-              top: false,
-              bottom: false,
-              child: Row(
-                children: [
-                  Expanded(
-                    child: ValueListenableBuilder<TextEditingValue>(
-                      valueListenable: controller,
-                      builder: (context, value, _) {
-                        final text = value.text.isEmpty ? 'Yazılıyor...' : value.text;
-                        return Text(
-                          text,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: TextStyle(
-                            fontStyle: value.text.isEmpty ? FontStyle.italic : FontStyle.normal,
-                            color: value.text.isEmpty 
-                                ? AppColors.textTertiary(context) 
-                                : AppColors.textPrimary(context),
-                            fontSize: 13,
-                            fontWeight: value.text.isEmpty ? FontWeight.normal : FontWeight.w500,
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  TextButton(
-                    onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
-                    style: TextButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      minimumSize: Size.zero,
-                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                      foregroundColor: kPrimary,
-                    ),
-                    child: const Text(
-                      'Kapat',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w700,
-                        fontSize: 14,
+              child: SafeArea(
+                top: false,
+                bottom: false,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: ValueListenableBuilder<TextEditingValue>(
+                        valueListenable: controller,
+                        builder: (context, value, _) {
+                          final text = value.text.isEmpty ? 'Yazılıyor...' : value.text;
+                          return Text(
+                            text,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: TextStyle(
+                              decoration: TextDecoration.none,
+                              fontStyle: value.text.isEmpty ? FontStyle.italic : FontStyle.normal,
+                              color: value.text.isEmpty 
+                                  ? AppColors.textTertiary(context) 
+                                  : AppColors.textPrimary(context),
+                              fontSize: 13,
+                              fontWeight: value.text.isEmpty ? FontWeight.normal : FontWeight.w500,
+                            ),
+                          );
+                        },
                       ),
                     ),
-                  ),
-                ],
+                    const SizedBox(width: 12),
+                    TextButton(
+                      onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
+                      style: TextButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        foregroundColor: kPrimary,
+                      ),
+                      child: const Text(
+                        'Kapat',
+                        style: TextStyle(
+                          decoration: TextDecoration.none,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
@@ -161,4 +166,5 @@ class _AccessoryBar extends StatelessWidget {
     );
   }
 }
+
 
