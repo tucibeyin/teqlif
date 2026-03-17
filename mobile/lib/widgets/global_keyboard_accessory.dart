@@ -71,8 +71,15 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+    return Listener(
+      onPointerDown: (_) {
+        // We use Listener instead of GestureDetector to ensure we catch the tap
+        // even if it's handled by other widgets (like buttons or scrollables).
+        final primaryFocus = FocusManager.instance.primaryFocus;
+        if (primaryFocus != null && primaryFocus.hasFocus) {
+          primaryFocus.unfocus();
+        }
+      },
       behavior: HitTestBehavior.translucent,
       child: Stack(
         children: [
