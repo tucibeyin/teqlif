@@ -10,6 +10,7 @@ import 'screens/main_screen.dart';
 import 'services/biometric_service.dart';
 import 'services/storage_service.dart';
 import 'services/push_notification_service.dart';
+import 'widgets/global_keyboard_accessory.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() async {
@@ -45,8 +46,11 @@ class TeqlifApp extends StatelessWidget {
         title: 'teqlif',
         theme: appTheme,
         darkTheme: darkTheme,
-        themeMode: ThemeProvider.instance.themeMode,
         debugShowCheckedModeBanner: false,
+        themeMode: ThemeProvider.instance.themeMode,
+        builder: (context, child) {
+          return GlobalKeyboardAccessory(child: child!);
+        },
         home: const _SplashGate(),
         routes: {
           '/login': (_) => const LoginScreen(),
