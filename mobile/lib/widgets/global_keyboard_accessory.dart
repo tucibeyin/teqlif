@@ -41,6 +41,12 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
           });
         }
         return;
+      } else {
+        // If we have focus but it's not on an EditableText, and we had an active controller,
+        // it means we lost focus. Ensure keyboard is closed.
+        if (_activeController != null) {
+          primaryFocus.unfocus();
+        }
       }
     }
 
