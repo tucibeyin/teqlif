@@ -21,7 +21,7 @@ For _fastlane_ installation instructions, see [Installing _fastlane_](https://do
 [bundle exec] fastlane android deploy_internal
 ```
 
-Sürümü artır, derle ve Internal Test'e gönder
+Teqlif'i derle ve Internal Test'e taslak olarak gönder
 
 ----
 
