@@ -26,6 +26,9 @@ body {
     color: var(--text);
     background: var(--bg);
     line-height: 1.6;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
 }
 
 /* ── NAV ── */
@@ -196,7 +199,7 @@ nav {
     margin-bottom: 0.4rem;
 }
 
-.form-group input {
+.form-group input:not([type="checkbox"]) {
     width: 100%;
     padding: 0.65rem 0.9rem;
     border: 1.5px solid var(--border);
@@ -251,9 +254,113 @@ nav {
 
 /* ── SAYFA ORTALAMA ── */
 .page-center {
-    min-height: calc(100vh - 60px);
+    min-height: calc(100vh - 160px);
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 2rem 1rem;
+}
+
+/* ── FOOTER ── */
+footer {
+    background: var(--white);
+    border-top: 1px solid var(--border);
+    padding: 3rem 2rem;
+    margin-top: auto;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 2rem;
+}
+
+.footer-brand {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.footer-social {
+    display: flex;
+    gap: 1.25rem;
+    align-items: center;
+}
+
+.footer-social a {
+    color: var(--text-muted);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.footer-social a:hover {
+    color: var(--primary);
+    transform: translateY(-3px);
+}
+
+.footer-social svg {
+    width: 20px;
+    height: 20px;
+    stroke-width: 1.5;
+}
+
+.footer-app-link {
+    display: flex;
+    align-items: center;
+    background: #000;
+    color: #fff !important;
+    padding: 0.5rem 1rem;
+    border-radius: 8px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-decoration: none;
+    transition: transform 0.2s;
+}
+
+.footer-app-link:hover {
+    transform: scale(1.03);
+}
+
+.footer-links {
+    display: flex;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+}
+
+.footer-links a {
+    color: var(--text-muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    transition: color 0.15s;
+}
+
+.footer-links a:hover {
+    color: var(--primary);
+}
+
+.footer-bottom {
+    max-width: 1200px;
+    margin: 2rem auto 0;
+    padding-top: 1.5rem;
+    border-top: 1px solid #f1f5f9;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    text-align: center;
+}
+
+/* ── MOBİL ── */
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+    }
+    .footer-links {
+        justify-content: center;
+    }
 }
