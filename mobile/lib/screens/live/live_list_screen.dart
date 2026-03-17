@@ -130,6 +130,11 @@ class LiveListScreenState extends State<LiveListScreen> {
                   setStateDialog(() => errorText = 'Yayın başlığı zorunludur');
                   return;
                 }
+                if (t.length < 3) {
+                  setStateDialog(
+                      () => errorText = 'Yayın başlığı 3 karakterden fazla olmalı.');
+                  return;
+                }
                 if (selectedCategory == null) {
                   setStateDialog(() => errorText = 'Kategori seçimi zorunludur');
                   return;
