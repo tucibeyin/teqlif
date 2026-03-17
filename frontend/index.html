@@ -535,8 +535,8 @@
                     İlanlar
                 </button>
             </div>
-            <button id="btnStartStream" class="btn btn-primary" style="display:none;">
-                + Yayın Başlat
+            <button id="btnYayınAc" class="btn btn-primary" style="display:none;">
+                + Yayın Aç
             </button>
             <a href="/ilan-ver.html" id="btnIlanVer" class="btn btn-primary" style="display:none;">
                 + İlan Ver
@@ -674,12 +674,12 @@
     <script src="/static/js/stream.js"></script>
     <script>
         const alertEl = document.getElementById('alert');
-        const btnStart = document.getElementById('btnStartStream');
+        const btnYayınAc = document.getElementById('btnYayınAc');
         const btnIlanVer = document.getElementById('btnIlanVer');
         const startModal = document.getElementById('startModal');
         const modalAlert = document.getElementById('modalAlert');
 
-        if (Auth.getToken()) btnStart.style.display = '';
+        if (Auth.getToken()) btnYayınAc.style.display = '';
 
         /* ── Tab geçişi ─────────────────────────────────────────────── */
         function switchTab(tab) {
@@ -688,7 +688,7 @@
             document.getElementById('section-ilanlar').style.display = isCanli ? 'none' : '';
             document.getElementById('tab-canli').classList.toggle('active', isCanli);
             document.getElementById('tab-ilanlar').classList.toggle('active', !isCanli);
-            btnStart.style.display = (isCanli && Auth.getToken()) ? '' : 'none';
+            btnYayınAc.style.display = (isCanli && Auth.getToken()) ? '' : 'none';
             btnIlanVer.style.display = !isCanli ? '' : 'none';
             if (!isCanli && !_listingsLoaded) { loadListings(); loadCityOptions(); }
         }
