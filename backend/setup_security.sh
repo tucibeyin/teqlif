@@ -8,7 +8,7 @@ echo "=================================="
 
 # 1. Gereksinimleri yükle
 echo "📦 1. Güvenlik paketleri yüklüyor..."
-pip install bcrypt slowapi bleach --quiet
+pip install bcrypt slowapi bleach pydantic-settings --quiet
 if [ $? -ne 0 ]; then
     echo "❌ Paket yükleme başarısız!"
     exit 1
