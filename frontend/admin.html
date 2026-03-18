@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="tr">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Teqlif Backoffice</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <style>
+        body {
+            background-color: #0f172a;
+            color: white;
+            font-family: sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+
+        .container {
+            background: #1e293b;
+            padding: 2rem;
+            border-radius: 1rem;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+            min-width: 300px;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        input {
+            width: 100%;
+            padding: 0.75rem;
+            margin: 1rem 0;
+            border-radius: 0.5rem;
+            border: 1px solid #334155;
+            background: #0f172a;
+            color: white;
+            box-sizing: border-box;
+        }
+
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            width: 100%;
+            font-weight: bold;
+        }
+
+        #admin-content h1 {
+            font-size: 3rem;
+            color: #10b981;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <div id="step-google">
+            <h3>Yönetici Girişi (1/2)</h3>
+            <div id="buttonDiv"></div>
+        </div>
+
+        <div id="step-password" class="hidden">
+            <h3>Güvenlik Anahtarı (2/2)</h3>
+            <input type="password" id="admin-pass" placeholder="Harici Şifre">
+            <button onclick="verifyPassword()">Onayla</button>
+        </div>
+
+        <div id="admin-content" class="hidden">
+            <h1>ADMIN PANELI</h1>
+            <button onclick="adminLogout()" style="background: #ef4444; margin-top: 2rem;">Çıkış Yap</button>
+        </div>
+    </div>
+
+    <script>
+        // Backend'den gelecek Client ID'yi buraya elinle yazabilirsin 
+        // ya da dinamik çekebiliriz. Şimdilik hızlıca devam edelim:
+        const GOOGLE_CLIENT_ID = "232766108005-c193qv63qkv5c6m3c2klrs2ihoj7b2ok.apps.googleusercontent.com";
+
+        window.onload = function () {
+            // Eğer zaten admin token'ı varsa direkt içeriği göster
+            if (sessionStorage.getItem("teqlif_admin_session")) {
+                showFinalStep();
+            } else {
+                initGoogleAuth();
+            }
+        };
+
+        function initGoogleAuth() {
+            google.accounts.id.initialize({
+                client_id: GOOGLE_CLIENT_ID,
+                callback: handleCredentialResponse
+            });
+            google.accounts.id.renderButton(
+                document.getElementById("buttonDiv"),
+                { theme: "outline", size: "large" }
+            );
+        }
+
+        async function handleCredentialResponse(response) {
+            const res = await fetch('/api/admin-auth/verify-google', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ token: response.credential })
+            });
+
+            if (res.ok) {
+                document.getElementById("step-google").classList.add("hidden");
+                document.getElementById("step-password").classList.remove("hidden");
+            } else {
+                alert("Sadece sistem yöneticisi erişebilir.");
+            }
+        }
+
+        async function verifyPassword() {
+            const password = document.getElementById("admin-pass").value;
+            const res = await fetch('/api/admin-auth/verify-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: password })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                // İZOLASYON: Diğer sayfalardan ayırmak için farklı bir key kullanıyoruz
+                // sessionStorage kullanarak tarayıcı kapandığında oturumu sonlandırıyoruz
+                sessionStorage.setItem("teqlif_admin_session", data.access_token);
+                showFinalStep();
+            } else {
+                alert("Hatalı şifre!");
+            }
+        }
+
+        function showFinalStep() {
+            document.getElementById("step-google").classList.add("hidden");
+            document.getElementById("step-password").classList.add("hidden");
+            document.getElementById("admin-content").classList.remove("hidden");
+        }
+
+        function adminLogout() {
+            sessionStorage.removeItem("teqlif_admin_session");
+            location.reload();
+        }
+    </script>
+</body>
+
+</html>

@@ -28,6 +28,7 @@ import app.models.city  # noqa: F401 — tablo kaydı için
 import app.models.report  # noqa: F401 — tablo kaydı için
 import app.models.favorite  # noqa: F401 — tablo kaydı için
 import sentry_sdk
+from app.routers import admin_auth
 
 logger = setup_logging()
 
@@ -214,6 +215,7 @@ app.include_router(reports.router)
 app.include_router(favorites.router)
 app.include_router(search.router)
 app.include_router(upload.router)
+app.include_router(admin_auth.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):
