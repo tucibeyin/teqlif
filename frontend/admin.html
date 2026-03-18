@@ -78,6 +78,8 @@
             gap: 2rem;
             padding: 2rem 0;
             align-items: start;
+            height: 100vh;
+            box-sizing: border-box;
         }
 
         .sidebar {
@@ -116,14 +118,17 @@
             border-radius: 1rem;
             padding: 2rem;
             border: 1px solid var(--admin-border);
-            min-height: 600px;
+            display: flex;
+            flex-direction: column;
+            max-height: calc(100vh - 4rem);
         }
 
         .header-bar {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
+            flex-shrink: 0;
         }
 
         .header-bar h1 {
@@ -132,12 +137,38 @@
             font-size: 2rem;
         }
 
+        /* Arama Kutusu ve Buton Grubu */
+        .header-actions {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .search-box {
+            padding: 0.6rem 1rem;
+            border-radius: 0.5rem;
+            border: 1px solid var(--admin-border);
+            background: var(--admin-bg);
+            color: white;
+            width: 250px;
+            font-size: 0.9rem;
+            margin: 0 !important;
+            /* Standart input margin'ini ezmek için */
+        }
+
+        .search-box::placeholder {
+            color: #64748b;
+        }
+
+        /* Tablo ve Scroll Ayarları */
         .table-container {
             background: var(--admin-card);
             border-radius: 0.5rem;
-            overflow: hidden;
             border: 1px solid var(--admin-border);
+            overflow-y: auto;
             overflow-x: auto;
+            flex-grow: 1;
+            max-height: 100%;
         }
 
         table {
@@ -145,21 +176,38 @@
             border-collapse: collapse;
             text-align: left;
             font-size: 0.95rem;
+            position: relative;
         }
 
-        thead {
+        thead th {
+            position: sticky;
+            top: 0;
             background: var(--admin-bg);
+            z-index: 10;
+            box-shadow: 0 2px 2px -1px rgba(0, 0, 0, 0.4);
+            padding: 1.2rem;
         }
 
-        th,
-        td {
+        tbody td {
             padding: 1.2rem;
             border-bottom: 1px solid var(--admin-border);
         }
 
         tbody tr:hover {
-            background: #1e293b;
-            filter: brightness(1.2);
+            background: #334155;
+        }
+
+        /* Linkler ve Etiketler */
+        .admin-link {
+            color: #38bdf8;
+            text-decoration: none;
+            font-weight: 600;
+            transition: color 0.2s;
+        }
+
+        .admin-link:hover {
+            color: white;
+            text-decoration: underline;
         }
 
         .action-btn {
@@ -178,6 +226,7 @@
             font-weight: bold;
         }
 
+        /* Modal Ayarları */
         .modal-overlay {
             position: fixed;
             top: 0;
@@ -253,10 +302,15 @@
         </aside>
 
         <main class="main-panel">
-            <div id="panel-users" class="panel-content">
+            <div id="panel-users" class="panel-content" style="display: flex; flex-direction: column; height: 100%;">
                 <div class="header-bar">
-                    <h1>Kullanıcı Yönetimi</h1> <button onclick="loadUsers()"
-                        style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                    <h1>Kullanıcı Yönetimi</h1>
+                    <div class="header-actions">
+                        <input type="text" id="search-users" class="search-box"
+                            placeholder="Kullanıcı adı, ID, E-posta ara..."
+                            onkeyup="filterTable('search-users', 'user-table-body')">
+                        <button onclick="loadUsers()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table>
@@ -274,10 +328,16 @@
                 </div>
             </div>
 
-            <div id="panel-streams" class="panel-content hidden">
+            <div id="panel-streams" class="panel-content hidden"
+                style="display: flex; flex-direction: column; height: 100%;">
                 <div class="header-bar">
-                    <h1>Canlı Yayın Denetimi</h1> <button onclick="loadStreams()"
-                        style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                    <h1>Canlı Yayın Denetimi</h1>
+                    <div class="header-actions">
+                        <input type="text" id="search-streams" class="search-box"
+                            placeholder="Yayıncı veya Başlık ara..."
+                            onkeyup="filterTable('search-streams', 'stream-table-body')">
+                        <button onclick="loadStreams()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table>
@@ -296,10 +356,16 @@
                 </div>
             </div>
 
-            <div id="panel-listings" class="panel-content hidden">
+            <div id="panel-listings" class="panel-content hidden"
+                style="display: flex; flex-direction: column; height: 100%;">
                 <div class="header-bar">
-                    <h1>İlan Denetimi</h1> <button onclick="loadListings()" style="width: auto; background: #3b82f6;">🔄
-                        Yenile</button>
+                    <h1>İlan Denetimi</h1>
+                    <div class="header-actions">
+                        <input type="text" id="search-listings" class="search-box"
+                            placeholder="İlan başlığı, ID veya Kullanıcı ara..."
+                            onkeyup="filterTable('search-listings', 'listing-table-body')">
+                        <button onclick="loadListings()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table>
@@ -318,10 +384,16 @@
                 </div>
             </div>
 
-            <div id="panel-reports" class="panel-content hidden">
+            <div id="panel-reports" class="panel-content hidden"
+                style="display: flex; flex-direction: column; height: 100%;">
                 <div class="header-bar">
-                    <h1>Şikayet Yönetimi</h1> <button onclick="loadReports()"
-                        style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                    <h1>Şikayet Yönetimi</h1>
+                    <div class="header-actions">
+                        <input type="text" id="search-reports" class="search-box"
+                            placeholder="Şikayet edilen, sebep ara..."
+                            onkeyup="filterTable('search-reports', 'report-table-body')">
+                        <button onclick="loadReports()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                    </div>
                 </div>
                 <div class="table-container">
                     <table>
@@ -391,22 +463,46 @@
         }
         function adminLogout() { sessionStorage.removeItem("teqlif_admin_session"); location.reload(); }
 
-        // --- NAVIGATION ---
+        // --- NAVIGATION & UTILS ---
         function showFinalStep() {
             document.getElementById("auth-container").classList.add("hidden");
             document.getElementById("admin-content").classList.remove("hidden");
             showPanel('users');
         }
         function showPanel(panel) {
-            document.querySelectorAll('.panel-content').forEach(p => p.classList.add('hidden'));
+            document.querySelectorAll('.panel-content').forEach(p => { p.classList.add('hidden'); p.style.display = 'none'; });
             document.querySelectorAll('.nav-item').forEach(p => p.classList.remove('active'));
-            document.getElementById(`panel-${panel}`).classList.remove('hidden');
-            if (event) event.target.classList.add('active');
+
+            const activePanel = document.getElementById(`panel-${panel}`);
+            activePanel.classList.remove('hidden');
+            activePanel.style.display = 'flex';
+
+            if (event && event.target.classList.contains('nav-item')) event.target.classList.add('active');
 
             if (panel === 'users') loadUsers();
             if (panel === 'streams') loadStreams();
             if (panel === 'listings') loadListings();
             if (panel === 'reports') loadReports();
+        }
+
+        // --- YENİ EKLENEN: ANLIK FİLTRELEME FONKSİYONU ---
+        function filterTable(inputId, tbodyId) {
+            const input = document.getElementById(inputId);
+            const filter = input.value.toLowerCase();
+            const tbody = document.getElementById(tbodyId);
+            const trs = tbody.getElementsByTagName("tr");
+
+            for (let i = 0; i < trs.length; i++) {
+                // Sadece gerçek veri satırlarını filtrele (boşluk mesajını gizleme/gösterme yapma)
+                if (trs[i].cells.length > 1) {
+                    const rowText = trs[i].innerText.toLowerCase();
+                    if (rowText.includes(filter)) {
+                        trs[i].style.display = "";
+                    } else {
+                        trs[i].style.display = "none";
+                    }
+                }
+            }
         }
 
         // --- USERS ---
@@ -416,11 +512,13 @@
             const data = await res.json();
             document.getElementById("user-table-body").innerHTML = data.map(u => `
                 <tr>
-                    <td>#${u.id}</td><td style="font-weight: bold; color: var(--admin-primary);">@${u.username}</td>
+                    <td>#${u.id}</td>
+                    <td><a href="/profil/${u.username}" target="_blank" class="admin-link">@${u.username}</a><br><small style="color:#64748b">${u.email}</small></td>
                     <td>${u.is_active ? '<span class="status-pill" style="background:#10b981; color:#0f172a">Aktif</span>' : '<span class="status-pill" style="background:#ef4444; color:white">Yasaklı</span>'}</td>
                     <td>${new Date(u.created_at).toLocaleDateString('tr-TR')}</td>
                     <td><button onclick="openModal(${u.id}, '${u.username}', '${u.full_name}', '${u.email}', ${u.is_active})" class="action-btn">Yönet</button></td>
                 </tr>`).join("");
+            document.getElementById("search-users").value = ""; // Tablo yenilendiğinde aramayı temizle
         }
         function openModal(id, un, fn, email, act) {
             currentUserId = id; document.getElementById("modal-title").innerText = "@" + un;
@@ -444,13 +542,15 @@
             const res = await fetch('/api/admin-data/streams/active', { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
-            document.getElementById("stream-table-body").innerHTML = data.length === 0 ? `<tr><td colspan="6">Aktif yayın yok.</td></tr>` : data.map(s => `
+            document.getElementById("stream-table-body").innerHTML = data.length === 0 ? `<tr><td colspan="6" style="text-align:center;">Aktif yayın yok.</td></tr>` : data.map(s => `
                 <tr>
-                    <td style="font-family: monospace;">${s.room_name.substring(0, 15)}...</td><td style="font-weight: bold; color: var(--admin-primary);">@${s.host_username}</td>
+                    <td style="font-family: monospace;">${s.room_name.substring(0, 15)}...</td>
+                    <td><a href="/profil/${s.host_username}" target="_blank" class="admin-link">@${s.host_username}</a></td>
                     <td>${s.title || '-'}</td><td><span class="status-pill" style="background:#3b82f6; color:white;">👁 ${s.viewer_count}</span></td>
                     <td>${Math.floor((new Date() - new Date(s.started_at)) / 60000)} dk</td>
                     <td><button onclick="endStream(${s.id})" class="action-btn" style="background: var(--admin-danger);">Kapat</button></td>
                 </tr>`).join("");
+            document.getElementById("search-streams").value = "";
         }
         async function endStream(id) {
             if (!confirm("Yayını zorla kapatmak istiyor musunuz?")) return;
@@ -463,9 +563,11 @@
             const res = await fetch('/api/admin-data/listings?limit=50', { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
-            document.getElementById("listing-table-body").innerHTML = data.length === 0 ? `<tr><td colspan="6">İlan bulunamadı.</td></tr>` : data.map(l => `
+            document.getElementById("listing-table-body").innerHTML = data.length === 0 ? `<tr><td colspan="6" style="text-align:center;">İlan bulunamadı.</td></tr>` : data.map(l => `
                 <tr style="opacity: ${l.is_deleted ? '0.5' : '1'};">
-                    <td>#${l.id}</td><td>${l.title}</td><td style="color: var(--admin-primary);">@${l.username}</td>
+                    <td>#${l.id}</td>
+                    <td><a href="/ilan/${l.id}" target="_blank" class="admin-link">${l.title}</a></td>
+                    <td><a href="/profil/${l.username}" target="_blank" class="admin-link">@${l.username}</a></td>
                     <td>₺${l.price}</td>
                     <td>${l.is_deleted ? '🗑 Silinmiş' : (l.is_active ? '✅ Aktif' : '⏸ Pasif')}</td>
                     <td>
@@ -473,6 +575,7 @@
                         <button onclick="deleteListing(${l.id})" class="action-btn" style="background: var(--admin-danger);">Sil</button>` : 'İşlem Yok'}
                     </td>
                 </tr>`).join("");
+            document.getElementById("search-listings").value = "";
         }
         async function toggleListing(id) { await fetch(`/api/admin-data/listings/${id}/toggle`, { method: 'POST', headers: getAuthHeaders() }); loadListings(); }
         async function deleteListing(id) {
@@ -484,13 +587,16 @@
             const res = await fetch('/api/admin-data/reports?limit=50', { headers: getAuthHeaders() });
             if (!res.ok) return;
             const data = await res.json();
-            document.getElementById("report-table-body").innerHTML = data.length === 0 ? `<tr><td colspan="6">Şikayet bulunamadı.</td></tr>` : data.map(r => `
+            document.getElementById("report-table-body").innerHTML = data.length === 0 ? `<tr><td colspan="6" style="text-align:center;">Şikayet bulunamadı.</td></tr>` : data.map(r => `
                 <tr>
-                    <td>#${r.id}</td><td>@${r.reporter}</td><td style="font-weight:bold;">${r.target}</td>
+                    <td>#${r.id}</td>
+                    <td><a href="${r.reporter_url}" target="_blank" class="admin-link">@${r.reporter}</a></td>
+                    <td><a href="${r.target_url}" target="_blank" class="admin-link" style="color: #fca5a5;">${r.target}</a></td>
                     <td>${r.reason}</td>
-                    <td>${r.status === 'resolved' ? '<span style="color:#10b981;">Çözüldü</span>' : '<span style="color:#f59e0b;">Bekliyor</span>'}</td>
+                    <td>${r.status === 'resolved' ? '<span class="status-pill" style="background:#10b981; color:#0f172a;">Çözüldü</span>' : '<span class="status-pill" style="background:#f59e0b; color:#0f172a;">Bekliyor</span>'}</td>
                     <td>${r.status !== 'resolved' ? `<button onclick="resolveReport(${r.id})" class="action-btn" style="background: var(--admin-primary);">Çözüldü İşaretle</button>` : '-'}</td>
                 </tr>`).join("");
+            document.getElementById("search-reports").value = "";
         }
         async function resolveReport(id) { await fetch(`/api/admin-data/reports/${id}/resolve`, { method: 'POST', headers: getAuthHeaders() }); loadReports(); }
     </script>

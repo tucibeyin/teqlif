@@ -25,7 +25,6 @@ async def check_admin_access(current_user: User = Depends(get_current_user)):
         raise HTTPException(status_code=403, detail="Admin yetkisi bulunamadı.")
     return current_user
 
-
 # --- VERİ MODELLERİ (SCHEMAS) ---
 class AdminUserUpdate(BaseModel):
     full_name: Optional[str] = None
@@ -34,7 +33,6 @@ class AdminUserUpdate(BaseModel):
 
 class AdminPasswordReset(BaseModel):
     new_password: str
-
 
 # ==========================================
 # 1. KULLANICI YÖNETİMİ
@@ -63,7 +61,6 @@ async def reset_user_password(user_id: int, data: AdminPasswordReset, db: AsyncS
     user.hashed_password = hash_password(data.new_password)
     await db.commit()
     return {"message": "Şifre değiştirildi."}
-
 
 # ==========================================
 # 2. CANLI YAYIN YÖNETİMİ
@@ -108,7 +105,6 @@ async def admin_end_stream(stream_id: int, db: AsyncSession = Depends(get_db), a
     except: pass
     return {"message": "Yayın kapatıldı."}
 
-
 # ==========================================
 # 3. İLAN YÖNETİMİ
 # ==========================================
@@ -144,7 +140,6 @@ async def admin_delete_listing(listing_id: int, db: AsyncSession = Depends(get_d
     await db.commit()
     return {"message": "İlan silindi."}
 
-
 # ==========================================
 # 4. ŞİKAYET (REPORT) YÖNETİMİ
 # ==========================================
@@ -157,17 +152,23 @@ async def get_admin_reports(limit: int = 50, db: AsyncSession = Depends(get_db),
     for r in reports:
         reporter = await db.get(User, r.reporter_id) if getattr(r, 'reporter_id', None) else None
         
-        target = "Bilinmiyor"
+        target_text = "Bilinmiyor"
+        target_url = "#"
+
         if getattr(r, 'reported_id', None):
             u = await db.get(User, r.reported_id)
-            target = f"Kullanıcı: @{u.username}" if u else "Kullanıcı"
+            target_text = f"@{u.username}" if u else "Kullanıcı"
+            target_url = f"/profil/{u.username}" if u else "#"
         elif getattr(r, 'listing_id', None):
-            target = f"İlan ID: {r.listing_id}"
+            target_text = f"İlan ID: {r.listing_id}"
+            target_url = f"/ilan/{r.listing_id}"
 
         data.append({
             "id": r.id,
             "reporter": reporter.username if reporter else "Sistem",
-            "target": target,
+            "reporter_url": f"/profil/{reporter.username}" if reporter else "#",
+            "target": target_text,
+            "target_url": target_url,
             "reason": r.reason,
             "status": getattr(r, 'status', 'pending'),
             "created_at": r.created_at
