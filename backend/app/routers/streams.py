@@ -3,12 +3,12 @@ import uuid
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from livekit.api import AccessToken, VideoGrants
 
-from app.database import get_db
+from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.stream import LiveStream
 from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinTokenOut
@@ -47,9 +47,37 @@ def _make_token(room_name: str, user: User, can_publish: bool) -> str:
         raise
 
 
+# SENTRY ÇÖZÜMÜ: Bağımsız ve kendi DB bağlantısını yöneten arka plan görevi
+async def _notify_followers_task(user_id: int, username: str, stream_title: str | None, stream_id: int):
+    import asyncio as _asyncio
+    from app.models.follow import Follow
+    from app.routers.notifications import push_notification
+    
+    try:
+        # Arka plan görevi için taze bir DB oturumu açılır ve iş bitince güvenle kapatılır
+        async with AsyncSessionLocal() as bg_db:
+            followers = await bg_db.scalars(
+                select(Follow.follower_id).where(Follow.followed_id == user_id)
+            )
+            for follower_id in followers:
+                _asyncio.create_task(push_notification(
+                    user_id=follower_id,
+                    notif={
+                        "type": "stream_started",
+                        "title": f"@{username} canlı yayın açtı",
+                        "body": stream_title or None,
+                        "related_id": stream_id,
+                    },
+                    pref_key="stream_started",
+                ))
+    except Exception as e:
+        logger.error("Takipçilere yayın bildirimi gönderilirken hata oluştu: %s", e, exc_info=True)
+
+
 @router.post("/start", response_model=StreamTokenOut, status_code=status.HTTP_201_CREATED)
 async def start_stream(
     data: StreamStart,
+    background_tasks: BackgroundTasks, # FastAPI'nin arka plan yöneticisi eklendi
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -86,28 +114,14 @@ async def start_stream(
     token = _make_token(room_name, current_user, can_publish=True)
     logger.info("Yayın başlatıldı | stream_id=%s user_id=%s room=%s", stream.id, current_user.id, room_name)
 
-    # Takipçilere stream_started bildirimi gönder (non-blocking)
-    import asyncio as _asyncio
-    from app.models.follow import Follow
-    from app.routers.notifications import push_notification
-
-    async def _notify_followers():
-        followers = await db.scalars(
-            select(Follow.follower_id).where(Follow.followed_id == current_user.id)
-        )
-        for follower_id in followers:
-            _asyncio.create_task(push_notification(
-                user_id=follower_id,
-                notif={
-                    "type": "stream_started",
-                    "title": f"@{current_user.username} canlı yayın açtı",
-                    "body": stream.title or None,
-                    "related_id": stream.id,
-                },
-                pref_key="stream_started",
-            ))
-
-    _asyncio.create_task(_notify_followers())
+    # Bildirim gönderme işlemini güvenli bir şekilde BackgroundTasks'a devrettik
+    background_tasks.add_task(
+        _notify_followers_task,
+        user_id=current_user.id,
+        username=current_user.username,
+        stream_title=stream.title,
+        stream_id=stream.id
+    )
 
     return StreamTokenOut(
         stream_id=stream.id,
