@@ -16,6 +16,7 @@ from app.utils.auth import get_current_user, hash_password
 from app.config import settings
 from app.utils.redis_client import get_redis
 from app.routers.chat import _publish_chat
+from sqlalchemy.exc import IntegrityError
 
 router = APIRouter(prefix="/api/admin-data", tags=["admin-data"])
 
@@ -33,6 +34,12 @@ class AdminUserUpdate(BaseModel):
 
 class AdminPasswordReset(BaseModel):
     new_password: str
+
+class AdminUserCreate(BaseModel):
+    username: str
+    email: str
+    password: str
+    full_name: Optional[str] = None
 
 # ==========================================
 # 1. KULLANICI YÖNETİMİ
@@ -184,3 +191,55 @@ async def admin_resolve_report(report_id: int, db: AsyncSession = Depends(get_db
         report.status = 'resolved'
         await db.commit()
     return {"message": "Şikayet çözüldü."}
+
+@router.post("/users")
+async def create_user(
+    data: AdminUserCreate, 
+    db: AsyncSession = Depends(get_db), 
+    admin: User = Depends(check_admin_access)
+):
+    # E-posta veya kullanıcı adı kullanımda mı kontrolü
+    existing_user = await db.execute(
+        select(User).where((User.email == data.email) | (User.username == data.username))
+    )
+    if existing_user.scalar_one_or_none():
+        raise HTTPException(status_code=400, detail="E-posta veya kullanıcı adı zaten kullanımda.")
+
+    # Yeni kullanıcıyı oluştur
+    new_user = User(
+        username=data.username,
+        email=data.email,
+        full_name=data.full_name,
+        hashed_password=hash_password(data.password),
+        is_active=True
+    )
+    db.add(new_user)
+    await db.commit()
+    return {"message": f"Kullanıcı @{new_user.username} başarıyla oluşturuldu."}
+
+
+# Kullanıcı Silme (Hard Delete)
+@router.delete("/users/{user_id}")
+async def delete_user(
+    user_id: int, 
+    db: AsyncSession = Depends(get_db), 
+    admin: User = Depends(check_admin_access)
+):
+    user = await db.get(User, user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
+    
+    # Admin kazara kendini silmesin diye güvenlik kilidi
+    if user.email == settings.admin_email:
+        raise HTTPException(status_code=400, detail="Sistem yöneticisi silinemez.")
+
+    try:
+        await db.delete(user)
+        await db.commit()
+        return {"message": "Kullanıcı veritabanından kalıcı olarak silindi."}
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(
+            status_code=400, 
+            detail="Bu kullanıcı silinemez çünkü sisteme kayıtlı ilanları, mesajları veya canlı yayın geçmişi var. Bunun yerine hesabı 'Yasaklı' duruma getirin."
+        )

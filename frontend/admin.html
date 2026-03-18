@@ -153,7 +153,6 @@
             width: 250px;
             font-size: 0.9rem;
             margin: 0 !important;
-            /* Standart input margin'ini ezmek için */
         }
 
         .search-box::placeholder {
@@ -306,8 +305,10 @@
                 <div class="header-bar">
                     <h1>Kullanıcı Yönetimi</h1>
                     <div class="header-actions">
+                        <button onclick="openAddUserModal()" style="width: auto; background: var(--admin-primary);">+
+                            Yeni Kullanıcı</button>
                         <input type="text" id="search-users" class="search-box"
-                            placeholder="Kullanıcı adı, ID, E-posta ara..."
+                            placeholder="Kullanıcı adı, E-posta ara..."
                             onkeyup="filterTable('search-users', 'user-table-body')">
                         <button onclick="loadUsers()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
                     </div>
@@ -433,6 +434,27 @@
         </div>
     </div>
 
+    <div id="add-user-modal" class="modal-overlay hidden">
+        <div class="modal-content">
+            <button class="modal-close" onclick="closeAddUserModal()">&times;</button>
+            <h2 style="margin-top:0; color:var(--admin-primary);">Yeni Kullanıcı Ekle</h2>
+
+            <label>Kullanıcı Adı *</label>
+            <input type="text" id="new-username" placeholder="Örn: ahmet123" required>
+
+            <label>E-posta Adresi *</label>
+            <input type="email" id="new-email" placeholder="Örn: ahmet@mail.com" required>
+
+            <label>Ad Soyad</label>
+            <input type="text" id="new-fullname" placeholder="Opsiyonel">
+
+            <label>Geçici Şifre *</label>
+            <input type="password" id="new-password" placeholder="En az 8 karakter" required>
+
+            <button onclick="submitNewUser()">Kullanıcıyı Oluştur</button>
+        </div>
+    </div>
+
     <script>
         const GOOGLE_CLIENT_ID = "232766108005-c193qv63qkv5c6m3c2klrs2ihoj7b2ok.apps.googleusercontent.com";
         let currentUserId = null;
@@ -485,7 +507,7 @@
             if (panel === 'reports') loadReports();
         }
 
-        // --- YENİ EKLENEN: ANLIK FİLTRELEME FONKSİYONU ---
+        // --- ARAMA / FİLTRELEME FONKSİYONU ---
         function filterTable(inputId, tbodyId) {
             const input = document.getElementById(inputId);
             const filter = input.value.toLowerCase();
@@ -493,19 +515,14 @@
             const trs = tbody.getElementsByTagName("tr");
 
             for (let i = 0; i < trs.length; i++) {
-                // Sadece gerçek veri satırlarını filtrele (boşluk mesajını gizleme/gösterme yapma)
                 if (trs[i].cells.length > 1) {
                     const rowText = trs[i].innerText.toLowerCase();
-                    if (rowText.includes(filter)) {
-                        trs[i].style.display = "";
-                    } else {
-                        trs[i].style.display = "none";
-                    }
+                    trs[i].style.display = rowText.includes(filter) ? "" : "none";
                 }
             }
         }
 
-        // --- USERS ---
+        // --- USERS: LİSTELEME & DÜZENLEME ---
         async function loadUsers() {
             const res = await fetch('/api/admin-data/users/recent?limit=50', { headers: getAuthHeaders() });
             if (!res.ok) return adminLogout();
@@ -516,25 +533,80 @@
                     <td><a href="/profil/${u.username}" target="_blank" class="admin-link">@${u.username}</a><br><small style="color:#64748b">${u.email}</small></td>
                     <td>${u.is_active ? '<span class="status-pill" style="background:#10b981; color:#0f172a">Aktif</span>' : '<span class="status-pill" style="background:#ef4444; color:white">Yasaklı</span>'}</td>
                     <td>${new Date(u.created_at).toLocaleDateString('tr-TR')}</td>
-                    <td><button onclick="openModal(${u.id}, '${u.username}', '${u.full_name}', '${u.email}', ${u.is_active})" class="action-btn">Yönet</button></td>
+                    <td>
+                        <button onclick="openModal(${u.id}, '${u.username}', '${u.full_name}', '${u.email}', ${u.is_active})" class="action-btn">Yönet</button>
+                        <button onclick="deleteUser(${u.id}, '${u.username}')" class="action-btn" style="background: var(--admin-danger);">Sil</button>
+                    </td>
                 </tr>`).join("");
-            document.getElementById("search-users").value = ""; // Tablo yenilendiğinde aramayı temizle
+            document.getElementById("search-users").value = "";
         }
+
         function openModal(id, un, fn, email, act) {
             currentUserId = id; document.getElementById("modal-title").innerText = "@" + un;
-            document.getElementById("edit-fullname").value = fn; document.getElementById("edit-email").value = email;
-            document.getElementById("edit-active").value = act ? "true" : "false"; document.getElementById("edit-password").value = "";
+            document.getElementById("edit-fullname").value = fn === 'null' ? '' : fn;
+            document.getElementById("edit-email").value = email;
+            document.getElementById("edit-active").value = act ? "true" : "false";
+            document.getElementById("edit-password").value = "";
             document.getElementById("user-modal").classList.remove("hidden");
         }
         function closeModal() { document.getElementById("user-modal").classList.add("hidden"); currentUserId = null; }
+
         async function submitUserUpdate() {
             await fetch(`/api/admin-data/users/${currentUserId}`, { method: 'PATCH', headers: getAuthHeaders(), body: JSON.stringify({ full_name: document.getElementById("edit-fullname").value, email: document.getElementById("edit-email").value, is_active: document.getElementById("edit-active").value === "true" }) });
             closeModal(); loadUsers();
         }
+
         async function submitPasswordReset() {
             const p = document.getElementById("edit-password").value; if (p.length < 8) return alert("En az 8 karakter");
             await fetch(`/api/admin-data/users/${currentUserId}/password`, { method: 'PATCH', headers: getAuthHeaders(), body: JSON.stringify({ new_password: p }) });
             alert("Şifre Değiştirildi!"); closeModal();
+        }
+
+        // --- USERS: YENİ KULLANICI EKLEME ---
+        function openAddUserModal() {
+            document.getElementById("new-username").value = "";
+            document.getElementById("new-email").value = "";
+            document.getElementById("new-fullname").value = "";
+            document.getElementById("new-password").value = "";
+            document.getElementById("add-user-modal").classList.remove("hidden");
+        }
+        function closeAddUserModal() { document.getElementById("add-user-modal").classList.add("hidden"); }
+
+        async function submitNewUser() {
+            const username = document.getElementById("new-username").value;
+            const email = document.getElementById("new-email").value;
+            const fullname = document.getElementById("new-fullname").value;
+            const password = document.getElementById("new-password").value;
+
+            if (!username || !email || !password) { alert("Lütfen zorunlu alanları doldurun."); return; }
+            if (password.length < 8) { alert("Şifre en az 8 karakter olmalıdır."); return; }
+
+            const res = await fetch(`/api/admin-data/users`, {
+                method: 'POST', headers: getAuthHeaders(),
+                body: JSON.stringify({ username: username, email: email, full_name: fullname, password: password })
+            });
+
+            if (res.ok) {
+                alert("Kullanıcı başarıyla eklendi!");
+                closeAddUserModal(); loadUsers();
+            } else {
+                const err = await res.json();
+                alert("Hata: " + (err.detail || "Kullanıcı eklenemedi."));
+            }
+        }
+
+        // --- USERS: SİLME (HARD DELETE) ---
+        async function deleteUser(id, username) {
+            if (!confirm(`DİKKAT: @${username} adlı kullanıcıyı veritabanından kalıcı olarak silmek istediğinize emin misiniz?\n\nNot: Eğer bu kullanıcının sistemde ilanları veya mesajları varsa silme işlemi güvenlik gereği iptal edilecektir.`)) return;
+
+            const res = await fetch(`/api/admin-data/users/${id}`, { method: 'DELETE', headers: getAuthHeaders() });
+
+            if (res.ok) {
+                alert(`@${username} başarıyla silindi.`); loadUsers();
+            } else {
+                const err = await res.json();
+                alert("Silinemedi: " + (err.detail || "Sistemde ilişkili verisi var."));
+            }
         }
 
         // --- STREAMS ---
