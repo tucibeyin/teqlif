@@ -1,9 +1,26 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart'; // Lifecycle dinleyicisi için eklendi
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
 import 'storage_service.dart';
+
+/// Uygulamanın arka plan/ön plan durumunu dinleyen özel sınıf
+class _WsLifecycleObserver extends WidgetsBindingObserver {
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      debugPrint('[WS] Uygulama arka planda, soket bekletiliyor...');
+      WsService.pauseConnection();
+    } else if (state == AppLifecycleState.resumed) {
+      debugPrint('[WS] Uygulama ön planda, yeniden bağlanılıyor...');
+      WsService.resumeConnection();
+    }
+  }
+}
 
 /// Uygulama genelinde tek bir WebSocket bağlantısı yönetir.
 /// Mesajlar [messageStream] üzerinden broadcast edilir.
@@ -16,6 +33,10 @@ class WsService {
   static Timer? _reconnectTimer;
   static bool _shouldStay = false;
 
+  // Lifecycle dinleyicisi tanımlamaları
+  static final _WsLifecycleObserver _observer = _WsLifecycleObserver();
+  static bool _isObserverRegistered = false;
+
   /// Gelen WS mesajlarını tüm dinleyicilere iletir.
   static final StreamController<Map<String, dynamic>> messageStream =
       StreamController<Map<String, dynamic>>.broadcast();
@@ -23,6 +44,13 @@ class WsService {
   /// Kullanıcı giriş yaptıktan sonra çağrılır.
   static Future<void> connect() async {
     _shouldStay = true;
+    
+    // Observer daha önce kaydedilmediyse kaydet
+    if (!_isObserverRegistered) {
+      WidgetsBinding.instance.addObserver(_observer);
+      _isObserverRegistered = true;
+    }
+
     if (_channel != null) return;
     await _connect();
   }
@@ -30,6 +58,33 @@ class WsService {
   /// Kullanıcı çıkış yaptığında çağrılır.
   static void disconnect() {
     _shouldStay = false;
+    
+    // Çıkış yapıldığında Observer'ı kaldır
+    if (_isObserverRegistered) {
+      WidgetsBinding.instance.removeObserver(_observer);
+      _isObserverRegistered = false;
+    }
+    
+    _closeResources();
+  }
+
+  /// İşletim sistemi uygulamayı arka plana attığında çağrılır
+  static void pauseConnection() {
+    // Çıkış yapılmış gibi tamamen silmeyiz, sadece soketi kapatırız.
+    // _shouldStay = true olarak kalır ki öne gelince tekrar bağlansın.
+    _closeResources();
+  }
+
+  /// Uygulama tekrar ekrana geldiğinde çağrılır
+  static void resumeConnection() {
+    // Eğer kullanıcı çıkış yapmamışsa tekrar bağlan
+    if (_shouldStay && _channel == null) {
+      _connect();
+    }
+  }
+
+  /// Tüm zamanlayıcıları ve soketleri güvenli bir şekilde temizler
+  static void _closeResources() {
     _pingTimer?.cancel();
     _reconnectTimer?.cancel();
     _channelSub?.cancel();
@@ -59,7 +114,16 @@ class WsService {
           } catch (_) {}
         },
         onDone: _onDisconnected,
-        onError: (_) => _onDisconnected(),
+        onError: (error) {
+          final errStr = error.toString();
+          // SENTRY ÇÖZÜMÜ: İşletim sisteminin attığı sahte fatal hataları filtrele
+          if (errStr.contains('Bad file descriptor') || errStr.contains('errno = 9')) {
+            debugPrint('[WS] OS tarafından soket kapatıldı (Normal davranış).');
+          } else {
+            debugPrint('[WS] Beklenmeyen Hata: $error');
+          }
+          _onDisconnected();
+        },
         cancelOnError: true,
       );
 
