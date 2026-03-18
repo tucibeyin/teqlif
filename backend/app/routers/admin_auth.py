@@ -33,13 +33,22 @@ async def verify_google(token: str = Body(..., embed=True)):
     except ValueError:
         raise HTTPException(status_code=401, detail="Geçersiz Google Token.")
 
+from app.security.auth import AdminSecurity, PasswordPolicy
+
 @router.post("/verify-password")
 async def verify_password(
     password: str = Body(..., embed=True),
     db: AsyncSession = Depends(get_db)
 ):
-    # 1. .env'deki ADMIN_PASSWORD ile karşılaştır
-    if password != settings.admin_password:
+    # 1. Yeni güvenli hash sistemini kullan
+    admin_security = AdminSecurity()
+    is_valid = admin_security.verify_admin_password(password)
+    
+    # Fallback: eski düz metin (geçici destek)
+    if not is_valid and settings.admin_password:
+        is_valid = (password == settings.admin_password)
+    
+    if not is_valid:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, 
             detail="Yönetici şifresi hatalı."

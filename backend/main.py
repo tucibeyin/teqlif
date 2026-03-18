@@ -16,6 +16,7 @@ from app.routers import auth, streams, webhooks, auction, chat
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search
+from app.security.middleware import security_headers, SecurityMiddleware, limiter
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 import app.models.auction  # noqa: F401 — tablo kaydı için
@@ -146,6 +147,10 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
 
+# Security middleware'leri ekle
+app.add_middleware(limiter)
+app.middleware("http")(security_headers)
+
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
@@ -169,11 +174,18 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["https://teqlif.com", "https://www.teqlif.com", "http://localhost:8000"],
-    allow_origin_regex=r".*",  # WebSocket (mobile/native) için tüm origin'lere izin ver
+    allow_origins=[
+        "https://teqlif.com",
+        "https://admin.teqlif.com", 
+        "https://www.teqlif.com",
+        "http://localhost:3000",
+        "http://localhost:8080",
+    ],
+    allow_origin_regex=r".*",  # WebSocket desteği
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
+    allow_headers=["Content-Type", "Authorization", "X-Requested-With"],
+    expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
 

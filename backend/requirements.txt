@@ -20,3 +20,6 @@ livekit-api==0.8.2
 firebase-admin==6.5.0
 sentry-sdk[fastapi]==2.0.0
 google-auth==2.22.0
+bleach==6.1.0
+slowapi==0.1.9
+itDangerous==2.2.0

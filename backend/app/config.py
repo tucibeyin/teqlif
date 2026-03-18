@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     google_client_id: str = ""
     admin_email: str = ""
     admin_password: str = ""
+    admin_password_hash: str = ""
 
     class Config:
         env_file = ".env"
