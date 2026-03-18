@@ -1,38 +1,32 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
-from typing import List
+from sqlalchemy.orm import selectinload
+from typing import List, Optional
+from pydantic import BaseModel
+from datetime import datetime, timezone
 
 from app.database import get_db
 from app.models.user import User
+from app.models.stream import LiveStream
+from app.models.listing import Listing
+from app.models.report import Report
 from app.schemas.user import UserOut
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, hash_password
 from app.config import settings
-
-from pydantic import BaseModel
-from typing import Optional
-from app.utils.auth import hash_password
+from app.utils.redis_client import get_redis
+from app.routers.chat import _publish_chat
 
 router = APIRouter(prefix="/api/admin-data", tags=["admin-data"])
 
-# GÜVENLİK DUVARI: Token geçerli olsa bile e-posta admin_email değilse reddet
+# --- GÜVENLİK DUVARI ---
 async def check_admin_access(current_user: User = Depends(get_current_user)):
     if current_user.email != settings.admin_email:
         raise HTTPException(status_code=403, detail="Admin yetkisi bulunamadı.")
     return current_user
 
-@router.get("/users/recent", response_model=List[UserOut])
-async def get_recent_users(
-    limit: int = 50,
-    db: AsyncSession = Depends(get_db),
-    admin: User = Depends(check_admin_access)
-):
-    result = await db.execute(
-        select(User).order_by(desc(User.created_at)).limit(limit)
-    )
-    return result.scalars().all()
 
-# --- YENİ EKLENEN VERİ MODELLERİ (SCHEMAS) ---
+# --- VERİ MODELLERİ (SCHEMAS) ---
 class AdminUserUpdate(BaseModel):
     full_name: Optional[str] = None
     email: Optional[str] = None
@@ -41,43 +35,151 @@ class AdminUserUpdate(BaseModel):
 class AdminPasswordReset(BaseModel):
     new_password: str
 
-# --- YENİ EKLENEN ENDPOINT'LER ---
 
-# 1. Kullanıcı Bilgilerini Güncelleme (Ban/Unban dahil)
+# ==========================================
+# 1. KULLANICI YÖNETİMİ
+# ==========================================
+@router.get("/users/recent", response_model=List[UserOut])
+async def get_recent_users(limit: int = 50, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    result = await db.execute(select(User).order_by(desc(User.created_at)).limit(limit))
+    return result.scalars().all()
+
 @router.patch("/users/{user_id}")
-async def update_user_info(
-    user_id: int,
-    data: AdminUserUpdate,
-    db: AsyncSession = Depends(get_db),
-    admin: User = Depends(check_admin_access)
-):
+async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
-
-    if data.full_name is not None:
-        user.full_name = data.full_name
-    if data.email is not None:
-        user.email = data.email
-    if data.is_active is not None:
-        user.is_active = data.is_active
-
+    if data.full_name is not None: user.full_name = data.full_name
+    if data.email is not None: user.email = data.email
+    if data.is_active is not None: user.is_active = data.is_active
     await db.commit()
-    return {"message": f"{user.username} bilgileri güncellendi."}
+    return {"message": "Bilgiler güncellendi."}
 
-# 2. Şifre Sıfırlama (Backdoor)
 @router.patch("/users/{user_id}/password")
-async def reset_user_password(
-    user_id: int,
-    data: AdminPasswordReset,
-    db: AsyncSession = Depends(get_db),
-    admin: User = Depends(check_admin_access)
-):
+async def reset_user_password(user_id: int, data: AdminPasswordReset, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     user = await db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
-
-    # Yeni şifreyi bcrypt ile şifreleyip kaydediyoruz
     user.hashed_password = hash_password(data.new_password)
     await db.commit()
-    return {"message": f"{user.username} şifresi başarıyla değiştirildi."}
+    return {"message": "Şifre değiştirildi."}
+
+
+# ==========================================
+# 2. CANLI YAYIN YÖNETİMİ
+# ==========================================
+@router.get("/streams/active")
+async def get_admin_active_streams(db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    result = await db.execute(select(LiveStream).where(LiveStream.is_live == True).order_by(desc(LiveStream.started_at)))
+    streams = result.scalars().all()
+    stream_list = []
+    try: redis = await get_redis()
+    except: redis = None
+
+    for s in streams:
+        host = await db.get(User, s.host_id)
+        viewer_count = 0
+        if redis:
+            count = await redis.get(f"live:viewers:{s.room_name}")
+            viewer_count = int(count) if count else 0
+
+        stream_list.append({
+            "id": s.id, "room_name": s.room_name, "title": s.title,
+            "host_username": host.username if host else "Bilinmiyor",
+            "started_at": s.started_at, "viewer_count": viewer_count
+        })
+    return stream_list
+
+@router.post("/streams/{stream_id}/end")
+async def admin_end_stream(stream_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+    stream = result.scalar_one_or_none()
+    if not stream or not stream.is_live:
+        raise HTTPException(status_code=400, detail="Yayın bulunamadı veya zaten kapalı")
+
+    stream.is_live = False
+    stream.ended_at = datetime.now(timezone.utc)
+    await db.commit()
+
+    try:
+        redis = await get_redis()
+        await redis.delete(f"live:viewers:{stream.room_name}")
+        await _publish_chat(stream_id, {"type": "stream_ended", "message": "Yayın sistem yöneticisi tarafından sonlandırıldı."})
+    except: pass
+    return {"message": "Yayın kapatıldı."}
+
+
+# ==========================================
+# 3. İLAN YÖNETİMİ
+# ==========================================
+@router.get("/listings")
+async def get_admin_listings(limit: int = 50, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    result = await db.execute(select(Listing).order_by(desc(Listing.created_at)).limit(limit))
+    listings = result.scalars().all()
+    
+    data = []
+    for l in listings:
+        user = await db.get(User, l.user_id)
+        data.append({
+            "id": l.id, "title": l.title, "price": l.price,
+            "is_active": l.is_active, "is_deleted": getattr(l, "is_deleted", False),
+            "username": user.username if user else "Bilinmiyor", "created_at": l.created_at
+        })
+    return data
+
+@router.post("/listings/{listing_id}/toggle")
+async def admin_toggle_listing(listing_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    listing = await db.get(Listing, listing_id)
+    if not listing: raise HTTPException(status_code=404, detail="İlan bulunamadı")
+    listing.is_active = not listing.is_active
+    await db.commit()
+    return {"message": "İlan durumu değiştirildi."}
+
+@router.delete("/listings/{listing_id}")
+async def admin_delete_listing(listing_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    listing = await db.get(Listing, listing_id)
+    if not listing: raise HTTPException(status_code=404, detail="İlan bulunamadı")
+    listing.is_deleted = True
+    listing.is_active = False
+    await db.commit()
+    return {"message": "İlan silindi."}
+
+
+# ==========================================
+# 4. ŞİKAYET (REPORT) YÖNETİMİ
+# ==========================================
+@router.get("/reports")
+async def get_admin_reports(limit: int = 50, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    result = await db.execute(select(Report).order_by(desc(Report.created_at)).limit(limit))
+    reports = result.scalars().all()
+    
+    data = []
+    for r in reports:
+        reporter = await db.get(User, r.reporter_id) if getattr(r, 'reporter_id', None) else None
+        
+        target = "Bilinmiyor"
+        if getattr(r, 'reported_id', None):
+            u = await db.get(User, r.reported_id)
+            target = f"Kullanıcı: @{u.username}" if u else "Kullanıcı"
+        elif getattr(r, 'listing_id', None):
+            target = f"İlan ID: {r.listing_id}"
+
+        data.append({
+            "id": r.id,
+            "reporter": reporter.username if reporter else "Sistem",
+            "target": target,
+            "reason": r.reason,
+            "status": getattr(r, 'status', 'pending'),
+            "created_at": r.created_at
+        })
+    return data
+
+@router.post("/reports/{report_id}/resolve")
+async def admin_resolve_report(report_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    report = await db.get(Report, report_id)
+    if not report: raise HTTPException(status_code=404, detail="Şikayet bulunamadı")
+    
+    if hasattr(report, 'status'):
+        report.status = 'resolved'
+        await db.commit()
+    return {"message": "Şikayet çözüldü."}
