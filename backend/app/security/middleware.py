@@ -56,12 +56,12 @@ async def security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.google.com; "
-        "style-src 'self' 'unsafe-inline' https://accounts.google.com; "
+        "script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.google.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://accounts.google.com https://cdn.jsdelivr.net; "
         "img-src 'self' data: https:; "
-        "font-src 'self' https://fonts.gstatic.com; "
+        "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
         "frame-src 'self' https://accounts.google.com https://www.google.com; "
-        "connect-src 'self' ws: wss: https://accounts.google.com;"
+        "connect-src 'self' ws: wss: https://accounts.google.com https://*.sentry.io;"
     )
     
     return response
