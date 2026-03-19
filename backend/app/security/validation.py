@@ -27,7 +27,11 @@ class SecureTextField:
     def escape_html(text: str) -> str:
         if not text:
             return ""
-        return (text.replace("&", "&").replace('"', """).replace("'", "&#x27;").replace(">", ">").replace("<", "<"))
+        return (text.replace("&", "&amp;")
+                .replace('"', "&quot;")
+                .replace("'", "&#x27;")
+                .replace(">", "&gt;")
+                .replace("<", "&lt;"))
 
 
 class SecureInputValidator:
