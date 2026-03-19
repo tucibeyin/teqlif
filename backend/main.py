@@ -323,6 +323,6 @@ async def sitemap_xml():
     return Response(content=xml, media_type="application/xml")
 
 
-@app.get("/api/health")
+@app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok", "version": "0.1.0"}
