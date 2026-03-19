@@ -16,7 +16,7 @@ from app.routers import auth, streams, webhooks, auction, chat
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search
-from app.security.middleware import security_headers, SecurityMiddleware, limiter
+from app.security.middleware import security_headers, SecurityMiddleware, limiter, RateLimitExceeded, _rate_limit_exceeded_handler
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 import app.models.auction  # noqa: F401 — tablo kaydı için
@@ -147,8 +147,9 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
 
-# Security middleware'leri ekle
-app.add_middleware(limiter)
+# Security setup
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.middleware("http")(security_headers)
 
 
