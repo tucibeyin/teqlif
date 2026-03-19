@@ -61,8 +61,9 @@ async def security_headers(request: Request, call_next):
         "img-src 'self' data: https:; "
         "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
         "frame-src 'self' https://accounts.google.com https://www.google.com; "
-        "connect-src 'self' ws: wss: https://accounts.google.com https://*.sentry.io;"
+        "connect-src 'self' ws: wss: https://accounts.google.com https://*.sentry.io https://cdn.jsdelivr.net;"
     )
+    response.headers["Permissions-Policy"] = "camera=(self), microphone=(self), geolocation=()"
     
     return response
 
