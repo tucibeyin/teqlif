@@ -56,10 +56,13 @@ async def setup_admin_password():
             # .env dosyasını güncelleme önerisi
             env_file = Path(".env")
             if env_file.exists():
-                old_admin_password = os.getenv("ADMIN_PASSWORD")
+                # Environment variables from os.environ instead of settings to see latest local state
+                old_admin_password = os.environ.get("ADMIN_PASSWORD")
                 print(f"\n⚠️  Eski ADMIN_PASSWORD değişkenini kaldırın!")
-                print("dığer backup yöntemi isterseniz:")
-                print(f"# Eski admin şifresi: {old_admin_password[:3]}...")
+                
+                if old_admin_password and isinstance(old_admin_password, str):
+                    mask = "*" * (len(old_admin_password) - 3) if len(old_admin_password) > 3 else "***"
+                    print(f"# Mevcut admin şifresi bulundu: {old_admin_password[:3]}{mask}")
                 
                 # Yeni .env satırları
                 new_env_lines = [
