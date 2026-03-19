@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 from typing import Optional
 from cryptography.fernet import Fernet
 from cryptography.hazmat.primitives import hashes
-from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2
+from cryptography.hazmat.primitives.kdf.pbkdf2 import PBKDF2HMAC
 from app.config import settings
 
 
@@ -21,7 +21,7 @@ class FieldEncryption:
         if cls._fernet is None:
             # Generate key from secret
             key = settings.secret_key.encode()
-            kdf = PBKDF2(algorithm=hashes.SHA256(), length=32, salt=b'teqlif_salt', iterations=100000)
+            kdf = PBKDF2HMAC(algorithm=hashes.SHA256(), length=32, salt=b'teqlif_salt', iterations=100000)
             key = base64.urlsafe_b64encode(kdf.derive(key))
             cls._fernet = Fernet(key)
         return cls._fernet
