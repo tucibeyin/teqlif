@@ -7,7 +7,7 @@ logger = logging.getLogger(__name__)
 def _get_firebase_app():
     from app.config import settings
     if not settings.firebase_service_account:
-        logger.warning("[FCM] firebase_service_account ayarlanmamış — push devre dışı")
+        logger.error("[FCM] firebase_service_account ayarlanmamış — push devre dışı")
         return None
     try:
         import firebase_admin
@@ -18,7 +18,7 @@ def _get_firebase_app():
             logger.info("[FCM] Firebase başarıyla başlatıldı")
         return firebase_admin.get_app()
     except Exception as exc:
-        logger.warning("[FCM] Firebase init failed: %s", exc)
+        logger.error("[FCM] Firebase init failed: %s", exc)
         return None
 
 
@@ -30,11 +30,11 @@ async def send_push(
     notif_type: str | None = None,
 ) -> None:
     if not token:
-        logger.warning("[FCM] send_push çağrıldı ama token boş")
+        logger.error("[FCM] send_push çağrıldı ama token boş")
         return
     app = _get_firebase_app()
     if app is None:
-        logger.warning("[FCM] Firebase app yok — push gönderilemiyor")
+        logger.error("[FCM] Firebase app yok — push gönderilemiyor")
         return
     logger.info("[FCM] Push gönderiliyor | token=%s… | title=%r | type=%s | badge=%s", token[:12], title, notif_type, badge)
     try:
@@ -60,4 +60,4 @@ async def send_push(
         )
         logger.info("[FCM] Push başarılı | message_id=%s", result)
     except Exception as exc:
-        logger.warning("[FCM] Push başarısız | %s", exc)
+        logger.error("[FCM] Push başarısız | %s", exc)

@@ -87,7 +87,7 @@ async def push_notification(user_id: int, notif: dict, pref_key: str | None = No
         try:
             await ws.send_json(payload)
         except Exception as exc:
-            logger.warning("[NOTIF WS] send error user_id=%s: %s", user_id, exc)
+            logger.error("[NOTIF WS] send error user_id=%s: %s", user_id, exc)
             dead.add(ws)
     for ws in dead:
         _notif_connections.get(user_id, set()).discard(ws)
@@ -198,7 +198,7 @@ async def notifications_ws(websocket: WebSocket, token: str = Query(...)):
     except WebSocketDisconnect:
         pass
     except Exception as exc:
-        logger.warning("[NOTIF WS] HATA | user_id=%s | %s", user_id, exc)
+        logger.error("[NOTIF WS] HATA | user_id=%s | %s", user_id, exc)
     finally:
         _notif_connections.get(user_id, set()).discard(websocket)
         logger.info("[NOTIF WS] AYRILDI | user_id=%s", user_id)

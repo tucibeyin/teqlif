@@ -59,10 +59,10 @@ class _Manager:
             try:
                 await ws.send_json(payload)
             except Exception as exc:
-                logger.warning("[WS] SEND HATA | stream_id=%s | %s", stream_id, exc)
+                logger.error("[WS] SEND HATA | stream_id=%s | %s", stream_id, exc)
                 dead.add(ws)
         if dead:
-            logger.warning("[WS] %s ölü bağlantı temizlendi | stream_id=%s", len(dead), stream_id)
+            logger.error("[WS] %s ölü bağlantı temizlendi | stream_id=%s", len(dead), stream_id)
             for ws in dead:
                 self._conns.get(stream_id, set()).discard(ws)
 
@@ -105,7 +105,7 @@ async def pubsub_listener():
                 stream_id = data.pop("_stream_id")
                 await manager.local_broadcast(stream_id, data)
             except Exception as exc:
-                logger.warning("[PUBSUB] Mesaj işleme hatası: %s", exc)
+                logger.error("[PUBSUB] Mesaj işleme hatası: %s", exc)
     except asyncio.CancelledError:
         pass
     finally:
@@ -474,7 +474,7 @@ async def accept_bid(
                 winner_user_id, item_name, final_price,
             )
         except Exception as exc:
-            logger.warning("[ACCEPT] DM gönderilemedi | winner_id=%s | %s", winner_id_str, exc)
+            logger.error("[ACCEPT] DM gönderilemedi | winner_id=%s | %s", winner_id_str, exc)
 
     # Chat'e herkese görünür özet mesajı da yayınla
     chat_summary = (
@@ -536,6 +536,6 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
     except WebSocketDisconnect:
         pass
     except Exception as exc:
-        logger.warning("[WS] BEKLENMEYEN HATA | stream_id=%s | %s", stream_id, exc)
+        logger.error("[WS] BEKLENMEYEN HATA | stream_id=%s | %s", stream_id, exc)
     finally:
         manager.disconnect(websocket, stream_id)
