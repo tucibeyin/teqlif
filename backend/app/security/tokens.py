@@ -9,7 +9,7 @@ from app.config import settings
 from app.utils.redis_client import get_redis
 
 # Token configurations
-ACCESS_TOKEN_EXPIRE_MINUTES = 30  # Reduced from 60
+ACCESS_TOKEN_EXPIRE_MINUTES = 15  # Reduced from 30
 REFRESH_TOKEN_EXPIRE_DAYS = 7
 TOKEN_TYPE = "bearer"
 

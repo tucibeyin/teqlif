@@ -182,7 +182,7 @@ app.add_middleware(
         "http://localhost:3000",
         "http://localhost:8080",
     ],
-    allow_origin_regex=r".*",  # WebSocket desteği
+    allow_origin_regex=None,  # WebSocket desteği
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["Content-Type", "Authorization", "X-Requested-With"],

@@ -27,19 +27,19 @@ class SecurityMiddleware:
     # Rate limiting decorators
     def auth_rate_limit(self):
         """Authentication endpoint için rate limiting"""
-        return self.shared_limiter.limit("5 per minute")
+        return self.shared_limiter.limit("3 per minute")
     
     def auction_rate_limit(self):
         """Açık artırma endpoint'leri için rate limiting"""
-        return self.shared_limiter.limit("2 per second")
+        return self.shared_limiter.limit("1 per second")
     
     def general_rate_limit(self):
         """Genel API endpoint'leri için rate limiting"""
-        return self.shared_limiter.limit("100 per minute")
+        return self.shared_limiter.limit("50 per minute")
     
     def upload_rate_limit(self):
         """File upload endpoint'leri için rate limiting"""
-        return self.shared_limiter.limit("10 per hour")
+        return self.shared_limiter.limit("5 per hour")
 
 # Security headers middleware
 async def security_headers(request: Request, call_next):
@@ -135,11 +135,11 @@ class SecurityConfig:
     
     # Rate limiting thresholds
     RATE_LIMITS = {
-        "login_attempts": {"limit": 5, "per": "minute"},
-        "auction_bids": {"limit": 20, "per": "minute"},
-        "file_uploads": {"limit": 10, "per": "hour"},
-        "api_general": {"limit": 100, "per": "hour"},
-        "admin_access": {"limit": 50, "per": "hour"}
+        "login_attempts": {"limit": 3, "per": "minute"},
+        "auction_bids": {"limit": 10, "per": "minute"},
+        "file_uploads": {"limit": 5, "per": "hour"},
+        "api_general": {"limit": 50, "per": "hour"},
+        "admin_access": {"limit": 20, "per": "hour"}
     }
     
     # Suspend thresholds
