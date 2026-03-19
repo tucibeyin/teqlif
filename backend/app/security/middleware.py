@@ -15,7 +15,7 @@ from app.utils.redis_client import get_redis
 limiter = Limiter(
     key_func=get_remote_address,
     storage_uri="redis://localhost:6379",
-    strategy="fixed-window-elastic-expiry"
+    strategy="fixed-window"
 )
 
 class SecurityMiddleware:
