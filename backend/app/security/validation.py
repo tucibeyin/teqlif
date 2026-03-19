@@ -11,7 +11,14 @@ class SecureTextField:
     def sanitize_html(dirty: str) -> str:
         if not dirty:
             return ""
-        return bleach.clean(dirty, tags=ALLOWED_TAGS, strip=True)
+        # Remove dangerous tags completely
+        import re
+        html = re.sub(r'<script[^>]*>.*?</script>', '', dirty, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<iframe[^>]*>.*?</iframe>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<object[^>]*>.*?</object>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        html = re.sub(r'<embed[^>]*>.*?</embed>', '', html, flags=re.DOTALL | re.IGNORECASE)
+        # Then allow only safe tags
+        return bleach.clean(html, tags=ALLOWED_TAGS, strip=True)
 
     @staticmethod
     def strip_scripts(html: str) -> str:
