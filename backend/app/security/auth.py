@@ -21,7 +21,7 @@ class AdminSecurity:
         admin_password değeri artık hash olarak .env'de olmalı:
         ADMIN_PASSWORD_HASH=$2b$12$salt_hash_value
         """
-        self.pw_ctx = admin_pwd_ctx
+        pass
     
     @classmethod
     def hash_password(cls, password: str) -> str:
@@ -29,12 +29,12 @@ class AdminSecurity:
         Administrator şifresini güvenli şekilde hash'ler
 
         Args:
-            password (str): Raf şifre
+            password (str): Admin şifre
 
         Returns:
             str: Bcrypt hash'lenmiş şifre
         """
-        return cls.pw_ctx.hash(password)
+        return admin_pwd_ctx.hash(password)
     
     def verify_admin_password(self, password: str, stored_hash: str = None) -> bool:
         """
@@ -50,11 +50,17 @@ class AdminSecurity:
         if stored_hash is None:
             stored_hash = settings.admin_password_hash
         
+        if not stored_hash:
+            # settings.admin_password_hash boşsa, eski düz metin admin_password ile dene
+            if settings.admin_password:
+                return password == settings.admin_password
+            return False
+        
         if not stored_hash.startswith('$2b$'):
             # Legacy düz metin kontrolü (geçici uyumluluk)
             return False
         
-        return self.pw_ctx.verify(password, stored_hash)
+        return admin_pwd_ctx.verify(password, stored_hash)
     
     @staticmethod
     def generate_temp_admin_access() -> str:
