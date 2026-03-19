@@ -101,7 +101,7 @@ class RouteInputValidator:
 def sanitize_search_query(query: str) -> str:
     """Sanitize search query"""
     # Remove potential SQL injection
-    query = SQLInjectionProtection.sanitize_for_like(query)
+    query = SQLInjectionProtection.sanitize_like(query)
     # Limit length
     query = query[:200]
     # Remove special characters that could be used in attacks
