@@ -110,10 +110,20 @@ class FileUploadSecurity:
 
     @classmethod
     def safe_filename(cls, name: str) -> bool:
+        if not name:
+            return False
+        # Path traversal check
         if '..' in name or '/' in name or '\\' in name:
             return False
+        # Hidden files
         if name.startswith('.'):
             return False
+        # Dangerous extensions
+        dangerous_exts = {'.php', '.py', '.js', '.exe', '.sh', '.bash', '.pl', '.cgi', '.phtml', '.asp', '.aspx', '.jsp'}
+        ext = '.' + name.split('.')[-1].lower() if '.' in name else ''
+        if ext in dangerous_exts:
+            return False
+        # Special characters
         if re.search(r'[^\w\s.-]', name):
             return False
         return True
