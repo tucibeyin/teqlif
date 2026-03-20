@@ -234,10 +234,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     _bidsPanelTop ??= topPad + 66;
     final live = !_connecting && _error == null;
 
-    return Scaffold(
-      backgroundColor: Colors.black,
-      resizeToAvoidBottomInset: false,
-      body: Stack(
+    return PopScope(
+      canPop: false,
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        resizeToAvoidBottomInset: false,
+        body: Stack(
         children: [
           // ── Kamera önizleme (tam ekran) ─────────────────────────────────
           if (_localVideoTrack != null)
@@ -497,6 +499,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
         ],
+        ),
       ),
     );
   }
