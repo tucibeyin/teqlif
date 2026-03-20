@@ -384,7 +384,7 @@ footer {
     margin-bottom: 0;
 }
 
-.live-badge {
+.avatar-live-ring .live-badge {
     position: absolute;
     bottom: -7px;
     left: 50%;
