@@ -430,7 +430,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                 },
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _BidsToggleTab(
                       isOpen: _bidsVisible,
@@ -662,8 +662,8 @@ class _BidsToggleTab extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeInOut,
-            width: isOpen ? 26 : 38,
-            padding: EdgeInsets.symmetric(vertical: isOpen ? 10 : 14),
+            width: isOpen ? 32 : 38,
+            padding: isOpen ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(isOpen ? 0.42 : 0.52),
               borderRadius: radius,
@@ -680,12 +680,14 @@ class _BidsToggleTab extends StatelessWidget {
     );
   }
 
-  // Açıkken: sadece › (listeyi sağa kapat)
+  // Açıkken: liste yüksekliğini doldurur, ok ortada
   Widget _openChild() {
-    return const Icon(
-      Icons.chevron_right_rounded,
-      color: Color(0xFF64748B),
-      size: 18,
+    return const Center(
+      child: Icon(
+        Icons.chevron_right_rounded,
+        color: Color(0xFF64748B),
+        size: 20,
+      ),
     );
   }
 
