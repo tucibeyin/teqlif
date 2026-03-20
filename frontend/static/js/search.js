@@ -303,6 +303,11 @@
         showExplore();
     });
 
+    /* ── BFCache koruması: bfcache'ten restore edilirse zorla yenile ── */
+    window.addEventListener('pageshow', function (e) {
+        if (e.persisted) window.location.reload();
+    });
+
     /* ── Sayfa yüklendiğinde (script body sonunda, DOM hazır) ─── */
     loadExplore();
 
