@@ -33,17 +33,16 @@ router = APIRouter(prefix="/api/moderation", tags=["moderation"])
 async def _remove_from_livekit(room_name: str, user_id: int) -> None:
     """Katılımcıyı LiveKit odasından zorla çıkar."""
     try:
-        from livekit.api import LiveKitAPI, RemoveParticipantRequest
+        import aiohttp
+        from livekit.api.room_service import RoomService, RoomParticipantIdentity
         from app.config import settings as _s
-        async with LiveKitAPI(
-            url=_s.livekit_url,
-            api_key=_s.livekit_api_key,
-            api_secret=_s.livekit_api_secret,
-        ) as lkapi:
-            await lkapi.room.remove_participant(
-                RemoveParticipantRequest(room=room_name, identity=str(user_id))
-            )
-            logger.info("[MOD] LiveKit katılımcı çıkarıldı | room=%s user_id=%s", room_name, user_id)
+        async with aiohttp.ClientSession() as session:
+            svc = RoomService(session, _s.livekit_url, _s.livekit_api_key, _s.livekit_api_secret)
+            req = RoomParticipantIdentity()
+            req.room = room_name
+            req.identity = str(user_id)
+            await svc.remove_participant(req)
+        logger.info("[MOD] LiveKit katılımcı çıkarıldı | room=%s user_id=%s", room_name, user_id)
     except Exception as exc:
         logger.warning("[MOD] LiveKit katılımcı çıkarılamadı | room=%s user_id=%s | %s", room_name, user_id, exc)
 
