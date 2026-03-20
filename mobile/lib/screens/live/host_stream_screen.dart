@@ -41,6 +41,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   Timer? _thumbTimer;
   int _viewerCount = 0;
   final List<({String bidder, double amount})> _bids = [];
+  bool _bidsVisible = true;
 
   @override
   void initState() {
@@ -392,14 +393,48 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           // ── Teklif Listesi (sağ kenar, kamera üzerinde yarı saydam) ────
           if (live && _bids.isNotEmpty)
             Positioned(
-              right: 8,
+              right: 0,
               top: topPad + 66,
-              child: ConstrainedBox(
-                constraints: BoxConstraints(
-                  maxWidth: 168,
-                  maxHeight: min(_bids.length, 5) * 36.0 + 44,
+              child: GestureDetector(
+                onHorizontalDragEnd: (d) {
+                  final v = d.primaryVelocity ?? 0;
+                  if (v > 120 && _bidsVisible) {
+                    setState(() => _bidsVisible = false);
+                  } else if (v < -120 && !_bidsVisible) {
+                    setState(() => _bidsVisible = true);
+                  }
+                },
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  transitionBuilder: (child, anim) => SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(1.0, 0),
+                      end: Offset.zero,
+                    ).animate(anim),
+                    child: child,
+                  ),
+                  child: _bidsVisible
+                      ? Padding(
+                          key: const ValueKey('full'),
+                          padding: const EdgeInsets.only(right: 8),
+                          child: ConstrainedBox(
+                            constraints: BoxConstraints(
+                              maxWidth: 148,
+                              maxHeight: min(_bids.length, 5) * 36.0 + 44,
+                            ),
+                            child: _BidsOverlay(
+                              bids: _bids,
+                              onHide: () =>
+                                  setState(() => _bidsVisible = false),
+                            ),
+                          ),
+                        )
+                      : _BidsCollapsedTab(
+                          key: const ValueKey('collapsed'),
+                          count: _bids.length,
+                          onShow: () => setState(() => _bidsVisible = true),
+                        ),
                 ),
-                child: _BidsOverlay(bids: _bids),
               ),
             ),
 
@@ -451,8 +486,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
 class _BidsOverlay extends StatelessWidget {
   final List<({String bidder, double amount})> bids;
+  final VoidCallback onHide;
 
-  const _BidsOverlay({required this.bids});
+  const _BidsOverlay({required this.bids, required this.onHide});
 
   @override
   Widget build(BuildContext context) {
@@ -500,6 +536,15 @@ class _BidsOverlay extends StatelessWidget {
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                         ),
+                      ),
+                    ),
+                    const SizedBox(width: 4),
+                    GestureDetector(
+                      onTap: onHide,
+                      child: const Icon(
+                        Icons.chevron_right_rounded,
+                        color: Color(0xFF475569),
+                        size: 16,
                       ),
                     ),
                   ],
@@ -559,6 +604,56 @@ class _BidsOverlay extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _BidsCollapsedTab extends StatelessWidget {
+  final int count;
+  final VoidCallback onShow;
+
+  const _BidsCollapsedTab({super.key, required this.count, required this.onShow});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onShow,
+      child: ClipRRect(
+        borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+        child: BackdropFilter(
+          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+          child: Container(
+            width: 28,
+            padding: const EdgeInsets.symmetric(vertical: 10),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.5),
+              border: Border(
+                left: BorderSide(color: Colors.white.withOpacity(0.1)),
+                top: BorderSide(color: Colors.white.withOpacity(0.1)),
+                bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
+              ),
+              borderRadius:
+                  const BorderRadius.horizontal(left: Radius.circular(10)),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.chevron_left_rounded,
+                    color: Color(0xFF60A5FA), size: 16),
+                const SizedBox(height: 4),
+                Text(
+                  '$count',
+                  style: const TextStyle(
+                    color: Color(0xFF4ADE80),
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
