@@ -126,8 +126,10 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   }
 
   void _handleKicked() {
+    debugPrint('[VIEWER] _handleKicked çağrıldı | mounted=$mounted _kicked=$_kicked');
     if (!mounted || _kicked) return;
     _kicked = true;
+    debugPrint('[VIEWER] kick işleniyor — room disconnect + navigate home');
     _room?.disconnect(); // fire-and-forget
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(

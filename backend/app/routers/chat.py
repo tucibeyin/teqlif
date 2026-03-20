@@ -63,11 +63,19 @@ class _ChatManager:
 
     async def send_to_user(self, stream_id: int, user_id: int, payload: dict):
         """Bu worker'daki belirli bir kullanıcıya doğrudan event gönder."""
-        ws = self._user_ws.get(stream_id, {}).get(user_id)
+        user_map = self._user_ws.get(stream_id, {})
+        all_ids = list(user_map.keys())
+        ws = user_map.get(user_id)
+        logger.info(
+            "[CHAT WS] send_to_user | stream_id=%s hedef_user_id=%s | "
+            "bu_worker_kayitli_users=%s | bulunan_ws=%s",
+            stream_id, user_id, all_ids, "VAR" if ws else "YOK",
+        )
         if not ws:
             return
         try:
             await ws.send_json(payload)
+            logger.info("[CHAT WS] send_to_user GÖNDERILDI | stream_id=%s user_id=%s payload=%s", stream_id, user_id, payload)
         except Exception as exc:
             logger.warning("[CHAT WS] send_to_user HATA | stream_id=%s user_id=%s | %s", stream_id, user_id, exc)
 
@@ -145,6 +153,10 @@ async def moderation_pubsub_listener():
                 stream_id = int(data["_stream_id"])
                 user_id = int(data["user_id"])
                 event_type = data["type"]
+                logger.info(
+                    "[MOD PUBSUB] EVENT ALINDI | type=%s stream_id=%s user_id=%s",
+                    event_type, stream_id, user_id,
+                )
                 # Hedef kullanıcı bu worker'da bağlıysa doğrudan event gönder
                 await chat_manager.send_to_user(stream_id, user_id, {"type": event_type})
             except Exception as exc:

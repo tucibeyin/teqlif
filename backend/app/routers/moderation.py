@@ -36,8 +36,11 @@ async def _remove_from_livekit(room_name: str, user_id: int) -> None:
         import aiohttp
         from livekit.api.room_service import RoomService, RoomParticipantIdentity
         from app.config import settings as _s
+        api_url = _s.livekit_api_base
+        logger.info("[MOD] LiveKit katılımcı çıkarılıyor | room=%s user_id=%s identity=%s api_url=%s",
+                    room_name, user_id, str(user_id), api_url)
         async with aiohttp.ClientSession() as session:
-            svc = RoomService(session, _s.livekit_api_base, _s.livekit_api_key, _s.livekit_api_secret)
+            svc = RoomService(session, api_url, _s.livekit_api_key, _s.livekit_api_secret)
             req = RoomParticipantIdentity()
             req.room = room_name
             req.identity = str(user_id)

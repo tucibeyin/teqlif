@@ -180,6 +180,7 @@ class _ChatPanelState extends State<ChatPanel> {
               widget.onUnmuted?.call();
             } else if (json['type'] == 'kicked') {
               _streamEnded = true; // yeniden bağlanmayı engelle
+              debugPrint('[CHAT] kicked event alındı — onKicked callback çağrılıyor');
               widget.onKicked?.call();
             }
           } catch (_) {}
