@@ -424,11 +424,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   setState(() {
                     _bidsPanelTop = (_bidsPanelTop! + d.delta.dy).clamp(
                       topPad + 50.0,
-                      screenH - botPad - 150.0,
+                      screenH - botPad - 260.0,
                     );
                   });
                 },
-                child: Row(
+                child: IntrinsicHeight(
+                  child: Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -455,6 +456,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                           : const SizedBox.shrink(),
                     ),
                   ],
+                  ),
                 ),
               ),
             ),
