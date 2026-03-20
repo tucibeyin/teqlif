@@ -28,7 +28,7 @@ async def _delete_livekit_room(room_name: str) -> None:
         import aiohttp
         from livekit.api.room_service import RoomService, DeleteRoomRequest
         async with aiohttp.ClientSession() as session:
-            svc = RoomService(session, settings.livekit_url, settings.livekit_api_key, settings.livekit_api_secret)
+            svc = RoomService(session, settings.livekit_api_base, settings.livekit_api_key, settings.livekit_api_secret)
             req = DeleteRoomRequest()
             req.room = room_name
             await svc.delete_room(req)

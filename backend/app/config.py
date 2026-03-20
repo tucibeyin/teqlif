@@ -14,6 +14,17 @@ class Settings(BaseSettings):
     livekit_url: str = "wss://teqlif.com/rtc"
     livekit_api_key: str = ""
     livekit_api_secret: str = ""
+    # LiveKit admin API URL'si (boşsa livekit_url'dan path çıkarılarak türetilir)
+    livekit_api_url: str = ""
+
+    @property
+    def livekit_api_base(self) -> str:
+        """Admin API çağrıları için path içermeyen URL döndürür."""
+        if self.livekit_api_url:
+            return self.livekit_api_url
+        from urllib.parse import urlparse
+        parsed = urlparse(self.livekit_url)
+        return f"{parsed.scheme}://{parsed.netloc}"
     firebase_service_account: str = ""  # path to service account JSON
     sentry_backend_dsn: str | None = None
     google_client_id: str = ""

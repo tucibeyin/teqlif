@@ -125,38 +125,18 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     );
   }
 
-  Future<void> _handleKicked() async {
+  void _handleKicked() {
     if (!mounted || _kicked) return;
     _kicked = true;
-    // LiveKit bağlantısını kapat; RoomDisconnectedEvent _kicked flag ile baskılanır
-    await _room?.disconnect();
-    if (!mounted) return;
-    await showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('🚫 Yayından Atıldınız',
-            style: TextStyle(color: Colors.white, fontSize: 17)),
-        content: const Text('Bu yayına erişiminiz kısıtlandı.',
-            style: TextStyle(color: Color(0xFF94A3B8))),
-        actions: [
-          ElevatedButton(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
-              shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8)),
-            ),
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Tamam', style: TextStyle(color: Colors.white)),
-          ),
-        ],
+    _room?.disconnect(); // fire-and-forget
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🚫 Bu yayından atıldınız'),
+        backgroundColor: Color(0xFFEF4444),
+        duration: Duration(seconds: 4),
       ),
     );
-    if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
-    }
+    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
   }
 
   Future<void> _handleStreamEnded() async {
