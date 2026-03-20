@@ -7,6 +7,7 @@ import '../config/theme.dart';
 import '../models/chat.dart';
 import '../screens/public_profile_screen.dart';
 import '../services/storage_service.dart';
+import '../utils/username_color.dart';
 
 class _TimedMessage {
   final ChatMessage message;
@@ -297,10 +298,10 @@ class _MessageItem extends StatelessWidget {
             ),
             child: Text(
               '@${message.username} ',
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12.5,
                 height: 1.35,
-                color: Color(0xFF60A5FA),
+                color: usernameColor(message.username),
                 fontWeight: FontWeight.w700,
                 shadows: shadow,
               ),

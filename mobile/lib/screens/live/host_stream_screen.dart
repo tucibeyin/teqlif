@@ -12,6 +12,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/stream_service.dart';
+import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 
@@ -581,8 +582,8 @@ class _BidsOverlay extends StatelessWidget {
                           Expanded(
                             child: Text(
                               '@${bid.bidder}',
-                              style: const TextStyle(
-                                color: Color(0xFF60A5FA),
+                              style: TextStyle(
+                                color: usernameColor(bid.bidder),
                                 fontSize: 10,
                                 fontWeight: FontWeight.w600,
                               ),
