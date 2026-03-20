@@ -13,7 +13,7 @@ import '../utils/price_formatter.dart';
 class AuctionPanel extends StatefulWidget {
   final int streamId;
   final bool isHost;
-  final void Function(String bidder, double amount)? onBidAdded;
+  final void Function(String bidder, double amount, String? itemName)? onBidAdded;
   final VoidCallback? onAuctionReset;
   /// false ise viewer teklif butonları devre dışı kalır (mute durumu)
   final bool enabled;
@@ -83,7 +83,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
                   newState.currentBidder != null &&
                   newState.currentBid != null) {
                 widget.onBidAdded
-                    ?.call(newState.currentBidder!, newState.currentBid!);
+                    ?.call(newState.currentBidder!, newState.currentBid!, newState.itemName);
               }
               if (newState.isIdle && !_state.isIdle) {
                 widget.onAuctionReset?.call();

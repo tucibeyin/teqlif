@@ -42,7 +42,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
   int _viewerCount = 0;
-  final List<({String bidder, double amount})> _bids = [];
+  final List<_BidGroup> _bidGroups = [];
   bool _bidsVisible = true;
   double? _bidsPanelTop;
   final Set<String> _mutedUsers = {};
@@ -141,12 +141,18 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
   }
 
-  void _onBidAdded(String bidder, double amount) {
-    setState(() => _bids.insert(0, (bidder: bidder, amount: amount)));
+  void _onBidAdded(String bidder, double amount, String? itemName) {
+    setState(() {
+      if (_bidGroups.isEmpty || _bidGroups.last.title != itemName) {
+        _bidGroups.add(_BidGroup(title: itemName));
+      }
+      _bidGroups.last.bids.insert(0, (bidder: bidder, amount: amount));
+    });
   }
 
   void _onAuctionReset() {
-    setState(() => _bids.clear());
+    // Grup sınırı bid gelince otomatik açılır — listeyi temizlemiyoruz
+    setState(() {});
   }
 
   void _showModSheet(String username) {
@@ -413,7 +419,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             ),
 
           // ── Teklif Listesi — Sürüklenebilir panel (sağ kenar) ─────
-          if (live && _bids.isNotEmpty)
+          if (live && _bidGroups.isNotEmpty)
             Positioned(
               top: _bidsPanelTop!,
               right: 0,
@@ -434,7 +440,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     },
                     child: _BidsToggleTab(
                       isOpen: _bidsVisible,
-                      count: _bids.length,
+                      count: _bidGroups.fold(0, (s, g) => s + g.bids.length),
                       onToggle: () =>
                           setState(() => _bidsVisible = !_bidsVisible),
                     ),
@@ -446,7 +452,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       width: _bidsVisible ? 148 : 0,
                       height: _kBidsH,
                       child: _BidsOverlay(
-                        bids: _bids,
+                        groups: _bidGroups,
                         onUsernameTap: _showModSheet,
                       ),
                     ),
@@ -504,16 +510,25 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 // Sabit panel yüksekliği — 5 satır × 36px + başlık 44px
 const double _kBidsH = 5 * 36.0 + 44; // 224px
 
+// ── Veri modeli ────────────────────────────────────────────────────────────
+
+class _BidGroup {
+  final String? title;
+  final List<({String bidder, double amount})> bids;
+  _BidGroup({this.title}) : bids = [];
+}
+
 // ── Yardımcı widget'lar ────────────────────────────────────────────────────
 
 class _BidsOverlay extends StatelessWidget {
-  final List<({String bidder, double amount})> bids;
+  final List<_BidGroup> groups;
   final void Function(String username)? onUsernameTap;
 
-  const _BidsOverlay({required this.bids, this.onUsernameTap});
+  const _BidsOverlay({required this.groups, this.onUsernameTap});
 
   @override
   Widget build(BuildContext context) {
+    final totalCount = groups.fold(0, (s, g) => s + g.bids.length);
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
@@ -529,8 +544,7 @@ class _BidsOverlay extends StatelessWidget {
             children: [
               // Header
               Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
                 child: Row(
                   children: [
                     const Text(
@@ -544,14 +558,13 @@ class _BidsOverlay extends StatelessWidget {
                     ),
                     const Spacer(),
                     Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 5, vertical: 1),
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
                       decoration: BoxDecoration(
                         color: const Color(0xFF1E293B),
                         borderRadius: BorderRadius.circular(4),
                       ),
                       child: Text(
-                        '${bids.length}',
+                        '$totalCount',
                         style: const TextStyle(
                           color: Color(0xFF94A3B8),
                           fontSize: 9,
@@ -563,65 +576,94 @@ class _BidsOverlay extends StatelessWidget {
                 ),
               ),
               const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
-              // Scrollable liste
+              // Gruplu scrollable liste
               Expanded(
                 child: ListView.builder(
-                  padding: const EdgeInsets.symmetric(vertical: 4),
-                  physics: const ClampingScrollPhysics(),
-                  itemCount: bids.length,
-                  itemBuilder: (_, i) {
-                    final bid = bids[i];
-                    final isFirst = i == 0;
-                    return GestureDetector(
-                      onTap: onUsernameTap != null
-                          ? () => onUsernameTap!(bid.bidder)
-                          : null,
-                      child: Padding(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 3),
-                        child: Row(
-                          children: [
-                            SizedBox(
-                              width: 20,
-                              child: Text(
-                                '#${i + 1}',
-                                style: TextStyle(
-                                  color: isFirst
-                                      ? const Color(0xFFFBBF24)
-                                      : const Color(0xFF475569),
-                                  fontSize: 9,
-                                  fontWeight: FontWeight.w800,
+                  padding: const EdgeInsets.only(bottom: 4),
+                  physics: const BouncingScrollPhysics(),
+                  // Her grup: 1 başlık + n teklif satırı
+                  itemCount: groups.fold(0, (s, g) => s + 1 + g.bids.length),
+                  itemBuilder: (_, flatIndex) {
+                    // flat index'i grup+satır'a çevir
+                    int cursor = 0;
+                    for (int gi = groups.length - 1; gi >= 0; gi--) {
+                      final g = groups[gi];
+                      if (flatIndex == cursor) {
+                        // Grup başlığı
+                        return Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          color: Colors.white.withOpacity(0.04),
+                          child: Text(
+                            g.title ?? 'Açık Artırma',
+                            style: const TextStyle(
+                              color: Color(0xFF06B6D4),
+                              fontSize: 8.5,
+                              fontWeight: FontWeight.w800,
+                              letterSpacing: 0.4,
+                            ),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        );
+                      }
+                      cursor++;
+                      final bidIdx = flatIndex - cursor;
+                      if (bidIdx >= 0 && bidIdx < g.bids.length) {
+                        final bid = g.bids[bidIdx];
+                        final isFirst = bidIdx == 0;
+                        return GestureDetector(
+                          onTap: onUsernameTap != null
+                              ? () => onUsernameTap!(bid.bidder)
+                              : null,
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 3),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 20,
+                                  child: Text(
+                                    '#${bidIdx + 1}',
+                                    style: TextStyle(
+                                      color: isFirst
+                                          ? const Color(0xFFFBBF24)
+                                          : const Color(0xFF475569),
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w800,
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
-                            Expanded(
-                              child: Text(
-                                '@${bid.bidder}',
-                                style: TextStyle(
-                                  color: usernameColor(bid.bidder),
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.w600,
-                                  decoration: onUsernameTap != null
-                                      ? TextDecoration.underline
-                                      : null,
-                                  decorationColor: usernameColor(bid.bidder)
-                                      .withOpacity(0.5),
+                                Expanded(
+                                  child: Text(
+                                    '@${bid.bidder}',
+                                    style: TextStyle(
+                                      color: usernameColor(bid.bidder),
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w600,
+                                      decoration: onUsernameTap != null
+                                          ? TextDecoration.underline
+                                          : null,
+                                      decorationColor: usernameColor(bid.bidder)
+                                          .withOpacity(0.5),
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
-                                overflow: TextOverflow.ellipsis,
-                              ),
+                                Text(
+                                  fmtPrice(bid.amount),
+                                  style: const TextStyle(
+                                    color: Color(0xFF4ADE80),
+                                    fontSize: 10,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ],
                             ),
-                            Text(
-                              fmtPrice(bid.amount),
-                              style: const TextStyle(
-                                color: Color(0xFF4ADE80),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w800,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
+                          ),
+                        );
+                      }
+                      cursor += g.bids.length;
+                    }
+                    return const SizedBox.shrink();
                   },
                 ),
               ),
