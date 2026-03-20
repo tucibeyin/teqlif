@@ -805,6 +805,11 @@
         .chat-username {
             color: #60a5fa;
             font-weight: 700;
+            cursor: pointer;
+        }
+
+        .chat-username:hover {
+            text-decoration: underline;
         }
 
         .chat-content {
@@ -1962,6 +1967,16 @@
             if (sendBtn) sendBtn.disabled = true;
             if (viewerCtrl) viewerCtrl.querySelectorAll('button, input').forEach(el => el.disabled = true);
             if (bidMsg) { bidMsg.textContent = 'Bu yayında susturuldunuz'; bidMsg.className = 'error'; }
+
+            // Kalıcı banner göster
+            if (!document.getElementById('mutedBanner')) {
+                const banner = document.createElement('div');
+                banner.id = 'mutedBanner';
+                banner.style.cssText = 'background:#d97706;color:#fff;text-align:center;padding:7px 12px;font-size:0.78rem;font-weight:700;letter-spacing:0.3px;flex-shrink:0;';
+                banner.textContent = '🔇 Bu yayında susturuldunuz — mesaj ve teklif gönderemezsiniz';
+                const chatPanel = document.getElementById('chatPanel');
+                if (chatPanel) chatPanel.prepend(banner);
+            }
         }
 
         function _onSelfUnmuted() {
@@ -1975,10 +1990,15 @@
             if (sendBtn) sendBtn.disabled = false;
             if (viewerCtrl) viewerCtrl.querySelectorAll('button, input').forEach(el => el.disabled = false);
             if (bidMsg) { bidMsg.textContent = ''; bidMsg.className = ''; }
+
+            // Banneri kaldır
+            document.getElementById('mutedBanner')?.remove();
         }
 
         function _onSelfKicked() {
             Chat.disconnect();
+            try { Auction.disconnect(); } catch (_) {}
+            try { disconnectRoom(); } catch (_) {}
             const el = document.createElement('div');
             el.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.92);z-index:9999;display:flex;align-items:center;justify-content:center;';
             el.innerHTML = `

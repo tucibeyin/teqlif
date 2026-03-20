@@ -126,6 +126,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
 
   Future<void> _handleKicked() async {
     if (!mounted) return;
+    await _room?.disconnect();
     await showDialog(
       context: context,
       barrierDismissible: false,
