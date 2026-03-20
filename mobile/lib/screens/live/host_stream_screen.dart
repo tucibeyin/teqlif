@@ -440,7 +440,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     },
                     child: _BidsToggleTab(
                       isOpen: _bidsVisible,
-                      count: _bidGroups.fold(0, (s, g) => s + g.bids.length),
+                      count: _bidGroups.fold<int>(0, (s, g) => s + g.bids.length),
                       onToggle: () =>
                           setState(() => _bidsVisible = !_bidsVisible),
                     ),
@@ -528,7 +528,7 @@ class _BidsOverlay extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final totalCount = groups.fold(0, (s, g) => s + g.bids.length);
+    final totalCount = groups.fold<int>(0, (s, g) => s + g.bids.length);
     return ClipRRect(
       borderRadius: BorderRadius.circular(12),
       child: BackdropFilter(
@@ -582,7 +582,7 @@ class _BidsOverlay extends StatelessWidget {
                   padding: const EdgeInsets.only(bottom: 4),
                   physics: const BouncingScrollPhysics(),
                   // Her grup: 1 başlık + n teklif satırı
-                  itemCount: groups.fold(0, (s, g) => s + 1 + g.bids.length),
+                  itemCount: groups.fold<int>(0, (s, g) => s + 1 + g.bids.length),
                   itemBuilder: (_, flatIndex) {
                     // flat index'i grup+satır'a çevir
                     int cursor = 0;
