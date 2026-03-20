@@ -123,19 +123,31 @@
         toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
     }
 
+    /* ── Login prompt (giriş yapılmamış kullanıcı) ───────────── */
+    const loginPrompt = document.getElementById('loginPrompt');
+
+    function showLoginPrompt() {
+        loginPrompt.style.display = 'flex';
+    }
+
+    function hideLoginPrompt() {
+        loginPrompt.style.display = 'none';
+    }
+
     /* ── Arama ────────────────────────────────────────────────── */
     let _debounce = null;
 
     function onInput() {
         const q = searchInput.value.trim();
 
-        if (q && !Auth.getToken()) {
+        if (!Auth.getToken()) {
             searchInput.value = '';
             clearBtn.style.display = 'none';
-            showToast('Arama yapmak için giriş yapmalısınız');
+            showLoginPrompt();
             return;
         }
 
+        hideLoginPrompt();
         clearBtn.style.display = q ? 'block' : 'none';
 
         if (!q) {
@@ -286,6 +298,7 @@
     clearBtn.addEventListener('click', function () {
         searchInput.value = '';
         clearBtn.style.display = 'none';
+        hideLoginPrompt();
         searchInput.focus();
         showExplore();
     });
