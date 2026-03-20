@@ -428,36 +428,34 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     );
                   });
                 },
-                child: IntrinsicHeight(
-                  child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    _BidsToggleTab(
-                      isOpen: _bidsVisible,
-                      count: _bids.length,
-                      onToggle: () =>
-                          setState(() => _bidsVisible = !_bidsVisible),
-                    ),
-                    AnimatedSize(
-                      duration: const Duration(milliseconds: 260),
-                      curve: Curves.easeInOut,
-                      child: _bidsVisible
-                          ? ConstrainedBox(
-                              constraints: BoxConstraints(
-                                maxWidth: 148,
-                                maxHeight: min(_bids.length, 5) * 36.0 + 44,
-                              ),
-                              child: _BidsOverlay(
-                                bids: _bids,
-                                onUsernameTap: _showModSheet,
-                              ),
-                            )
-                          : const SizedBox.shrink(),
-                    ),
-                  ],
-                  ),
-                ),
+                child: (() {
+                  final overlayH = min(_bids.length, 5) * 36.0 + 44;
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _BidsToggleTab(
+                        isOpen: _bidsVisible,
+                        openHeight: overlayH,
+                        count: _bids.length,
+                        onToggle: () =>
+                            setState(() => _bidsVisible = !_bidsVisible),
+                      ),
+                      AnimatedOpacity(
+                        duration: const Duration(milliseconds: 200),
+                        opacity: _bidsVisible ? 1.0 : 0.0,
+                        child: SizedBox(
+                          width: _bidsVisible ? 148 : 0,
+                          height: overlayH,
+                          child: _BidsOverlay(
+                            bids: _bids,
+                            onUsernameTap: _showModSheet,
+                          ),
+                        ),
+                      ),
+                    ],
+                  );
+                })(),
               ),
             ),
 
@@ -638,12 +636,14 @@ class _BidsOverlay extends StatelessWidget {
 
 class _BidsToggleTab extends StatelessWidget {
   final bool isOpen;
+  final double openHeight;
   final int count;
   final VoidCallback onToggle;
 
   const _BidsToggleTab({
     super.key,
     required this.isOpen,
+    required this.openHeight,
     required this.count,
     required this.onToggle,
   });
@@ -664,6 +664,7 @@ class _BidsToggleTab extends StatelessWidget {
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeInOut,
             width: isOpen ? 32 : 38,
+            height: isOpen ? openHeight : null,
             padding: isOpen ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(isOpen ? 0.42 : 0.52),
