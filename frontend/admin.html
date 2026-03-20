@@ -640,7 +640,7 @@
                     <td>#${l.id}</td>
                     <td><a href="/ilan/${l.id}" target="_blank" class="admin-link">${l.title}</a></td>
                     <td><a href="/profil/${l.username}" target="_blank" class="admin-link">@${l.username}</a></td>
-                    <td>₺${l.price}</td>
+                    <td>${l.price != null ? '₺' + Number(l.price).toLocaleString('tr-TR') : '—'}</td>
                     <td>${l.is_deleted ? '🗑 Silinmiş' : (l.is_active ? '✅ Aktif' : '⏸ Pasif')}</td>
                     <td>
                         ${!l.is_deleted ? `<button onclick="toggleListing(${l.id})" class="action-btn" style="background: var(--admin-warn);">${l.is_active ? 'Pasife Al' : 'Aktifleştir'}</button>

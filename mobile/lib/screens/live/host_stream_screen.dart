@@ -12,6 +12,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/stream_service.dart';
+import '../../utils/price_formatter.dart';
 import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
@@ -591,7 +592,7 @@ class _BidsOverlay extends StatelessWidget {
                             ),
                           ),
                           Text(
-                            '₺${bid.amount.toStringAsFixed(0)}',
+                            fmtPrice(bid.amount),
                             style: const TextStyle(
                               color: Color(0xFF4ADE80),
                               fontSize: 10,
