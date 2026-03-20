@@ -218,7 +218,7 @@
         const priceHtml = price ? `<div class="listing-tile-price">${esc(price)}</div>` : '';
 
         return `
-        <a class="listing-tile" href="/ilan.html?id=${l.id}">
+        <a class="listing-tile" href="/ilan/${l.id}">
             ${imgHtml}
             ${priceHtml}
         </a>`;
