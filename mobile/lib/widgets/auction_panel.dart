@@ -15,6 +15,8 @@ class AuctionPanel extends StatefulWidget {
   final bool isHost;
   final void Function(String bidder, double amount)? onBidAdded;
   final VoidCallback? onAuctionReset;
+  /// false ise viewer teklif butonları devre dışı kalır (mute durumu)
+  final bool enabled;
 
   const AuctionPanel({
     super.key,
@@ -22,6 +24,7 @@ class AuctionPanel extends StatefulWidget {
     required this.isHost,
     this.onBidAdded,
     this.onAuctionReset,
+    this.enabled = true,
   });
 
   @override
@@ -603,19 +606,25 @@ class _AuctionPanelState extends State<AuctionPanel> {
   }
 
   Widget _viewerBidButton(BuildContext context) {
+    final enabled = widget.enabled;
     return GestureDetector(
-      onTap: () => _showBidSheet(context),
+      onTap: enabled ? () => _showBidSheet(context) : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
         decoration: BoxDecoration(
-          color: const Color(0xFF16A34A),
+          color: enabled
+              ? const Color(0xFF16A34A)
+              : const Color(0xFF334155),
           borderRadius: BorderRadius.circular(20),
         ),
-        child: const Text('Teklif Ver',
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 11,
-                fontWeight: FontWeight.w700)),
+        child: Text(
+          enabled ? 'Teklif Ver' : '🔇 Susturuldunuz',
+          style: TextStyle(
+            color: enabled ? Colors.white : const Color(0xFF64748B),
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
       ),
     );
   }

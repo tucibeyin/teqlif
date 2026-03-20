@@ -24,6 +24,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   bool _connecting = true;
   String? _error;
   int _viewerCount = 0;
+  bool _selfMuted = false;
 
   @override
   void initState() {
@@ -96,6 +97,60 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
         _error = 'Bağlantı hatası: ${e.toString()}';
         _connecting = false;
       });
+    }
+  }
+
+  Future<void> _handleMuted() async {
+    if (!mounted) return;
+    setState(() => _selfMuted = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🔇 Bu yayında susturuldunuz'),
+        backgroundColor: Color(0xFFD97706),
+        duration: Duration(seconds: 4),
+      ),
+    );
+  }
+
+  Future<void> _handleUnmuted() async {
+    if (!mounted) return;
+    setState(() => _selfMuted = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🔊 Susturma kaldırıldı'),
+        backgroundColor: Color(0xFF16A34A),
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _handleKicked() async {
+    if (!mounted) return;
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        title: const Text('🚫 Yayından Atıldınız',
+            style: TextStyle(color: Colors.white, fontSize: 17)),
+        content: const Text('Bu yayına erişiminiz kısıtlandı.',
+            style: TextStyle(color: Color(0xFF94A3B8))),
+        actions: [
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFEF4444),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Tamam', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+    if (mounted) {
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     }
   }
 
@@ -369,11 +424,15 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       onStreamEnded: _handleStreamEnded,
                       onViewerCountChanged: (n) =>
                           setState(() => _viewerCount = n),
+                      onMuted: _handleMuted,
+                      onUnmuted: _handleUnmuted,
+                      onKicked: _handleKicked,
                     ),
                     // Açık artırma (sadece aktifse, altta sabit)
                     AuctionPanel(
                       streamId: widget.joinToken.streamId,
                       isHost: false,
+                      enabled: !_selfMuted,
                     ),
                     const SizedBox(height: 4),
                   ],

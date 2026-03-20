@@ -39,12 +39,24 @@ class ChatPanel extends StatefulWidget {
   final int streamId;
   final VoidCallback? onStreamEnded;
   final void Function(int count)? onViewerCountChanged;
+  /// Host için: kullanıcı adına tıklanınca çağrılır
+  final void Function(String username)? onUsernameTap;
+  /// Viewer için: susturulunca çağrılır
+  final VoidCallback? onMuted;
+  /// Viewer için: susturma kaldırılınca çağrılır
+  final VoidCallback? onUnmuted;
+  /// Viewer için: yayından atılınca çağrılır
+  final VoidCallback? onKicked;
 
   const ChatPanel({
     super.key,
     required this.streamId,
     this.onStreamEnded,
     this.onViewerCountChanged,
+    this.onUsernameTap,
+    this.onMuted,
+    this.onUnmuted,
+    this.onKicked,
   });
 
   @override
@@ -56,6 +68,7 @@ class _ChatPanelState extends State<ChatPanel> {
   final List<ChatMessage> _history = []; // last 50 messages
   final _inputCtrl = TextEditingController();
   final _focusNode = FocusNode();
+  bool _selfMuted = false;
 
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
@@ -159,6 +172,15 @@ class _ChatPanelState extends State<ChatPanel> {
             } else if (json['type'] == 'stream_ended') {
               _streamEnded = true;
               widget.onStreamEnded?.call();
+            } else if (json['type'] == 'muted') {
+              if (mounted) setState(() => _selfMuted = true);
+              widget.onMuted?.call();
+            } else if (json['type'] == 'unmuted') {
+              if (mounted) setState(() => _selfMuted = false);
+              widget.onUnmuted?.call();
+            } else if (json['type'] == 'kicked') {
+              _streamEnded = true; // yeniden bağlanmayı engelle
+              widget.onKicked?.call();
             }
           } catch (_) {}
         },
@@ -234,7 +256,10 @@ class _ChatPanelState extends State<ChatPanel> {
                       builder: (_, op, __) => AnimatedOpacity(
                         opacity: op,
                         duration: const Duration(milliseconds: 700),
-                        child: _MessageItem(m.message),
+                        child: _MessageItem(
+                          m.message,
+                          onUsernameTap: widget.onUsernameTap,
+                        ),
                       ),
                     ),
                   )
@@ -282,18 +307,22 @@ class _ChatPanelState extends State<ChatPanel> {
                     child: TextField(
                       controller: _inputCtrl,
                       focusNode: _focusNode,
-                      style:
-                          const TextStyle(color: Colors.white, fontSize: 13),
+                      enabled: !_selfMuted,
+                      style: TextStyle(
+                          color: _selfMuted ? Colors.white38 : Colors.white,
+                          fontSize: 13),
                       maxLength: 200,
                       maxLines: 1,
                       textInputAction: TextInputAction.send,
-                      decoration: const InputDecoration(
-                        hintText: 'Mesaj yaz...',
-                        hintStyle: TextStyle(
+                      decoration: InputDecoration(
+                        hintText: _selfMuted
+                            ? '🔇 Susturuldunuz'
+                            : 'Mesaj yaz...',
+                        hintStyle: const TextStyle(
                             color: Color(0xFF94A3B8), fontSize: 12),
                         counterText: '',
                         border: InputBorder.none,
-                        contentPadding: EdgeInsets.symmetric(
+                        contentPadding: const EdgeInsets.symmetric(
                             horizontal: 16, vertical: 10),
                       ),
                       onSubmitted: (_) => _sendMessage(),
@@ -302,16 +331,21 @@ class _ChatPanelState extends State<ChatPanel> {
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
-                  onTap: _sendMessage,
+                  onTap: _selfMuted ? null : _sendMessage,
                   child: Container(
                     width: 38,
                     height: 38,
-                    decoration: const BoxDecoration(
-                      color: kPrimary,
+                    decoration: BoxDecoration(
+                      color: _selfMuted
+                          ? const Color(0x44000000)
+                          : kPrimary,
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(Icons.send_rounded,
-                        color: Colors.white, size: 16),
+                    child: Icon(Icons.send_rounded,
+                        color: _selfMuted
+                            ? Colors.white24
+                            : Colors.white,
+                        size: 16),
                   ),
                 ),
               ],
@@ -434,8 +468,9 @@ class _HistorySheet extends StatelessWidget {
 
 class _MessageItem extends StatelessWidget {
   final ChatMessage message;
+  final void Function(String username)? onUsernameTap;
 
-  const _MessageItem(this.message);
+  const _MessageItem(this.message, {this.onUsernameTap});
 
   @override
   Widget build(BuildContext context) {
@@ -448,12 +483,15 @@ class _MessageItem extends StatelessWidget {
       child: Wrap(
         children: [
           GestureDetector(
-            onTap: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => PublicProfileScreen(username: message.username),
-              ),
-            ),
+            onTap: onUsernameTap != null
+                ? () => onUsernameTap!(message.username)
+                : () => Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) =>
+                            PublicProfileScreen(username: message.username),
+                      ),
+                    ),
             child: Text(
               '@${message.username} ',
               style: TextStyle(

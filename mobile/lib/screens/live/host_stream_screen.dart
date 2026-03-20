@@ -16,6 +16,7 @@ import '../../utils/price_formatter.dart';
 import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
+import '../../services/moderation_service.dart';
 
 class HostStreamScreen extends StatefulWidget {
   final StreamTokenOut streamToken;
@@ -44,6 +45,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   int _viewerCount = 0;
   final List<({String bidder, double amount})> _bids = [];
   bool _bidsVisible = true;
+  final Set<String> _mutedUsers = {};
 
   @override
   void initState() {
@@ -145,6 +147,20 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
   void _onAuctionReset() {
     setState(() => _bids.clear());
+  }
+
+  void _showModSheet(String username) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => _ModerationSheet(
+        streamId: widget.streamToken.streamId,
+        username: username,
+        isMuted: _mutedUsers.contains(username),
+        onMuted: () => setState(() => _mutedUsers.add(username)),
+        onUnmuted: () => setState(() => _mutedUsers.remove(username)),
+      ),
+    );
   }
 
   Future<void> _endStream() async {
@@ -410,7 +426,10 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     maxWidth: 148,
                     maxHeight: min(_bids.length, 5) * 36.0 + 44,
                   ),
-                  child: _BidsOverlay(bids: _bids),
+                  child: _BidsOverlay(
+                    bids: _bids,
+                    onUsernameTap: _showModSheet,
+                  ),
                 ),
               ),
             ),
@@ -454,6 +473,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       streamId: widget.streamToken.streamId,
                       onViewerCountChanged: (n) =>
                           setState(() => _viewerCount = n),
+                      onUsernameTap: _showModSheet,
                     ),
                     // Açık artırma şeridi (altta sabit)
                     AuctionPanel(
@@ -477,8 +497,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
 class _BidsOverlay extends StatelessWidget {
   final List<({String bidder, double amount})> bids;
+  final void Function(String username)? onUsernameTap;
 
-  const _BidsOverlay({required this.bids});
+  const _BidsOverlay({required this.bids, this.onUsernameTap});
 
   @override
   Widget build(BuildContext context) {
@@ -541,44 +562,54 @@ class _BidsOverlay extends StatelessWidget {
                   itemBuilder: (_, i) {
                     final bid = bids[i];
                     final isFirst = i == 0;
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 3),
-                      child: Row(
-                        children: [
-                          SizedBox(
-                            width: 20,
-                            child: Text(
-                              '#${i + 1}',
-                              style: TextStyle(
-                                color: isFirst
-                                    ? const Color(0xFFFBBF24)
-                                    : const Color(0xFF475569),
-                                fontSize: 9,
+                    return GestureDetector(
+                      onTap: onUsernameTap != null
+                          ? () => onUsernameTap!(bid.bidder)
+                          : null,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 3),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 20,
+                              child: Text(
+                                '#${i + 1}',
+                                style: TextStyle(
+                                  color: isFirst
+                                      ? const Color(0xFFFBBF24)
+                                      : const Color(0xFF475569),
+                                  fontSize: 9,
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                '@${bid.bidder}',
+                                style: TextStyle(
+                                  color: usernameColor(bid.bidder),
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w600,
+                                  decoration: onUsernameTap != null
+                                      ? TextDecoration.underline
+                                      : null,
+                                  decorationColor: usernameColor(bid.bidder)
+                                      .withOpacity(0.5),
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            Text(
+                              fmtPrice(bid.amount),
+                              style: const TextStyle(
+                                color: Color(0xFF4ADE80),
+                                fontSize: 10,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
-                          ),
-                          Expanded(
-                            child: Text(
-                              '@${bid.bidder}',
-                              style: TextStyle(
-                                color: usernameColor(bid.bidder),
-                                fontSize: 10,
-                                fontWeight: FontWeight.w600,
-                              ),
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-                          Text(
-                            fmtPrice(bid.amount),
-                            style: const TextStyle(
-                              color: Color(0xFF4ADE80),
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     );
                   },
@@ -702,6 +733,206 @@ class _BidsToggleTab extends StatelessWidget {
     );
   }
 }
+
+// ── Moderasyon BottomSheet ──────────────────────────────────────────────────
+
+class _ModerationSheet extends StatefulWidget {
+  final int streamId;
+  final String username;
+  final bool isMuted;
+  final VoidCallback onMuted;
+  final VoidCallback onUnmuted;
+
+  const _ModerationSheet({
+    required this.streamId,
+    required this.username,
+    required this.isMuted,
+    required this.onMuted,
+    required this.onUnmuted,
+  });
+
+  @override
+  State<_ModerationSheet> createState() => _ModerationSheetState();
+}
+
+class _ModerationSheetState extends State<_ModerationSheet> {
+  bool _loading = false;
+  String? _msg;
+  bool _isError = false;
+  late bool _isMuted;
+
+  @override
+  void initState() {
+    super.initState();
+    _isMuted = widget.isMuted;
+  }
+
+  Future<void> _act(Future<void> Function() fn, {
+    required String successMsg,
+    VoidCallback? onSuccess,
+  }) async {
+    setState(() { _loading = true; _msg = null; });
+    try {
+      await fn();
+      onSuccess?.call();
+      if (mounted) setState(() { _loading = false; _msg = successMsg; _isError = false; });
+      await Future.delayed(const Duration(milliseconds: 900));
+      if (mounted) Navigator.pop(context);
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _msg = e.toString(); _isError = true; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E293B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          // Başlık
+          Row(
+            children: [
+              const Text('🛡 Moderasyon',
+                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              const Spacer(),
+              Text('@${widget.username}',
+                  style: const TextStyle(color: Color(0xFF06B6D4), fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: Colors.white12, height: 1),
+          const SizedBox(height: 14),
+
+          // Sustur / Susturmayı Kaldır
+          if (!_isMuted)
+            _ModBtn(
+              icon: '🔇',
+              label: 'Sustur',
+              color: const Color(0xFFD97706),
+              loading: _loading,
+              onTap: () => _act(
+                () => ModerationService.mute(widget.streamId, widget.username),
+                successMsg: '@${widget.username} susturuldu',
+                onSuccess: () { widget.onMuted(); setState(() => _isMuted = true); },
+              ),
+            )
+          else
+            _ModBtn(
+              icon: '🔊',
+              label: 'Susturmayı Kaldır',
+              color: const Color(0xFF16A34A),
+              loading: _loading,
+              onTap: () => _act(
+                () => ModerationService.unmute(widget.streamId, widget.username),
+                successMsg: 'Susturma kaldırıldı',
+                onSuccess: () { widget.onUnmuted(); setState(() => _isMuted = false); },
+              ),
+            ),
+          const SizedBox(height: 10),
+
+          // Yayından At
+          _ModBtn(
+            icon: '🚫',
+            label: 'Yayından At',
+            color: const Color(0xFFEF4444),
+            loading: _loading,
+            onTap: () => _act(
+              () => ModerationService.kick(widget.streamId, widget.username),
+              successMsg: '@${widget.username} yayından atıldı',
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // İptal
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: _loading ? null : () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: Colors.white12),
+                ),
+              ),
+              child: const Text('İptal',
+                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+            ),
+          ),
+
+          // Mesaj
+          if (_msg != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Center(
+                child: Text(
+                  _msg!,
+                  style: TextStyle(
+                    color: _isError ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ModBtn extends StatelessWidget {
+  final String icon;
+  final String label;
+  final Color color;
+  final bool loading;
+  final VoidCallback onTap;
+
+  const _ModBtn({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.loading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: loading ? null : onTap,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          disabledBackgroundColor: color.withOpacity(0.4),
+          padding: const EdgeInsets.symmetric(vertical: 13),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          elevation: 0,
+        ),
+        child: Text('$icon  $label',
+            style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+// ── TopIconBtn ──────────────────────────────────────────────────────────────
 
 class _TopIconBtn extends StatelessWidget {
   final IconData icon;
