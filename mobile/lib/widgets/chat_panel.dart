@@ -155,6 +155,7 @@ class _ChatPanelState extends State<ChatPanel> {
       _sub = _channel!.stream.listen(
         (data) {
           if (!mounted) return;
+          String? _eventType;
           try {
             final json = jsonDecode(data as String) as Map<String, dynamic>;
             if (json['type'] == 'message') {
@@ -171,19 +172,28 @@ class _ChatPanelState extends State<ChatPanel> {
               widget.onViewerCountChanged?.call(count);
             } else if (json['type'] == 'stream_ended') {
               _streamEnded = true;
-              widget.onStreamEnded?.call();
+              _eventType = 'stream_ended';
             } else if (json['type'] == 'muted') {
               if (mounted) setState(() => _selfMuted = true);
-              widget.onMuted?.call();
+              _eventType = 'muted';
             } else if (json['type'] == 'unmuted') {
               if (mounted) setState(() => _selfMuted = false);
-              widget.onUnmuted?.call();
+              _eventType = 'unmuted';
             } else if (json['type'] == 'kicked') {
-              _streamEnded = true; // yeniden bağlanmayı engelle
-              debugPrint('[CHAT] kicked event alındı — onKicked callback çağrılıyor');
-              widget.onKicked?.call();
+              _streamEnded = true;
+              _eventType = 'kicked';
             }
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('[CHAT] JSON parse hatası: $e');
+          }
+          // Callback'leri try-catch dışında çağır — exception gizlenmesin
+          if (_eventType == 'stream_ended') widget.onStreamEnded?.call();
+          if (_eventType == 'muted') widget.onMuted?.call();
+          if (_eventType == 'unmuted') widget.onUnmuted?.call();
+          if (_eventType == 'kicked') {
+            debugPrint('[CHAT] kicked — onKicked null:${widget.onKicked == null}');
+            widget.onKicked?.call();
+          }
         },
         onDone: _scheduleReconnect,
         onError: (_) => _scheduleReconnect(),
