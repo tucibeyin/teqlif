@@ -46,7 +46,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   final List<({String bidder, double amount})> _bids = [];
   bool _bidsVisible = true;
   double? _bidsPanelTop;
-  bool _bidsPanelLeft = false;
   final Set<String> _mutedUsers = {};
 
   @override
@@ -412,12 +411,11 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // ── Teklif Listesi — Sürüklenebilir panel ──────────────────
+          // ── Teklif Listesi — Sürüklenebilir panel (sağ kenar) ─────
           if (live && _bids.isNotEmpty)
             Positioned(
               top: _bidsPanelTop!,
-              left: _bidsPanelLeft ? 0 : null,
-              right: _bidsPanelLeft ? null : 0,
+              right: 0,
               child: GestureDetector(
                 behavior: HitTestBehavior.opaque,
                 onPanUpdate: (d) {
@@ -428,67 +426,33 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     );
                   });
                 },
-                onPanEnd: (d) {
-                  final vx = d.velocity.pixelsPerSecond.dx;
-                  if (vx < -300) setState(() => _bidsPanelLeft = true);
-                  if (vx > 300) setState(() => _bidsPanelLeft = false);
-                },
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
-                  children: _bidsPanelLeft
-                      ? [
-                          _BidsToggleTab(
-                            isOpen: _bidsVisible,
-                            isLeft: true,
-                            count: _bids.length,
-                            onToggle: () =>
-                                setState(() => _bidsVisible = !_bidsVisible),
-                          ),
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 260),
-                            curve: Curves.easeInOut,
-                            child: _bidsVisible
-                                ? ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth: 148,
-                                      maxHeight:
-                                          min(_bids.length, 5) * 36.0 + 44,
-                                    ),
-                                    child: _BidsOverlay(
-                                      bids: _bids,
-                                      onUsernameTap: _showModSheet,
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                        ]
-                      : [
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 260),
-                            curve: Curves.easeInOut,
-                            child: _bidsVisible
-                                ? ConstrainedBox(
-                                    constraints: BoxConstraints(
-                                      maxWidth: 148,
-                                      maxHeight:
-                                          min(_bids.length, 5) * 36.0 + 44,
-                                    ),
-                                    child: _BidsOverlay(
-                                      bids: _bids,
-                                      onUsernameTap: _showModSheet,
-                                    ),
-                                  )
-                                : const SizedBox.shrink(),
-                          ),
-                          _BidsToggleTab(
-                            isOpen: _bidsVisible,
-                            isLeft: false,
-                            count: _bids.length,
-                            onToggle: () =>
-                                setState(() => _bidsVisible = !_bidsVisible),
-                          ),
-                        ],
+                  children: [
+                    _BidsToggleTab(
+                      isOpen: _bidsVisible,
+                      count: _bids.length,
+                      onToggle: () =>
+                          setState(() => _bidsVisible = !_bidsVisible),
+                    ),
+                    AnimatedSize(
+                      duration: const Duration(milliseconds: 260),
+                      curve: Curves.easeInOut,
+                      child: _bidsVisible
+                          ? ConstrainedBox(
+                              constraints: BoxConstraints(
+                                maxWidth: 148,
+                                maxHeight: min(_bids.length, 5) * 36.0 + 44,
+                              ),
+                              child: _BidsOverlay(
+                                bids: _bids,
+                                onUsernameTap: _showModSheet,
+                              ),
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                  ],
                 ),
               ),
             ),
@@ -670,23 +634,20 @@ class _BidsOverlay extends StatelessWidget {
 
 class _BidsToggleTab extends StatelessWidget {
   final bool isOpen;
-  final bool isLeft;
   final int count;
   final VoidCallback onToggle;
 
   const _BidsToggleTab({
     super.key,
     required this.isOpen,
-    this.isLeft = false,
     required this.count,
     required this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
-    final radius = isLeft
-        ? const BorderRadius.horizontal(right: Radius.circular(12))
-        : const BorderRadius.horizontal(left: Radius.circular(12));
+    // Toggle listenin solunda, sol kenarı yuvarlak; sağ kenarı listeye yapışık
+    const radius = BorderRadius.horizontal(left: Radius.circular(12));
     final borderColor = Colors.white.withOpacity(isOpen ? 0.10 : 0.15);
 
     return GestureDetector(
@@ -704,12 +665,7 @@ class _BidsToggleTab extends StatelessWidget {
               color: Colors.black.withOpacity(isOpen ? 0.42 : 0.52),
               borderRadius: radius,
               border: Border(
-                left: isLeft
-                    ? BorderSide.none
-                    : BorderSide(color: borderColor),
-                right: isLeft
-                    ? BorderSide(color: borderColor)
-                    : BorderSide.none,
+                left: BorderSide(color: borderColor),
                 top: BorderSide(color: borderColor),
                 bottom: BorderSide(color: borderColor),
               ),
@@ -721,16 +677,16 @@ class _BidsToggleTab extends StatelessWidget {
     );
   }
 
-  // Açıkken: ince, sadece ok
+  // Açıkken: sadece › (listeyi sağa kapat)
   Widget _openChild() {
-    return Icon(
-      isLeft ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
-      color: const Color(0xFF64748B),
+    return const Icon(
+      Icons.chevron_right_rounded,
+      color: Color(0xFF64748B),
       size: 18,
     );
   }
 
-  // Kapalıyken: sayı + dikey metin + ok
+  // Kapalıyken: sayı + dikey metin + ‹ (listeyi aç)
   Widget _closedChild() {
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -756,7 +712,7 @@ class _BidsToggleTab extends StatelessWidget {
         const SizedBox(height: 8),
         // Dikey "TEKLİFLER" yazısı — koyu
         RotatedBox(
-          quarterTurns: isLeft ? 1 : 3,
+          quarterTurns: 3,
           child: const Text(
             'TEKLİFLER',
             style: TextStyle(
@@ -768,9 +724,9 @@ class _BidsToggleTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        // ok ikonu — koyu gri
-        Icon(
-          isLeft ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+        // ‹ oku — listeyi aç
+        const Icon(
+          Icons.chevron_left_rounded,
           color: const Color(0xFF64748B),
           size: 18,
         ),
