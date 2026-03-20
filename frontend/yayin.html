@@ -1902,6 +1902,8 @@
             document.getElementById('modBtnMute').style.display   = isMuted ? 'none' : 'block';
             document.getElementById('modBtnUnmute').style.display = isMuted ? 'block' : 'none';
             document.getElementById('modMsg').textContent = '';
+            // Her açılışta butonları aktif et
+            document.querySelectorAll('.mod-btn').forEach(b => b.disabled = false);
             document.getElementById('modModal').style.display = 'flex';
         }
 
@@ -2026,13 +2028,12 @@
             const _onViewerCount = (n) => { if (_viewerCountEl) _viewerCountEl.textContent = `👁 ${n}`; };
 
             if (isHost) {
-                Chat.connect(sid, { onViewerCount: _onViewerCount });
-
-                // Host: kullanıcı adına tıklayınca mod modal aç
-                document.getElementById('chatMessages').addEventListener('click', (e) => {
-                    const span = e.target.closest('[data-username]');
-                    if (span && span.dataset.username) _showModModal(span.dataset.username);
+                Chat.connect(sid, {
+                    onViewerCount: _onViewerCount,
+                    onUsernameTap: _showModModal,
                 });
+
+                // Host: teklif listesinde kullanıcı adına tıklayınca mod modal aç
                 document.getElementById('bidsList').addEventListener('click', (e) => {
                     const span = e.target.closest('[data-username]');
                     if (span && span.dataset.username) _showModModal(span.dataset.username);

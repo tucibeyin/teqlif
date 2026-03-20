@@ -29,6 +29,24 @@ from app.utils.redis_client import get_redis
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/moderation", tags=["moderation"])
 
+
+async def _remove_from_livekit(room_name: str, user_id: int) -> None:
+    """Katılımcıyı LiveKit odasından zorla çıkar."""
+    try:
+        from livekit.api import LiveKitAPI, RemoveParticipantRequest
+        from app.config import settings as _s
+        async with LiveKitAPI(
+            url=_s.livekit_url,
+            api_key=_s.livekit_api_key,
+            api_secret=_s.livekit_api_secret,
+        ) as lkapi:
+            await lkapi.room.remove_participant(
+                RemoveParticipantRequest(room=room_name, identity=str(user_id))
+            )
+            logger.info("[MOD] LiveKit katılımcı çıkarıldı | room=%s user_id=%s", room_name, user_id)
+    except Exception as exc:
+        logger.warning("[MOD] LiveKit katılımcı çıkarılamadı | room=%s user_id=%s | %s", room_name, user_id, exc)
+
 MOD_CHANNEL = "moderation_broadcast"
 _TTL = 86_400  # 24 saat
 
@@ -136,13 +154,15 @@ async def kick_user(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    _, target = await _resolve(stream_id, body.username, current_user, db)
+    stream, target = await _resolve(stream_id, body.username, current_user, db)
 
     redis = await get_redis()
     await redis.sadd(kick_key(stream_id), str(target.id))
     await redis.expire(kick_key(stream_id), _TTL)
 
     await publish_mod_event(stream_id, "kicked", target.id)
+    # LiveKit odasından zorla çıkar
+    await _remove_from_livekit(stream.room_name, target.id)
     logger.info(
         "[MOD] KICK | stream_id=%s host=%s target=%s",
         stream_id, current_user.username, target.username,

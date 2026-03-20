@@ -122,6 +122,12 @@ class _AuctionPanelState extends State<AuctionPanel> {
     });
   }
 
+  String _cleanErr(Object e) {
+    final s = e.toString();
+    if (s.startsWith('Exception: ')) return s.substring('Exception: '.length);
+    return s;
+  }
+
   void _setMsg(String msg, {bool error = false}) {
     if (!mounted) return;
     setState(() {
@@ -148,7 +154,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
         listingId: result['listing_id'] as int?,
       );
     } catch (e) {
-      _setMsg(e.toString(), error: true);
+      _setMsg(_cleanErr(e), error: true);
     }
   }
 
@@ -156,7 +162,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
     try {
       await AuctionService.pauseAuction(widget.streamId);
     } catch (e) {
-      _setMsg(e.toString(), error: true);
+      _setMsg(_cleanErr(e), error: true);
     }
   }
 
@@ -164,7 +170,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
     try {
       await AuctionService.resumeAuction(widget.streamId);
     } catch (e) {
-      _setMsg(e.toString(), error: true);
+      _setMsg(_cleanErr(e), error: true);
     }
   }
 
@@ -248,7 +254,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
       await AuctionService.acceptBid(widget.streamId);
       _setMsg('Teklif kabul edildi! Özet sohbete gönderildi.');
     } catch (e) {
-      _setMsg(e.toString(), error: true);
+      _setMsg(_cleanErr(e), error: true);
     }
   }
 
@@ -282,7 +288,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
     try {
       await AuctionService.endAuction(widget.streamId);
     } catch (e) {
-      _setMsg(e.toString(), error: true);
+      _setMsg(_cleanErr(e), error: true);
     }
   }
 
@@ -293,7 +299,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
       _setMsg('₺${_fmt(amount)} teklifiniz alındı!');
       _customBidCtrl.clear();
     } catch (e) {
-      _setMsg(e.toString(), error: true);
+      _setMsg(_cleanErr(e), error: true);
     }
   }
 

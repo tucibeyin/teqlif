@@ -10,14 +10,16 @@ const Chat = (() => {
     let _onMuted = null;
     let _onKicked = null;
     let _onUnmuted = null;
+    let _onUsernameTap = null;
 
-    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted } = {}) {
+    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap } = {}) {
         _streamId = streamId;
         _onStreamEnded = onStreamEnded || null;
         _onViewerCount = onViewerCount || null;
         _onMuted = onMuted || null;
         _onKicked = onKicked || null;
         _onUnmuted = onUnmuted || null;
+        _onUsernameTap = onUsernameTap || null;
         _connectWS();
     }
 
@@ -114,6 +116,12 @@ const Chat = (() => {
             html += ` <a href="${_esc(msg.url)}" target="_blank" style="color:#fbbf24;font-weight:600;text-decoration:underline;white-space:nowrap;">🔗 İlana Bak</a>`;
         }
         el.innerHTML = html;
+        if (_onUsernameTap) {
+            const usernameSpan = el.querySelector('.chat-username');
+            if (usernameSpan) {
+                usernameSpan.addEventListener('click', () => _onUsernameTap(msg.username));
+            }
+        }
         list.appendChild(el);
 
         // En fazla 50 mesaj göster
