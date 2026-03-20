@@ -75,13 +75,28 @@ const Chat = (() => {
         }, 4000);
     }
 
+    const _PALETTE = [
+        '#f87171', '#fb923c', '#fbbf24', '#a3e635',
+        '#4ade80', '#2dd4bf', '#22d3ee', '#38bdf8',
+        '#818cf8', '#c084fc', '#f472b6', '#fb7185',
+    ];
+
+    function _usernameColor(username) {
+        let hash = 0;
+        for (let i = 0; i < username.length; i++) {
+            hash = (hash * 31 + username.charCodeAt(i)) & 0x7fffffff;
+        }
+        return _PALETTE[hash % _PALETTE.length];
+    }
+
     function _appendMessage(msg) {
         const list = document.getElementById('chatMessages');
         if (!list) return;
 
+        const color = _usernameColor(msg.username || '');
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        let html = `<span class="chat-username">@${_esc(msg.username)}</span> <span class="chat-content">${_esc(msg.content)}</span>`;
+        let html = `<span class="chat-username" style="color:${color}">@${_esc(msg.username)}</span> <span class="chat-content">${_esc(msg.content)}</span>`;
         if (msg.url) {
             html += ` <a href="${_esc(msg.url)}" target="_blank" style="color:#fbbf24;font-weight:600;text-decoration:underline;white-space:nowrap;">🔗 İlana Bak</a>`;
         }
