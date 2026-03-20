@@ -22,6 +22,21 @@ logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/streams", tags=["streams"])
 
 
+async def _delete_livekit_room(room_name: str) -> None:
+    """LiveKit odasını zorla sil (tüm katılımcıları çıkarır)."""
+    try:
+        import aiohttp
+        from livekit.api.room_service import RoomService, DeleteRoomRequest
+        async with aiohttp.ClientSession() as session:
+            svc = RoomService(session, settings.livekit_url, settings.livekit_api_key, settings.livekit_api_secret)
+            req = DeleteRoomRequest()
+            req.room = room_name
+            await svc.delete_room(req)
+        logger.info("[STREAMS] LiveKit oda silindi | room=%s", room_name)
+    except Exception as exc:
+        logger.warning("[STREAMS] LiveKit oda silinemedi | room=%s | %s", room_name, exc)
+
+
 def _make_token(room_name: str, user: User, can_publish: bool) -> str:
     try:
         grant = VideoGrants(
@@ -171,6 +186,9 @@ async def end_stream(
         await _publish_chat(stream_id, {"type": "stream_ended"})
     except Exception:
         logger.error("stream_ended yayınlanamadı | stream_id=%s", stream_id, exc_info=True)
+
+    # LiveKit odasını kapat → tüm viewer'lar RoomDisconnectedEvent alır
+    await _delete_livekit_room(stream.room_name)
 
     logger.info("Yayın sonlandırıldı | stream_id=%s user_id=%s", stream_id, current_user.id)
     return {"message": "Yayın sonlandırıldı"}
