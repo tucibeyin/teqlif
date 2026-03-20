@@ -91,6 +91,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   bool _loading = false;
   bool _streamEnded = false;
   int _viewerCount = 0;
+  bool _selfMuted = false;
+  bool _kicked = false;
 
   @override
   void initState() {
@@ -168,6 +170,44 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     } catch (_) {
       if (mounted) setState(() => _loading = false);
     }
+  }
+
+  void _handleMuted() {
+    if (!mounted) return;
+    setState(() => _selfMuted = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🔇 Bu yayında susturuldunuz'),
+        backgroundColor: Color(0xFFD97706),
+        duration: Duration(seconds: 4),
+      ),
+    );
+  }
+
+  void _handleUnmuted() {
+    if (!mounted) return;
+    setState(() => _selfMuted = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🔊 Susturma kaldırıldı'),
+        backgroundColor: Color(0xFF16A34A),
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  void _handleKicked() {
+    if (!mounted || _kicked) return;
+    _kicked = true;
+    _room?.disconnect();
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('🚫 Bu yayından atıldınız'),
+        backgroundColor: Color(0xFFEF4444),
+        duration: Duration(seconds: 4),
+      ),
+    );
+    Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
   }
 
   Future<void> _deactivate() async {
@@ -426,8 +466,15 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                         setState(() => _streamEnded = true),
                     onViewerCountChanged: (n) =>
                         setState(() => _viewerCount = n),
+                    onMuted: _handleMuted,
+                    onUnmuted: _handleUnmuted,
+                    onKicked: _handleKicked,
                   ),
-                  AuctionPanel(streamId: widget.stream.id, isHost: false),
+                  AuctionPanel(
+                    streamId: widget.stream.id,
+                    isHost: false,
+                    enabled: !_selfMuted,
+                  ),
                   const SizedBox(height: 4),
                 ],
               ),
