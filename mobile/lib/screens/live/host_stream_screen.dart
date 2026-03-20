@@ -45,6 +45,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   int _viewerCount = 0;
   final List<({String bidder, double amount})> _bids = [];
   bool _bidsVisible = true;
+  double? _bidsPanelTop;
+  bool _bidsPanelLeft = false;
   final Set<String> _mutedUsers = {};
 
   @override
@@ -229,6 +231,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   Widget build(BuildContext context) {
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
+    final screenH = MediaQuery.of(context).size.height;
+    _bidsPanelTop ??= topPad + 66;
     final live = !_connecting && _error == null;
 
     return Scaffold(
@@ -408,43 +412,84 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // ── Teklif Listesi — Panel (sağdan kayar) ──────────────────
+          // ── Teklif Listesi — Sürüklenebilir panel ──────────────────
           if (live && _bids.isNotEmpty)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeInOut,
-              right: _bidsVisible ? 8 : -160,
-              top: topPad + 66,
+            Positioned(
+              top: _bidsPanelTop!,
+              left: _bidsPanelLeft ? 0 : null,
+              right: _bidsPanelLeft ? null : 0,
               child: GestureDetector(
-                onHorizontalDragEnd: (d) {
-                  if ((d.primaryVelocity ?? 0) > 120) {
-                    setState(() => _bidsVisible = false);
-                  }
+                behavior: HitTestBehavior.opaque,
+                onPanUpdate: (d) {
+                  setState(() {
+                    _bidsPanelTop = (_bidsPanelTop! + d.delta.dy).clamp(
+                      topPad + 50.0,
+                      screenH - botPad - 150.0,
+                    );
+                  });
                 },
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    maxWidth: 148,
-                    maxHeight: min(_bids.length, 5) * 36.0 + 44,
-                  ),
-                  child: _BidsOverlay(
-                    bids: _bids,
-                    onUsernameTap: _showModSheet,
-                  ),
+                onPanEnd: (d) {
+                  final vx = d.velocity.pixelsPerSecond.dx;
+                  if (vx < -300) setState(() => _bidsPanelLeft = true);
+                  if (vx > 300) setState(() => _bidsPanelLeft = false);
+                },
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: _bidsPanelLeft
+                      ? [
+                          _BidsToggleTab(
+                            isOpen: _bidsVisible,
+                            isLeft: true,
+                            count: _bids.length,
+                            onToggle: () =>
+                                setState(() => _bidsVisible = !_bidsVisible),
+                          ),
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeInOut,
+                            child: _bidsVisible
+                                ? ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: 148,
+                                      maxHeight:
+                                          min(_bids.length, 5) * 36.0 + 44,
+                                    ),
+                                    child: _BidsOverlay(
+                                      bids: _bids,
+                                      onUsernameTap: _showModSheet,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                        ]
+                      : [
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 260),
+                            curve: Curves.easeInOut,
+                            child: _bidsVisible
+                                ? ConstrainedBox(
+                                    constraints: BoxConstraints(
+                                      maxWidth: 148,
+                                      maxHeight:
+                                          min(_bids.length, 5) * 36.0 + 44,
+                                    ),
+                                    child: _BidsOverlay(
+                                      bids: _bids,
+                                      onUsernameTap: _showModSheet,
+                                    ),
+                                  )
+                                : const SizedBox.shrink(),
+                          ),
+                          _BidsToggleTab(
+                            isOpen: _bidsVisible,
+                            isLeft: false,
+                            count: _bids.length,
+                            onToggle: () =>
+                                setState(() => _bidsVisible = !_bidsVisible),
+                          ),
+                        ],
                 ),
-              ),
-            ),
-
-          // ── Teklif Listesi — Toggle Tab (her zaman görünür) ─────────
-          if (live && _bids.isNotEmpty)
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 260),
-              curve: Curves.easeInOut,
-              right: _bidsVisible ? 148 + 8 + 4 : 0,
-              top: topPad + 66,
-              child: _BidsToggleTab(
-                isOpen: _bidsVisible,
-                count: _bids.length,
-                onToggle: () => setState(() => _bidsVisible = !_bidsVisible),
               ),
             ),
 
@@ -625,22 +670,29 @@ class _BidsOverlay extends StatelessWidget {
 
 class _BidsToggleTab extends StatelessWidget {
   final bool isOpen;
+  final bool isLeft;
   final int count;
   final VoidCallback onToggle;
 
   const _BidsToggleTab({
     super.key,
     required this.isOpen,
+    this.isLeft = false,
     required this.count,
     required this.onToggle,
   });
 
   @override
   Widget build(BuildContext context) {
+    final radius = isLeft
+        ? const BorderRadius.horizontal(right: Radius.circular(12))
+        : const BorderRadius.horizontal(left: Radius.circular(12));
+    final borderColor = Colors.white.withOpacity(isOpen ? 0.10 : 0.15);
+
     return GestureDetector(
       onTap: onToggle,
       child: ClipRRect(
-        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
+        borderRadius: radius,
         child: BackdropFilter(
           filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
           child: AnimatedContainer(
@@ -649,24 +701,17 @@ class _BidsToggleTab extends StatelessWidget {
             width: isOpen ? 26 : 38,
             padding: EdgeInsets.symmetric(vertical: isOpen ? 10 : 14),
             decoration: BoxDecoration(
-              color: isOpen
-                  ? Colors.black.withOpacity(0.42)
-                  : const Color(0xFF06B6D4).withOpacity(0.18),
-              borderRadius:
-                  const BorderRadius.horizontal(left: Radius.circular(12)),
+              color: Colors.black.withOpacity(isOpen ? 0.42 : 0.52),
+              borderRadius: radius,
               border: Border(
-                left: BorderSide(
-                    color: isOpen
-                        ? Colors.white.withOpacity(0.10)
-                        : const Color(0xFF06B6D4).withOpacity(0.5)),
-                top: BorderSide(
-                    color: isOpen
-                        ? Colors.white.withOpacity(0.10)
-                        : const Color(0xFF06B6D4).withOpacity(0.5)),
-                bottom: BorderSide(
-                    color: isOpen
-                        ? Colors.white.withOpacity(0.10)
-                        : const Color(0xFF06B6D4).withOpacity(0.5)),
+                left: isLeft
+                    ? BorderSide.none
+                    : BorderSide(color: borderColor),
+                right: isLeft
+                    ? BorderSide(color: borderColor)
+                    : BorderSide.none,
+                top: BorderSide(color: borderColor),
+                bottom: BorderSide(color: borderColor),
               ),
             ),
             child: isOpen ? _openChild() : _closedChild(),
@@ -676,46 +721,46 @@ class _BidsToggleTab extends StatelessWidget {
     );
   }
 
-  // Açıkken: ince, sadece › oku
+  // Açıkken: ince, sadece ok
   Widget _openChild() {
-    return const Icon(
-      Icons.chevron_right_rounded,
-      color: Color(0xFF64748B),
+    return Icon(
+      isLeft ? Icons.chevron_left_rounded : Icons.chevron_right_rounded,
+      color: const Color(0xFF64748B),
       size: 18,
     );
   }
 
-  // Kapalıyken: sayı + dikey metin + ‹ oku
+  // Kapalıyken: sayı + dikey metin + ok
   Widget _closedChild() {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Teklif sayısı rozeti
+        // Teklif sayısı rozeti — koyu gri
         Container(
           width: 22,
           height: 22,
           decoration: const BoxDecoration(
-            color: Color(0xFF06B6D4),
+            color: Color(0xFF334155),
             shape: BoxShape.circle,
           ),
           alignment: Alignment.center,
           child: Text(
             '$count',
             style: const TextStyle(
-              color: Colors.white,
+              color: Color(0xFFCBD5E1),
               fontSize: 10,
               fontWeight: FontWeight.w800,
             ),
           ),
         ),
         const SizedBox(height: 8),
-        // Dikey "TEKLİFLER" yazısı
+        // Dikey "TEKLİFLER" yazısı — koyu
         RotatedBox(
-          quarterTurns: 3,
-          child: Text(
+          quarterTurns: isLeft ? 1 : 3,
+          child: const Text(
             'TEKLİFLER',
             style: TextStyle(
-              color: const Color(0xFF06B6D4).withOpacity(0.85),
+              color: Color(0xFF475569),
               fontSize: 7.5,
               fontWeight: FontWeight.w800,
               letterSpacing: 0.6,
@@ -723,10 +768,10 @@ class _BidsToggleTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        // ‹ oku
-        const Icon(
-          Icons.chevron_left_rounded,
-          color: Color(0xFF06B6D4),
+        // ok ikonu — koyu gri
+        Icon(
+          isLeft ? Icons.chevron_right_rounded : Icons.chevron_left_rounded,
+          color: const Color(0xFF64748B),
           size: 18,
         ),
       ],
