@@ -568,10 +568,10 @@ class _BidsOverlay extends StatelessWidget {
               ),
               const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
               // Liste
-              Flexible(
-                child: ListView.builder(
+              ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 4),
                   shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
                   itemCount: bids.length,
                   itemBuilder: (_, i) {
                     final bid = bids[i];
@@ -628,7 +628,6 @@ class _BidsOverlay extends StatelessWidget {
                     );
                   },
                 ),
-              ),
             ],
           ),
         ),
