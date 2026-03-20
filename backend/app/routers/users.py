@@ -7,6 +7,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.listing import Listing
 from app.models.follow import Follow
+from app.models.stream import LiveStream
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
 
 router = APIRouter(prefix="/api/users", tags=["users"])
@@ -62,6 +63,13 @@ async def get_user_profile(
         )
         is_following = chk is not None
 
+    active_stream = await db.scalar(
+        select(LiveStream).where(
+            LiveStream.host_id == user.id,
+            LiveStream.is_live == True,  # noqa: E712
+        )
+    )
+
     return {
         "id": user.id,
         "username": user.username,
@@ -71,4 +79,6 @@ async def get_user_profile(
         "follower_count": follower_count,
         "following_count": following_count,
         "is_following": is_following,
+        "is_live": active_stream is not None,
+        "active_stream_id": active_stream.id if active_stream else None,
     }

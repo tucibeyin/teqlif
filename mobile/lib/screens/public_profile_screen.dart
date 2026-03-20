@@ -9,6 +9,8 @@ import '../services/notification_service.dart';
 import 'messages_screen.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
+import 'live/viewer_stream_screen.dart';
+import '../services/stream_service.dart';
 
 const _starColor = Color(0xFFF59E0B);
 
@@ -443,22 +445,58 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   Widget _buildAvatar(String fullName, String initial) {
     final imgUrl = _user?['profile_image_url'] as String?;
-    if (imgUrl != null) {
-      return CircleAvatar(
-        radius: 44,
-        backgroundColor: kPrimary.withOpacity(0.15),
-        backgroundImage: NetworkImage(imgUrl),
-      );
-    }
-    return CircleAvatar(
+    final isLive = (_user?['is_live'] as bool?) ?? false;
+    final streamId = _user?['active_stream_id'] as int?;
+
+    final avatar = CircleAvatar(
       radius: 44,
       backgroundColor: kPrimary.withOpacity(0.15),
-      child: Text(
-        initial,
-        style: const TextStyle(
-            fontSize: 36, fontWeight: FontWeight.bold, color: kPrimary),
+      backgroundImage: imgUrl != null ? NetworkImage(imgUrl) : null,
+      child: imgUrl == null
+          ? Text(
+              initial,
+              style: const TextStyle(
+                  fontSize: 36, fontWeight: FontWeight.bold, color: kPrimary),
+            )
+          : null,
+    );
+
+    if (isLive && streamId != null) {
+      return _LiveAvatarRing(
+        onTap: () => _goToLiveStream(streamId),
+        child: avatar,
+      );
+    }
+    return avatar;
+  }
+
+  Future<void> _goToLiveStream(int streamId) async {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const Center(
+        child: CircularProgressIndicator(color: kPrimary),
       ),
     );
+    try {
+      final joinToken = await StreamService.joinStream(streamId);
+      if (!mounted) return;
+      Navigator.pop(context);
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ViewerStreamScreen(joinToken: joinToken),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(e.toString().replaceFirst('Exception: ', '')),
+        ),
+      );
+    }
   }
 
   Widget _buildRatingBadge(bool hasRating, dynamic avgRaw) {
@@ -1064,6 +1102,134 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                       ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Canlı Yayın Halka Widget'ı ──────────────────────────────────────────────
+
+class _LiveAvatarRing extends StatefulWidget {
+  final Widget child;
+  final VoidCallback onTap;
+
+  const _LiveAvatarRing({required this.child, required this.onTap});
+
+  @override
+  State<_LiveAvatarRing> createState() => _LiveAvatarRingState();
+}
+
+class _LiveAvatarRingState extends State<_LiveAvatarRing>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _ctrl;
+  late final Animation<double> _glow;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 2200),
+    )..repeat(reverse: true);
+    _glow = CurvedAnimation(parent: _ctrl, curve: Curves.easeInOut);
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: widget.onTap,
+      child: AnimatedBuilder(
+        animation: _glow,
+        builder: (context, child) => Container(
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFFDD2A7B)
+                    .withOpacity(0.15 + 0.35 * _glow.value),
+                blurRadius: 8 + 14 * _glow.value,
+                spreadRadius: 1 + 3 * _glow.value,
+              ),
+              BoxShadow(
+                color: const Color(0xFFF58529)
+                    .withOpacity(0.1 + 0.2 * _glow.value),
+                blurRadius: 12 + 16 * _glow.value,
+                spreadRadius: 0 + 2 * _glow.value,
+              ),
+            ],
+          ),
+          child: child,
+        ),
+        child: Stack(
+          alignment: Alignment.bottomCenter,
+          clipBehavior: Clip.none,
+          children: [
+            // Gradient ring + beyaz boşluk + avatar
+            Container(
+              padding: const EdgeInsets.all(3),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: SweepGradient(
+                  colors: [
+                    Color(0xFFF58529),
+                    Color(0xFFFEDA77),
+                    Color(0xFFDD2A7B),
+                    Color(0xFF8134AF),
+                    Color(0xFF515BD4),
+                    Color(0xFFF58529),
+                  ],
+                ),
+              ),
+              child: Builder(
+                builder: (ctx) => Container(
+                  padding: const EdgeInsets.all(2.5),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.bg(ctx),
+                  ),
+                  child: widget.child,
+                ),
+              ),
+            ),
+
+            // CANLI rozeti
+            Positioned(
+              bottom: -8,
+              child: Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 9, vertical: 2.5),
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(
+                    colors: [Color(0xFFEF4444), Color(0xFFDC2626)],
+                  ),
+                  borderRadius: BorderRadius.circular(10),
+                  border: Border.all(color: Colors.white, width: 1.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color(0xFFEF4444).withOpacity(0.45),
+                      blurRadius: 6,
+                    ),
+                  ],
+                ),
+                child: const Text(
+                  '● CANLI',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

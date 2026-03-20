@@ -364,3 +364,51 @@ footer {
         justify-content: center;
     }
 }
+
+
+/* ── Canlı Yayın Halka Göstergesi ────────────────────────────────────────── */
+.avatar-live-ring {
+    position: relative;
+    display: inline-flex;
+    cursor: pointer;
+    border-radius: 50%;
+    padding: 3px;
+    background: linear-gradient(135deg, #f58529 0%, #feda77 20%, #dd2a7b 50%, #8134af 80%, #515bd4 100%);
+    animation: live-ring-pulse 2.2s ease-in-out infinite;
+    margin-bottom: 0.875rem;
+    text-decoration: none;
+}
+
+.avatar-live-ring .profile-avatar {
+    outline: 2.5px solid var(--bg, #f8fafc);
+    margin-bottom: 0;
+}
+
+.live-badge {
+    position: absolute;
+    bottom: -7px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: linear-gradient(90deg, #ef4444, #dc2626);
+    color: #fff;
+    font-size: 0.58rem;
+    font-weight: 800;
+    padding: 2px 9px;
+    border-radius: 10px;
+    letter-spacing: 1.2px;
+    white-space: nowrap;
+    border: 2px solid var(--bg, #f8fafc);
+    box-shadow: 0 1px 6px rgba(239, 68, 68, 0.45);
+    user-select: none;
+}
+
+@keyframes live-ring-pulse {
+    0%, 100% {
+        box-shadow: 0 0 0 0 rgba(221, 42, 123, 0.55),
+                    0 0 0 0 rgba(245, 133, 41, 0.35);
+    }
+    50% {
+        box-shadow: 0 0 18px 5px rgba(221, 42, 123, 0.2),
+                    0 0 28px 8px rgba(245, 133, 41, 0.1);
+    }
+}

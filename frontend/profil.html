@@ -905,9 +905,16 @@
                     </div>`;
             }
 
-            const avatarHtml = user.profile_image_url
+            const _innerAvatar = user.profile_image_url
                 ? `<div class="profile-avatar" style="overflow:hidden;"><img src="${escHtml(user.profile_image_url)}" alt="${escHtml(user.full_name || user.username)}" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"></div>`
                 : `<div class="profile-avatar">${escHtml(initial)}</div>`;
+
+            const avatarHtml = user.is_live
+                ? `<div class="avatar-live-ring" onclick="goToLiveStream(${user.active_stream_id})" title="Canlı yayını izle">
+                       ${_innerAvatar}
+                       <span class="live-badge">● CANLI</span>
+                   </div>`
+                : _innerAvatar;
 
             inner.innerHTML = `
                 ${avatarHtml}
@@ -1025,6 +1032,12 @@
                 btn.disabled = false;
                 btn.style.opacity = '';
             }
+        }
+
+        // ── Canlı yayın navigasyonu ────────────────────────────────────
+        function goToLiveStream(streamId) {
+            if (!streamId) return;
+            window.location.href = `/yayin.html?id=${streamId}`;
         }
 
         // ── Rating state ───────────────────────────────────────────────
