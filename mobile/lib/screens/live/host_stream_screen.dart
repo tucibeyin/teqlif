@@ -392,51 +392,40 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // ── Teklif Listesi (sağ kenar, kamera üzerinde yarı saydam) ────
+          // ── Teklif Listesi — Panel (sağdan kayar) ──────────────────
           if (live && _bids.isNotEmpty)
-            Positioned(
-              right: 0,
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeInOut,
+              right: _bidsVisible ? 8 : -160,
               top: topPad + 66,
               child: GestureDetector(
                 onHorizontalDragEnd: (d) {
-                  final v = d.primaryVelocity ?? 0;
-                  if (v > 120 && _bidsVisible) {
+                  if ((d.primaryVelocity ?? 0) > 120) {
                     setState(() => _bidsVisible = false);
-                  } else if (v < -120 && !_bidsVisible) {
-                    setState(() => _bidsVisible = true);
                   }
                 },
-                child: AnimatedSwitcher(
-                  duration: const Duration(milliseconds: 220),
-                  transitionBuilder: (child, anim) => SlideTransition(
-                    position: Tween<Offset>(
-                      begin: const Offset(1.0, 0),
-                      end: Offset.zero,
-                    ).animate(anim),
-                    child: child,
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    maxWidth: 148,
+                    maxHeight: min(_bids.length, 5) * 36.0 + 44,
                   ),
-                  child: _bidsVisible
-                      ? Padding(
-                          key: const ValueKey('full'),
-                          padding: const EdgeInsets.only(right: 8),
-                          child: ConstrainedBox(
-                            constraints: BoxConstraints(
-                              maxWidth: 148,
-                              maxHeight: min(_bids.length, 5) * 36.0 + 44,
-                            ),
-                            child: _BidsOverlay(
-                              bids: _bids,
-                              onHide: () =>
-                                  setState(() => _bidsVisible = false),
-                            ),
-                          ),
-                        )
-                      : _BidsCollapsedTab(
-                          key: const ValueKey('collapsed'),
-                          count: _bids.length,
-                          onShow: () => setState(() => _bidsVisible = true),
-                        ),
+                  child: _BidsOverlay(bids: _bids),
                 ),
+              ),
+            ),
+
+          // ── Teklif Listesi — Toggle Tab (her zaman görünür) ─────────
+          if (live && _bids.isNotEmpty)
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeInOut,
+              right: _bidsVisible ? 148 + 8 + 4 : 0,
+              top: topPad + 66,
+              child: _BidsToggleTab(
+                isOpen: _bidsVisible,
+                count: _bids.length,
+                onToggle: () => setState(() => _bidsVisible = !_bidsVisible),
               ),
             ),
 
@@ -488,9 +477,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
 class _BidsOverlay extends StatelessWidget {
   final List<({String bidder, double amount})> bids;
-  final VoidCallback onHide;
 
-  const _BidsOverlay({required this.bids, required this.onHide});
+  const _BidsOverlay({required this.bids});
 
   @override
   Widget build(BuildContext context) {
@@ -538,15 +526,6 @@ class _BidsOverlay extends StatelessWidget {
                           fontSize: 9,
                           fontWeight: FontWeight.w700,
                         ),
-                      ),
-                    ),
-                    const SizedBox(width: 4),
-                    GestureDetector(
-                      onTap: onHide,
-                      child: const Icon(
-                        Icons.chevron_right_rounded,
-                        color: Color(0xFF475569),
-                        size: 16,
                       ),
                     ),
                   ],
@@ -613,52 +592,113 @@ class _BidsOverlay extends StatelessWidget {
   }
 }
 
-class _BidsCollapsedTab extends StatelessWidget {
+class _BidsToggleTab extends StatelessWidget {
+  final bool isOpen;
   final int count;
-  final VoidCallback onShow;
+  final VoidCallback onToggle;
 
-  const _BidsCollapsedTab({super.key, required this.count, required this.onShow});
+  const _BidsToggleTab({
+    super.key,
+    required this.isOpen,
+    required this.count,
+    required this.onToggle,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: onShow,
+      onTap: onToggle,
       child: ClipRRect(
-        borderRadius: const BorderRadius.horizontal(left: Radius.circular(10)),
+        borderRadius: const BorderRadius.horizontal(left: Radius.circular(12)),
         child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            width: 28,
-            padding: const EdgeInsets.symmetric(vertical: 10),
+          filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeInOut,
+            width: isOpen ? 26 : 38,
+            padding: EdgeInsets.symmetric(vertical: isOpen ? 10 : 14),
             decoration: BoxDecoration(
-              color: Colors.black.withOpacity(0.5),
-              border: Border(
-                left: BorderSide(color: Colors.white.withOpacity(0.1)),
-                top: BorderSide(color: Colors.white.withOpacity(0.1)),
-                bottom: BorderSide(color: Colors.white.withOpacity(0.1)),
-              ),
+              color: isOpen
+                  ? Colors.black.withOpacity(0.42)
+                  : const Color(0xFF06B6D4).withOpacity(0.18),
               borderRadius:
-                  const BorderRadius.horizontal(left: Radius.circular(10)),
+                  const BorderRadius.horizontal(left: Radius.circular(12)),
+              border: Border(
+                left: BorderSide(
+                    color: isOpen
+                        ? Colors.white.withOpacity(0.10)
+                        : const Color(0xFF06B6D4).withOpacity(0.5)),
+                top: BorderSide(
+                    color: isOpen
+                        ? Colors.white.withOpacity(0.10)
+                        : const Color(0xFF06B6D4).withOpacity(0.5)),
+                bottom: BorderSide(
+                    color: isOpen
+                        ? Colors.white.withOpacity(0.10)
+                        : const Color(0xFF06B6D4).withOpacity(0.5)),
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                const Icon(Icons.chevron_left_rounded,
-                    color: Color(0xFF60A5FA), size: 16),
-                const SizedBox(height: 4),
-                Text(
-                  '$count',
-                  style: const TextStyle(
-                    color: Color(0xFF4ADE80),
-                    fontSize: 10,
-                    fontWeight: FontWeight.w800,
-                  ),
-                ),
-              ],
-            ),
+            child: isOpen ? _openChild() : _closedChild(),
           ),
         ),
       ),
+    );
+  }
+
+  // Açıkken: ince, sadece › oku
+  Widget _openChild() {
+    return const Icon(
+      Icons.chevron_right_rounded,
+      color: Color(0xFF64748B),
+      size: 18,
+    );
+  }
+
+  // Kapalıyken: sayı + dikey metin + ‹ oku
+  Widget _closedChild() {
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        // Teklif sayısı rozeti
+        Container(
+          width: 22,
+          height: 22,
+          decoration: const BoxDecoration(
+            color: Color(0xFF06B6D4),
+            shape: BoxShape.circle,
+          ),
+          alignment: Alignment.center,
+          child: Text(
+            '$count',
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // Dikey "TEKLİFLER" yazısı
+        RotatedBox(
+          quarterTurns: 3,
+          child: Text(
+            'TEKLİFLER',
+            style: TextStyle(
+              color: const Color(0xFF06B6D4).withOpacity(0.85),
+              fontSize: 7.5,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 0.6,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        // ‹ oku
+        const Icon(
+          Icons.chevron_left_rounded,
+          color: Color(0xFF06B6D4),
+          size: 18,
+        ),
+      ],
     );
   }
 }
