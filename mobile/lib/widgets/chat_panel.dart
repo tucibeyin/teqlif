@@ -13,10 +13,15 @@ class _TimedMessage {
   final ChatMessage message;
   final ValueNotifier<double> opacity = ValueNotifier(1.0);
   bool _disposed = false;
+  bool _permanent = false; // true → timer expired but last-3 protection kept it
 
-  _TimedMessage(this.message, VoidCallback onExpired) {
+  _TimedMessage(this.message, {required bool Function() shouldRemove, required VoidCallback onExpired}) {
     Future.delayed(const Duration(seconds: 6), () {
       if (_disposed) return;
+      if (!shouldRemove()) {
+        _permanent = true;
+        return; // keep it — it's in the last 3
+      }
       opacity.value = 0.0;
       Future.delayed(const Duration(milliseconds: 700), () {
         if (!_disposed) onExpired();
@@ -26,7 +31,7 @@ class _TimedMessage {
 
   void dispose() {
     _disposed = true;
-    opacity.dispose();
+    if (!_permanent) opacity.dispose();
   }
 }
 
@@ -48,6 +53,7 @@ class ChatPanel extends StatefulWidget {
 
 class _ChatPanelState extends State<ChatPanel> {
   final List<_TimedMessage> _messages = [];
+  final List<ChatMessage> _history = []; // last 50 messages
   final _inputCtrl = TextEditingController();
   final _focusNode = FocusNode();
 
@@ -99,15 +105,28 @@ class _ChatPanelState extends State<ChatPanel> {
 
   void _addMessage(ChatMessage msg) {
     if (!mounted) return;
-    final timed = _TimedMessage(msg, () {
-      if (mounted) {
-        setState(() => _messages.removeWhere((m) => m.message == msg));
-      }
-    });
+    late _TimedMessage timed;
+    timed = _TimedMessage(
+      msg,
+      shouldRemove: () {
+        final idx = _messages.indexOf(timed);
+        if (idx < 0) return true;
+        return idx < _messages.length - 3;
+      },
+      onExpired: () {
+        if (mounted) {
+          setState(() => _messages.removeWhere((m) => m == timed));
+        }
+      },
+    );
     setState(() {
       _messages.add(timed);
       if (_messages.length > 20) {
         _messages.removeAt(0).dispose();
+      }
+      _history.add(msg);
+      if (_history.length > 50) {
+        _history.removeAt(0);
       }
     });
   }
@@ -182,6 +201,16 @@ class _ChatPanelState extends State<ChatPanel> {
     } catch (_) {}
   }
 
+  void _showHistory() {
+    final history = List<ChatMessage>.from(_history.reversed);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _HistorySheet(history: history),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final visible = _messages.length > 6
@@ -217,6 +246,25 @@ class _ChatPanelState extends State<ChatPanel> {
             padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
             child: Row(
               children: [
+                // History button
+                if (_history.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(right: 6),
+                    child: GestureDetector(
+                      onTap: _showHistory,
+                      child: Container(
+                        width: 38,
+                        height: 38,
+                        decoration: BoxDecoration(
+                          color: const Color(0x88000000),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white24),
+                        ),
+                        child: const Icon(Icons.history_rounded,
+                            color: Colors.white70, size: 18),
+                      ),
+                    ),
+                  ),
                 Expanded(
                   child: Container(
                     height: 40,
@@ -270,6 +318,116 @@ class _ChatPanelState extends State<ChatPanel> {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _HistorySheet extends StatelessWidget {
+  final List<ChatMessage> history;
+
+  const _HistorySheet({required this.history});
+
+  @override
+  Widget build(BuildContext context) {
+    return DraggableScrollableSheet(
+      initialChildSize: 0.55,
+      minChildSize: 0.3,
+      maxChildSize: 0.85,
+      builder: (_, controller) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xF0111827),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            // Handle bar
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            // Header
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+              child: Row(
+                children: [
+                  const Icon(Icons.history_rounded,
+                      color: Colors.white54, size: 18),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Sohbet Geçmişi',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    'Son ${history.length} mesaj',
+                    style: const TextStyle(
+                        color: Colors.white38, fontSize: 12),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(color: Colors.white12, height: 1),
+            // Messages
+            Expanded(
+              child: ListView.builder(
+                controller: controller,
+                padding: const EdgeInsets.symmetric(
+                    horizontal: 16, vertical: 8),
+                itemCount: history.length,
+                itemBuilder: (_, i) {
+                  final msg = history[i];
+                  final color = usernameColor(msg.username);
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 4),
+                    child: Wrap(
+                      children: [
+                        GestureDetector(
+                          onTap: () {
+                            Navigator.pop(context);
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => PublicProfileScreen(
+                                    username: msg.username),
+                              ),
+                            );
+                          },
+                          child: Text(
+                            '@${msg.username} ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: color,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        Text(
+                          msg.content,
+                          style: const TextStyle(
+                            fontSize: 13,
+                            color: Colors.white70,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
