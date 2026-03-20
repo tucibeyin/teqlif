@@ -2,6 +2,7 @@ import os
 import uuid
 import logging
 from datetime import datetime, timezone
+from typing import Optional
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -11,8 +12,9 @@ from livekit.api import AccessToken, VideoGrants
 from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.stream import LiveStream
+from app.models.block import UserBlock
 from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinTokenOut
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, bearer_scheme, decode_token
 from app.utils.redis_client import get_redis
 from app.config import settings
 from app.routers.upload import _detect_image_type
@@ -279,13 +281,36 @@ async def update_thumbnail(
     return {"thumbnail_url": stream.thumbnail_url}
 
 
+async def _optional_user_id(
+    credentials=Depends(bearer_scheme),
+) -> Optional[int]:
+    if not credentials:
+        return None
+    return decode_token(credentials.credentials)
+
+
 @router.get("/active", response_model=list[StreamOut])
-async def get_active_streams(db: AsyncSession = Depends(get_db)):
+async def get_active_streams(
+    current_user_id: Optional[int] = Depends(_optional_user_id),
+    db: AsyncSession = Depends(get_db),
+):
     try:
-        result = await db.execute(
-            select(LiveStream).where(LiveStream.is_live == True)  # noqa: E712
+        query = (
+            select(LiveStream)
+            .where(LiveStream.is_live == True)  # noqa: E712
             .order_by(LiveStream.started_at.desc())
         )
+
+        # Engelleme filtresi: engellediğin veya seni engelleyen hostların yayınlarını gizle
+        if current_user_id:
+            blocked_by_me = select(UserBlock.blocked_id).where(UserBlock.blocker_id == current_user_id)
+            blocking_me = select(UserBlock.blocker_id).where(UserBlock.blocked_id == current_user_id)
+            query = query.where(
+                LiveStream.host_id.not_in(blocked_by_me),
+                LiveStream.host_id.not_in(blocking_me),
+            )
+
+        result = await db.execute(query)
         streams = result.scalars().all()
     except Exception:
         logger.error("Aktif yayın listesi DB hatası", exc_info=True)

@@ -16,6 +16,7 @@ import '../services/notification_service.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'notification_settings_screen.dart';
+import 'blocked_users_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -773,6 +774,16 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (_) => const NotificationSettingsScreen(),
+                  ),
+                ),
+              ),
+              _SettingsTile(
+                icon: Icons.block_outlined,
+                label: 'Engellenen Kullanıcılar',
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const BlockedUsersScreen(),
                   ),
                 ),
               ),

@@ -8,6 +8,7 @@ from sqlalchemy import select, update, func, or_, and_
 from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
 from app.models.message import DirectMessage
+from app.models.block import UserBlock
 from app.schemas.message import MessageOut, ConversationOut, SendMessageIn
 from app.schemas.notification import UnreadCountOut
 from app.utils.auth import get_current_user, decode_token
@@ -194,6 +195,18 @@ async def send_message(
 
     if data.receiver_id == uid:
         raise HTTPException(status_code=400, detail="Kendinize mesaj gönderemezsiniz")
+
+    # Engelleme kontrolü (iki yönlü)
+    block_exists = await db.scalar(
+        select(UserBlock).where(
+            or_(
+                and_(UserBlock.blocker_id == uid, UserBlock.blocked_id == data.receiver_id),
+                and_(UserBlock.blocker_id == data.receiver_id, UserBlock.blocked_id == uid),
+            )
+        )
+    )
+    if block_exists:
+        raise HTTPException(status_code=403, detail="Bu kullanıcıyla mesajlaşamazsınız")
 
     msg = DirectMessage(
         sender_id=uid,

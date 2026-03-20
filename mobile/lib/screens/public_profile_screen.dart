@@ -30,6 +30,8 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   bool _isOwnProfile = false;
   bool _isFollowing = false;
   bool _followLoading = false;
+  bool _isBlocked = false;
+  bool _blockLoading = false;
   Map<String, dynamic>? _ratingSummary;
 
   @override
@@ -53,6 +55,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
     List<dynamic> listings = [];
     bool isFollowing = false;
+    bool isBlocked = false;
 
     if (data != null) {
       final userId = data['id'] as int;
@@ -68,6 +71,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
       if (!isOwn && info != null) {
         isFollowing = (data['is_following'] as bool?) ?? false;
+        isBlocked = (data['is_blocked'] as bool?) ?? false;
       }
 
       try {
@@ -89,6 +93,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
         _listings = listings;
         _isOwnProfile = isOwn;
         _isFollowing = isFollowing;
+        _isBlocked = isBlocked;
         _loading = false;
       });
     }
@@ -127,6 +132,35 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     } catch (_) {
     } finally {
       if (mounted) setState(() => _followLoading = false);
+    }
+  }
+
+  Future<void> _toggleBlock() async {
+    if (_user == null) return;
+    setState(() => _blockLoading = true);
+    try {
+      final headers = await _authHeaders();
+      if (_isBlocked) {
+        await http.delete(
+          Uri.parse('$kBaseUrl/users/${Uri.encodeComponent(widget.username)}/block'),
+          headers: headers,
+        );
+        if (mounted) setState(() => _isBlocked = false);
+      } else {
+        await http.post(
+          Uri.parse('$kBaseUrl/users/${Uri.encodeComponent(widget.username)}/block'),
+          headers: headers,
+        );
+        if (mounted) setState(() => _isBlocked = true);
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('İşlem gerçekleştirilemedi')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _blockLoading = false);
     }
   }
 
@@ -320,6 +354,14 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       onPressed: _showRatingForm,
                     ),
                   ],
+                  const SizedBox(height: 8),
+                  _actionButton(
+                    label: _isBlocked ? 'Engeli Kaldır' : 'Engelle',
+                    icon: Icons.block_outlined,
+                    primary: false,
+                    danger: true,
+                    onPressed: _blockLoading ? null : _toggleBlock,
+                  ),
                 ],
                 const SizedBox(height: 24),
                 Align(
@@ -590,6 +632,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     required String label,
     required IconData icon,
     required bool primary,
+    bool danger = false,
     VoidCallback? onPressed,
   }) {
     return Builder(
@@ -599,10 +642,16 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
           icon: Icon(icon, size: 18),
           label: Text(label),
           style: ElevatedButton.styleFrom(
-            backgroundColor:
-                primary ? kPrimary : AppColors.surfaceVariant(context),
-            foregroundColor:
-                primary ? Colors.white : AppColors.textPrimary(context),
+            backgroundColor: primary
+                ? kPrimary
+                : danger
+                    ? const Color(0xFFFEF2F2)
+                    : AppColors.surfaceVariant(context),
+            foregroundColor: primary
+                ? Colors.white
+                : danger
+                    ? const Color(0xFFEF4444)
+                    : AppColors.textPrimary(context),
             elevation: 0,
             padding: const EdgeInsets.symmetric(vertical: 14),
             shape: RoundedRectangleBorder(

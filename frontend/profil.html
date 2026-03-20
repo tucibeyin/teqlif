@@ -634,6 +634,29 @@
         .rsb-avg { font-size: 2rem; font-weight: 800; color: #1e293b; }
         .rsb-stars { color: #f59e0b; font-size: 1.1rem; display: block; margin-bottom: 0.15rem; }
         .rsb-count { font-size: 0.82rem; color: #6b7280; }
+
+        /* ── Block button ─────────────────────────────────────────────── */
+        .btn-block {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            width: 100%;
+            padding: 0.6rem 1rem;
+            border-radius: 10px;
+            font-size: 0.87rem;
+            font-weight: 500;
+            cursor: pointer;
+            border: 1px solid #e5e7eb;
+            background: #f8fafc;
+            color: #6b7280;
+            transition: all 0.15s;
+            box-sizing: border-box;
+        }
+        .btn-block:hover { border-color: #ef4444; color: #ef4444; background: #fef2f2; }
+        .btn-block.blocked { background: #fef2f2; color: #ef4444; border-color: #fca5a5; }
+        .btn-block.blocked:hover { background: #fee2e2; }
+        .btn-block svg { width: 15px; height: 15px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
     </style>
 </head>
 
@@ -765,8 +788,9 @@
                 const isOwn = myUser && myUser.username === user.username;
                 const loggedIn = !!Auth.getToken();
                 const isFollowing = !isOwn && loggedIn && !!(user.is_following);
+                const isBlocked = !isOwn && loggedIn && !!(user.is_blocked);
 
-                renderProfile(user, isOwn, isFollowing, loggedIn);
+                renderProfile(user, isOwn, isFollowing, loggedIn, isBlocked);
                 loadListings(user.id);
                 loadRatingSummary(user.id);
             } catch (e) {
@@ -855,7 +879,9 @@
 
         // ──────────────────────────────────────────────────────────────────
 
-        function renderProfile(user, isOwn, isFollowing, loggedIn) {
+        const _blockSvg = `<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/></svg>`;
+
+        function renderProfile(user, isOwn, isFollowing, loggedIn, isBlocked = false) {
             const inner = document.getElementById('profileInner');
             const initial = ((user.full_name || user.username || '?')[0]).toUpperCase();
             const listingCount = user.listing_count ?? 0;
@@ -886,6 +912,8 @@
                             <span id="rateBtnLabel">Puan Ver</span>
                         </button>`
                     : '';
+                const blockLabel = isBlocked ? 'Engeli Kaldır' : 'Engelle';
+                const blockBtn = `<button class="btn-block ${isBlocked ? 'blocked' : ''}" id="blockBtn" onclick="toggleBlock(${user.id}, ${isBlocked})">${_blockSvg} ${escHtml(blockLabel)}</button>`;
                 actionsHtml = `
                     <div class="profile-actions">
                         <button class="btn-profile ${followBtnClass}" id="followBtn" onclick="toggleFollow(${user.id}, ${isFollowing})">
@@ -897,6 +925,7 @@
                             Mesaj Gönder
                         </a>
                         ${rateBtn}
+                        ${blockBtn}
                     </div>`;
             } else {
                 actionsHtml = `
@@ -1228,6 +1257,30 @@
                         </div>
                     </div>`;
             }).join('');
+        }
+
+        // ── Kullanıcı engelleme ────────────────────────────────────────
+        async function toggleBlock(userId, currentlyBlocked) {
+            const btn = document.getElementById('blockBtn');
+            if (!btn) return;
+            btn.disabled = true;
+            try {
+                if (currentlyBlocked) {
+                    await apiFetch(`/users/${encodeURIComponent(username)}/block`, { method: 'DELETE' });
+                    btn.className = 'btn-block';
+                    btn.innerHTML = `${_blockSvg} Engelle`;
+                    btn.setAttribute('onclick', `toggleBlock(${userId}, false)`);
+                } else {
+                    await apiFetch(`/users/${encodeURIComponent(username)}/block`, { method: 'POST' });
+                    btn.className = 'btn-block blocked';
+                    btn.innerHTML = `${_blockSvg} Engeli Kaldır`;
+                    btn.setAttribute('onclick', `toggleBlock(${userId}, true)`);
+                }
+            } catch (e) {
+                alert((e && e.detail) || 'İşlem gerçekleştirilemedi.');
+            } finally {
+                btn.disabled = false;
+            }
         }
 
         document.addEventListener('keydown', e => {

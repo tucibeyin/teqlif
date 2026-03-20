@@ -29,6 +29,7 @@ import app.models.city  # noqa: F401 — tablo kaydı için
 import app.models.report  # noqa: F401 — tablo kaydı için
 import app.models.favorite  # noqa: F401 — tablo kaydı için
 import app.models.rating  # noqa: F401 — tablo kaydı için
+import app.models.block  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
