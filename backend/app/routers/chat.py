@@ -29,17 +29,23 @@ def _key(stream_id: int) -> str:
 class _ChatManager:
     def __init__(self):
         self._conns: Dict[int, Set[WebSocket]] = {}
+        # stream_id → {user_id → WebSocket}  (son bağlantıyı tutar)
+        self._user_ws: Dict[int, Dict[int, WebSocket]] = {}
 
-    async def connect(self, ws: WebSocket, stream_id: int):
+    async def connect(self, ws: WebSocket, stream_id: int, user_id: int):
         await ws.accept()
         self._conns.setdefault(stream_id, set()).add(ws)
+        self._user_ws.setdefault(stream_id, {})[user_id] = ws
         total = len(self._conns[stream_id])
-        logger.info("[CHAT WS] BAĞLANDI | stream_id=%s | bu_worker=%s bağlı", stream_id, total)
+        logger.info("[CHAT WS] BAĞLANDI | stream_id=%s user_id=%s | bu_worker=%s bağlı", stream_id, user_id, total)
 
-    def disconnect(self, ws: WebSocket, stream_id: int):
+    def disconnect(self, ws: WebSocket, stream_id: int, user_id: int):
         self._conns.get(stream_id, set()).discard(ws)
+        user_map = self._user_ws.get(stream_id, {})
+        if user_map.get(user_id) is ws:
+            user_map.pop(user_id, None)
         total = len(self._conns.get(stream_id, set()))
-        logger.info("[CHAT WS] AYRILDI | stream_id=%s | bu_worker=%s bağlı", stream_id, total)
+        logger.info("[CHAT WS] AYRILDI | stream_id=%s user_id=%s | bu_worker=%s bağlı", stream_id, user_id, total)
 
     async def local_broadcast(self, stream_id: int, payload: dict):
         targets = list(self._conns.get(stream_id, set()))
@@ -54,6 +60,16 @@ class _ChatManager:
                 dead.add(ws)
         for ws in dead:
             self._conns.get(stream_id, set()).discard(ws)
+
+    async def send_to_user(self, stream_id: int, user_id: int, payload: dict):
+        """Bu worker'daki belirli bir kullanıcıya doğrudan event gönder."""
+        ws = self._user_ws.get(stream_id, {}).get(user_id)
+        if not ws:
+            return
+        try:
+            await ws.send_json(payload)
+        except Exception as exc:
+            logger.warning("[CHAT WS] send_to_user HATA | stream_id=%s user_id=%s | %s", stream_id, user_id, exc)
 
 
 chat_manager = _ChatManager()
@@ -110,6 +126,36 @@ async def chat_pubsub_listener():
         await r.aclose()
 
 
+async def moderation_pubsub_listener():
+    """Her worker için moderasyon event dinleyicisi (muted/kicked/unmuted)."""
+    import redis.asyncio as aioredis
+    from app.config import settings
+    from app.routers.moderation import MOD_CHANNEL
+
+    r = aioredis.from_url(settings.redis_url, decode_responses=True)
+    pubsub = r.pubsub()
+    await pubsub.subscribe(MOD_CHANNEL)
+    logger.info("[MOD PUBSUB] Dinleyici başladı (worker)")
+    try:
+        async for message in pubsub.listen():
+            if message["type"] != "message":
+                continue
+            try:
+                data = json.loads(message["data"])
+                stream_id = int(data["_stream_id"])
+                user_id = int(data["user_id"])
+                event_type = data["type"]
+                # Hedef kullanıcı bu worker'da bağlıysa doğrudan event gönder
+                await chat_manager.send_to_user(stream_id, user_id, {"type": event_type})
+            except Exception as exc:
+                logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await pubsub.unsubscribe(MOD_CHANNEL)
+        await r.aclose()
+
+
 # ── WebSocket endpoint ────────────────────────────────────────────────────────
 @router.websocket("/{stream_id}/ws")
 async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...)):
@@ -138,8 +184,20 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             is_host = stream.host_id == user_id
             room_name = stream.room_name
 
+    # Kick kontrolü — kicklenen kullanıcı WS'e giremez
+    if not is_host:
+        try:
+            redis = await get_redis()
+            from app.routers.moderation import kick_key
+            if await redis.sismember(kick_key(stream_id), str(user_id)):
+                await websocket.close(code=4003)
+                logger.info("[CHAT WS] Kicklenen kullanıcı engellendi | stream_id=%s user_id=%s", stream_id, user_id)
+                return
+        except Exception:
+            pass
+
     # WS kabul et
-    await chat_manager.connect(websocket, stream_id)
+    await chat_manager.connect(websocket, stream_id, user_id)
 
     # İzleyiciyse sayacı artır
     if not is_host and room_name:
@@ -176,6 +234,18 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                     content = str(payload.get("content", "")).strip()[:500]
                     if not content:
                         continue
+
+                    # Mute kontrolü
+                    from app.routers.moderation import mute_key
+                    redis = await get_redis()
+                    if await redis.sismember(mute_key(stream_id), str(user_id)):
+                        await websocket.send_json({
+                            "type": "error",
+                            "code": "muted",
+                            "message": "Bu yayında susturuldunuz",
+                        })
+                        continue
+
                     chat_msg = {
                         "type": "message",
                         "id": str(uuid.uuid4())[:8],
@@ -184,7 +254,6 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                         "created_at": datetime.now(timezone.utc).isoformat(),
                     }
                     key = _key(stream_id)
-                    redis = await get_redis()
                     await redis.rpush(key, json.dumps(chat_msg))
                     await redis.ltrim(key, -_MAX_HISTORY, -1)
                     await redis.expire(key, 24 * 3600)
@@ -200,7 +269,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
     except Exception as exc:
         logger.warning("[CHAT WS] BEKLENMEYEN HATA | stream_id=%s | %s", stream_id, exc)
     finally:
-        chat_manager.disconnect(websocket, stream_id)
+        chat_manager.disconnect(websocket, stream_id, user_id)
         # İzleyiciyse sayacı düşür
         if not is_host and room_name:
             await _update_viewer_count(room_name, stream_id, -1)

@@ -12,9 +12,9 @@ from fastapi.responses import FileResponse, JSONResponse, Response
 
 from app.config import settings
 from app.logging_config import setup_logging
-from app.routers import auth, streams, webhooks, auction, chat
+from app.routers import auth, streams, webhooks, auction, chat, moderation
 from app.routers.auction import pubsub_listener
-from app.routers.chat import chat_pubsub_listener
+from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings
 from app.security.middleware import security_headers, SecurityMiddleware, limiter, RateLimitExceeded, _rate_limit_exceeded_handler
 from app.database import engine, Base, AsyncSessionLocal
@@ -137,13 +137,15 @@ async def lifespan(app: FastAPI):
         )
     await _seed_categories()
     await _seed_cities()
-    # Her worker'da Redis pub/sub dinleyicisini başlat
+    # Her worker'da Redis pub/sub dinleyicilerini başlat
     task = asyncio.create_task(pubsub_listener())
     chat_task = asyncio.create_task(chat_pubsub_listener())
+    mod_task = asyncio.create_task(moderation_pubsub_listener())
     yield
     task.cancel()
     chat_task.cancel()
-    await asyncio.gather(task, chat_task, return_exceptions=True)
+    mod_task.cancel()
+    await asyncio.gather(task, chat_task, mod_task, return_exceptions=True)
 
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
@@ -233,6 +235,7 @@ app.include_router(ratings.router)
 app.include_router(upload.router)
 app.include_router(admin_auth.router)
 app.include_router(admin_data.router)
+app.include_router(moderation.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):

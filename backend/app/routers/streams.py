@@ -194,6 +194,12 @@ async def join_stream(
     if stream.host_id == current_user.id:
         raise HTTPException(status_code=400, detail="Kendi yayınınıza izleyici olarak katılamazsınız")
 
+    # Kick kontrolü — bu yayından atılan kullanıcı tekrar giremez
+    from app.routers.moderation import kick_key
+    redis = await get_redis()
+    if await redis.sismember(kick_key(stream_id), str(current_user.id)):
+        raise HTTPException(status_code=403, detail="Bu yayına erişiminiz kısıtlanmıştır")
+
     token = _make_token(stream.room_name, current_user, can_publish=False)
     logger.info("Yayına katılındı | stream_id=%s user_id=%s", stream_id, current_user.id)
 

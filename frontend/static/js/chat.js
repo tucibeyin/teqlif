@@ -7,11 +7,17 @@ const Chat = (() => {
     let _pingInterval = null;
     let _onStreamEnded = null;
     let _onViewerCount = null;
+    let _onMuted = null;
+    let _onKicked = null;
+    let _onUnmuted = null;
 
-    function connect(streamId, { onStreamEnded, onViewerCount } = {}) {
+    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted } = {}) {
         _streamId = streamId;
         _onStreamEnded = onStreamEnded || null;
         _onViewerCount = onViewerCount || null;
+        _onMuted = onMuted || null;
+        _onKicked = onKicked || null;
+        _onUnmuted = onUnmuted || null;
         _connectWS();
     }
 
@@ -51,6 +57,13 @@ const Chat = (() => {
                 } else if (msg.type === 'stream_ended') {
                     _streamId = null; // yeniden bağlanmayı engelle
                     if (_onStreamEnded) _onStreamEnded();
+                } else if (msg.type === 'muted') {
+                    if (_onMuted) _onMuted();
+                } else if (msg.type === 'kicked') {
+                    _streamId = null; // yeniden bağlanmayı engelle
+                    if (_onKicked) _onKicked();
+                } else if (msg.type === 'unmuted') {
+                    if (_onUnmuted) _onUnmuted();
                 }
             } catch (_) {}
         };
@@ -96,7 +109,7 @@ const Chat = (() => {
         const color = _usernameColor(msg.username || '');
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        let html = `<span class="chat-username" style="color:${color}">@${_esc(msg.username)}</span> <span class="chat-content">${_esc(msg.content)}</span>`;
+        let html = `<span class="chat-username" data-username="${_esc(msg.username)}" style="color:${color};cursor:pointer;">@${_esc(msg.username)}</span> <span class="chat-content">${_esc(msg.content)}</span>`;
         if (msg.url) {
             html += ` <a href="${_esc(msg.url)}" target="_blank" style="color:#fbbf24;font-weight:600;text-decoration:underline;white-space:nowrap;">🔗 İlana Bak</a>`;
         }

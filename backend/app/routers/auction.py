@@ -327,6 +327,11 @@ async def place_bid(
 
     redis = await get_redis()
 
+    # Mute kontrolü — susturulan kullanıcı teklif veremez
+    from app.routers.moderation import mute_key
+    if await redis.sismember(mute_key(stream_id), str(current_user.id)):
+        raise HTTPException(status_code=403, detail="Bu yayında susturuldunuz. Teklif veremezsiniz.")
+
     # Önceki teklif sahibini kaydet (outbid bildirimi için)
     prev_data = await redis.hgetall(_key(stream_id))
     prev_bidder_id_str = prev_data.get("current_bidder_id", "")
