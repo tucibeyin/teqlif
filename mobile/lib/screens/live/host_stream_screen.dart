@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' show min;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -39,6 +40,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   final _videoKey = GlobalKey();
   Timer? _thumbTimer;
   int _viewerCount = 0;
+  final List<({String bidder, double amount})> _bids = [];
 
   @override
   void initState() {
@@ -132,6 +134,14 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   Future<void> _switchCamera() async {
     if (_localVideoTrack == null) return;
     await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
+  }
+
+  void _onBidAdded(String bidder, double amount) {
+    setState(() => _bids.insert(0, (bidder: bidder, amount: amount)));
+  }
+
+  void _onAuctionReset() {
+    setState(() => _bids.clear());
   }
 
   Future<void> _endStream() async {
@@ -379,6 +389,20 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
+          // ── Teklif Listesi (sağ kenar, kamera üzerinde yarı saydam) ────
+          if (live && _bids.isNotEmpty)
+            Positioned(
+              right: 8,
+              top: topPad + 66,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(
+                  maxWidth: 168,
+                  maxHeight: min(_bids.length, 5) * 36.0 + 44,
+                ),
+                child: _BidsOverlay(bids: _bids),
+              ),
+            ),
+
           // ── Alt panel: sohbet + açık artırma ───────────────────────────
           if (live)
             Positioned(
@@ -409,6 +433,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     AuctionPanel(
                       streamId: widget.streamToken.streamId,
                       isHost: true,
+                      onBidAdded: _onBidAdded,
+                      onAuctionReset: _onAuctionReset,
                     ),
                     const SizedBox(height: 4),
                   ],
@@ -422,6 +448,123 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 }
 
 // ── Yardımcı widget'lar ────────────────────────────────────────────────────
+
+class _BidsOverlay extends StatelessWidget {
+  final List<({String bidder, double amount})> bids;
+
+  const _BidsOverlay({required this.bids});
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: ui.BackdropFilter(
+        filter: ui.ImageFilter.blur(sigmaX: 12, sigmaY: 12),
+        child: Container(
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.48),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.white.withOpacity(0.09)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header
+              Padding(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+                child: Row(
+                  children: [
+                    const Text(
+                      'TEKLİFLER',
+                      style: TextStyle(
+                        color: Color(0xFF64748B),
+                        fontSize: 9,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                    const Spacer(),
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 5, vertical: 1),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1E293B),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        '${bids.length}',
+                        style: const TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
+              // Liste
+              Flexible(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  shrinkWrap: true,
+                  itemCount: bids.length,
+                  itemBuilder: (_, i) {
+                    final bid = bids[i];
+                    final isFirst = i == 0;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 8, vertical: 3),
+                      child: Row(
+                        children: [
+                          SizedBox(
+                            width: 20,
+                            child: Text(
+                              '#${i + 1}',
+                              style: TextStyle(
+                                color: isFirst
+                                    ? const Color(0xFFFBBF24)
+                                    : const Color(0xFF475569),
+                                fontSize: 9,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ),
+                          Expanded(
+                            child: Text(
+                              '@${bid.bidder}',
+                              style: const TextStyle(
+                                color: Color(0xFF60A5FA),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                              ),
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ),
+                          Text(
+                            '₺${bid.amount.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              color: Color(0xFF4ADE80),
+                              fontSize: 10,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
 
 class _TopIconBtn extends StatelessWidget {
   final IconData icon;

@@ -12,8 +12,16 @@ import '../services/storage_service.dart';
 class AuctionPanel extends StatefulWidget {
   final int streamId;
   final bool isHost;
+  final void Function(String bidder, double amount)? onBidAdded;
+  final VoidCallback? onAuctionReset;
 
-  const AuctionPanel({super.key, required this.streamId, required this.isHost});
+  const AuctionPanel({
+    super.key,
+    required this.streamId,
+    required this.isHost,
+    this.onBidAdded,
+    this.onAuctionReset,
+  });
 
   @override
   State<AuctionPanel> createState() => _AuctionPanelState();
@@ -66,7 +74,17 @@ class _AuctionPanelState extends State<AuctionPanel> {
           try {
             final json = jsonDecode(data as String) as Map<String, dynamic>;
             if (json['type'] == 'state') {
-              setState(() => _state = AuctionState.fromJson(json));
+              final newState = AuctionState.fromJson(json);
+              if (newState.bidCount > _state.bidCount &&
+                  newState.currentBidder != null &&
+                  newState.currentBid != null) {
+                widget.onBidAdded
+                    ?.call(newState.currentBidder!, newState.currentBid!);
+              }
+              if (newState.isIdle && !_state.isIdle) {
+                widget.onAuctionReset?.call();
+              }
+              setState(() => _state = newState);
             }
           } catch (_) {}
         },
