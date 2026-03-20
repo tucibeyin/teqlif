@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' show min;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
@@ -418,44 +417,41 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             Positioned(
               top: _bidsPanelTop!,
               right: 0,
-              child: GestureDetector(
-                behavior: HitTestBehavior.opaque,
-                onPanUpdate: (d) {
-                  setState(() {
-                    _bidsPanelTop = (_bidsPanelTop! + d.delta.dy).clamp(
-                      topPad + 50.0,
-                      screenH - botPad - 260.0,
-                    );
-                  });
-                },
-                child: (() {
-                  final overlayH = min(_bids.length, 5) * 36.0 + 44;
-                  return Row(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _BidsToggleTab(
-                        isOpen: _bidsVisible,
-                        openHeight: overlayH,
-                        count: _bids.length,
-                        onToggle: () =>
-                            setState(() => _bidsVisible = !_bidsVisible),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Sadece toggle sürüklenebilir — scroll'la çakışmaz
+                  GestureDetector(
+                    behavior: HitTestBehavior.opaque,
+                    onPanUpdate: (d) {
+                      setState(() {
+                        _bidsPanelTop = (_bidsPanelTop! + d.delta.dy).clamp(
+                          topPad + 50.0,
+                          screenH - botPad - 260.0,
+                        );
+                      });
+                    },
+                    child: _BidsToggleTab(
+                      isOpen: _bidsVisible,
+                      count: _bids.length,
+                      onToggle: () =>
+                          setState(() => _bidsVisible = !_bidsVisible),
+                    ),
+                  ),
+                  AnimatedOpacity(
+                    duration: const Duration(milliseconds: 200),
+                    opacity: _bidsVisible ? 1.0 : 0.0,
+                    child: SizedBox(
+                      width: _bidsVisible ? 148 : 0,
+                      height: _kBidsH,
+                      child: _BidsOverlay(
+                        bids: _bids,
+                        onUsernameTap: _showModSheet,
                       ),
-                      AnimatedOpacity(
-                        duration: const Duration(milliseconds: 200),
-                        opacity: _bidsVisible ? 1.0 : 0.0,
-                        child: SizedBox(
-                          width: _bidsVisible ? 148 : 0,
-                          height: overlayH,
-                          child: _BidsOverlay(
-                            bids: _bids,
-                            onUsernameTap: _showModSheet,
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
-                })(),
+                    ),
+                  ),
+                ],
               ),
             ),
 
@@ -505,6 +501,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   }
 }
 
+// Sabit panel yüksekliği — 5 satır × 36px + başlık 44px
+const double _kBidsH = 5 * 36.0 + 44; // 224px
+
 // ── Yardımcı widget'lar ────────────────────────────────────────────────────
 
 class _BidsOverlay extends StatelessWidget {
@@ -526,7 +525,6 @@ class _BidsOverlay extends StatelessWidget {
             border: Border.all(color: Colors.white.withOpacity(0.09)),
           ),
           child: Column(
-            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Header
@@ -565,11 +563,11 @@ class _BidsOverlay extends StatelessWidget {
                 ),
               ),
               const Divider(height: 1, thickness: 1, color: Color(0x14FFFFFF)),
-              // Liste
-              ListView.builder(
+              // Scrollable liste
+              Expanded(
+                child: ListView.builder(
                   padding: const EdgeInsets.symmetric(vertical: 4),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
+                  physics: const ClampingScrollPhysics(),
                   itemCount: bids.length,
                   itemBuilder: (_, i) {
                     final bid = bids[i];
@@ -626,6 +624,7 @@ class _BidsOverlay extends StatelessWidget {
                     );
                   },
                 ),
+              ),
             ],
           ),
         ),
@@ -636,14 +635,12 @@ class _BidsOverlay extends StatelessWidget {
 
 class _BidsToggleTab extends StatelessWidget {
   final bool isOpen;
-  final double openHeight;
   final int count;
   final VoidCallback onToggle;
 
   const _BidsToggleTab({
     super.key,
     required this.isOpen,
-    required this.openHeight,
     required this.count,
     required this.onToggle,
   });
@@ -664,7 +661,7 @@ class _BidsToggleTab extends StatelessWidget {
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeInOut,
             width: isOpen ? 32 : 38,
-            height: isOpen ? openHeight : null,
+            height: isOpen ? _kBidsH : null,
             padding: isOpen ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(isOpen ? 0.42 : 0.52),
