@@ -18,7 +18,10 @@ class StreamService {
   static void _checkError(http.Response res) {
     if (res.statusCode >= 400) {
       final body = jsonDecode(res.body);
-      throw ApiException(body['detail'] ?? 'Bir hata oluştu');
+      throw ApiException(
+        body['detail'] ?? 'Bir hata oluştu',
+        statusCode: res.statusCode,
+      );
     }
   }
 

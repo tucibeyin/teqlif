@@ -5,6 +5,7 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/api.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
+import '../../services/auth_service.dart';
 import '../../services/stream_service.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
@@ -166,6 +167,19 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
           _room = room;
           _loading = false;
         });
+      }
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() => _loading = false);
+      if (e.statusCode == 403) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(e.message),
+            backgroundColor: const Color(0xFFEF4444),
+            duration: const Duration(seconds: 4),
+          ),
+        );
+        setState(() => _streamEnded = true);
       }
     } catch (_) {
       if (mounted) setState(() => _loading = false);

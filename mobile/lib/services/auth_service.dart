@@ -6,7 +6,8 @@ import 'storage_service.dart';
 
 class ApiException implements Exception {
   final String message;
-  ApiException(this.message);
+  final int statusCode;
+  ApiException(this.message, {this.statusCode = 0});
   @override
   String toString() => message;
 }
