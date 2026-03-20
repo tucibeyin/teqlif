@@ -8,6 +8,7 @@ import '../config/theme.dart';
 import '../models/auction.dart';
 import '../services/auction_service.dart';
 import '../services/storage_service.dart';
+import '../utils/price_formatter.dart';
 
 class AuctionPanel extends StatefulWidget {
   final int streamId;
@@ -702,8 +703,8 @@ class _AuctionPanelState extends State<AuctionPanel> {
               Expanded(
                 child: TextField(
                   controller: _customBidCtrl,
-                  keyboardType:
-                      const TextInputType.numberWithOptions(decimal: true),
+                  keyboardType: TextInputType.number,
+                  inputFormatters: [ThousandsSeparatorInputFormatter()],
                   style:
                       const TextStyle(color: Colors.white, fontSize: 14),
                   decoration: InputDecoration(
@@ -734,7 +735,8 @@ class _AuctionPanelState extends State<AuctionPanel> {
                 height: 50,
                 child: ElevatedButton(
                   onPressed: () {
-                    final v = double.tryParse(_customBidCtrl.text);
+                    final raw = _customBidCtrl.text.replaceAll('.', '');
+                    final v = double.tryParse(raw);
                     if (v == null || v <= 0) {
                       _setMsg('Geçerli tutar girin', error: true);
                       return;
@@ -1027,12 +1029,14 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
           onPressed: () {
             if (_fromListing) {
               if (_selectedListing == null) return;
-              final price = double.tryParse(_priceCtrl.text.replaceAll(',', '.'));
+              final raw = _priceCtrl.text.replaceAll('.', '').replaceAll(',', '.');
+              final price = double.tryParse(raw);
               if (price == null || price < 0) return;
               Navigator.pop(context, {'listing_id': _selectedListing['id'] as int, 'price': price});
             } else {
               final item = _itemCtrl.text.trim();
-              final price = double.tryParse(_priceCtrl.text.replaceAll(',', '.'));
+              final raw = _priceCtrl.text.replaceAll('.', '').replaceAll(',', '.');
+              final price = double.tryParse(raw);
               if (item.length < 2 || price == null || price < 0) return;
               Navigator.pop(context, {'item': item, 'price': price});
             }
@@ -1075,6 +1079,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
     return TextField(
       controller: ctrl,
       keyboardType: isNumber ? TextInputType.number : TextInputType.text,
+      inputFormatters: isNumber ? [ThousandsSeparatorInputFormatter()] : null,
       style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hint,

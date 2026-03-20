@@ -1046,7 +1046,7 @@
                     <!-- Manuel giriş alanları -->
                     <div id="manualInputs">
                         <input type="text" id="auctionItemInput" placeholder="Ürün adı" maxlength="200">
-                        <input type="number" id="auctionStartPrice" placeholder="Başlangıç (₺)" min="0" step="1">
+                        <input type="text" inputmode="numeric" id="auctionStartPrice" placeholder="Başlangıç (₺)" autocomplete="off">
                     </div>
                 </div>
 
@@ -1068,7 +1068,7 @@
                     <button class="btn btn-slate" onclick="quickBid(200)">+₺200</button>
                     <button class="btn btn-slate" onclick="quickBid(500)">+₺500</button>
                     <button class="btn btn-slate" onclick="quickBid(1000)">+₺1000</button>
-                    <input type="number" id="customBidInput" placeholder="Özel (₺)" min="1" step="1">
+                    <input type="text" inputmode="numeric" id="customBidInput" placeholder="Özel (₺)" autocomplete="off">
                     <button class="btn btn-green" id="btnCustomBid">Teklif Ver</button>
                 </div>
 
@@ -1651,7 +1651,7 @@
 
         // HOST: Başlat
         document.getElementById('btnAuctionStart')?.addEventListener('click', async () => {
-            const startPrice = parseFloat(document.getElementById('auctionStartPrice').value);
+            const startPrice = _parsePrice('auctionStartPrice');
             if (isNaN(startPrice) || startPrice < 0) return setAuctionMsg('Geçerli başlangıç fiyatı girin', 'error');
             if (_listingMode) {
                 // DOM'daki seçili item'dan fallback oku
@@ -1791,7 +1791,7 @@
 
         // VIEWER: Custom teklif
         document.getElementById('btnCustomBid')?.addEventListener('click', async () => {
-            const val = parseFloat(document.getElementById('customBidInput').value);
+            const val = _parsePrice('customBidInput');
             if (isNaN(val) || val <= 0) return setAuctionMsg('Geçerli tutar girin', 'error');
             await submitBid(val);
         });
@@ -1843,6 +1843,24 @@
             input.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter') doSend();
             });
+        }
+
+        // ── Fiyat Alanı Formatlama ───────────────────────────────────────
+        function _attachPriceFormat(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            el.addEventListener('input', () => {
+                const digits = el.value.replace(/[^\d]/g, '');
+                el.value = digits.replace(/(\d)(?=(\d{3})+$)/g, '$1.');
+            });
+        }
+        _attachPriceFormat('auctionStartPrice');
+        _attachPriceFormat('customBidInput');
+
+        function _parsePrice(id) {
+            const el = document.getElementById(id);
+            if (!el) return NaN;
+            return parseFloat(el.value.replace(/\./g, '')) || NaN;
         }
 
         init();
