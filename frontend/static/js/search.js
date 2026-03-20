@@ -108,11 +108,34 @@
         }
     }
 
+    /* ── Toast bildirimi ──────────────────────────────────────── */
+    function showToast(msg) {
+        let toast = document.getElementById('kesfetToast');
+        if (!toast) {
+            toast = document.createElement('div');
+            toast.id = 'kesfetToast';
+            toast.style.cssText = 'position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:0.65rem 1.25rem;border-radius:10px;font-size:0.88rem;font-weight:500;z-index:9999;opacity:0;transition:opacity 0.2s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,0.2);';
+            document.body.appendChild(toast);
+        }
+        toast.textContent = msg;
+        toast.style.opacity = '1';
+        clearTimeout(toast._timer);
+        toast._timer = setTimeout(() => { toast.style.opacity = '0'; }, 2500);
+    }
+
     /* ── Arama ────────────────────────────────────────────────── */
     let _debounce = null;
 
     function onInput() {
         const q = searchInput.value.trim();
+
+        if (q && !Auth.getToken()) {
+            searchInput.value = '';
+            clearBtn.style.display = 'none';
+            showToast('Arama yapmak için giriş yapmalısınız');
+            return;
+        }
+
         clearBtn.style.display = q ? 'block' : 'none';
 
         if (!q) {
@@ -246,14 +269,14 @@
     /* ── Yayına katıl ─────────────────────────────────────────── */
     window.joinStream = async function (id) {
         if (!Auth.getToken()) {
-            window.location.href = '/giris.html?next=/kesfet.html';
+            showToast('Yayına katılmak için giriş yapmalısınız');
             return;
         }
         try {
             await Stream.joinStream(id);
             window.location.href = `/yayin.html?id=${id}`;
         } catch (err) {
-            alert(err.detail || 'Yayına katılınamadı');
+            showToast(err.detail || 'Yayına katılınamadı');
         }
     };
 
