@@ -25,6 +25,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   String? _error;
   int _viewerCount = 0;
   bool _selfMuted = false;
+  bool _kicked = false; // kick işlemi sırasında RoomDisconnectedEvent'i baskıla
 
   @override
   void initState() {
@@ -64,7 +65,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
       });
 
       _listener!.on<RoomDisconnectedEvent>((_) {
-        if (mounted) {
+        if (mounted && !_kicked) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Yayın sona erdi')),
           );
@@ -125,6 +126,10 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   }
 
   Future<void> _handleKicked() async {
+    if (!mounted || _kicked) return;
+    _kicked = true;
+    // LiveKit bağlantısını kapat; RoomDisconnectedEvent _kicked flag ile baskılanır
+    await _room?.disconnect();
     if (!mounted) return;
     await showDialog(
       context: context,
