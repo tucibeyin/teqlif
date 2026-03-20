@@ -15,7 +15,7 @@ from app.logging_config import setup_logging
 from app.routers import auth, streams, webhooks, auction, chat
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener
-from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search
+from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings
 from app.security.middleware import security_headers, SecurityMiddleware, limiter, RateLimitExceeded, _rate_limit_exceeded_handler
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
@@ -28,6 +28,7 @@ import app.models.category  # noqa: F401 — tablo kaydı için
 import app.models.city  # noqa: F401 — tablo kaydı için
 import app.models.report  # noqa: F401 — tablo kaydı için
 import app.models.favorite  # noqa: F401 — tablo kaydı için
+import app.models.rating  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
@@ -228,6 +229,7 @@ app.include_router(cities.router)
 app.include_router(reports.router)
 app.include_router(favorites.router)
 app.include_router(search.router)
+app.include_router(ratings.router)
 app.include_router(upload.router)
 app.include_router(admin_auth.router)
 app.include_router(admin_data.router)
