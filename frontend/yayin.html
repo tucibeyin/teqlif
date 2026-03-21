@@ -11,8 +11,6 @@
     <link rel="manifest" href="/static/icons/manifest.json">
     <meta name="theme-color" content="#06b6d4">
     <link rel="stylesheet" href="/static/css/main.css">
-    <!-- Alpine.js — Deklaratif reaktivite (teklif listesi + fiyat animasyonu) -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 
     <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
     <script>
@@ -928,16 +926,6 @@
             to   { opacity: 1; transform: translateY(0); }
         }
 
-        /* Alpine: fiyat güncellendiğinde "pop" animasyonu */
-        .price-pop {
-            animation: price-pop 0.5s ease;
-        }
-        @keyframes price-pop {
-            0%   { transform: scale(1);    color: #4ade80; }
-            30%  { transform: scale(1.18); color: #86efac; text-shadow: 0 0 12px rgba(74,222,128,0.7); }
-            100% { transform: scale(1);    color: #4ade80; }
-        }
-
         .bid-rank {
             font-size: 0.68rem;
             font-weight: 800;
@@ -1107,12 +1095,7 @@
 
                 <!-- Fiyat bilgisi (active/paused/ended) -->
                 <div class="auction-bid-info" id="auctionBidInfo" style="display:none;">
-                    <!-- Alpine: fiyat + pop animasyonu -->
-                    <div class="auction-current-price" id="auctionPrice"
-                        x-data="priceDisplay()"
-                        @auction-state.window="handleState($event.detail)"
-                        :class="{ 'price-pop': isPricePopping }"
-                        x-text="priceStr">—</div>
+                    <div class="auction-current-price" id="auctionPrice">—</div>
                     <div>
                         <div class="auction-current-bidder" id="auctionBidder"></div>
                         <div class="auction-bid-count" id="auctionBidCount"></div>
@@ -1170,20 +1153,11 @@
         <!-- ── Sağ: Teklifler + Sohbet ──────────────────────────── -->
         <div class="chat-col">
 
-            <!-- Teklifler Bölümü (üst %50) — Alpine bileşeni -->
-            <div class="bids-section"
-                x-data="bidsList()"
-                @auction-state.window="handleState($event.detail)">
+            <!-- Teklifler Bölümü (üst %50) -->
+            <div class="bids-section">
                 <div class="panel-header">TEKLİFLER</div>
                 <div id="bidsList">
-                    <div class="bids-empty" x-show="bids.length === 0">Henüz teklif yok.</div>
-                    <template x-for="bid in bids" :key="bid.id">
-                        <div class="bid-item">
-                            <span class="bid-rank" :class="bid.rank === 1 ? 'first' : ''" x-text="'#' + bid.rank"></span>
-                            <span class="bid-user clickable" :data-username="bid.username" x-text="'@' + bid.username"></span>
-                            <span class="bid-amount" x-text="bid.amountStr"></span>
-                        </div>
-                    </template>
+                    <div class="bids-empty" id="bidsEmpty">Henüz teklif yok.</div>
                 </div>
             </div>
 
@@ -1508,64 +1482,30 @@
         let _currentListingId = null;  // viewer için pinlenmiş ilan
         let _selectedListingId = null; // host için seçilen ilan
         let _listingMode = false;      // host: listing mi manual mı
-        // NOT: _lastBidCount, _addBidEntry, _clearBidsList → Alpine'e taşındı.
+        let _lastBidCount = 0;         // teklif sayısı takibi
 
-        // ── Alpine.js bileşenleri ────────────────────────────────────────
-
-        // Teklif listesini yöneten Alpine bileşeni
-        function bidsList() {
-            return {
-                bids: [],
-                _lastBidCount: 0,
-
-                handleState(state) {
-                    const newBidCount = state.bid_count || 0;
-                    if (state.status === 'idle') {
-                        this.bids = [];
-                        this._lastBidCount = 0;
-                        return;
-                    }
-                    if (newBidCount > this._lastBidCount &&
-                        state.current_bidder && state.current_bid != null) {
-                        // Mevcut sıralamaları +1 kaydır, başa yeni teklifi ekle
-                        const updated = this.bids.map((b, i) => ({ ...b, rank: i + 2 }));
-                        updated.unshift({
-                            id: Date.now(),
-                            username: state.current_bidder,
-                            amountStr: '₺' + Number(state.current_bid).toLocaleString('tr-TR'),
-                            rank: 1,
-                        });
-                        this.bids = updated;
-                    }
-                    this._lastBidCount = newBidCount;
-                },
-            };
+        function _addBidEntry(username, amount) {
+            const list = document.getElementById('bidsList');
+            if (!list) return;
+            const empty = document.getElementById('bidsEmpty');
+            if (empty) empty.remove();
+            // Mevcut sıra numaralarını güncelle
+            list.querySelectorAll('.bid-rank').forEach((el, i) => {
+                el.textContent = `#${i + 2}`;
+                el.classList.remove('first');
+            });
+            const u = username.replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            const div = document.createElement('div');
+            div.className = 'bid-item';
+            div.innerHTML = `<span class="bid-rank first">#1</span><span class="bid-user${_isHostPage ? ' clickable' : ''}" data-username="${u}">@${u}</span><span class="bid-amount">₺${Number(amount).toLocaleString('tr-TR')}</span>`;
+            list.insertBefore(div, list.firstChild);
         }
 
-        // Anlık fiyatı + pop animasyonunu yöneten Alpine bileşeni
-        function priceDisplay() {
-            return {
-                priceStr: '—',
-                isPricePopping: false,
-
-                init() {
-                    this.$watch('priceStr', (newVal, oldVal) => {
-                        if (newVal !== oldVal && newVal !== '—') {
-                            this.isPricePopping = true;
-                            setTimeout(() => { this.isPricePopping = false; }, 500);
-                        }
-                    });
-                },
-
-                handleState(state) {
-                    this.priceStr = state.current_bid != null
-                        ? '₺' + Number(state.current_bid).toLocaleString('tr-TR')
-                        : '—';
-                },
-            };
+        function _clearBidsList() {
+            const list = document.getElementById('bidsList');
+            if (!list) return;
+            list.innerHTML = '<div class="bids-empty" id="bidsEmpty">Henüz teklif yok.</div>';
         }
-
-        // ────────────────────────────────────────────────────────────────
 
         function updateAuctionUI(state) {
             _currentAuctionStatus = state.status;
@@ -1586,14 +1526,26 @@
 
             if (state.item_name) document.getElementById('auctionItemName').textContent = state.item_name;
 
-            // #auctionPrice ve #bidsList → Alpine bileşenleri tarafından yönetilir.
             if (state.current_bid != null) {
                 _currentBid = state.current_bid;
+                document.getElementById('auctionPrice').textContent = '₺' + Number(state.current_bid).toLocaleString('tr-TR');
                 document.getElementById('auctionBidder').textContent = state.current_bidder
                     ? `@${state.current_bidder} en yüksek teklif sahibi`
                     : (state.start_price != null ? `Başlangıç: ₺${Number(state.start_price).toLocaleString('tr-TR')}` : '');
                 document.getElementById('auctionBidCount').textContent = state.bid_count > 0 ? `${state.bid_count} teklif` : '';
                 bidInfo.style.display = 'block';
+            }
+
+            // Teklif listesi güncelle
+            const newBidCount = state.bid_count || 0;
+            if (state.status === 'idle') {
+                _clearBidsList();
+                _lastBidCount = 0;
+            } else {
+                if (newBidCount > _lastBidCount && state.current_bidder && state.current_bid != null) {
+                    _addBidEntry(state.current_bidder, state.current_bid);
+                }
+                _lastBidCount = newBidCount;
             }
 
             // Viewer: pinlenmiş ilan butonu
@@ -1669,9 +1621,7 @@
             }
 
             updateAuctionUI({ status: 'idle', bid_count: 0 });
-            // auction.js CustomEvent dispatch ediyor; Alpine ve vanilla JS birlikte dinler
-            window.addEventListener('auction-state', (e) => updateAuctionUI(e.detail));
-            Auction.connect(sid, isHost);
+            Auction.connect(sid, isHost, (state) => updateAuctionUI(state));
         }
 
         // ── Host: ilan listesi yükleme (custom picker) ───────────────
