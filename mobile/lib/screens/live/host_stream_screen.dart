@@ -418,7 +418,47 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // ── Teklif Listesi — Sürüklenebilir panel (sağ kenar) ─────
+          // ── Alt panel: sohbet + açık artırma ───────────────────────────
+          if (live)
+            Positioned(
+              bottom: 0,
+              left: 0,
+              right: 0,
+              child: Container(
+                padding: EdgeInsets.only(bottom: botPad + 8),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.bottomCenter,
+                    end: Alignment.topCenter,
+                    colors: [Color(0xCC000000), Colors.transparent],
+                    stops: [0.0, 1.0],
+                  ),
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Sohbet (mesajlar üstte yüzer)
+                    ChatPanel(
+                      streamId: widget.streamToken.streamId,
+                      onViewerCountChanged: (n) =>
+                          setState(() => _viewerCount = n),
+                      onUsernameTap: _showModSheet,
+                    ),
+                    // Açık artırma şeridi (altta sabit)
+                    AuctionPanel(
+                      streamId: widget.streamToken.streamId,
+                      isHost: true,
+                      onBidAdded: _onBidAdded,
+                      onAuctionReset: _onAuctionReset,
+                    ),
+                    const SizedBox(height: 4),
+                  ],
+                ),
+              ),
+            ),
+
+          // ── Teklif Listesi — her zaman en üstte (alt panelin üstüne gelince tıklanabilir kalsın) ──
           if (live && _bidGroups.isNotEmpty)
             Positioned(
               top: _bidsPanelTop!,
@@ -458,46 +498,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     ),
                   ),
                 ],
-              ),
-            ),
-
-          // ── Alt panel: sohbet + açık artırma ───────────────────────────
-          if (live)
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: Container(
-                padding: EdgeInsets.only(bottom: botPad + 8),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Color(0xCC000000), Colors.transparent],
-                    stops: [0.0, 1.0],
-                  ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Sohbet (mesajlar üstte yüzer)
-                    ChatPanel(
-                      streamId: widget.streamToken.streamId,
-                      onViewerCountChanged: (n) =>
-                          setState(() => _viewerCount = n),
-                      onUsernameTap: _showModSheet,
-                    ),
-                    // Açık artırma şeridi (altta sabit)
-                    AuctionPanel(
-                      streamId: widget.streamToken.streamId,
-                      isHost: true,
-                      onBidAdded: _onBidAdded,
-                      onAuctionReset: _onAuctionReset,
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-                ),
               ),
             ),
         ],
