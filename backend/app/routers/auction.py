@@ -13,6 +13,7 @@ from app.database import get_db
 from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.auction import Auction
+from app.models.bid import Bid
 from app.models.listing import Listing
 from app.models.message import DirectMessage
 from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut
@@ -129,7 +130,23 @@ async def _get_state(stream_id: int) -> dict:
         "listing_id": int(listing_id_raw) if listing_id_raw else None,
     }
 
-# ── Atomic bid Lua scripti ───────────────────────────────────────────────────
+# ── Lua scriptleri ──────────────────────────────────────────────────────────
+
+# Sadece okuma — Redis'te hiçbir şey değiştirmez.
+# DB commit'ten ÖNCE fiyat/durum kontrolü için kullanılır.
+_VALIDATE_BID_SCRIPT = """
+local key = KEYS[1]
+local amount = tonumber(ARGV[1])
+local status = redis.call('hget', key, 'status')
+if status ~= 'active' then return {0, 'not_active'} end
+local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
+if amount <= current then return {0, 'too_low'} end
+return {1, tostring(current)}
+"""
+
+# DB commit başarılı olduktan SONRA Redis'i günceller.
+# Re-validate içerir: DB ile Redis arasındaki küçük zaman penceresinde
+# başka bir teklif geldiyse güvenli şekilde reddeder.
 _BID_SCRIPT = """
 local key = KEYS[1]
 local amount = tonumber(ARGV[1])
@@ -276,9 +293,7 @@ async def end_auction(
     if not data or data.get("status") not in ("active", "paused"):
         raise HTTPException(status_code=400, detail="Aktif açık artırma yok")
 
-    await redis.hset(key, "status", "ended")
-
-    # DB'ye yaz (sadece burada)
+    # DB'ye KESİN YAZ — commit başarılı olana kadar Redis'e "ended" yazma
     winner_id_str = data.get("current_bidder_id", "")
     final_price = float(data["current_bid"]) if data.get("current_bid") else float(data.get("start_price", 0))
 
@@ -296,9 +311,15 @@ async def end_auction(
         ended_at=datetime.now(timezone.utc),
     )
     db.add(auction)
-    await db.commit()
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        logger.error("[AÇIK ARTIRMA] end DB commit HATASI | stream_id=%s | %s", stream_id, exc)
+        raise HTTPException(status_code=500, detail="Açık artırma sonucu kaydedilemedi")
 
-    # Redis'i temizle
+    # Commit başarılı → şimdi Redis'i güncelle ve temizle
+    await redis.hset(key, "status", "ended")
     await redis.delete(key)
 
     state = {"status": "ended", "item_name": data.get("item_name"), "bid_count": int(data.get("bid_count", 0)),
@@ -319,7 +340,7 @@ async def place_bid(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Host kendi açık artırmasına teklif veremez
+    # ── 1. Host kendi açık artırmasına teklif veremez ────────────────────────
     result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
     if stream and stream.host_id == current_user.id:
@@ -327,7 +348,7 @@ async def place_bid(
 
     redis = await get_redis()
 
-    # Mute kontrolü — susturulan kullanıcı teklif veremez
+    # ── 2. Mute kontrolü ─────────────────────────────────────────────────────
     from app.routers.moderation import mute_key
     if await redis.sismember(mute_key(stream_id), str(current_user.id)):
         raise HTTPException(status_code=403, detail="Bu yayında susturuldunuz. Teklif veremezsiniz.")
@@ -337,26 +358,60 @@ async def place_bid(
     prev_bidder_id_str = prev_data.get("current_bidder_id", "")
     prev_item_name = prev_data.get("item_name", "")
 
-    # Atomic Lua scripti: bid validate + update
-    result = await redis.eval(
-        _BID_SCRIPT, 1, _key(stream_id),
-        str(data.amount), str(current_user.id), current_user.username,
-    )
-
-    ok, msg = int(result[0]), result[1]
+    # ── 3. Fiyat & durum doğrulama (read-only, Redis değişmez) ──────────────
+    val = await redis.eval(_VALIDATE_BID_SCRIPT, 1, _key(stream_id), str(data.amount))
+    ok, msg = int(val[0]), val[1]
     if ok == 0:
         if msg == "not_active":
             raise HTTPException(status_code=400, detail="Açık artırma aktif değil")
         raise HTTPException(status_code=400, detail="Teklifiniz mevcut tekliften yüksek olmalı")
 
+    # ── 4. PostgreSQL'e KESİN YAZ — commit başarılı olana kadar Redis'e dokunma
+    new_bid = Bid(
+        stream_id=stream_id,
+        bidder_id=current_user.id,
+        bidder_username=current_user.username,
+        amount=data.amount,
+    )
+    db.add(new_bid)
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        logger.error(
+            "[TEKLİF] DB commit HATASI | stream_id=%s user=%s amount=%s | %s",
+            stream_id, current_user.username, data.amount, exc,
+        )
+        raise HTTPException(status_code=500, detail="Teklif kaydedilemedi, lütfen tekrar deneyin")
+
+    # ── 5. Redis atomik güncelle (re-validate + update) ──────────────────────
+    # DB commit başarılı → şimdi Redis'i güncelliyoruz.
+    # _BID_SCRIPT içindeki re-validate, aradaki nadir race condition'ı yakalar.
+    result = await redis.eval(
+        _BID_SCRIPT, 1, _key(stream_id),
+        str(data.amount), str(current_user.id), current_user.username,
+    )
+    ok, msg = int(result[0]), result[1]
+    if ok == 0:
+        # Nadir race condition: DB commit ile Redis update arasında başka bir
+        # teklif geldi. DB kaydı audit trail olarak kalır, publish yapılmaz.
+        logger.warning(
+            "[TEKLİF] Race condition (eş zamanlı teklif) | stream_id=%s user=%s amount=%s reason=%s",
+            stream_id, current_user.username, data.amount, msg,
+        )
+        if msg == "not_active":
+            raise HTTPException(status_code=400, detail="Açık artırma aktif değil")
+        raise HTTPException(status_code=400, detail="Eş zamanlı teklif: teklifiniz geçildi, lütfen tekrar deneyin")
+
+    # ── 6. Redis pub/sub yayını — SADECE her iki yazma da başarılıysa ────────
     state = await _get_state(stream_id)
     await _publish(stream_id, {"type": "state", **state})
     logger.info(
-        "[TEKLİF] stream_id=%s user=%s amount=%s | ws_hedef=%s",
+        "[TEKLİF] KAYDEDILDI+YAYINLANDI | stream_id=%s user=%s amount=%s | ws_hedef=%s",
         stream_id, current_user.username, data.amount, manager.conn_count(stream_id),
     )
 
-    # Host'a new_bid bildirimi
+    # ── 7. Push bildirimler (arka planda, non-blocking) ───────────────────────
     if stream and stream.host_id:
         asyncio.create_task(push_notification(
             user_id=stream.host_id,
@@ -369,7 +424,6 @@ async def place_bid(
             pref_key="new_bid",
         ))
 
-    # Önceki teklif sahibine outbid bildirimi
     if prev_bidder_id_str and prev_bidder_id_str != str(current_user.id):
         try:
             prev_bidder_id = int(prev_bidder_id_str)
@@ -414,8 +468,27 @@ async def accept_bid(
     listing_id = int(lid_str) if lid_str else None
     item_name = data.get("item_name", "")
 
-    await redis.hset(key, "status", "ended")
+    # Fiyat formatlama yardımcısı
+    def _fmt_price(v: float) -> str:
+        s = str(int(v))
+        r, i = "", 0
+        for ch in reversed(s):
+            if i and i % 3 == 0:
+                r = "." + r
+            r = ch + r
+            i += 1
+        return f"₺{r}"
 
+    listing_line = f"\n🔗 https://teqlif.com/ilan/{listing_id}" if listing_id else ""
+    dm_content = (
+        f"🏆 Tebrikler! Teklifiniz kabul edildi.\n"
+        f"📦 Ürün: {item_name}\n"
+        f"💰 Kazanan fiyat: {_fmt_price(final_price)}"
+        f"{listing_line}"
+    )
+
+    # Auction + DM tek transaction'da — commit başarılı olana kadar
+    # Redis'e "ended" yazılmaz.
     auction = Auction(
         stream_id=stream_id,
         listing_id=listing_id,
@@ -429,29 +502,8 @@ async def accept_bid(
         ended_at=datetime.now(timezone.utc),
     )
     db.add(auction)
-    await db.commit()
-    await redis.delete(key)
 
-    # Fiyat formatlama yardımcısı
-    def _fmt_price(v: float) -> str:
-        s = str(int(v))
-        result, i = "", 0
-        for ch in reversed(s):
-            if i and i % 3 == 0:
-                result = "." + result
-            result = ch + result
-            i += 1
-        return f"₺{result}"
-
-    listing_line = f"\n🔗 https://teqlif.com/ilan/{listing_id}" if listing_id else ""
-    dm_content = (
-        f"🏆 Tebrikler! Teklifiniz kabul edildi.\n"
-        f"📦 Ürün: {item_name}\n"
-        f"💰 Kazanan fiyat: {_fmt_price(final_price)}"
-        f"{listing_line}"
-    )
-
-    # Kazanan kullanıcıya DM gönder (kalıcı + push notification)
+    winner_user_id: int | None = None
     if winner_id_str:
         try:
             winner_user_id = int(winner_id_str)
@@ -461,9 +513,23 @@ async def accept_bid(
                 content=dm_content,
             )
             db.add(dm)
-            await db.commit()
-            await db.refresh(dm)
-            # Push notification gönder
+        except ValueError:
+            winner_user_id = None
+
+    try:
+        await db.commit()
+    except Exception as exc:
+        await db.rollback()
+        logger.error("[ACCEPT] DB commit HATASI | stream_id=%s | %s", stream_id, exc)
+        raise HTTPException(status_code=500, detail="Teklif kabul sonucu kaydedilemedi")
+
+    # Commit başarılı → şimdi Redis'i güncelle ve temizle
+    await redis.hset(key, "status", "ended")
+    await redis.delete(key)
+
+    # Kazanana push notification (commit sonrası, non-blocking)
+    if winner_user_id:
+        try:
             await push_notification(
                 winner_user_id,
                 {
@@ -475,11 +541,11 @@ async def accept_bid(
                 pref_key="auction_won",
             )
             logger.info(
-                "[ACCEPT] DM gönderildi | winner_id=%s | item=%r | price=%s",
+                "[ACCEPT] DM+bildirim gönderildi | winner_id=%s | item=%r | price=%s",
                 winner_user_id, item_name, final_price,
             )
         except Exception as exc:
-            logger.error("[ACCEPT] DM gönderilemedi | winner_id=%s | %s", winner_id_str, exc)
+            logger.error("[ACCEPT] Bildirim gönderilemedi | winner_id=%s | %s", winner_user_id, exc)
 
     # Chat'e herkese görünür özet mesajı da yayınla
     chat_summary = (

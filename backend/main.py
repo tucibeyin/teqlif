@@ -24,6 +24,7 @@ from sqlalchemy import select
 from app.models.listing import Listing
 from app.models.user import User
 import app.models.auction  # noqa: F401 — tablo kaydı için
+import app.models.bid  # noqa: F401 — tablo kaydı için
 import app.models.notification  # noqa: F401 — tablo kaydı için
 import app.models.message  # noqa: F401 — tablo kaydı için
 import app.models.listing  # noqa: F401 — tablo kaydı için
