@@ -111,31 +111,6 @@ async def _seed_cities():
 async def lifespan(app: FastAPI):
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        await conn.execute(
-            __import__("sqlalchemy").text(
-                "ALTER TABLE listings ADD COLUMN IF NOT EXISTS image_urls TEXT"
-            )
-        )
-        await conn.execute(
-            __import__("sqlalchemy").text(
-                "ALTER TABLE listings ADD COLUMN IF NOT EXISTS is_deleted BOOLEAN DEFAULT FALSE"
-            )
-        )
-        await conn.execute(
-            __import__("sqlalchemy").text(
-                "UPDATE listings SET is_deleted = FALSE WHERE is_deleted IS NULL"
-            )
-        )
-        await conn.execute(
-            __import__("sqlalchemy").text(
-                "ALTER TABLE auctions ADD COLUMN IF NOT EXISTS listing_id INTEGER REFERENCES listings(id)"
-            )
-        )
-        await conn.execute(
-            __import__("sqlalchemy").text(
-                "ALTER TABLE live_streams ADD COLUMN IF NOT EXISTS thumbnail_url TEXT"
-            )
-        )
     await _seed_categories()
     await _seed_cities()
     # Her worker'da Redis pub/sub dinleyicilerini başlat
