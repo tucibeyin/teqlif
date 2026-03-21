@@ -4,14 +4,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>İlan — teqlif</title>
+    <title>{{ og_title }} — teqlif</title>
     <meta name="robots" content="index, follow">
-    <meta name="description" content="teqlif'te satılık ilan detaylarını incele ve satıcıyla iletişime geç.">
-    <!-- Open Graph (dynamic, updated via JS after data load) -->
+    <meta name="description" content="{{ og_description }}">
     <meta property="og:type" content="product">
     <meta property="og:site_name" content="teqlif">
     <meta property="og:locale" content="tr_TR">
+    <meta property="og:title" content="{{ og_title }}">
+    <meta property="og:description" content="{{ og_description }}">
+    <meta property="og:image" content="{{ og_image }}">
+    <meta property="og:url" content="{{ og_url }}">
     <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="{{ og_title }}">
+    <meta name="twitter:description" content="{{ og_description }}">
+    <meta name="twitter:image" content="{{ og_image }}">
     <link rel="icon" type="image/svg+xml" href="/static/icons/icon.svg">
     <link rel="apple-touch-icon" href="/static/icons/icon.svg">
     <link rel="manifest" href="/static/icons/manifest.json">

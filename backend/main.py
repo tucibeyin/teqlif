@@ -1,4 +1,5 @@
 import asyncio
+import json
 import logging
 import traceback
 import os
@@ -8,7 +9,8 @@ from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from fastapi.templating import Jinja2Templates
 
 from app.config import settings
 from app.logging_config import setup_logging
@@ -19,6 +21,8 @@ from app.routers import notifications, messages, users, listings, follows, categ
 from app.security.middleware import security_headers, SecurityMiddleware, limiter, RateLimitExceeded, _rate_limit_exceeded_handler
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
+from app.models.listing import Listing
+from app.models.user import User
 import app.models.auction  # noqa: F401 — tablo kaydı için
 import app.models.notification  # noqa: F401 — tablo kaydı için
 import app.models.message  # noqa: F401 — tablo kaydı için
@@ -219,6 +223,37 @@ if os.path.exists(settings.upload_dir):
 
 # Frontend dosyalarını sun
 frontend_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "frontend"))
+templates = Jinja2Templates(directory=frontend_dir)
+
+_DEFAULT_OG_IMAGE = "https://teqlif.com/static/icons/icon.svg"
+
+
+def _listing_og(listing: Listing, listing_id: int) -> dict:
+    """Listing'den OpenGraph context sözlüğü üretir."""
+    urls = json.loads(listing.image_urls) if listing.image_urls else []
+    og_image = urls[0] if urls else (listing.image_url or _DEFAULT_OG_IMAGE)
+    price_str = f"{int(listing.price):,} ₺".replace(",", ".") if listing.price else ""
+    desc_parts = [p for p in [price_str, listing.description] if p]
+    og_description = " — ".join(desc_parts)[:200] if desc_parts else "teqlif'te satılık ilan"
+    return {
+        "og_title": listing.title,
+        "og_description": og_description,
+        "og_image": og_image,
+        "og_url": f"https://teqlif.com/ilan/{listing_id}",
+    }
+
+
+def _user_og(user: User) -> dict:
+    """User'dan OpenGraph context sözlüğü üretir."""
+    name = user.full_name or user.username
+    return {
+        "og_title": f"{name} — teqlif",
+        "og_description": f"{name} kullanıcısının ilanlarını ve satışlarını teqlif'te incele.",
+        "og_image": user.profile_image_url or _DEFAULT_OG_IMAGE,
+        "og_url": f"https://teqlif.com/profil/{user.username}",
+    }
+
+
 if os.path.exists(frontend_dir):
     app.mount("/static", StaticFiles(directory=os.path.join(frontend_dir, "static")), name="static")
 
@@ -227,12 +262,32 @@ if os.path.exists(frontend_dir):
         return FileResponse(os.path.join(frontend_dir, "index.html"))
 
     @app.get("/ilan/{listing_id}", include_in_schema=False)
-    async def serve_listing_page(listing_id: int):
-        return FileResponse(os.path.join(frontend_dir, "ilan.html"))
+    async def serve_listing_page(request: Request, listing_id: int):
+        async with AsyncSessionLocal() as db:
+            listing = await db.scalar(
+                select(Listing).where(Listing.id == listing_id, Listing.is_deleted.is_(False))
+            )
+        if not listing:
+            return HTMLResponse(
+                "<h1>404 — İlan bulunamadı</h1>", status_code=404
+            )
+        return templates.TemplateResponse(
+            request, "ilan.html", _listing_og(listing, listing_id)
+        )
 
     @app.get("/profil/{username}", include_in_schema=False)
-    async def serve_profile_page(username: str):
-        return FileResponse(os.path.join(frontend_dir, "profil.html"))
+    async def serve_profile_page(request: Request, username: str):
+        async with AsyncSessionLocal() as db:
+            user = await db.scalar(
+                select(User).where(User.username == username, User.is_active.is_(True))
+            )
+        if not user:
+            return HTMLResponse(
+                "<h1>404 — Kullanıcı bulunamadı</h1>", status_code=404
+            )
+        return templates.TemplateResponse(
+            request, "profil.html", _user_og(user)
+        )
 
     @app.get("/mesajlar", include_in_schema=False)
     async def serve_messages_page():
