@@ -1100,7 +1100,7 @@
                 <div id="videoOverlay" style="display:none;">
                     <span class="live-badge">CANLI</span>
                     <div id="statusMsg"></div>
-                    <span class="viewer-count" id="viewerCount">👁 0<div id="viewerPopup"></div></span>
+                    <span class="viewer-count" id="viewerCount"><span id="viewerCountText">👁 0</span><div id="viewerPopup"></div></span>
                 </div>
 
                 <!-- Alt bar: başlık + kontrol butonları -->
@@ -1401,7 +1401,7 @@
                     showPlaceholder('Yayına bağlanıldı, video bekleniyor...');
                 }
 
-                viewerCount.textContent = `👁 ${info.viewer_count ?? 0}`;
+                document.getElementById('viewerCountText').textContent = `👁 ${info.viewer_count ?? 0}`;
 
                 // Açık artırmayı başlat
                 initAuction(streamId, isHost);
@@ -2091,7 +2091,7 @@
                 document.getElementById('chatInputRow').style.display = 'flex';
             }
 
-            const _viewerCountEl = document.getElementById('viewerCount');
+            const _viewerCountEl = document.getElementById('viewerCountText');
             const _onViewerCount = (n) => { if (_viewerCountEl) _viewerCountEl.textContent = `👁 ${n}`; };
 
             if (isHost) {
