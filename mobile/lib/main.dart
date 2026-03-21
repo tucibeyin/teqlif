@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
@@ -30,7 +31,7 @@ void main() async {
       options.tracesSampleRate = 1.0; 
     },
     // Uygulamamızı Sentry üzerinden başlatıyoruz
-    appRunner: () => runApp(const TeqlifApp()),
+    appRunner: () => runApp(const ProviderScope(child: TeqlifApp())),
   );
   // --- SENTRY ENTEGRASYONU BITISI ---
 }

@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
@@ -577,19 +578,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             onPageChanged: (i) => setState(() => _currentImg = i),
             itemBuilder: (context, i) => GestureDetector(
               onTap: () => _openFullscreen(i),
-              child: Image.network(
-                _images[i],
+              child: CachedNetworkImage(
+                imageUrl: _images[i],
                 fit: BoxFit.cover,
                 width: double.infinity,
-                loadingBuilder: (ctx, child, progress) => progress == null
-                    ? child
-                    : Container(
-                        color: AppColors.surfaceVariant(ctx),
-                        child: const Center(
-                            child: CircularProgressIndicator(strokeWidth: 2)),
-                      ),
-                errorBuilder: (ctx, err, stack) {
-                  debugPrint('IMG HATA [${_images[i]}]: $err');
+                placeholder: (ctx, _) => Container(
+                  color: AppColors.surfaceVariant(ctx),
+                  child: const Center(
+                      child: CircularProgressIndicator(strokeWidth: 2)),
+                ),
+                errorWidget: (ctx, url, err) {
+                  debugPrint('IMG HATA [$url]: $err');
                   return Container(
                     color: AppColors.surfaceVariant(ctx),
                     child: Column(
@@ -735,10 +734,12 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
         onPageChanged: (i) => setState(() => _current = i),
         itemBuilder: (context, i) => InteractiveViewer(
           child: Center(
-            child: Image.network(
-              widget.images[i],
+            child: CachedNetworkImage(
+              imageUrl: widget.images[i],
               fit: BoxFit.contain,
-              errorBuilder: (_, __, ___) => const Icon(
+              placeholder: (_, __) => const Center(
+                  child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2)),
+              errorWidget: (_, __, ___) => const Icon(
                 Icons.broken_image_outlined,
                 color: Colors.white54,
                 size: 64,

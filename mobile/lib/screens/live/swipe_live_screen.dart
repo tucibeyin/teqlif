@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -276,10 +277,11 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
           )
         else if (!widget.isActive && hasThumbnail)
           Positioned.fill(
-            child: Image.network(
-              imgUrl(widget.stream.thumbnailUrl),
+            child: CachedNetworkImage(
+              imageUrl: imgUrl(widget.stream.thumbnailUrl),
               fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => _darkBg(),
+              placeholder: (_, __) => _darkBg(),
+              errorWidget: (_, __, ___) => _darkBg(),
             ),
           )
         else

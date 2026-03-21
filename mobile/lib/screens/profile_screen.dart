@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
@@ -359,10 +360,12 @@ class _ListingGridItem extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           imageUrl != null
-              ? Image.network(
-                  imageUrl,
+              ? CachedNetworkImage(
+                  imageUrl: imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _placeholder(context),
+                  placeholder: (_, __) =>
+                      const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  errorWidget: (_, __, ___) => _placeholder(context),
                 )
               : _placeholder(context),
           if (price.isNotEmpty)
@@ -1369,9 +1372,14 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: imageUrl != null
-                                ? Image.network(imageUrl,
+                                ? CachedNetworkImage(
+                                    imageUrl: imageUrl,
                                     width: 60, height: 60, fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => _imgPlaceholder())
+                                    placeholder: (_, __) => const SizedBox(
+                                      width: 60, height: 60,
+                                      child: Center(child: CircularProgressIndicator(strokeWidth: 1.5)),
+                                    ),
+                                    errorWidget: (_, __, ___) => _imgPlaceholder())
                                 : _imgPlaceholder(),
                           ),
                           title: Text(l['title'] ?? '',
@@ -1521,9 +1529,14 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
                           leading: ClipRRect(
                             borderRadius: BorderRadius.circular(8),
                             child: imageUrl != null
-                                ? Image.network(imageUrl,
+                                ? CachedNetworkImage(
+                                    imageUrl: imageUrl,
                                     width: 60, height: 60, fit: BoxFit.cover,
-                                    errorBuilder: (_, __, ___) => _imgPlaceholder())
+                                    placeholder: (_, __) => const SizedBox(
+                                      width: 60, height: 60,
+                                      child: Center(child: CircularProgressIndicator(strokeWidth: 1.5)),
+                                    ),
+                                    errorWidget: (_, __, ___) => _imgPlaceholder())
                                 : _imgPlaceholder(),
                           ),
                           title: Text(l['title'] ?? '',

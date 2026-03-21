@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
@@ -580,10 +581,12 @@ class _GridItem extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           photo != null
-              ? Image.network(
-                  photo,
+              ? CachedNetworkImage(
+                  imageUrl: photo,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) => _placeholder(context),
+                  placeholder: (_, __) =>
+                      const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  errorWidget: (_, __, ___) => _placeholder(context),
                 )
               : _placeholder(context),
           if (price.isNotEmpty)

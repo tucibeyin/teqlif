@@ -1,16 +1,18 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
-import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
 import '../models/auction.dart';
+import '../providers/auction_provider.dart';
 import '../services/auction_service.dart';
 import '../services/storage_service.dart';
 import '../utils/price_formatter.dart';
 
-class AuctionPanel extends StatefulWidget {
+class AuctionPanel extends ConsumerStatefulWidget {
   final int streamId;
   final bool isHost;
   final void Function(String bidder, double amount, String? itemName)? onBidAdded;
@@ -28,98 +30,18 @@ class AuctionPanel extends StatefulWidget {
   });
 
   @override
-  State<AuctionPanel> createState() => _AuctionPanelState();
+  ConsumerState<AuctionPanel> createState() => _AuctionPanelState();
 }
 
-class _AuctionPanelState extends State<AuctionPanel> {
-  AuctionState _state = AuctionState.idle();
-  WebSocketChannel? _channel;
-  StreamSubscription? _sub;
-  Timer? _heartbeat;
-  bool _reconnecting = false;
-
+class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   final _customBidCtrl = TextEditingController();
   String? _msg;
   bool _msgError = false;
 
   @override
-  void initState() {
-    super.initState();
-    _connectWS();
-  }
-
-  @override
   void dispose() {
-    _reconnecting = false;
-    _heartbeat?.cancel();
-    _sub?.cancel();
-    try {
-      _channel?.sink.close();
-    } catch (_) {}
     _customBidCtrl.dispose();
     super.dispose();
-  }
-
-  String get _wsBaseUrl {
-    return kBaseUrl
-        .replaceFirst('https://', 'wss://')
-        .replaceFirst('http://', 'ws://');
-  }
-
-  void _connectWS() {
-    if (!mounted) return;
-    _heartbeat?.cancel();
-    try {
-      final uri = Uri.parse('$_wsBaseUrl/auction/${widget.streamId}/ws');
-      _channel = WebSocketChannel.connect(uri);
-      _sub = _channel!.stream.listen(
-        (data) {
-          if (!mounted) return;
-          try {
-            final json = jsonDecode(data as String) as Map<String, dynamic>;
-            if (json['type'] == 'state') {
-              final newState = AuctionState.fromJson(json);
-              if (newState.bidCount > _state.bidCount &&
-                  newState.currentBidder != null &&
-                  newState.currentBid != null) {
-                widget.onBidAdded
-                    ?.call(newState.currentBidder!, newState.currentBid!, newState.itemName);
-              }
-              if (newState.isIdle && !_state.isIdle) {
-                widget.onAuctionReset?.call();
-              }
-              setState(() => _state = newState);
-            }
-          } catch (_) {}
-        },
-        onDone: _scheduleReconnect,
-        onError: (_) => _scheduleReconnect(),
-        cancelOnError: false,
-      );
-      _heartbeat = Timer.periodic(const Duration(seconds: 25), (_) {
-        if (!mounted) return;
-        try {
-          _channel?.sink.add('ping');
-        } catch (_) {}
-      });
-    } catch (_) {
-      _scheduleReconnect();
-    }
-  }
-
-  void _scheduleReconnect() {
-    if (_reconnecting || !mounted) return;
-    _reconnecting = true;
-    _heartbeat?.cancel();
-    Future.delayed(const Duration(seconds: 4), () {
-      if (!mounted) return;
-      _reconnecting = false;
-      _sub?.cancel();
-      try {
-        _channel?.sink.close();
-      } catch (_) {}
-      _connectWS();
-    });
   }
 
   String _cleanErr(Object e) {
@@ -175,6 +97,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
   }
 
   Future<void> _acceptBid() async {
+    final state = ref.read(auctionProvider(widget.streamId));
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -195,15 +118,15 @@ class _AuctionPanelState extends State<AuctionPanel> {
               ),
               child: Column(
                 children: [
-                  _acceptRow('Ürün', _state.itemName ?? '—'),
+                  _acceptRow('Ürün', state.itemName ?? '—'),
                   const SizedBox(height: 10),
                   _acceptRow('Kazanan Fiyat',
-                      '₺${_fmt(_state.currentBid)}',
+                      '₺${_fmt(state.currentBid)}',
                       valueColor: const Color(0xFF4ADE80),
                       valueBold: true),
                   const SizedBox(height: 10),
                   _acceptRow('Teklif Sahibi',
-                      '@${_state.currentBidder ?? '—'}'),
+                      '@${state.currentBidder ?? '—'}'),
                 ],
               ),
             ),
@@ -294,8 +217,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
 
   Future<void> _placeBid(double amount) async {
     try {
-      final newState = await AuctionService.placeBid(widget.streamId, amount);
-      if (mounted) setState(() => _state = newState);
+      await AuctionService.placeBid(widget.streamId, amount);
       _setMsg('₺${_fmt(amount)} teklifiniz alındı!');
       _customBidCtrl.clear();
     } catch (e) {
@@ -313,8 +235,24 @@ class _AuctionPanelState extends State<AuctionPanel> {
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final state = ref.watch(auctionProvider(widget.streamId));
+
+    // Callback'leri provider değişimine bağla
+    ref.listen<AuctionState>(auctionProvider(widget.streamId), (prev, next) {
+      if (prev != null &&
+          next.bidCount > prev.bidCount &&
+          next.currentBidder != null &&
+          next.currentBid != null) {
+        widget.onBidAdded?.call(
+            next.currentBidder!, next.currentBid!, next.itemName);
+      }
+      if (prev != null && next.isIdle && !prev.isIdle) {
+        widget.onAuctionReset?.call();
+      }
+    });
+
     // Viewer için artırma yoksa gösterme
-    if (!widget.isHost && (_state.isIdle || _state.isEnded)) {
+    if (!widget.isHost && (state.isIdle || state.isEnded)) {
       return const SizedBox.shrink();
     }
 
@@ -333,13 +271,13 @@ class _AuctionPanelState extends State<AuctionPanel> {
             child: Row(
               children: [
                 // Status badge
-                _statusBadge(),
+                _statusBadge(state),
                 const SizedBox(width: 8),
                 // Ürün + fiyat
                 Expanded(
                   child: GestureDetector(
-                    onTap: (!widget.isHost && _state.listingId != null)
-                        ? () => _showListingPopup(context)
+                    onTap: (!widget.isHost && state.listingId != null)
+                        ? () => _showListingPopup(context, state.listingId!)
                         : null,
                     child: Row(
                       children: [
@@ -349,18 +287,18 @@ class _AuctionPanelState extends State<AuctionPanel> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text(
-                                _state.itemName ?? 'Açık Artırma',
+                                state.itemName ?? 'Açık Artırma',
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
                                     fontSize: 12),
                                 overflow: TextOverflow.ellipsis,
                               ),
-                              if (_state.currentBid != null ||
-                                  _state.startPrice != null)
+                              if (state.currentBid != null ||
+                                  state.startPrice != null)
                                 Text(
-                                  '₺${_fmt(_state.currentBid ?? _state.startPrice)}'
-                                  '${_state.currentBidder != null ? ' · @${_state.currentBidder}' : ''}',
+                                  '₺${_fmt(state.currentBid ?? state.startPrice)}'
+                                  '${state.currentBidder != null ? ' · @${state.currentBidder}' : ''}',
                                   style: const TextStyle(
                                       color: Color(0xFF4ADE80), fontSize: 11),
                                 ),
@@ -368,7 +306,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
                           ),
                         ),
                         // Viewer: pinlenmiş ilan varsa ikon göster
-                        if (!widget.isHost && _state.listingId != null)
+                        if (!widget.isHost && state.listingId != null)
                           Padding(
                             padding: const EdgeInsets.only(left: 4),
                             child: Container(
@@ -389,10 +327,10 @@ class _AuctionPanelState extends State<AuctionPanel> {
                 ),
                 const SizedBox(width: 8),
                 // Host inline kontroller
-                if (widget.isHost) _hostInlineControls(),
+                if (widget.isHost) _hostInlineControls(state),
                 // Viewer: teklif butonu
-                if (!widget.isHost && _state.isActive)
-                  _viewerBidButton(context),
+                if (!widget.isHost && state.isActive)
+                  _viewerBidButton(context, state),
               ],
             ),
           ),
@@ -413,9 +351,7 @@ class _AuctionPanelState extends State<AuctionPanel> {
     );
   }
 
-  Future<void> _showListingPopup(BuildContext context) async {
-    final id = _state.listingId;
-    if (id == null) return;
+  Future<void> _showListingPopup(BuildContext context, int id) async {
     try {
       final resp = await http.get(Uri.parse('$kBaseUrl/listings/$id'));
       if (resp.statusCode != 200 || !mounted) return;
@@ -484,11 +420,13 @@ class _AuctionPanelState extends State<AuctionPanel> {
                             controller: pageCtrl,
                             itemCount: imageUrls.length,
                             onPageChanged: (i) => setSt(() => pageIdx[0] = i),
-                            itemBuilder: (_, i) => Image.network(
-                              imageUrls[i],
+                            itemBuilder: (_, i) => CachedNetworkImage(
+                              imageUrl: imageUrls[i],
                               fit: BoxFit.cover,
                               width: double.infinity,
-                              errorBuilder: (_, __, ___) => Container(
+                              placeholder: (_, __) => const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2)),
+                              errorWidget: (_, __, ___) => Container(
                                 color: const Color(0xFF0F172A),
                                 child: const Icon(Icons.image_outlined,
                                     color: Color(0xFF475569), size: 48),
@@ -565,8 +503,8 @@ class _AuctionPanelState extends State<AuctionPanel> {
     );
   }
 
-  Widget _statusBadge() {
-    final (label, color) = switch (_state.status) {
+  Widget _statusBadge(AuctionState state) {
+    final (label, color) = switch (state.status) {
       'active' => ('AKTİF', Colors.green),
       'paused' => ('DURAKLADI', Colors.amber),
       'ended' => ('BİTTİ', Colors.red),
@@ -582,14 +520,14 @@ class _AuctionPanelState extends State<AuctionPanel> {
     );
   }
 
-  Widget _hostInlineControls() {
-    if (_state.isIdle || _state.isEnded) {
+  Widget _hostInlineControls(AuctionState state) {
+    if (state.isIdle || state.isEnded) {
       return _pillBtn('▶ Başlat', Colors.green, _showStartDialog);
     }
-    if (_state.isActive) {
+    if (state.isActive) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
         _iconBtn(Icons.pause_rounded, Colors.amber, _pauseAuction),
-        if (_state.currentBidder != null) ...[
+        if (state.currentBidder != null) ...[
           const SizedBox(width: 6),
           _acceptBtn(),
         ],
@@ -597,10 +535,10 @@ class _AuctionPanelState extends State<AuctionPanel> {
         _iconBtn(Icons.stop_rounded, Colors.red, _endAuction),
       ]);
     }
-    if (_state.isPaused) {
+    if (state.isPaused) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
         _iconBtn(Icons.play_arrow_rounded, Colors.green, _resumeAuction),
-        if (_state.currentBidder != null) ...[
+        if (state.currentBidder != null) ...[
           const SizedBox(width: 6),
           _acceptBtn(),
         ],
@@ -611,10 +549,10 @@ class _AuctionPanelState extends State<AuctionPanel> {
     return const SizedBox.shrink();
   }
 
-  Widget _viewerBidButton(BuildContext context) {
+  Widget _viewerBidButton(BuildContext context, AuctionState state) {
     final enabled = widget.enabled;
     return GestureDetector(
-      onTap: enabled ? () => _showBidSheet(context) : null,
+      onTap: enabled ? () => _showBidSheet(context, state) : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
         decoration: BoxDecoration(
@@ -635,8 +573,8 @@ class _AuctionPanelState extends State<AuctionPanel> {
     );
   }
 
-  void _showBidSheet(BuildContext outerContext) {
-    final base = _state.currentBid ?? _state.startPrice ?? 0;
+  void _showBidSheet(BuildContext outerContext, AuctionState state) {
+    final base = state.currentBid ?? state.startPrice ?? 0;
     showModalBottomSheet(
       context: outerContext,
       backgroundColor: const Color(0xF01E293B),
@@ -668,14 +606,14 @@ class _AuctionPanelState extends State<AuctionPanel> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      _state.itemName ?? 'Teklif Ver',
+                      state.itemName ?? 'Teklif Ver',
                       style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.w700,
                           fontSize: 16),
                     ),
-                    if (_state.currentBidder != null)
-                      Text('@${_state.currentBidder} en yüksek teklif sahibi',
+                    if (state.currentBidder != null)
+                      Text('@${state.currentBidder} en yüksek teklif sahibi',
                           style: const TextStyle(
                               color: Color(0xFF64748B), fontSize: 12))
                     else
@@ -687,14 +625,14 @@ class _AuctionPanelState extends State<AuctionPanel> {
               ),
               Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
                 Text(
-                  '₺${_fmt(_state.currentBid ?? _state.startPrice)}',
+                  '₺${_fmt(state.currentBid ?? state.startPrice)}',
                   style: const TextStyle(
                       color: Color(0xFF4ADE80),
                       fontWeight: FontWeight.w800,
                       fontSize: 22),
                 ),
-                if (_state.bidCount > 0)
-                  Text('${_state.bidCount} teklif',
+                if (state.bidCount > 0)
+                  Text('${state.bidCount} teklif',
                       style: const TextStyle(
                           color: Color(0xFF64748B), fontSize: 11)),
               ]),
@@ -990,8 +928,15 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                               return ClipRRect(
                                 borderRadius: BorderRadius.circular(6),
                                 child: url != null && url.isNotEmpty
-                                    ? Image.network(url, width: 38, height: 38, fit: BoxFit.cover,
-                                        errorBuilder: (_, __, ___) => _lpPlaceholder())
+                                    ? CachedNetworkImage(
+                                        imageUrl: url,
+                                        width: 38, height: 38,
+                                        fit: BoxFit.cover,
+                                        placeholder: (_, __) => const SizedBox(
+                                          width: 38, height: 38,
+                                          child: Center(child: CircularProgressIndicator(strokeWidth: 1.5)),
+                                        ),
+                                        errorWidget: (_, __, ___) => _lpPlaceholder())
                                     : _lpPlaceholder(),
                               );
                             }),

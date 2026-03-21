@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../config/api.dart';
 import '../../config/theme.dart';
@@ -431,10 +432,12 @@ class _StreamGridTile extends StatelessWidget {
                 children: [
                   // Background
                   if (hasThumbnail)
-                    Image.network(
-                      imgUrl(stream.thumbnailUrl),
+                    CachedNetworkImage(
+                      imageUrl: imgUrl(stream.thumbnailUrl),
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _gradientBox(),
+                      placeholder: (_, __) =>
+                          const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                      errorWidget: (_, __, ___) => _gradientBox(),
                     )
                   else
                     _gradientBox(),

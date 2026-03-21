@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_colors.dart';
@@ -431,10 +432,12 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       fit: StackFit.expand,
                       children: [
                         photo != null
-                            ? Image.network(
-                                photo,
+                            ? CachedNetworkImage(
+                                imageUrl: photo,
                                 fit: BoxFit.cover,
-                                errorBuilder: (c, __, ___) => Container(
+                                placeholder: (_, __) => const Center(
+                                    child: CircularProgressIndicator(strokeWidth: 2)),
+                                errorWidget: (c, __, ___) => Container(
                                   color: AppColors.surfaceVariant(c),
                                   child: Icon(Icons.image_outlined,
                                       size: 28, color: AppColors.border(c)),
