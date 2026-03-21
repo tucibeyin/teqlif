@@ -1,12 +1,16 @@
 from datetime import datetime
-from typing import Optional
-from sqlalchemy import String, Float, DateTime, ForeignKey, Boolean, Text, func
+from typing import Any, Optional
+from sqlalchemy import String, Float, DateTime, ForeignKey, Boolean, Text, Index, func
+from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column
 from app.database import Base
 
 
 class Listing(Base):
     __tablename__ = "listings"
+    __table_args__ = (
+        Index('ix_listings_search_vector', 'search_vector', postgresql_using='gin'),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False, index=True)
@@ -20,3 +24,4 @@ class Listing(Base):
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    search_vector: Mapped[Optional[Any]] = mapped_column(TSVECTOR, nullable=True)

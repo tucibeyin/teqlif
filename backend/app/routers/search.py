@@ -2,7 +2,7 @@ import json
 from typing import Optional
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_
+from sqlalchemy import select, or_, func
 
 from app.database import get_db
 from app.models.user import User
@@ -12,6 +12,11 @@ from app.models.block import UserBlock
 from app.utils.auth import bearer_scheme, decode_token
 
 router = APIRouter(prefix="/api/search", tags=["search"])
+
+
+def _sanitize_ts_query(q: str) -> str:
+    """Fazla boşlukları temizler. websearch_to_tsquery AND/OR/NOT semantiğini kendisi yönetir."""
+    return " ".join(q.split())
 
 
 async def _optional_user_id(
@@ -172,20 +177,24 @@ async def search_all(
         for u in users_result.scalars().all()
     ]
 
-    # İlanlar
+    # İlanlar — PostgreSQL Full-Text Search (GIN index üzerinden)
+    ts_q = _sanitize_ts_query(q)
+    tsquery = func.websearch_to_tsquery('turkish', ts_q)
+    rank = func.ts_rank(Listing.search_vector, tsquery)
+
     listing_q = (
-        select(Listing, User)
+        select(Listing, User, rank.label('rank'))
         .join(User, User.id == Listing.user_id)
         .where(
             Listing.is_active == True,  # noqa: E712
             Listing.is_deleted == False,  # noqa: E712
-            or_(Listing.title.ilike(term), Listing.description.ilike(term)),
+            Listing.search_vector.op('@@')(tsquery),
         )
-        .order_by(Listing.created_at.desc())
+        .order_by(rank.desc())
         .limit(12)
     )
     listings_result = await db.execute(listing_q)
-    listings = [_listing_dict(l, u) for l, u in listings_result.all()]
+    listings = [_listing_dict(l, u) for l, u, _rank in listings_result.all()]
 
     # Aktif yayınlar
     stream_q = (
