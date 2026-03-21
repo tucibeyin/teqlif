@@ -160,6 +160,15 @@ class _ChatPanelState extends State<ChatPanel> {
             final json = jsonDecode(data as String) as Map<String, dynamic>;
             if (json['type'] == 'message') {
               _addMessage(ChatMessage.fromJson(json));
+            } else if (json['type'] == 'system_join') {
+              final uname = json['username'] as String? ?? '';
+              _addMessage(ChatMessage(
+                id: 'join_${DateTime.now().millisecondsSinceEpoch}',
+                username: uname,
+                content: 'yayına katıldı',
+                createdAt: DateTime.now(),
+                isSystem: true,
+              ));
             } else if (json['type'] == 'history') {
               final msgs = (json['messages'] as List)
                   .map((m) => ChatMessage.fromJson(m as Map<String, dynamic>))
@@ -489,6 +498,37 @@ class _MessageItem extends StatelessWidget {
       Shadow(blurRadius: 6, color: Colors.black),
       Shadow(blurRadius: 12, color: Colors.black),
     ];
+
+    if (message.isSystem) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 2),
+        child: Wrap(
+          children: [
+            Text(
+              '@${message.username} ',
+              style: TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
+                color: usernameColor(message.username),
+                fontWeight: FontWeight.w700,
+                shadows: shadow,
+              ),
+            ),
+            Text(
+              message.content,
+              style: const TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
+                color: Colors.white54,
+                fontStyle: FontStyle.italic,
+                shadows: shadow,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Wrap(

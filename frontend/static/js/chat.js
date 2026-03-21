@@ -52,6 +52,8 @@ const Chat = (() => {
                 const msg = JSON.parse(e.data);
                 if (msg.type === 'message') {
                     _appendMessage(msg);
+                } else if (msg.type === 'system_join') {
+                    _appendSystemJoin(msg.username);
                 } else if (msg.type === 'history') {
                     (msg.messages || []).forEach(_appendMessage);
                 } else if (msg.type === 'viewer_count') {
@@ -130,6 +132,18 @@ const Chat = (() => {
         }
 
         // En alta kaydır
+        list.scrollTop = list.scrollHeight;
+    }
+
+    function _appendSystemJoin(username) {
+        const list = document.getElementById('chatMessages');
+        if (!list) return;
+        const color = _usernameColor(username || '');
+        const el = document.createElement('div');
+        el.className = 'chat-msg';
+        el.innerHTML = `<span class="chat-username" style="color:${color};">@${_esc(username)}</span> <span class="chat-content" style="opacity:0.6;font-style:italic;">yayına katıldı</span>`;
+        list.appendChild(el);
+        while (list.children.length > 50) list.removeChild(list.firstChild);
         list.scrollTop = list.scrollHeight;
     }
 

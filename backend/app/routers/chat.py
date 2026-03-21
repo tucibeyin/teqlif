@@ -211,9 +211,10 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
     # WS kabul et
     await chat_manager.connect(websocket, stream_id, user_id)
 
-    # İzleyiciyse sayacı artır
+    # İzleyiciyse sayacı artır ve katılma duyurusu yap
     if not is_host and room_name:
         await _update_viewer_count(room_name, stream_id, +1)
+        await _publish_chat(stream_id, {"type": "system_join", "username": username})
 
     try:
         redis = await get_redis()
