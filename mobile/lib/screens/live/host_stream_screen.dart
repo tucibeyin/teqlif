@@ -155,6 +155,97 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     setState(() {});
   }
 
+  Future<void> _showViewers() async {
+    List<String> viewers = [];
+    try {
+      viewers = await StreamService.getViewers(widget.streamToken.streamId);
+    } catch (_) {}
+    if (!mounted) return;
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF1E293B),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.white24,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(
+              '👁 İzleyiciler (${viewers.length})',
+              style: const TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (viewers.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Henüz izleyici yok',
+                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                ),
+              )
+            else
+              ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 260),
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: viewers.length,
+                  itemBuilder: (_, i) {
+                    final uname = viewers[i];
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 6),
+                      child: Row(
+                        children: [
+                          CircleAvatar(
+                            radius: 14,
+                            backgroundColor: usernameColor(uname).withOpacity(0.25),
+                            child: Text(
+                              uname.isNotEmpty ? uname[0].toUpperCase() : '?',
+                              style: TextStyle(
+                                color: usernameColor(uname),
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 10),
+                          Text(
+                            '@$uname',
+                            style: TextStyle(
+                              color: usernameColor(uname),
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
   void _showModSheet(String username) {
     showModalBottomSheet(
       context: context,
@@ -342,18 +433,21 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                               letterSpacing: 0.5)),
                     ),
                     const SizedBox(width: 6),
-                    // İzleyici sayısı
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 8, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: Text(
-                        '👁 $_viewerCount',
-                        style: const TextStyle(
-                            color: Colors.white, fontSize: 11),
+                    // İzleyici sayısı (tıklanabilir)
+                    GestureDetector(
+                      onTap: _showViewers,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: Colors.black45,
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Text(
+                          '👁 $_viewerCount',
+                          style: const TextStyle(
+                              color: Colors.white, fontSize: 11),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),

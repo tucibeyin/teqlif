@@ -69,6 +69,16 @@ class StreamService {
     );
   }
 
+  static Future<List<String>> getViewers(int streamId) async {
+    final res = await http.get(
+      Uri.parse('$kBaseUrl/streams/$streamId/viewers'),
+      headers: await _headers(),
+    );
+    _checkError(res);
+    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    return List<String>.from(body['viewers'] as List);
+  }
+
   static Future<String> uploadThumbnail(int streamId, Uint8List bytes, String filename) async {
     final token = await StorageService.getToken();
     final req = http.MultipartRequest(

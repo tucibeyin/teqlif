@@ -211,9 +211,14 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
     # WS kabul et
     await chat_manager.connect(websocket, stream_id, user_id)
 
-    # İzleyiciyse sayacı artır ve katılma duyurusu yap
+    # İzleyiciyse sayacı artır, set'e ekle ve katılma duyurusu yap
     if not is_host and room_name:
         await _update_viewer_count(room_name, stream_id, +1)
+        try:
+            _r = await get_redis()
+            await _r.sadd(f"live:viewer_set:{stream_id}", username)
+        except Exception:
+            pass
         await _publish_chat(stream_id, {"type": "system_join", "username": username})
 
     try:
@@ -283,6 +288,11 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
         logger.warning("[CHAT WS] BEKLENMEYEN HATA | stream_id=%s | %s", stream_id, exc)
     finally:
         chat_manager.disconnect(websocket, stream_id, user_id)
-        # İzleyiciyse sayacı düşür
+        # İzleyiciyse sayacı düşür ve set'ten çıkar
         if not is_host and room_name:
             await _update_viewer_count(room_name, stream_id, -1)
+            try:
+                _r = await get_redis()
+                await _r.srem(f"live:viewer_set:{stream_id}", username)
+            except Exception:
+                pass

@@ -181,6 +181,7 @@ async def end_stream(
     try:
         redis = await get_redis()
         await redis.delete(f"live:viewers:{stream.room_name}")
+        await redis.delete(f"live:viewer_set:{stream_id}")
     except Exception:
         logger.error("Redis viewer key silinemedi | room=%s", stream.room_name, exc_info=True)
 
@@ -194,6 +195,23 @@ async def end_stream(
 
     logger.info("Yayın sonlandırıldı | stream_id=%s user_id=%s", stream_id, current_user.id)
     return {"message": "Yayın sonlandırıldı"}
+
+
+@router.get("/{stream_id}/viewers")
+async def get_viewers(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+    stream = result.scalar_one_or_none()
+    if not stream or not stream.is_live:
+        raise HTTPException(status_code=404, detail="Aktif yayın bulunamadı")
+    if stream.host_id != current_user.id:
+        raise HTTPException(status_code=403, detail="Sadece host görüntüleyebilir")
+    redis = await get_redis()
+    members = await redis.smembers(f"live:viewer_set:{stream_id}")
+    return {"viewers": sorted(list(members))}
 
 
 @router.post("/{stream_id}/join", response_model=JoinTokenOut)

@@ -169,6 +169,37 @@
             font-size: 0.8rem;
             padding: 3px 10px;
             border-radius: 20px;
+            position: relative;
+        }
+        .viewer-count.host-clickable {
+            cursor: pointer;
+        }
+        #viewerPopup {
+            display: none;
+            position: absolute;
+            top: calc(100% + 8px);
+            left: 0;
+            min-width: 180px;
+            max-height: 220px;
+            overflow-y: auto;
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.12);
+            border-radius: 12px;
+            padding: 10px 0;
+            z-index: 999;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+        }
+        #viewerPopup.open { display: block; }
+        .viewer-popup-item {
+            padding: 7px 14px;
+            font-size: 0.82rem;
+            color: #e2e8f0;
+            white-space: nowrap;
+        }
+        .viewer-popup-empty {
+            padding: 10px 14px;
+            font-size: 0.8rem;
+            color: #64748b;
         }
 
         /* Üst bar içinde küçük status mesajı */
@@ -1069,7 +1100,7 @@
                 <div id="videoOverlay" style="display:none;">
                     <span class="live-badge">CANLI</span>
                     <div id="statusMsg"></div>
-                    <span class="viewer-count" id="viewerCount">👁 0</span>
+                    <span class="viewer-count" id="viewerCount">👁 0<div id="viewerPopup"></div></span>
                 </div>
 
                 <!-- Alt bar: başlık + kontrol butonları -->
@@ -1364,6 +1395,7 @@
                     showVideo();
                     setStatus('Yayın canlı. İzleyiciler sizi görebilir.');
                     _scheduleThumbCapture(streamId);
+                    _initViewerPopup(streamId);
                 } else if (!videoStarted) {
                     // Video henüz gelmediyse placeholder göster (onRemoteVideo gelince kapanır)
                     showPlaceholder('Yayına bağlanıldı, video bekleniyor...');
@@ -1382,6 +1414,41 @@
                 setStatus('Bağlantı kurulamadı: ' + (err.message || 'Bilinmeyen hata'), true);
                 connectingOverlay.innerHTML = `<span style="color:#f87171">Bağlantı hatası</span>`;
             }
+        }
+
+        // ── Viewer listesi popup (sadece host) ────────────────────────────
+        function _initViewerPopup(streamId) {
+            const badge = document.getElementById('viewerCount');
+            const popup = document.getElementById('viewerPopup');
+            if (!badge || !popup) return;
+            badge.classList.add('host-clickable');
+
+            badge.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const isOpen = popup.classList.contains('open');
+                if (isOpen) { popup.classList.remove('open'); return; }
+                popup.innerHTML = '<div class="viewer-popup-empty">Yükleniyor...</div>';
+                popup.classList.add('open');
+                try {
+                    const token = Auth.getToken();
+                    const res = await fetch(`/api/streams/${streamId}/viewers`, {
+                        headers: { 'Authorization': `Bearer ${token}` }
+                    });
+                    const data = await res.json();
+                    const viewers = data.viewers || [];
+                    if (viewers.length === 0) {
+                        popup.innerHTML = '<div class="viewer-popup-empty">Henüz izleyici yok</div>';
+                    } else {
+                        popup.innerHTML = viewers.map(u =>
+                            `<div class="viewer-popup-item">@${u}</div>`
+                        ).join('');
+                    }
+                } catch (_) {
+                    popup.innerHTML = '<div class="viewer-popup-empty">Yüklenemedi</div>';
+                }
+            });
+
+            document.addEventListener('click', () => popup.classList.remove('open'));
         }
 
         // ── Otomatik kapak fotoğrafı (host) ────────────────────────────────
