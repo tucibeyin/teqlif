@@ -310,6 +310,12 @@ if os.path.exists(frontend_dir):
         return FileResponse(os.path.join(frontend_dir, "index.html"))
 
 
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    path = os.path.join(frontend_dir, "static", "icons", "favicon.ico")
+    return FileResponse(path, media_type="image/x-icon")
+
+
 @app.get("/robots.txt", include_in_schema=False)
 async def robots_txt():
     content = (
