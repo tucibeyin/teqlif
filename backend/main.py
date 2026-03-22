@@ -17,7 +17,7 @@ from app.logging_config import setup_logging
 from app.routers import auth, streams, webhooks, auction, chat, moderation
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
-from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings
+from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics
 from app.security.middleware import security_headers, SecurityMiddleware, limiter, RateLimitExceeded, _rate_limit_exceeded_handler
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
@@ -35,6 +35,7 @@ import app.models.report  # noqa: F401 — tablo kaydı için
 import app.models.favorite  # noqa: F401 — tablo kaydı için
 import app.models.rating  # noqa: F401 — tablo kaydı için
 import app.models.block  # noqa: F401 — tablo kaydı için
+import app.models.analytics  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
@@ -217,6 +218,7 @@ app.include_router(upload.router)
 app.include_router(admin_auth.router)
 app.include_router(admin_data.router)
 app.include_router(moderation.router)
+app.include_router(analytics.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):
