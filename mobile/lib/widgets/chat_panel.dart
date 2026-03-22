@@ -328,8 +328,8 @@ class _ChatPanelState extends State<ChatPanel> {
                 // Scroll alanı: history'nin son 20'si
                 itemCount: min(_history.length, 20),
                 itemBuilder: (_, i) {
-                  final histLen = min(_history.length, 20);
-                  final msg = _history[_history.length - (histLen - i)];
+                  // i=0 → en yeni mesaj (reverse:true'da alta denk gelir)
+                  final msg = _history[_history.length - 1 - i];
                   // Aktif timed mesajı bul (fade animasyonu için)
                   _TimedMessage? timed;
                   for (final t in _messages) {
