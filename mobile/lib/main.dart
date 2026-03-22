@@ -126,41 +126,10 @@ class _SplashGateState extends State<_SplashGate> {
     });
     if (!mounted) return;
 
-    // Analytics Çerez/İzleme İzni Kontrolü
-    final consent = await AnalyticsService.getConsentStatus();
-    if (consent == null && mounted) {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (ctx) => AlertDialog(
-          backgroundColor: const Color(0xFF1E293B), // Dark theme modal
-          title: const Text('Kullanım İzni', style: TextStyle(color: Colors.white)),
-          content: const Text(
-            'teqlif deneyiminizi iyileştirmek ve analiz yapmak için kullanım verilerinizi anonim olarak toplamamıza izin verir misiniz?',
-            style: TextStyle(fontSize: 14, color: Colors.white70),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () {
-                AnalyticsService.setConsent(false);
-                Navigator.of(ctx).pop();
-              },
-              child: const Text('Reddet', style: TextStyle(color: Colors.white54)),
-            ),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF0D9488)),
-              onPressed: () {
-                AnalyticsService.setConsent(true);
-                Navigator.of(ctx).pop();
-              },
-              child: const Text('Kabul Et', style: TextStyle(color: Colors.white)),
-            ),
-          ],
-        ),
-      );
-    } else if (consent != null) {
-      await AnalyticsService.init();
-    }
+    // Mobilde consent dialog gösterilmez; analytics otomatik başlar.
+    // Daha önce reddetmiş kullanıcılar için onay güncellenir.
+    await AnalyticsService.setConsent(true);
+    await AnalyticsService.init();
 
     if (!mounted) return;
 
