@@ -1593,16 +1593,6 @@
         let _listingMode = false;      // host: listing mi manual mı
         let _lastBidCount = 0;         // teklif sayısı takibi
 
-        function _usernameColor(username) {
-            let hash = 0;
-            for (let i = 0; i < username.length; i++) {
-                hash = (hash << 5) - hash + username.charCodeAt(i);
-                hash |= 0;
-            }
-            const hue = Math.abs(hash) % 360;
-            return `hsl(${hue}, 70%, 68%)`;
-        }
-
         function _addBidEntry(username, amount) {
             const list = document.getElementById('bidsList');
             if (!list) return;
@@ -1614,7 +1604,7 @@
                 el.classList.remove('first');
             });
             const u = username.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const color = _usernameColor(username);
+            const color = Chat.usernameColor(username);
             const div = document.createElement('div');
             div.className = 'bid-item';
             div.innerHTML = `<span class="bid-rank first">#1</span><span class="bid-user${_isHostPage ? ' clickable' : ''}" data-username="${u}" style="color:${color}">@${u}</span><span class="bid-amount">₺${Number(amount).toLocaleString('tr-TR')}</span>`;
