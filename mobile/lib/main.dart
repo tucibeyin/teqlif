@@ -37,8 +37,27 @@ void main() async {
   // --- SENTRY ENTEGRASYONU BITISI ---
 }
 
-class TeqlifApp extends StatelessWidget {
+class TeqlifApp extends StatefulWidget {
   const TeqlifApp({super.key});
+
+  @override
+  State<TeqlifApp> createState() => _TeqlifAppState();
+}
+
+class _TeqlifAppState extends State<TeqlifApp> {
+  final _lifecycleObserver = AnalyticsLifecycleObserver();
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(_lifecycleObserver);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(_lifecycleObserver);
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -50,6 +69,7 @@ class TeqlifApp extends StatelessWidget {
         darkTheme: darkTheme,
         debugShowCheckedModeBanner: false,
         themeMode: ThemeProvider.instance.themeMode,
+        navigatorObservers: [AnalyticsRouteObserver()],
         builder: (context, child) {
           return GlobalKeyboardAccessory(child: child!);
         },

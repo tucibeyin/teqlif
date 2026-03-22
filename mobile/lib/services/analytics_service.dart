@@ -84,3 +84,43 @@ class AnalyticsService {
     }
   }
 }
+
+// --- Screen Tracking Observer ---
+class AnalyticsRouteObserver extends RouteObserver<PageRoute<dynamic>> {
+  @override
+  void didPush(Route<dynamic> route, Route<dynamic>? previousRoute) {
+    super.didPush(route, previousRoute);
+    if (route is PageRoute) {
+      AnalyticsService.trackEvent('screen_view', {'screen_name': route.settings.name ?? 'unknown'});
+    }
+  }
+
+  @override
+  void didReplace({Route<dynamic>? newRoute, Route<dynamic>? oldRoute}) {
+    super.didReplace(newRoute: newRoute, oldRoute: oldRoute);
+    if (newRoute is PageRoute) {
+      AnalyticsService.trackEvent('screen_view', {'screen_name': newRoute?.settings.name ?? 'unknown'});
+    }
+  }
+}
+
+// --- App Time Spent Tracking Observer ---
+class AnalyticsLifecycleObserver extends WidgetsBindingObserver {
+  DateTime? _appStartTime;
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _appStartTime = DateTime.now();
+    } else if (state == AppLifecycleState.paused || state == AppLifecycleState.detached) {
+      if (_appStartTime != null) {
+        final timeSpent = DateTime.now().difference(_appStartTime!).inSeconds;
+        if (timeSpent > 2) {
+          AnalyticsService.trackEvent('time_spent', {'seconds': timeSpent});
+        }
+        _appStartTime = null;
+      }
+    }
+  }
+}
+

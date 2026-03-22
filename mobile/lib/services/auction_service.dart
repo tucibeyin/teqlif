@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../models/auction.dart';
 import 'storage_service.dart';
+import 'analytics_service.dart';
 
 class AuctionService {
   static Future<Map<String, String>> _headers() async {
@@ -77,6 +78,8 @@ class AuctionService {
   }
 
   static Future<AuctionState> placeBid(int streamId, double amount) async {
+    AnalyticsService.trackEvent('bid_attempt', {'stream_id': streamId, 'amount': amount});
+    
     final res = await http.post(
       Uri.parse('$kBaseUrl/auction/$streamId/bid'),
       headers: await _headers(),
