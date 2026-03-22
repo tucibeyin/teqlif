@@ -2311,6 +2311,9 @@
             document.getElementById('binModalDesc').style.display = '';
             document.getElementById('binModalWaiting').style.display = 'none';
             document.getElementById('binModalActions').style.display = 'flex';
+            // Önceki işlemden kalabilecek disabled/loading durumunu sıfırla
+            const confirmBtn = document.getElementById('binModalConfirm');
+            if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Satın Al'; }
             document.getElementById('buyItNowModal').style.display = 'flex';
         }
 
