@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/theme.dart';
+import '../core/app_exception.dart';
+import '../core/logger_service.dart';
 import '../models/auction.dart';
 import '../providers/auction_provider.dart';
 import '../services/auction_service.dart';
@@ -689,7 +691,10 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
       await AuctionService.placeBid(widget.streamId, amount);
       _customBidCtrl.clear();
       _setMsg('₺${_fmt(amount)} teklifiniz alındı!');
-    } catch (e) {
+    } on AppException catch (e) {
+      _setMsg(e.message, error: true);
+    } catch (e, st) {
+      LoggerService.instance.captureException(e, stackTrace: st, tag: '_BidSheetContent._placeBid');
       final s = e.toString();
       _setMsg(s.startsWith('Exception: ') ? s.substring('Exception: '.length) : s,
           error: true);
