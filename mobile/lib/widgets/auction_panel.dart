@@ -40,16 +40,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   bool _msgError = false;
   // BIN onay dialog'unun context'i — host kararına göre otomatik kapatmak için
   BuildContext? _binDialogCtx;
-  // Oturumdaki kullanıcının adı — BIN alıcısı mı değil mi ayırt etmek için
-  String? _myUsername;
-
-  @override
-  void initState() {
-    super.initState();
-    StorageService.getUserInfo().then((info) {
-      if (mounted) setState(() => _myUsername = info?['username'] as String?);
-    });
-  }
+  // Bu viewer BIN talebini başlattıysa true — async username'e gerek kalmaz
+  bool _iAmBinBuyer = false;
 
   @override
   void dispose() {
@@ -258,14 +250,13 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           _setMsg(
             '🛒 Hemen Al tamamlandı! @${next.buyerUsername ?? next.currentBidder ?? '?'} — ₺${_fmt(next.currentBid)}',
           );
-        } else if (next.buyerUsername != null && next.buyerUsername == _myUsername) {
-          // Bu viewer BIN alıcısıydı
+        } else if (_iAmBinBuyer) {
           _setMsg('🎉 Tebrikler! Satın alma tamamlandı.');
         } else {
-          // Diğer viewer'lar
           final buyer = next.buyerUsername ?? next.currentBidder ?? '?';
           _setMsg('🛒 Ürün Hemen Satıldı! @$buyer tarafından alındı.');
         }
+        _iAmBinBuyer = false;
       }
       // Host: Hemen Al talebi geldiğinde onay diyaloğu göster
       if (widget.isHost && prev != null && !prev.isPending && next.isPending) {
@@ -273,9 +264,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       }
       // Viewer: talep reddedildiğinde bilgi mesajı (isPending → active geçişi)
       if (!widget.isHost && prev != null && prev.isPending && !next.isPending && !next.isBoughtItNow) {
-        final wasBuyer = prev.pendingBuyerUsername != null &&
-            prev.pendingBuyerUsername == _myUsername;
-        if (wasBuyer) {
+        if (_iAmBinBuyer) {
           // BIN talebini başlatan viewer: diyalog kapat + red mesajı
           if (_binDialogCtx != null && _binDialogCtx!.mounted) {
             Navigator.of(_binDialogCtx!).pop();
@@ -283,17 +272,16 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           }
           _setMsg('Hemen Al talebiniz reddedildi, artırma devam ediyor.', error: true);
         } else {
-          // Diğer viewer'lar: artırma devam ediyor bildirimi
-          _setMsg('Hemen Al işlemi reddedildi, artırma devam ediyor.');
+          _setMsg('Hemen Al işlemi sonuçlandı, artırma devam ediyor.');
         }
+        _iAmBinBuyer = false;
       }
-      // Viewer: talep tamamlandığında (isBoughtItNow && prev.isPending)
+      // Viewer: talep tamamlandığında dialog'u kapat (mesaj yukarıda)
       if (!widget.isHost && prev != null && prev.isPending && next.isBoughtItNow) {
         if (_binDialogCtx != null && _binDialogCtx!.mounted) {
           Navigator.of(_binDialogCtx!).pop();
           _binDialogCtx = null;
         }
-        // Mesaj yukarıdaki isBoughtItNow bloğunda zaten ayarlandı
       }
     });
 
@@ -779,8 +767,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                       onPressed: () async {
                         setS(() => waiting = true);
                         try {
-                          await AuctionService.buyItNow(
-                              widget.streamId);
+                          await AuctionService.buyItNow(widget.streamId);
+                          // Başarılı → bu viewer BIN alıcısı olarak işaretlenir
+                          _iAmBinBuyer = true;
                           // Dialog ref.listen üzerinden kapanacak (host kararıyla)
                         } on AppException catch (e) {
                           if (ctx.mounted) Navigator.pop(ctx);
@@ -906,7 +895,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       isScrollControlled: true,
-      builder: (_) => _BidSheetContent(streamId: widget.streamId, myUsername: _myUsername),
+      builder: (_) => _BidSheetContent(streamId: widget.streamId, iAmBinBuyer: _iAmBinBuyer),
     );
   }
 
@@ -986,8 +975,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
 class _BidSheetContent extends ConsumerStatefulWidget {
   final int streamId;
-  final String? myUsername;
-  const _BidSheetContent({required this.streamId, this.myUsername});
+  final bool iAmBinBuyer;
+  const _BidSheetContent({required this.streamId, this.iAmBinBuyer = false});
 
   @override
   ConsumerState<_BidSheetContent> createState() => _BidSheetContentState();
@@ -1085,8 +1074,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
     // Hemen Al talebi onay bekliyor (pending)
     if (liveState.isPending && !liveState.isBoughtItNow) {
-      final isBuyer = widget.myUsername != null &&
-          liveState.pendingBuyerUsername == widget.myUsername;
+      final isBuyer = widget.iAmBinBuyer;
       return Padding(
         padding: EdgeInsets.fromLTRB(
             20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
