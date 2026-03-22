@@ -5,6 +5,7 @@ from pydantic import BaseModel, field_validator, model_validator
 class AuctionStart(BaseModel):
     item_name: Optional[str] = None
     start_price: float  # her zaman zorunlu
+    buy_it_now_price: Optional[float] = None  # opsiyonel
     listing_id: Optional[int] = None  # seçilince başlık buradan gelir
 
     @model_validator(mode="after")
@@ -29,6 +30,13 @@ class AuctionStart(BaseModel):
             raise ValueError("Başlangıç fiyatı negatif olamaz")
         return v
 
+    @field_validator("buy_it_now_price")
+    @classmethod
+    def bin_price_valid(cls, v: Optional[float]) -> Optional[float]:
+        if v is not None and v <= 0:
+            raise ValueError("Hemen al fiyatı sıfırdan büyük olmalı")
+        return v
+
 
 class BidIn(BaseModel):
     amount: float
@@ -45,6 +53,7 @@ class AuctionStateOut(BaseModel):
     status: str
     item_name: Optional[str] = None
     start_price: Optional[float] = None
+    buy_it_now_price: Optional[float] = None
     current_bid: Optional[float] = None
     current_bidder: Optional[str] = None
     bid_count: int = 0

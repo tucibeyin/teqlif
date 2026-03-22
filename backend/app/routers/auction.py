@@ -15,6 +15,7 @@ from app.models.auction import Auction
 from app.models.bid import Bid
 from app.models.listing import Listing
 from app.models.message import DirectMessage
+from app.models.purchase import Purchase
 from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut
 from app.utils.auth import get_current_user, decode_token
 from app.utils.redis_client import get_redis
@@ -26,6 +27,18 @@ logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auction", tags=["auction"])
 
 _PUBSUB_CHANNEL = "auction_broadcast"
+
+# ── Fiyat formatlama yardımcısı ─────────────────────────────────────────────
+def _fmt_price(v: float) -> str:
+    s = str(int(v))
+    r, i = "", 0
+    for ch in reversed(s):
+        if i and i % 3 == 0:
+            r = "." + r
+        r = ch + r
+        i += 1
+    return f"₺{r}"
+
 
 # ── Redis keys ──────────────────────────────────────────────────────────────
 def _key(stream_id: int) -> str:
@@ -121,10 +134,12 @@ async def _get_state(stream_id: int) -> dict:
     if not data:
         return {"status": "idle", "bid_count": 0}
     listing_id_raw = data.get("listing_id")
+    bin_raw = data.get("buy_it_now_price")
     return {
         "status": data.get("status", "idle"),
         "item_name": data.get("item_name"),
         "start_price": float(data["start_price"]) if data.get("start_price") else None,
+        "buy_it_now_price": float(bin_raw) if bin_raw else None,
         "current_bid": float(data["current_bid"]) if data.get("current_bid") else None,
         "current_bidder": data.get("current_bidder_name") or None,
         "bid_count": int(data.get("bid_count", 0)),
@@ -215,10 +230,12 @@ async def start_auction(
         item_name = data.item_name
         listing_id_val = None
 
+    bin_price = float(data.buy_it_now_price) if data.buy_it_now_price else None
     await redis.hset(key, mapping={
         "status": "active",
         "item_name": item_name,
         "start_price": str(start_price),
+        "buy_it_now_price": str(bin_price) if bin_price else "",
         "current_bid": str(start_price),
         "current_bidder_id": "",
         "current_bidder_name": "",
@@ -449,6 +466,156 @@ async def place_bid(
     return state
 
 
+# Atomik BIN kilidi: durum + fiyat kontrolü + status kilitleme tek adımda.
+# Başarılı olursa status → 'buy_it_now_locked' yazılır; başka istek giremez.
+_BUY_IT_NOW_LOCK_SCRIPT = """
+local key    = KEYS[1]
+local status = redis.call('hget', key, 'status')
+if status ~= 'active' and status ~= 'paused' then
+    return {0, 'not_active'}
+end
+local bin_raw = redis.call('hget', key, 'buy_it_now_price')
+if not bin_raw or bin_raw == '' then
+    return {0, 'no_bin_price'}
+end
+local bin     = tonumber(bin_raw)
+local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
+if current >= bin then
+    return {0, 'bid_exceeds_bin'}
+end
+redis.call('hset', key, 'status', 'buy_it_now_locked')
+return {1, bin_raw}
+"""
+
+
+@router.post("/{stream_id}/buy-it-now", response_model=AuctionStateOut)
+async def buy_it_now(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    # ── 0. Host kendi artırmasını satın alamaz ───────────────────────────────
+    result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+    stream = result.scalar_one_or_none()
+    if not stream:
+        raise NotFoundException("Yayın bulunamadı")
+    if stream.host_id == current_user.id:
+        raise ForbiddenException("Host kendi açık artırmasını satın alamaz")
+
+    redis = await get_redis()
+    key = _key(stream_id)
+
+    # ── 1. Mute kontrolü ─────────────────────────────────────────────────────
+    from app.routers.moderation import mute_key
+    if await redis.sismember(mute_key(stream_id), str(current_user.id)):
+        raise ForbiddenException("Bu yayında susturuldunuz. Satın alma yapamazsınız.")
+
+    # ── 2. Redis atomik kilitleme (Primary Pessimistic Lock) ─────────────────
+    # Tek Lua çağrısı: durum+fiyat kontrol et VE 'buy_it_now_locked' yaz.
+    val = await redis.eval(_BUY_IT_NOW_LOCK_SCRIPT, 1, key)
+    ok, msg = int(val[0]), val[1]
+    if ok == 0:
+        if msg == "not_active":
+            raise BadRequestException("Açık artırma aktif değil")
+        if msg == "no_bin_price":
+            raise BadRequestException("Bu ürün hemen alıma kapalı")
+        if msg == "bid_exceeds_bin":
+            raise BadRequestException(
+                "Teklifler hemen al fiyatını aştığı için artık kullanılamaz"
+            )
+        raise BadRequestException("Hemen al işlemi gerçekleştirilemedi")
+
+    bin_price = float(msg)
+
+    # Redis'ten diğer bilgileri al
+    redis_data = await redis.hgetall(key)
+    item_name  = redis_data.get("item_name", "")
+    lid_str    = redis_data.get("listing_id", "")
+    listing_id = int(lid_str) if lid_str else None
+    bid_count  = int(redis_data.get("bid_count", 0))
+    start_price = float(redis_data.get("start_price", bin_price))
+
+    # ── 3. DB İşlemi (Secondary Pessimistic Lock + Commit) ───────────────────
+    try:
+        # Listing varsa with_for_update() ile kilitle
+        listing: Listing | None = None
+        if listing_id:
+            listing_result = await db.execute(
+                select(Listing)
+                .where(Listing.id == listing_id)
+                .with_for_update()
+            )
+            listing = listing_result.scalar_one_or_none()
+
+        # Auction kaydı oluştur
+        auction = Auction(
+            stream_id=stream_id,
+            listing_id=listing_id,
+            item_name=item_name,
+            start_price=start_price,
+            buy_it_now_price=bin_price,
+            final_price=bin_price,
+            winner_id=current_user.id,
+            winner_username=current_user.username,
+            bid_count=bid_count,
+            status="completed",
+            is_bought_it_now=True,
+            ended_at=datetime.now(timezone.utc),
+        )
+        db.add(auction)
+        await db.flush()  # auction.id üretilsin
+
+        # Listing'i SOLD olarak işaretle
+        if listing:
+            listing.is_active = False
+
+        # Purchase kaydı
+        purchase = Purchase(
+            buyer_id=current_user.id,
+            listing_id=listing_id,
+            auction_id=auction.id,
+            price=bin_price,
+            purchase_type="BUY_IT_NOW",
+        )
+        db.add(purchase)
+
+        await db.commit()
+
+    except Exception as exc:
+        await db.rollback()
+        # Kilidi geri aç — Redis'i tekrar 'active'/'paused' durumuna döndür
+        prev_status = redis_data.get("status", "active")
+        await redis.hset(key, "status", prev_status)
+        logger.error(
+            "[HEMEN AL] DB commit HATASI | stream_id=%s user=%s | %s",
+            stream_id, current_user.username, exc, exc_info=True,
+        )
+        capture_exception(exc)
+        raise DatabaseException("Satın alma işlemi kaydedilemedi, lütfen tekrar deneyin")
+
+    # ── 4. Redis temizle ─────────────────────────────────────────────────────
+    await redis.delete(key)
+
+    state = {
+        "status": "ended",
+        "item_name": item_name,
+        "bid_count": bid_count,
+        "current_bid": bin_price,
+        "current_bidder": current_user.username,
+        "start_price": start_price,
+        "buy_it_now_price": bin_price,
+        "listing_id": listing_id,
+    }
+
+    logger.info(
+        "[HEMEN AL] TAMAMLANDI | stream_id=%s buyer=%s price=%s item=%r",
+        stream_id, current_user.username, bin_price, item_name,
+    )
+
+    # Aşama 3'te WebSocket publish buraya eklenir
+    return state
+
+
 @router.post("/{stream_id}/accept", response_model=AuctionStateOut)
 async def accept_bid(
     stream_id: int,
@@ -473,17 +640,6 @@ async def accept_bid(
     lid_str = data.get("listing_id", "")
     listing_id = int(lid_str) if lid_str else None
     item_name = data.get("item_name", "")
-
-    # Fiyat formatlama yardımcısı
-    def _fmt_price(v: float) -> str:
-        s = str(int(v))
-        r, i = "", 0
-        for ch in reversed(s):
-            if i and i % 3 == 0:
-                r = "." + r
-            r = ch + r
-            i += 1
-        return f"₺{r}"
 
     listing_line = f"\n🔗 https://teqlif.com/ilan/{listing_id}" if listing_id else ""
     dm_content = (
