@@ -14,6 +14,7 @@ class GlobalKeyboardAccessory extends StatefulWidget {
 
 class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   TextEditingController? _activeController;
+  bool _isObscure = false;
 
   @override
   void initState() {
@@ -29,21 +30,20 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
 
   void _handleFocusChange() {
     final primaryFocus = FocusManager.instance.primaryFocus;
-    
+
     if (primaryFocus != null && primaryFocus.context != null) {
-      final state = primaryFocus.context!.findAncestorStateOfType<EditableTextState>() ?? 
+      final state = primaryFocus.context!.findAncestorStateOfType<EditableTextState>() ??
                     _findEditableInContext(primaryFocus.context!);
 
       if (state != null) {
         if (_activeController != state.widget.controller) {
           setState(() {
             _activeController = state.widget.controller;
+            _isObscure = state.widget.obscureText;
           });
         }
         return;
       } else {
-        // If we have focus but it's not on an EditableText, and we had an active controller,
-        // it means we lost focus. Ensure keyboard is closed.
         if (_activeController != null) {
           primaryFocus.unfocus();
         }
@@ -53,6 +53,7 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
     if (_activeController != null) {
       setState(() {
         _activeController = null;
+        _isObscure = false;
       });
     }
   }
@@ -85,7 +86,7 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
         children: [
           widget.child,
           if (_activeController != null)
-            _AccessoryBar(controller: _activeController!),
+            _AccessoryBar(controller: _activeController!, isObscure: _isObscure),
         ],
       ),
     );
@@ -94,8 +95,9 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
 
 class _AccessoryBar extends StatelessWidget {
   final TextEditingController controller;
+  final bool isObscure;
 
-  const _AccessoryBar({required this.controller});
+  const _AccessoryBar({required this.controller, this.isObscure = false});
 
   @override
   Widget build(BuildContext context) {
@@ -130,26 +132,28 @@ class _AccessoryBar extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: ValueListenableBuilder<TextEditingValue>(
-                        valueListenable: controller,
-                        builder: (context, value, _) {
-                          final text = value.text.isEmpty ? 'Yazılıyor...' : value.text;
-                          return Text(
-                            text,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: TextStyle(
-                              decoration: TextDecoration.none,
-                              fontStyle: value.text.isEmpty ? FontStyle.italic : FontStyle.normal,
-                              color: value.text.isEmpty 
-                                  ? AppColors.textTertiary(context) 
-                                  : AppColors.textPrimary(context),
-                              fontSize: 13,
-                              fontWeight: value.text.isEmpty ? FontWeight.normal : FontWeight.w500,
+                      child: isObscure
+                          ? const SizedBox.shrink()
+                          : ValueListenableBuilder<TextEditingValue>(
+                              valueListenable: controller,
+                              builder: (context, value, _) {
+                                final text = value.text.isEmpty ? 'Yazılıyor...' : value.text;
+                                return Text(
+                                  text,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: TextStyle(
+                                    decoration: TextDecoration.none,
+                                    fontStyle: value.text.isEmpty ? FontStyle.italic : FontStyle.normal,
+                                    color: value.text.isEmpty
+                                        ? AppColors.textTertiary(context)
+                                        : AppColors.textPrimary(context),
+                                    fontSize: 13,
+                                    fontWeight: value.text.isEmpty ? FontWeight.normal : FontWeight.w500,
+                                  ),
+                                );
+                              },
                             ),
-                          );
-                        },
-                      ),
                     ),
                     const SizedBox(width: 12),
                     TextButton(
