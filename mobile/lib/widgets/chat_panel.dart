@@ -143,7 +143,7 @@ class _ChatPanelState extends State<ChatPanel> {
       shouldRemove: () {
         final idx = _messages.indexOf(timed);
         if (idx < 0) return true;
-        return idx < _messages.length - 3;
+        return idx < _messages.length - 5;
       },
       onExpired: () {
         if (mounted) {
@@ -169,7 +169,7 @@ class _ChatPanelState extends State<ChatPanel> {
   /// mesajları fade-out yaparak listeden temizler.
   void _evictStalePermanents() {
     final toEvict = <_TimedMessage>[];
-    final protectedStart = _messages.length - 3;
+    final protectedStart = _messages.length - 5;
     for (int i = 0; i < _messages.length; i++) {
       if (_messages[i]._permanent && i < protectedStart) {
         toEvict.add(_messages[i]);
@@ -320,7 +320,7 @@ class _ChatPanelState extends State<ChatPanel> {
               // Her mesaj yaklaşık 22px, +4 ListView top padding.
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
-              height: _messages.length.clamp(3, 6) * 22.0 + 4.0,
+              height: _messages.length.clamp(5, 6) * 22.0 + 4.0,
               child: ListView.builder(
                 controller: _scrollController,
                 reverse: true,
