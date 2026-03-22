@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,24 +18,22 @@ import 'services/analytics_service.dart';
 import 'widgets/global_keyboard_accessory.dart';
 
 void main() async {
-  WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
-  FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await ThemeProvider.instance.load();
-  // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
-  // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
-  PushNotificationService.initEarly();
-
-// --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU ---
+  // --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU ---
+  // NOT: ensureInitialized ve runApp aynı zone'da çağrılmalı.
+  // SentryFlutter.init appRunner'ı kendi zone'unda çalıştırır; bu nedenle
+  // tüm başlatma işlemleri appRunner içine taşındı.
   await SentryFlutter.init(
     (options) {
       options.dsn = 'https://d9535262385699cee49c13cc02add8f2@o4511052861538304.ingest.us.sentry.io/4511053904478208';
       // Üretim ortamı için performansı artırmak adına oranı düşürebilirsiniz (örn: 0.2)
       options.tracesSampleRate = 1.0;
     },
-    appRunner: () {
-      // 1. Flutter/UI katmanındaki yakalanmamış hataları yakala
-      //    (örn: build metodundaki null pointer, layout hataları)
+    appRunner: () async {
+      // ensureInitialized ve runApp aynı (Sentry) zone'unda çalışır
+      WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
+      FlutterNativeSplash.preserve(widgetsBinding: widgetsBinding);
+
+      // Flutter/UI katmanındaki yakalanmamış hataları yakala
       PlatformDispatcher.instance.onError = (error, stack) {
         LoggerService.instance.captureException(
           error,
@@ -46,18 +43,15 @@ void main() async {
         return true; // hatayı "işlendi" olarak işaretle, uygulama çökmez
       };
 
-      // 2. Dart async zone'undaki tüm yakalanmamış hataları yakala
-      //    (örn: async fonksiyonlardaki unhandled exception'lar)
-      runZonedGuarded(
-        () => runApp(const ProviderScope(child: TeqlifApp())),
-        (error, stack) {
-          LoggerService.instance.captureException(
-            error,
-            stackTrace: stack,
-            tag: 'ZonedGuarded',
-          );
-        },
-      );
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      await ThemeProvider.instance.load();
+      // Background handler kaydı senkron çalışır; geri kalanı (foreground options,
+      // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
+      PushNotificationService.initEarly();
+
+      // Sentry appRunner zaten runZonedGuarded ile sarılı olduğundan
+      // async hataları da Sentry tarafından yakalanır.
+      runApp(const ProviderScope(child: TeqlifApp()));
     },
   );
   // --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU SONU ---
