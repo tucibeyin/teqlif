@@ -200,6 +200,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
+        key: const Key('main_bottom_nav'),
         currentIndex: _currentIndex,
         onTap: _onNavTap,
         items: [

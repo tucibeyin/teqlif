@@ -346,6 +346,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
               children: [
                 // Geri
                 GestureDetector(
+                  key: const Key('swipe_live_btn_geri'),
                   onTap: _leave,
                   child: Container(
                     width: 36,
@@ -416,6 +417,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                 ),
                 // Ayrıl
                 GestureDetector(
+                  key: const Key('swipe_live_btn_ayril'),
                   onTap: _leave,
                   child: Container(
                     padding: const EdgeInsets.symmetric(

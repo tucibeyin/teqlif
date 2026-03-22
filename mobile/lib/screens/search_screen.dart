@@ -121,12 +121,14 @@ class _SearchScreenState extends State<SearchScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
               child: TextField(
+                key: const Key('search_input_arama'),
                 controller: _controller,
                 decoration: InputDecoration(
                   hintText: 'Kullanıcı ara...',
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _hasQuery
                       ? IconButton(
+                          key: const Key('search_btn_arama_temizle'),
                           icon: const Icon(Icons.clear, size: 18),
                           onPressed: _controller.clear,
                         )

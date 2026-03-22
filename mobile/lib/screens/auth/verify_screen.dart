@@ -114,6 +114,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
               const SizedBox(height: 16),
             ],
             TextFormField(
+              key: const Key('verify_input_kod'),
               controller: _codeCtrl,
               keyboardType: TextInputType.number,
               inputFormatters: [
@@ -137,6 +138,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton(
+              key: const Key('verify_btn_dogrula'),
               onPressed: _loading ? null : _verify,
               child: _loading
                   ? const SizedBox(
@@ -158,6 +160,7 @@ class _VerifyScreenState extends State<VerifyScreen> {
                       child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : TextButton(
+                      key: const Key('verify_btn_kodu_tekrar_gonder'),
                       onPressed: _resend,
                       child: const Text(
                         'Kodu tekrar gönder',

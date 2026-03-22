@@ -111,6 +111,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         ),
         actions: [
           IconButton(
+            key: const Key('profile_btn_ayarlar'),
             icon: const Icon(Icons.settings_outlined),
             onPressed: _openSettings,
           ),
@@ -156,6 +157,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             children: [
                               _StatItem(count: _listings.length, label: 'İlan'),
                               GestureDetector(
+                                key: const Key('profile_stat_takipci'),
                                 onTap: _user?['id'] != null
                                     ? () => Navigator.push(
                                           context,
@@ -174,6 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ),
                               ),
                               GestureDetector(
+                                key: const Key('profile_stat_takip'),
                                 onTap: _user?['id'] != null
                                     ? () => Navigator.push(
                                           context,
@@ -225,6 +228,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                     child: OutlinedButton(
+                      key: const Key('profile_btn_profil_duzenle'),
                       onPressed: () => Navigator.push(
                         context,
                         MaterialPageRoute(
@@ -284,7 +288,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   )
                 : SliverGrid(
                     delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => _ListingGridItem(listing: _listings[i]),
+                      (ctx, i) => _ListingGridItem(
+                        key: Key('profile_listing_${_listings[i]['id']}'),
+                        listing: _listings[i],
+                      ),
                       childCount: _listings.length,
                     ),
                     gridDelegate:
@@ -326,7 +333,7 @@ class _StatItem extends StatelessWidget {
 
 class _ListingGridItem extends StatelessWidget {
   final dynamic listing;
-  const _ListingGridItem({required this.listing});
+  const _ListingGridItem({super.key, required this.listing});
 
   String _fmt(dynamic price) {
     if (price == null) return '';
@@ -808,6 +815,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               ),
               if (_biometricAvailable)
                 SwitchListTile(
+                  key: const Key('settings_switch_face_id'),
                   secondary: Icon(Icons.face_outlined,
                       color: AppColors.iconColor(context)),
                   title: Text('Face ID ile Giriş',
@@ -822,6 +830,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   onChanged: _toggleBiometric,
                 ),
               SwitchListTile(
+                key: const Key('settings_switch_karanlik_mod'),
                 secondary: Icon(Icons.dark_mode_outlined, color: AppColors.iconColor(context)),
                 title: Text('Karanlık Mod', style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
                 subtitle: Text(
@@ -879,6 +888,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
             child: Column(
               children: [
                 ListTile(
+                  key: const Key('settings_tile_hesabi_sil'),
                   leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
                   title: const Text(
                     'Hesabı Sil',
@@ -891,6 +901,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 ),
                 const Divider(height: 1, indent: 56),
                 ListTile(
+                  key: const Key('settings_tile_cikis_yap'),
                   leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
                   title: const Text(
                     'Çıkış Yap',

@@ -552,6 +552,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   Widget _viewerBidButton(BuildContext context, AuctionState state) {
     final enabled = widget.enabled;
     return GestureDetector(
+      key: const Key('auction_btn_teklif_ver'),
       onTap: enabled ? () => _showBidSheet(context, state) : null,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
@@ -655,6 +656,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             Row(children: [
               Expanded(
                 child: TextField(
+                  key: const Key('auction_input_ozel_teklif'),
                   controller: _customBidCtrl,
                   keyboardType: TextInputType.number,
                   inputFormatters: [ThousandsSeparatorInputFormatter()],
@@ -687,6 +689,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               SizedBox(
                 height: 50,
                 child: ElevatedButton(
+                  key: const Key('auction_btn_ozel_teklif_gonder'),
                   onPressed: () {
                     final raw = _customBidCtrl.text.replaceAll('.', '');
                     final v = double.tryParse(raw);

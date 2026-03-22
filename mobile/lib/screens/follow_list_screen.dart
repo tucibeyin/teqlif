@@ -131,6 +131,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                     return ListTile(
                       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
                       leading: GestureDetector(
+                        key: Key('follow_avatar_${u['id']}'),
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -151,6 +152,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                         ),
                       ),
                       title: GestureDetector(
+                        key: Key('follow_name_${u['id']}'),
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -171,6 +173,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                           : SizedBox(
                               width: 100,
                               child: OutlinedButton(
+                                key: Key('follow_btn_toggle_${u['id']}'),
                                 onPressed: () => _toggleFollow(i),
                                 style: OutlinedButton.styleFrom(
                                   backgroundColor: isFollowing ? null : kPrimary,

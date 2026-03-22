@@ -296,6 +296,7 @@ class _ChatPanelState extends State<ChatPanel> {
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
                     child: GestureDetector(
+                      key: const Key('chat_panel_btn_gecmis'),
                       onTap: _showHistory,
                       child: Container(
                         width: 38,
@@ -325,6 +326,7 @@ class _ChatPanelState extends State<ChatPanel> {
                       ),
                     ),
                     child: TextField(
+                      key: const Key('chat_panel_input_mesaj'),
                       controller: _inputCtrl,
                       focusNode: _focusNode,
                       enabled: !_selfMuted,
@@ -351,6 +353,7 @@ class _ChatPanelState extends State<ChatPanel> {
                 ),
                 const SizedBox(width: 8),
                 GestureDetector(
+                  key: const Key('chat_panel_btn_gonder'),
                   onTap: _selfMuted ? null : _sendMessage,
                   child: Container(
                     width: 38,

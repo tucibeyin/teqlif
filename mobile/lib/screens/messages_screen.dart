@@ -682,6 +682,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                 children: [
                   Expanded(
                     child: TextField(
+                      key: const Key('chat_input_mesaj'),
                       controller: _textCtrl,
                       textCapitalization: TextCapitalization.sentences,
                       textInputAction: TextInputAction.newline,
@@ -704,6 +705,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                   ),
                   const SizedBox(width: 8),
                   GestureDetector(
+                    key: const Key('chat_btn_gonder'),
                     onTap: _send,
                     child: Container(
                       width: 42,

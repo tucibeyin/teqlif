@@ -469,6 +469,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     const SizedBox(width: 6),
                     // Mikrofon
                     _TopIconBtn(
+                      key: const Key('host_btn_mikrofon_toggle'),
                       icon: _micEnabled ? Icons.mic_rounded : Icons.mic_off_rounded,
                       active: _micEnabled,
                       onTap: _toggleMic,
@@ -476,6 +477,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     const SizedBox(width: 6),
                     // Kamera
                     _TopIconBtn(
+                      key: const Key('host_btn_kamera_toggle'),
                       icon: _cameraEnabled
                           ? Icons.videocam_rounded
                           : Icons.videocam_off_rounded,
@@ -485,6 +487,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     const SizedBox(width: 6),
                     // Kamera çevir
                     _TopIconBtn(
+                      key: const Key('host_btn_kamera_cevir'),
                       icon: Icons.flip_camera_ios_rounded,
                       active: true,
                       onTap: _switchCamera,
@@ -492,6 +495,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     const SizedBox(width: 10),
                     // Yayını Bitir
                     GestureDetector(
+                      key: const Key('host_btn_yayin_bitir'),
                       onTap: _endStream,
                       child: Container(
                         padding: const EdgeInsets.symmetric(
@@ -1081,6 +1085,7 @@ class _TopIconBtn extends StatelessWidget {
   final VoidCallback onTap;
 
   const _TopIconBtn({
+    super.key,
     required this.icon,
     required this.active,
     required this.onTap,

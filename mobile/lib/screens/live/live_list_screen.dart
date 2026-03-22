@@ -90,6 +90,7 @@ class LiveListScreenState extends State<LiveListScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextField(
+                key: const Key('live_dialog_input_yayin_basligi'),
                 controller: titleController,
                 autofocus: true,
                 maxLength: 200,
@@ -101,6 +102,7 @@ class LiveListScreenState extends State<LiveListScreen> {
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
+                key: const Key('live_dialog_select_kategori'),
                 value: selectedCategory,
                 decoration: const InputDecoration(
                   labelText: 'Kategori *',
@@ -120,10 +122,12 @@ class LiveListScreenState extends State<LiveListScreen> {
           ),
           actions: [
             TextButton(
+              key: const Key('live_dialog_btn_iptal'),
               onPressed: () => Navigator.pop(ctx),
               child: const Text('İptal'),
             ),
             ElevatedButton(
+              key: const Key('live_dialog_btn_baslat'),
               style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
               onPressed: () {
                 final t = titleController.text.trim();
@@ -220,6 +224,7 @@ class LiveListScreenState extends State<LiveListScreen> {
         ),
         actions: [
           TextButton.icon(
+            key: const Key('live_list_btn_yayin_ac'),
             onPressed: _showStartDialog,
             icon: const Icon(Icons.videocam_outlined, size: 18, color: Colors.red),
             label: const Text(
@@ -240,11 +245,13 @@ class LiveListScreenState extends State<LiveListScreen> {
                 padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                 children: [
                   _CategoryChip(
+                    key: const Key('live_list_chip_tumü'),
                     label: 'Tümü',
                     active: _selectedCategory == null,
                     onTap: () => setState(() => _selectedCategory = null),
                   ),
                   ...cats.map((c) => _CategoryChip(
+                        key: Key('live_list_chip_$c'),
                         label: _kCatLabels[c] ?? c,
                         active: _selectedCategory == c,
                         onTap: () => setState(() => _selectedCategory = c),
@@ -338,7 +345,7 @@ class _CategoryChip extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
 
-  const _CategoryChip({required this.label, required this.active, required this.onTap});
+  const _CategoryChip({super.key, required this.label, required this.active, required this.onTap});
 
   @override
   Widget build(BuildContext context) {

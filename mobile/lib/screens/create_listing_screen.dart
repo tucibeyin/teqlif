@@ -223,6 +223,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                       ),
                       if (_images.length < _maxImages)
                         TextButton.icon(
+                          key: const Key('create_listing_btn_fotograf_ekle'),
                           onPressed: _showImageSourceSheet,
                           icon: const Icon(Icons.add_photo_alternate_outlined,
                               size: 18),
@@ -306,6 +307,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   ] else ...[
                     const SizedBox(height: 8),
                     GestureDetector(
+                      key: const Key('create_listing_gesture_fotograf_ekle_bos'),
                       onTap: _showImageSourceSheet,
                       child: Builder(
                         builder: (context) => Container(
@@ -339,6 +341,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               _SectionCard(
                 children: [
                   TextFormField(
+                    key: const Key('create_listing_input_baslik'),
                     controller: _titleCtrl,
                     decoration: const InputDecoration(labelText: 'İlan Başlığı'),
                     validator: (v) =>
@@ -346,6 +349,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
+                    key: const Key('create_listing_select_kategori'),
                     value: _selectedCategory,
                     decoration: const InputDecoration(labelText: 'Kategori'),
                     items: _categories
@@ -357,6 +361,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
+                    key: const Key('create_listing_input_fiyat'),
                     controller: _priceCtrl,
                     keyboardType: TextInputType.number,
                     inputFormatters: [_ThousandSeparatorFormatter()],
@@ -369,6 +374,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
+                    key: const Key('create_listing_select_konum'),
                     value: _selectedCity,
                     decoration: const InputDecoration(labelText: 'Konum (isteğe bağlı)'),
                     hint: const Text('Şehir seçin'),
@@ -384,6 +390,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               _SectionCard(
                 children: [
                   TextFormField(
+                    key: const Key('create_listing_input_aciklama'),
                     controller: _descCtrl,
                     maxLines: 5,
                     keyboardType: TextInputType.multiline,
@@ -401,6 +408,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
+                  key: const Key('create_listing_btn_yayinla'),
                   onPressed: _submitting ? null : _submit,
                   child: _submitting
                       ? const SizedBox(

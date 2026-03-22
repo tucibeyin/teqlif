@@ -275,6 +275,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       _divider(),
                       Expanded(
                         child: GestureDetector(
+                          key: const Key('pub_profile_stat_takipci'),
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -291,6 +292,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                       _divider(),
                       Expanded(
                         child: GestureDetector(
+                          key: const Key('pub_profile_stat_takip'),
                           onTap: () => Navigator.push(
                             context,
                             MaterialPageRoute(
@@ -312,6 +314,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 // Action buttons
                 if (_isOwnProfile) ...[
                   _actionButton(
+                    key: const Key('pub_profile_btn_profil_duzenle'),
                     label: 'Profili Düzenle',
                     icon: Icons.edit_outlined,
                     primary: false,
@@ -321,6 +324,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ),
                 ] else if (userId != 0) ...[
                   _actionButton(
+                    key: const Key('pub_profile_btn_takip_toggle'),
                     label: _isFollowing ? 'Takip Ediliyor' : 'Takip Et',
                     icon: _isFollowing
                         ? Icons.person_remove_outlined
@@ -330,6 +334,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ),
                   const SizedBox(height: 8),
                   _actionButton(
+                    key: const Key('pub_profile_btn_mesaj_gonder'),
                     label: 'Mesaj Gönder',
                     icon: Icons.chat_bubble_outline,
                     primary: false,
@@ -347,6 +352,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   if (_isFollowing) ...[
                     const SizedBox(height: 8),
                     _actionButton(
+                      key: const Key('pub_profile_btn_puan_ver'),
                       label: hasMyRating ? 'Puanı Güncelle' : 'Puan Ver',
                       icon: hasMyRating
                           ? Icons.star_rounded
@@ -357,6 +363,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ],
                   const SizedBox(height: 8),
                   _actionButton(
+                    key: const Key('pub_profile_btn_engelle'),
                     label: _isBlocked ? 'Engeli Kaldır' : 'Engelle',
                     icon: Icons.block_outlined,
                     primary: false,
@@ -422,6 +429,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                         }()
                       : '';
                   return GestureDetector(
+                    key: Key('pub_profile_listing_${listing['id']}'),
                     onTap: () => Navigator.push(
                       ctx,
                       MaterialPageRoute(
@@ -556,6 +564,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     final filled = avg.round().clamp(0, 5);
 
     return GestureDetector(
+      key: const Key('pub_profile_btn_rating_badge'),
       onTap: _showRatingsList,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -632,6 +641,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       );
 
   Widget _actionButton({
+    Key? key,
     required String label,
     required IconData icon,
     required bool primary,
@@ -642,6 +652,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       builder: (context) => SizedBox(
         width: double.infinity,
         child: ElevatedButton.icon(
+          key: key,
           icon: Icon(icon, size: 18),
           label: Text(label),
           style: ElevatedButton.styleFrom(

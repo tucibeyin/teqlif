@@ -292,6 +292,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                 children: [
                   // Geri
                   GestureDetector(
+                    key: const Key('viewer_btn_geri'),
                     onTap: _leave,
                     child: Container(
                       width: 36,
@@ -364,6 +365,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                   ),
                   // Ayrıl
                   GestureDetector(
+                    key: const Key('viewer_btn_ayril'),
                     onTap: _leave,
                     child: Container(
                       padding: const EdgeInsets.symmetric(

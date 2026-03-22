@@ -119,6 +119,7 @@ class _NotificationSettingsScreenState
                   children: _prefs.keys.map((key) {
                     final info = _labels[key]!;
                     return _NotifTile(
+                      key: Key('notif_tile_$key'),
                       icon: info.$3,
                       label: info.$1,
                       subtitle: info.$2,
@@ -139,6 +140,7 @@ class _NotifTile extends StatelessWidget {
   final ValueChanged<bool> onChanged;
 
   const _NotifTile({
+    super.key,
     required this.icon,
     required this.label,
     required this.subtitle,

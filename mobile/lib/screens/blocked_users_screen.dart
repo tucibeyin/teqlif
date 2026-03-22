@@ -112,6 +112,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                         name.isNotEmpty ? name[0].toUpperCase() : '?';
                     return ListTile(
                       leading: GestureDetector(
+                        key: Key('blocked_avatar_${u['id']}'),
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -137,6 +138,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                         ),
                       ),
                       title: GestureDetector(
+                        key: Key('blocked_name_${u['id']}'),
                         onTap: () => Navigator.push(
                           context,
                           MaterialPageRoute(
@@ -157,6 +159,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                             color: AppColors.textSecondary(context)),
                       ),
                       trailing: OutlinedButton(
+                        key: Key('blocked_btn_engel_kaldir_${u['id']}'),
                         onPressed: () => _unblock(username, u['id'] as int),
                         style: OutlinedButton.styleFrom(
                           foregroundColor: const Color(0xFFEF4444),

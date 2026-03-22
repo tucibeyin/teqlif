@@ -185,8 +185,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         title: const Text('İlanı Sil'),
         content: const Text('Bu ilanı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('Vazgeç')),
           TextButton(
+            key: const Key('listing_detail_dialog_btn_vazgec'),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Vazgeç'),
+          ),
+          TextButton(
+            key: const Key('listing_detail_dialog_btn_sil'),
             onPressed: () async {
               Navigator.pop(context);
               await _deleteListing(context);
@@ -246,6 +251,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
+                key: const Key('listing_detail_report_select_neden'),
                 value: selectedReason,
                 hint: const Text('Neden seçin'),
                 decoration: InputDecoration(
@@ -264,6 +270,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               ),
               const SizedBox(height: 12),
               TextField(
+                key: const Key('listing_detail_report_input_aciklama'),
                 controller: noteCtrl,
                 maxLines: 3,
                 decoration: InputDecoration(
@@ -276,6 +283,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
+                  key: const Key('listing_detail_report_btn_gonder'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kPrimary,
                     foregroundColor: Colors.white,
@@ -352,6 +360,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         actions: [
           if (isMine) ...[
             IconButton(
+              key: const Key('listing_detail_btn_aktif_toggle'),
               icon: Icon(
                 _isActive ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                 color: _isActive ? const Color(0xFF6B7280) : kPrimary,
@@ -360,12 +369,14 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               onPressed: _toggleActive,
             ),
             IconButton(
+              key: const Key('listing_detail_btn_sil'),
               icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
               tooltip: 'İlanı Sil',
               onPressed: () => _confirmDelete(context),
             ),
           ] else if (_myUserId != null) ...[
             IconButton(
+              key: const Key('listing_detail_btn_favorile'),
               icon: Icon(
                 _isFavorited ? Icons.favorite : Icons.favorite_border,
                 color: _isFavorited ? Colors.red : const Color(0xFF9CA3AF),
@@ -374,6 +385,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               onPressed: _toggleFavorite,
             ),
             IconButton(
+              key: const Key('listing_detail_btn_sikayet'),
               icon: const Icon(Icons.flag_outlined, color: Color(0xFF9CA3AF), size: 22),
               tooltip: 'Şikayet Et',
               onPressed: () => _openReport(context),
@@ -480,6 +492,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             // Satıcı — tıklanabilir
             if (user != null)
               InkWell(
+                key: const Key('listing_detail_inkwell_satici'),
                 onTap: _goToProfile,
                 child: Container(
                   color: AppColors.surface(context),
@@ -536,6 +549,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(12),
                 child: ElevatedButton.icon(
+                  key: const Key('listing_detail_btn_mesaj_gonder'),
                   onPressed: _openChat,
                   icon: const Icon(Icons.chat_bubble_outline, size: 20),
                   label: const Text('Satıcıya Mesaj Gönder'),

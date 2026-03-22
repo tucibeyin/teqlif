@@ -10,6 +10,7 @@ class NotificationsScreen extends StatelessWidget {
         title: const Text('Bildirimler'),
         actions: [
           TextButton(
+            key: const Key('notifications_btn_tumunu_oku'),
             onPressed: () {},
             child: const Text(
               'Tümünü oku',

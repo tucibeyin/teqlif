@@ -157,6 +157,7 @@ class _AccessoryBar extends StatelessWidget {
                     ),
                     const SizedBox(width: 12),
                     TextButton(
+                      key: const Key('keyboard_accessory_btn_kapat'),
                       onPressed: () => FocusManager.instance.primaryFocus?.unfocus(),
                       style: TextButton.styleFrom(
                         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
