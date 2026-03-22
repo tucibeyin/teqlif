@@ -320,7 +320,7 @@ class _ChatPanelState extends State<ChatPanel> {
               // Her mesaj yaklaşık 22px, +4 ListView top padding.
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
-              height: _messages.length.clamp(5, 6) * 22.0 + 4.0,
+              height: _messages.length.clamp(5, 8) * 22.0 + 4.0,
               child: ListView.builder(
                 controller: _scrollController,
                 reverse: true,
