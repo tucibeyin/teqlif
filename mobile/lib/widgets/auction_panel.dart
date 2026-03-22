@@ -40,6 +40,16 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   bool _msgError = false;
   // BIN onay dialog'unun context'i — host kararına göre otomatik kapatmak için
   BuildContext? _binDialogCtx;
+  // Oturumdaki kullanıcının adı — BIN alıcısı mı değil mi ayırt etmek için
+  String? _myUsername;
+
+  @override
+  void initState() {
+    super.initState();
+    StorageService.getUserInfo().then((info) {
+      if (mounted) setState(() => _myUsername = info?['username'] as String?);
+    });
+  }
 
   @override
   void dispose() {
@@ -248,8 +258,13 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           _setMsg(
             '🛒 Hemen Al tamamlandı! @${next.buyerUsername ?? next.currentBidder ?? '?'} — ₺${_fmt(next.currentBid)}',
           );
-        } else {
+        } else if (next.buyerUsername != null && next.buyerUsername == _myUsername) {
+          // Bu viewer BIN alıcısıydı
           _setMsg('🎉 Tebrikler! Satın alma tamamlandı.');
+        } else {
+          // Diğer viewer'lar
+          final buyer = next.buyerUsername ?? next.currentBidder ?? '?';
+          _setMsg('🛒 Ürün Hemen Satıldı! @$buyer tarafından alındı.');
         }
       }
       // Host: Hemen Al talebi geldiğinde onay diyaloğu göster
@@ -258,11 +273,19 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       }
       // Viewer: talep reddedildiğinde bilgi mesajı (isPending → active geçişi)
       if (!widget.isHost && prev != null && prev.isPending && !next.isPending && !next.isBoughtItNow) {
-        if (_binDialogCtx != null && _binDialogCtx!.mounted) {
-          Navigator.of(_binDialogCtx!).pop();
-          _binDialogCtx = null;
+        final wasBuyer = prev.pendingBuyerUsername != null &&
+            prev.pendingBuyerUsername == _myUsername;
+        if (wasBuyer) {
+          // BIN talebini başlatan viewer: diyalog kapat + red mesajı
+          if (_binDialogCtx != null && _binDialogCtx!.mounted) {
+            Navigator.of(_binDialogCtx!).pop();
+            _binDialogCtx = null;
+          }
+          _setMsg('Hemen Al talebiniz reddedildi, artırma devam ediyor.', error: true);
+        } else {
+          // Diğer viewer'lar: artırma devam ediyor bildirimi
+          _setMsg('Hemen Al işlemi reddedildi, artırma devam ediyor.');
         }
-        _setMsg('Hemen Al talebiniz reddedildi, artırma devam ediyor.', error: true);
       }
       // Viewer: talep tamamlandığında (isBoughtItNow && prev.isPending)
       if (!widget.isHost && prev != null && prev.isPending && next.isBoughtItNow) {
@@ -270,7 +293,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           Navigator.of(_binDialogCtx!).pop();
           _binDialogCtx = null;
         }
-        _setMsg('🎉 Tebrikler! Satın alma tamamlandı.');
+        // Mesaj yukarıdaki isBoughtItNow bloğunda zaten ayarlandı
       }
     });
 
@@ -883,7 +906,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       isScrollControlled: true,
-      builder: (_) => _BidSheetContent(streamId: widget.streamId),
+      builder: (_) => _BidSheetContent(streamId: widget.streamId, myUsername: _myUsername),
     );
   }
 
@@ -963,7 +986,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
 class _BidSheetContent extends ConsumerStatefulWidget {
   final int streamId;
-  const _BidSheetContent({required this.streamId});
+  final String? myUsername;
+  const _BidSheetContent({required this.streamId, this.myUsername});
 
   @override
   ConsumerState<_BidSheetContent> createState() => _BidSheetContentState();
@@ -1061,6 +1085,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
     // Hemen Al talebi onay bekliyor (pending)
     if (liveState.isPending && !liveState.isBoughtItNow) {
+      final isBuyer = widget.myUsername != null &&
+          liveState.pendingBuyerUsername == widget.myUsername;
       return Padding(
         padding: EdgeInsets.fromLTRB(
             20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
@@ -1083,15 +1109,33 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(color: Colors.orange.shade600, width: 1.5),
               ),
-              child: const Column(children: [
-                Text('⚡ Onay Bekleniyor',
-                    style: TextStyle(color: Colors.orange, fontSize: 18,
-                        fontWeight: FontWeight.w800)),
-                SizedBox(height: 8),
-                Text('Hemen Al talebiniz host onayına gönderildi.',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
-              ]),
+              child: isBuyer
+                  ? const Column(children: [
+                      Text('⚡ Onay Bekleniyor',
+                          style: TextStyle(color: Colors.orange, fontSize: 18,
+                              fontWeight: FontWeight.w800)),
+                      SizedBox(height: 8),
+                      Text('Hemen Al talebiniz host onayına gönderildi.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                    ])
+                  : Column(children: [
+                      const Text('⏳ İşlem Devam Ediyor',
+                          style: TextStyle(color: Colors.orange, fontSize: 18,
+                              fontWeight: FontWeight.w800)),
+                      const SizedBox(height: 8),
+                      Text(
+                        '@${liveState.pendingBuyerUsername ?? '?'} ile Hemen Al işlemi yapılıyor.',
+                        textAlign: TextAlign.center,
+                        style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                      ),
+                      const SizedBox(height: 4),
+                      const Text(
+                        'Sonuçlanana kadar teklif veremezsiniz.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                      ),
+                    ]),
             ),
             const SizedBox(height: 20),
           ],

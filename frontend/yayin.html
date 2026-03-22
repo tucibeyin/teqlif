@@ -1802,20 +1802,38 @@
                         msg.price,
                         msg.item_name || _currentItemName || ''
                     );
-                } else {
-                    // Viewer: BIN butonunu gizle, bekleniyor mesajı göster
+                } else if (_iAmBinBuyer) {
+                    // Sadece BIN talebini başlatan viewer — bekleme mesajı
                     const binBtn = document.getElementById('btnBuyItNow');
                     if (binBtn) binBtn.style.display = 'none';
                     setAuctionMsg('⚡ Talebiniz iletildi, host onayı bekleniyor...', '');
+                } else {
+                    // Diğer viewer'lar — teklif alanı devre dışı + bilgi mesajı
+                    const binBtn = document.getElementById('btnBuyItNow');
+                    if (binBtn) binBtn.style.display = 'none';
+                    const bidInput = document.getElementById('bidInput');
+                    if (bidInput) bidInput.disabled = true;
+                    const btnPlaceBid = document.getElementById('btnPlaceBid');
+                    if (btnPlaceBid) btnPlaceBid.disabled = true;
+                    setAuctionMsg('⏳ Başka bir kullanıcı ile Hemen Al işlemi yapılıyor.', '');
                 }
                 return;
             }
 
             if (msg.type === 'buy_it_now_rejected') {
-                // Sadece viewer'a bildirim göster — host zaten reddetti, bilgiyi zaten biliyor
                 if (!_isHostPage) {
-                    _closeBuyItNowModal(); // bekleme ekranını kapat
-                    setAuctionMsg('Hemen Al talebiniz reddedildi, artırma devam ediyor.', 'error');
+                    if (_iAmBinBuyer) {
+                        // Teklif veren viewer: modal'ı kapat, red mesajı göster
+                        _closeBuyItNowModal(); // _iAmBinBuyer'ı da false yapar
+                        setAuctionMsg('Hemen Al talebiniz reddedildi, artırma devam ediyor.', 'error');
+                    } else {
+                        // Diğer viewer'lar: teklif alanını geri aç
+                        const bidInput = document.getElementById('bidInput');
+                        if (bidInput) bidInput.disabled = false;
+                        const btnPlaceBid = document.getElementById('btnPlaceBid');
+                        if (btnPlaceBid) btnPlaceBid.disabled = false;
+                        setAuctionMsg('Hemen Al işlemi reddedildi, artırma devam ediyor.', '');
+                    }
                     setTimeout(() => setAuctionMsg('', ''), 4000);
                 }
                 return;
@@ -1823,7 +1841,8 @@
 
             // auction_ended_by_buy_it_now event'i — özel SATILDI overlay
             if (msg.type === 'auction_ended_by_buy_it_now') {
-                _closeBuyItNowModal(); // onay verildi, bekleme modalını kapat
+                const wasBuyer = _iAmBinBuyer; // close öncesi kaydet
+                _closeBuyItNowModal(); // onay verildi, bekleme modalını kapat + _iAmBinBuyer sıfırla
                 _isBoughtItNow = true;
                 const buyer = msg.buyer?.username || '?';
                 const price = msg.price != null ? '₺' + Number(msg.price).toLocaleString('tr-TR') : '';
@@ -1834,11 +1853,13 @@
                 if (vc) vc.style.display = 'none';
                 const binBtn = document.getElementById('btnBuyItNow');
                 if (binBtn) binBtn.style.display = 'none';
-                // Bilgilendirme mesajı
+                // Bilgilendirme mesajı: rol bazlı
                 if (_isHostPage) {
                     setAuctionMsg(`🛒 Hemen Al tamamlandı! @${buyer}${price ? ' — ' + price : ''}`, 'success');
-                } else {
+                } else if (wasBuyer) {
                     setAuctionMsg('🎉 Tebrikler! Satın alma tamamlandı.', 'success');
+                } else {
+                    setAuctionMsg(`🛒 Ürün Hemen Satıldı! @${buyer}${price ? ' — ' + price : ''}`, '');
                 }
                 return;
             }
@@ -1952,6 +1973,11 @@
             } else if (viewerControls) {
                 const showViewer = state.status === 'active' && !_isBoughtItNow;
                 viewerControls.style.display = showViewer ? 'flex' : 'none';
+
+                // Başka kullanıcı BIN işlemi yapıyorsa diğer viewer'lara bilgi ver
+                if (state.status === 'buy_it_now_pending' && !_iAmBinBuyer) {
+                    setAuctionMsg('⏳ Başka bir kullanıcı ile Hemen Al işlemi yapılıyor.', '');
+                }
 
                 // Hemen Al butonu: BIN varsa ve currentBid < BIN ise göster
                 const binBtn = document.getElementById('btnBuyItNow');
@@ -2307,6 +2333,7 @@
         });
 
         let _binModalWaiting = false;
+        let _iAmBinBuyer = false; // Bu viewer BIN talebini başlattıysa true
 
         function _openBuyItNowModal() {
             _binModalWaiting = false;
@@ -2325,6 +2352,7 @@
 
         function _closeBuyItNowModal() {
             _binModalWaiting = false;
+            _iAmBinBuyer = false;
             document.getElementById('buyItNowModal').style.display = 'none';
         }
 
@@ -2345,6 +2373,7 @@
             try {
                 await Auction.buyItNow();
                 // Modal kapanmıyor — host onayı bekleniyor durumuna geç
+                _iAmBinBuyer = true;
                 _binModalWaiting = true;
                 document.getElementById('binModalDesc').style.display = 'none';
                 document.getElementById('binModalActions').style.display = 'none';
