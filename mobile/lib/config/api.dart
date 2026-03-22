@@ -43,7 +43,16 @@ Future<Map<String, dynamic>> apiCall(
     try {
       body = jsonDecode(response.body) as Map<String, dynamic>;
     } catch (_) {
-      // JSON parse hatası → 2xx değilse hata, 2xx ise boş body döndür
+      // JSON parse hatası — Nginx 502/503/504 HTML sayfası veya boş yanıt
+      if (response.statusCode == 502 ||
+          response.statusCode == 503 ||
+          response.statusCode == 504) {
+        throw AppException(
+          'Sistemlerimizde anlık bir bakım çalışması var. Lütfen birazdan tekrar deneyin.',
+          code: 'SERVER_DOWN',
+          statusCode: response.statusCode,
+        );
+      }
       if (response.statusCode >= 400) {
         throw AppException(
           'Sunucu geçersiz yanıt döndürdü',
@@ -76,14 +85,14 @@ Future<Map<String, dynamic>> apiCall(
   } on AppException {
     rethrow;
   } catch (e, stack) {
-    // Ağ hatası (timeout, DNS, vb.)
+    // Ağ hatası (timeout, DNS, VPS tamamen kapalı, vb.)
     LoggerService.instance.captureException(
       e,
       stackTrace: stack,
       tag: 'apiCall',
     );
     throw AppException(
-      'Bağlantı hatası. İnternet bağlantınızı kontrol edin.',
+      'Sunucuya ulaşılamıyor veya internet bağlantınız kopuk. Lütfen daha sonra tekrar deneyin.',
       code: 'NETWORK_ERROR',
       statusCode: 0,
     );

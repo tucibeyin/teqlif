@@ -5,8 +5,39 @@ async function apiFetch(path, options = {}) {
     const headers = { 'Content-Type': 'application/json', ...options.headers };
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
-    const res = await fetch(API + path, { ...options, headers });
-    if (!res.ok) throw await res.json();
+    let res;
+    try {
+        res = await fetch(API + path, { ...options, headers });
+    } catch (networkErr) {
+        // VPS tamamen kapalı veya ağ erişimi yok
+        console.error('[apiFetch] Ağ hatası:', networkErr);
+        if (window.Sentry) Sentry.captureException(networkErr);
+        throw {
+            success: false,
+            error: {
+                code: 'NETWORK_ERROR',
+                message: 'Sunucuya ulaşılamıyor. Lütfen internet bağlantınızı kontrol edin ve daha sonra tekrar deneyin.',
+            },
+        };
+    }
+
+    if (!res.ok) {
+        const ct = res.headers.get('content-type') || '';
+        if (!ct.includes('application/json')) {
+            // Nginx 502/503/504 veya başka bir HTML hata sayfası
+            console.error(`[apiFetch] Sunucu hatası (${res.status}) — JSON dışı yanıt`);
+            if (window.Sentry) Sentry.captureMessage(`[apiFetch] HTTP ${res.status} non-JSON response: ${path}`, 'error');
+            throw {
+                success: false,
+                error: {
+                    code: 'SERVER_DOWN',
+                    message: 'Sunucularımızda anlık bir bakım çalışması var. Lütfen birazdan tekrar deneyin.',
+                },
+            };
+        }
+        throw await res.json();
+    }
+
     return res.json();
 }
 
