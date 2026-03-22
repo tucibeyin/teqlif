@@ -264,7 +264,7 @@ async def get_admin_analytics_summary(db: AsyncSession = Depends(get_db), admin:
     )
     device_stats = [{"device": item[0], "count": item[1]} for item in device_groups_res.all()]
 
-    recent_res = await db.execute(select(AnalyticsEvent).order_by(desc(AnalyticsEvent.created_at)).limit(50))
+    recent_res = await db.execute(select(AnalyticsEvent).order_by(desc(AnalyticsEvent.created_at)).limit(500))
     recent_events = recent_res.scalars().all()
     
     recent_list = []
@@ -276,7 +276,8 @@ async def get_admin_analytics_summary(db: AsyncSession = Depends(get_db), admin:
             "url": req.url or "-",
             "device": req.device_type,
             "brand": req.os or req.browser or "-",
-            "created_at": req.created_at
+            "created_at": req.created_at,
+            "metadata": req.event_metadata or {}
         })
 
     return {

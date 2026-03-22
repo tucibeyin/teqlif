@@ -441,6 +441,10 @@
                     </div>
                 </div>
 
+                <div style="margin-bottom: 1rem;">
+                    <input type="text" id="search-analytics" placeholder="🔍 Eylem, URL, Cihaz, Metadata Ara..." class="search-box" onkeyup="filterTable('search-analytics', 'analytics-table-body')">
+                </div>
+
                 <div class="table-container">
                     <table>
                         <thead>
@@ -450,6 +454,7 @@
                                 <th>Eylem Tipi</th>
                                 <th>Cihaz & Tarayıcı</th>
                                 <th>Hedef (URL)</th>
+                                <th>Metadata (Detay)</th>
                             </tr>
                         </thead>
                         <tbody id="analytics-table-body"></tbody>
@@ -726,17 +731,25 @@
             document.getElementById("analytics-total").innerText = data.total_events.toLocaleString('tr-TR');
             document.getElementById("analytics-unique").innerText = data.unique_sessions.toLocaleString('tr-TR');
             
-            const devs = data.device_stats.map(d => `<div><span style="color:#64748b; font-size:0.9rem">${d.device.toUpperCase()}</span><br><b>${d.count}</b></div>`).join("");
+            const devs = data.device_stats.map(d => `<div><span style="color:#64748b; font-size:0.9rem">${d.device?.toUpperCase() || '-'}</span><br><b>${d.count}</b></div>`).join("");
             document.getElementById("analytics-devices").innerHTML = devs || "<span>Veri Yok</span>";
 
-            document.getElementById("analytics-table-body").innerHTML = data.recent_events.length === 0 ? `<tr><td colspan="5" style="text-align:center;">Kayıt bulunamadı.</td></tr>` : data.recent_events.map(e => `
-                <tr>
+            document.getElementById("search-analytics").value = "";
+
+            document.getElementById("analytics-table-body").innerHTML = data.recent_events.length === 0 ? `<tr><td colspan="6" style="text-align:center;">Kayıt bulunamadı.</td></tr>` : data.recent_events.map(e => {
+                const metaStr = Object.keys(e.metadata).length > 0 
+                  ? Object.entries(e.metadata).map(([k,v]) => `<span style="background: rgba(255,255,255,0.1); padding: 2px 4px; border-radius: 4px; margin-right: 4px;"><b>${k}</b>: ${v}</span>`).join('') 
+                  : '-';
+                
+                return `<tr>
                     <td style="font-size: 0.85rem; color: #94a3b8;">${new Date(e.created_at).toLocaleString('tr-TR')}</td>
                     <td style="font-family: monospace; color: #64748b;">${e.session_id.substring(0, 8)}...</td>
                     <td><span class="status-pill" style="background:var(--admin-card); border: 1px solid var(--admin-border); color: #38bdf8;">${e.event_type}</span></td>
                     <td>${e.device} - ${e.brand}</td>
                     <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${e.url}</td>
-                </tr>`).join("");
+                    <td style="font-size: 0.8rem; color: #cbd5e1; max-width: 300px; line-height: 1.5;">${metaStr}</td>
+                </tr>`;
+            }).join("");
         }
     </script>
 </body>
