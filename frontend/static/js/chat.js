@@ -141,7 +141,13 @@ const Chat = (() => {
         const color = _usernameColor(username || '');
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        el.innerHTML = `<span class="chat-username" style="color:${color};">@${_esc(username)}</span> <span class="chat-content" style="opacity:0.6;font-style:italic;">yayına katıldı</span>`;
+        el.innerHTML = `<span class="chat-username" data-username="${_esc(username)}" style="color:${color};cursor:pointer;">@${_esc(username)}</span> <span class="chat-content" style="opacity:0.6;font-style:italic;">yayına katıldı</span>`;
+        if (_onUsernameTap) {
+            const usernameSpan = el.querySelector('.chat-username');
+            if (usernameSpan) {
+                usernameSpan.addEventListener('click', () => _onUsernameTap(username));
+            }
+        }
         list.appendChild(el);
         while (list.children.length > 50) list.removeChild(list.firstChild);
         list.scrollTop = list.scrollHeight;
