@@ -33,6 +33,7 @@ class LiveListScreenState extends State<LiveListScreen> {
   List<StreamOut> _streams = [];
   bool _loading = true;
   String? _selectedCategory; // null = Tümü
+  String? _error;
 
   @override
   void initState() {
@@ -51,10 +52,14 @@ class LiveListScreenState extends State<LiveListScreen> {
       setState(() {
         _streams = streams;
         _loading = false;
+        _error = null;
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() => _loading = false);
+      setState(() {
+        _loading = false;
+        _error = e.toString();
+      });
       showErrorSnackbar(context, e);
     }
   }

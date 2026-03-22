@@ -14,7 +14,7 @@ class ModerationService {
 
   static Future<void> mute(int streamId, String username) async {
     await apiCall(
-      () => http.post(
+      () async => http.post(
         Uri.parse('$kBaseUrl/moderation/$streamId/mute'),
         headers: await _headers(),
         body: jsonEncode({'username': username}),
@@ -24,7 +24,7 @@ class ModerationService {
 
   static Future<void> unmute(int streamId, String username) async {
     await apiCall(
-      () => http.post(
+      () async => http.post(
         Uri.parse('$kBaseUrl/moderation/$streamId/unmute'),
         headers: await _headers(),
         body: jsonEncode({'username': username}),
@@ -34,7 +34,7 @@ class ModerationService {
 
   static Future<void> kick(int streamId, String username) async {
     await apiCall(
-      () => http.post(
+      () async => http.post(
         Uri.parse('$kBaseUrl/moderation/$streamId/kick'),
         headers: await _headers(),
         body: jsonEncode({'username': username}),

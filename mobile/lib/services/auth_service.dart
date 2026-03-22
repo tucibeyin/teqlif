@@ -92,7 +92,7 @@ class AuthService {
 
   static Future<User> me() async {
     final body = await apiCall(
-      () => http.get(
+      () async => http.get(
         Uri.parse('$kBaseUrl/auth/me'),
         headers: await _headers(auth: true),
       ),
@@ -102,7 +102,7 @@ class AuthService {
 
   static Future<void> deleteAccount(String password) async {
     await apiCall(
-      () => http.delete(
+      () async => http.delete(
         Uri.parse('$kBaseUrl/auth/delete-account'),
         headers: await _headers(auth: true),
         body: jsonEncode({'password': password}),
@@ -113,7 +113,7 @@ class AuthService {
 
   static Future<void> saveFcmToken(String token) async {
     await apiCall(
-      () => http.post(
+      () async => http.post(
         Uri.parse('$kBaseUrl/auth/fcm-token'),
         headers: await _headers(auth: true),
         body: jsonEncode({'token': token}),

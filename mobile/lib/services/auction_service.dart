@@ -16,7 +16,7 @@ class AuctionService {
 
   static Future<AuctionState> getState(int streamId) async {
     final body = await apiCall(
-      () => http.get(Uri.parse('$kBaseUrl/auction/$streamId'), headers: await _headers()),
+      () async => http.get(Uri.parse('$kBaseUrl/auction/$streamId'), headers: await _headers()),
     );
     return AuctionState.fromJson(body);
   }
@@ -33,7 +33,7 @@ class AuctionService {
         ? {'listing_id': listingId, 'start_price': startPrice!}
         : {'item_name': itemName!, 'start_price': startPrice!};
     final body = await apiCall(
-      () => http.post(
+      () async => http.post(
         Uri.parse('$kBaseUrl/auction/$streamId/start'),
         headers: await _headers(),
         body: jsonEncode(payload),
@@ -44,21 +44,21 @@ class AuctionService {
 
   static Future<AuctionState> pauseAuction(int streamId) async {
     final body = await apiCall(
-      () => http.post(Uri.parse('$kBaseUrl/auction/$streamId/pause'), headers: await _headers()),
+      () async => http.post(Uri.parse('$kBaseUrl/auction/$streamId/pause'), headers: await _headers()),
     );
     return AuctionState.fromJson(body);
   }
 
   static Future<AuctionState> resumeAuction(int streamId) async {
     final body = await apiCall(
-      () => http.post(Uri.parse('$kBaseUrl/auction/$streamId/resume'), headers: await _headers()),
+      () async => http.post(Uri.parse('$kBaseUrl/auction/$streamId/resume'), headers: await _headers()),
     );
     return AuctionState.fromJson(body);
   }
 
   static Future<AuctionState> endAuction(int streamId) async {
     final body = await apiCall(
-      () => http.post(Uri.parse('$kBaseUrl/auction/$streamId/end'), headers: await _headers()),
+      () async => http.post(Uri.parse('$kBaseUrl/auction/$streamId/end'), headers: await _headers()),
     );
     return AuctionState.fromJson(body);
   }
@@ -66,7 +66,7 @@ class AuctionService {
   static Future<AuctionState> placeBid(int streamId, double amount) async {
     AnalyticsService.trackEvent('bid_attempt', {'stream_id': streamId, 'amount': amount});
     final body = await apiCall(
-      () => http.post(
+      () async => http.post(
         Uri.parse('$kBaseUrl/auction/$streamId/bid'),
         headers: await _headers(),
         body: jsonEncode({'amount': amount}),
@@ -77,7 +77,7 @@ class AuctionService {
 
   static Future<AuctionState> acceptBid(int streamId) async {
     final body = await apiCall(
-      () => http.post(Uri.parse('$kBaseUrl/auction/$streamId/accept'), headers: await _headers()),
+      () async => http.post(Uri.parse('$kBaseUrl/auction/$streamId/accept'), headers: await _headers()),
     );
     return AuctionState.fromJson(body);
   }

@@ -33,7 +33,7 @@ class StreamService {
 
   static Future<StreamTokenOut> startStream(String title, String category) async {
     final body = await apiCall(
-      () => http.post(
+      () async => http.post(
         Uri.parse('$kBaseUrl/streams/start'),
         headers: await _headers(),
         body: jsonEncode({'title': title, 'category': category}),
@@ -44,13 +44,13 @@ class StreamService {
 
   static Future<void> endStream(int streamId) async {
     await apiCall(
-      () => http.post(Uri.parse('$kBaseUrl/streams/$streamId/end'), headers: await _headers()),
+      () async => http.post(Uri.parse('$kBaseUrl/streams/$streamId/end'), headers: await _headers()),
     );
   }
 
   static Future<JoinTokenOut> joinStream(int streamId) async {
     final body = await apiCall(
-      () => http.post(Uri.parse('$kBaseUrl/streams/$streamId/join'), headers: await _headers()),
+      () async => http.post(Uri.parse('$kBaseUrl/streams/$streamId/join'), headers: await _headers()),
     );
     return JoinTokenOut.fromJson(body);
   }

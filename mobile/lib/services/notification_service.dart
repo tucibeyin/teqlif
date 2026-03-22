@@ -17,7 +17,7 @@ class NotificationService {
   static Future<int> getUnreadNotifCount() async {
     try {
       final body = await apiCall(
-        () => http.get(Uri.parse('$kBaseUrl/notifications/unread-count'), headers: await _headers()),
+        () async => http.get(Uri.parse('$kBaseUrl/notifications/unread-count'), headers: await _headers()),
       );
       return body['count'] as int? ?? 0;
     } catch (e) {
@@ -30,7 +30,7 @@ class NotificationService {
   static Future<int> getUnreadMessageCount() async {
     try {
       final body = await apiCall(
-        () => http.get(Uri.parse('$kBaseUrl/messages/unread-count'), headers: await _headers()),
+        () async => http.get(Uri.parse('$kBaseUrl/messages/unread-count'), headers: await _headers()),
       );
       return body['count'] as int? ?? 0;
     } catch (e) {
@@ -54,7 +54,7 @@ class NotificationService {
   static Future<void> markAllRead() async {
     try {
       await apiCall(
-        () => http.post(Uri.parse('$kBaseUrl/notifications/mark-all-read'), headers: await _headers()),
+        () async => http.post(Uri.parse('$kBaseUrl/notifications/mark-all-read'), headers: await _headers()),
       );
     } catch (e) {
       LoggerService.instance.warning('NotificationService', 'Okundu işareti başarısız: $e');
@@ -87,7 +87,7 @@ class NotificationService {
   static Future<Map<String, dynamic>?> getUserByUsername(String username) async {
     try {
       final body = await apiCall(
-        () => http.get(Uri.parse('$kBaseUrl/users/$username'), headers: await _headers()),
+        () async => http.get(Uri.parse('$kBaseUrl/users/$username'), headers: await _headers()),
       );
       return body;
     } catch (e) {
@@ -100,7 +100,7 @@ class NotificationService {
   static Future<bool> sendMessage(int receiverId, String content) async {
     try {
       await apiCall(
-        () => http.post(
+        () async => http.post(
           Uri.parse('$kBaseUrl/messages/send'),
           headers: await _headers(),
           body: jsonEncode({'receiver_id': receiverId, 'content': content}),
