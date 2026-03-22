@@ -485,7 +485,8 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   obscureText: true,
                   enableSuggestions: false,
                   autocorrect: false,
-                  keyboardType: TextInputType.visiblePassword,
+                  smartDashesType: SmartDashesType.disabled,
+                  smartQuotesType: SmartQuotesType.disabled,
                   decoration: InputDecoration(
                     labelText: 'Mevcut Şifre',
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
@@ -497,7 +498,8 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   obscureText: true,
                   enableSuggestions: false,
                   autocorrect: false,
-                  keyboardType: TextInputType.visiblePassword,
+                  smartDashesType: SmartDashesType.disabled,
+                  smartQuotesType: SmartQuotesType.disabled,
                   decoration: InputDecoration(
                     labelText: 'Yeni Şifre',
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
@@ -509,7 +511,8 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   obscureText: true,
                   enableSuggestions: false,
                   autocorrect: false,
-                  keyboardType: TextInputType.visiblePassword,
+                  smartDashesType: SmartDashesType.disabled,
+                  smartQuotesType: SmartQuotesType.disabled,
                   decoration: InputDecoration(
                     labelText: 'Yeni Şifre (Tekrar)',
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
@@ -693,7 +696,8 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 obscureText: true,
                 enableSuggestions: false,
                 autocorrect: false,
-                keyboardType: TextInputType.visiblePassword,
+                smartDashesType: SmartDashesType.disabled,
+                smartQuotesType: SmartQuotesType.disabled,
                 decoration: const InputDecoration(
                   labelText: 'Şifreniz',
                   hintText: 'Onaylamak için şifrenizi girin',
