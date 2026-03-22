@@ -47,17 +47,12 @@
             event_metadata: metadata
         };
 
-        if (navigator.sendBeacon) {
-            const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-            navigator.sendBeacon(TRACKING_URL, blob);
-        } else {
-            fetch(TRACKING_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-                keepalive: true
-            }).catch(() => { });
-        }
+        fetch(TRACKING_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+            keepalive: true
+        }).catch(() => { });
     };
 
     function getOS() {
