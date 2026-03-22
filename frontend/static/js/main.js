@@ -20,10 +20,11 @@ document.addEventListener("DOMContentLoaded", () => {
         document.head.appendChild(link);
     }
 
-    const scriptPath = '/static/js/analytics.js';
-    if (!document.querySelector(`script[src="${scriptPath}"]`)) {
+    const baseScriptPath = '/static/js/analytics.js';
+    const scriptVersion = '?v=2';
+    if (!document.querySelector(`script[src^="${baseScriptPath}"]`)) {
         const script = document.createElement('script');
-        script.src = scriptPath;
+        script.src = baseScriptPath + scriptVersion;
         document.body.appendChild(script);
     }
 });
