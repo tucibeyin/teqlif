@@ -861,10 +861,12 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
               ),
             ),
           ]),
-          // Başarı / hata mesajı
-          if (_msg != null) ...[
-            const SizedBox(height: 12),
-            Container(
+          // Başarı / hata mesajı — alan her zaman ayrılır, içerik koşullu
+          const SizedBox(height: 12),
+          AnimatedOpacity(
+            opacity: _msg != null ? 1.0 : 0.0,
+            duration: const Duration(milliseconds: 200),
+            child: Container(
               width: double.infinity,
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -892,7 +894,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    _msg!,
+                    _msg ?? '',
                     style: TextStyle(
                         color: _msgError
                             ? const Color(0xFFFCA5A5)
@@ -902,7 +904,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 ),
               ]),
             ),
-          ],
+          ),
         ],
       ),
     );
