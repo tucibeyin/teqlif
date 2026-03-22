@@ -1,7 +1,6 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, desc
-from sqlalchemy.orm import selectinload
 from typing import List, Optional
 from pydantic import BaseModel
 from datetime import datetime, timezone
@@ -17,13 +16,17 @@ from app.config import settings
 from app.utils.redis_client import get_redis
 from app.routers.chat import _publish_chat
 from sqlalchemy.exc import IntegrityError
+from app.core.exceptions import ForbiddenException, NotFoundException, BadRequestException
+from app.core.logger import get_logger, capture_exception
+
+logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/admin-data", tags=["admin-data"])
 
 # --- GÜVENLİK DUVARI ---
 async def check_admin_access(current_user: User = Depends(get_current_user)):
     if current_user.email != settings.admin_email:
-        raise HTTPException(status_code=403, detail="Admin yetkisi bulunamadı.")
+        raise ForbiddenException("Admin yetkisi bulunamadı.")
     return current_user
 
 # --- VERİ MODELLERİ (SCHEMAS) ---
@@ -53,7 +56,7 @@ async def get_recent_users(limit: int = 50, db: AsyncSession = Depends(get_db), 
 async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     user = await db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise NotFoundException("Kullanıcı bulunamadı")
     if data.full_name is not None: user.full_name = data.full_name
     if data.email is not None: user.email = data.email
     if data.is_active is not None: user.is_active = data.is_active
@@ -64,7 +67,7 @@ async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession
 async def reset_user_password(user_id: int, data: AdminPasswordReset, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     user = await db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise NotFoundException("Kullanıcı bulunamadı")
     user.hashed_password = hash_password(data.new_password)
     await db.commit()
     return {"message": "Şifre değiştirildi."}
@@ -77,8 +80,11 @@ async def get_admin_active_streams(db: AsyncSession = Depends(get_db), admin: Us
     result = await db.execute(select(LiveStream).where(LiveStream.is_live == True).order_by(desc(LiveStream.started_at)))
     streams = result.scalars().all()
     stream_list = []
-    try: redis = await get_redis()
-    except: redis = None
+    try:
+        redis = await get_redis()
+    except Exception as exc:
+        logger.warning("[ADMIN] Redis bağlantısı alınamadı, viewer count atlanıyor: %s", exc)
+        redis = None
 
     for s in streams:
         host = await db.get(User, s.host_id)
@@ -99,7 +105,7 @@ async def admin_end_stream(stream_id: int, db: AsyncSession = Depends(get_db), a
     result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
     if not stream or not stream.is_live:
-        raise HTTPException(status_code=400, detail="Yayın bulunamadı veya zaten kapalı")
+        raise BadRequestException("Yayın bulunamadı veya zaten kapalı")
 
     stream.is_live = False
     stream.ended_at = datetime.now(timezone.utc)
@@ -109,7 +115,8 @@ async def admin_end_stream(stream_id: int, db: AsyncSession = Depends(get_db), a
         redis = await get_redis()
         await redis.delete(f"live:viewers:{stream.room_name}")
         await _publish_chat(stream_id, {"type": "stream_ended", "message": "Yayın sistem yöneticisi tarafından sonlandırıldı."})
-    except: pass
+    except Exception as exc:
+        logger.warning("[ADMIN] Redis temizleme/chat yayını başarısız | stream_id=%s | %s", stream_id, exc)
     return {"message": "Yayın kapatıldı."}
 
 # ==========================================
@@ -133,7 +140,7 @@ async def get_admin_listings(limit: int = 50, db: AsyncSession = Depends(get_db)
 @router.post("/listings/{listing_id}/toggle")
 async def admin_toggle_listing(listing_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     listing = await db.get(Listing, listing_id)
-    if not listing: raise HTTPException(status_code=404, detail="İlan bulunamadı")
+    if not listing: raise NotFoundException("İlan bulunamadı")
     listing.is_active = not listing.is_active
     await db.commit()
     return {"message": "İlan durumu değiştirildi."}
@@ -141,7 +148,7 @@ async def admin_toggle_listing(listing_id: int, db: AsyncSession = Depends(get_d
 @router.delete("/listings/{listing_id}")
 async def admin_delete_listing(listing_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     listing = await db.get(Listing, listing_id)
-    if not listing: raise HTTPException(status_code=404, detail="İlan bulunamadı")
+    if not listing: raise NotFoundException("İlan bulunamadı")
     listing.is_deleted = True
     listing.is_active = False
     await db.commit()
@@ -185,7 +192,7 @@ async def get_admin_reports(limit: int = 50, db: AsyncSession = Depends(get_db),
 @router.post("/reports/{report_id}/resolve")
 async def admin_resolve_report(report_id: int, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     report = await db.get(Report, report_id)
-    if not report: raise HTTPException(status_code=404, detail="Şikayet bulunamadı")
+    if not report: raise NotFoundException("Şikayet bulunamadı")
     
     if hasattr(report, 'status'):
         report.status = 'resolved'
@@ -203,7 +210,7 @@ async def create_user(
         select(User).where((User.email == data.email) | (User.username == data.username))
     )
     if existing_user.scalar_one_or_none():
-        raise HTTPException(status_code=400, detail="E-posta veya kullanıcı adı zaten kullanımda.")
+        raise BadRequestException("E-posta veya kullanıcı adı zaten kullanımda.")
 
     # Yeni kullanıcıyı oluştur
     new_user = User(
@@ -227,11 +234,11 @@ async def delete_user(
 ):
     user = await db.get(User, user_id)
     if not user:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı.")
-    
+        raise NotFoundException("Kullanıcı bulunamadı.")
+
     # Admin kazara kendini silmesin diye güvenlik kilidi
     if user.email == settings.admin_email:
-        raise HTTPException(status_code=400, detail="Sistem yöneticisi silinemez.")
+        raise BadRequestException("Sistem yöneticisi silinemez.")
 
     try:
         await db.delete(user)
@@ -239,9 +246,8 @@ async def delete_user(
         return {"message": "Kullanıcı veritabanından kalıcı olarak silindi."}
     except IntegrityError:
         await db.rollback()
-        raise HTTPException(
-            status_code=400, 
-            detail="Bu kullanıcı silinemez çünkü sisteme kayıtlı ilanları, mesajları veya canlı yayın geçmişi var. Bunun yerine hesabı 'Yasaklı' duruma getirin."
+        raise BadRequestException(
+            "Bu kullanıcı silinemez çünkü sisteme kayıtlı ilanları, mesajları veya canlı yayın geçmişi var. Bunun yerine hesabı 'Yasaklı' duruma getirin."
         )
 
 # ==========================================

@@ -5,6 +5,7 @@ import '../../services/auth_service.dart';
 import '../../services/biometric_service.dart';
 import '../../services/push_notification_service.dart';
 import '../../services/storage_service.dart';
+import '../../utils/error_helper.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -19,7 +20,6 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
-  String? _error;
   bool _obscure = true;
 
   @override
@@ -31,7 +31,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; });
     try {
       await AuthService.login(
         email: _emailCtrl.text.trim(),
@@ -47,10 +47,8 @@ class _LoginScreenState extends State<LoginScreen> {
       if (mounted) {
         Navigator.of(context).pushReplacementNamed('/home');
       }
-    } on ApiException catch (e) {
-      setState(() { _error = e.message; });
-    } catch (_) {
-      setState(() { _error = 'Bağlantı hatası. Lütfen tekrar deneyin.'; });
+    } catch (e) {
+      if (mounted) showErrorSnackbar(context, e);
     } finally {
       if (mounted) setState(() { _loading = false; });
     }
@@ -122,21 +120,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
                 ),
                 const SizedBox(height: 28),
-                if (_error != null) ...[
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFFEF2F2),
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: const Color(0xFFFECACA)),
-                    ),
-                    child: Text(
-                      _error!,
-                      style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                ],
                 Form(
                   key: _formKey,
                   child: Column(

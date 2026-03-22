@@ -1,7 +1,6 @@
-import logging
 from typing import Dict, Set, List
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, func, or_, and_
 
@@ -13,8 +12,10 @@ from app.schemas.message import MessageOut, ConversationOut, SendMessageIn
 from app.schemas.notification import UnreadCountOut
 from app.utils.auth import get_current_user, decode_token
 from app.routers.notifications import push_notification
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
+from app.core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 
 # In-memory WebSocket connections per user
@@ -129,7 +130,7 @@ async def get_messages(
     other_result = await db.execute(select(User).where(User.id == other_user_id))
     other_user = other_result.scalar_one_or_none()
     if not other_user:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise NotFoundException("Kullanıcı bulunamadı")
 
     # Fetch last 100 messages between the two users
     result = await db.execute(
@@ -191,10 +192,10 @@ async def send_message(
     recv_result = await db.execute(select(User).where(User.id == data.receiver_id))
     receiver = recv_result.scalar_one_or_none()
     if not receiver:
-        raise HTTPException(status_code=404, detail="Alıcı bulunamadı")
+        raise NotFoundException("Alıcı bulunamadı")
 
     if data.receiver_id == uid:
-        raise HTTPException(status_code=400, detail="Kendinize mesaj gönderemezsiniz")
+        raise BadRequestException("Kendinize mesaj gönderemezsiniz")
 
     # Engelleme kontrolü (iki yönlü)
     block_exists = await db.scalar(
@@ -206,7 +207,7 @@ async def send_message(
         )
     )
     if block_exists:
-        raise HTTPException(status_code=403, detail="Bu kullanıcıyla mesajlaşamazsınız")
+        raise ForbiddenException("Bu kullanıcıyla mesajlaşamazsınız")
 
     msg = DirectMessage(
         sender_id=uid,

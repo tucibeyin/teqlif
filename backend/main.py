@@ -5,7 +5,7 @@ import traceback
 import os
 
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -14,6 +14,8 @@ from fastapi.templating import Jinja2Templates
 
 from app.config import settings
 from app.logging_config import setup_logging
+from app.core.exceptions import AppException
+from app.core.logger import capture_exception
 from app.routers import auth, streams, webhooks, auction, chat, moderation
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
@@ -138,6 +140,69 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.middleware("http")(security_headers)
 
 
+# ── Global Exception Handlers ────────────────────────────────────────────────
+
+@app.exception_handler(AppException)
+async def app_exception_handler(request: Request, exc: AppException):
+    """
+    Projeye özel AppException ve alt sınıflarını (NotFoundException,
+    DatabaseException vb.) standart formatta döner.
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": exc.error_code,
+                "message": exc.message,
+            },
+        },
+    )
+
+
+@app.exception_handler(HTTPException)
+async def http_exception_handler(request: Request, exc: HTTPException):
+    """
+    FastAPI'nin yerleşik HTTPException'larını (raise HTTPException(404, ...))
+    standart formata dönüştürür. Geriye dönük uyumluluk korunur.
+    """
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": f"HTTP_{exc.status_code}",
+                "message": exc.detail if isinstance(exc.detail, str) else str(exc.detail),
+            },
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request: Request, exc: Exception):
+    """
+    Hiçbir handler'ın yakalamadığı beklenmedik hataları loglar ve
+    Sentry'e iletir. Kullanıcıya hiçbir zaman iç detay sızdırılmaz.
+    """
+    logger.error(
+        "Beklenmedik hata: %s %s | %s",
+        request.method,
+        request.url.path,
+        traceback.format_exc(),
+    )
+    capture_exception(exc)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": {
+                "code": "INTERNAL_ERROR",
+                "message": "Sunucu hatası",
+            },
+        },
+    )
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     try:
@@ -155,7 +220,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         return str(obj)
     safe_errors = _safe(errors)
     logger.error("[422] %s %s | errors=%s", request.method, request.url.path, safe_errors)
-    return JSONResponse(status_code=422, content={"detail": safe_errors})
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Geçersiz istek verisi",
+                "details": safe_errors,
+            },
+        },
+    )
 
 
 app.add_middleware(
@@ -174,27 +249,6 @@ app.add_middleware(
     expose_headers=["X-RateLimit-Limit", "X-RateLimit-Remaining", "X-RateLimit-Reset"],
 )
 
-
-@app.middleware("http")
-async def log_errors(request: Request, call_next):
-    try:
-        response = await call_next(request)
-        if response.status_code >= 500:
-            logger.error(
-                "HTTP %s %s → %s",
-                request.method,
-                request.url.path,
-                response.status_code,
-            )
-        return response
-    except Exception:
-        logger.error(
-            "Beklenmeyen hata: %s %s\n%s",
-            request.method,
-            request.url.path,
-            traceback.format_exc(),
-        )
-        return JSONResponse(status_code=500, content={"detail": "Sunucu hatası"})
 
 
 # Router'ları kaydet

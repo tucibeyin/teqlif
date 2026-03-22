@@ -1,6 +1,6 @@
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +9,7 @@ from app.models.follow import Follow
 from app.models.rating import Rating
 from app.models.user import User
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 
 router = APIRouter(prefix="/api/ratings", tags=["ratings"])
 
@@ -37,14 +38,14 @@ async def upsert_rating(
 ):
     """Hedef kullanıcıya puan ver (veya güncelle). Takip etmek zorunlu."""
     if user_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Kendinizi puanlayamazsınız")
+        raise BadRequestException("Kendinizi puanlayamazsınız")
 
     # Hedef kullanıcı var mı?
     target = await db.scalar(
         select(User).where(User.id == user_id, User.is_active == True)  # noqa: E712
     )
     if not target:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise NotFoundException("Kullanıcı bulunamadı")
 
     # Takip kontrolü
     is_following = await db.scalar(
@@ -54,18 +55,15 @@ async def upsert_rating(
         )
     )
     if not is_following:
-        raise HTTPException(
-            status_code=403,
-            detail="Puan vermek için bu kullanıcıyı takip etmelisiniz",
-        )
+        raise ForbiddenException("Puan vermek için bu kullanıcıyı takip etmelisiniz")
 
     score = payload.get("score")
     if not isinstance(score, int) or score < 1 or score > 5:
-        raise HTTPException(status_code=422, detail="Puan 1 ile 5 arasında olmalıdır")
+        raise BadRequestException("Puan 1 ile 5 arasında olmalıdır")
 
     comment = (payload.get("comment") or "").strip() or None
     if comment and len(comment) > 500:
-        raise HTTPException(status_code=422, detail="Yorum 500 karakteri geçemez")
+        raise BadRequestException("Yorum 500 karakteri geçemez")
 
     # Upsert: var olan puanı güncelle, yoksa oluştur
     existing = await db.scalar(
@@ -151,7 +149,7 @@ async def delete_rating(
         select(Rating).where(Rating.rater_id == current_user.id, Rating.rated_id == user_id)
     )
     if not rating:
-        raise HTTPException(status_code=404, detail="Puan bulunamadı")
+        raise NotFoundException("Puan bulunamadı")
     await db.delete(rating)
     await db.commit()
     return {"ok": True}

@@ -14,20 +14,11 @@ class AuctionService {
     };
   }
 
-  static void _checkError(http.Response res) {
-    if (res.statusCode >= 400) {
-      final body = jsonDecode(res.body);
-      throw Exception(body['detail'] ?? 'Bir hata oluştu');
-    }
-  }
-
   static Future<AuctionState> getState(int streamId) async {
-    final res = await http.get(
-      Uri.parse('$kBaseUrl/auction/$streamId'),
-      headers: await _headers(),
+    final body = await apiCall(
+      () => http.get(Uri.parse('$kBaseUrl/auction/$streamId'), headers: await _headers()),
     );
-    _checkError(res);
-    return AuctionState.fromJson(jsonDecode(res.body));
+    return AuctionState.fromJson(body);
   }
 
   /// İlan seçilerek başlatmak için [listingId] gönderilir;
@@ -38,63 +29,56 @@ class AuctionService {
     double? startPrice,
     int? listingId,
   }) async {
-    final Map<String, dynamic> body = listingId != null
+    final Map<String, dynamic> payload = listingId != null
         ? {'listing_id': listingId, 'start_price': startPrice!}
         : {'item_name': itemName!, 'start_price': startPrice!};
-    final res = await http.post(
-      Uri.parse('$kBaseUrl/auction/$streamId/start'),
-      headers: await _headers(),
-      body: jsonEncode(body),
+    final body = await apiCall(
+      () => http.post(
+        Uri.parse('$kBaseUrl/auction/$streamId/start'),
+        headers: await _headers(),
+        body: jsonEncode(payload),
+      ),
     );
-    _checkError(res);
-    return AuctionState.fromJson(jsonDecode(res.body));
+    return AuctionState.fromJson(body);
   }
 
   static Future<AuctionState> pauseAuction(int streamId) async {
-    final res = await http.post(
-      Uri.parse('$kBaseUrl/auction/$streamId/pause'),
-      headers: await _headers(),
+    final body = await apiCall(
+      () => http.post(Uri.parse('$kBaseUrl/auction/$streamId/pause'), headers: await _headers()),
     );
-    _checkError(res);
-    return AuctionState.fromJson(jsonDecode(res.body));
+    return AuctionState.fromJson(body);
   }
 
   static Future<AuctionState> resumeAuction(int streamId) async {
-    final res = await http.post(
-      Uri.parse('$kBaseUrl/auction/$streamId/resume'),
-      headers: await _headers(),
+    final body = await apiCall(
+      () => http.post(Uri.parse('$kBaseUrl/auction/$streamId/resume'), headers: await _headers()),
     );
-    _checkError(res);
-    return AuctionState.fromJson(jsonDecode(res.body));
+    return AuctionState.fromJson(body);
   }
 
   static Future<AuctionState> endAuction(int streamId) async {
-    final res = await http.post(
-      Uri.parse('$kBaseUrl/auction/$streamId/end'),
-      headers: await _headers(),
+    final body = await apiCall(
+      () => http.post(Uri.parse('$kBaseUrl/auction/$streamId/end'), headers: await _headers()),
     );
-    _checkError(res);
-    return AuctionState.fromJson(jsonDecode(res.body));
+    return AuctionState.fromJson(body);
   }
 
   static Future<AuctionState> placeBid(int streamId, double amount) async {
     AnalyticsService.trackEvent('bid_attempt', {'stream_id': streamId, 'amount': amount});
-    
-    final res = await http.post(
-      Uri.parse('$kBaseUrl/auction/$streamId/bid'),
-      headers: await _headers(),
-      body: jsonEncode({'amount': amount}),
+    final body = await apiCall(
+      () => http.post(
+        Uri.parse('$kBaseUrl/auction/$streamId/bid'),
+        headers: await _headers(),
+        body: jsonEncode({'amount': amount}),
+      ),
     );
-    _checkError(res);
-    return AuctionState.fromJson(jsonDecode(res.body));
+    return AuctionState.fromJson(body);
   }
 
   static Future<AuctionState> acceptBid(int streamId) async {
-    final res = await http.post(
-      Uri.parse('$kBaseUrl/auction/$streamId/accept'),
-      headers: await _headers(),
+    final body = await apiCall(
+      () => http.post(Uri.parse('$kBaseUrl/auction/$streamId/accept'), headers: await _headers()),
     );
-    _checkError(res);
-    return AuctionState.fromJson(jsonDecode(res.body));
+    return AuctionState.fromJson(body);
   }
 }

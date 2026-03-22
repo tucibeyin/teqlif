@@ -1,6 +1,5 @@
 import asyncio
 import json
-import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Set
@@ -13,8 +12,9 @@ from app.models.user import User
 from app.models.stream import LiveStream
 from app.utils.auth import decode_token
 from app.utils.redis_client import get_redis
+from app.core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["chat"])
 
 _CHAT_CHANNEL = "chat_broadcast"
@@ -205,8 +205,8 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                 await websocket.close(code=4003)
                 logger.info("[CHAT WS] Kicklenen kullanıcı engellendi | stream_id=%s user_id=%s", stream_id, user_id)
                 return
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("[CHAT WS] Kick Redis kontrolü başarısız | stream_id=%s user_id=%s | %s", stream_id, user_id, exc)
 
     # WS kabul et
     await chat_manager.connect(websocket, stream_id, user_id)
@@ -217,8 +217,8 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
         try:
             _r = await get_redis()
             await _r.sadd(f"live:viewer_set:{stream_id}", username)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("[CHAT WS] viewer_set sadd başarısız | stream_id=%s | %s", stream_id, exc)
         await _publish_chat(stream_id, {"type": "system_join", "username": username})
 
     try:
@@ -294,5 +294,5 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             try:
                 _r = await get_redis()
                 await _r.srem(f"live:viewer_set:{stream_id}", username)
-            except Exception:
-                pass
+            except Exception as exc:
+                logger.warning("[CHAT WS] viewer_set srem başarısız | stream_id=%s | %s", stream_id, exc)

@@ -1,10 +1,9 @@
 import os
 import uuid
-import logging
 from datetime import datetime, timezone
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, status, BackgroundTasks
+from fastapi import APIRouter, Depends, UploadFile, File, status, BackgroundTasks
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from livekit.api import AccessToken, VideoGrants
@@ -19,8 +18,10 @@ from app.utils.redis_client import get_redis
 from app.config import settings
 from app.routers.upload import _detect_image_type
 from app.routers.chat import _publish_chat
+from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException, DatabaseException
+from app.core.logger import get_logger, capture_exception
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/streams", tags=["streams"])
 
 
@@ -69,7 +70,7 @@ async def _notify_followers_task(user_id: int, username: str, stream_title: str 
     import asyncio as _asyncio
     from app.models.follow import Follow
     from app.routers.notifications import push_notification
-    
+
     try:
         # Arka plan görevi için taze bir DB oturumu açılır ve iş bitince güvenle kapatılır
         async with AsyncSessionLocal() as bg_db:
@@ -94,7 +95,7 @@ async def _notify_followers_task(user_id: int, username: str, stream_title: str 
 @router.post("/start", response_model=StreamTokenOut, status_code=status.HTTP_201_CREATED)
 async def start_stream(
     data: StreamStart,
-    background_tasks: BackgroundTasks, # FastAPI'nin arka plan yöneticisi eklendi
+    background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -106,38 +107,39 @@ async def start_stream(
     )
     if result.scalar_one_or_none():
         logger.warning("Kullanıcının zaten aktif yayını var | user_id=%s", current_user.id)
-        raise HTTPException(status_code=400, detail="Zaten aktif bir yayınınız var")
+        raise BadRequestException("Zaten aktif bir yayınınız var")
 
     room_name = f"stream_{current_user.id}_{uuid.uuid4().hex[:8]}"
 
+    stream = LiveStream(
+        room_name=room_name,
+        title=data.title,
+        category=data.category,
+        host_id=current_user.id,
+    )
+    db.add(stream)
     try:
-        stream = LiveStream(
-            room_name=room_name,
-            title=data.title,
-            category=data.category,
-            host_id=current_user.id,
-        )
-        db.add(stream)
         await db.commit()
         await db.refresh(stream)
-    except Exception:
+    except Exception as exc:
+        await db.rollback()
         logger.error(
             "Yayın DB'ye kaydedilemedi | user_id=%s room=%s",
             current_user.id, room_name,
             exc_info=True,
         )
-        raise HTTPException(status_code=500, detail="Yayın başlatılamadı")
+        capture_exception(exc)
+        raise DatabaseException("Yayın başlatılamadı")
 
     token = _make_token(room_name, current_user, can_publish=True)
     logger.info("Yayın başlatıldı | stream_id=%s user_id=%s room=%s", stream.id, current_user.id, room_name)
 
-    # Bildirim gönderme işlemini güvenli bir şekilde BackgroundTasks'a devrettik
     background_tasks.add_task(
         _notify_followers_task,
         user_id=current_user.id,
         username=current_user.username,
         stream_title=stream.title,
-        stream_id=stream.id
+        stream_id=stream.id,
     )
 
     return StreamTokenOut(
@@ -159,25 +161,28 @@ async def end_stream(
 
     if not stream:
         logger.warning("Yayın sonlandırma: bulunamadı | stream_id=%s user_id=%s", stream_id, current_user.id)
-        raise HTTPException(status_code=404, detail="Yayın bulunamadı")
+        raise NotFoundException("Yayın bulunamadı")
     if stream.host_id != current_user.id:
         logger.warning(
             "Yayın sonlandırma: yetkisiz erişim | stream_id=%s host_id=%s user_id=%s",
             stream_id, stream.host_id, current_user.id,
         )
-        raise HTTPException(status_code=403, detail="Bu yayını sonlandırma yetkiniz yok")
+        raise ForbiddenException("Bu yayını sonlandırma yetkiniz yok")
     if not stream.is_live:
-        raise HTTPException(status_code=400, detail="Yayın zaten sonlanmış")
+        raise BadRequestException("Yayın zaten sonlanmış")
 
     stream.is_live = False
     stream.ended_at = datetime.now(timezone.utc)
 
     try:
         await db.commit()
-    except Exception:
+    except Exception as exc:
+        await db.rollback()
         logger.error("Yayın sonlandırma DB hatası | stream_id=%s", stream_id, exc_info=True)
-        raise HTTPException(status_code=500, detail="Yayın sonlandırılamadı")
+        capture_exception(exc)
+        raise DatabaseException("Yayın sonlandırılamadı")
 
+    # Redis temizliği — non-critical, başarısız olsa da yayın sonlandı sayılır
     try:
         redis = await get_redis()
         await redis.delete(f"live:viewers:{stream.room_name}")
@@ -185,6 +190,7 @@ async def end_stream(
     except Exception:
         logger.error("Redis viewer key silinemedi | room=%s", stream.room_name, exc_info=True)
 
+    # Chat stream_ended eventi — non-critical
     try:
         await _publish_chat(stream_id, {"type": "stream_ended"})
     except Exception:
@@ -206,9 +212,9 @@ async def get_viewers(
     result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
     if not stream or not stream.is_live:
-        raise HTTPException(status_code=404, detail="Aktif yayın bulunamadı")
+        raise NotFoundException("Aktif yayın bulunamadı")
     if stream.host_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Sadece host görüntüleyebilir")
+        raise ForbiddenException("Sadece host görüntüleyebilir")
     redis = await get_redis()
     members = await redis.smembers(f"live:viewer_set:{stream_id}")
     return {"viewers": sorted(list(members))}
@@ -220,23 +226,21 @@ async def join_stream(
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    result = await db.execute(
-        select(LiveStream).where(LiveStream.id == stream_id)
-    )
+    result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
 
     if not stream or not stream.is_live:
         logger.warning("Yayına katılma: aktif yayın yok | stream_id=%s user_id=%s", stream_id, current_user.id)
-        raise HTTPException(status_code=404, detail="Aktif yayın bulunamadı")
+        raise NotFoundException("Aktif yayın bulunamadı")
 
     if stream.host_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Kendi yayınınıza izleyici olarak katılamazsınız")
+        raise BadRequestException("Kendi yayınınıza izleyici olarak katılamazsınız")
 
     # Kick kontrolü — bu yayından atılan kullanıcı tekrar giremez
     from app.routers.moderation import kick_key
     redis = await get_redis()
     if await redis.sismember(kick_key(stream_id), str(current_user.id)):
-        raise HTTPException(status_code=403, detail="Bu yayına erişiminiz kısıtlanmıştır")
+        raise ForbiddenException("Bu yayına erişiminiz kısıtlanmıştır")
 
     token = _make_token(stream.room_name, current_user, can_publish=False)
     logger.info("Yayına katılındı | stream_id=%s user_id=%s", stream_id, current_user.id)
@@ -274,19 +278,19 @@ async def update_thumbnail(
     result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
     if not stream:
-        raise HTTPException(status_code=404, detail="Yayın bulunamadı")
+        raise NotFoundException("Yayın bulunamadı")
     if stream.host_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Bu yayını düzenleme yetkiniz yok")
+        raise ForbiddenException("Bu yayını düzenleme yetkiniz yok")
     if not stream.is_live:
-        raise HTTPException(status_code=400, detail="Yayın aktif değil")
+        raise BadRequestException("Yayın aktif değil")
 
     data = await file.read()
     if len(data) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=422, detail="Dosya 10 MB'ı geçemez")
+        raise BadRequestException("Dosya 10 MB'ı geçemez")
 
     ext = _detect_image_type(data)
     if ext is None:
-        raise HTTPException(status_code=422, detail="Sadece JPEG, PNG veya WebP yüklenebilir")
+        raise BadRequestException("Sadece JPEG, PNG veya WebP yüklenebilir")
 
     filename = f"thumb_{uuid.uuid4().hex}.{ext}"
     os.makedirs(settings.upload_dir, exist_ok=True)
@@ -312,28 +316,25 @@ async def get_active_streams(
     current_user_id: Optional[int] = Depends(_optional_user_id),
     db: AsyncSession = Depends(get_db),
 ):
-    try:
-        query = (
-            select(LiveStream)
-            .where(LiveStream.is_live == True)  # noqa: E712
-            .order_by(LiveStream.started_at.desc())
+    query = (
+        select(LiveStream)
+        .where(LiveStream.is_live == True)  # noqa: E712
+        .order_by(LiveStream.started_at.desc())
+    )
+
+    # Engelleme filtresi: engellediğin veya seni engelleyen hostların yayınlarını gizle
+    if current_user_id:
+        blocked_by_me = select(UserBlock.blocked_id).where(UserBlock.blocker_id == current_user_id)
+        blocking_me = select(UserBlock.blocker_id).where(UserBlock.blocked_id == current_user_id)
+        query = query.where(
+            LiveStream.host_id.not_in(blocked_by_me),
+            LiveStream.host_id.not_in(blocking_me),
         )
 
-        # Engelleme filtresi: engellediğin veya seni engelleyen hostların yayınlarını gizle
-        if current_user_id:
-            blocked_by_me = select(UserBlock.blocked_id).where(UserBlock.blocker_id == current_user_id)
-            blocking_me = select(UserBlock.blocker_id).where(UserBlock.blocked_id == current_user_id)
-            query = query.where(
-                LiveStream.host_id.not_in(blocked_by_me),
-                LiveStream.host_id.not_in(blocking_me),
-            )
+    result = await db.execute(query)
+    streams = result.scalars().all()
 
-        result = await db.execute(query)
-        streams = result.scalars().all()
-    except Exception:
-        logger.error("Aktif yayın listesi DB hatası", exc_info=True)
-        raise HTTPException(status_code=500, detail="Yayın listesi alınamadı")
-
+    # Redis viewer count — Redis erişilemese bile liste döner, graceful degrade
     try:
         redis = await get_redis()
         for stream in streams:

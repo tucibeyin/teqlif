@@ -6,8 +6,10 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/api.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
-import '../../services/auth_service.dart';
+import '../../core/app_exception.dart';
+import '../../core/logger_service.dart';
 import '../../services/stream_service.dart';
+import '../../utils/error_helper.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 
@@ -169,20 +171,17 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
           _loading = false;
         });
       }
-    } on ApiException catch (e) {
+    } on AppException catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
       if (e.statusCode == 403) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(e.message),
-            backgroundColor: const Color(0xFFEF4444),
-            duration: const Duration(seconds: 4),
-          ),
-        );
+        showErrorSnackbar(context, e);
         setState(() => _streamEnded = true);
+      } else {
+        showErrorSnackbar(context, e);
       }
-    } catch (_) {
+    } catch (e, st) {
+      LoggerService.instance.captureException(e, stackTrace: st, tag: 'SwipeLivePage._activate');
       if (mounted) setState(() => _loading = false);
     }
   }
@@ -233,7 +232,9 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     _token = null;
     try {
       await StreamService.leaveStream(widget.stream.id);
-    } catch (_) {}
+    } catch (e) {
+      LoggerService.instance.warning('SwipeLivePage._deactivate', 'leaveStream başarısız: $e');
+    }
     await room?.disconnect();
     if (mounted) setState(() => _remoteVideoTrack = null);
   }
@@ -248,7 +249,9 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     room?.disconnect();
     try {
       StreamService.leaveStream(widget.stream.id);
-    } catch (_) {}
+    } catch (e) {
+      LoggerService.instance.warning('SwipeLivePage._deactivateSync', 'leaveStream başarısız: $e');
+    }
   }
 
   Future<void> _leave() async {

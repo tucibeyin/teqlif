@@ -13,9 +13,8 @@ Durum Redis'te tutulur (stream-scoped, 24 saat TTL):
 Anlık event, moderation_broadcast kanalı üzerinden ilgili kullanıcıya iletilir.
 """
 import json
-import logging
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, status
 from pydantic import BaseModel
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -25,8 +24,10 @@ from app.models.stream import LiveStream
 from app.models.user import User
 from app.utils.auth import get_current_user
 from app.utils.redis_client import get_redis
+from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException
+from app.core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/moderation", tags=["moderation"])
 
 
@@ -92,16 +93,16 @@ async def _resolve(
     )
     stream = stream_res.scalar_one_or_none()
     if not stream or not stream.is_live:
-        raise HTTPException(status_code=404, detail="Aktif yayın bulunamadı")
+        raise NotFoundException("Aktif yayın bulunamadı")
     if stream.host_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Sadece yayın sahibi moderasyon yapabilir")
+        raise ForbiddenException("Sadece yayın sahibi moderasyon yapabilir")
 
     target_res = await db.execute(select(User).where(User.username == username))
     target = target_res.scalar_one_or_none()
     if not target:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise NotFoundException("Kullanıcı bulunamadı")
     if target.id == current_user.id:
-        raise HTTPException(status_code=400, detail="Kendinize moderasyon uygulayamazsınız")
+        raise BadRequestException("Kendinize moderasyon uygulayamazsınız")
 
     return stream, target
 
@@ -184,9 +185,9 @@ async def mod_status(
     )
     stream = stream_res.scalar_one_or_none()
     if not stream:
-        raise HTTPException(status_code=404, detail="Yayın bulunamadı")
+        raise NotFoundException("Yayın bulunamadı")
     if stream.host_id != current_user.id:
-        raise HTTPException(status_code=403, detail="Sadece yayın sahibi görebilir")
+        raise ForbiddenException("Sadece yayın sahibi görebilir")
 
     redis = await get_redis()
     muted_ids = await redis.smembers(mute_key(stream_id))

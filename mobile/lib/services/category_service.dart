@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
+import '../core/logger_service.dart';
 
 class CategoryService {
   static List<(String, String)>? _cache;
@@ -16,9 +17,11 @@ class CategoryService {
             .toList();
         return _cache!;
       }
-    } catch (_) {}
-    // Fallback: hardcoded liste (offline veya sunucu hatası)
-    _cache = const [
+    } catch (e) {
+      LoggerService.instance.warning('CategoryService', 'Kategoriler sunucudan alınamadı, fallback kullanılıyor: $e');
+    }
+    // Fallback: sunucu cevap vermezse ya da parse edilemezse hardcoded liste
+    _cache ??= const [
       ('elektronik', '📱 Elektronik'),
       ('vasita', '🚗 Vasıta'),
       ('emlak', '🏠 Emlak'),

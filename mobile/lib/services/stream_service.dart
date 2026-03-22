@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
+import '../core/app_exception.dart';
 import '../models/stream.dart';
-import '../services/auth_service.dart';
 import 'storage_service.dart';
 
 class StreamService {
@@ -15,51 +15,44 @@ class StreamService {
     };
   }
 
-  static void _checkError(http.Response res) {
-    if (res.statusCode >= 400) {
-      final body = jsonDecode(res.body);
-      throw ApiException(
-        body['detail'] ?? 'Bir hata oluştu',
-        statusCode: res.statusCode,
+  static Future<List<StreamOut>> getActiveStreams() async {
+    final headers = await _headers();
+    final resp = await http.get(Uri.parse('$kBaseUrl/streams/active'), headers: headers);
+    if (resp.statusCode >= 400) {
+      final body = _tryDecode(resp.body);
+      final errMap = body['error'];
+      throw AppException(
+        errMap is Map ? (errMap['message'] ?? 'Bir hata oluştu') : (body['detail'] ?? 'Bir hata oluştu'),
+        code: errMap is Map ? (errMap['code'] ?? 'ERR_${resp.statusCode}') : 'HTTP_${resp.statusCode}',
+        statusCode: resp.statusCode,
       );
     }
-  }
-
-  static Future<List<StreamOut>> getActiveStreams() async {
-    final res = await http.get(
-      Uri.parse('$kBaseUrl/streams/active'),
-      headers: await _headers(),
-    );
-    _checkError(res);
-    final list = jsonDecode(res.body) as List;
-    return list.map((e) => StreamOut.fromJson(e)).toList();
+    final list = _tryDecodeList(resp.body);
+    return list.map((e) => StreamOut.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   static Future<StreamTokenOut> startStream(String title, String category) async {
-    final res = await http.post(
-      Uri.parse('$kBaseUrl/streams/start'),
-      headers: await _headers(),
-      body: jsonEncode({'title': title, 'category': category}),
+    final body = await apiCall(
+      () => http.post(
+        Uri.parse('$kBaseUrl/streams/start'),
+        headers: await _headers(),
+        body: jsonEncode({'title': title, 'category': category}),
+      ),
     );
-    _checkError(res);
-    return StreamTokenOut.fromJson(jsonDecode(res.body));
+    return StreamTokenOut.fromJson(body);
   }
 
   static Future<void> endStream(int streamId) async {
-    final res = await http.post(
-      Uri.parse('$kBaseUrl/streams/$streamId/end'),
-      headers: await _headers(),
+    await apiCall(
+      () => http.post(Uri.parse('$kBaseUrl/streams/$streamId/end'), headers: await _headers()),
     );
-    _checkError(res);
   }
 
   static Future<JoinTokenOut> joinStream(int streamId) async {
-    final res = await http.post(
-      Uri.parse('$kBaseUrl/streams/$streamId/join'),
-      headers: await _headers(),
+    final body = await apiCall(
+      () => http.post(Uri.parse('$kBaseUrl/streams/$streamId/join'), headers: await _headers()),
     );
-    _checkError(res);
-    return JoinTokenOut.fromJson(jsonDecode(res.body));
+    return JoinTokenOut.fromJson(body);
   }
 
   static Future<void> leaveStream(int streamId) async {
@@ -70,12 +63,12 @@ class StreamService {
   }
 
   static Future<List<String>> getViewers(int streamId) async {
-    final res = await http.get(
-      Uri.parse('$kBaseUrl/streams/$streamId/viewers'),
-      headers: await _headers(),
-    );
-    _checkError(res);
-    final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final headers = await _headers();
+    final resp = await http.get(Uri.parse('$kBaseUrl/streams/$streamId/viewers'), headers: headers);
+    if (resp.statusCode >= 400) {
+      throw AppException('İzleyiciler alınamadı', statusCode: resp.statusCode);
+    }
+    final body = jsonDecode(resp.body) as Map<String, dynamic>;
     return List<String>.from(body['viewers'] as List);
   }
 
@@ -88,11 +81,23 @@ class StreamService {
     if (token != null) req.headers['Authorization'] = 'Bearer $token';
     req.files.add(http.MultipartFile.fromBytes('file', bytes, filename: filename));
     final streamed = await req.send();
-    final body = await streamed.stream.bytesToString();
+    final bodyStr = await streamed.stream.bytesToString();
     if (streamed.statusCode >= 400) {
-      final decoded = jsonDecode(body);
-      throw ApiException(decoded['detail'] ?? 'Thumbnail yüklenemedi');
+      final decoded = _tryDecode(bodyStr);
+      final errMap = decoded['error'];
+      throw AppException(
+        errMap is Map ? (errMap['message'] ?? 'Thumbnail yüklenemedi') : (decoded['detail'] ?? 'Thumbnail yüklenemedi'),
+        statusCode: streamed.statusCode,
+      );
     }
-    return (jsonDecode(body)['thumbnail_url'] as String);
+    return (_tryDecode(bodyStr)['thumbnail_url'] as String);
+  }
+
+  static Map<String, dynamic> _tryDecode(String body) {
+    try { return jsonDecode(body) as Map<String, dynamic>; } catch (_) { return {}; }
+  }
+
+  static List _tryDecodeList(String body) {
+    try { return jsonDecode(body) as List; } catch (_) { return []; }
   }
 }

@@ -1,6 +1,6 @@
 import json
 from typing import Optional
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
@@ -8,6 +8,7 @@ from app.models.listing import Listing
 from app.models.user import User
 from app.utils.auth import get_current_user
 from app.schemas.stream import VALID_CATEGORIES
+from app.core.exceptions import NotFoundException, BadRequestException
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
@@ -69,7 +70,7 @@ async def get_listing(listing_id: int, db: AsyncSession = Depends(get_db)):
     )
     row = result.first()
     if not row:
-        raise HTTPException(status_code=404, detail="İlan bulunamadı")
+        raise NotFoundException("İlan bulunamadı")
     l, u = row
     return _row_dict(l, u)
 
@@ -78,7 +79,7 @@ async def get_listing(listing_id: int, db: AsyncSession = Depends(get_db)):
 async def create_listing(payload: dict, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     category = (payload.get("category") or "diger").strip().lower()
     if category not in VALID_CATEGORIES:
-        raise HTTPException(status_code=422, detail=f"Geçersiz kategori: {category}")
+        raise BadRequestException(f"Geçersiz kategori: {category}")
     listing = Listing(
         user_id=current_user.id,
         title=payload.get("title", ""),
@@ -126,7 +127,7 @@ async def toggle_listing(listing_id: int, current_user: User = Depends(get_curre
     )
     listing = result.scalar_one_or_none()
     if not listing:
-        raise HTTPException(status_code=404, detail="İlan bulunamadı")
+        raise NotFoundException("İlan bulunamadı")
     listing.is_active = not listing.is_active
     await db.commit()
     return {"is_active": listing.is_active}
@@ -137,7 +138,7 @@ async def delete_listing(listing_id: int, current_user: User = Depends(get_curre
     result = await db.execute(select(Listing).where(Listing.id == listing_id, Listing.user_id == current_user.id))
     listing = result.scalar_one_or_none()
     if not listing:
-        raise HTTPException(status_code=404, detail="İlan bulunamadı")
+        raise NotFoundException("İlan bulunamadı")
     listing.is_deleted = True
     listing.is_active = False
     await db.commit()

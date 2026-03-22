@@ -9,11 +9,14 @@ import 'package:url_launcher/url_launcher.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../core/app_exception.dart';
+import '../core/logger_service.dart';
 import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import '../utils/error_helper.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'notification_settings_screen.dart';
@@ -67,7 +70,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _loading = false;
         });
       }
-    } catch (_) {
+    } catch (e) {
+      LoggerService.instance.warning('ProfileScreen', 'Profil yüklenemedi: $e');
       if (!mounted) return;
       setState(() => _loading = false);
     }
@@ -590,23 +594,23 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                       if (!codeSent) {
                         // Doğrulama kodunu gönder
                         try {
-                          final resp = await http.post(
-                            Uri.parse('$kBaseUrl/auth/change-password/send-code'),
-                            headers: {'Authorization': 'Bearer $token'},
+                          await apiCall(
+                            () => http.post(
+                              Uri.parse('$kBaseUrl/auth/change-password/send-code'),
+                              headers: {'Authorization': 'Bearer $token'},
+                            ),
                           );
-                          if (resp.statusCode == 200) {
-                            setS(() {
-                              codeSent = true;
-                              loading = false;
-                            });
-                          } else {
-                            final msg = jsonDecode(resp.body)['detail'] as String?;
-                            setS(() {
-                              error = msg ?? 'Kod gönderilemedi.';
-                              loading = false;
-                            });
-                          }
-                        } catch (_) {
+                          setS(() {
+                            codeSent = true;
+                            loading = false;
+                          });
+                        } on AppException catch (e) {
+                          setS(() {
+                            error = e.message;
+                            loading = false;
+                          });
+                        } catch (e) {
+                          LoggerService.instance.warning('ProfileScreen', 'Şifre kodu gönderilemedi: $e');
                           setS(() {
                             error = 'Bağlantı hatası.';
                             loading = false;
@@ -622,34 +626,34 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                           return;
                         }
                         try {
-                          final resp = await http.post(
-                            Uri.parse('$kBaseUrl/auth/change-password/confirm'),
-                            headers: {
-                              'Content-Type': 'application/json',
-                              'Authorization': 'Bearer $token',
-                            },
-                            body: jsonEncode({
-                              'current_password': currentPassCtrl.text,
-                              'new_password': newPassCtrl.text,
-                              'code': codeCtrl.text.trim(),
-                            }),
+                          await apiCall(
+                            () => http.post(
+                              Uri.parse('$kBaseUrl/auth/change-password/confirm'),
+                              headers: {
+                                'Content-Type': 'application/json',
+                                'Authorization': 'Bearer $token',
+                              },
+                              body: jsonEncode({
+                                'current_password': currentPassCtrl.text,
+                                'new_password': newPassCtrl.text,
+                                'code': codeCtrl.text.trim(),
+                              }),
+                            ),
                           );
-                          if (resp.statusCode == 200) {
-                            if (ctx.mounted) Navigator.pop(ctx);
-                            if (mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                    content: Text('Şifreniz başarıyla değiştirildi.')),
-                              );
-                            }
-                          } else {
-                            final msg = jsonDecode(resp.body)['detail'] as String?;
-                            setS(() {
-                              error = msg ?? 'İşlem başarısız.';
-                              loading = false;
-                            });
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          if (mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Şifreniz başarıyla değiştirildi.')),
+                            );
                           }
-                        } catch (_) {
+                        } on AppException catch (e) {
+                          setS(() {
+                            error = e.message;
+                            loading = false;
+                          });
+                        } catch (e) {
+                          LoggerService.instance.warning('ProfileScreen', 'Şifre değiştirme başarısız: $e');
                           setS(() {
                             error = 'Bağlantı hatası.';
                             loading = false;
@@ -738,9 +742,10 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                     Navigator.of(ctx).pop();
                     Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
                   }
-                } on ApiException catch (e) {
+                } on AppException catch (e) {
                   setS(() => error = e.message);
-                } catch (_) {
+                } catch (e) {
+                  LoggerService.instance.warning('ProfileScreen', 'Hesap silinemedi: $e');
                   setS(() => error = 'Hesap silinemedi. Şifrenizi kontrol edin.');
                 }
               },
@@ -989,7 +994,6 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
   late final TextEditingController _nameCtrl;
   late final TextEditingController _usernameCtrl;
   bool _saving = false;
-  String? _error;
   String? _profileImageUrl;
 
   // Username availability check
@@ -1033,15 +1037,15 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       final excludeId = widget.user?['id'] as int?;
       final params = {'username': val};
       if (excludeId != null) params['exclude_id'] = excludeId.toString();
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/auth/check-username').replace(queryParameters: params),
+      final data = await apiCall(
+        () => http.get(
+          Uri.parse('$kBaseUrl/auth/check-username').replace(queryParameters: params),
+        ),
       );
       if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        setState(() => _usernameStatus = (data['available'] as bool) ? 'available' : 'taken');
-      }
-    } catch (_) {
+      setState(() => _usernameStatus = (data['available'] as bool) ? 'available' : 'taken');
+    } catch (e) {
+      LoggerService.instance.warning('EditProfileScreen', 'Kullanıcı adı kontrolü başarısız: $e');
       if (mounted) setState(() => _usernameStatus = null);
     }
   }
@@ -1107,7 +1111,8 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         fullName: updatedUser['full_name'] as String,
       );
       if (mounted) setState(() => _profileImageUrl = imageUrl);
-    } catch (_) {
+    } catch (e) {
+      LoggerService.instance.warning('EditProfileScreen', 'Avatar yüklenemedi: $e');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Fotoğraf yüklenemedi. Tekrar deneyin.')),
@@ -1121,35 +1126,32 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     final name = _nameCtrl.text.trim();
     final username = _usernameCtrl.text.trim();
     if (name.isEmpty || username.isEmpty) {
-      setState(() => _error = 'Tüm alanları doldurun');
+      showErrorSnackbar(context, Exception('Tüm alanları doldurun'));
       return;
     }
     if (username.length < 3 || !RegExp(r'^[a-z0-9_]+$').hasMatch(username)) {
-      setState(() => _error = 'Kullanıcı adı geçersiz. Sadece küçük harf, rakam ve _ kullanılabilir.');
+      showErrorSnackbar(context, Exception('Kullanıcı adı geçersiz. Sadece küçük harf, rakam ve _ kullanılabilir.'));
       return;
     }
     if (_usernameStatus == 'taken') {
-      setState(() => _error = 'Bu kullanıcı adı zaten alınmış');
+      showErrorSnackbar(context, Exception('Bu kullanıcı adı zaten alınmış'));
       return;
     }
     if (_usernameStatus == 'checking') {
-      setState(() => _error = 'Kullanıcı adı kontrol ediliyor, lütfen bekleyin...');
+      showErrorSnackbar(context, Exception('Kullanıcı adı kontrol ediliyor, lütfen bekleyin...'));
       return;
     }
-    setState(() { _saving = true; _error = null; });
+    setState(() { _saving = true; });
     try {
       final token = await StorageService.getToken();
       if (token == null) throw Exception('No token');
-      final resp = await http.patch(
-        Uri.parse('$kBaseUrl/auth/me'),
-        headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-        body: jsonEncode({'full_name': name, 'username': username}),
+      final updatedUser = await apiCall(
+        () => http.patch(
+          Uri.parse('$kBaseUrl/auth/me'),
+          headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
+          body: jsonEncode({'full_name': name, 'username': username}),
+        ),
       );
-      if (resp.statusCode != 200) {
-        final body = jsonDecode(resp.body);
-        throw Exception(body['detail'] ?? 'Hata');
-      }
-      final updatedUser = jsonDecode(resp.body) as Map<String, dynamic>;
       await StorageService.saveUserInfo(
         id: updatedUser['id'] as int,
         email: updatedUser['email'] as String,
@@ -1158,7 +1160,9 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
       );
       if (mounted) Navigator.pop(context);
     } catch (e) {
-      setState(() { _saving = false; _error = e.toString().replaceFirst('Exception: ', ''); });
+      if (mounted) showErrorSnackbar(context, e);
+    } finally {
+      if (mounted) setState(() => _saving = false);
     }
   }
 
@@ -1226,11 +1230,6 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
               ),
             ),
             const SizedBox(height: 24),
-            if (_error != null) ...[
-              Text(_error!,
-                  style: const TextStyle(color: Colors.red, fontSize: 13)),
-              const SizedBox(height: 12),
-            ],
             TextField(
               controller: _nameCtrl,
               decoration: const InputDecoration(labelText: 'Ad Soyad'),
@@ -1299,7 +1298,8 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
       if (resp.statusCode == 200 && mounted) {
         setState(() => _listings = jsonDecode(resp.body) as List);
       }
-    } catch (_) {
+    } catch (e) {
+      LoggerService.instance.warning('MyListingsScreen', 'İlanlar yüklenemedi: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1315,7 +1315,9 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) await _load();
-    } catch (_) {}
+    } catch (e) {
+      LoggerService.instance.warning('MyListingsScreen', 'İlan durumu değiştirilemedi: $e');
+    }
   }
 
   Future<void> _delete(dynamic listing) async {
@@ -1343,7 +1345,9 @@ class _MyListingsScreenState extends State<_MyListingsScreen> {
         headers: {'Authorization': 'Bearer $token'},
       );
       if (resp.statusCode == 200) await _load();
-    } catch (_) {}
+    } catch (e) {
+      LoggerService.instance.warning('MyListingsScreen', 'İlan silinemedi: $e');
+    }
   }
 
   String _fmt(dynamic price) {
@@ -1488,7 +1492,8 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
       if (resp.statusCode == 200 && mounted) {
         setState(() => _listings = jsonDecode(resp.body) as List);
       }
-    } catch (_) {
+    } catch (e) {
+      LoggerService.instance.warning('FavoritesScreen', 'Favoriler yüklenemedi: $e');
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -1503,7 +1508,9 @@ class _FavoritesScreenState extends State<_FavoritesScreen> {
         headers: {'Authorization': 'Bearer $token'},
       );
       await _load();
-    } catch (_) {}
+    } catch (e) {
+      LoggerService.instance.warning('FavoritesScreen', 'Favori kaldırılamadı: $e');
+    }
   }
 
   String _fmt(dynamic price) {

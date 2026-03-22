@@ -1,9 +1,13 @@
+import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
+import 'package:sentry_flutter/sentry_flutter.dart';
 import 'config/theme.dart';
+import 'core/logger_service.dart';
 import 'firebase_options.dart';
 import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
@@ -13,7 +17,6 @@ import 'services/storage_service.dart';
 import 'services/push_notification_service.dart';
 import 'services/analytics_service.dart';
 import 'widgets/global_keyboard_accessory.dart';
-import 'package:sentry_flutter/sentry_flutter.dart';
 
 void main() async {
   WidgetsBinding widgetsBinding = WidgetsFlutterBinding.ensureInitialized();
@@ -24,17 +27,40 @@ void main() async {
   // getInitialMessage) non-blocking olarak başlat — runApp'i bloke etme
   PushNotificationService.initEarly();
 
-// --- SENTRY ENTEGRASYONU BAŞLANGICI ---
+// --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU ---
   await SentryFlutter.init(
     (options) {
       options.dsn = 'https://d9535262385699cee49c13cc02add8f2@o4511052861538304.ingest.us.sentry.io/4511053904478208';
       // Üretim ortamı için performansı artırmak adına oranı düşürebilirsiniz (örn: 0.2)
-      options.tracesSampleRate = 1.0; 
+      options.tracesSampleRate = 1.0;
     },
-    // Uygulamamızı Sentry üzerinden başlatıyoruz
-    appRunner: () => runApp(const ProviderScope(child: TeqlifApp())),
+    appRunner: () {
+      // 1. Flutter/UI katmanındaki yakalanmamış hataları yakala
+      //    (örn: build metodundaki null pointer, layout hataları)
+      PlatformDispatcher.instance.onError = (error, stack) {
+        LoggerService.instance.captureException(
+          error,
+          stackTrace: stack,
+          tag: 'PlatformDispatcher',
+        );
+        return true; // hatayı "işlendi" olarak işaretle, uygulama çökmez
+      };
+
+      // 2. Dart async zone'undaki tüm yakalanmamış hataları yakala
+      //    (örn: async fonksiyonlardaki unhandled exception'lar)
+      runZonedGuarded(
+        () => runApp(const ProviderScope(child: TeqlifApp())),
+        (error, stack) {
+          LoggerService.instance.captureException(
+            error,
+            stackTrace: stack,
+            tag: 'ZonedGuarded',
+          );
+        },
+      );
+    },
   );
-  // --- SENTRY ENTEGRASYONU BITISI ---
+  // --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU SONU ---
 }
 
 class TeqlifApp extends StatefulWidget {

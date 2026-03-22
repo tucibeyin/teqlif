@@ -1,8 +1,7 @@
-import logging
 from datetime import datetime, timezone
 from typing import Dict, Set, List
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
 
@@ -12,8 +11,10 @@ from app.models.notification import Notification
 from app.schemas.notification import NotificationOut, UnreadCountOut
 from app.utils.auth import get_current_user, decode_token
 from app.services.firebase_service import send_push
+from app.core.exceptions import NotFoundException
+from app.core.logger import get_logger
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
 
 # In-memory WebSocket connections per user

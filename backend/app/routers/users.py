@@ -1,5 +1,5 @@
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
 from sqlalchemy.exc import IntegrityError
@@ -12,6 +12,7 @@ from app.models.stream import LiveStream
 from app.models.block import UserBlock
 from app.schemas.block import BlockedUserOut, BlockStatusOut
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
+from app.core.exceptions import NotFoundException, BadRequestException
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -56,16 +57,16 @@ async def block_user(
     )
     target = result.scalar_one_or_none()
     if not target:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise NotFoundException("Kullanıcı bulunamadı")
     if target.id == current_user.id:
-        raise HTTPException(status_code=400, detail="Kendinizi engelleyemezsiniz")
+        raise BadRequestException("Kendinizi engelleyemezsiniz")
 
     block = UserBlock(blocker_id=current_user.id, blocked_id=target.id)
     db.add(block)
     try:
         await db.commit()
     except IntegrityError:
-        await db.rollback()  # already blocked — idempotent
+        await db.rollback()  # zaten engellenmiş — idempotent
     return BlockStatusOut(is_blocked=True)
 
 
@@ -80,7 +81,7 @@ async def unblock_user(
     )
     target = result.scalar_one_or_none()
     if not target:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise NotFoundException("Kullanıcı bulunamadı")
 
     block = await db.scalar(
         select(UserBlock).where(
@@ -105,7 +106,7 @@ async def get_user_profile(
     )
     user = result.scalar_one_or_none()
     if not user:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise NotFoundException("Kullanıcı bulunamadı")
 
     listing_count = await db.scalar(
         select(func.count()).where(Listing.user_id == user.id, Listing.is_active == True)  # noqa: E712

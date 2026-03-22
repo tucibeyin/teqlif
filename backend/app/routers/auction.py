@@ -1,11 +1,10 @@
 import asyncio
 import json
-import logging
 import uuid
 from datetime import datetime, timezone
 from typing import Dict, Set
 
-from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -20,8 +19,10 @@ from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut
 from app.utils.auth import get_current_user, decode_token
 from app.utils.redis_client import get_redis
 from app.routers.notifications import push_notification
+from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException, DatabaseException
+from app.core.logger import get_logger, capture_exception
 
-logger = logging.getLogger(__name__)
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auction", tags=["auction"])
 
 _PUBSUB_CHANNEL = "auction_broadcast"
@@ -169,11 +170,11 @@ async def _get_stream_as_host(stream_id: int, user: User, db: AsyncSession) -> L
     result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
     if not stream:
-        raise HTTPException(status_code=404, detail="Yayın bulunamadı")
+        raise NotFoundException("Yayın bulunamadı")
     if stream.host_id != user.id:
-        raise HTTPException(status_code=403, detail="Sadece host bu işlemi yapabilir")
+        raise ForbiddenException("Sadece host bu işlemi yapabilir")
     if not stream.is_live:
-        raise HTTPException(status_code=400, detail="Yayın aktif değil")
+        raise BadRequestException("Yayın aktif değil")
     return stream
 
 
@@ -198,7 +199,7 @@ async def start_auction(
 
     existing_status = await redis.hget(key, "status")
     if existing_status == "active":
-        raise HTTPException(status_code=400, detail="Zaten aktif bir açık artırma var")
+        raise BadRequestException("Zaten aktif bir açık artırma var")
 
     # listing_id verilmişse başlığı oradan al, fiyat her zaman request'ten gelir
     listing_id_val = data.listing_id
@@ -208,7 +209,7 @@ async def start_auction(
             select(Listing).where(Listing.id == listing_id_val, Listing.is_deleted == False)  # noqa: E712
         )
         if not listing:
-            raise HTTPException(status_code=404, detail="İlan bulunamadı")
+            raise NotFoundException("İlan bulunamadı")
         item_name = listing.title
     else:
         item_name = data.item_name
@@ -248,7 +249,7 @@ async def pause_auction(
     key = _key(stream_id)
 
     if await redis.hget(key, "status") != "active":
-        raise HTTPException(status_code=400, detail="Açık artırma aktif değil")
+        raise BadRequestException("Açık artırma aktif değil")
 
     await redis.hset(key, "status", "paused")
     state = await _get_state(stream_id)
@@ -269,7 +270,7 @@ async def resume_auction(
     key = _key(stream_id)
 
     if await redis.hget(key, "status") != "paused":
-        raise HTTPException(status_code=400, detail="Açık artırma duraklatılmamış")
+        raise BadRequestException("Açık artırma duraklatılmamış")
 
     await redis.hset(key, "status", "active")
     state = await _get_state(stream_id)
@@ -291,7 +292,7 @@ async def end_auction(
 
     data = await redis.hgetall(key)
     if not data or data.get("status") not in ("active", "paused"):
-        raise HTTPException(status_code=400, detail="Aktif açık artırma yok")
+        raise BadRequestException("Aktif açık artırma yok")
 
     # DB'ye KESİN YAZ — commit başarılı olana kadar Redis'e "ended" yazma
     winner_id_str = data.get("current_bidder_id", "")
@@ -315,8 +316,9 @@ async def end_auction(
         await db.commit()
     except Exception as exc:
         await db.rollback()
-        logger.error("[AÇIK ARTIRMA] end DB commit HATASI | stream_id=%s | %s", stream_id, exc)
-        raise HTTPException(status_code=500, detail="Açık artırma sonucu kaydedilemedi")
+        logger.error("[AÇIK ARTIRMA] end DB commit HATASI | stream_id=%s | %s", stream_id, exc, exc_info=True)
+        capture_exception(exc)
+        raise DatabaseException("Açık artırma sonucu kaydedilemedi")
 
     # Commit başarılı → şimdi Redis'i güncelle ve temizle
     await redis.hset(key, "status", "ended")
@@ -344,14 +346,14 @@ async def place_bid(
     result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
     if stream and stream.host_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Host kendi açık artırmasına teklif veremez")
+        raise BadRequestException("Host kendi açık artırmasına teklif veremez")
 
     redis = await get_redis()
 
     # ── 2. Mute kontrolü ─────────────────────────────────────────────────────
     from app.routers.moderation import mute_key
     if await redis.sismember(mute_key(stream_id), str(current_user.id)):
-        raise HTTPException(status_code=403, detail="Bu yayında susturuldunuz. Teklif veremezsiniz.")
+        raise ForbiddenException("Bu yayında susturuldunuz. Teklif veremezsiniz.")
 
     # Önceki teklif sahibini kaydet (outbid bildirimi için)
     prev_data = await redis.hgetall(_key(stream_id))
@@ -363,8 +365,8 @@ async def place_bid(
     ok, msg = int(val[0]), val[1]
     if ok == 0:
         if msg == "not_active":
-            raise HTTPException(status_code=400, detail="Açık artırma aktif değil")
-        raise HTTPException(status_code=400, detail="Teklifiniz mevcut tekliften yüksek olmalı")
+            raise BadRequestException("Açık artırma aktif değil")
+        raise BadRequestException("Teklifiniz mevcut tekliften yüksek olmalı")
 
     # ── 4. PostgreSQL'e KESİN YAZ — commit başarılı olana kadar Redis'e dokunma
     new_bid = Bid(
@@ -380,9 +382,10 @@ async def place_bid(
         await db.rollback()
         logger.error(
             "[TEKLİF] DB commit HATASI | stream_id=%s user=%s amount=%s | %s",
-            stream_id, current_user.username, data.amount, exc,
+            stream_id, current_user.username, data.amount, exc, exc_info=True,
         )
-        raise HTTPException(status_code=500, detail="Teklif kaydedilemedi, lütfen tekrar deneyin")
+        capture_exception(exc)
+        raise DatabaseException("Teklif kaydedilemedi, lütfen tekrar deneyin")
 
     # ── 5. Redis atomik güncelle (re-validate + update) ──────────────────────
     # DB commit başarılı → şimdi Redis'i güncelliyoruz.
@@ -400,8 +403,8 @@ async def place_bid(
             stream_id, current_user.username, data.amount, msg,
         )
         if msg == "not_active":
-            raise HTTPException(status_code=400, detail="Açık artırma aktif değil")
-        raise HTTPException(status_code=400, detail="Eş zamanlı teklif: teklifiniz geçildi, lütfen tekrar deneyin")
+            raise BadRequestException("Açık artırma aktif değil")
+        raise BadRequestException("Eş zamanlı teklif: teklifiniz geçildi, lütfen tekrar deneyin")
 
     # ── 6. Redis pub/sub yayını — SADECE her iki yazma da başarılıysa ────────
     state = await _get_state(stream_id)
@@ -438,7 +441,10 @@ async def place_bid(
                 pref_key="outbid",
             ))
         except ValueError:
-            pass
+            logger.warning(
+                "[TEKLİF] Geçersiz prev_bidder_id formatı, outbid bildirimi atlandı | stream_id=%s prev_bidder_id_str=%r",
+                stream_id, prev_bidder_id_str,
+            )
 
     return state
 
@@ -455,11 +461,11 @@ async def accept_bid(
 
     data = await redis.hgetall(key)
     if not data or data.get("status") not in ("active", "paused"):
-        raise HTTPException(status_code=400, detail="Aktif açık artırma yok")
+        raise BadRequestException("Aktif açık artırma yok")
 
     winner_name = data.get("current_bidder_name", "")
     if not winner_name:
-        raise HTTPException(status_code=400, detail="Kabul edilecek teklif yok (henüz teklif verilmemiş)")
+        raise BadRequestException("Kabul edilecek teklif yok (henüz teklif verilmemiş)")
 
     # Auction'ı bitir — end ile aynı mantık
     winner_id_str = data.get("current_bidder_id", "")
@@ -514,14 +520,19 @@ async def accept_bid(
             )
             db.add(dm)
         except ValueError:
+            logger.warning(
+                "[ACCEPT] Geçersiz winner_id_str formatı, DM atlandı | stream_id=%s winner_id_str=%r",
+                stream_id, winner_id_str,
+            )
             winner_user_id = None
 
     try:
         await db.commit()
     except Exception as exc:
         await db.rollback()
-        logger.error("[ACCEPT] DB commit HATASI | stream_id=%s | %s", stream_id, exc)
-        raise HTTPException(status_code=500, detail="Teklif kabul sonucu kaydedilemedi")
+        logger.error("[ACCEPT] DB commit HATASI | stream_id=%s | %s", stream_id, exc, exc_info=True)
+        capture_exception(exc)
+        raise DatabaseException("Teklif kabul sonucu kaydedilemedi")
 
     # Commit başarılı → şimdi Redis'i güncelle ve temizle
     await redis.hset(key, "status", "ended")

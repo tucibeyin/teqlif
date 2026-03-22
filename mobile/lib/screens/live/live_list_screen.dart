@@ -5,8 +5,8 @@ import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
-import '../../services/auth_service.dart';
 import '../../services/category_service.dart';
+import '../../utils/error_helper.dart';
 import '../public_profile_screen.dart';
 import 'host_stream_screen.dart';
 import 'swipe_live_screen.dart';
@@ -32,7 +32,6 @@ const _kCatLabels = {
 class LiveListScreenState extends State<LiveListScreen> {
   List<StreamOut> _streams = [];
   bool _loading = true;
-  String? _error;
   String? _selectedCategory; // null = Tümü
 
   @override
@@ -45,10 +44,7 @@ class LiveListScreenState extends State<LiveListScreen> {
 
   Future<void> _load() async {
     if (!mounted) return;
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    setState(() => _loading = true);
     try {
       final streams = await StreamService.getActiveStreams();
       if (!mounted) return;
@@ -58,10 +54,8 @@ class LiveListScreenState extends State<LiveListScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      setState(() {
-        _error = e.toString();
-        _loading = false;
-      });
+      setState(() => _loading = false);
+      showErrorSnackbar(context, e);
     }
   }
 
@@ -157,7 +151,6 @@ class LiveListScreenState extends State<LiveListScreen> {
     final (title, category) = result;
 
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.of(context);
     try {
       final streamToken = await StreamService.startStream(title, category);
       if (!mounted) return;
@@ -167,12 +160,8 @@ class LiveListScreenState extends State<LiveListScreen> {
           builder: (_) => HostStreamScreen(streamToken: streamToken, title: title),
         ),
       ).then((_) => _load());
-    } on ApiException catch (e) {
-      messenger.showSnackBar(SnackBar(content: Text(e.message)));
-    } catch (_) {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('Yayın başlatılamadı')),
-      );
+    } catch (e) {
+      showErrorSnackbar(context, e);
     }
   }
 
@@ -199,7 +188,7 @@ class LiveListScreenState extends State<LiveListScreen> {
   @override
   Widget build(BuildContext context) {
     final cats = _categories;
-    final showFilter = !_loading && _error == null && cats.length >= 1;
+    final showFilter = !_loading && cats.length >= 1;
     final filtered = _filtered;
 
     return Scaffold(

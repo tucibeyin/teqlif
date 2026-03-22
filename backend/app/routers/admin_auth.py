@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Body, status
+from fastapi import APIRouter, Depends, Body
 from google.oauth2 import id_token
 from google.auth.transport import requests
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -8,65 +8,56 @@ from app.config import settings
 from app.database import get_db
 from app.models.user import User
 from app.utils.auth import create_access_token
+from app.core.exceptions import NotFoundException, ForbiddenException, UnauthorizedException
+from app.core.logger import get_logger
 
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/admin-auth", tags=["admin-auth"])
+
 
 @router.post("/verify-google")
 async def verify_google(token: str = Body(..., embed=True)):
     try:
-        # 1. Google Token'ını doğrula
         idinfo = id_token.verify_oauth2_token(
-            token, 
-            requests.Request(), 
-            settings.google_client_id
+            token,
+            requests.Request(),
+            settings.google_client_id,
         )
-
-        # 2. E-posta kontrolü (Sadece senin e-postan mı?)
-        if idinfo['email'] != settings.admin_email:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN, 
-                detail="Bu alan sadece sistem yöneticisine özeldir."
-            )
-
-        return {"status": "google_ok", "email": idinfo['email']}
-    
     except ValueError:
-        raise HTTPException(status_code=401, detail="Geçersiz Google Token.")
+        raise UnauthorizedException("Geçersiz Google Token.")
 
-from app.security.auth import AdminSecurity, PasswordPolicy
+    if idinfo["email"] != settings.admin_email:
+        raise ForbiddenException("Bu alan sadece sistem yöneticisine özeldir.")
+
+    return {"status": "google_ok", "email": idinfo["email"]}
+
+
+from app.security.auth import AdminSecurity
+
 
 @router.post("/verify-password")
 async def verify_password(
     password: str = Body(..., embed=True),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
-    # 1. Yeni güvenli hash sistemini kullan
     admin_security = AdminSecurity()
     is_valid = admin_security.verify_admin_password(password)
-    
-    # Fallback: eski düz metin (geçici destek)
+
+    # Geçici geriye dönük uyumluluk: eski düz metin şifre desteği
     if not is_valid and settings.admin_password:
-        is_valid = (password == settings.admin_password)
-    
+        is_valid = password == settings.admin_password
+
     if not is_valid:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, 
-            detail="Yönetici şifresi hatalı."
-        )
+        raise UnauthorizedException("Yönetici şifresi hatalı.")
 
-    # 2. Şifre doğruysa, senin kullanıcını DB'de bul ve bir admin token'ı üret
-    result = await db.execute(
-        select(User).where(User.email == settings.admin_email)
-    )
+    result = await db.execute(select(User).where(User.email == settings.admin_email))
     user = result.scalar_one_or_none()
-
     if not user:
-        raise HTTPException(status_code=404, detail="Admin kullanıcısı veritabanında bulunamadı.")
+        raise NotFoundException("Admin kullanıcısı veritabanında bulunamadı.")
 
-    # Normal kullanıcı login'indeki gibi token üret
     access_token = create_access_token(user_id=user.id)
     return {
         "access_token": access_token,
         "token_type": "bearer",
-        "message": "Backoffice erişimi onaylandı"
+        "message": "Backoffice erişimi onaylandı",
     }

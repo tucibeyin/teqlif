@@ -1,12 +1,13 @@
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
+import '../../core/logger_service.dart';
 import '../../services/auth_service.dart';
+import '../../utils/error_helper.dart';
 import 'verify_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -23,7 +24,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _fullNameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
   bool _loading = false;
-  String? _error;
   bool _obscure = true;
   bool _eulaAccepted = false;
 
@@ -60,15 +60,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _checkUsername(String val) async {
     try {
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/auth/check-username').replace(queryParameters: {'username': val}),
+      final body = await apiCall(
+        () => http.get(
+          Uri.parse('$kBaseUrl/auth/check-username')
+              .replace(queryParameters: {'username': val}),
+        ),
       );
       if (!mounted) return;
-      if (resp.statusCode == 200) {
-        final data = jsonDecode(resp.body) as Map<String, dynamic>;
-        setState(() => _usernameStatus = (data['available'] as bool) ? 'available' : 'taken');
-      }
-    } catch (_) {
+      setState(() => _usernameStatus = (body['available'] as bool) ? 'available' : 'taken');
+    } catch (e) {
+      LoggerService.instance.warning('RegisterScreen', 'Kullanıcı adı kontrolü başarısız: $e');
       if (mounted) setState(() => _usernameStatus = null);
     }
   }
@@ -81,10 +82,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_eulaAccepted) {
-      setState(() => _error = 'Kullanım Şartları\'nı kabul etmelisiniz.');
+      showErrorSnackbar(context, Exception('Kullanım Şartları\'nı kabul etmelisiniz.'));
       return;
     }
-    setState(() { _loading = true; _error = null; });
+    setState(() { _loading = true; });
     try {
       await AuthService.register(
         email: _emailCtrl.text.trim(),
@@ -99,10 +100,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         );
       }
-    } on ApiException catch (e) {
-      setState(() => _error = e.message);
-    } catch (_) {
-      setState(() => _error = 'Bağlantı hatası. Lütfen tekrar deneyin.');
+    } catch (e) {
+      if (mounted) showErrorSnackbar(context, e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -129,21 +128,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
               ),
               const SizedBox(height: 28),
-              if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: const Color(0xFFFECACA)),
-                  ),
-                  child: Text(
-                    _error!,
-                    style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13),
-                  ),
-                ),
-                const SizedBox(height: 16),
-              ],
               Form(
                 key: _formKey,
                 child: Column(

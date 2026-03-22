@@ -1,7 +1,7 @@
 import asyncio
 from typing import Optional
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models.follow import Follow
 from app.models.user import User
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
+from app.core.exceptions import NotFoundException, BadRequestException
 
 router = APIRouter(prefix="/api/follows", tags=["follows"])
 
@@ -35,19 +36,19 @@ async def follow_user(
     db: AsyncSession = Depends(get_db),
 ):
     if user_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Kendinizi takip edemezsiniz")
+        raise BadRequestException("Kendinizi takip edemezsiniz")
 
     target = await db.scalar(
         select(User).where(User.id == user_id, User.is_active == True)  # noqa: E712
     )
     if not target:
-        raise HTTPException(status_code=404, detail="Kullanıcı bulunamadı")
+        raise NotFoundException("Kullanıcı bulunamadı")
 
     existing = await db.scalar(
         select(Follow).where(Follow.follower_id == current_user.id, Follow.followed_id == user_id)
     )
     if existing:
-        raise HTTPException(status_code=400, detail="Zaten takip ediyorsunuz")
+        raise BadRequestException("Zaten takip ediyorsunuz")
 
     db.add(Follow(follower_id=current_user.id, followed_id=user_id))
     await db.commit()
@@ -77,7 +78,7 @@ async def unfollow_user(
         select(Follow).where(Follow.follower_id == current_user.id, Follow.followed_id == user_id)
     )
     if not follow:
-        raise HTTPException(status_code=404, detail="Takip kaydı bulunamadı")
+        raise NotFoundException("Takip kaydı bulunamadı")
     await db.delete(follow)
     await db.commit()
     return {"ok": True}

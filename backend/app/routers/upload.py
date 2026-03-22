@@ -1,9 +1,10 @@
 import os
 import uuid
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, UploadFile, File
 from app.config import settings
 from app.models.user import User
 from app.utils.auth import get_current_user
+from app.core.exceptions import BadRequestException
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
@@ -30,11 +31,11 @@ async def upload_image(
 ):
     data = await file.read()
     if len(data) > MAX_SIZE:
-        raise HTTPException(status_code=422, detail="Dosya boyutu 10 MB'ı geçemez")
+        raise BadRequestException("Dosya boyutu 10 MB'ı geçemez")
 
     ext = _detect_image_type(data)
     if ext is None:
-        raise HTTPException(status_code=422, detail="Sadece JPEG, PNG, WebP veya GIF yüklenebilir")
+        raise BadRequestException("Sadece JPEG, PNG, WebP veya GIF yüklenebilir")
     filename = f"{uuid.uuid4().hex}.{ext}"
 
     os.makedirs(settings.upload_dir, exist_ok=True)

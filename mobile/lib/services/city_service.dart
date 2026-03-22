@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
+import '../core/logger_service.dart';
 
 class CityService {
   static List<String>? _cache;
@@ -14,7 +15,9 @@ class CityService {
         _cache = list.cast<String>();
         return _cache!;
       }
-    } catch (_) {}
+    } catch (e) {
+      LoggerService.instance.warning('CityService', 'Şehirler alınamadı: $e');
+    }
     return [];
   }
 }

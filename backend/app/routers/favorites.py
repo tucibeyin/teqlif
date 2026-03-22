@@ -1,5 +1,5 @@
 import json
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from app.database import get_db
@@ -7,6 +7,7 @@ from app.models.favorite import Favorite
 from app.models.listing import Listing
 from app.models.user import User
 from app.utils.auth import get_current_user
+from app.core.exceptions import NotFoundException, BadRequestException
 
 router = APIRouter(prefix="/api/favorites", tags=["favorites"])
 
@@ -51,9 +52,9 @@ async def check_favorite(listing_id: int, current_user: User = Depends(get_curre
 async def add_favorite(listing_id: int, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
     listing = await db.scalar(select(Listing).where(Listing.id == listing_id, Listing.is_deleted == False))  # noqa: E712
     if not listing:
-        raise HTTPException(status_code=404, detail="İlan bulunamadı")
+        raise NotFoundException("İlan bulunamadı")
     if listing.user_id == current_user.id:
-        raise HTTPException(status_code=400, detail="Kendi ilanınızı favorileyemezsiniz")
+        raise BadRequestException("Kendi ilanınızı favorileyemezsiniz")
     existing = await db.scalar(
         select(Favorite).where(Favorite.user_id == current_user.id, Favorite.listing_id == listing_id)
     )

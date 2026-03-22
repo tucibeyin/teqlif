@@ -4,6 +4,7 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../services/auth_service.dart';
 import '../../services/push_notification_service.dart';
+import '../../utils/error_helper.dart';
 
 class VerifyScreen extends StatefulWidget {
   final String email;
@@ -17,7 +18,6 @@ class _VerifyScreenState extends State<VerifyScreen> {
   final _codeCtrl = TextEditingController();
   bool _loading = false;
   bool _resending = false;
-  String? _error;
   String? _success;
 
   @override
@@ -28,10 +28,10 @@ class _VerifyScreenState extends State<VerifyScreen> {
 
   Future<void> _verify() async {
     if (_codeCtrl.text.length != 6) {
-      setState(() => _error = '6 haneli kodu giriniz');
+      showErrorSnackbar(context, Exception('6 haneli kodu giriniz'));
       return;
     }
-    setState(() { _loading = true; _error = null; _success = null; });
+    setState(() { _loading = true; _success = null; });
     try {
       await AuthService.verify(
         email: widget.email,
@@ -39,24 +39,20 @@ class _VerifyScreenState extends State<VerifyScreen> {
       );
       PushNotificationService.initialize();
       if (mounted) Navigator.of(context).pushReplacementNamed('/home');
-    } on ApiException catch (e) {
-      setState(() => _error = e.message);
-    } catch (_) {
-      setState(() => _error = 'Bağlantı hatası. Lütfen tekrar deneyin.');
+    } catch (e) {
+      if (mounted) showErrorSnackbar(context, e);
     } finally {
       if (mounted) setState(() => _loading = false);
     }
   }
 
   Future<void> _resend() async {
-    setState(() { _resending = true; _error = null; _success = null; });
+    setState(() { _resending = true; _success = null; });
     try {
       final msg = await AuthService.resendCode(widget.email);
-      setState(() => _success = msg);
-    } on ApiException catch (e) {
-      setState(() => _error = e.message);
-    } catch (_) {
-      setState(() => _error = 'Bağlantı hatası.');
+      if (mounted) setState(() => _success = msg);
+    } catch (e) {
+      if (mounted) showErrorSnackbar(context, e);
     } finally {
       if (mounted) setState(() => _resending = false);
     }
@@ -83,21 +79,6 @@ class _VerifyScreenState extends State<VerifyScreen> {
               style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
             ),
             const SizedBox(height: 28),
-            if (_error != null) ...[
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFEF2F2),
-                  borderRadius: BorderRadius.circular(8),
-                  border: Border.all(color: const Color(0xFFFECACA)),
-                ),
-                child: Text(
-                  _error!,
-                  style: const TextStyle(color: Color(0xFF991B1B), fontSize: 13),
-                ),
-              ),
-              const SizedBox(height: 16),
-            ],
             if (_success != null) ...[
               Container(
                 padding: const EdgeInsets.all(12),
