@@ -1112,6 +1112,8 @@
                     </div>
                     <div class="stream-meta-controls">
                         <button class="btn btn-slate" id="btnToggleMic" style="display:none;">🎙 Mikrofon Kapat</button>
+                        <button class="btn btn-slate" id="btnToggleCamera" style="display:none;">📷 Kamera Kapat</button>
+                        <button class="btn btn-slate" id="btnSwitchCamera" style="display:none;">🔄 Kamera Değiştir</button>
                         <button class="btn btn-danger" id="btnEndStream" style="display:none;">Yayını Bitir</button>
                         <button class="btn btn-slate" id="btnLeave" style="display:none;">Ayrıl</button>
                     </div>
@@ -1366,6 +1368,12 @@
             if (isHost) {
                 document.getElementById('btnEndStream').style.display = '';
                 document.getElementById('btnToggleMic').style.display = '';
+                document.getElementById('btnToggleCamera').style.display = '';
+                // Birden fazla kamera varsa "Değiştir" butonunu göster
+                navigator.mediaDevices.enumerateDevices().then(devices => {
+                    const cams = devices.filter(d => d.kind === 'videoinput');
+                    if (cams.length > 1) document.getElementById('btnSwitchCamera').style.display = '';
+                }).catch(() => {});
             } else {
                 document.getElementById('btnLeave').style.display = '';
                 // mainVideo daima muted — ses remoteAudio elementi üzerinden çıkar
@@ -1506,6 +1514,38 @@
                 await _room.localParticipant.setMicrophoneEnabled(micEnabled);
             }
             btn.textContent = micEnabled ? '🎙 Mikrofon Kapat' : '🔇 Mikrofon Aç';
+        });
+
+        // Kamera Kapat/Aç (Host)
+        let cameraEnabled = true;
+        document.getElementById('btnToggleCamera').addEventListener('click', async () => {
+            const btn = document.getElementById('btnToggleCamera');
+            cameraEnabled = !cameraEnabled;
+            if (_room) {
+                await _room.localParticipant.setCameraEnabled(cameraEnabled);
+            }
+            btn.textContent = cameraEnabled ? '📷 Kamera Kapat' : '📷 Kamera Aç';
+        });
+
+        // Kamera Değiştir (Host — birden fazla kamera varsa)
+        document.getElementById('btnSwitchCamera').addEventListener('click', async () => {
+            const btn = document.getElementById('btnSwitchCamera');
+            if (!_room) return;
+            try {
+                btn.disabled = true;
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cams = devices.filter(d => d.kind === 'videoinput');
+                if (cams.length < 2) return;
+                const currentId = _room.localParticipant.videoTrackPublications.values().next()
+                    ?.value?.track?.mediaStreamTrack?.getSettings()?.deviceId;
+                const currentIdx = cams.findIndex(d => d.deviceId === currentId);
+                const nextCam = cams[(currentIdx + 1) % cams.length];
+                await _room.switchActiveDevice('videoinput', nextCam.deviceId);
+            } catch (e) {
+                console.error('Kamera değiştirilemedi:', e);
+            } finally {
+                btn.disabled = false;
+            }
         });
 
         // Yayın sona erdi — viewer tam sayfa bildirim + yönlendirme
