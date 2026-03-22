@@ -151,6 +151,8 @@ class _LoginScreenState extends State<LoginScreen> {
                       TextFormField(
                         controller: _passCtrl,
                         obscureText: _obscure,
+                        enableSuggestions: false,
+                        autocorrect: false,
                         decoration: InputDecoration(
                           labelText: 'Şifre',
                           suffixIcon: IconButton(

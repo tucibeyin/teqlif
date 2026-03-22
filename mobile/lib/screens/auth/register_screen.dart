@@ -229,6 +229,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     TextFormField(
                       controller: _passCtrl,
                       obscureText: _obscure,
+                      enableSuggestions: false,
+                      autocorrect: false,
                       decoration: InputDecoration(
                         labelText: 'Şifre',
                         suffixIcon: IconButton(

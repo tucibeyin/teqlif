@@ -483,6 +483,8 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 TextField(
                   controller: currentPassCtrl,
                   obscureText: true,
+                  enableSuggestions: false,
+                  autocorrect: false,
                   decoration: InputDecoration(
                     labelText: 'Mevcut Şifre',
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
@@ -492,6 +494,8 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 TextField(
                   controller: newPassCtrl,
                   obscureText: true,
+                  enableSuggestions: false,
+                  autocorrect: false,
                   decoration: InputDecoration(
                     labelText: 'Yeni Şifre',
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
@@ -501,6 +505,8 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 TextField(
                   controller: confirmPassCtrl,
                   obscureText: true,
+                  enableSuggestions: false,
+                  autocorrect: false,
                   decoration: InputDecoration(
                     labelText: 'Yeni Şifre (Tekrar)',
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
@@ -682,6 +688,8 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               TextField(
                 controller: passCtrl,
                 obscureText: true,
+                enableSuggestions: false,
+                autocorrect: false,
                 decoration: const InputDecoration(
                   labelText: 'Şifreniz',
                   hintText: 'Onaylamak için şifrenizi girin',
