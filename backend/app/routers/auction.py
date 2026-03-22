@@ -622,6 +622,14 @@ async def buy_it_now_accept(
     bid_count   = int(redis_data.get("bid_count", 0))
     start_price = float(redis_data.get("start_price", bin_price))
 
+    listing_line = f"\n🔗 https://teqlif.com/ilan/{listing_id}" if listing_id else ""
+    dm_content = (
+        f"🛒 Hemen Al tamamlandı! Tebrikler!\n"
+        f"📦 Ürün: {item_name}\n"
+        f"💰 Fiyat: {_fmt_price(bin_price)}"
+        f"{listing_line}"
+    )
+
     try:
         listing: Listing | None = None
         if listing_id:
@@ -658,6 +666,15 @@ async def buy_it_now_accept(
             purchase_type="BUY_IT_NOW",
         )
         db.add(purchase)
+
+        # Host'tan alıcıya DM (normal teklif kabulüyle aynı pattern)
+        dm = DirectMessage(
+            sender_id=current_user.id,
+            receiver_id=buyer_id,
+            content=dm_content,
+        )
+        db.add(dm)
+
         await db.commit()
 
     except Exception as exc:
@@ -669,6 +686,25 @@ async def buy_it_now_accept(
         )
         capture_exception(exc)
         raise DatabaseException("Satın alma işlemi kaydedilemedi, lütfen tekrar deneyin")
+
+    # Alıcıya push notification (commit sonrası, non-blocking)
+    try:
+        await push_notification(
+            buyer_id,
+            {
+                "type": "auction_won",
+                "title": "🛒 Hemen Al tamamlandı!",
+                "body": f"{item_name} — {_fmt_price(bin_price)}",
+                "related_id": listing_id or stream_id,
+            },
+            pref_key="auction_won",
+        )
+        logger.info(
+            "[HEMEN AL KABUL] DM+bildirim gönderildi | buyer_id=%s | item=%r | price=%s",
+            buyer_id, item_name, bin_price,
+        )
+    except Exception as exc:
+        logger.error("[HEMEN AL KABUL] Bildirim gönderilemedi | buyer_id=%s | %s", buyer_id, exc)
 
     await redis.delete(key)
 
