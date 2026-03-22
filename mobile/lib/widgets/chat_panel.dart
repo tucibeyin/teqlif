@@ -300,7 +300,7 @@ class _ChatPanelState extends State<ChatPanel> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (_messages.isNotEmpty)
+        if (_history.isNotEmpty)
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
               if (n is ScrollUpdateNotification) {
@@ -317,24 +317,39 @@ class _ChatPanelState extends State<ChatPanel> {
               constraints: const BoxConstraints(maxHeight: 220),
               child: ListView.builder(
                 controller: _scrollController,
-                // reverse:true → mesajlar alttan büyür, az mesajda
-                // input'un üstüne yapışır (Instagram Live davranışı)
                 reverse: true,
                 padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
-                itemCount: _messages.length,
+                // _history tüm geçmişi tutar (max 50) — scroll her zaman çalışır.
+                // Aktif (henüz expire olmamış) mesajlar için _messages'taki
+                // opacity animasyonu uygulanır; expire olanlar full opacity'de kalır.
+                itemCount: _history.length,
                 itemBuilder: (_, i) {
-                  // Ters sıra: en yeni mesaj altta (index 0)
-                  final m = _messages[_messages.length - 1 - i];
-                  return ValueListenableBuilder<double>(
-                    valueListenable: m.opacity,
-                    builder: (_, op, __) => AnimatedOpacity(
-                      opacity: op,
-                      duration: const Duration(milliseconds: 700),
-                      child: _MessageItem(
-                        m.message,
-                        onUsernameTap: widget.onUsernameTap,
+                  final msg = _history[_history.length - 1 - i];
+                  // Aktif timed mesajı bul (fade animasyonu için)
+                  _TimedMessage? timed;
+                  for (final t in _messages) {
+                    if (t.message.id == msg.id) {
+                      timed = t;
+                      break;
+                    }
+                  }
+                  if (timed != null) {
+                    return ValueListenableBuilder<double>(
+                      valueListenable: timed.opacity,
+                      builder: (_, op, __) => AnimatedOpacity(
+                        opacity: op,
+                        duration: const Duration(milliseconds: 700),
+                        child: _MessageItem(
+                          msg,
+                          onUsernameTap: widget.onUsernameTap,
+                        ),
                       ),
-                    ),
+                    );
+                  }
+                  // Expire olmuş → history'de full opacity ile kalsın
+                  return _MessageItem(
+                    msg,
+                    onUsernameTap: widget.onUsernameTap,
                   );
                 },
               ),
