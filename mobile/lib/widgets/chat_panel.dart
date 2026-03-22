@@ -119,8 +119,9 @@ class _ChatPanelState extends State<ChatPanel> {
     if (!_autoScroll) return;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted || !_scrollController.hasClients) return;
+      // reverse:true'da "en alt" (en yeni mesaj) = minScrollExtent (0.0)
       _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
+        0,
         duration: const Duration(milliseconds: 150),
         curve: Curves.easeOut,
       );
@@ -303,11 +304,10 @@ class _ChatPanelState extends State<ChatPanel> {
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
               if (n is ScrollUpdateNotification) {
+                // reverse:true'da "alta yakın" = pixels küçük (0'a yakın)
                 final atBottom = _scrollController.hasClients &&
-                    _scrollController.position.pixels >=
-                        _scrollController.position.maxScrollExtent - 32;
+                    _scrollController.position.pixels <= 32;
                 if (_autoScroll != atBottom) {
-                  // setState çağırmıyoruz — sadece flag güncelleme, rebuild şart değil
                   _autoScroll = atBottom;
                 }
               }
@@ -317,10 +317,14 @@ class _ChatPanelState extends State<ChatPanel> {
               constraints: const BoxConstraints(maxHeight: 220),
               child: ListView.builder(
                 controller: _scrollController,
-                padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+                // reverse:true → mesajlar alttan büyür, az mesajda
+                // input'un üstüne yapışır (Instagram Live davranışı)
+                reverse: true,
+                padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
                 itemCount: _messages.length,
                 itemBuilder: (_, i) {
-                  final m = _messages[i];
+                  // Ters sıra: en yeni mesaj altta (index 0)
+                  final m = _messages[_messages.length - 1 - i];
                   return ValueListenableBuilder<double>(
                     valueListenable: m.opacity,
                     builder: (_, op, __) => AnimatedOpacity(
