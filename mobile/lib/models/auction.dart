@@ -1,5 +1,5 @@
 class AuctionState {
-  final String status; // idle, active, paused, ended
+  final String status; // idle, active, paused, ended, buy_it_now_pending
   final String? itemName;
   final double? startPrice;
   final double? buyItNowPrice;
@@ -9,6 +9,7 @@ class AuctionState {
   final int? listingId;
   final bool isBoughtItNow;
   final String? buyerUsername;
+  final String? pendingBuyerUsername;
 
   const AuctionState({
     required this.status,
@@ -21,6 +22,7 @@ class AuctionState {
     this.listingId,
     this.isBoughtItNow = false,
     this.buyerUsername,
+    this.pendingBuyerUsername,
   });
 
   factory AuctionState.idle() => const AuctionState(status: 'idle');
@@ -34,10 +36,12 @@ class AuctionState {
         currentBidder: j['current_bidder'] as String?,
         bidCount: (j['bid_count'] as num?)?.toInt() ?? 0,
         listingId: (j['listing_id'] as num?)?.toInt(),
+        pendingBuyerUsername: j['bin_buyer_username'] as String?,
       );
 
   bool get isActive => status == 'active';
   bool get isPaused => status == 'paused';
   bool get isIdle => status == 'idle';
   bool get isEnded => status == 'ended';
+  bool get isPending => status == 'buy_it_now_pending';
 }

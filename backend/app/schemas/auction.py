@@ -58,3 +58,4 @@ class AuctionStateOut(BaseModel):
     current_bidder: Optional[str] = None
     bid_count: int = 0
     listing_id: Optional[int] = None
+    bin_buyer_username: Optional[str] = None

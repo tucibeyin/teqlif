@@ -54,6 +54,24 @@ class AuctionService {
     );
   }
 
+  static Future<void> acceptBuyItNow(int streamId) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/auction/$streamId/buy-it-now/accept'),
+        headers: await _headers(),
+      ),
+    );
+  }
+
+  static Future<void> rejectBuyItNow(int streamId) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/auction/$streamId/buy-it-now/reject'),
+        headers: await _headers(),
+      ),
+    );
+  }
+
   static Future<AuctionState> pauseAuction(int streamId) async {
     final body = await apiCall(
       () async => http.post(Uri.parse('$kBaseUrl/auction/$streamId/pause'), headers: await _headers()),

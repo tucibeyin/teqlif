@@ -50,6 +50,31 @@ class AuctionNotifier extends StateNotifier<AuctionState> {
                 isBoughtItNow: true,
                 buyerUsername: buyerUsername,
               );
+            } else if (json['type'] == 'buy_it_now_requested') {
+              final buyer = json['buyer'] as Map<String, dynamic>?;
+              final buyerUsername = buyer?['username'] as String?;
+              state = AuctionState(
+                status: 'buy_it_now_pending',
+                itemName: state.itemName,
+                startPrice: state.startPrice,
+                buyItNowPrice: state.buyItNowPrice,
+                currentBid: state.currentBid,
+                currentBidder: state.currentBidder,
+                bidCount: state.bidCount,
+                listingId: state.listingId,
+                pendingBuyerUsername: buyerUsername,
+              );
+            } else if (json['type'] == 'buy_it_now_rejected') {
+              state = AuctionState(
+                status: 'active',
+                itemName: state.itemName,
+                startPrice: state.startPrice,
+                buyItNowPrice: state.buyItNowPrice,
+                currentBid: state.currentBid,
+                currentBidder: state.currentBidder,
+                bidCount: state.bidCount,
+                listingId: state.listingId,
+              );
             }
           } catch (e) {
             debugPrint('[AuctionNotifier] WS mesajı ayrıştırılamadı: $e');

@@ -11,6 +11,7 @@ const Auction = (() => {
         active: 'Aktif',
         paused: 'Duraklatıldı',
         ended: 'Tamamlandı',
+        buy_it_now_pending: 'Onay Bekleniyor',
     };
 
     function connect(streamId, isHost, onState) {
@@ -24,7 +25,8 @@ const Auction = (() => {
         _ws.onmessage = (e) => {
             try {
                 const msg = JSON.parse(e.data);
-                if ((msg.type === 'state' || msg.type === 'auction_ended_by_buy_it_now') && _onState) {
+                if ((msg.type === 'state' || msg.type === 'auction_ended_by_buy_it_now'
+                     || msg.type === 'buy_it_now_requested' || msg.type === 'buy_it_now_rejected') && _onState) {
                     _onState(msg);
                 }
             } catch (err) {
@@ -62,6 +64,14 @@ const Auction = (() => {
         return await apiFetch(`/auction/${_streamId}/buy-it-now`, { method: 'POST' });
     }
 
+    async function acceptBuyItNow() {
+        return await apiFetch(`/auction/${_streamId}/buy-it-now/accept`, { method: 'POST' });
+    }
+
+    async function rejectBuyItNow() {
+        return await apiFetch(`/auction/${_streamId}/buy-it-now/reject`, { method: 'POST' });
+    }
+
     async function pauseAuction() {
         return await apiFetch(`/auction/${_streamId}/pause`, { method: 'POST' });
     }
@@ -85,5 +95,5 @@ const Auction = (() => {
         return await apiFetch(`/auction/${_streamId}/accept`, { method: 'POST' });
     }
 
-    return { connect, disconnect, startAuction, pauseAuction, resumeAuction, endAuction, placeBid, acceptBid, buyItNow, STATUS_LABELS };
+    return { connect, disconnect, startAuction, pauseAuction, resumeAuction, endAuction, placeBid, acceptBid, buyItNow, acceptBuyItNow, rejectBuyItNow, STATUS_LABELS };
 })();

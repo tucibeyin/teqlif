@@ -135,7 +135,7 @@ async def _get_state(stream_id: int) -> dict:
         return {"status": "idle", "bid_count": 0}
     listing_id_raw = data.get("listing_id")
     bin_raw = data.get("buy_it_now_price")
-    return {
+    result = {
         "status": data.get("status", "idle"),
         "item_name": data.get("item_name"),
         "start_price": float(data["start_price"]) if data.get("start_price") else None,
@@ -145,6 +145,9 @@ async def _get_state(stream_id: int) -> dict:
         "bid_count": int(data.get("bid_count", 0)),
         "listing_id": int(listing_id_raw) if listing_id_raw else None,
     }
+    if data.get("status") == "buy_it_now_pending":
+        result["bin_buyer_username"] = data.get("bin_buyer_username") or None
+    return result
 
 # ── Lua scriptleri ──────────────────────────────────────────────────────────
 
@@ -466,10 +469,9 @@ async def place_bid(
     return state
 
 
-# Atomik BIN kilidi: durum + fiyat kontrolü + status kilitleme tek adımda.
-# Başarılı olursa status → 'buy_it_now_locked' yazılır; başka istek giremez.
-_BUY_IT_NOW_LOCK_SCRIPT = """
-local key    = KEYS[1]
+# Viewer isteği: active → buy_it_now_pending (atomik)
+_BUY_IT_NOW_REQUEST_SCRIPT = """
+local key = KEYS[1]
 local status = redis.call('hget', key, 'status')
 if status ~= 'active' and status ~= 'paused' then
     return {0, 'not_active'}
@@ -478,41 +480,77 @@ local bin_raw = redis.call('hget', key, 'buy_it_now_price')
 if not bin_raw or bin_raw == '' then
     return {0, 'no_bin_price'}
 end
-local bin     = tonumber(bin_raw)
+local bin = tonumber(bin_raw)
 local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
 if current >= bin then
     return {0, 'bid_exceeds_bin'}
 end
-redis.call('hset', key, 'status', 'buy_it_now_locked')
+redis.call('hset', key, 'pre_pending_status', status)
+redis.call('hset', key, 'status', 'buy_it_now_pending')
+redis.call('hset', key, 'bin_buyer_id', ARGV[1])
+redis.call('hset', key, 'bin_buyer_username', ARGV[2])
 return {1, bin_raw}
 """
 
+# Host kabulü: buy_it_now_pending → buy_it_now_locked (atomik)
+_BUY_IT_NOW_ACCEPT_SCRIPT = """
+local key = KEYS[1]
+local status = redis.call('hget', key, 'status')
+if status ~= 'buy_it_now_pending' then
+    return {0, 'not_pending'}
+end
+local bin_raw = redis.call('hget', key, 'buy_it_now_price')
+if not bin_raw or bin_raw == '' then
+    return {0, 'no_bin_price'}
+end
+local buyer_id = redis.call('hget', key, 'bin_buyer_id') or ''
+local buyer_username = redis.call('hget', key, 'bin_buyer_username') or ''
+redis.call('hset', key, 'status', 'buy_it_now_locked')
+return {1, bin_raw, buyer_id, buyer_username}
+"""
 
-@router.post("/{stream_id}/buy-it-now", response_model=AuctionStateOut)
-async def buy_it_now(
+# Host reddi: buy_it_now_pending → önceki status'e dön (atomik)
+_BUY_IT_NOW_REJECT_SCRIPT = """
+local key = KEYS[1]
+local status = redis.call('hget', key, 'status')
+if status ~= 'buy_it_now_pending' then
+    return {0, 'not_pending'}
+end
+local prev = redis.call('hget', key, 'pre_pending_status') or 'active'
+local buyer_username = redis.call('hget', key, 'bin_buyer_username') or ''
+redis.call('hset', key, 'status', prev)
+redis.call('hdel', key, 'bin_buyer_id', 'bin_buyer_username', 'pre_pending_status')
+return {1, prev, buyer_username}
+"""
+
+
+@router.post("/{stream_id}/buy-it-now", response_model=dict)
+async def buy_it_now_request(
     stream_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # ── 0. Host kendi artırmasını satın alamaz ───────────────────────────────
+    """Viewer Hemen Al talebi gönderir. Host onayına kadar bekler."""
     result = await db.execute(select(LiveStream).where(LiveStream.id == stream_id))
     stream = result.scalar_one_or_none()
     if not stream:
         raise NotFoundException("Yayın bulunamadı")
     if stream.host_id == current_user.id:
         raise ForbiddenException("Host kendi açık artırmasını satın alamaz")
+    if not stream.is_live:
+        raise BadRequestException("Yayın aktif değil")
 
     redis = await get_redis()
     key = _key(stream_id)
 
-    # ── 1. Mute kontrolü ─────────────────────────────────────────────────────
     from app.routers.moderation import mute_key
     if await redis.sismember(mute_key(stream_id), str(current_user.id)):
         raise ForbiddenException("Bu yayında susturuldunuz. Satın alma yapamazsınız.")
 
-    # ── 2. Redis atomik kilitleme (Primary Pessimistic Lock) ─────────────────
-    # Tek Lua çağrısı: durum+fiyat kontrol et VE 'buy_it_now_locked' yaz.
-    val = await redis.eval(_BUY_IT_NOW_LOCK_SCRIPT, 1, key)
+    val = await redis.eval(
+        _BUY_IT_NOW_REQUEST_SCRIPT, 1, key,
+        str(current_user.id), current_user.username,
+    )
     ok, msg = int(val[0]), val[1]
     if ok == 0:
         if msg == "not_active":
@@ -520,34 +558,78 @@ async def buy_it_now(
         if msg == "no_bin_price":
             raise BadRequestException("Bu ürün hemen alıma kapalı")
         if msg == "bid_exceeds_bin":
-            raise BadRequestException(
-                "Teklifler hemen al fiyatını aştığı için artık kullanılamaz"
-            )
-        raise BadRequestException("Hemen al işlemi gerçekleştirilemedi")
+            raise BadRequestException("Teklifler hemen al fiyatını aştığı için artık kullanılamaz")
+        raise BadRequestException("Hemen Al isteği gönderilemedi")
 
     bin_price = float(msg)
-
-    # Redis'ten diğer bilgileri al
     redis_data = await redis.hgetall(key)
-    item_name  = redis_data.get("item_name", "")
-    lid_str    = redis_data.get("listing_id", "")
-    listing_id = int(lid_str) if lid_str else None
-    bid_count  = int(redis_data.get("bid_count", 0))
+    item_name = redis_data.get("item_name", "")
+
+    # Herkese durum güncellemesi gönder
+    state = await _get_state(stream_id)
+    await _publish(stream_id, {"type": "state", **state})
+
+    # Host'a özel bildirim eventi
+    await _publish(stream_id, {
+        "type": "buy_it_now_requested",
+        "buyer": {"id": current_user.id, "username": current_user.username},
+        "price": bin_price,
+        "item_name": item_name,
+    })
+
+    logger.info(
+        "[HEMEN AL] TALEP | stream_id=%s buyer=%s price=%s",
+        stream_id, current_user.username, bin_price,
+    )
+    return {"detail": "Talebiniz iletildi, host onayı bekleniyor"}
+
+
+@router.post("/{stream_id}/buy-it-now/accept", response_model=AuctionStateOut)
+async def buy_it_now_accept(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Host Hemen Al talebini kabul eder. Satın alma tamamlanır."""
+    await _get_stream_as_host(stream_id, current_user, db)
+    redis = await get_redis()
+    key = _key(stream_id)
+
+    val = await redis.eval(_BUY_IT_NOW_ACCEPT_SCRIPT, 1, key)
+    ok = int(val[0])
+    if ok == 0:
+        msg = val[1]
+        if msg == "not_pending":
+            raise BadRequestException("Bekleyen Hemen Al talebi yok")
+        if msg == "no_bin_price":
+            raise BadRequestException("Bu ürün hemen alıma kapalı")
+        raise BadRequestException("Hemen Al kabul edilemedi")
+
+    bin_price = float(val[1])
+    buyer_id_str = val[2]
+    buyer_username = val[3]
+
+    if not buyer_id_str:
+        await redis.hset(key, "status", "active")
+        raise BadRequestException("Alıcı bilgisi bulunamadı")
+
+    buyer_id = int(buyer_id_str)
+
+    redis_data = await redis.hgetall(key)
+    item_name   = redis_data.get("item_name", "")
+    lid_str     = redis_data.get("listing_id", "")
+    listing_id  = int(lid_str) if lid_str else None
+    bid_count   = int(redis_data.get("bid_count", 0))
     start_price = float(redis_data.get("start_price", bin_price))
 
-    # ── 3. DB İşlemi (Secondary Pessimistic Lock + Commit) ───────────────────
     try:
-        # Listing varsa with_for_update() ile kilitle
         listing: Listing | None = None
         if listing_id:
             listing_result = await db.execute(
-                select(Listing)
-                .where(Listing.id == listing_id)
-                .with_for_update()
+                select(Listing).where(Listing.id == listing_id).with_for_update()
             )
             listing = listing_result.scalar_one_or_none()
 
-        # Auction kaydı oluştur
         auction = Auction(
             stream_id=stream_id,
             listing_id=listing_id,
@@ -555,45 +637,39 @@ async def buy_it_now(
             start_price=start_price,
             buy_it_now_price=bin_price,
             final_price=bin_price,
-            winner_id=current_user.id,
-            winner_username=current_user.username,
+            winner_id=buyer_id,
+            winner_username=buyer_username,
             bid_count=bid_count,
             status="completed",
             is_bought_it_now=True,
             ended_at=datetime.now(timezone.utc),
         )
         db.add(auction)
-        await db.flush()  # auction.id üretilsin
+        await db.flush()
 
-        # Listing'i SOLD olarak işaretle
         if listing:
             listing.is_active = False
 
-        # Purchase kaydı
         purchase = Purchase(
-            buyer_id=current_user.id,
+            buyer_id=buyer_id,
             listing_id=listing_id,
             auction_id=auction.id,
             price=bin_price,
             purchase_type="BUY_IT_NOW",
         )
         db.add(purchase)
-
         await db.commit()
 
     except Exception as exc:
         await db.rollback()
-        # Kilidi geri aç — Redis'i tekrar 'active'/'paused' durumuna döndür
-        prev_status = redis_data.get("status", "active")
-        await redis.hset(key, "status", prev_status)
+        await redis.hset(key, "status", "buy_it_now_pending")
         logger.error(
-            "[HEMEN AL] DB commit HATASI | stream_id=%s user=%s | %s",
-            stream_id, current_user.username, exc, exc_info=True,
+            "[HEMEN AL KABUL] DB commit HATASI | stream_id=%s | %s",
+            stream_id, exc, exc_info=True,
         )
         capture_exception(exc)
         raise DatabaseException("Satın alma işlemi kaydedilemedi, lütfen tekrar deneyin")
 
-    # ── 4. Redis temizle ─────────────────────────────────────────────────────
     await redis.delete(key)
 
     state = {
@@ -601,42 +677,29 @@ async def buy_it_now(
         "item_name": item_name,
         "bid_count": bid_count,
         "current_bid": bin_price,
-        "current_bidder": current_user.username,
+        "current_bidder": buyer_username,
         "start_price": start_price,
         "buy_it_now_price": bin_price,
         "listing_id": listing_id,
     }
 
-    logger.info(
-        "[HEMEN AL] TAMAMLANDI | stream_id=%s buyer=%s price=%s item=%r",
-        stream_id, current_user.username, bin_price, item_name,
-    )
-
-    # ── 5. WebSocket — tüm izleyicilere ve host'a anında bildir ─────────────
-    # 5a. Standart state güncellemesi — mevcut auction dinleyicileri 'ended' alır
     await _publish(stream_id, {"type": "state", **state})
-
-    # 5b. Özel BIN event — client'lar bu type'ı dinleyerek "SATILDI" UI'ı gösterir
     await _publish(stream_id, {
         "type": "auction_ended_by_buy_it_now",
         "listing_id": listing_id,
-        "buyer": {
-            "id": current_user.id,
-            "username": current_user.username,
-        },
+        "buyer": {"id": buyer_id, "username": buyer_username},
         "price": bin_price,
         "item_name": item_name,
     })
 
-    # 5c. Chat'e herkese görünür özet mesajı
     chat_msg = {
         "type": "message",
         "id": str(uuid.uuid4())[:8],
-        "username": current_user.username,
+        "username": buyer_username,
         "content": (
             f"🛒 Hemen Alındı! "
             f"📦 {item_name} — {_fmt_price(bin_price)} — "
-            f"🏅 @{current_user.username}"
+            f"🏅 @{buyer_username}"
         ),
         "created_at": datetime.now(timezone.utc).isoformat(),
     }
@@ -650,8 +713,41 @@ async def buy_it_now(
     await redis.publish(_CHAT_PUBSUB, json.dumps({"_stream_id": stream_id, **chat_msg}))
 
     logger.info(
-        "[HEMEN AL] WS+CHAT YAYINLANDI | stream_id=%s ws_hedef=%s",
-        stream_id, manager.conn_count(stream_id),
+        "[HEMEN AL KABUL] TAMAMLANDI | stream_id=%s buyer=%s price=%s",
+        stream_id, buyer_username, bin_price,
+    )
+    return state
+
+
+@router.post("/{stream_id}/buy-it-now/reject", response_model=AuctionStateOut)
+async def buy_it_now_reject(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Host Hemen Al talebini reddeder. Artırma kaldığı yerden devam eder."""
+    await _get_stream_as_host(stream_id, current_user, db)
+    redis = await get_redis()
+    key = _key(stream_id)
+
+    val = await redis.eval(_BUY_IT_NOW_REJECT_SCRIPT, 1, key)
+    ok = int(val[0])
+    if ok == 0:
+        raise BadRequestException("Bekleyen Hemen Al talebi yok")
+
+    prev_status = val[1]
+    buyer_username = val[2]
+
+    state = await _get_state(stream_id)
+    await _publish(stream_id, {"type": "state", **state})
+    await _publish(stream_id, {
+        "type": "buy_it_now_rejected",
+        "buyer_username": buyer_username,
+    })
+
+    logger.info(
+        "[HEMEN AL RED] | stream_id=%s host=%s buyer=%s restored_status=%s",
+        stream_id, current_user.username, buyer_username, prev_status,
     )
     return state
 

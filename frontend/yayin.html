@@ -340,6 +340,11 @@
             color: #fff;
         }
 
+        .badge-pending {
+            background: #ea580c;
+            color: #fff;
+        }
+
         .auction-title {
             font-size: 0.82rem;
             font-weight: 700;
@@ -1318,8 +1323,53 @@
     <script src="/static/js/auth.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/stream.js?v=4"></script>
-    <script src="/static/js/auction.js?v=5"></script>
+    <script src="/static/js/auction.js?v=6"></script>
     <script src="/static/js/chat.js?v=6"></script>
+
+    <!-- Host: Hemen Al Talep Onay Modalı -->
+    <div id="binRequestModal" style="
+        display:none; position:fixed; inset:0; z-index:9999;
+        background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
+        align-items:center; justify-content:center;">
+        <div style="
+            background:#1e293b; border:1px solid #334155; border-radius:16px;
+            padding:28px 24px; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+            <div style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:18px;">⚡ Hemen Al Talebi</div>
+            <div style="background:#0f172a; border-radius:12px; padding:16px; margin-bottom:20px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#64748b; font-size:0.78rem;">Ürün</span>
+                    <span id="binReqModalItem" style="color:#e2e8f0; font-weight:600; font-size:0.88rem; text-align:right; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</span>
+                </div>
+                <div style="height:1px; background:#1e293b;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#64748b; font-size:0.78rem;">Hemen Al Fiyatı</span>
+                    <span id="binReqModalPrice" style="color:#f97316; font-weight:800; font-size:1.05rem;">—</span>
+                </div>
+                <div style="height:1px; background:#1e293b;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#64748b; font-size:0.78rem;">Talep Eden</span>
+                    <span id="binReqModalBuyer" style="color:#e2e8f0; font-weight:600; font-size:0.88rem;">—</span>
+                </div>
+            </div>
+            <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 20px; line-height:1.5;">
+                Bu kişinin Hemen Al talebini onaylıyor musun? Artırma sona erecek.
+            </p>
+            <div style="display:flex; gap:10px;">
+                <button id="binReqModalReject" style="
+                    flex:1; padding:11px; border:1px solid #ef4444; background:transparent;
+                    color:#f87171; border-radius:10px; cursor:pointer; font-size:0.88rem; font-weight:600;"
+                    data-track-id="yayin-modal-btn-hemen-al-talep-reddet">
+                    Reddet
+                </button>
+                <button id="binReqModalAccept" style="
+                    flex:1; padding:11px; border:none; background:#ea580c;
+                    color:#fff; border-radius:10px; cursor:pointer; font-size:0.88rem; font-weight:700;"
+                    data-track-id="yayin-modal-btn-hemen-al-talep-onayla">
+                    Onayla
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Hemen Al Onay Modalı -->
     <div id="buyItNowModal" style="
@@ -1739,6 +1789,28 @@
         }
 
         function updateAuctionUI(msg) {
+            if (msg.type === 'buy_it_now_requested') {
+                if (_isHostPage) {
+                    _showBuyItNowRequestModal(
+                        msg.buyer?.username || '?',
+                        msg.price,
+                        msg.item_name || _currentItemName || ''
+                    );
+                } else {
+                    // Viewer: BIN butonunu gizle, bekleniyor mesajı göster
+                    const binBtn = document.getElementById('btnBuyItNow');
+                    if (binBtn) binBtn.style.display = 'none';
+                    setAuctionMsg('⚡ Talebiniz iletildi, host onayı bekleniyor...', '');
+                }
+                return;
+            }
+
+            if (msg.type === 'buy_it_now_rejected') {
+                setAuctionMsg('Hemen Al talebi reddedildi, artırma devam ediyor.', 'error');
+                setTimeout(() => setAuctionMsg('', ''), 4000);
+                return;
+            }
+
             // auction_ended_by_buy_it_now event'i — özel SATILDI overlay
             if (msg.type === 'auction_ended_by_buy_it_now') {
                 _isBoughtItNow = true;
@@ -1783,6 +1855,9 @@
             if (_isBoughtItNow && state.status === 'ended') {
                 badge.textContent = 'SATILDI 🛒';
                 badge.className = 'auction-status-badge badge-sold';
+            } else if (state.status === 'buy_it_now_pending') {
+                badge.textContent = Auction.STATUS_LABELS[state.status] || state.status;
+                badge.className = 'auction-status-badge badge-pending';
             } else {
                 badge.textContent = Auction.STATUS_LABELS[state.status] || state.status;
                 badge.className = 'auction-status-badge badge-' + state.status;
@@ -2167,6 +2242,52 @@
         });
 
         // ── VIEWER: Hemen Al ──────────────────────────────────────────────
+
+        function _showBuyItNowRequestModal(buyerUsername, price, itemName) {
+            document.getElementById('binReqModalItem').textContent = itemName || '—';
+            document.getElementById('binReqModalPrice').textContent = price != null
+                ? '₺' + Number(price).toLocaleString('tr-TR')
+                : '—';
+            document.getElementById('binReqModalBuyer').textContent = '@' + buyerUsername;
+            document.getElementById('binRequestModal').style.display = 'flex';
+        }
+
+        function _closeBuyItNowRequestModal() {
+            document.getElementById('binRequestModal').style.display = 'none';
+        }
+
+        document.getElementById('binReqModalReject')?.addEventListener('click', async () => {
+            _closeBuyItNowRequestModal();
+            try {
+                await Auction.rejectBuyItNow();
+                setAuctionMsg('Hemen Al talebi reddedildi.', '');
+            } catch (e) {
+                console.error('[Auction] Hemen Al red hatası:', e);
+                if (window.Sentry) Sentry.captureException(e);
+                setAuctionMsg(e.detail || e.message || 'Hata oluştu', 'error');
+            }
+        });
+
+        document.getElementById('binReqModalAccept')?.addEventListener('click', async () => {
+            const btn = document.getElementById('binReqModalAccept');
+            btn.disabled = true;
+            btn.textContent = 'İşleniyor...';
+            try {
+                await Auction.acceptBuyItNow();
+                _closeBuyItNowRequestModal();
+            } catch (e) {
+                console.error('[Auction] Hemen Al kabul hatası:', e);
+                if (window.Sentry) Sentry.captureException(e);
+                _closeBuyItNowRequestModal();
+                setAuctionMsg(e.detail || e.message || 'Hata oluştu', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.textContent = 'Onayla'; }
+            }
+        });
+
+        document.getElementById('binRequestModal')?.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('binRequestModal')) _closeBuyItNowRequestModal();
+        });
 
         function _openBuyItNowModal() {
             document.getElementById('binModalItem').textContent = _currentItemName || '—';
