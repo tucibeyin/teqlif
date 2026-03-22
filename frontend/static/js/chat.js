@@ -168,5 +168,5 @@ const Chat = (() => {
         if (_ws) { try { _ws.close(); } catch (_) {} _ws = null; }
     }
 
-    return { connect, sendMessage, disconnect, usernameColor: _usernameColor };
+    return { connect, sendMessage, disconnect };
 })();

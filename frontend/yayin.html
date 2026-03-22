@@ -1593,6 +1593,20 @@
         let _listingMode = false;      // host: listing mi manual mı
         let _lastBidCount = 0;         // teklif sayısı takibi
 
+        // chat.js ile aynı palet ve algoritma — bağımsız çalışır
+        const _USER_PALETTE = [
+            '#f87171', '#fb923c', '#fbbf24', '#a3e635',
+            '#4ade80', '#2dd4bf', '#22d3ee', '#38bdf8',
+            '#818cf8', '#c084fc', '#f472b6', '#fb7185',
+        ];
+        function _usernameColor(username) {
+            let hash = 0;
+            for (let i = 0; i < username.length; i++) {
+                hash = (hash * 31 + username.charCodeAt(i)) & 0x7fffffff;
+            }
+            return _USER_PALETTE[hash % _USER_PALETTE.length];
+        }
+
         function _addBidEntry(username, amount) {
             const list = document.getElementById('bidsList');
             if (!list) return;
@@ -1604,7 +1618,7 @@
                 el.classList.remove('first');
             });
             const u = username.replace(/</g, '&lt;').replace(/>/g, '&gt;');
-            const color = Chat.usernameColor(username);
+            const color = _usernameColor(username);
             const div = document.createElement('div');
             div.className = 'bid-item';
             div.innerHTML = `<span class="bid-rank first">#1</span><span class="bid-user${_isHostPage ? ' clickable' : ''}" data-username="${u}" style="color:${color}">@${u}</span><span class="bid-amount">₺${Number(amount).toLocaleString('tr-TR')}</span>`;
