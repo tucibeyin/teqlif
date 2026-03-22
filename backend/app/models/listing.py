@@ -21,6 +21,7 @@ class Listing(Base):
     location: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     image_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     image_urls: Mapped[Optional[str]] = mapped_column(Text, nullable=True)  # JSON array of URLs
+    buy_it_now_price: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
