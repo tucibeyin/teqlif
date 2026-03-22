@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math' show min;
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -304,7 +305,6 @@ class _ChatPanelState extends State<ChatPanel> {
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
               if (n is ScrollUpdateNotification) {
-                // reverse:true'da "alta yakın" = pixels küçük (0'a yakın)
                 final atBottom = _scrollController.hasClients &&
                     _scrollController.position.pixels <= 32;
                 if (_autoScroll != atBottom) {
@@ -313,18 +313,23 @@ class _ChatPanelState extends State<ChatPanel> {
               }
               return false;
             },
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 220),
+            child: AnimatedContainer(
+              // Yükseklik _messages.length'e göre dinamik:
+              // Aktif chat → 6 satıra kadar büyür.
+              // Mesajlar expire olunca 3'e küçülür (last-3 protected).
+              // Her mesaj yaklaşık 22px, +4 ListView top padding.
+              duration: const Duration(milliseconds: 200),
+              curve: Curves.easeOut,
+              height: _messages.length.clamp(3, 6) * 22.0 + 4.0,
               child: ListView.builder(
                 controller: _scrollController,
                 reverse: true,
                 padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
-                // _history tüm geçmişi tutar (max 50) — scroll her zaman çalışır.
-                // Aktif (henüz expire olmamış) mesajlar için _messages'taki
-                // opacity animasyonu uygulanır; expire olanlar full opacity'de kalır.
-                itemCount: _history.length,
+                // Scroll alanı: history'nin son 20'si
+                itemCount: min(_history.length, 20),
                 itemBuilder: (_, i) {
-                  final msg = _history[_history.length - 1 - i];
+                  final histLen = min(_history.length, 20);
+                  final msg = _history[_history.length - (histLen - i)];
                   // Aktif timed mesajı bul (fade animasyonu için)
                   _TimedMessage? timed;
                   for (final t in _messages) {
@@ -346,7 +351,6 @@ class _ChatPanelState extends State<ChatPanel> {
                       ),
                     );
                   }
-                  // Expire olmuş → history'de full opacity ile kalsın
                   return _MessageItem(
                     msg,
                     onUsernameTap: widget.onUsernameTap,
