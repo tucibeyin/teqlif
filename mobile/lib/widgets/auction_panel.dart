@@ -38,6 +38,8 @@ class AuctionPanel extends ConsumerStatefulWidget {
 class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   String? _msg;
   bool _msgError = false;
+  // BIN onay dialog'unun context'i — host kararına göre otomatik kapatmak için
+  BuildContext? _binDialogCtx;
 
   @override
   void dispose() {
@@ -252,10 +254,18 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       }
       // Viewer: talep reddedildiğinde bilgi mesajı (isPending → active geçişi)
       if (!widget.isHost && prev != null && prev.isPending && !next.isPending && !next.isBoughtItNow) {
+        if (_binDialogCtx != null && _binDialogCtx!.mounted) {
+          Navigator.of(_binDialogCtx!).pop();
+          _binDialogCtx = null;
+        }
         _setMsg('Hemen Al talebiniz reddedildi, artırma devam ediyor.', error: true);
       }
       // Viewer: talep tamamlandığında (isBoughtItNow && prev.isPending)
       if (!widget.isHost && prev != null && prev.isPending && next.isBoughtItNow) {
+        if (_binDialogCtx != null && _binDialogCtx!.mounted) {
+          Navigator.of(_binDialogCtx!).pop();
+          _binDialogCtx = null;
+        }
         _setMsg('🎉 Tebrikler! Satın alma tamamlandı.');
       }
     });
@@ -624,84 +634,153 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Future<void> _buyItNow(AuctionState state) async {
-    final ok = await showDialog<bool>(
+    var waiting = false;
+
+    await showDialog<void>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        backgroundColor: const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('⚡ Hemen Al',
-            style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF0F172A),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Column(children: [
-                _acceptRow('Ürün', state.itemName ?? '—'),
-                const SizedBox(height: 10),
-                _acceptRow('Hemen Al Fiyatı',
-                    '₺${_fmt(state.buyItNowPrice)}',
-                    valueColor: Colors.orange,
-                    valueBold: true),
-              ]),
-            ),
-            const SizedBox(height: 14),
-            const Text(
-              'Bu fiyatla ürünü hemen satın almak istiyor musun? Artırma sona erecek.',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
-        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
-        actions: [
-          Row(children: [
-            Expanded(
-              child: OutlinedButton(
-                onPressed: () => Navigator.pop(ctx, false),
-                style: OutlinedButton.styleFrom(
-                  side: const BorderSide(color: Color(0xFF334155)),
-                  shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(vertical: 12),
+      barrierDismissible: false,
+      builder: (dialogCtx) {
+        _binDialogCtx = dialogCtx;
+        return StatefulBuilder(
+          builder: (ctx, setS) {
+            _binDialogCtx = ctx;
+
+            if (waiting) {
+              return AlertDialog(
+                backgroundColor: const Color(0xFF1E293B),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                title: const Text('⚡ Hemen Al',
+                    style: TextStyle(color: Colors.white, fontSize: 16)),
+                content: const Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    SizedBox(height: 8),
+                    Text('⏳', style: TextStyle(fontSize: 36)),
+                    SizedBox(height: 12),
+                    Text(
+                      'Host\'tan cevap bekleniyor',
+                      style: TextStyle(
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Host onayladığında satın alma tamamlanacak.',
+                      style: TextStyle(
+                          color: Color(0xFF94A3B8),
+                          fontSize: 12,
+                          height: 1.5),
+                      textAlign: TextAlign.center,
+                    ),
+                    SizedBox(height: 8),
+                  ],
                 ),
-                child: const Text('İptal',
-                    style: TextStyle(color: Color(0xFF94A3B8))),
+              );
+            }
+
+            return AlertDialog(
+              backgroundColor: const Color(0xFF1E293B),
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16)),
+              title: const Text('⚡ Hemen Al',
+                  style: TextStyle(color: Colors.white, fontSize: 16)),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(14),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(children: [
+                      _acceptRow('Ürün', state.itemName ?? '—'),
+                      const SizedBox(height: 10),
+                      _acceptRow('Hemen Al Fiyatı',
+                          '₺${_fmt(state.buyItNowPrice)}',
+                          valueColor: Colors.orange,
+                          valueBold: true),
+                    ]),
+                  ),
+                  const SizedBox(height: 14),
+                  const Text(
+                    'Bu fiyatla ürünü hemen satın almak istiyor musun? Artırma sona erecek.',
+                    style: TextStyle(
+                        color: Color(0xFF94A3B8),
+                        fontSize: 12,
+                        height: 1.5),
+                    textAlign: TextAlign.center,
+                  ),
+                ],
               ),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange.shade700,
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(vertical: 12)),
-                onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Satın Al',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
-              ),
-            ),
-          ]),
-        ],
-      ),
+              actionsPadding:
+                  const EdgeInsets.fromLTRB(16, 0, 16, 16),
+              actions: [
+                Row(children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      onPressed: () => Navigator.pop(ctx),
+                      style: OutlinedButton.styleFrom(
+                        side: const BorderSide(
+                            color: Color(0xFF334155)),
+                        shape: RoundedRectangleBorder(
+                            borderRadius:
+                                BorderRadius.circular(10)),
+                        padding: const EdgeInsets.symmetric(
+                            vertical: 12),
+                      ),
+                      child: const Text('İptal',
+                          style: TextStyle(
+                              color: Color(0xFF94A3B8))),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                          backgroundColor:
+                              Colors.orange.shade700,
+                          shape: RoundedRectangleBorder(
+                              borderRadius:
+                                  BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(
+                              vertical: 12)),
+                      onPressed: () async {
+                        setS(() => waiting = true);
+                        try {
+                          await AuctionService.buyItNow(
+                              widget.streamId);
+                          // Dialog ref.listen üzerinden kapanacak (host kararıyla)
+                        } on AppException catch (e) {
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          _setMsg(e.message, error: true);
+                        } catch (e, st) {
+                          LoggerService.instance.captureException(
+                              e,
+                              stackTrace: st,
+                              tag: '_AuctionPanelState._buyItNow');
+                          if (ctx.mounted) Navigator.pop(ctx);
+                          _setMsg(_cleanErr(e), error: true);
+                        }
+                      },
+                      child: const Text('Satın Al',
+                          style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700)),
+                    ),
+                  ),
+                ]),
+              ],
+            );
+          },
+        );
+      },
     );
-    if (ok != true) return;
-    try {
-      await AuctionService.buyItNow(widget.streamId);
-      // WS broadcast state güncelleyecek
-    } on AppException catch (e) {
-      _setMsg(e.message, error: true);
-    } catch (e, st) {
-      LoggerService.instance.captureException(e,
-          stackTrace: st, tag: '_AuctionPanelState._buyItNow');
-      _setMsg(_cleanErr(e), error: true);
-    }
+    _binDialogCtx = null;
   }
 
   Future<void> _showBuyItNowRequestDialog(String buyerUsername, AuctionState state) async {

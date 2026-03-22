@@ -1391,10 +1391,16 @@
                     <span id="binModalPrice" style="color:#f97316; font-weight:800; font-size:1.05rem;">—</span>
                 </div>
             </div>
-            <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 20px; line-height:1.5;">
+            <p id="binModalDesc" style="color:#94a3b8; font-size:0.8rem; margin:0 0 20px; line-height:1.5;">
                 Bu fiyatla ürünü hemen satın almak istediğine emin misin? Açık artırma sona erecek.
             </p>
-            <div style="display:flex; gap:10px;">
+            <!-- Onay bekleniyor durumu -->
+            <div id="binModalWaiting" style="display:none; text-align:center; padding:4px 0 20px;">
+                <div style="font-size:1.6rem; margin-bottom:10px;">⏳</div>
+                <p style="color:#f97316; font-weight:700; font-size:0.95rem; margin:0 0 6px;">Host'tan cevap bekleniyor</p>
+                <p style="color:#64748b; font-size:0.78rem; margin:0;">Host onayladığında satın alma tamamlanacak.</p>
+            </div>
+            <div id="binModalActions" style="display:flex; gap:10px;">
                 <button id="binModalCancel" style="
                     flex:1; padding:11px; border:1px solid #334155; background:transparent;
                     color:#94a3b8; border-radius:10px; cursor:pointer; font-size:0.88rem;"
@@ -1808,6 +1814,7 @@
             if (msg.type === 'buy_it_now_rejected') {
                 // Sadece viewer'a bildirim göster — host zaten reddetti, bilgiyi zaten biliyor
                 if (!_isHostPage) {
+                    _closeBuyItNowModal(); // bekleme ekranını kapat
                     setAuctionMsg('Hemen Al talebiniz reddedildi, artırma devam ediyor.', 'error');
                     setTimeout(() => setAuctionMsg('', ''), 4000);
                 }
@@ -1816,6 +1823,7 @@
 
             // auction_ended_by_buy_it_now event'i — özel SATILDI overlay
             if (msg.type === 'auction_ended_by_buy_it_now') {
+                _closeBuyItNowModal(); // onay verildi, bekleme modalını kapat
                 _isBoughtItNow = true;
                 const buyer = msg.buyer?.username || '?';
                 const price = msg.price != null ? '₺' + Number(msg.price).toLocaleString('tr-TR') : '';
@@ -2292,15 +2300,22 @@
             if (e.target === document.getElementById('binRequestModal')) _closeBuyItNowRequestModal();
         });
 
+        let _binModalWaiting = false;
+
         function _openBuyItNowModal() {
+            _binModalWaiting = false;
             document.getElementById('binModalItem').textContent = _currentItemName || '—';
             document.getElementById('binModalPrice').textContent = _currentBinPrice != null
                 ? '₺' + Number(_currentBinPrice).toLocaleString('tr-TR')
                 : '—';
+            document.getElementById('binModalDesc').style.display = '';
+            document.getElementById('binModalWaiting').style.display = 'none';
+            document.getElementById('binModalActions').style.display = 'flex';
             document.getElementById('buyItNowModal').style.display = 'flex';
         }
 
         function _closeBuyItNowModal() {
+            _binModalWaiting = false;
             document.getElementById('buyItNowModal').style.display = 'none';
         }
 
@@ -2309,6 +2324,8 @@
         document.getElementById('binModalCancel')?.addEventListener('click', _closeBuyItNowModal);
 
         document.getElementById('buyItNowModal')?.addEventListener('click', (e) => {
+            // Onay beklenirken backdrop tıklamasıyla kapanmayı engelle
+            if (_binModalWaiting) return;
             if (e.target === document.getElementById('buyItNowModal')) _closeBuyItNowModal();
         });
 
@@ -2318,15 +2335,18 @@
             confirmBtn.textContent = 'İşleniyor...';
             try {
                 await Auction.buyItNow();
-                _closeBuyItNowModal();
-                // WS broadcast state'i güncelleyecek
+                // Modal kapanmıyor — host onayı bekleniyor durumuna geç
+                _binModalWaiting = true;
+                document.getElementById('binModalDesc').style.display = 'none';
+                document.getElementById('binModalActions').style.display = 'none';
+                document.getElementById('binModalWaiting').style.display = '';
             } catch (e) {
                 console.error('[Auction] Hemen Al başarısız:', e);
                 if (window.Sentry) Sentry.captureException(e);
                 _closeBuyItNowModal();
                 setAuctionMsg(e.detail || e.message || 'Hemen Al sırasında hata oluştu', 'error');
             } finally {
-                if (confirmBtn) {
+                if (!_binModalWaiting && confirmBtn) {
                     confirmBtn.disabled = false;
                     confirmBtn.textContent = 'Satın Al';
                 }
