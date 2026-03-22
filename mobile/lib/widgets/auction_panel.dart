@@ -34,13 +34,11 @@ class AuctionPanel extends ConsumerStatefulWidget {
 }
 
 class _AuctionPanelState extends ConsumerState<AuctionPanel> {
-  final _customBidCtrl = TextEditingController();
   String? _msg;
   bool _msgError = false;
 
   @override
   void dispose() {
-    _customBidCtrl.dispose();
     super.dispose();
   }
 
@@ -210,16 +208,6 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     if (ok != true) return;
     try {
       await AuctionService.endAuction(widget.streamId);
-    } catch (e) {
-      _setMsg(_cleanErr(e), error: true);
-    }
-  }
-
-  Future<void> _placeBid(double amount) async {
-    try {
-      await AuctionService.placeBid(widget.streamId, amount);
-      _setMsg('₺${_fmt(amount)} teklifiniz alındı!');
-      _customBidCtrl.clear();
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
     }
@@ -575,168 +563,13 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   void _showBidSheet(BuildContext outerContext, AuctionState state) {
-    final base = state.currentBid ?? state.startPrice ?? 0;
     showModalBottomSheet(
       context: outerContext,
       backgroundColor: const Color(0xF01E293B),
       shape: const RoundedRectangleBorder(
           borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       isScrollControlled: true,
-      builder: (ctx) => Padding(
-        padding: EdgeInsets.fromLTRB(
-            20, 16, 20, MediaQuery.of(ctx).viewInsets.bottom + 28),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Handle bar
-            Center(
-              child: Container(
-                width: 38,
-                height: 4,
-                decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 18),
-            // Başlık + fiyat
-            Row(children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      state.itemName ?? 'Teklif Ver',
-                      style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 16),
-                    ),
-                    if (state.currentBidder != null)
-                      Text('@${state.currentBidder} en yüksek teklif sahibi',
-                          style: const TextStyle(
-                              color: Color(0xFF64748B), fontSize: 12))
-                    else
-                      const Text('İlk teklifi sen ver!',
-                          style: TextStyle(
-                              color: Color(0xFF64748B), fontSize: 12)),
-                  ],
-                ),
-              ),
-              Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
-                Text(
-                  '₺${_fmt(state.currentBid ?? state.startPrice)}',
-                  style: const TextStyle(
-                      color: Color(0xFF4ADE80),
-                      fontWeight: FontWeight.w800,
-                      fontSize: 22),
-                ),
-                if (state.bidCount > 0)
-                  Text('${state.bidCount} teklif',
-                      style: const TextStyle(
-                          color: Color(0xFF64748B), fontSize: 11)),
-              ]),
-            ]),
-            const SizedBox(height: 18),
-            // 2×2 preset grid
-            Row(children: [
-              Expanded(child: _sheetBidBtn('+₺100', base + 100, ctx)),
-              const SizedBox(width: 8),
-              Expanded(child: _sheetBidBtn('+₺250', base + 250, ctx)),
-            ]),
-            const SizedBox(height: 8),
-            Row(children: [
-              Expanded(child: _sheetBidBtn('+₺500', base + 500, ctx)),
-              const SizedBox(width: 8),
-              Expanded(child: _sheetBidBtn('+₺1000', base + 1000, ctx)),
-            ]),
-            const SizedBox(height: 14),
-            // Özel teklif
-            Row(children: [
-              Expanded(
-                child: TextField(
-                  key: const Key('auction_input_ozel_teklif'),
-                  controller: _customBidCtrl,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [ThousandsSeparatorInputFormatter()],
-                  style:
-                      const TextStyle(color: Colors.white, fontSize: 14),
-                  decoration: InputDecoration(
-                    hintText: 'Özel tutar (₺)',
-                    hintStyle: const TextStyle(
-                        color: Color(0xFF475569), fontSize: 13),
-                    filled: true,
-                    fillColor: const Color(0xFF0F172A),
-                    contentPadding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 13),
-                    border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            const BorderSide(color: Color(0xFF334155))),
-                    enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            const BorderSide(color: Color(0xFF334155))),
-                    focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            const BorderSide(color: kPrimary)),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 10),
-              SizedBox(
-                height: 50,
-                child: ElevatedButton(
-                  key: const Key('auction_btn_ozel_teklif_gonder'),
-                  onPressed: () {
-                    final raw = _customBidCtrl.text.replaceAll('.', '');
-                    final v = double.tryParse(raw);
-                    if (v == null || v <= 0) {
-                      _setMsg('Geçerli tutar girin', error: true);
-                      return;
-                    }
-                    _placeBid(v);
-                    Navigator.pop(ctx);
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF16A34A),
-                    minimumSize: Size.zero,
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10)),
-                  ),
-                  child: const Text('Teklif Ver',
-                      style: TextStyle(
-                          color: Colors.white, fontWeight: FontWeight.w700)),
-                ),
-              ),
-            ]),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _sheetBidBtn(String label, double amount, BuildContext sheetCtx) {
-    return GestureDetector(
-      onTap: () {
-        _placeBid(amount);
-        Navigator.pop(sheetCtx);
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-            color: const Color(0xFF334155),
-            borderRadius: BorderRadius.circular(10)),
-        child: Text(label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-                color: Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600)),
-      ),
+      builder: (_) => _BidSheetContent(streamId: widget.streamId),
     );
   }
 
@@ -807,6 +640,270 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           border: Border.all(color: color.withOpacity(0.5)),
         ),
         child: Icon(icon, color: color, size: 16),
+      ),
+    );
+  }
+}
+
+// ── Viewer teklif verme sheet içeriği ─────────────────────────────────────────
+
+class _BidSheetContent extends ConsumerStatefulWidget {
+  final int streamId;
+  const _BidSheetContent({required this.streamId});
+
+  @override
+  ConsumerState<_BidSheetContent> createState() => _BidSheetContentState();
+}
+
+class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
+  final _customBidCtrl = TextEditingController();
+  String? _msg;
+  bool _msgError = false;
+  bool _loading = false;
+
+  @override
+  void dispose() {
+    _customBidCtrl.dispose();
+    super.dispose();
+  }
+
+  String _fmt(double? v) {
+    if (v == null) return '—';
+    return v
+        .toStringAsFixed(0)
+        .replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.');
+  }
+
+  void _setMsg(String msg, {bool error = false}) {
+    if (!mounted) return;
+    setState(() {
+      _msg = msg;
+      _msgError = error;
+    });
+  }
+
+  Future<void> _placeBid(double amount) async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await AuctionService.placeBid(widget.streamId, amount);
+      _customBidCtrl.clear();
+      _setMsg('₺${_fmt(amount)} teklifiniz alındı!');
+    } catch (e) {
+      final s = e.toString();
+      _setMsg(s.startsWith('Exception: ') ? s.substring('Exception: '.length) : s,
+          error: true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Widget _presetBtn(String label, double amount) {
+    return GestureDetector(
+      onTap: _loading ? null : () => _placeBid(amount),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        decoration: BoxDecoration(
+            color: _loading
+                ? const Color(0xFF1E293B)
+                : const Color(0xFF334155),
+            borderRadius: BorderRadius.circular(10)),
+        child: Text(label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+                color: _loading ? const Color(0xFF475569) : Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final liveState = ref.watch(auctionProvider(widget.streamId));
+    final base = liveState.currentBid ?? liveState.startPrice ?? 0;
+
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+          20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Handle bar
+          Center(
+            child: Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                  color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+            ),
+          ),
+          const SizedBox(height: 18),
+          // Başlık + güncel fiyat
+          Row(children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    liveState.itemName ?? 'Teklif Ver',
+                    style: const TextStyle(
+                        color: Colors.white,
+                        fontWeight: FontWeight.w700,
+                        fontSize: 16),
+                  ),
+                  if (liveState.currentBidder != null)
+                    Text('@${liveState.currentBidder} en yüksek teklif sahibi',
+                        style: const TextStyle(
+                            color: Color(0xFF64748B), fontSize: 12))
+                  else
+                    const Text('İlk teklifi sen ver!',
+                        style:
+                            TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                ],
+              ),
+            ),
+            Column(crossAxisAlignment: CrossAxisAlignment.end, children: [
+              Text(
+                '₺${_fmt(liveState.currentBid ?? liveState.startPrice)}',
+                style: const TextStyle(
+                    color: Color(0xFF4ADE80),
+                    fontWeight: FontWeight.w800,
+                    fontSize: 22),
+              ),
+              if (liveState.bidCount > 0)
+                Text('${liveState.bidCount} teklif',
+                    style: const TextStyle(
+                        color: Color(0xFF64748B), fontSize: 11)),
+            ]),
+          ]),
+          const SizedBox(height: 18),
+          // Preset butonlar 2×2
+          Row(children: [
+            Expanded(child: _presetBtn('+₺100', base + 100)),
+            const SizedBox(width: 8),
+            Expanded(child: _presetBtn('+₺250', base + 250)),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            Expanded(child: _presetBtn('+₺500', base + 500)),
+            const SizedBox(width: 8),
+            Expanded(child: _presetBtn('+₺1000', base + 1000)),
+          ]),
+          const SizedBox(height: 14),
+          // Özel tutar
+          Row(children: [
+            Expanded(
+              child: TextField(
+                key: const Key('auction_input_ozel_teklif'),
+                controller: _customBidCtrl,
+                keyboardType: TextInputType.number,
+                inputFormatters: [ThousandsSeparatorInputFormatter()],
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+                decoration: InputDecoration(
+                  hintText: 'Özel tutar (₺)',
+                  hintStyle:
+                      const TextStyle(color: Color(0xFF475569), fontSize: 13),
+                  filled: true,
+                  fillColor: const Color(0xFF0F172A),
+                  contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 14, vertical: 13),
+                  border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF334155))),
+                  enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide:
+                          const BorderSide(color: Color(0xFF334155))),
+                  focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(color: kPrimary)),
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            SizedBox(
+              height: 50,
+              child: ElevatedButton(
+                key: const Key('auction_btn_ozel_teklif_gonder'),
+                onPressed: _loading
+                    ? null
+                    : () {
+                        final raw =
+                            _customBidCtrl.text.replaceAll('.', '');
+                        final v = double.tryParse(raw);
+                        if (v == null || v <= 0) {
+                          _setMsg('Geçerli tutar girin', error: true);
+                          return;
+                        }
+                        _placeBid(v);
+                      },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF16A34A),
+                  disabledBackgroundColor: const Color(0xFF1E293B),
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                ),
+                child: _loading
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(
+                            strokeWidth: 2, color: Colors.white))
+                    : const Text('Teklif Ver',
+                        style: TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ]),
+          // Başarı / hata mesajı
+          if (_msg != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              width: double.infinity,
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: _msgError
+                    ? const Color(0xFF7F1D1D).withValues(alpha: 0.5)
+                    : const Color(0xFF14532D).withValues(alpha: 0.5),
+                borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                    color: _msgError
+                        ? const Color(0xFFEF4444)
+                        : const Color(0xFF4ADE80),
+                    width: 1),
+              ),
+              child: Row(children: [
+                Icon(
+                  _msgError
+                      ? Icons.error_outline_rounded
+                      : Icons.check_circle_outline_rounded,
+                  color: _msgError
+                      ? const Color(0xFFEF4444)
+                      : const Color(0xFF4ADE80),
+                  size: 16,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _msg!,
+                    style: TextStyle(
+                        color: _msgError
+                            ? const Color(0xFFFCA5A5)
+                            : const Color(0xFF86EFAC),
+                        fontSize: 13),
+                  ),
+                ),
+              ]),
+            ),
+          ],
+        ],
       ),
     );
   }
