@@ -48,7 +48,8 @@
         };
 
         if (navigator.sendBeacon) {
-            navigator.sendBeacon(TRACKING_URL, JSON.stringify(payload));
+            const blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+            navigator.sendBeacon(TRACKING_URL, blob);
         } else {
             fetch(TRACKING_URL, {
                 method: 'POST',
