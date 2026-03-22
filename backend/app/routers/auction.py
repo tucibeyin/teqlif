@@ -612,7 +612,47 @@ async def buy_it_now(
         stream_id, current_user.username, bin_price, item_name,
     )
 
-    # Aşama 3'te WebSocket publish buraya eklenir
+    # ── 5. WebSocket — tüm izleyicilere ve host'a anında bildir ─────────────
+    # 5a. Standart state güncellemesi — mevcut auction dinleyicileri 'ended' alır
+    await _publish(stream_id, {"type": "state", **state})
+
+    # 5b. Özel BIN event — client'lar bu type'ı dinleyerek "SATILDI" UI'ı gösterir
+    await _publish(stream_id, {
+        "type": "auction_ended_by_buy_it_now",
+        "listing_id": listing_id,
+        "buyer": {
+            "id": current_user.id,
+            "username": current_user.username,
+        },
+        "price": bin_price,
+        "item_name": item_name,
+    })
+
+    # 5c. Chat'e herkese görünür özet mesajı
+    chat_msg = {
+        "type": "message",
+        "id": str(uuid.uuid4())[:8],
+        "username": current_user.username,
+        "content": (
+            f"🛒 Hemen Alındı! "
+            f"📦 {item_name} — {_fmt_price(bin_price)} — "
+            f"🏅 @{current_user.username}"
+        ),
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    if listing_id:
+        chat_msg["url"] = f"/ilan/{listing_id}"
+    _CHAT_KEY = f"chat:{stream_id}:messages"
+    _CHAT_PUBSUB = "chat_broadcast"
+    await redis.rpush(_CHAT_KEY, json.dumps(chat_msg))
+    await redis.ltrim(_CHAT_KEY, -50, -1)
+    await redis.expire(_CHAT_KEY, 24 * 3600)
+    await redis.publish(_CHAT_PUBSUB, json.dumps({"_stream_id": stream_id, **chat_msg}))
+
+    logger.info(
+        "[HEMEN AL] WS+CHAT YAYINLANDI | stream_id=%s ws_hedef=%s",
+        stream_id, manager.conn_count(stream_id),
+    )
     return state
 
 
