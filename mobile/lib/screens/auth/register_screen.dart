@@ -231,6 +231,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       obscureText: _obscure,
                       enableSuggestions: false,
                       autocorrect: false,
+                      keyboardType: TextInputType.visiblePassword,
                       decoration: InputDecoration(
                         labelText: 'Şifre',
                         suffixIcon: IconButton(

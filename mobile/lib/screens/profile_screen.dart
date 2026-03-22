@@ -485,6 +485,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   obscureText: true,
                   enableSuggestions: false,
                   autocorrect: false,
+                  keyboardType: TextInputType.visiblePassword,
                   decoration: InputDecoration(
                     labelText: 'Mevcut Şifre',
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
@@ -496,6 +497,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   obscureText: true,
                   enableSuggestions: false,
                   autocorrect: false,
+                  keyboardType: TextInputType.visiblePassword,
                   decoration: InputDecoration(
                     labelText: 'Yeni Şifre',
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
@@ -507,6 +509,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   obscureText: true,
                   enableSuggestions: false,
                   autocorrect: false,
+                  keyboardType: TextInputType.visiblePassword,
                   decoration: InputDecoration(
                     labelText: 'Yeni Şifre (Tekrar)',
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
@@ -690,6 +693,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 obscureText: true,
                 enableSuggestions: false,
                 autocorrect: false,
+                keyboardType: TextInputType.visiblePassword,
                 decoration: const InputDecoration(
                   labelText: 'Şifreniz',
                   hintText: 'Onaylamak için şifrenizi girin',

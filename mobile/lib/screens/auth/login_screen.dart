@@ -153,6 +153,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         obscureText: _obscure,
                         enableSuggestions: false,
                         autocorrect: false,
+                        keyboardType: TextInputType.visiblePassword,
                         decoration: InputDecoration(
                           labelText: 'Şifre',
                           suffixIcon: IconButton(
