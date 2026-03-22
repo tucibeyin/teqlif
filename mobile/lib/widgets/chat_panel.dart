@@ -31,7 +31,7 @@ class _TimedMessage {
 
   void dispose() {
     _disposed = true;
-    if (!_permanent) opacity.dispose();
+    opacity.dispose();
   }
 }
 
@@ -142,6 +142,28 @@ class _ChatPanelState extends State<ChatPanel> {
         _history.removeAt(0);
       }
     });
+    _evictStalePermanents();
+  }
+
+  /// Yeni mesaj gelince: _permanent işaretli ama artık son 3'te olmayan
+  /// mesajları fade-out yaparak listeden temizler.
+  void _evictStalePermanents() {
+    final toEvict = <_TimedMessage>[];
+    final protectedStart = _messages.length - 3;
+    for (int i = 0; i < _messages.length; i++) {
+      if (_messages[i]._permanent && i < protectedStart) {
+        toEvict.add(_messages[i]);
+      }
+    }
+    for (final m in toEvict) {
+      m._permanent = false;
+      m.opacity.value = 0.0;
+      Future.delayed(const Duration(milliseconds: 700), () {
+        if (mounted) {
+          setState(() => _messages.removeWhere((x) => x == m));
+        }
+      });
+    }
   }
 
   void _connectWS() {
