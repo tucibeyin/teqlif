@@ -1760,9 +1760,12 @@
             _currentBidder = state.current_bidder || null;
             _currentItemName = state.item_name || null;
             _currentBinPrice = state.buy_it_now_price ?? null;
+            // Her zaman güncel bid'i al; null ise sıfırla (yeni artırma başlangıcı)
+            _currentBid = state.current_bid ?? 0;
 
-            // idle'a dönünce buy-it-now bayrağını sıfırla
-            if (state.status === 'idle') {
+            // idle VEYA active'e geçişte buy-it-now bayrağını sıfırla.
+            // Buy-it-now sonrası yeni artırma idle'dan geçmeden doğrudan active gelir.
+            if (state.status === 'idle' || state.status === 'active') {
                 _isBoughtItNow = false;
                 _hideSoldBanner();
             }
