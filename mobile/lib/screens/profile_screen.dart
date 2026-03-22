@@ -108,7 +108,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        backgroundColor: AppColors.surface(context),
+        surfaceTintColor: Colors.transparent,
         title: Text(
           '@$username',
           style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 17),

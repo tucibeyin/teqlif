@@ -197,7 +197,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 'İlanlar',
                 style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
               ),
-              backgroundColor: AppColors.surface(context),
+              surfaceTintColor: Colors.transparent,
               floating: true,
               snap: true,
               actions: [
