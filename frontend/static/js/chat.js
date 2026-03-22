@@ -106,6 +106,20 @@ const Chat = (() => {
         return _PALETTE[hash % _PALETTE.length];
     }
 
+    function _buildAvatar(username, imageUrl) {
+        const color = _usernameColor(username || '');
+        const initial = username ? username[0].toUpperCase() : '?';
+
+        if (imageUrl) {
+            // Gerçek resim: hata durumunda fallback'e geç
+            const fallbackHtml = `<span class="chat-avatar-fallback" style="background:${color};" aria-hidden="true">${_esc(initial)}</span>`;
+            return `<img class="chat-avatar" src="${_esc(imageUrl)}" alt="" aria-hidden="true" onerror="this.outerHTML='${fallbackHtml.replace(/'/g, "\\'")}'" loading="lazy">`;
+        }
+
+        // URL yoksa direkt fallback
+        return `<span class="chat-avatar-fallback" style="background:${color};" aria-hidden="true">${_esc(initial)}</span>`;
+    }
+
     function _appendMessage(msg) {
         const list = document.getElementById('chatMessages');
         if (!list) return;
@@ -113,7 +127,8 @@ const Chat = (() => {
         const color = _usernameColor(msg.username || '');
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        let html = `<span class="chat-username" data-username="${_esc(msg.username)}" style="color:${color};cursor:pointer;">@${_esc(msg.username)}</span> <span class="chat-content">${_esc(msg.content)}</span>`;
+        const avatar = _buildAvatar(msg.username || '', msg.profile_image_url || null);
+        let html = `${avatar}<span class="chat-username" data-username="${_esc(msg.username)}" style="color:${color};cursor:pointer;">@${_esc(msg.username)}</span> <span class="chat-content">${_esc(msg.content)}</span>`;
         if (msg.url) {
             html += ` <a href="${_esc(msg.url)}" target="_blank" style="color:#fbbf24;font-weight:600;text-decoration:underline;white-space:nowrap;">🔗 İlana Bak</a>`;
         }

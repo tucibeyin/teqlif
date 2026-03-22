@@ -187,6 +187,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             await websocket.close(code=4001)
             return
         username = user.username
+        profile_image_url: str | None = user.profile_image_url if hasattr(user, "profile_image_url") else None
 
         stream_result = await db.execute(
             select(LiveStream).where(LiveStream.id == stream_id)
@@ -268,6 +269,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                         "type": "message",
                         "id": str(uuid.uuid4())[:8],
                         "username": username,
+                        "profile_image_url": profile_image_url,
                         "content": content,
                         "created_at": datetime.now(timezone.utc).isoformat(),
                     }

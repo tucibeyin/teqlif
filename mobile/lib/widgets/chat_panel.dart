@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
@@ -466,39 +468,50 @@ class _HistorySheet extends StatelessWidget {
                 itemCount: history.length,
                 itemBuilder: (_, i) {
                   final msg = history[i];
-                  final color = usernameColor(msg.username);
                   return Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4),
-                    child: Wrap(
-                      children: [
-                        GestureDetector(
-                          onTap: () {
-                            Navigator.pop(context);
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => PublicProfileScreen(
-                                    username: msg.username),
-                              ),
-                            );
-                          },
-                          child: Text(
-                            '@${msg.username} ',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: color,
-                              fontWeight: FontWeight.w700,
+                    child: Text.rich(
+                      TextSpan(
+                        children: [
+                          WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: _ChatAvatar(
+                              username: msg.username,
+                              imageUrl: msg.profileImageUrl,
                             ),
                           ),
-                        ),
-                        Text(
-                          msg.content,
-                          style: const TextStyle(
-                            fontSize: 13,
-                            color: Colors.white70,
+                          const WidgetSpan(
+                            alignment: PlaceholderAlignment.middle,
+                            child: SizedBox(width: 4),
                           ),
-                        ),
-                      ],
+                          TextSpan(
+                            text: '@${msg.username} ',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: usernameColor(msg.username),
+                              fontWeight: FontWeight.w700,
+                            ),
+                            recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                Navigator.pop(context);
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => PublicProfileScreen(
+                                        username: msg.username),
+                                  ),
+                                );
+                              },
+                          ),
+                          TextSpan(
+                            text: msg.content,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Colors.white70,
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   );
                 },
@@ -506,6 +519,53 @@ class _HistorySheet extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+/// Satır içi avatar: 18×18 yuvarlak resim, OOM korumalı (memCache 60×60).
+/// URL null/boş veya hata durumunda kullanıcı baş harfini gösterir.
+class _ChatAvatar extends StatelessWidget {
+  final String username;
+  final String? imageUrl;
+  static const double _size = 18;
+
+  const _ChatAvatar({required this.username, this.imageUrl});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = usernameColor(username);
+    final initial = username.isNotEmpty ? username[0].toUpperCase() : '?';
+
+    final fallback = Container(
+      width: _size,
+      height: _size,
+      decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      alignment: Alignment.center,
+      child: Text(
+        initial,
+        style: const TextStyle(
+          fontSize: 8,
+          color: Colors.white,
+          fontWeight: FontWeight.w700,
+          height: 1,
+        ),
+      ),
+    );
+
+    if (imageUrl == null || imageUrl!.isEmpty) return fallback;
+
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: imageUrl!,
+        width: _size,
+        height: _size,
+        memCacheWidth: 60,
+        memCacheHeight: 60,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => fallback,
+        errorWidget: (_, __, ___) => fallback,
       ),
     );
   }
@@ -524,6 +584,7 @@ class _MessageItem extends StatelessWidget {
       Shadow(blurRadius: 12, color: Colors.black),
     ];
 
+    // Sistem mesajları (katılma bildirimi): avatar yok, italik stil
     if (message.isSystem) {
       return Padding(
         padding: const EdgeInsets.symmetric(vertical: 2),
@@ -554,22 +615,26 @@ class _MessageItem extends StatelessWidget {
       );
     }
 
+    // Normal mesaj: avatar + kullanıcı adı + içerik — Text.rich ile satır
+    // yüksekliği bozulmadan hizalama sağlanır (PlaceholderAlignment.middle).
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
-      child: Wrap(
-        children: [
-          GestureDetector(
-            onTap: onUsernameTap != null
-                ? () => onUsernameTap!(message.username)
-                : () => Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) =>
-                            PublicProfileScreen(username: message.username),
-                      ),
-                    ),
-            child: Text(
-              '@${message.username} ',
+      child: Text.rich(
+        TextSpan(
+          children: [
+            WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: _ChatAvatar(
+                username: message.username,
+                imageUrl: message.profileImageUrl,
+              ),
+            ),
+            const WidgetSpan(
+              alignment: PlaceholderAlignment.middle,
+              child: SizedBox(width: 4),
+            ),
+            TextSpan(
+              text: '@${message.username} ',
               style: TextStyle(
                 fontSize: 12.5,
                 height: 1.35,
@@ -577,18 +642,28 @@ class _MessageItem extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 shadows: shadow,
               ),
+              recognizer: TapGestureRecognizer()
+                ..onTap = onUsernameTap != null
+                    ? () => onUsernameTap!(message.username)
+                    : () => Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) =>
+                                PublicProfileScreen(username: message.username),
+                          ),
+                        ),
             ),
-          ),
-          Text(
-            message.content,
-            style: const TextStyle(
-              fontSize: 12.5,
-              height: 1.35,
-              color: Colors.white,
-              shadows: shadow,
+            TextSpan(
+              text: message.content,
+              style: const TextStyle(
+                fontSize: 12.5,
+                height: 1.35,
+                color: Colors.white,
+                shadows: shadow,
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

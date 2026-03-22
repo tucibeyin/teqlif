@@ -894,6 +894,35 @@
             word-break: break-word;
         }
 
+        /* Satır içi avatar — 18×18 yuvarlak, line-height'ı bozmaz */
+        .chat-avatar {
+            display: inline-block;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            object-fit: cover;
+            vertical-align: middle;
+            margin-right: 4px;
+            flex-shrink: 0;
+        }
+
+        /* URL null/hatalı olduğunda gösterilen baş-harf yedek avatarı */
+        .chat-avatar-fallback {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            vertical-align: middle;
+            margin-right: 4px;
+            font-size: 10px;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1;
+            flex-shrink: 0;
+        }
+
         .chat-username {
             font-weight: 700;
             cursor: pointer;
