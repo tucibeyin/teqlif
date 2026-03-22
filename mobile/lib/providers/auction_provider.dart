@@ -35,8 +35,25 @@ class AuctionNotifier extends StateNotifier<AuctionState> {
             final json = jsonDecode(data as String) as Map<String, dynamic>;
             if (json['type'] == 'state') {
               state = AuctionState.fromJson(json);
+            } else if (json['type'] == 'auction_ended_by_buy_it_now') {
+              final buyer = json['buyer'] as Map<String, dynamic>?;
+              final buyerUsername = buyer?['username'] as String?;
+              state = AuctionState(
+                status: 'ended',
+                itemName: json['item_name'] as String? ?? state.itemName,
+                startPrice: state.startPrice,
+                buyItNowPrice: state.buyItNowPrice,
+                currentBid: (json['price'] as num?)?.toDouble(),
+                currentBidder: buyerUsername,
+                bidCount: state.bidCount,
+                listingId: state.listingId,
+                isBoughtItNow: true,
+                buyerUsername: buyerUsername,
+              );
             }
-          } catch (_) {}
+          } catch (e) {
+            debugPrint('[AuctionNotifier] WS mesajı ayrıştırılamadı: $e');
+          }
         },
         onDone: _scheduleReconnect,
         onError: (_) => _scheduleReconnect(),

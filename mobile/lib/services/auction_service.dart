@@ -23,15 +23,18 @@ class AuctionService {
 
   /// İlan seçilerek başlatmak için [listingId] gönderilir;
   /// manuel girildiğinde [itemName] ve [startPrice] gönderilir.
+  /// [buyItNowPrice] opsiyonel; belirtilirse Hemen Al özelliği aktif olur.
   static Future<AuctionState> startAuction(
     int streamId, {
     String? itemName,
     double? startPrice,
     int? listingId,
+    double? buyItNowPrice,
   }) async {
     final Map<String, dynamic> payload = listingId != null
         ? {'listing_id': listingId, 'start_price': startPrice!}
         : {'item_name': itemName!, 'start_price': startPrice!};
+    if (buyItNowPrice != null) payload['buy_it_now_price'] = buyItNowPrice;
     final body = await apiCall(
       () async => http.post(
         Uri.parse('$kBaseUrl/auction/$streamId/start'),
@@ -40,6 +43,15 @@ class AuctionService {
       ),
     );
     return AuctionState.fromJson(body);
+  }
+
+  static Future<void> buyItNow(int streamId) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/auction/$streamId/buy-it-now'),
+        headers: await _headers(),
+      ),
+    );
   }
 
   static Future<AuctionState> pauseAuction(int streamId) async {

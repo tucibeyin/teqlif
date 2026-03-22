@@ -74,6 +74,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         itemName: result['item'] as String?,
         startPrice: result['price'] as double?,
         listingId: result['listing_id'] as int?,
+        buyItNowPrice: result['bin_price'] as double?,
       );
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
@@ -238,6 +239,12 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       }
       if (prev != null && next.isIdle && !prev.isIdle) {
         widget.onAuctionReset?.call();
+      }
+      // Hemen Al tamamlandığında bildirim göster
+      if (prev != null && !prev.isBoughtItNow && next.isBoughtItNow) {
+        _setMsg(
+          '🛒 Hemen Alındı! @${next.buyerUsername ?? next.currentBidder ?? '?'} — ₺${_fmt(next.currentBid)}',
+        );
       }
     });
 
@@ -494,12 +501,19 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _statusBadge(AuctionState state) {
-    final (label, color) = switch (state.status) {
-      'active' => ('AKTİF', Colors.green),
-      'paused' => ('DURAKLADI', Colors.amber),
-      'ended' => ('BİTTİ', Colors.red),
-      _ => ('AÇIK ARTIRMA', const Color(0xFF475569)),
-    };
+    final String label;
+    final Color color;
+    if (state.status == 'active') {
+      label = 'AKTİF'; color = Colors.green;
+    } else if (state.status == 'paused') {
+      label = 'DURAKLADI'; color = Colors.amber;
+    } else if (state.status == 'ended' && state.isBoughtItNow) {
+      label = 'SATILDI 🛒'; color = Colors.orange;
+    } else if (state.status == 'ended') {
+      label = 'BİTTİ'; color = Colors.red;
+    } else {
+      label = 'AÇIK ARTIRMA'; color = const Color(0xFF475569);
+    }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
       decoration:
@@ -541,27 +555,139 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Widget _viewerBidButton(BuildContext context, AuctionState state) {
     final enabled = widget.enabled;
-    return GestureDetector(
-      key: const Key('auction_btn_teklif_ver'),
-      onTap: enabled ? () => _showBidSheet(context, state) : null,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
-        decoration: BoxDecoration(
-          color: enabled
-              ? const Color(0xFF16A34A)
-              : const Color(0xFF334155),
-          borderRadius: BorderRadius.circular(20),
-        ),
-        child: Text(
-          enabled ? 'Teklif Ver' : '🔇 Susturuldunuz',
-          style: TextStyle(
-            color: enabled ? Colors.white : const Color(0xFF64748B),
-            fontSize: 11,
-            fontWeight: FontWeight.w700,
+    final bin = state.buyItNowPrice;
+    final showBin = enabled &&
+        bin != null &&
+        (state.currentBid == null || state.currentBid! < bin);
+
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        GestureDetector(
+          key: const Key('auction_btn_teklif_ver'),
+          onTap: enabled ? () => _showBidSheet(context, state) : null,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+            decoration: BoxDecoration(
+              color: enabled ? const Color(0xFF16A34A) : const Color(0xFF334155),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              enabled ? 'Teklif Ver' : '🔇 Susturuldunuz',
+              style: TextStyle(
+                color: enabled ? Colors.white : const Color(0xFF64748B),
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
           ),
         ),
+        if (showBin) ...[
+          const SizedBox(height: 4),
+          GestureDetector(
+            key: const Key('auction_btn_hemen_al'),
+            onTap: () => _buyItNow(state),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade700,
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: Text(
+                '⚡ ₺${_fmt(bin)}',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Future<void> _buyItNow(AuctionState state) async {
+    final ok = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('⚡ Hemen Al',
+            style: TextStyle(color: Colors.white, fontSize: 16)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF0F172A),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Column(children: [
+                _acceptRow('Ürün', state.itemName ?? '—'),
+                const SizedBox(height: 10),
+                _acceptRow('Hemen Al Fiyatı',
+                    '₺${_fmt(state.buyItNowPrice)}',
+                    valueColor: Colors.orange,
+                    valueBold: true),
+              ]),
+            ),
+            const SizedBox(height: 14),
+            const Text(
+              'Bu fiyatla ürünü hemen satın almak istiyor musun? Artırma sona erecek.',
+              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+        actions: [
+          Row(children: [
+            Expanded(
+              child: OutlinedButton(
+                onPressed: () => Navigator.pop(ctx, false),
+                style: OutlinedButton.styleFrom(
+                  side: const BorderSide(color: Color(0xFF334155)),
+                  shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+                child: const Text('İptal',
+                    style: TextStyle(color: Color(0xFF94A3B8))),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.orange.shade700,
+                    shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 12)),
+                onPressed: () => Navigator.pop(ctx, true),
+                child: const Text('Satın Al',
+                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+              ),
+            ),
+          ]),
+        ],
       ),
     );
+    if (ok != true) return;
+    try {
+      await AuctionService.buyItNow(widget.streamId);
+      // WS broadcast state güncelleyecek
+    } on AppException catch (e) {
+      _setMsg(e.message, error: true);
+    } catch (e, st) {
+      LoggerService.instance.captureException(e,
+          stackTrace: st, tag: '_AuctionPanelState._buyItNow');
+      _setMsg(_cleanErr(e), error: true);
+    }
   }
 
   void _showBidSheet(BuildContext outerContext, AuctionState state) {
@@ -723,10 +849,77 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     );
   }
 
+  Future<void> _buyItNow() async {
+    if (_loading) return;
+    setState(() => _loading = true);
+    try {
+      await AuctionService.buyItNow(widget.streamId);
+      // WS broadcast state güncelleyecek
+    } on AppException catch (e) {
+      _setMsg(e.message, error: true);
+    } catch (e, st) {
+      LoggerService.instance.captureException(e,
+          stackTrace: st, tag: '_BidSheetContent._buyItNow');
+      final s = e.toString();
+      _setMsg(s.startsWith('Exception: ') ? s.substring('Exception: '.length) : s,
+          error: true);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final liveState = ref.watch(auctionProvider(widget.streamId));
     final base = liveState.currentBid ?? liveState.startPrice ?? 0;
+
+    // Hemen Al ile satın alındıysa özel ekran göster
+    if (liveState.isBoughtItNow && liveState.isEnded) {
+      return Padding(
+        padding: EdgeInsets.fromLTRB(
+            20, 16, 20, MediaQuery.of(context).viewInsets.bottom + 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Center(
+              child: Container(
+                width: 38, height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.white24, borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 24),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.orange.shade900.withValues(alpha: 0.3),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: Colors.orange.shade600, width: 1.5),
+              ),
+              child: Column(children: [
+                const Text('🛒 SATILDI!',
+                    style: TextStyle(color: Colors.orange, fontSize: 22,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 8),
+                Text(liveState.itemName ?? '',
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(color: Colors.white, fontSize: 15,
+                        fontWeight: FontWeight.w600)),
+                const SizedBox(height: 6),
+                Text('₺${_fmt(liveState.currentBid)}',
+                    style: const TextStyle(color: Color(0xFF4ADE80), fontSize: 20,
+                        fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text('@${liveState.buyerUsername ?? '?'} tarafından Hemen Alındı',
+                    style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+              ]),
+            ),
+            const SizedBox(height: 20),
+          ],
+        ),
+      );
+    }
 
     return Padding(
       padding: EdgeInsets.fromLTRB(
@@ -781,6 +974,11 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 Text('${liveState.bidCount} teklif',
                     style: const TextStyle(
                         color: Color(0xFF64748B), fontSize: 11)),
+              if (liveState.buyItNowPrice != null)
+                Text('⚡ ₺${_fmt(liveState.buyItNowPrice)}',
+                    style: TextStyle(
+                        color: Colors.orange.shade400, fontSize: 11,
+                        fontWeight: FontWeight.w600)),
             ]),
           ]),
           const SizedBox(height: 18),
@@ -796,6 +994,54 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
             const SizedBox(width: 8),
             Expanded(child: _presetBtn('+₺1000', base + 1000)),
           ]),
+          // Hemen Al butonu — buyItNowPrice varsa ve currentBid < buyItNowPrice ise göster
+          Builder(builder: (_) {
+            final bin = liveState.buyItNowPrice;
+            if (bin == null || (liveState.currentBid != null && liveState.currentBid! >= bin)) {
+              return const SizedBox.shrink();
+            }
+            return Padding(
+              padding: const EdgeInsets.only(top: 14),
+              child: GestureDetector(
+                key: const Key('auction_sheet_btn_hemen_al'),
+                onTap: _loading ? null : _buyItNow,
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  decoration: BoxDecoration(
+                    color: _loading
+                        ? const Color(0xFF1E293B)
+                        : Colors.orange.shade700,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                        color: _loading
+                            ? const Color(0xFF334155)
+                            : Colors.orange.shade500,
+                        width: 1.5),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      if (_loading)
+                        const SizedBox(
+                          width: 16, height: 16,
+                          child: CircularProgressIndicator(
+                              strokeWidth: 2, color: Colors.white),
+                        )
+                      else ...[
+                        const Text('⚡ Hemen Al — ',
+                            style: TextStyle(color: Colors.white,
+                                fontWeight: FontWeight.w700, fontSize: 14)),
+                        Text('₺${_fmt(bin)}',
+                            style: const TextStyle(color: Colors.white,
+                                fontWeight: FontWeight.w800, fontSize: 16)),
+                      ],
+                    ],
+                  ),
+                ),
+              ),
+            );
+          }),
           const SizedBox(height: 14),
           // Özel tutar
           Row(children: [
@@ -927,6 +1173,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
   bool _fromListing = false;
   final _itemCtrl = TextEditingController();
   final _priceCtrl = TextEditingController();
+  final _binCtrl = TextEditingController();
   List<dynamic> _listings = [];
   bool _loadingListings = false;
   dynamic _selectedListing;
@@ -941,6 +1188,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
   void dispose() {
     _itemCtrl.dispose();
     _priceCtrl.dispose();
+    _binCtrl.dispose();
     super.dispose();
   }
 
@@ -991,6 +1239,8 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
               _inputField(_itemCtrl, 'Ürün adı'),
               const SizedBox(height: 10),
               _inputField(_priceCtrl, 'Başlangıç fiyatı (₺)', isNumber: true),
+              const SizedBox(height: 10),
+              _inputField(_binCtrl, 'Hemen Al fiyatı (₺, opsiyonel)', isNumber: true),
             ] else ...[
               if (_loadingListings)
                 const Padding(
@@ -1077,6 +1327,8 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
               if (_fromListing) ...[
                 const SizedBox(height: 10),
                 _inputField(_priceCtrl, 'Başlangıç fiyatı (₺)', isNumber: true),
+                const SizedBox(height: 10),
+                _inputField(_binCtrl, 'Hemen Al fiyatı (₺, opsiyonel)', isNumber: true),
               ],
             ],
           ],
@@ -1094,18 +1346,28 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),
           onPressed: () {
+            final binRaw = _binCtrl.text.replaceAll('.', '').replaceAll(',', '.');
+            final binPrice = binRaw.isNotEmpty ? double.tryParse(binRaw) : null;
             if (_fromListing) {
               if (_selectedListing == null) return;
               final raw = _priceCtrl.text.replaceAll('.', '').replaceAll(',', '.');
               final price = double.tryParse(raw);
               if (price == null || price < 0) return;
-              Navigator.pop(context, {'listing_id': _selectedListing['id'] as int, 'price': price});
+              Navigator.pop(context, {
+                'listing_id': _selectedListing['id'] as int,
+                'price': price,
+                if (binPrice != null && binPrice > 0) 'bin_price': binPrice,
+              });
             } else {
               final item = _itemCtrl.text.trim();
               final raw = _priceCtrl.text.replaceAll('.', '').replaceAll(',', '.');
               final price = double.tryParse(raw);
               if (item.length < 2 || price == null || price < 0) return;
-              Navigator.pop(context, {'item': item, 'price': price});
+              Navigator.pop(context, {
+                'item': item,
+                'price': price,
+                if (binPrice != null && binPrice > 0) 'bin_price': binPrice,
+              });
             }
           },
           child: const Text('Başlat', style: TextStyle(color: Colors.white)),

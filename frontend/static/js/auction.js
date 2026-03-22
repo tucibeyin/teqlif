@@ -22,8 +22,14 @@ const Auction = (() => {
         _ws = new WebSocket(`${proto}://${location.host}/api/auction/${streamId}/ws`);
 
         _ws.onmessage = (e) => {
-            const msg = JSON.parse(e.data);
-            if (msg.type === 'state' && _onState) _onState(msg);
+            try {
+                const msg = JSON.parse(e.data);
+                if ((msg.type === 'state' || msg.type === 'auction_ended_by_buy_it_now') && _onState) {
+                    _onState(msg);
+                }
+            } catch (err) {
+                console.error('[Auction] WS mesajı ayrıştırılamadı:', err);
+            }
         };
 
         _ws.onclose = () => {
@@ -39,14 +45,21 @@ const Auction = (() => {
         if (_ws) { _ws.close(); _ws = null; }
     }
 
-    async function startAuction(itemName, startPrice, listingId) {
+    async function startAuction(itemName, startPrice, listingId, buyItNowPrice) {
         const body = listingId
             ? { listing_id: listingId, start_price: parseFloat(startPrice) }
             : { item_name: itemName, start_price: parseFloat(startPrice) };
+        if (buyItNowPrice != null && !isNaN(buyItNowPrice) && buyItNowPrice > 0) {
+            body.buy_it_now_price = parseFloat(buyItNowPrice);
+        }
         return await apiFetch(`/auction/${_streamId}/start`, {
             method: 'POST',
             body: JSON.stringify(body),
         });
+    }
+
+    async function buyItNow() {
+        return await apiFetch(`/auction/${_streamId}/buy-it-now`, { method: 'POST' });
     }
 
     async function pauseAuction() {
@@ -72,5 +85,5 @@ const Auction = (() => {
         return await apiFetch(`/auction/${_streamId}/accept`, { method: 'POST' });
     }
 
-    return { connect, disconnect, startAuction, pauseAuction, resumeAuction, endAuction, placeBid, acceptBid, STATUS_LABELS };
+    return { connect, disconnect, startAuction, pauseAuction, resumeAuction, endAuction, placeBid, acceptBid, buyItNow, STATUS_LABELS };
 })();

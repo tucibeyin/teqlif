@@ -335,6 +335,11 @@
             color: #fff;
         }
 
+        .badge-sold {
+            background: #ea580c;
+            color: #fff;
+        }
+
         .auction-title {
             font-size: 0.82rem;
             font-weight: 700;
@@ -399,8 +404,13 @@
             flex: 2;
         }
 
-        #manualInputs input:last-child {
+        #auctionStartPrice,
+        #auctionBinPrice {
             flex: 1;
+        }
+
+        #auctionBinPrice {
+            font-style: italic;
         }
 
         .auction-setup input:focus,
@@ -758,6 +768,51 @@
 
         .auction-viewer-controls input:focus {
             border-color: var(--primary);
+        }
+
+        .btn-orange {
+            background: #ea580c;
+            color: #fff;
+            font-weight: 700;
+        }
+
+        .btn-orange:hover {
+            background: #c2410c;
+        }
+
+        #auctionBinBadge {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: #f97316;
+            white-space: nowrap;
+            cursor: default;
+        }
+
+        #auctionSoldBanner {
+            flex: 0 0 100%;
+            background: linear-gradient(135deg, rgba(234,88,12,0.15), rgba(234,88,12,0.05));
+            border: 1px solid #ea580c;
+            border-radius: 8px;
+            padding: 0.5rem 1rem;
+            display: none;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.82rem;
+        }
+
+        #auctionSoldBanner .sold-icon {
+            font-size: 1.2rem;
+            flex-shrink: 0;
+        }
+
+        #auctionSoldBanner .sold-label {
+            font-weight: 800;
+            color: #f97316;
+            font-size: 0.88rem;
+        }
+
+        #auctionSoldBanner .sold-detail {
+            color: #e2e8f0;
         }
 
         #auctionMsg {
@@ -1133,6 +1188,7 @@
                         <div class="auction-current-bidder" id="auctionBidder"></div>
                         <div class="auction-bid-count" id="auctionBidCount"></div>
                     </div>
+                    <div id="auctionBinBadge" style="display:none;"></div>
                 </div>
 
                 <!-- HOST: ürün girişi (idle) -->
@@ -1152,6 +1208,7 @@
                     <div id="manualInputs">
                         <input type="text" id="auctionItemInput" placeholder="Ürün adı" maxlength="200" data-track-id="yayin-input-acik-artirma-urun">
                         <input type="text" inputmode="numeric" id="auctionStartPrice" placeholder="Başlangıç (₺)" autocomplete="off" data-track-id="yayin-input-acik-artirma-baslangic-fiyati">
+                        <input type="text" inputmode="numeric" id="auctionBinPrice" placeholder="Hemen Al (₺, opsiyonel)" autocomplete="off" data-track-id="yayin-input-hemen-al-fiyati">
                     </div>
                 </div>
 
@@ -1175,6 +1232,14 @@
                     <button class="btn btn-slate" onclick="quickBid(1000)" data-track-id="yayin-btn-hizli-teklif-1000">+₺1000</button>
                     <input type="text" inputmode="numeric" id="customBidInput" placeholder="Özel (₺)" autocomplete="off" data-track-id="yayin-input-ozel-teklif">
                     <button class="btn btn-green" id="btnCustomBid" data-track-id="yayin-btn-ozel-teklif-ver">Teklif Ver</button>
+                    <button class="btn btn-orange" id="btnBuyItNow" style="display:none;" data-track-id="yayin-btn-hemen-al">⚡ Hemen Al</button>
+                </div>
+
+                <!-- SATILDI banner (Hemen Al ile kapanınca görünür) -->
+                <div id="auctionSoldBanner">
+                    <span class="sold-icon">🛒</span>
+                    <span class="sold-label">SATILDI!</span>
+                    <span class="sold-detail" id="soldBannerDetail"></span>
                 </div>
 
                 <div id="auctionMsg"></div>
@@ -1253,8 +1318,48 @@
     <script src="/static/js/auth.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/stream.js?v=4"></script>
-    <script src="/static/js/auction.js?v=4"></script>
+    <script src="/static/js/auction.js?v=5"></script>
     <script src="/static/js/chat.js?v=6"></script>
+
+    <!-- Hemen Al Onay Modalı -->
+    <div id="buyItNowModal" style="
+        display:none; position:fixed; inset:0; z-index:9999;
+        background:rgba(0,0,0,0.7); backdrop-filter:blur(4px);
+        align-items:center; justify-content:center;">
+        <div style="
+            background:#1e293b; border:1px solid #334155; border-radius:16px;
+            padding:28px 24px; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+            <div style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:18px;">⚡ Hemen Al</div>
+            <div style="background:#0f172a; border-radius:12px; padding:16px; margin-bottom:20px; display:flex; flex-direction:column; gap:10px;">
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#64748b; font-size:0.78rem;">Ürün</span>
+                    <span id="binModalItem" style="color:#e2e8f0; font-weight:600; font-size:0.88rem; text-align:right; max-width:180px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">—</span>
+                </div>
+                <div style="height:1px; background:#1e293b;"></div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="color:#64748b; font-size:0.78rem;">Hemen Al Fiyatı</span>
+                    <span id="binModalPrice" style="color:#f97316; font-weight:800; font-size:1.05rem;">—</span>
+                </div>
+            </div>
+            <p style="color:#94a3b8; font-size:0.8rem; margin:0 0 20px; line-height:1.5;">
+                Bu fiyatla ürünü hemen satın almak istediğine emin misin? Açık artırma sona erecek.
+            </p>
+            <div style="display:flex; gap:10px;">
+                <button id="binModalCancel" style="
+                    flex:1; padding:11px; border:1px solid #334155; background:transparent;
+                    color:#94a3b8; border-radius:10px; cursor:pointer; font-size:0.88rem;"
+                    data-track-id="yayin-modal-btn-hemen-al-iptal">
+                    İptal Et
+                </button>
+                <button id="binModalConfirm" style="
+                    flex:1; padding:11px; border:none; background:#ea580c;
+                    color:#fff; border-radius:10px; cursor:pointer; font-size:0.88rem; font-weight:700;"
+                    data-track-id="yayin-modal-btn-hemen-al-onayla">
+                    Satın Al
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- Teklif Kabul Onay Modalı -->
     <div id="acceptModal" style="
@@ -1592,6 +1697,8 @@
         let _selectedListingId = null; // host için seçilen ilan
         let _listingMode = false;      // host: listing mi manual mı
         let _lastBidCount = 0;         // teklif sayısı takibi
+        let _currentBinPrice = null;   // buy_it_now_price
+        let _isBoughtItNow = false;    // son artırma Hemen Al ile mi kapandı
 
         // chat.js ile aynı palet ve algoritma — bağımsız çalışır
         const _USER_PALETTE = [
@@ -1631,11 +1738,34 @@
             list.innerHTML = '<div class="bids-empty" id="bidsEmpty">Henüz teklif yok.</div>';
         }
 
-        function updateAuctionUI(state) {
+        function updateAuctionUI(msg) {
+            // auction_ended_by_buy_it_now event'i — özel SATILDI overlay
+            if (msg.type === 'auction_ended_by_buy_it_now') {
+                _isBoughtItNow = true;
+                const buyer = msg.buyer?.username || '?';
+                const price = msg.price != null ? '₺' + Number(msg.price).toLocaleString('tr-TR') : '';
+                const itemName = msg.item_name || _currentItemName || '';
+                _showSoldBanner(buyer, price, itemName);
+                // viewerControls'u gizle, Hemen Al butonunu kapat
+                const vc = document.getElementById('viewerControls');
+                if (vc) vc.style.display = 'none';
+                const binBtn = document.getElementById('btnBuyItNow');
+                if (binBtn) binBtn.style.display = 'none';
+                return;
+            }
+
+            const state = msg; // type === 'state' — normal alanlar mevcut
             _currentAuctionStatus = state.status;
             _currentListingId = state.listing_id || null;
             _currentBidder = state.current_bidder || null;
             _currentItemName = state.item_name || null;
+            _currentBinPrice = state.buy_it_now_price ?? null;
+
+            // idle'a dönünce buy-it-now bayrağını sıfırla
+            if (state.status === 'idle') {
+                _isBoughtItNow = false;
+                _hideSoldBanner();
+            }
 
             const panel = document.getElementById('auctionPanel');
             const badge = document.getElementById('auctionBadge');
@@ -1645,8 +1775,15 @@
             const viewerControls = document.getElementById('viewerControls');
 
             panel.classList.add('visible');
-            badge.textContent = Auction.STATUS_LABELS[state.status] || state.status;
-            badge.className = 'auction-status-badge badge-' + state.status;
+
+            // Badge: isBoughtItNow && ended → SATILDI rozeti
+            if (_isBoughtItNow && state.status === 'ended') {
+                badge.textContent = 'SATILDI 🛒';
+                badge.className = 'auction-status-badge badge-sold';
+            } else {
+                badge.textContent = Auction.STATUS_LABELS[state.status] || state.status;
+                badge.className = 'auction-status-badge badge-' + state.status;
+            }
 
             if (state.item_name) document.getElementById('auctionItemName').textContent = state.item_name;
 
@@ -1658,6 +1795,17 @@
                     : (state.start_price != null ? `Başlangıç: ₺${Number(state.start_price).toLocaleString('tr-TR')}` : '');
                 document.getElementById('auctionBidCount').textContent = state.bid_count > 0 ? `${state.bid_count} teklif` : '';
                 bidInfo.style.display = 'block';
+            }
+
+            // BIN badge güncelle (hem host hem viewer için göster)
+            const binBadge = document.getElementById('auctionBinBadge');
+            if (binBadge) {
+                if (_currentBinPrice != null && state.status === 'active') {
+                    binBadge.textContent = `⚡ ${Number(_currentBinPrice).toLocaleString('tr-TR')} ₺`;
+                    binBadge.style.display = '';
+                } else {
+                    binBadge.style.display = 'none';
+                }
             }
 
             // Teklif listesi güncelle
@@ -1689,7 +1837,7 @@
                     document.getElementById('btnAuctionResume').style.display = 'none';
                     document.getElementById('btnAuctionAccept').style.display = 'none';
                     document.getElementById('btnAuctionEnd').style.display = 'none';
-                    // ended sonrası listing seçimini sıfırla
+                    // ended sonrası listing seçimini ve BIN inputu sıfırla
                     if (state.status === 'ended') _resetListingMode();
                 } else if (state.status === 'active') {
                     hostSetup.style.display = 'none';
@@ -1707,8 +1855,35 @@
                     document.getElementById('btnAuctionEnd').style.display = '';
                 }
             } else if (viewerControls) {
-                viewerControls.style.display = (state.status === 'active') ? 'flex' : 'none';
+                const showViewer = state.status === 'active' && !_isBoughtItNow;
+                viewerControls.style.display = showViewer ? 'flex' : 'none';
+
+                // Hemen Al butonu: BIN varsa ve currentBid < BIN ise göster
+                const binBtn = document.getElementById('btnBuyItNow');
+                if (binBtn) {
+                    const binVisible = showViewer &&
+                        _currentBinPrice != null &&
+                        (_currentBid == null || _currentBid < _currentBinPrice);
+                    binBtn.textContent = `⚡ Hemen Al — ₺${Number(_currentBinPrice ?? 0).toLocaleString('tr-TR')}`;
+                    binBtn.style.display = binVisible ? '' : 'none';
+                }
             }
+        }
+
+        function _showSoldBanner(buyer, price, itemName) {
+            const banner = document.getElementById('auctionSoldBanner');
+            if (!banner) return;
+            const detail = document.getElementById('soldBannerDetail');
+            if (detail) {
+                const item = itemName ? `${itemName} — ` : '';
+                detail.textContent = `${item}${price} — @${buyer} tarafından Hemen Alındı`;
+            }
+            banner.style.display = 'flex';
+        }
+
+        function _hideSoldBanner() {
+            const banner = document.getElementById('auctionSoldBanner');
+            if (banner) banner.style.display = 'none';
         }
 
         function setAuctionMsg(msg, type = '') {
@@ -1849,9 +2024,11 @@
             const btn = document.getElementById('btnListingMode');
             const picker = document.getElementById('listingPicker');
             const itemInput = document.getElementById('auctionItemInput');
+            const binInput = document.getElementById('auctionBinPrice');
             if (btn) btn.classList.remove('active');
             if (picker) picker.style.display = 'none';
             if (itemInput) itemInput.style.display = '';
+            if (binInput) binInput.value = '';
             const trigger = document.getElementById('listingPickerTrigger');
             if (trigger) { trigger.innerHTML = '<span id="listingPickerText">— İlan seçin —</span><span style="color:#64748b;font-size:10px;">▾</span>'; trigger.onclick = toggleListingPicker; }
             document.querySelectorAll('.lp-item').forEach(el => el.classList.remove('selected'));
@@ -1862,6 +2039,8 @@
         document.getElementById('btnAuctionStart')?.addEventListener('click', async () => {
             const startPrice = _parsePrice('auctionStartPrice');
             if (isNaN(startPrice) || startPrice < 0) return setAuctionMsg('Geçerli başlangıç fiyatı girin', 'error');
+            const binRaw = _parsePrice('auctionBinPrice');
+            const binPrice = !isNaN(binRaw) && binRaw > 0 ? binRaw : null;
             if (_listingMode) {
                 // DOM'daki seçili item'dan fallback oku
                 if (!_selectedListingId) {
@@ -1870,7 +2049,7 @@
                 }
                 if (!_selectedListingId) return setAuctionMsg('Bir ilan seçin', 'error');
                 try {
-                    await Auction.startAuction(null, startPrice, _selectedListingId);
+                    await Auction.startAuction(null, startPrice, _selectedListingId, binPrice);
                     setAuctionMsg('Açık artırma başladı!', 'success');
                 } catch (e) { setAuctionMsg(e.detail || e.message || 'Hata', 'error'); }
                 return;
@@ -1878,7 +2057,7 @@
             const itemName = document.getElementById('auctionItemInput').value.trim();
             if (!itemName) return setAuctionMsg('Ürün adı girin', 'error');
             try {
-                await Auction.startAuction(itemName, startPrice);
+                await Auction.startAuction(itemName, startPrice, null, binPrice);
                 setAuctionMsg('Açık artırma başladı!', 'success');
             } catch (e) { setAuctionMsg(e.detail || e.message || 'Hata', 'error'); }
         });
@@ -1982,6 +2161,49 @@
         document.getElementById('acceptModal')?.addEventListener('click', (e) => {
             if (e.target === document.getElementById('acceptModal'))
                 document.getElementById('acceptModal').style.display = 'none';
+        });
+
+        // ── VIEWER: Hemen Al ──────────────────────────────────────────────
+
+        function _openBuyItNowModal() {
+            document.getElementById('binModalItem').textContent = _currentItemName || '—';
+            document.getElementById('binModalPrice').textContent = _currentBinPrice != null
+                ? '₺' + Number(_currentBinPrice).toLocaleString('tr-TR')
+                : '—';
+            document.getElementById('buyItNowModal').style.display = 'flex';
+        }
+
+        function _closeBuyItNowModal() {
+            document.getElementById('buyItNowModal').style.display = 'none';
+        }
+
+        document.getElementById('btnBuyItNow')?.addEventListener('click', _openBuyItNowModal);
+
+        document.getElementById('binModalCancel')?.addEventListener('click', _closeBuyItNowModal);
+
+        document.getElementById('buyItNowModal')?.addEventListener('click', (e) => {
+            if (e.target === document.getElementById('buyItNowModal')) _closeBuyItNowModal();
+        });
+
+        document.getElementById('binModalConfirm')?.addEventListener('click', async () => {
+            const confirmBtn = document.getElementById('binModalConfirm');
+            confirmBtn.disabled = true;
+            confirmBtn.textContent = 'İşleniyor...';
+            try {
+                await Auction.buyItNow();
+                _closeBuyItNowModal();
+                // WS broadcast state'i güncelleyecek
+            } catch (e) {
+                console.error('[Auction] Hemen Al başarısız:', e);
+                if (window.Sentry) Sentry.captureException(e);
+                _closeBuyItNowModal();
+                setAuctionMsg(e.detail || e.message || 'Hemen Al sırasında hata oluştu', 'error');
+            } finally {
+                if (confirmBtn) {
+                    confirmBtn.disabled = false;
+                    confirmBtn.textContent = 'Satın Al';
+                }
+            }
         });
 
         // HOST: Bitir
@@ -2207,6 +2429,7 @@
             });
         }
         _attachPriceFormat('auctionStartPrice');
+        _attachPriceFormat('auctionBinPrice');
         _attachPriceFormat('customBidInput');
 
         function _parsePrice(id) {
