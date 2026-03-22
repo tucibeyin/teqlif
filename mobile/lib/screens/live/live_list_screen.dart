@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import '../../config/api.dart';
 import '../../config/theme.dart';
+import '../../core/app_exception.dart';
 import '../../models/stream.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
@@ -58,9 +59,8 @@ class LiveListScreenState extends State<LiveListScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e.toString();
+        _error = e is AppException ? e.message : 'Yayınlar yüklenemedi';
       });
-      showErrorSnackbar(context, e);
     }
   }
 
@@ -261,7 +261,7 @@ class LiveListScreenState extends State<LiveListScreen> {
               child: _loading
                   ? const Center(child: CircularProgressIndicator(color: kPrimary))
                   : _error != null
-                      ? Center(child: Text(_error!))
+                      ? _ErrorState(message: _error!)
                       : filtered.isEmpty
                           ? const _EmptyState()
                           : _selectedCategory != null || cats.length < 2
@@ -366,6 +366,39 @@ class _CategoryChip extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _ErrorState extends StatelessWidget {
+  final String message;
+  const _ErrorState({required this.message});
+
+  @override
+  Widget build(BuildContext context) {
+    // ListView + AlwaysScrollableScrollPhysics olmadan
+    // RefreshIndicator parmak hareketini algılayamaz.
+    return ListView(
+      physics: const AlwaysScrollableScrollPhysics(),
+      children: [
+        SizedBox(height: MediaQuery.sizeOf(context).height * 0.2),
+        Column(
+          children: [
+            const Icon(Icons.cloud_off_outlined, size: 56, color: Color(0xFFD1D5DB)),
+            const SizedBox(height: 12),
+            Text(
+              message,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Color(0xFF6B7280), fontSize: 14),
+            ),
+            const SizedBox(height: 8),
+            const Text(
+              'Yenilemek için aşağı çekin',
+              style: TextStyle(color: Color(0xFF9CA3AF), fontSize: 12),
+            ),
+          ],
+        ),
+      ],
     );
   }
 }
