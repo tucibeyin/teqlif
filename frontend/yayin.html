@@ -1834,6 +1834,12 @@
                 if (vc) vc.style.display = 'none';
                 const binBtn = document.getElementById('btnBuyItNow');
                 if (binBtn) binBtn.style.display = 'none';
+                // Bilgilendirme mesajı
+                if (_isHostPage) {
+                    setAuctionMsg(`🛒 Hemen Al tamamlandı! @${buyer}${price ? ' — ' + price : ''}`, 'success');
+                } else {
+                    setAuctionMsg('🎉 Tebrikler! Satın alma tamamlandı.', 'success');
+                }
                 return;
             }
 

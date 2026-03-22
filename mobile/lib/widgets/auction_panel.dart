@@ -244,9 +244,13 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       }
       // Hemen Al tamamlandığında bildirim göster
       if (prev != null && !prev.isBoughtItNow && next.isBoughtItNow) {
-        _setMsg(
-          '🛒 Hemen Alındı! @${next.buyerUsername ?? next.currentBidder ?? '?'} — ₺${_fmt(next.currentBid)}',
-        );
+        if (widget.isHost) {
+          _setMsg(
+            '🛒 Hemen Al tamamlandı! @${next.buyerUsername ?? next.currentBidder ?? '?'} — ₺${_fmt(next.currentBid)}',
+          );
+        } else {
+          _setMsg('🎉 Tebrikler! Satın alma tamamlandı.');
+        }
       }
       // Host: Hemen Al talebi geldiğinde onay diyaloğu göster
       if (widget.isHost && prev != null && !prev.isPending && next.isPending) {
