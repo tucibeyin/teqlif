@@ -70,6 +70,8 @@ class _ChatPanelState extends State<ChatPanel> {
   final List<ChatMessage> _history = []; // last 50 messages
   final _inputCtrl = TextEditingController();
   final _focusNode = FocusNode();
+  final _scrollController = ScrollController();
+  bool _autoScroll = true; // kullanıcı yukarı kaydırınca false olur
   bool _selfMuted = false;
 
   WebSocketChannel? _channel;
@@ -109,7 +111,20 @@ class _ChatPanelState extends State<ChatPanel> {
     }
     _inputCtrl.dispose();
     _focusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToBottom() {
+    if (!_autoScroll) return;
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted || !_scrollController.hasClients) return;
+      _scrollController.animateTo(
+        _scrollController.position.maxScrollExtent,
+        duration: const Duration(milliseconds: 150),
+        curve: Curves.easeOut,
+      );
+    });
   }
 
   String get _wsBaseUrl {
@@ -145,6 +160,7 @@ class _ChatPanelState extends State<ChatPanel> {
       }
     });
     _evictStalePermanents();
+    _scrollToBottom();
   }
 
   /// Yeni mesaj gelince: _permanent işaretli ama artık son 3'te olmayan
@@ -279,35 +295,45 @@ class _ChatPanelState extends State<ChatPanel> {
 
   @override
   Widget build(BuildContext context) {
-    final visible = _messages.length > 6
-        ? _messages.sublist(_messages.length - 6)
-        : _messages;
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        if (visible.isNotEmpty)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: visible
-                  .map(
-                    (m) => ValueListenableBuilder<double>(
-                      valueListenable: m.opacity,
-                      builder: (_, op, __) => AnimatedOpacity(
-                        opacity: op,
-                        duration: const Duration(milliseconds: 700),
-                        child: _MessageItem(
-                          m.message,
-                          onUsernameTap: widget.onUsernameTap,
-                        ),
+        if (_messages.isNotEmpty)
+          NotificationListener<ScrollNotification>(
+            onNotification: (n) {
+              if (n is ScrollUpdateNotification) {
+                final atBottom = _scrollController.hasClients &&
+                    _scrollController.position.pixels >=
+                        _scrollController.position.maxScrollExtent - 32;
+                if (_autoScroll != atBottom) {
+                  // setState çağırmıyoruz — sadece flag güncelleme, rebuild şart değil
+                  _autoScroll = atBottom;
+                }
+              }
+              return false;
+            },
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 220),
+              child: ListView.builder(
+                controller: _scrollController,
+                padding: const EdgeInsets.fromLTRB(14, 0, 14, 4),
+                itemCount: _messages.length,
+                itemBuilder: (_, i) {
+                  final m = _messages[i];
+                  return ValueListenableBuilder<double>(
+                    valueListenable: m.opacity,
+                    builder: (_, op, __) => AnimatedOpacity(
+                      opacity: op,
+                      duration: const Duration(milliseconds: 700),
+                      child: _MessageItem(
+                        m.message,
+                        onUsernameTap: widget.onUsernameTap,
                       ),
                     ),
-                  )
-                  .toList(),
+                  );
+                },
+              ),
             ),
           ),
         if (_token != null)
