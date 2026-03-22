@@ -524,6 +524,14 @@ class _HistorySheet extends StatelessWidget {
   }
 }
 
+/// Relative URL'leri (/uploads/...) tam URL'ye çevirir.
+/// Diğer ekranlarla aynı mantık: kBaseUrl'den origin alınır.
+String _resolveImageUrl(String url) {
+  if (url.startsWith('http')) return url;
+  final origin = kBaseUrl.replaceFirst(RegExp(r'/api.*'), '');
+  return '$origin$url';
+}
+
 /// Satır içi avatar: 18×18 yuvarlak resim, OOM korumalı (memCache 60×60).
 /// URL null/boş veya hata durumunda kullanıcı baş harfini gösterir.
 class _ChatAvatar extends StatelessWidget {
@@ -558,7 +566,7 @@ class _ChatAvatar extends StatelessWidget {
 
     return ClipOval(
       child: CachedNetworkImage(
-        imageUrl: imageUrl!,
+        imageUrl: _resolveImageUrl(imageUrl!),
         width: _size,
         height: _size,
         memCacheWidth: 60,

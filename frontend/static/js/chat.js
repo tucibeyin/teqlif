@@ -106,18 +106,31 @@ const Chat = (() => {
         return _PALETTE[hash % _PALETTE.length];
     }
 
-    function _buildAvatar(username, imageUrl) {
+    function _buildAvatarEl(username, imageUrl) {
         const color = _usernameColor(username || '');
         const initial = username ? username[0].toUpperCase() : '?';
 
-        if (imageUrl) {
-            // Gerçek resim: hata durumunda fallback'e geç
-            const fallbackHtml = `<span class="chat-avatar-fallback" style="background:${color};" aria-hidden="true">${_esc(initial)}</span>`;
-            return `<img class="chat-avatar" src="${_esc(imageUrl)}" alt="" aria-hidden="true" onerror="this.outerHTML='${fallbackHtml.replace(/'/g, "\\'")}'" loading="lazy">`;
+        function makeFallback() {
+            const span = document.createElement('span');
+            span.className = 'chat-avatar-fallback';
+            span.style.background = color;
+            span.setAttribute('aria-hidden', 'true');
+            span.textContent = initial;
+            return span;
         }
 
-        // URL yoksa direkt fallback
-        return `<span class="chat-avatar-fallback" style="background:${color};" aria-hidden="true">${_esc(initial)}</span>`;
+        if (imageUrl) {
+            const img = document.createElement('img');
+            img.className = 'chat-avatar';
+            img.src = imageUrl;
+            img.alt = '';
+            img.setAttribute('aria-hidden', 'true');
+            img.setAttribute('loading', 'lazy');
+            img.onerror = function () { this.replaceWith(makeFallback()); };
+            return img;
+        }
+
+        return makeFallback();
     }
 
     function _appendMessage(msg) {
@@ -127,18 +140,39 @@ const Chat = (() => {
         const color = _usernameColor(msg.username || '');
         const el = document.createElement('div');
         el.className = 'chat-msg';
-        const avatar = _buildAvatar(msg.username || '', msg.profile_image_url || null);
-        let html = `${avatar}<span class="chat-username" data-username="${_esc(msg.username)}" style="color:${color};cursor:pointer;">@${_esc(msg.username)}</span> <span class="chat-content">${_esc(msg.content)}</span>`;
-        if (msg.url) {
-            html += ` <a href="${_esc(msg.url)}" target="_blank" style="color:#fbbf24;font-weight:600;text-decoration:underline;white-space:nowrap;">🔗 İlana Bak</a>`;
-        }
-        el.innerHTML = html;
+
+        // Avatar — DOM element, onerror HTML string trick yok
+        el.appendChild(_buildAvatarEl(msg.username || '', msg.profile_image_url || null));
+
+        // Kullanıcı adı
+        const usernameSpan = document.createElement('span');
+        usernameSpan.className = 'chat-username';
+        usernameSpan.dataset.username = msg.username || '';
+        usernameSpan.style.color = color;
+        usernameSpan.textContent = '@' + (msg.username || '');
         if (_onUsernameTap) {
-            const usernameSpan = el.querySelector('.chat-username');
-            if (usernameSpan) {
-                usernameSpan.addEventListener('click', () => _onUsernameTap(msg.username));
-            }
+            usernameSpan.addEventListener('click', () => _onUsernameTap(msg.username));
         }
+        el.appendChild(usernameSpan);
+        el.appendChild(document.createTextNode(' '));
+
+        // Mesaj içeriği
+        const contentSpan = document.createElement('span');
+        contentSpan.className = 'chat-content';
+        contentSpan.textContent = msg.content || '';
+        el.appendChild(contentSpan);
+
+        // Opsiyonel ilan linki
+        if (msg.url) {
+            el.appendChild(document.createTextNode(' '));
+            const link = document.createElement('a');
+            link.href = msg.url;
+            link.target = '_blank';
+            link.style.cssText = 'color:#fbbf24;font-weight:600;text-decoration:underline;white-space:nowrap;';
+            link.textContent = '🔗 İlana Bak';
+            el.appendChild(link);
+        }
+
         list.appendChild(el);
 
         // En fazla 50 mesaj göster
