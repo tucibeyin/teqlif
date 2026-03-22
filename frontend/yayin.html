@@ -1806,8 +1806,11 @@
             }
 
             if (msg.type === 'buy_it_now_rejected') {
-                setAuctionMsg('Hemen Al talebi reddedildi, artırma devam ediyor.', 'error');
-                setTimeout(() => setAuctionMsg('', ''), 4000);
+                // Sadece viewer'a bildirim göster — host zaten reddetti, bilgiyi zaten biliyor
+                if (!_isHostPage) {
+                    setAuctionMsg('Hemen Al talebiniz reddedildi, artırma devam ediyor.', 'error');
+                    setTimeout(() => setAuctionMsg('', ''), 4000);
+                }
                 return;
             }
 
