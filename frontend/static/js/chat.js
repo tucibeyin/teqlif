@@ -180,8 +180,11 @@ const Chat = (() => {
             list.removeChild(list.firstChild);
         }
 
-        // En alta kaydır
-        list.scrollTop = list.scrollHeight;
+        // Kullanıcı alta yakınsa auto-scroll; yukarı scroll ediyorsa dokunma
+        const distFromBottom = list.scrollHeight - list.scrollTop - list.clientHeight;
+        if (distFromBottom < 60) {
+            list.scrollTop = list.scrollHeight;
+        }
     }
 
     function _appendSystemJoin(username) {
