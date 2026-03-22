@@ -296,6 +296,7 @@
             <div class="nav-item" onclick="showPanel('streams')">🎥 Canlı Yayınlar</div>
             <div class="nav-item" onclick="showPanel('listings')">📦 İlan Denetimi</div>
             <div class="nav-item" onclick="showPanel('reports')">🚩 Şikayetler (Reports)</div>
+            <div class="nav-item" onclick="showPanel('analytics')">📊 Ziyaretçi İstatistikleri</div>
             <div class="divider"></div>
             <button onclick="adminLogout()" style="background: var(--admin-danger);">Güvenli Çıkış</button>
         </aside>
@@ -412,6 +413,49 @@
                     </table>
                 </div>
             </div>
+
+            <!-- ANALYTICS PANEL -->
+            <div id="panel-analytics" class="panel-content hidden"
+                style="display: flex; flex-direction: column; height: 100%;">
+                <div class="header-bar">
+                    <h1>Ziyaretçi & Olay Analizi</h1>
+                    <div class="header-actions">
+                        <button onclick="loadAnalytics()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                    </div>
+                </div>
+                
+                <div style="display: flex; gap: 1rem; margin-bottom: 2rem; flex-shrink: 0;">
+                    <div style="background: var(--admin-card); border: 1px solid var(--admin-border); padding: 1.5rem; border-radius: 1rem; flex: 1; text-align: center;">
+                        <h3 style="margin-top:0; color: #94a3b8; font-size: 1rem;">Toplam Eylem (Event)</h3>
+                        <span style="font-size: 2.5rem; font-weight: bold; color: white;" id="analytics-total">0</span>
+                    </div>
+                    <div style="background: var(--admin-card); border: 1px solid var(--admin-border); padding: 1.5rem; border-radius: 1rem; flex: 1; text-align: center;">
+                        <h3 style="margin-top:0; color: #94a3b8; font-size: 1rem;">Tekil Oturum (Session)</h3>
+                        <span style="font-size: 2.5rem; font-weight: bold; color: var(--admin-primary);" id="analytics-unique">0</span>
+                    </div>
+                    <div style="background: var(--admin-card); border: 1px solid var(--admin-border); padding: 1.5rem; border-radius: 1rem; flex: 2; text-align: center;">
+                        <h3 style="margin-top:0; color: #94a3b8; font-size: 1rem;">Cihaz Dağılımı</h3>
+                        <div id="analytics-devices" style="display: flex; justify-content: space-around; font-size: 1.2rem; margin-top: 1rem; color: white;">
+                            <!-- Populated via JS -->
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Tarih</th>
+                                <th>Oturum ID</th>
+                                <th>Eylem Tipi</th>
+                                <th>Cihaz & Tarayıcı</th>
+                                <th>Hedef (URL)</th>
+                            </tr>
+                        </thead>
+                        <tbody id="analytics-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -505,6 +549,7 @@
             if (panel === 'streams') loadStreams();
             if (panel === 'listings') loadListings();
             if (panel === 'reports') loadReports();
+            if (panel === 'analytics') loadAnalytics();
         }
 
         // --- ARAMA / FİLTRELEME FONKSİYONU ---
@@ -671,6 +716,28 @@
             document.getElementById("search-reports").value = "";
         }
         async function resolveReport(id) { await fetch(`/api/admin-data/reports/${id}/resolve`, { method: 'POST', headers: getAuthHeaders() }); loadReports(); }
+
+        // --- ANALYTICS ---
+        async function loadAnalytics() {
+            const res = await fetch('/api/admin-data/analytics/summary', { headers: getAuthHeaders() });
+            if (!res.ok) return;
+            const data = await res.json();
+            
+            document.getElementById("analytics-total").innerText = data.total_events.toLocaleString('tr-TR');
+            document.getElementById("analytics-unique").innerText = data.unique_sessions.toLocaleString('tr-TR');
+            
+            const devs = data.device_stats.map(d => `<div><span style="color:#64748b; font-size:0.9rem">${d.device.toUpperCase()}</span><br><b>${d.count}</b></div>`).join("");
+            document.getElementById("analytics-devices").innerHTML = devs || "<span>Veri Yok</span>";
+
+            document.getElementById("analytics-table-body").innerHTML = data.recent_events.length === 0 ? `<tr><td colspan="5" style="text-align:center;">Kayıt bulunamadı.</td></tr>` : data.recent_events.map(e => `
+                <tr>
+                    <td style="font-size: 0.85rem; color: #94a3b8;">${new Date(e.created_at).toLocaleString('tr-TR')}</td>
+                    <td style="font-family: monospace; color: #64748b;">${e.session_id.substring(0, 8)}...</td>
+                    <td><span class="status-pill" style="background:var(--admin-card); border: 1px solid var(--admin-border); color: #38bdf8;">${e.event_type}</span></td>
+                    <td>${e.device} - ${e.brand}</td>
+                    <td style="max-width: 250px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${e.url}</td>
+                </tr>`).join("");
+        }
     </script>
 </body>
 

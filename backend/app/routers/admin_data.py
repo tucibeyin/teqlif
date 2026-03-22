@@ -243,3 +243,45 @@ async def delete_user(
             status_code=400, 
             detail="Bu kullanıcı silinemez çünkü sisteme kayıtlı ilanları, mesajları veya canlı yayın geçmişi var. Bunun yerine hesabı 'Yasaklı' duruma getirin."
         )
+
+# ==========================================
+# 5. ANALİTİK VE ZİYARETÇİ VERİLERİ
+# ==========================================
+from sqlalchemy import func
+from app.models.analytics import AnalyticsEvent
+
+@router.get("/analytics/summary")
+async def get_admin_analytics_summary(db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
+    total_events_res = await db.execute(select(func.count(AnalyticsEvent.id)))
+    total_events = total_events_res.scalar() or 0
+
+    unique_sessions_res = await db.execute(select(func.count(func.distinct(AnalyticsEvent.session_id))))
+    unique_sessions = unique_sessions_res.scalar() or 0
+
+    device_groups_res = await db.execute(
+        select(AnalyticsEvent.device_type, func.count(AnalyticsEvent.id))
+        .group_by(AnalyticsEvent.device_type)
+    )
+    device_stats = [{"device": item[0], "count": item[1]} for item in device_groups_res.all()]
+
+    recent_res = await db.execute(select(AnalyticsEvent).order_by(desc(AnalyticsEvent.created_at)).limit(50))
+    recent_events = recent_res.scalars().all()
+    
+    recent_list = []
+    for req in recent_events:
+        recent_list.append({
+            "id": req.id,
+            "session_id": req.session_id,
+            "event_type": req.event_type,
+            "url": req.url or "-",
+            "device": req.device_type,
+            "brand": req.os or req.browser or "-",
+            "created_at": req.created_at
+        })
+
+    return {
+        "total_events": total_events,
+        "unique_sessions": unique_sessions,
+        "device_stats": device_stats,
+        "recent_events": recent_list
+    }
