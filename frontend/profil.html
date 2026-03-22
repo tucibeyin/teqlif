@@ -670,14 +670,14 @@
 
 <body>
     <nav>
-        <a href="/" class="logo">teqlif</a>
+        <a href="/" class="logo" data-track-id="profil-nav-logo-anasayfa">teqlif</a>
         <div class="nav-links">
-            <a href="/kesfet.html" style="display:inline-flex;align-items:center;gap:0.3rem;">
+            <a href="/kesfet.html" style="display:inline-flex;align-items:center;gap:0.3rem;" data-track-id="profil-nav-link-kesfet">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                 Keşfet
             </a>
-            <a href="/giris.html" id="navGiris">Giriş Yap</a>
-            <a href="/kayit.html" class="btn-nav" id="navKayit">Kayıt Ol</a>
+            <a href="/giris.html" id="navGiris" data-track-id="profil-nav-link-giris">Giriş Yap</a>
+            <a href="/kayit.html" class="btn-nav" id="navKayit" data-track-id="profil-nav-link-kayit">Kayıt Ol</a>
         </div>
     </nav>
 
@@ -692,7 +692,7 @@
         <div class="follow-modal">
             <div class="follow-modal-header">
                 <span id="followModalTitle">Takipçiler</span>
-                <button class="follow-modal-close" onclick="closeFollowModal(null)">×</button>
+                <button class="follow-modal-close" onclick="closeFollowModal(null)" data-track-id="profil-modal-btn-takipci-kapat">×</button>
             </div>
             <div class="follow-modal-body" id="followModalBody">
                 <div class="follow-modal-loading">Yükleniyor...</div>
@@ -705,23 +705,23 @@
         <div class="rating-modal">
             <div class="rating-modal-header">
                 <span id="ratingFormTitle">Puan Ver</span>
-                <button class="rating-modal-close" onclick="closeRatingForm(null)">×</button>
+                <button class="rating-modal-close" onclick="closeRatingForm(null)" data-track-id="profil-modal-btn-puan-kapat">×</button>
             </div>
             <div class="rating-modal-body">
                 <div class="star-picker" id="ratingStarPicker">
-                    <span data-v="1">★</span>
-                    <span data-v="2">★</span>
-                    <span data-v="3">★</span>
-                    <span data-v="4">★</span>
-                    <span data-v="5">★</span>
+                    <span data-v="1" data-track-id="profil-modal-star-1">★</span>
+                    <span data-v="2" data-track-id="profil-modal-star-2">★</span>
+                    <span data-v="3" data-track-id="profil-modal-star-3">★</span>
+                    <span data-v="4" data-track-id="profil-modal-star-4">★</span>
+                    <span data-v="5" data-track-id="profil-modal-star-5">★</span>
                 </div>
                 <div class="star-label" id="ratingStarLabel">Bir yıldız seçin</div>
-                <textarea class="rating-comment" id="ratingComment" rows="3" maxlength="500" placeholder="Neden bu puanı veriyorsunuz? (isteğe bağlı)"></textarea>
+                <textarea class="rating-comment" id="ratingComment" rows="3" maxlength="500" placeholder="Neden bu puanı veriyorsunuz? (isteğe bağlı)" data-track-id="profil-modal-textarea-puan-yorum"></textarea>
                 <div class="rating-char-count"><span id="ratingCharCount">0</span>/500</div>
             </div>
             <div class="rating-modal-footer">
-                <button class="btn-rating-cancel" onclick="closeRatingForm(null)">Vazgeç</button>
-                <button class="btn-rating-save" id="ratingSubmitBtn" onclick="submitRating()">Kaydet</button>
+                <button class="btn-rating-cancel" onclick="closeRatingForm(null)" data-track-id="profil-modal-btn-puan-vazgec">Vazgeç</button>
+                <button class="btn-rating-save" id="ratingSubmitBtn" onclick="submitRating()" data-track-id="profil-modal-btn-puan-kaydet">Kaydet</button>
             </div>
         </div>
     </div>
@@ -731,7 +731,7 @@
         <div class="ratings-list-modal">
             <div class="ratings-list-header">
                 <span id="ratingsListTitle">Değerlendirmeler</span>
-                <button class="rating-modal-close" onclick="closeRatingsList(null)">×</button>
+                <button class="rating-modal-close" onclick="closeRatingsList(null)" data-track-id="profil-modal-btn-degerlendirmeler-kapat">×</button>
             </div>
             <div id="ratingsListSummaryBar"></div>
             <div class="ratings-list-body" id="ratingsListBody">

@@ -73,10 +73,12 @@ class _LoginScreenState extends State<LoginScreen> {
         ),
         actions: [
           TextButton(
+            key: const Key('login_biometric_btn_simdi_degil'),
             onPressed: () => Navigator.pop(context, false),
             child: const Text('Şimdi Değil', style: TextStyle(color: Color(0xFF6B7280))),
           ),
           ElevatedButton(
+            key: const Key('login_biometric_btn_etkinlestir'),
             style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
             onPressed: () => Navigator.pop(context, true),
             child: const Text('Etkinleştir', style: TextStyle(color: Colors.white)),
@@ -140,6 +142,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   child: Column(
                     children: [
                       TextFormField(
+                        key: const Key('login_input_email'),
                         controller: _emailCtrl,
                         keyboardType: TextInputType.emailAddress,
                         autocorrect: false,
@@ -149,6 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
+                        key: const Key('login_input_password'),
                         controller: _passCtrl,
                         obscureText: _obscure,
                         enableSuggestions: false,
@@ -158,6 +162,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         decoration: InputDecoration(
                           labelText: 'Şifre',
                           suffixIcon: IconButton(
+                            key: const Key('login_btn_password_visibility'),
                             icon: Icon(_obscure
                                 ? Icons.visibility_off_outlined
                                 : Icons.visibility_outlined),
@@ -170,6 +175,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
+                        key: const Key('login_btn_submit'),
                         onPressed: _loading ? null : _submit,
                         child: _loading
                             ? const SizedBox(
@@ -194,6 +200,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
                     ),
                     GestureDetector(
+                      key: const Key('login_link_kayit_ol'),
                       onTap: () => Navigator.of(context).push(
                         MaterialPageRoute(
                             builder: (_) => const RegisterScreen()),

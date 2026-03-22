@@ -202,6 +202,7 @@ class _HomeScreenState extends State<HomeScreen> {
               snap: true,
               actions: [
                 TextButton.icon(
+                  key: const Key('home_btn_ilan_ver'),
                   onPressed: () => Navigator.push(
                     context,
                     MaterialPageRoute(
@@ -235,6 +236,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         final slug = cat['slug'] as String;
                         final isSelected = _selectedCategory == slug;
                         return GestureDetector(
+                          key: Key('home_cat_$slug'),
                           onTap: () {
                             setState(() => _selectedCategory =
                                 isSelected ? null : slug);
@@ -301,6 +303,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         children: [
                           // Şehir seçici chip
                           GestureDetector(
+                            key: const Key('home_chip_sehir_sec'),
                             onTap: _cities.isEmpty ? null : _showCityPicker,
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 150),
@@ -384,6 +387,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (_hasFilter) ...[
                             const SizedBox(width: 8),
                             GestureDetector(
+                              key: const Key('home_btn_filtreleri_temizle'),
                               onTap: _clearAll,
                               child: Container(
                                 padding: const EdgeInsets.symmetric(
@@ -447,6 +451,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           style: const TextStyle(color: Colors.grey)),
                       const SizedBox(height: 12),
                       TextButton(
+                          key: const Key('home_btn_tekrar_dene'),
                           onPressed: _load,
                           child: const Text('Tekrar Dene')),
                     ],
@@ -471,6 +476,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (_hasFilter) ...[
                         const SizedBox(height: 8),
                         TextButton(
+                          key: const Key('home_btn_filtreleri_temizle_bos'),
                           onPressed: _clearAll,
                           child: const Text('Filtreleri Temizle'),
                         ),
@@ -490,6 +496,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   delegate: SliverChildBuilderDelegate(
                     (context, i) => _GridItem(
+                      key: Key('home_listing_item_${_listings[i]['id']}'),
                       listing: _listings[i],
                       onTap: () => Navigator.push(
                         context,
@@ -540,6 +547,7 @@ class _ActiveFilterChip extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           GestureDetector(
+            key: Key('home_chip_kaldir_$label'),
             onTap: onRemove,
             child: const Icon(Icons.close, size: 14, color: kPrimary),
           ),
@@ -553,7 +561,7 @@ class _ActiveFilterChip extends StatelessWidget {
 class _GridItem extends StatelessWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
-  const _GridItem({required this.listing, required this.onTap});
+  const _GridItem({super.key, required this.listing, required this.onTap});
 
   String _fmt(dynamic price) {
     if (price == null) return '';

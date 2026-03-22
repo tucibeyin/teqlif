@@ -474,14 +474,14 @@
 
 <body>
     <nav>
-        <a href="/" class="logo">teqlif</a>
+        <a href="/" class="logo" data-track-id="kesfet-nav-logo-anasayfa">teqlif</a>
         <div class="nav-links">
-            <a href="/kesfet.html" style="display:inline-flex;align-items:center;gap:0.3rem;color:var(--primary)!important;font-weight:600;">
+            <a href="/kesfet.html" style="display:inline-flex;align-items:center;gap:0.3rem;color:var(--primary)!important;font-weight:600;" data-track-id="kesfet-nav-link-kesfet">
                 <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                 Keşfet
             </a>
-            <a href="/giris.html" id="navGiris">Giriş Yap</a>
-            <a href="/kayit.html" class="btn-nav" id="navKayit">Kayıt Ol</a>
+            <a href="/giris.html" id="navGiris" data-track-id="kesfet-nav-link-giris">Giriş Yap</a>
+            <a href="/kayit.html" class="btn-nav" id="navKayit" data-track-id="kesfet-nav-link-kayit">Kayıt Ol</a>
         </div>
     </nav>
 
@@ -492,8 +492,8 @@
             <svg class="search-icon" xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/>
             </svg>
-            <input type="text" id="searchInput" placeholder="İlan, yayın veya kullanıcı ara..." autocomplete="off">
-            <button id="clearBtn" aria-label="Temizle">
+            <input type="text" id="searchInput" placeholder="İlan, yayın veya kullanıcı ara..." autocomplete="off" data-track-id="kesfet-input-arama">
+            <button id="clearBtn" aria-label="Temizle" data-track-id="kesfet-btn-arama-temizle">
                 <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
         </div>
@@ -503,7 +503,7 @@
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--primary)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px;"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
                 Arama yapmak için giriş yapmalısınız.
             </span>
-            <a href="/giris.html?next=/kesfet.html" style="font-size:0.85rem;font-weight:600;color:var(--primary);text-decoration:none;white-space:nowrap;">Giriş Yap →</a>
+            <a href="/giris.html?next=/kesfet.html" style="font-size:0.85rem;font-weight:600;color:var(--primary);text-decoration:none;white-space:nowrap;" data-track-id="kesfet-prompt-link-giris">Giriş Yap →</a>
         </div>
 
         <!-- ── Varsayılan Keşfet Görünümü ── -->
@@ -581,24 +581,24 @@
     <footer>
         <div class="footer-content">
             <div class="footer-brand">
-                <a href="/" class="logo">teqlif</a>
+                <a href="/" class="logo" data-track-id="footer-logo-anasayfa">teqlif</a>
                 <div class="footer-social">
-                    <a href="https://www.instagram.com/teqlifcom/" target="_blank" title="Instagram">
+                    <a href="https://www.instagram.com/teqlifcom/" target="_blank" title="Instagram" data-track-id="footer-link-instagram">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
                     </a>
-                    <a href="https://x.com/teqlif" target="_blank" title="X (Twitter)">
+                    <a href="https://x.com/teqlif" target="_blank" title="X (Twitter)" data-track-id="footer-link-twitter">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16zM4 20l6.768 -6.768m2.464 -2.464l6.768 -6.768"></path></svg>
                     </a>
-                    <a href="https://www.facebook.com/profile.php?id=61578477205115" target="_blank" title="Facebook">
+                    <a href="https://www.facebook.com/profile.php?id=61578477205115" target="_blank" title="Facebook" data-track-id="footer-link-facebook">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
                     </a>
                 </div>
             </div>
             <div class="footer-links">
-                <a href="/support.html">Yardım Merkezi</a>
-                <a href="/gizlilik-politikasi.html">Gizlilik Politikası</a>
-                <a href="/kullanim-sartlari.html">Kullanım Şartları</a>
-                <a href="https://apps.apple.com/tr/app/teqlif/id6759490205" class="footer-app-link" target="_blank">
+                <a href="/support.html" data-track-id="footer-link-destek">Yardım Merkezi</a>
+                <a href="/gizlilik-politikasi.html" data-track-id="footer-link-gizlilik">Gizlilik Politikası</a>
+                <a href="/kullanim-sartlari.html" data-track-id="footer-link-kullanim-sartlari">Kullanım Şartları</a>
+                <a href="https://apps.apple.com/tr/app/teqlif/id6759490205" class="footer-app-link" target="_blank" data-track-id="footer-link-appstore">
                     <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;margin-right:8px;"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.1 2.48-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .76-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.36 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
                     App Store
                 </a>

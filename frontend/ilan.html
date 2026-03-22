@@ -665,19 +665,19 @@
 
 <body>
     <nav>
-        <a href="/" class="logo">teqlif</a>
+        <a href="/" class="logo" data-track-id="ilan-nav-logo-anasayfa">teqlif</a>
         <div class="nav-links">
-            <a href="/kesfet.html" style="display:inline-flex;align-items:center;gap:0.3rem;">
+            <a href="/kesfet.html" style="display:inline-flex;align-items:center;gap:0.3rem;" data-track-id="ilan-nav-link-kesfet">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
                 Keşfet
             </a>
-            <a href="/giris.html" id="navGiris">Giriş Yap</a>
-            <a href="/kayit.html" class="btn-nav" id="navKayit">Kayıt Ol</a>
+            <a href="/giris.html" id="navGiris" data-track-id="ilan-nav-link-giris">Giriş Yap</a>
+            <a href="/kayit.html" class="btn-nav" id="navKayit" data-track-id="ilan-nav-link-kayit">Kayıt Ol</a>
         </div>
     </nav>
 
     <div class="page-wrap">
-        <a href="javascript:history.back()" class="back-link">← Geri</a>
+        <a href="javascript:history.back()" class="back-link" data-track-id="ilan-link-geri">← Geri</a>
         <div id="content"></div>
     </div>
 
@@ -685,7 +685,7 @@
     <div class="modal-backdrop" id="reportModal">
         <div class="modal-box">
             <h3>🚩 İlanı Şikayet Et</h3>
-            <select id="reportReason">
+            <select id="reportReason" data-track-id="ilan-modal-select-sikayet-nedeni">
                 <option value="">-- Neden seçin --</option>
                 <option value="Yanıltıcı ilan">Yanıltıcı ilan</option>
                 <option value="Yasadışı ürün">Yasadışı ürün</option>
@@ -694,11 +694,11 @@
                 <option value="Dolandırıcılık şüphesi">Dolandırıcılık şüphesi</option>
                 <option value="Diğer">Diğer</option>
             </select>
-            <textarea id="reportNote" placeholder="Ek açıklama (isteğe bağlı)" rows="3"></textarea>
+            <textarea id="reportNote" placeholder="Ek açıklama (isteğe bağlı)" rows="3" data-track-id="ilan-modal-textarea-sikayet-aciklama"></textarea>
             <div id="reportMsg" style="font-size:.83rem;color:#dc2626;margin-bottom:.5rem;display:none;"></div>
             <div class="modal-actions">
-                <button class="btn-cancel" onclick="closeReportModal()">Vazgeç</button>
-                <button class="btn-send" id="reportSendBtn" onclick="submitReport()">Gönder</button>
+                <button class="btn-cancel" onclick="closeReportModal()" data-track-id="ilan-modal-btn-sikayet-vazgec">Vazgeç</button>
+                <button class="btn-send" id="reportSendBtn" onclick="submitReport()" data-track-id="ilan-modal-btn-sikayet-gonder">Gönder</button>
             </div>
         </div>
     </div>
@@ -710,8 +710,8 @@
             <p style="font-size:.9rem;color:#4b5563;margin:0 0 1.25rem;">Bu ilanı silmek istediğinize emin misiniz? Bu
                 işlem geri alınamaz.</p>
             <div class="modal-actions">
-                <button class="btn-cancel" onclick="closeDeleteModal()">Vazgeç</button>
-                <button class="btn-send" style="background:#dc2626;" id="deleteSendBtn" onclick="confirmDelete()">Evet,
+                <button class="btn-cancel" onclick="closeDeleteModal()" data-track-id="ilan-modal-btn-sil-vazgec">Vazgeç</button>
+                <button class="btn-send" style="background:#dc2626;" id="deleteSendBtn" onclick="confirmDelete()" data-track-id="ilan-modal-btn-sil-onayla">Evet,
                     Sil</button>
             </div>
         </div>
@@ -719,10 +719,10 @@
 
     <!-- Lightbox -->
     <div class="lightbox" id="lightbox" onclick="lbClickOutside(event)">
-        <button class="lb-close" onclick="closeLb()">✕</button>
-        <button class="lb-arrow prev" onclick="lbNav(-1)">‹</button>
+        <button class="lb-close" onclick="closeLb()" data-track-id="ilan-lightbox-btn-kapat">✕</button>
+        <button class="lb-arrow prev" onclick="lbNav(-1)" data-track-id="ilan-lightbox-btn-onceki">‹</button>
         <img id="lbImg" src="" alt="">
-        <button class="lb-arrow next" onclick="lbNav(1)">›</button>
+        <button class="lb-arrow next" onclick="lbNav(1)" data-track-id="ilan-lightbox-btn-sonraki">›</button>
         <div class="lb-counter" id="lbCounter"></div>
     </div>
 

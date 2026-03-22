@@ -1064,9 +1064,9 @@
 
 <body>
     <nav>
-        <a href="/" class="logo">teqlif</a>
+        <a href="/" class="logo" data-track-id="yayin-nav-logo-anasayfa">teqlif</a>
         <div class="nav-links">
-            <a href="/">← Yayınlar</a>
+            <a href="/" data-track-id="yayin-nav-link-yayinlar">← Yayınlar</a>
         </div>
     </nav>
 
@@ -1111,11 +1111,11 @@
                         <span id="metaHost"></span>
                     </div>
                     <div class="stream-meta-controls">
-                        <button class="btn btn-slate" id="btnToggleMic" style="display:none;">🎙 Mikrofon Kapat</button>
-                        <button class="btn btn-slate" id="btnToggleCamera" style="display:none;">📷 Kamera Kapat</button>
-                        <button class="btn btn-slate" id="btnSwitchCamera" style="display:none;">🔄 Kamera Değiştir</button>
-                        <button class="btn btn-danger" id="btnEndStream" style="display:none;">Yayını Bitir</button>
-                        <button class="btn btn-slate" id="btnLeave" style="display:none;">Ayrıl</button>
+                        <button class="btn btn-slate" id="btnToggleMic" style="display:none;" data-track-id="yayin-btn-mikrofon-toggle">🎙 Mikrofon Kapat</button>
+                        <button class="btn btn-slate" id="btnToggleCamera" style="display:none;" data-track-id="yayin-btn-kamera-toggle">📷 Kamera Kapat</button>
+                        <button class="btn btn-slate" id="btnSwitchCamera" style="display:none;" data-track-id="yayin-btn-kamera-degistir">🔄 Kamera Değiştir</button>
+                        <button class="btn btn-danger" id="btnEndStream" style="display:none;" data-track-id="yayin-btn-yayin-bitir">Yayını Bitir</button>
+                        <button class="btn btn-slate" id="btnLeave" style="display:none;" data-track-id="yayin-btn-ayril">Ayrıl</button>
                     </div>
                 </div>
 
@@ -1139,7 +1139,7 @@
                 <!-- HOST: ürün girişi (idle) -->
                 <div class="auction-setup" id="hostSetup" style="display:none;">
                     <!-- İlan seçici toggle -->
-                    <button class="auction-mode-toggle" id="btnListingMode" title="İlanlarımdan seç">📋
+                    <button class="auction-mode-toggle" id="btnListingMode" title="İlanlarımdan seç" data-track-id="yayin-btn-ilan-modu-toggle">📋
                         İlanlarımdan</button>
                     <!-- Custom listing picker (listing modda görünür) -->
                     <div id="listingPicker" style="display:none;">
@@ -1151,8 +1151,8 @@
                     </div>
                     <!-- Manuel giriş alanları -->
                     <div id="manualInputs">
-                        <input type="text" id="auctionItemInput" placeholder="Ürün adı" maxlength="200">
-                        <input type="text" inputmode="numeric" id="auctionStartPrice" placeholder="Başlangıç (₺)" autocomplete="off">
+                        <input type="text" id="auctionItemInput" placeholder="Ürün adı" maxlength="200" data-track-id="yayin-input-acik-artirma-urun">
+                        <input type="text" inputmode="numeric" id="auctionStartPrice" placeholder="Başlangıç (₺)" autocomplete="off" data-track-id="yayin-input-acik-artirma-baslangic-fiyati">
                     </div>
                 </div>
 
@@ -1161,21 +1161,21 @@
 
                 <!-- HOST: kontrol butonları -->
                 <div class="auction-host-controls" id="hostControls" style="display:none;">
-                    <button class="btn btn-green" id="btnAuctionStart">▶ Başlat</button>
-                    <button class="btn btn-amber" id="btnAuctionPause" style="display:none;">⏸ Duraklat</button>
-                    <button class="btn btn-slate" id="btnAuctionResume" style="display:none;">▶ Devam</button>
-                    <button class="btn btn-success" id="btnAuctionAccept" style="display:none;">✅ Kabul Et</button>
-                    <button class="btn btn-danger" id="btnAuctionEnd" style="display:none;">⏹ Bitir</button>
+                    <button class="btn btn-green" id="btnAuctionStart" data-track-id="yayin-btn-acik-artirma-baslat">▶ Başlat</button>
+                    <button class="btn btn-amber" id="btnAuctionPause" style="display:none;" data-track-id="yayin-btn-acik-artirma-duraklat">⏸ Duraklat</button>
+                    <button class="btn btn-slate" id="btnAuctionResume" style="display:none;" data-track-id="yayin-btn-acik-artirma-devam">▶ Devam</button>
+                    <button class="btn btn-success" id="btnAuctionAccept" style="display:none;" data-track-id="yayin-btn-acik-artirma-kabul-et">✅ Kabul Et</button>
+                    <button class="btn btn-danger" id="btnAuctionEnd" style="display:none;" data-track-id="yayin-btn-acik-artirma-bitir">⏹ Bitir</button>
                 </div>
 
                 <!-- VIEWER: teklif butonları -->
                 <div class="auction-viewer-controls" id="viewerControls" style="display:none;">
-                    <button class="btn btn-slate" onclick="quickBid(100)">+₺100</button>
-                    <button class="btn btn-slate" onclick="quickBid(200)">+₺200</button>
-                    <button class="btn btn-slate" onclick="quickBid(500)">+₺500</button>
-                    <button class="btn btn-slate" onclick="quickBid(1000)">+₺1000</button>
-                    <input type="text" inputmode="numeric" id="customBidInput" placeholder="Özel (₺)" autocomplete="off">
-                    <button class="btn btn-green" id="btnCustomBid">Teklif Ver</button>
+                    <button class="btn btn-slate" onclick="quickBid(100)" data-track-id="yayin-btn-hizli-teklif-100">+₺100</button>
+                    <button class="btn btn-slate" onclick="quickBid(200)" data-track-id="yayin-btn-hizli-teklif-200">+₺200</button>
+                    <button class="btn btn-slate" onclick="quickBid(500)" data-track-id="yayin-btn-hizli-teklif-500">+₺500</button>
+                    <button class="btn btn-slate" onclick="quickBid(1000)" data-track-id="yayin-btn-hizli-teklif-1000">+₺1000</button>
+                    <input type="text" inputmode="numeric" id="customBidInput" placeholder="Özel (₺)" autocomplete="off" data-track-id="yayin-input-ozel-teklif">
+                    <button class="btn btn-green" id="btnCustomBid" data-track-id="yayin-btn-ozel-teklif-ver">Teklif Ver</button>
                 </div>
 
                 <div id="auctionMsg"></div>
@@ -1203,8 +1203,8 @@
                         <div class="chat-empty" id="chatEmpty">Henüz mesaj yok. İlk mesajı sen gönder!</div>
                     </div>
                     <div class="chat-input-row" id="chatInputRow" style="display:none;">
-                        <input type="text" id="chatInput" placeholder="Mesaj yaz..." maxlength="200" autocomplete="off">
-                        <button class="chat-send-btn" id="chatSendBtn" title="Gönder">
+                        <input type="text" id="chatInput" placeholder="Mesaj yaz..." maxlength="200" autocomplete="off" data-track-id="yayin-input-sohbet-mesaj">
+                        <button class="chat-send-btn" id="chatSendBtn" title="Gönder" data-track-id="yayin-btn-sohbet-gonder">
                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                 stroke-width="2.5">
                                 <line x1="22" y1="2" x2="11" y2="13"></line>
@@ -1226,8 +1226,8 @@
             <div class="listing-modal-handle"></div>
             <div class="lm-slider" id="listingModalSlider" style="display:none;">
                 <div class="lm-track" id="listingModalTrack"></div>
-                <button class="lm-arrow lm-arrow-l" id="lmArrowL" onclick="lmSlide(-1)">‹</button>
-                <button class="lm-arrow lm-arrow-r" id="lmArrowR" onclick="lmSlide(1)">›</button>
+                <button class="lm-arrow lm-arrow-l" id="lmArrowL" onclick="lmSlide(-1)" data-track-id="yayin-ilan-modal-btn-onceki">‹</button>
+                <button class="lm-arrow lm-arrow-r" id="lmArrowR" onclick="lmSlide(1)" data-track-id="yayin-ilan-modal-btn-sonraki">›</button>
                 <div class="lm-dots" id="lmDots"></div>
             </div>
             <div class="listing-modal-title" id="listingModalTitle"></div>
@@ -1242,10 +1242,10 @@
         <div class="mod-modal-box">
             <div class="mod-modal-title">🛡 Moderasyon</div>
             <div class="mod-modal-target" id="modModalTarget">@kullanici</div>
-            <button class="mod-btn mod-btn-mute"   id="modBtnMute">🔇 Sustur</button>
-            <button class="mod-btn mod-btn-unmute" id="modBtnUnmute">🔊 Susturmayı Kaldır</button>
-            <button class="mod-btn mod-btn-kick"   id="modBtnKick">🚫 Yayından At</button>
-            <button class="mod-btn mod-btn-cancel" id="modBtnCancel">İptal</button>
+            <button class="mod-btn mod-btn-mute"   id="modBtnMute" data-track-id="yayin-mod-btn-sustur">🔇 Sustur</button>
+            <button class="mod-btn mod-btn-unmute" id="modBtnUnmute" data-track-id="yayin-mod-btn-susturmayı-kaldir">🔊 Susturmayı Kaldır</button>
+            <button class="mod-btn mod-btn-kick"   id="modBtnKick" data-track-id="yayin-mod-btn-yayindan-at">🚫 Yayından At</button>
+            <button class="mod-btn mod-btn-cancel" id="modBtnCancel" data-track-id="yayin-mod-btn-iptal">İptal</button>
             <div id="modMsg"></div>
         </div>
     </div>
@@ -1290,12 +1290,14 @@
             <div style="display:flex; gap:10px;">
                 <button id="acceptModalCancel" style="
                     flex:1; padding:11px; border:1px solid #334155; background:transparent;
-                    color:#94a3b8; border-radius:10px; cursor:pointer; font-size:0.88rem;">
+                    color:#94a3b8; border-radius:10px; cursor:pointer; font-size:0.88rem;"
+                    data-track-id="yayin-modal-btn-teklif-kabul-iptal">
                     İptal Et
                 </button>
                 <button id="acceptModalConfirm" style="
                     flex:1; padding:11px; border:none; background:#059669;
-                    color:#fff; border-radius:10px; cursor:pointer; font-size:0.88rem; font-weight:700;">
+                    color:#fff; border-radius:10px; cursor:pointer; font-size:0.88rem; font-weight:700;"
+                    data-track-id="yayin-modal-btn-teklif-kabul-onayla">
                     Devam Et
                 </button>
             </div>

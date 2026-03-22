@@ -149,6 +149,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 child: Column(
                   children: [
                     TextFormField(
+                      key: const Key('register_input_ad_soyad'),
                       controller: _fullNameCtrl,
                       textCapitalization: TextCapitalization.words,
                       maxLength: 100,
@@ -166,6 +167,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
+                      key: const Key('register_input_kullanici_adi'),
                       controller: _usernameCtrl,
                       autocorrect: false,
                       maxLength: 50,
@@ -207,6 +209,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
+                      key: const Key('register_input_email'),
                       controller: _emailCtrl,
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
@@ -227,6 +230,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 14),
                     TextFormField(
+                      key: const Key('register_input_sifre'),
                       controller: _passCtrl,
                       obscureText: _obscure,
                       enableSuggestions: false,
@@ -236,6 +240,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       decoration: InputDecoration(
                         labelText: 'Şifre',
                         suffixIcon: IconButton(
+                          key: const Key('register_btn_password_visibility'),
                           icon: Icon(_obscure
                               ? Icons.visibility_off_outlined
                               : Icons.visibility_outlined),
@@ -255,6 +260,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Checkbox(
+                          key: const Key('register_checkbox_eula'),
                           value: _eulaAccepted,
                           activeColor: kPrimary,
                           onChanged: (v) => setState(() => _eulaAccepted = v ?? false),
@@ -263,6 +269,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ),
                         Expanded(
                           child: GestureDetector(
+                            key: const Key('register_gesture_eula_text'),
                             onTap: () => setState(() => _eulaAccepted = !_eulaAccepted),
                             child: Padding(
                               padding: const EdgeInsets.only(top: 10),
@@ -276,6 +283,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     const TextSpan(text: 'teqlif '),
                                     WidgetSpan(
                                       child: GestureDetector(
+                                        key: const Key('register_link_kullanim_sartlari'),
                                         onTap: () => _openUrl('https://teqlif.com/kullanim-sartlari.html'),
                                         child: const Text(
                                           'Kullanım Şartları ve EULA',
@@ -300,6 +308,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                     const SizedBox(height: 20),
                     ElevatedButton(
+                      key: const Key('register_btn_submit'),
                       onPressed: _loading ? null : _submit,
                       child: _loading
                           ? const SizedBox(
@@ -324,6 +333,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
                   ),
                   GestureDetector(
+                    key: const Key('register_link_giris_yap'),
                     onTap: () => Navigator.of(context).pop(),
                     child: const Text(
                       'Giriş yap',

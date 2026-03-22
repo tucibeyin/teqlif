@@ -30,9 +30,9 @@
 
 <body>
     <nav>
-        <a href="/" class="logo">teqlif</a>
+        <a href="/" class="logo" data-track-id="kayit-nav-logo-anasayfa">teqlif</a>
         <div class="nav-links">
-            <a href="/giris.html">Giriş Yap</a>
+            <a href="/giris.html" data-track-id="kayit-nav-link-giris">Giriş Yap</a>
         </div>
     </nav>
 
@@ -46,14 +46,14 @@
 
                 <div class="alert" id="alertRegister"></div>
 
-                <form id="registerForm">
+                <form id="registerForm" data-track-id="kayit-form-register">
                     <div class="form-group">
                         <label for="full_name">Ad Soyad</label>
-                        <input type="text" id="full_name" placeholder="Adınız Soyadınız" required autocomplete="name">
+                        <input type="text" id="full_name" placeholder="Adınız Soyadınız" required autocomplete="name" data-track-id="kayit-input-ad-soyad">
                     </div>
                     <div class="form-group">
                         <label for="username">Kullanıcı Adı</label>
-                        <input type="text" id="username" placeholder="ornek_kullanici" required autocomplete="username">
+                        <input type="text" id="username" placeholder="ornek_kullanici" required autocomplete="username" data-track-id="kayit-input-kullanici-adi">
                         <small style="color:var(--text-muted);font-size:0.78rem;">Küçük harf, rakam ve alt çizgi
                             kullanabilirsin</small>
                         <span id="usernameStatus"
@@ -61,32 +61,32 @@
                     </div>
                     <div class="form-group">
                         <label for="email">E-posta</label>
-                        <input type="email" id="email" placeholder="ornek@mail.com" required autocomplete="email">
+                        <input type="email" id="email" placeholder="ornek@mail.com" required autocomplete="email" data-track-id="kayit-input-email">
                     </div>
                     <div class="form-group">
                         <label for="password">Şifre</label>
                         <input type="password" id="password" placeholder="En az 8 karakter" required
-                            autocomplete="new-password">
+                            autocomplete="new-password" data-track-id="kayit-input-sifre">
                     </div>
                     <div class="form-group" style="margin-bottom:0.5rem;">
                         <label
                             style="display:flex;align-items:flex-start;gap:0.6rem;cursor:pointer;font-size:0.85rem;color:var(--text-muted);font-weight:400;">
                             <input type="checkbox" id="eulaCheck" required
-                                style="margin-top:2px;accent-color:var(--primary);flex-shrink:0;">
+                                style="margin-top:2px;accent-color:var(--primary);flex-shrink:0;" data-track-id="kayit-checkbox-eula">
                             <span>
-                                <a href="/kullanim-sartlari.html" target="_blank" style="color:var(--primary);">Kullanım
+                                <a href="/kullanim-sartlari.html" target="_blank" style="color:var(--primary);" data-track-id="kayit-link-kullanim-sartlari">Kullanım
                                     Şartları ve EULA</a>'yı
                                 okudum, kabul ediyorum. Uygunsuz içeriklere sıfır tolerans politikasını anladım.
                             </span>
                         </label>
                     </div>
-                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="registerBtn">
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="registerBtn" data-track-id="kayit-btn-submit">
                         Kayıt Ol
                     </button>
                 </form>
 
                 <div class="form-footer">
-                    Zaten hesabın var mı? <a href="/giris.html">Giriş yap</a>
+                    Zaten hesabın var mı? <a href="/giris.html" data-track-id="kayit-link-giris-yap">Giriş yap</a>
                 </div>
             </div>
 
@@ -97,20 +97,20 @@
 
                 <div class="alert" id="alertVerify"></div>
 
-                <form id="verifyForm">
+                <form id="verifyForm" data-track-id="kayit-form-verify">
                     <div class="form-group">
                         <label for="code">Doğrulama Kodu</label>
                         <input type="text" id="code" placeholder="6 haneli kodu gir" maxlength="6" inputmode="numeric"
                             pattern="[0-9]{6}" required autocomplete="one-time-code"
-                            style="font-size:1.5rem;letter-spacing:0.4rem;text-align:center;">
+                            style="font-size:1.5rem;letter-spacing:0.4rem;text-align:center;" data-track-id="kayit-input-dogrulama-kodu">
                     </div>
-                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="verifyBtn">
+                    <button type="submit" class="btn btn-primary btn-full btn-lg" id="verifyBtn" data-track-id="kayit-btn-dogrula">
                         Doğrula
                     </button>
                 </form>
 
                 <div class="form-footer">
-                    <a href="#" id="resendLink">Kodu tekrar gönder</a>
+                    <a href="#" id="resendLink" data-track-id="kayit-link-kodu-tekrar-gonder">Kodu tekrar gönder</a>
                 </div>
             </div>
 
@@ -120,25 +120,25 @@
     <footer>
         <div class="footer-content">
             <div class="footer-brand">
-                <a href="/" class="logo">teqlif</a>
+                <a href="/" class="logo" data-track-id="footer-logo-anasayfa">teqlif</a>
                 <div class="footer-social">
-                    <a href="https://www.instagram.com/teqlifcom/" target="_blank" title="Instagram">
+                    <a href="https://www.instagram.com/teqlifcom/" target="_blank" title="Instagram" data-track-id="footer-link-instagram">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>
                     </a>
-                    <a href="https://x.com/teqlif" target="_blank" title="X (Twitter)">
+                    <a href="https://x.com/teqlif" target="_blank" title="X (Twitter)" data-track-id="footer-link-twitter">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l11.733 16h4.267l-11.733 -16zM4 20l6.768 -6.768m2.464 -2.464l6.768 -6.768"></path></svg>
                     </a>
-                    <a href="https://www.facebook.com/profile.php?id=61578477205115" target="_blank" title="Facebook">
+                    <a href="https://www.facebook.com/profile.php?id=61578477205115" target="_blank" title="Facebook" data-track-id="footer-link-facebook">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>
                     </a>
                 </div>
             </div>
-            
+
             <div class="footer-links">
-                <a href="/support.html">Yardım Merkezi</a>
-                <a href="/gizlilik-politikasi.html">Gizlilik Politikası</a>
-                <a href="/kullanim-sartlari.html">Kullanım Şartları</a>
-                <a href="https://apps.apple.com/tr/app/teqlif/id6759490205" class="footer-app-link" target="_blank">
+                <a href="/support.html" data-track-id="footer-link-destek">Yardım Merkezi</a>
+                <a href="/gizlilik-politikasi.html" data-track-id="footer-link-gizlilik">Gizlilik Politikası</a>
+                <a href="/kullanim-sartlari.html" data-track-id="footer-link-kullanim-sartlari">Kullanım Şartları</a>
+                <a href="https://apps.apple.com/tr/app/teqlif/id6759490205" class="footer-app-link" target="_blank" data-track-id="footer-link-appstore">
                     <svg viewBox="0 0 24 24" fill="currentColor" style="width:16px;height:16px;margin-right:8px;"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.1 2.48-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .76-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.36 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
                     App Store
                 </a>
