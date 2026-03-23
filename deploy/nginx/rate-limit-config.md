@@ -55,3 +55,22 @@ sudo systemctl reload nginx
 # Rate limit test
 for i in {1..15}; do curl -I https://teqlif.com/api/categories & done
 ```
+
+---
+
+## ⚠️ Önemli: CSP Header Yönetimi
+
+Content-Security-Policy **yalnızca FastAPI middleware** (`backend/app/security/middleware.py`) üzerinden yönetilmeli.
+Nginx config'de `add_header Content-Security-Policy` satırı OLMAMALI — iki CSP çakışır, nginx'inki kazanır.
+
+Nginx config'de CSP satırı varsa kaldır:
+```bash
+sudo nano /etc/nginx/sites-enabled/teqlif.com
+# add_header Content-Security-Policy ... satırını sil veya yorum satırına al
+sudo nginx -t && sudo systemctl reload nginx
+```
+
+Zorunlu olarak nginx'te tutulacaksa şu domain'lerin mevcut olduğundan emin ol:
+- `script-src`: `https://challenges.cloudflare.com`
+- `frame-src`:  `https://challenges.cloudflare.com`
+- `connect-src`: `https://challenges.cloudflare.com`
