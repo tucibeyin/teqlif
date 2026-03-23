@@ -187,7 +187,9 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             await websocket.close(code=4001)
             return
         username = user.username
-        profile_image_url: str | None = user.profile_image_url if hasattr(user, "profile_image_url") else None
+        profile_image_url: str | None = (
+            user.profile_image_thumb_url or user.profile_image_url
+        ) if hasattr(user, "profile_image_url") else None
 
         stream_result = await db.execute(
             select(LiveStream).where(LiveStream.id == stream_id)

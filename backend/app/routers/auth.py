@@ -158,6 +158,9 @@ async def update_me(
     if data.profile_image_url is not None:
         current_user.profile_image_url = data.profile_image_url
 
+    if data.profile_image_thumb_url is not None:
+        current_user.profile_image_thumb_url = data.profile_image_thumb_url
+
     await db.commit()
     await db.refresh(current_user)
     return current_user

@@ -23,6 +23,7 @@ def _row_dict(l: Listing, u: User) -> dict:
         "location": l.location,
         "image_url": l.image_url,
         "image_urls": json.loads(l.image_urls) if l.image_urls else [],
+        "thumbnail_url": l.thumbnail_url,
         "created_at": l.created_at.isoformat() if l.created_at else None,
         "is_active": l.is_active,
         "user": {"id": u.id, "username": u.username, "full_name": u.full_name},
@@ -89,6 +90,7 @@ async def create_listing(payload: dict, current_user: User = Depends(get_current
         location=payload.get("location"),
         image_url=payload.get("image_url"),
         image_urls=json.dumps(payload.get("image_urls") or []),
+        thumbnail_url=payload.get("thumbnail_url"),
     )
     db.add(listing)
     await db.commit()

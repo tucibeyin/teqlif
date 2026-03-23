@@ -45,6 +45,7 @@ class UserOut(BaseModel):
     is_active: bool
     is_verified: bool
     profile_image_url: Optional[str] = None
+    profile_image_thumb_url: Optional[str] = None
     created_at: datetime
 
     model_config = {"from_attributes": True}
@@ -54,6 +55,7 @@ class UserUpdate(BaseModel):
     full_name: Optional[str] = None
     username: Optional[str] = None
     profile_image_url: Optional[str] = None
+    profile_image_thumb_url: Optional[str] = None
 
 
 class TokenOut(BaseModel):
