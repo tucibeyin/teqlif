@@ -129,8 +129,8 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     await _seed_categories()
     await _seed_cities()
-    # FastAPI Cache — Redis backend
-    _cache_redis = aioredis.from_url(settings.redis_url, encoding="utf8", decode_responses=True)
+    # FastAPI Cache — Redis backend (decode_responses=False: JsonCoder bytes bekler)
+    _cache_redis = aioredis.from_url(settings.redis_url, decode_responses=False)
     FastAPICache.init(RedisBackend(_cache_redis), prefix="teqlif:cache")
     # ARQ Task Queue pool
     arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
