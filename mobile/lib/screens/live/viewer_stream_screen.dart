@@ -44,7 +44,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   Future<void> _loadCurrentUsername() async {
     try {
       final info = await StorageService.getUserInfo();
-      if (mounted) _currentUsername = info?['username'] as String?;
+      if (mounted) setState(() => _currentUsername = info?['username'] as String?);
     } catch (e) {
       debugPrint('[VIEWER] Kullanıcı adı yüklenemedi: $e');
     }
@@ -158,15 +158,51 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
 
   void _handleModPromoted(String targetUsername, String promotedBy) {
     if (!mounted) return;
-    // Sadece bu cihazın kullanıcısı hedef alındıysa dönüşüm yapılır
     if (_currentUsername == null || _currentUsername != targetUsername) return;
     setState(() => _isCoHost = true);
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('⭐ Tebrikler! @$promotedBy sizi moderatör yaptı.'),
-        backgroundColor: const Color(0xFF16A34A),
-        behavior: SnackBarBehavior.floating,
-        duration: const Duration(seconds: 4),
+    showDialog(
+      context: context,
+      barrierColor: Colors.black54,
+      builder: (_) => Dialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('⭐', style: TextStyle(fontSize: 40)),
+              const SizedBox(height: 12),
+              const Text(
+                'Moderatör oldunuz!',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                '@$promotedBy sizi moderatör yaptı.\nArtık izleyicileri susturabilir ve yayından atabilirsiniz.',
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.5),
+              ),
+              const SizedBox(height: 20),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF16A34A),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                  onPressed: () => Navigator.pop(_),
+                  child: const Text('Anladım', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
