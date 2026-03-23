@@ -18,6 +18,7 @@ import '../services/storage_service.dart';
 import '../services/notification_service.dart';
 import '../services/upload_service.dart';
 import '../utils/error_helper.dart';
+import '../widgets/shimmer_loading.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
 import 'notification_settings_screen.dart';
@@ -44,38 +45,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _load() async {
     setState(() => _loading = true);
     try {
+      // 1. Önce yerel önbellekten anında göster (0ms gecikme)
       final info = await StorageService.getUserInfo();
       if (!mounted) return;
+      if (info != null) setState(() => _user = info);
+
       final username = info?['username'] as String?;
-      Map<String, dynamic>? profile;
-      if (username != null) {
-        profile = await NotificationService.getUserByUsername(username);
-      }
-      final userId = (profile ?? info)?['id'] as int?;
-      List<dynamic> listings = [];
-      if (userId != null) {
-        final token = await StorageService.getToken();
-        final resp = await http.get(
-          Uri.parse('$kBaseUrl/listings?user_id=$userId'),
-          headers: {
-            'Content-Type': 'application/json',
-            if (token != null) 'Authorization': 'Bearer $token',
-          },
-        );
-        if (resp.statusCode == 200) listings = jsonDecode(resp.body) as List;
-      }
-      if (mounted) {
-        setState(() {
-          _user = profile ?? info;
-          _listings = listings;
-          _loading = false;
-        });
-      }
+      final userId = info?['id'] as int?;
+      final token = await StorageService.getToken();
+
+      // 2. Profil API + ilanlar paralel olarak uçar
+      final results = await Future.wait([
+        username != null
+            ? NotificationService.getUserByUsername(username)
+            : Future<Map<String, dynamic>?>.value(null),
+        userId != null
+            ? _fetchListings(userId, token)
+            : Future<List<dynamic>>.value([]),
+      ]);
+
+      if (!mounted) return;
+      setState(() {
+        _user = (results[0] as Map<String, dynamic>?) ?? info;
+        _listings = results[1] as List<dynamic>;
+        _loading = false;
+      });
     } catch (e) {
       LoggerService.instance.warning('ProfileScreen', 'Profil yüklenemedi: $e');
       if (!mounted) return;
       setState(() => _loading = false);
     }
+  }
+
+  Future<List<dynamic>> _fetchListings(int userId, String? token) async {
+    final resp = await http.get(
+      Uri.parse('$kBaseUrl/listings?user_id=$userId'),
+      headers: {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      },
+    );
+    if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
+    return [];
   }
 
 
@@ -94,7 +105,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) {
+    // Yerel önbellekte hiç veri yoksa (ilk kurulum) tam ekran spinner
+    if (_loading && _user == null) {
       return const Scaffold(
         body: Center(child: CircularProgressIndicator(color: kPrimary)),
       );
@@ -262,50 +274,68 @@ class _ProfileScreenState extends State<ProfileScreen> {
               ),
             ),
             // ── İlanlar grid ──
-            _listings.isEmpty
-                ? const SliverFillRemaining(
-                    child: Center(
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(Icons.grid_off_outlined,
-                              size: 52, color: Color(0xFFD1D5DB)),
-                          SizedBox(height: 12),
-                          Text(
-                            'Henüz ilan yok',
-                            style: TextStyle(
-                              color: Color(0xFF6B7280),
-                              fontSize: 15,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                          SizedBox(height: 4),
-                          Text(
-                            'İlk ilanını ver!',
-                            style: TextStyle(
-                              color: Color(0xFF9CA3AF),
-                              fontSize: 13,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  )
-                : SliverGrid(
-                    delegate: SliverChildBuilderDelegate(
-                      (ctx, i) => _ListingGridItem(
-                        key: Key('profile_listing_${_listings[i]['id']}'),
-                        listing: _listings[i],
-                      ),
-                      childCount: _listings.length,
-                    ),
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 3,
-                      crossAxisSpacing: 2,
-                      mainAxisSpacing: 2,
-                    ),
+            if (_loading)
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                sliver: SliverGrid(
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 2,
+                    mainAxisSpacing: 2,
+                    childAspectRatio: 0.78,
                   ),
+                  delegate: SliverChildBuilderDelegate(
+                    (_, __) => const ShimmerGridCard(),
+                    childCount: 9,
+                  ),
+                ),
+              )
+            else if (_listings.isEmpty)
+              const SliverFillRemaining(
+                child: Center(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.grid_off_outlined,
+                          size: 52, color: Color(0xFFD1D5DB)),
+                      SizedBox(height: 12),
+                      Text(
+                        'Henüz ilan yok',
+                        style: TextStyle(
+                          color: Color(0xFF6B7280),
+                          fontSize: 15,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'İlk ilanını ver!',
+                        style: TextStyle(
+                          color: Color(0xFF9CA3AF),
+                          fontSize: 13,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              SliverGrid(
+                delegate: SliverChildBuilderDelegate(
+                  (ctx, i) => _ListingGridItem(
+                    key: Key('profile_listing_${_listings[i]['id']}'),
+                    listing: _listings[i],
+                  ),
+                  childCount: _listings.length,
+                ),
+                gridDelegate:
+                    const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  crossAxisSpacing: 2,
+                  mainAxisSpacing: 2,
+                ),
+              ),
           ],
         ),
       ),
