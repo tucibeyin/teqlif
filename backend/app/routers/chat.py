@@ -105,31 +105,30 @@ async def moderation_pubsub_listener() -> None:
                     event_type, stream_id, user_id,
                 )
                 if event_type == "mod_promoted":
-                    # Tüm izleyicilere broadcast — moderatör rozetini herkes görmeli
+                    # Tüm izleyicilere broadcast — user_id eklendi (integer karşılaştırma için)
                     await ws_manager.broadcast_local(
                         f"chat:{stream_id}",
                         {
                             "type": "mod_promoted",
+                            "user_id": user_id,
                             "username": data.get("username"),
                             "promoted_by": data.get("promoted_by"),
                         },
                     )
-                    # Hedefli event — sadece atanan kullanıcıya (username eşleşmesi gerekmez)
                     await ws_manager.broadcast_local(
                         f"chat:{stream_id}:u{user_id}",
                         {"type": "mod_promoted_self", "promoted_by": data.get("promoted_by")},
                     )
                 elif event_type == "mod_demoted":
-                    # Tüm izleyicilere broadcast — rozet kaldırma
                     await ws_manager.broadcast_local(
                         f"chat:{stream_id}",
                         {
                             "type": "mod_demoted",
+                            "user_id": user_id,
                             "username": data.get("username"),
                             "demoted_by": data.get("demoted_by"),
                         },
                     )
-                    # Hedefli event — sadece etkilenen kullanıcıya
                     await ws_manager.broadcast_local(
                         f"chat:{stream_id}:u{user_id}",
                         {"type": "mod_demoted_self", "demoted_by": data.get("demoted_by")},

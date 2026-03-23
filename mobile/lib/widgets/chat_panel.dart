@@ -60,10 +60,6 @@ class ChatPanel extends StatefulWidget {
   /// Sadece bu kullanıcıya hedefli — benim moderatörlüğüm kaldırıldı.
   final void Function(String demotedBy)? onModDemotedSelf;
 
-  /// Bu cihazın kullanıcı adı — broadcast mod_promoted eventinde
-  /// username eşleşmesi için kullanılır (eski backend uyumluluğu).
-  final String? myUsername;
-
   const ChatPanel({
     super.key,
     required this.streamId,
@@ -77,7 +73,6 @@ class ChatPanel extends StatefulWidget {
     this.onModDemoted,
     this.onModPromotedSelf,
     this.onModDemotedSelf,
-    this.myUsername,
   });
 
   @override
@@ -99,6 +94,7 @@ class _ChatPanelState extends State<ChatPanel> {
   bool _reconnecting = false;
   bool _streamEnded = false;
   String? _token;
+  int? _myUserId;
   bool _inputFocused = false;
 
   @override
@@ -112,6 +108,9 @@ class _ChatPanelState extends State<ChatPanel> {
 
   Future<void> _init() async {
     _token = await StorageService.getToken();
+    final info = await StorageService.getUserInfo();
+    _myUserId = info?['id'] as int?;
+    debugPrint('[CHAT] _init tamamlandı — myUserId:$_myUserId');
     if (!mounted) return;
     setState(() {});
     _connectWS();
@@ -252,15 +251,24 @@ class _ChatPanelState extends State<ChatPanel> {
               _streamEnded = true;
               _eventType = 'kicked';
             } else if (json['type'] == 'mod_promoted') {
-              // format: 'mod_promoted:{targetUsername}:{promotedBy}'
-              final target = json['username'] as String? ?? '';
-              final by     = json['promoted_by'] as String? ?? '';
+              final target   = json['username'] as String? ?? '';
+              final by       = json['promoted_by'] as String? ?? '';
+              final targetId = (json['user_id'] as num?)?.toInt();
               _eventType = 'mod_promoted:$target:$by';
+              // user_id eşleşirse hedefli self eventi tetikle (backend deploy beklenmeden)
+              if (_myUserId != null && targetId != null && targetId == _myUserId) {
+                debugPrint('[CHAT] mod_promoted self-match via user_id=$targetId');
+                _eventType = 'mod_promoted_self:$by';
+              }
             } else if (json['type'] == 'mod_demoted') {
-              // format: 'mod_demoted:{targetUsername}:{demotedBy}'
-              final target = json['username'] as String? ?? '';
-              final by     = json['demoted_by'] as String? ?? '';
+              final target   = json['username'] as String? ?? '';
+              final by       = json['demoted_by'] as String? ?? '';
+              final targetId = (json['user_id'] as num?)?.toInt();
               _eventType = 'mod_demoted:$target:$by';
+              if (_myUserId != null && targetId != null && targetId == _myUserId) {
+                debugPrint('[CHAT] mod_demoted self-match via user_id=$targetId');
+                _eventType = 'mod_demoted_self:$by';
+              }
             } else if (json['type'] == 'mod_promoted_self') {
               // Hedefli event — sadece atanan kullanıcı alır
               final by = json['promoted_by'] as String? ?? '';
@@ -286,28 +294,16 @@ class _ChatPanelState extends State<ChatPanel> {
             final colon = rest.indexOf(':');
             final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
             final promotedBy     = colon >= 0 ? rest.substring(colon + 1) : '';
-            debugPrint('[CHAT] mod_promoted — target:$targetUsername promotedBy:$promotedBy');
+            debugPrint('[CHAT] mod_promoted — target:$targetUsername promotedBy:$promotedBy myUserId:$_myUserId');
             widget.onModPromoted?.call(targetUsername, promotedBy);
-            // Eski backend uyumluluğu: myUsername eşleşirse self eventi tetikle
-            final my = widget.myUsername;
-            if (my != null && my.isNotEmpty && my == targetUsername) {
-              debugPrint('[CHAT] mod_promoted self-match via broadcast — promotedBy:$promotedBy');
-              widget.onModPromotedSelf?.call(promotedBy);
-            }
           }
           if (_eventType != null && _eventType!.startsWith('mod_demoted:')) {
             final rest  = _eventType!.substring('mod_demoted:'.length);
             final colon = rest.indexOf(':');
             final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
             final demotedBy      = colon >= 0 ? rest.substring(colon + 1) : '';
-            debugPrint('[CHAT] mod_demoted — target:$targetUsername demotedBy:$demotedBy');
+            debugPrint('[CHAT] mod_demoted — target:$targetUsername demotedBy:$demotedBy myUserId:$_myUserId');
             widget.onModDemoted?.call(targetUsername, demotedBy);
-            // Eski backend uyumluluğu: myUsername eşleşirse self eventi tetikle
-            final my = widget.myUsername;
-            if (my != null && my.isNotEmpty && my == targetUsername) {
-              debugPrint('[CHAT] mod_demoted self-match via broadcast — demotedBy:$demotedBy');
-              widget.onModDemotedSelf?.call(demotedBy);
-            }
           }
           if (_eventType != null && _eventType!.startsWith('mod_promoted_self:')) {
             final promotedBy = _eventType!.substring('mod_promoted_self:'.length);
