@@ -22,6 +22,7 @@ from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics
 from app.security.middleware import security_headers, SecurityMiddleware
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
+from app.core.defender import AntiBotMiddleware
 from slowapi.errors import RateLimitExceeded
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
@@ -249,6 +250,8 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
         },
     )
 
+
+app.add_middleware(AntiBotMiddleware)
 
 app.add_middleware(
     CORSMiddleware,

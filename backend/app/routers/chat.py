@@ -13,6 +13,7 @@ from app.models.stream import LiveStream
 from app.utils.auth import decode_token
 from app.utils.redis_client import get_redis
 from app.core.logger import get_logger
+from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -294,13 +295,27 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                 stream_id, user_id, exc,
             )
 
-    # ── 5. Tüm doğrulamalar geçti → state'e kaydet ───────────────────────────
+    # ── 5. Token klonlama / eş zamanlı oturum koruması ──────────────────────
+    # Aynı token farklı cihazlara kopyalanmış olsa bile MAX_CONCURRENT_SESSIONS
+    # eşiği aşıldığında yeni bağlantı 4008 ile reddedilir.
+    session_count = await register_ws_session(user_id)
+    if session_count > MAX_CONCURRENT_SESSIONS:
+        await release_ws_session(user_id)
+        await websocket.close(code=4008)
+        logger.warning(
+            "[CHAT WS] Eş zamanlı oturum limiti aşıldı | stream_id=%s user_id=%s | "
+            "count=%s limit=%s",
+            stream_id, user_id, session_count, MAX_CONCURRENT_SESSIONS,
+        )
+        return
+
+    # ── 6. Tüm doğrulamalar geçti → state'e kaydet ───────────────────────────
     # connect() senkron: accept() + doğrulama tamamlandıktan SONRA çağrılır.
     # Bu sayede yarım bağlantılar hiçbir zaman broadcast hedefi olmaz.
     chat_manager.connect(websocket, stream_id, user_id)
 
     try:
-        # ── 6. İzleyici sayacı ve katılma bildirimi ───────────────────────────
+        # ── 7. İzleyici sayacı ve katılma bildirimi ───────────────────────────
         if not is_host and room_name:
             await _update_viewer_count(room_name, stream_id, +1)
             try:
@@ -313,7 +328,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                 )
             await _publish_chat(stream_id, {"type": "system_join", "username": username})
 
-        # ── 7. Geçmiş mesajlar ve mevcut izleyici sayısı ─────────────────────
+        # ── 8. Geçmiş mesajlar ve mevcut izleyici sayısı ─────────────────────
         try:
             redis = await get_redis()
             history_raw = await redis.lrange(_key(stream_id), -_MAX_HISTORY, -1)
@@ -333,7 +348,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                 stream_id, exc,
             )
 
-        # ── 8. Mesaj döngüsü ─────────────────────────────────────────────────
+        # ── 9. Mesaj döngüsü ─────────────────────────────────────────────────
         while True:
             try:
                 text = await websocket.receive_text()
@@ -391,9 +406,10 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
         )
     finally:
         # connect() çağrıldıktan sonra buraya girilmesi garantilenmiştir.
-        # Early return'ler (adım 1-4) try bloğu dışında olduğundan bu finally
+        # Early return'ler (adım 1-5) try bloğu dışında olduğundan bu finally
         # yalnızca gerçekten bağlanmış kullanıcılar için çalışır.
         chat_manager.disconnect(websocket, stream_id, user_id)
+        await release_ws_session(user_id)
         if not is_host and room_name:
             await _update_viewer_count(room_name, stream_id, -1)
             try:

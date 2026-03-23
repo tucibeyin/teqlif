@@ -14,6 +14,7 @@ from app.services.firebase_service import send_push
 from app.core.exceptions import NotFoundException
 from app.core.logger import get_logger
 from app.core.task_queue import get_pool
+from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
@@ -174,24 +175,51 @@ async def delete_notification(
 
 @router.websocket("/ws")
 async def notifications_ws(websocket: WebSocket, token: str = Query(...)):
+    # ── 1. Hızlı senkron token kontrolü (accept() öncesi — close() çağrılmaz) ─
     user_id = decode_token(token)
     if not user_id:
-        await websocket.close(code=4001)
+        logger.warning("[NOTIF WS] Geçersiz token, bağlantı reddedildi")
         return
 
-    async with AsyncSessionLocal() as db:
-        result = await db.execute(select(User).where(User.id == user_id))
-        user = result.scalar_one_or_none()
-        if not user or not user.is_active:
-            await websocket.close(code=4001)
-            return
+    # ── 2. Bağlantıyı kabul et ────────────────────────────────────────────────
+    try:
+        await websocket.accept()
+    except Exception as exc:
+        logger.error("[NOTIF WS] accept() başarısız | user_id=%s | %s", user_id, exc, exc_info=True)
+        return
 
-    await websocket.accept()
+    # ── 3. DB doğrulama (accept() sonrası — close() artık güvenli) ───────────
+    try:
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(User).where(User.id == user_id))
+            user = result.scalar_one_or_none()
+            if not user or not user.is_active:
+                await websocket.close(code=4001)
+                return
+    except Exception as exc:
+        logger.error("[NOTIF WS] DB doğrulama hatası | user_id=%s | %s", user_id, exc, exc_info=True)
+        try:
+            await websocket.close(code=1011)
+        except Exception:
+            pass
+        return
+
+    # ── 4. Eş zamanlı oturum koruması ─────────────────────────────────────────
+    session_count = await register_ws_session(user_id)
+    if session_count > MAX_CONCURRENT_SESSIONS:
+        await release_ws_session(user_id)
+        await websocket.close(code=4008)
+        logger.warning(
+            "[NOTIF WS] Eş zamanlı oturum limiti aşıldı | user_id=%s | count=%s limit=%s",
+            user_id, session_count, MAX_CONCURRENT_SESSIONS,
+        )
+        return
+
     _notif_connections.setdefault(user_id, set()).add(websocket)
     logger.info("[NOTIF WS] BAĞLANDI | user_id=%s", user_id)
 
     try:
-        # Send current unread count on connect
+        # Bağlantı kurulunca mevcut okunmamış sayısını gönder
         async with AsyncSessionLocal() as db:
             result = await db.execute(
                 select(func.count()).where(
@@ -202,7 +230,7 @@ async def notifications_ws(websocket: WebSocket, token: str = Query(...)):
             count = result.scalar_one()
         await websocket.send_json({"type": "unread_count", "count": count})
 
-        # Keep alive loop
+        # Keep-alive döngüsü
         while True:
             try:
                 text = await websocket.receive_text()
@@ -216,4 +244,5 @@ async def notifications_ws(websocket: WebSocket, token: str = Query(...)):
         logger.error("[NOTIF WS] HATA | user_id=%s | %s", user_id, exc)
     finally:
         _notif_connections.get(user_id, set()).discard(websocket)
+        await release_ws_session(user_id)
         logger.info("[NOTIF WS] AYRILDI | user_id=%s", user_id)
