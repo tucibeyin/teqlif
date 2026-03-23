@@ -26,6 +26,7 @@ dependencies:
   sentry: ^9.14.0
   flutter_riverpod: ^2.4.9
   cached_network_image: ^3.3.1
+  shimmer: ^3.0.0
 
 dev_dependencies:
   flutter_test:

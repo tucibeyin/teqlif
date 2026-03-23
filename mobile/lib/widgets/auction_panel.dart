@@ -13,6 +13,7 @@ import '../providers/auction_provider.dart';
 import '../services/auction_service.dart';
 import '../services/storage_service.dart';
 import '../utils/price_formatter.dart';
+import 'shimmer_loading.dart';
 
 class AuctionPanel extends ConsumerStatefulWidget {
   final int streamId;
@@ -458,8 +459,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                               imageUrl: imageUrls[i],
                               fit: BoxFit.cover,
                               width: double.infinity,
-                              placeholder: (_, __) => const Center(
-                                  child: CircularProgressIndicator(strokeWidth: 2)),
+                              placeholder: (_, __) => const ShimmerBox(),
                               errorWidget: (_, __, ___) => Container(
                                 color: const Color(0xFF0F172A),
                                 child: const Icon(Icons.image_outlined,
@@ -1501,9 +1501,12 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
               _inputField(_binCtrl, 'Hemen Al fiyatı (₺, opsiyonel)', isNumber: true),
             ] else ...[
               if (_loadingListings)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(child: CircularProgressIndicator(color: kPrimary, strokeWidth: 2)),
+                const Column(
+                  children: [
+                    ShimmerListRow(),
+                    ShimmerListRow(),
+                    ShimmerListRow(),
+                  ],
                 )
               else if (_listings.isEmpty)
                 const Padding(
@@ -1547,9 +1550,8 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                                         imageUrl: url,
                                         width: 38, height: 38,
                                         fit: BoxFit.cover,
-                                        placeholder: (_, __) => const SizedBox(
+                                        placeholder: (_, __) => const ShimmerBox(
                                           width: 38, height: 38,
-                                          child: Center(child: CircularProgressIndicator(strokeWidth: 1.5)),
                                         ),
                                         errorWidget: (_, __, ___) => _lpPlaceholder())
                                     : _lpPlaceholder(),

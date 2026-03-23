@@ -6,6 +6,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/city_service.dart';
+import '../widgets/shimmer_loading.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
 
@@ -438,8 +439,21 @@ class _HomeScreenState extends State<HomeScreen> {
 
             // ── İlan grid ───────────────────────────────────────────
             if (_loading)
-              const SliverFillRemaining(
-                child: Center(child: CircularProgressIndicator()),
+              SliverPadding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                sliver: SliverGrid(
+                  gridDelegate:
+                      const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    crossAxisSpacing: 2,
+                    mainAxisSpacing: 2,
+                    childAspectRatio: 0.78,
+                  ),
+                  delegate: SliverChildBuilderDelegate(
+                    (_, __) => const ShimmerGridCard(),
+                    childCount: 9,
+                  ),
+                ),
               )
             else if (_error != null)
               SliverFillRemaining(
@@ -592,8 +606,7 @@ class _GridItem extends StatelessWidget {
               ? CachedNetworkImage(
                   imageUrl: photo,
                   fit: BoxFit.cover,
-                  placeholder: (_, __) =>
-                      const Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  placeholder: (_, __) => const ShimmerBox(),
                   errorWidget: (_, __, ___) => _placeholder(context),
                 )
               : _placeholder(context),

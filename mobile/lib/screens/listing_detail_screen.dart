@@ -6,6 +6,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
+import '../widgets/shimmer_loading.dart';
 import 'profile_screen.dart';
 import 'public_profile_screen.dart';
 import 'messages_screen.dart';
@@ -596,11 +597,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 imageUrl: _images[i],
                 fit: BoxFit.cover,
                 width: double.infinity,
-                placeholder: (ctx, _) => Container(
-                  color: AppColors.surfaceVariant(ctx),
-                  child: const Center(
-                      child: CircularProgressIndicator(strokeWidth: 2)),
-                ),
+                placeholder: (_, __) => const ShimmerBox(),
                 errorWidget: (ctx, url, err) {
                   debugPrint('IMG HATA [$url]: $err');
                   return Container(
