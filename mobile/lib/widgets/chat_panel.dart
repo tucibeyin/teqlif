@@ -50,15 +50,16 @@ class ChatPanel extends StatefulWidget {
   final VoidCallback? onUnmuted;
   /// Viewer için: yayından atılınca çağrılır
   final VoidCallback? onKicked;
-  /// Viewer için: bu kullanıcı moderatör (Co-Host) yapılınca çağrılır.
-  /// [targetUsername] → atanan kullanıcı adı (eşleşme kontrolü için).
-  /// [promotedBy]     → atamayı yapan host'un kullanıcı adı.
+  /// Tüm izleyicilere broadcast — birisi moderatör yapıldı (rozet gösterimi için).
   final void Function(String targetUsername, String promotedBy)? onModPromoted;
-
-  /// Viewer için: bu kullanıcının moderatörlüğü kaldırılınca çağrılır.
-  /// [targetUsername] → etkilenen kullanıcı adı (eşleşme kontrolü için).
-  /// [demotedBy]      → işlemi yapan host'un kullanıcı adı.
+  /// Tüm izleyicilere broadcast — birinin moderatörlüğü kaldırıldı.
   final void Function(String targetUsername, String demotedBy)? onModDemoted;
+
+  /// Sadece bu kullanıcıya hedefli — BEN moderatör yapıldım.
+  /// Username eşleşmesi gerekmez; event kişisel kanaldan gelir.
+  final void Function(String promotedBy)? onModPromotedSelf;
+  /// Sadece bu kullanıcıya hedefli — benim moderatörlüğüm kaldırıldı.
+  final void Function(String demotedBy)? onModDemotedSelf;
 
   const ChatPanel({
     super.key,
@@ -71,6 +72,8 @@ class ChatPanel extends StatefulWidget {
     this.onKicked,
     this.onModPromoted,
     this.onModDemoted,
+    this.onModPromotedSelf,
+    this.onModDemotedSelf,
   });
 
   @override
@@ -254,6 +257,14 @@ class _ChatPanelState extends State<ChatPanel> {
               final target = json['username'] as String? ?? '';
               final by     = json['demoted_by'] as String? ?? '';
               _eventType = 'mod_demoted:$target:$by';
+            } else if (json['type'] == 'mod_promoted_self') {
+              // Hedefli event — sadece atanan kullanıcı alır
+              final by = json['promoted_by'] as String? ?? '';
+              _eventType = 'mod_promoted_self:$by';
+            } else if (json['type'] == 'mod_demoted_self') {
+              // Hedefli event — sadece etkilenen kullanıcı alır
+              final by = json['demoted_by'] as String? ?? '';
+              _eventType = 'mod_demoted_self:$by';
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -281,6 +292,16 @@ class _ChatPanelState extends State<ChatPanel> {
             final demotedBy      = colon >= 0 ? rest.substring(colon + 1) : '';
             debugPrint('[CHAT] mod_demoted — target:$targetUsername demotedBy:$demotedBy');
             widget.onModDemoted?.call(targetUsername, demotedBy);
+          }
+          if (_eventType != null && _eventType!.startsWith('mod_promoted_self:')) {
+            final promotedBy = _eventType!.substring('mod_promoted_self:'.length);
+            debugPrint('[CHAT] mod_promoted_self — promotedBy:$promotedBy');
+            widget.onModPromotedSelf?.call(promotedBy);
+          }
+          if (_eventType != null && _eventType!.startsWith('mod_demoted_self:')) {
+            final demotedBy = _eventType!.substring('mod_demoted_self:'.length);
+            debugPrint('[CHAT] mod_demoted_self — demotedBy:$demotedBy');
+            widget.onModDemotedSelf?.call(demotedBy);
           }
         },
         onDone: _scheduleReconnect,

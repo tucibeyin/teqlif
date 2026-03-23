@@ -29,7 +29,6 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   bool _selfMuted = false;
   bool _kicked = false; // kick işlemi sırasında RoomDisconnectedEvent'i baskıla
   bool _isCoHost = false;
-  String? _currentUsername;
   final Set<String> _coHostMutedUsers = {};
 
   @override
@@ -38,16 +37,6 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     _connect();
-    _loadCurrentUsername();
-  }
-
-  Future<void> _loadCurrentUsername() async {
-    try {
-      final info = await StorageService.getUserInfo();
-      if (mounted) setState(() => _currentUsername = info?['username'] as String?);
-    } catch (e) {
-      debugPrint('[VIEWER] Kullanıcı adı yüklenemedi: $e');
-    }
   }
 
   @override
@@ -156,9 +145,9 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
   }
 
-  void _handleModPromoted(String targetUsername, String promotedBy) {
+  // Hedefli event: username eşleşmesine gerek yok — ben atandım
+  void _handleModPromotedSelf(String promotedBy) {
     if (!mounted) return;
-    if (_currentUsername == null || _currentUsername != targetUsername) return;
     setState(() => _isCoHost = true);
     showDialog(
       context: context,
@@ -175,11 +164,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               const SizedBox(height: 12),
               const Text(
                 'Moderatör oldunuz!',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 8),
               Text(
@@ -207,9 +192,9 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     );
   }
 
-  void _handleModDemoted(String targetUsername, String demotedBy) {
+  // Hedefli event: username eşleşmesine gerek yok — benim moderatörlüğüm kaldırıldı
+  void _handleModDemotedSelf(String demotedBy) {
     if (!mounted) return;
-    if (_currentUsername == null || _currentUsername != targetUsername) return;
     setState(() => _isCoHost = false);
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -512,8 +497,8 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       onMuted: _handleMuted,
                       onUnmuted: _handleUnmuted,
                       onKicked: _handleKicked,
-                      onModPromoted: _handleModPromoted,
-                      onModDemoted: _handleModDemoted,
+                      onModPromotedSelf: _handleModPromotedSelf,
+                      onModDemotedSelf: _handleModDemotedSelf,
                       // Co-Host ise kullanıcı adına tıklanınca mod sheet açılır
                       onUsernameTap: _isCoHost ? _showCoHostModSheet : null,
                     ),

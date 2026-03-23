@@ -114,6 +114,11 @@ async def moderation_pubsub_listener() -> None:
                             "promoted_by": data.get("promoted_by"),
                         },
                     )
+                    # Hedefli event — sadece atanan kullanıcıya (username eşleşmesi gerekmez)
+                    await ws_manager.broadcast_local(
+                        f"chat:{stream_id}:u{user_id}",
+                        {"type": "mod_promoted_self", "promoted_by": data.get("promoted_by")},
+                    )
                 elif event_type == "mod_demoted":
                     # Tüm izleyicilere broadcast — rozet kaldırma
                     await ws_manager.broadcast_local(
@@ -123,6 +128,11 @@ async def moderation_pubsub_listener() -> None:
                             "username": data.get("username"),
                             "demoted_by": data.get("demoted_by"),
                         },
+                    )
+                    # Hedefli event — sadece etkilenen kullanıcıya
+                    await ws_manager.broadcast_local(
+                        f"chat:{stream_id}:u{user_id}",
+                        {"type": "mod_demoted_self", "demoted_by": data.get("demoted_by")},
                     )
                 else:
                     # Kullanıcıya özel topic: sadece hedef kullanıcıya gönderilir
