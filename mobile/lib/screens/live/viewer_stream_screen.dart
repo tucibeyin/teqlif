@@ -163,7 +163,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     showDialog(
       context: context,
       barrierColor: Colors.black54,
-      builder: (_) => Dialog(
+      builder: (ctx) => Dialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
         child: Padding(
@@ -196,7 +196,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  onPressed: () => Navigator.pop(_),
+                  onPressed: () => Navigator.pop(ctx),
                   child: const Text('Anladım', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
                 ),
               ),
