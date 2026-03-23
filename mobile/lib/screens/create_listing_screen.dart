@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../core/app_exception.dart';
+import '../services/captcha_service.dart';
 import '../services/category_service.dart';
 import '../services/city_service.dart';
 import '../services/storage_service.dart';
@@ -132,48 +134,69 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         }
       }
 
-      final resp = await http.post(
-        Uri.parse('$kBaseUrl/listings'),
-        headers: {
-          'Content-Type': 'application/json',
-          if (token != null) 'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode({
-          'title': _titleCtrl.text.trim(),
-          'description': _descCtrl.text.trim(),
-          'price': double.tryParse(_priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.')),
-          'category': _selectedCategory,
-          if (_selectedCity != null && _selectedCity!.isNotEmpty)
-            'location': _selectedCity,
-          'image_urls': imageUrls,
-          if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
-          if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
-        }),
-      );
+      // Güvenlik doğrulaması: görünmez Turnstile challenge
       if (!mounted) return;
-      if (resp.statusCode == 200) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('İlan yayına alındı!'),
-            backgroundColor: kPrimary,
-          ),
-        );
-        Navigator.pop(context, true);
-      } else {
-        final err = jsonDecode(resp.body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(err['detail'] ?? 'Bir hata oluştu')),
-        );
-      }
+      final captchaToken = await CaptchaService.getToken(context);
+      if (!mounted) return;
+
+      await apiCall(
+        () async => http.post(
+          Uri.parse('$kBaseUrl/listings'),
+          headers: {
+            'Content-Type': 'application/json',
+            if (token != null) 'Authorization': 'Bearer $token',
+            if (captchaToken != null && captchaToken.isNotEmpty)
+              'X-Captcha-Token': captchaToken,
+          },
+          body: jsonEncode({
+            'title': _titleCtrl.text.trim(),
+            'description': _descCtrl.text.trim(),
+            'price': double.tryParse(
+              _priceCtrl.text.trim().replaceAll('.', '').replaceAll(',', '.'),
+            ),
+            'category': _selectedCategory,
+            if (_selectedCity != null && _selectedCity!.isNotEmpty)
+              'location': _selectedCity,
+            'image_urls': imageUrls,
+            if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
+            if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
+          }),
+        ),
+      );
+
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('İlan yayına alındı!'),
+          backgroundColor: kPrimary,
+        ),
+      );
+      Navigator.pop(context, true);
+    } on AppException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(_mapError(e))),
+      );
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bağlantı hatası')),
+          const SnackBar(content: Text('Bağlantı hatası. Lütfen tekrar deneyin.')),
         );
       }
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
+  }
+
+  /// 403/429 hata kodlarını kullanıcı dostu mesaja çevirir.
+  String _mapError(AppException e) {
+    if (e.statusCode == 403 || e.code == 'FORBIDDEN') {
+      return 'Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.';
+    }
+    if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') {
+      return 'Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.';
+    }
+    return e.message;
   }
 
   @override

@@ -31,11 +31,19 @@ class StreamService {
     return list.map((e) => StreamOut.fromJson(e as Map<String, dynamic>)).toList();
   }
 
-  static Future<StreamTokenOut> startStream(String title, String category) async {
+  static Future<StreamTokenOut> startStream(
+    String title,
+    String category, {
+    String? captchaToken,
+  }) async {
+    final headers = await _headers();
+    if (captchaToken != null && captchaToken.isNotEmpty) {
+      headers['X-Captcha-Token'] = captchaToken;
+    }
     final body = await apiCall(
       () async => http.post(
         Uri.parse('$kBaseUrl/streams/start'),
-        headers: await _headers(),
+        headers: headers,
         body: jsonEncode({'title': title, 'category': category}),
       ),
     );

@@ -4,6 +4,7 @@ import '../../config/api.dart';
 import '../../config/theme.dart';
 import '../../core/app_exception.dart';
 import '../../models/stream.dart';
+import '../../services/captcha_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/category_service.dart';
@@ -156,8 +157,17 @@ class LiveListScreenState extends State<LiveListScreen> {
     final (title, category) = result;
 
     if (!mounted) return;
+
+    // Güvenlik doğrulaması: görünmez Turnstile challenge
+    final captchaToken = await CaptchaService.getToken(context);
+    if (!mounted) return;
+
     try {
-      final streamToken = await StreamService.startStream(title, category);
+      final streamToken = await StreamService.startStream(
+        title,
+        category,
+        captchaToken: captchaToken,
+      );
       if (!mounted) return;
       Navigator.push(
         context,
@@ -165,9 +175,24 @@ class LiveListScreenState extends State<LiveListScreen> {
           builder: (_) => HostStreamScreen(streamToken: streamToken, title: title),
         ),
       ).then((_) => _load());
+    } on AppException catch (e) {
+      if (!mounted) return;
+      final msg = _mapCaptchaError(e);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
       showErrorSnackbar(context, e);
     }
+  }
+
+  /// 403/429 hata kodlarını kullanıcı dostu mesaja çevirir.
+  String _mapCaptchaError(AppException e) {
+    if (e.statusCode == 403 || e.code == 'FORBIDDEN') {
+      return 'Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.';
+    }
+    if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') {
+      return 'Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.';
+    }
+    return e.message;
   }
 
   Future<void> _joinStream(StreamOut stream) async {
