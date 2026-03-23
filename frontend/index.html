@@ -694,6 +694,8 @@
     <script src="/static/js/auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/stream.js"></script>
+    <div id="cf-turnstile-container" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true"></div>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
     <script>
         const alertEl = document.getElementById('alert');
         const btnYayınAc = document.getElementById('btnYayınAc');
@@ -972,7 +974,14 @@
                 const data = await Stream.startStream(title, category);
                 window.location.href = `/yayin.html?id=${data.stream_id}&host=1`;
             } catch (err) {
-                modalAlert.textContent = err.detail || 'Yayın başlatılamadı';
+                const errCode = err?.error?.code;
+                if (errCode === 'RATE_LIMIT_EXCEEDED') {
+                    modalAlert.textContent = 'Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.';
+                } else if (errCode === 'FORBIDDEN' || (err?.error?.status === 403)) {
+                    modalAlert.textContent = 'Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.';
+                } else {
+                    modalAlert.textContent = err?.error?.message || err.detail || 'Yayın başlatılamadı';
+                }
                 modalAlert.style.display = 'block';
                 btn.disabled = false; btn.textContent = 'Başlat';
             }

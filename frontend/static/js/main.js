@@ -41,6 +41,43 @@ async function apiFetch(path, options = {}) {
     return res.json();
 }
 
+// Cloudflare Turnstile — görünmez CAPTCHA token al
+// Turnstile widget'ı sayfaya `id="cf-turnstile-container"` ile eklenmeli.
+async function getCaptchaToken() {
+    try {
+        if (typeof turnstile === 'undefined') return null;
+        const siteKey = '0x4AAAAAACu_Bb1lbiRXqw4Q';
+        return await new Promise((resolve) => {
+            const container = document.getElementById('cf-turnstile-container');
+            if (!container) { resolve(null); return; }
+            let widgetId;
+            const timeout = setTimeout(() => {
+                try { turnstile.remove(widgetId); } catch (_) {}
+                console.error('[getCaptchaToken] Timeout');
+                resolve(null);
+            }, 10000);
+            widgetId = turnstile.render(container, {
+                sitekey: siteKey,
+                size: 'invisible',
+                callback: (token) => {
+                    clearTimeout(timeout);
+                    try { turnstile.remove(widgetId); } catch (_) {}
+                    resolve(token);
+                },
+                'error-callback': (err) => {
+                    clearTimeout(timeout);
+                    try { turnstile.remove(widgetId); } catch (_) {}
+                    console.error('[getCaptchaToken] Hata:', err);
+                    resolve(null);
+                },
+            });
+        });
+    } catch (e) {
+        console.error('[getCaptchaToken] Beklenmeyen hata:', e);
+        return null;
+    }
+}
+
 // Analytics ve Cookie Consent Enjeksiyonu
 document.addEventListener("DOMContentLoaded", () => {
     const cssPath = '/static/css/cookie.css';

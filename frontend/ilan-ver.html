@@ -340,6 +340,8 @@
         </div>
     </div>
 
+    <div id="cf-turnstile-container" style="position:absolute;left:-9999px;top:-9999px;width:1px;height:1px;overflow:hidden;" aria-hidden="true"></div>
+    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit" defer></script>
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
     <script>
@@ -507,6 +509,7 @@
                     progressWrap.style.display = 'none';
                 }
 
+                const captchaToken = await getCaptchaToken();
                 await apiFetch('/listings', {
                     method: 'POST',
                     body: JSON.stringify({
@@ -514,6 +517,7 @@
                         image_urls: imageUrls,
                         ...(imageUrls.length > 0 ? { image_url: imageUrls[0] } : {}),
                     }),
+                    headers: captchaToken ? { 'X-Captcha-Token': captchaToken } : {},
                 });
                 showAlert('İlanınız başarıyla yayına alındı!', 'success');
                 document.getElementById('ilanForm').reset();
@@ -521,7 +525,14 @@
                 renderPreviews();
                 setTimeout(() => window.location.href = '/?tab=ilanlar', 1500);
             } catch (err) {
-                showAlert(err.detail || 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');
+                const errCode = err?.error?.code;
+                if (errCode === 'RATE_LIMIT_EXCEEDED') {
+                    showAlert('Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.', 'error');
+                } else if (errCode === 'FORBIDDEN' || err?.error?.status === 403) {
+                    showAlert('Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.', 'error');
+                } else {
+                    showAlert(err?.error?.message || err.detail || 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');
+                }
             } finally {
                 btn.disabled = false;
                 btn.textContent = 'İlanı Yayınla';

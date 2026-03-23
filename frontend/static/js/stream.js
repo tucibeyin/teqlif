@@ -22,9 +22,11 @@ const Stream = (() => {
     }
 
     async function startStream(title, category) {
+        const captchaToken = await getCaptchaToken();
         const data = await apiFetch('/streams/start', {
             method: 'POST',
             body: JSON.stringify({ title, category }),
+            headers: captchaToken ? { 'X-Captcha-Token': captchaToken } : {},
         });
         save({ ...data, is_host: true, title, category });
         return data;
