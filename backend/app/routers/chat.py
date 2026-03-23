@@ -2,7 +2,6 @@ import asyncio
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Set
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy import select
@@ -14,6 +13,7 @@ from app.utils.auth import decode_token
 from app.utils.redis_client import get_redis
 from app.core.logger import get_logger
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
+from app.core.ws_manager import ws_manager, safe_send_json
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -24,114 +24,6 @@ _MAX_HISTORY = 50
 
 def _key(stream_id: int) -> str:
     return f"chat:{stream_id}:messages"
-
-
-# ── Güvenli gönderim helper'ı ─────────────────────────────────────────────────
-async def _safe_send_json(ws: WebSocket, payload: dict) -> bool:
-    """
-    Bağlantı durumundan bağımsız güvenli JSON gönderimi.
-
-    'Cannot call send once close message sent' ve 'WebSocketDisconnect' gibi
-    kapanma sürecine ait hataları sessizce yakalar; çağıranı kirletmez.
-    Dönüş: True = gönderim başarılı, False = bağlantı kapalıydı / hata oluştu.
-    """
-    try:
-        await ws.send_json(payload)
-        return True
-    except WebSocketDisconnect:
-        return False
-    except RuntimeError as exc:
-        # "Cannot call send once close message sent" vb. durum hataları
-        logger.debug("[CHAT WS] RuntimeError send sırasında (bağlantı kapanıyor): %s", exc)
-        return False
-    except Exception as exc:
-        logger.warning("[CHAT WS] send_json beklenmeyen hata: %s", exc)
-        return False
-
-
-# ── WebSocket bağlantı yöneticisi ────────────────────────────────────────────
-class _ChatManager:
-    def __init__(self):
-        self._conns: Dict[int, Set[WebSocket]] = {}
-        # stream_id → {user_id → WebSocket}  (son bağlantıyı tutar)
-        self._user_ws: Dict[int, Dict[int, WebSocket]] = {}
-
-    def connect(self, ws: WebSocket, stream_id: int, user_id: int) -> None:
-        """
-        Bağlantıyı state'e ekler.
-        accept() çağrısının dışarıda — endpoint içinde — yapılmış olması gerekir.
-        Bu metot artık senkron: state güncellemesi I/O beklemiyor.
-        """
-        self._conns.setdefault(stream_id, set()).add(ws)
-        self._user_ws.setdefault(stream_id, {})[user_id] = ws
-        total = len(self._conns[stream_id])
-        logger.info(
-            "[CHAT WS] BAĞLANDI | stream_id=%s user_id=%s | bu_worker=%s bağlı",
-            stream_id, user_id, total,
-        )
-
-    def disconnect(self, ws: WebSocket, stream_id: int, user_id: int) -> None:
-        self._conns.get(stream_id, set()).discard(ws)
-        user_map = self._user_ws.get(stream_id, {})
-        if user_map.get(user_id) is ws:
-            user_map.pop(user_id, None)
-        total = len(self._conns.get(stream_id, set()))
-        logger.info(
-            "[CHAT WS] AYRILDI | stream_id=%s user_id=%s | bu_worker=%s bağlı",
-            stream_id, user_id, total,
-        )
-
-    async def local_broadcast(self, stream_id: int, payload: dict) -> None:
-        # Snapshot alınır → iterasyon sırasında set boyutu değişmez
-        targets = list(self._conns.get(stream_id, set()))
-        if not targets:
-            return
-
-        # Paralel fan-out: tüm bağlantılara aynı anda gönderim başlatılır.
-        # return_exceptions=True → tek bir kopuk bağlantı diğerlerini engellemez.
-        results = await asyncio.gather(
-            *[_safe_send_json(ws, payload) for ws in targets],
-            return_exceptions=True,
-        )
-
-        # Başarısız gönderimler (False veya Exception) → ölü bağlantı temizliği
-        live_set = self._conns.get(stream_id, set())
-        for ws, result in zip(targets, results):
-            if result is not True:
-                live_set.discard(ws)
-                logger.debug(
-                    "[CHAT WS] Ölü bağlantı temizlendi | stream_id=%s result=%s",
-                    stream_id, result,
-                )
-
-    async def send_to_user(
-        self, stream_id: int, user_id: int, payload: dict
-    ) -> None:
-        """Bu worker'daki belirli bir kullanıcıya doğrudan event gönder."""
-        user_map = self._user_ws.get(stream_id, {})
-        all_ids = list(user_map.keys())
-        ws = user_map.get(user_id)
-        logger.info(
-            "[CHAT WS] send_to_user | stream_id=%s hedef_user_id=%s | "
-            "bu_worker_kayitli_users=%s | bulunan_ws=%s",
-            stream_id, user_id, all_ids, "VAR" if ws else "YOK",
-        )
-        if not ws:
-            return
-        ok = await _safe_send_json(ws, payload)
-        if ok:
-            logger.info(
-                "[CHAT WS] send_to_user GÖNDERILDI | stream_id=%s user_id=%s payload=%s",
-                stream_id, user_id, payload,
-            )
-        else:
-            logger.warning(
-                "[CHAT WS] send_to_user BAŞARISIZ (bağlantı kapalı) | stream_id=%s user_id=%s",
-                stream_id, user_id,
-            )
-
-
-chat_manager = _ChatManager()
 
 
 async def _update_viewer_count(room_name: str, stream_id: int, delta: int) -> None:
@@ -155,9 +47,11 @@ async def _update_viewer_count(room_name: str, stream_id: int, delta: int) -> No
 
 
 async def _publish_chat(stream_id: int, payload: dict) -> None:
-    redis = await get_redis()
-    data = json.dumps({"_stream_id": stream_id, **payload})
-    await redis.publish(_CHAT_CHANNEL, data)
+    """
+    Chat mesajını Redis Pub/Sub aracılığıyla tüm worker'lara yayar.
+    ws_manager.publish() delegesi — streams.py gibi dış importlar bu wrapper'ı kullanır.
+    """
+    await ws_manager.publish(_CHAT_CHANNEL, f"chat:{stream_id}", payload)
 
 
 async def chat_pubsub_listener() -> None:
@@ -174,10 +68,10 @@ async def chat_pubsub_listener() -> None:
                 continue
             try:
                 data = json.loads(message["data"])
-                stream_id = data.pop("_stream_id")
+                topic = data.pop("_topic")
                 # Fire-and-forget: broadcast bir Task'a alınır, listener
                 # Redis kuyruğunu okumaya hemen devam eder; event loop bloklanmaz.
-                asyncio.create_task(chat_manager.local_broadcast(stream_id, data))
+                asyncio.create_task(ws_manager.broadcast_local(topic, data))
             except Exception as exc:
                 logger.warning("[CHAT PUBSUB] Mesaj işleme hatası: %s", exc)
     except asyncio.CancelledError:
@@ -210,7 +104,11 @@ async def moderation_pubsub_listener() -> None:
                     "[MOD PUBSUB] EVENT ALINDI | type=%s stream_id=%s user_id=%s",
                     event_type, stream_id, user_id,
                 )
-                await chat_manager.send_to_user(stream_id, user_id, {"type": event_type})
+                # Kullanıcıya özel topic: sadece hedef kullanıcıya gönderilir
+                await ws_manager.broadcast_local(
+                    f"chat:{stream_id}:u{user_id}",
+                    {"type": event_type},
+                )
             except Exception as exc:
                 logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
     except asyncio.CancelledError:
@@ -224,8 +122,6 @@ async def moderation_pubsub_listener() -> None:
 @router.websocket("/{stream_id}/ws")
 async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...)):
     # ── 1. Hızlı senkron token kontrolü (accept() ÖNCESİ — DB yükü sıfır) ────
-    # close() accept() öncesinde çağrılırsa Starlette "Need to call accept first"
-    # hatası fırlatır. Geçersiz token için sadece return — bağlantı drop edilir.
     user_id = decode_token(token)
     if not user_id:
         logger.warning("[CHAT WS] Geçersiz token, bağlantı reddedildi | stream_id=%s", stream_id)
@@ -277,7 +173,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             pass
         return
 
-    # ── 4. Kick kontrolü (accept() sonrası — close(code=4003) güvenli) ─────────
+    # ── 4. Kick kontrolü ─────────────────────────────────────────────────────
     if not is_host:
         try:
             redis = await get_redis()
@@ -296,8 +192,6 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             )
 
     # ── 5. Token klonlama / eş zamanlı oturum koruması ──────────────────────
-    # Aynı token farklı cihazlara kopyalanmış olsa bile MAX_CONCURRENT_SESSIONS
-    # eşiği aşıldığında yeni bağlantı 4008 ile reddedilir.
     session_count = await register_ws_session(user_id)
     if session_count > MAX_CONCURRENT_SESSIONS:
         await release_ws_session(user_id)
@@ -309,10 +203,16 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
         )
         return
 
-    # ── 6. Tüm doğrulamalar geçti → state'e kaydet ───────────────────────────
-    # connect() senkron: accept() + doğrulama tamamlandıktan SONRA çağrılır.
-    # Bu sayede yarım bağlantılar hiçbir zaman broadcast hedefi olmaz.
-    chat_manager.connect(websocket, stream_id, user_id)
+    # ── 6. Tüm doğrulamalar geçti → Gateway'e kaydet ─────────────────────────
+    # İki topic: oda broadcast + kullanıcıya özel moderasyon kanalı
+    chat_topic = f"chat:{stream_id}"
+    user_topic = f"chat:{stream_id}:u{user_id}"
+    ws_manager.connect(websocket, chat_topic)
+    ws_manager.connect(websocket, user_topic)
+    logger.info(
+        "[CHAT WS] BAĞLANDI | stream_id=%s user_id=%s | oda_abonesi=%s",
+        stream_id, user_id, ws_manager.subscriber_count(chat_topic),
+    )
 
     try:
         # ── 7. İzleyici sayacı ve katılma bildirimi ───────────────────────────
@@ -334,11 +234,11 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             history_raw = await redis.lrange(_key(stream_id), -_MAX_HISTORY, -1)
             if history_raw:
                 messages = [json.loads(m) for m in history_raw]
-                await _safe_send_json(websocket, {"type": "history", "messages": messages})
+                await safe_send_json(websocket, {"type": "history", "messages": messages})
 
             if room_name:
                 count_raw = await redis.get(f"live:viewers:{room_name}")
-                await _safe_send_json(websocket, {
+                await safe_send_json(websocket, {
                     "type": "viewer_count",
                     "count": int(count_raw) if count_raw else 0,
                 })
@@ -367,7 +267,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                     from app.routers.moderation import mute_key
                     redis = await get_redis()
                     if await redis.sismember(mute_key(stream_id), str(user_id)):
-                        await _safe_send_json(websocket, {
+                        await safe_send_json(websocket, {
                             "type": "error",
                             "code": "muted",
                             "message": "Bu yayında susturuldunuz",
@@ -405,11 +305,12 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             stream_id, user_id, exc,
         )
     finally:
-        # connect() çağrıldıktan sonra buraya girilmesi garantilenmiştir.
-        # Early return'ler (adım 1-5) try bloğu dışında olduğundan bu finally
-        # yalnızca gerçekten bağlanmış kullanıcılar için çalışır.
-        chat_manager.disconnect(websocket, stream_id, user_id)
+        ws_manager.disconnect(websocket, chat_topic, user_topic)
         await release_ws_session(user_id)
+        logger.info(
+            "[CHAT WS] AYRILDI | stream_id=%s user_id=%s | oda_abonesi=%s",
+            stream_id, user_id, ws_manager.subscriber_count(chat_topic),
+        )
         if not is_host and room_name:
             await _update_viewer_count(room_name, stream_id, -1)
             try:

@@ -1,4 +1,4 @@
-from typing import Dict, Set, List
+from typing import List
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -14,27 +14,15 @@ from app.utils.auth import get_current_user, decode_token
 from app.routers.notifications import push_notification
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
+from app.core.ws_manager import ws_manager
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/messages", tags=["messages"])
 
-# In-memory WebSocket connections per user
-_dm_connections: Dict[int, Set[WebSocket]] = {}
-
-
 async def _broadcast_dm(user_id: int, payload: dict) -> None:
     """Push a DM payload to all active WS connections for the given user."""
-    targets = list(_dm_connections.get(user_id, set()))
-    dead = set()
-    for ws in targets:
-        try:
-            await ws.send_json(payload)
-        except Exception as exc:
-            logger.warning("[DM WS] send error user_id=%s: %s", user_id, exc)
-            dead.add(ws)
-    for ws in dead:
-        _dm_connections.get(user_id, set()).discard(ws)
+    await ws_manager.broadcast_local(f"dm:{user_id}", payload)
 
 
 @router.get("/conversations", response_model=List[ConversationOut])
@@ -301,7 +289,7 @@ async def messages_ws(websocket: WebSocket, token: str = Query(...)):
         )
         return
 
-    _dm_connections.setdefault(user_id, set()).add(websocket)
+    ws_manager.connect(websocket, f"dm:{user_id}")
     logger.info("[DM WS] BAĞLANDI | user_id=%s", user_id)
 
     try:
@@ -317,6 +305,6 @@ async def messages_ws(websocket: WebSocket, token: str = Query(...)):
     except Exception as exc:
         logger.warning("[DM WS] HATA | user_id=%s | %s", user_id, exc)
     finally:
-        _dm_connections.get(user_id, set()).discard(websocket)
+        ws_manager.disconnect(websocket, f"dm:{user_id}")
         await release_ws_session(user_id)
         logger.info("[DM WS] AYRILDI | user_id=%s", user_id)

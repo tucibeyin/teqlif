@@ -30,6 +30,7 @@ import redis.asyncio as aioredis
 from arq import create_pool
 from arq.connections import RedisSettings
 from app.core.task_queue import set_pool, clear_pool
+from app.core.ws_manager import ws_manager
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 from app.models.listing import Listing
@@ -146,6 +147,8 @@ async def lifespan(app: FastAPI):
     chat_task.cancel()
     mod_task.cancel()
     await asyncio.gather(task, chat_task, mod_task, return_exceptions=True)
+    # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
+    await ws_manager.shutdown()
     await arq_pool.aclose()
     clear_pool()
 

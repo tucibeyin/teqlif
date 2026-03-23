@@ -1,5 +1,5 @@
 from datetime import datetime, timezone
-from typing import Dict, Set, List
+from typing import List
 
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -15,12 +15,10 @@ from app.core.exceptions import NotFoundException
 from app.core.logger import get_logger
 from app.core.task_queue import get_pool
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
+from app.core.ws_manager import ws_manager
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
-
-# In-memory WebSocket connections per user
-_notif_connections: Dict[int, Set[WebSocket]] = {}
 
 
 async def push_notification(user_id: int, notif: dict, pref_key: str | None = None) -> None:
@@ -85,12 +83,8 @@ async def push_notification(user_id: int, notif: dict, pref_key: str | None = No
                 # Worker başlatılmamışsa (geliştirme ortamı) direkt gönder
                 await send_push(user.fcm_token, notif.get("title", ""), notif.get("body"), badge=badge, notif_type=notif.get("type"))
 
-    # Push to WS connections
-    targets = list(_notif_connections.get(user_id, set()))
-    if not targets:
-        return
-    dead = set()
-    payload = {
+    # Push to WS connections — GlobalWSManager ile paralel fan-out
+    notif_payload = {
         "type": "notification",
         "id": n.id,
         "notif_type": n.type,
@@ -99,14 +93,7 @@ async def push_notification(user_id: int, notif: dict, pref_key: str | None = No
         "related_id": n.related_id,
         "created_at": n.created_at.isoformat() if n.created_at else None,
     }
-    for ws in targets:
-        try:
-            await ws.send_json(payload)
-        except Exception as exc:
-            logger.error("[NOTIF WS] send error user_id=%s: %s", user_id, exc)
-            dead.add(ws)
-    for ws in dead:
-        _notif_connections.get(user_id, set()).discard(ws)
+    await ws_manager.broadcast_local(f"notif:{user_id}", notif_payload)
 
 
 @router.get("/", response_model=List[NotificationOut])
@@ -215,7 +202,7 @@ async def notifications_ws(websocket: WebSocket, token: str = Query(...)):
         )
         return
 
-    _notif_connections.setdefault(user_id, set()).add(websocket)
+    ws_manager.connect(websocket, f"notif:{user_id}")
     logger.info("[NOTIF WS] BAĞLANDI | user_id=%s", user_id)
 
     try:
@@ -243,6 +230,6 @@ async def notifications_ws(websocket: WebSocket, token: str = Query(...)):
     except Exception as exc:
         logger.error("[NOTIF WS] HATA | user_id=%s | %s", user_id, exc)
     finally:
-        _notif_connections.get(user_id, set()).discard(websocket)
+        ws_manager.disconnect(websocket, f"notif:{user_id}")
         await release_ws_session(user_id)
         logger.info("[NOTIF WS] AYRILDI | user_id=%s", user_id)
