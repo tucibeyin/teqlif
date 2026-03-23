@@ -45,12 +45,19 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
 
-    # E-posta hatası kayıt işlemini engellemesin; sadece logla
+    # E-posta kuyruğa alınır — API yanıtı bloklanmaz
     try:
-        await send_verification_code(data.email, data.full_name, code)
+        await request.app.state.arq_pool.enqueue_job(
+            "send_verification_email_task", data.email, data.full_name, code
+        )
     except Exception as e:
-        logger.warning("Doğrulama e-postası gönderilemedi [%s]: %s", data.email, str(e))
-        capture_exception(e)
+        # ARQ pool erişim hatası — yedek olarak direkt gönder
+        logger.warning("ARQ enqueue başarısız, direkt gönderilecek [%s]: %s", data.email, str(e))
+        try:
+            await send_verification_code(data.email, data.full_name, code)
+        except Exception as e2:
+            logger.warning("Doğrulama e-postası gönderilemedi [%s]: %s", data.email, str(e2))
+            capture_exception(e2)
 
     return {"message": "Kayıt başarılı. E-posta adresinize doğrulama kodu gönderdik."}
 
@@ -108,12 +115,20 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
 
+    # E-posta kuyruğa alınır — API yanıtı bloklanmaz
     try:
-        await send_verification_code(data.email, user.full_name, code)
+        await request.app.state.arq_pool.enqueue_job(
+            "send_verification_email_task", data.email, user.full_name, code
+        )
     except Exception as e:
-        logger.error("Doğrulama kodu e-postası gönderilemedi [%s]: %s", data.email, str(e), exc_info=True)
-        capture_exception(e)
-        raise ServiceException("E-posta gönderilemedi")
+        # ARQ pool erişim hatası — yedek olarak direkt gönder
+        logger.warning("ARQ enqueue başarısız, direkt gönderilecek [%s]: %s", data.email, str(e))
+        try:
+            await send_verification_code(data.email, user.full_name, code)
+        except Exception as e2:
+            logger.error("Doğrulama kodu e-postası gönderilemedi [%s]: %s", data.email, str(e2), exc_info=True)
+            capture_exception(e2)
+            raise ServiceException("E-posta gönderilemedi")
 
     return {"message": "Kod tekrar gönderildi"}
 

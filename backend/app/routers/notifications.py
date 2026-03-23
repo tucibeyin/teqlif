@@ -13,6 +13,7 @@ from app.utils.auth import get_current_user, decode_token
 from app.services.firebase_service import send_push
 from app.core.exceptions import NotFoundException
 from app.core.logger import get_logger
+from app.core.task_queue import get_pool
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/notifications", tags=["notifications"])
@@ -68,7 +69,20 @@ async def push_notification(user_id: int, notif: dict, pref_key: str | None = No
                 )
             ) or 0
             badge = unread_notifs + unread_msgs
-            await send_push(user.fcm_token, notif.get("title", ""), notif.get("body"), badge=badge, notif_type=notif.get("type"))
+            # FCM push kuyruğa alınır — push_notification bloklanmaz
+            pool = get_pool()
+            if pool:
+                await pool.enqueue_job(
+                    "send_push_notification_task",
+                    user.fcm_token,
+                    notif.get("title", ""),
+                    notif.get("body"),
+                    badge,
+                    notif.get("type"),
+                )
+            else:
+                # Worker başlatılmamışsa (geliştirme ortamı) direkt gönder
+                await send_push(user.fcm_token, notif.get("title", ""), notif.get("body"), badge=badge, notif_type=notif.get("type"))
 
     # Push to WS connections
     targets = list(_notif_connections.get(user_id, set()))

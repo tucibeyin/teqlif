@@ -26,6 +26,9 @@ from slowapi.errors import RateLimitExceeded
 from fastapi_cache import FastAPICache
 from fastapi_cache.backends.redis import RedisBackend
 import redis.asyncio as aioredis
+from arq import create_pool
+from arq.connections import RedisSettings
+from app.core.task_queue import set_pool, clear_pool
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 from app.models.listing import Listing
@@ -129,6 +132,10 @@ async def lifespan(app: FastAPI):
     # FastAPI Cache — Redis backend
     _cache_redis = aioredis.from_url(settings.redis_url, encoding="utf8", decode_responses=True)
     FastAPICache.init(RedisBackend(_cache_redis), prefix="teqlif:cache")
+    # ARQ Task Queue pool
+    arq_pool = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+    app.state.arq_pool = arq_pool
+    set_pool(arq_pool)
     # Her worker'da Redis pub/sub dinleyicilerini başlat
     task = asyncio.create_task(pubsub_listener())
     chat_task = asyncio.create_task(chat_pubsub_listener())
@@ -138,6 +145,8 @@ async def lifespan(app: FastAPI):
     chat_task.cancel()
     mod_task.cancel()
     await asyncio.gather(task, chat_task, mod_task, return_exceptions=True)
+    await arq_pool.aclose()
+    clear_pool()
 
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
