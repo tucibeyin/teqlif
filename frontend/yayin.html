@@ -874,6 +874,11 @@
             min-height: 0;
         }
 
+        /* Mesajlar az olunca alta yapış; taşınca normal scroll devreye girer */
+        #chatMessages > :first-child {
+            margin-top: auto;
+        }
+
         #chatMessages::-webkit-scrollbar {
             width: 3px;
         }
