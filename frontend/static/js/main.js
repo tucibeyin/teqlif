@@ -45,20 +45,35 @@ async function apiFetch(path, options = {}) {
 // Turnstile widget'ı sayfaya `id="cf-turnstile-container"` ile eklenmeli.
 async function getCaptchaToken() {
     try {
-        if (typeof turnstile === 'undefined') return null;
-        const siteKey = '0x4AAAAAACu_Bb1lbiRXqw4Q';
+        // Turnstile SDK henüz yüklenmediyse en fazla 8s bekle
+        if (typeof turnstile === 'undefined') {
+            await new Promise((resolve) => {
+                const deadline = Date.now() + 8000;
+                const poll = () => {
+                    if (typeof turnstile !== 'undefined') { resolve(); return; }
+                    if (Date.now() >= deadline) { resolve(); return; }
+                    setTimeout(poll, 150);
+                };
+                poll();
+            });
+        }
+        if (typeof turnstile === 'undefined') {
+            console.error('[getCaptchaToken] Turnstile SDK yüklenemedi');
+            return null;
+        }
+        const container = document.getElementById('cf-turnstile-container');
+        if (!container) { console.error('[getCaptchaToken] Container bulunamadı'); return null; }
+
         return await new Promise((resolve) => {
-            const container = document.getElementById('cf-turnstile-container');
-            if (!container) { resolve(null); return; }
             let widgetId;
             const timeout = setTimeout(() => {
-                try { turnstile.remove(widgetId); } catch (_) {}
-                console.error('[getCaptchaToken] Timeout');
+                try { if (widgetId !== undefined) turnstile.remove(widgetId); } catch (_) {}
+                console.error('[getCaptchaToken] 10s timeout');
                 resolve(null);
             }, 10000);
             widgetId = turnstile.render(container, {
-                sitekey: siteKey,
-                size: 'invisible',
+                sitekey: '0x4AAAAAACu_Bb1lbiRXqw4Q',
+                execution: 'execute',   // otomatik çalıştırma, biz manuel tetikleyeceğiz
                 callback: (token) => {
                     clearTimeout(timeout);
                     try { turnstile.remove(widgetId); } catch (_) {}
@@ -70,7 +85,15 @@ async function getCaptchaToken() {
                     console.error('[getCaptchaToken] Hata:', err);
                     resolve(null);
                 },
+                'expired-callback': () => {
+                    clearTimeout(timeout);
+                    try { turnstile.remove(widgetId); } catch (_) {}
+                    console.error('[getCaptchaToken] Token süresi doldu');
+                    resolve(null);
+                },
             });
+            // Render tamamlandıktan sonra challenge'ı başlat
+            turnstile.execute(widgetId);
         });
     } catch (e) {
         console.error('[getCaptchaToken] Beklenmeyen hata:', e);
