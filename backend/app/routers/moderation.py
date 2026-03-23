@@ -104,16 +104,31 @@ async def _resolve(
     username: str,
     current_user: User,
     db: AsyncSession,
+    *,
+    host_only: bool = False,
 ) -> tuple[LiveStream, User]:
-    """Host doğrula + hedef kullanıcıyı bul."""
+    """Yetki doğrula (host veya co-host) + hedef kullanıcıyı bul.
+
+    host_only=True → sadece yayın sahibi geçebilir (promote gibi kritik işlemler için).
+    host_only=False → host VEYA Redis mods set'indeki co-host geçebilir.
+    """
     stream_res = await db.execute(
         select(LiveStream).where(LiveStream.id == stream_id)
     )
     stream = stream_res.scalar_one_or_none()
     if not stream or not stream.is_live:
         raise NotFoundException("Aktif yayın bulunamadı")
-    if stream.host_id != current_user.id:
-        raise ForbiddenException("Sadece yayın sahibi moderasyon yapabilir")
+
+    is_host = stream.host_id == current_user.id
+
+    if not is_host:
+        if host_only:
+            raise ForbiddenException("Sadece yayın sahibi bu işlemi yapabilir")
+        # Co-host kontrolü: Redis mods set'inde mi?
+        redis = await get_redis()
+        is_mod = await redis.sismember(mod_key(stream_id), str(current_user.id))
+        if not is_mod:
+            raise ForbiddenException("Bu işlem için yetkiniz yok")
 
     target_res = await db.execute(select(User).where(User.username == username))
     target = target_res.scalar_one_or_none()
@@ -203,7 +218,7 @@ async def promote_moderator(
     Sadece yayının asıl host'u çağırabilir.
     Başarı durumunda tüm izleyicilere mod_promoted eventi yayınlanır.
     """
-    stream, target = await _resolve(stream_id, body.username, current_user, db)
+    stream, target = await _resolve(stream_id, body.username, current_user, db, host_only=True)
 
     redis = await get_redis()
     await redis.sadd(mod_key(stream_id), str(target.id))
