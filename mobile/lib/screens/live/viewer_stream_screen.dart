@@ -29,6 +29,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   bool _selfMuted = false;
   bool _kicked = false; // kick işlemi sırasında RoomDisconnectedEvent'i baskıla
   bool _isCoHost = false;
+  String? _myUsername;
   final Set<String> _coHostMutedUsers = {};
 
   @override
@@ -37,6 +38,16 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     _connect();
+    _loadMyUsername();
+  }
+
+  Future<void> _loadMyUsername() async {
+    try {
+      final info = await StorageService.getUserInfo();
+      if (mounted) setState(() => _myUsername = info?['username'] as String?);
+    } catch (e) {
+      debugPrint('[VIEWER] Kullanıcı adı yüklenemedi: $e');
+    }
   }
 
   @override
@@ -147,7 +158,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
 
   // Hedefli event: username eşleşmesine gerek yok — ben atandım
   void _handleModPromotedSelf(String promotedBy) {
-    if (!mounted) return;
+    if (!mounted || _isCoHost) return; // çift tetiklenme koruması
     setState(() => _isCoHost = true);
     showDialog(
       context: context,
@@ -499,6 +510,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       onKicked: _handleKicked,
                       onModPromotedSelf: _handleModPromotedSelf,
                       onModDemotedSelf: _handleModDemotedSelf,
+                      myUsername: _myUsername,
                       // Co-Host ise kullanıcı adına tıklanınca mod sheet açılır
                       onUsernameTap: _isCoHost ? _showCoHostModSheet : null,
                     ),

@@ -56,10 +56,13 @@ class ChatPanel extends StatefulWidget {
   final void Function(String targetUsername, String demotedBy)? onModDemoted;
 
   /// Sadece bu kullanıcıya hedefli — BEN moderatör yapıldım.
-  /// Username eşleşmesi gerekmez; event kişisel kanaldan gelir.
   final void Function(String promotedBy)? onModPromotedSelf;
   /// Sadece bu kullanıcıya hedefli — benim moderatörlüğüm kaldırıldı.
   final void Function(String demotedBy)? onModDemotedSelf;
+
+  /// Bu cihazın kullanıcı adı — broadcast mod_promoted eventinde
+  /// username eşleşmesi için kullanılır (eski backend uyumluluğu).
+  final String? myUsername;
 
   const ChatPanel({
     super.key,
@@ -74,6 +77,7 @@ class ChatPanel extends StatefulWidget {
     this.onModDemoted,
     this.onModPromotedSelf,
     this.onModDemotedSelf,
+    this.myUsername,
   });
 
   @override
@@ -284,6 +288,12 @@ class _ChatPanelState extends State<ChatPanel> {
             final promotedBy     = colon >= 0 ? rest.substring(colon + 1) : '';
             debugPrint('[CHAT] mod_promoted — target:$targetUsername promotedBy:$promotedBy');
             widget.onModPromoted?.call(targetUsername, promotedBy);
+            // Eski backend uyumluluğu: myUsername eşleşirse self eventi tetikle
+            final my = widget.myUsername;
+            if (my != null && my.isNotEmpty && my == targetUsername) {
+              debugPrint('[CHAT] mod_promoted self-match via broadcast — promotedBy:$promotedBy');
+              widget.onModPromotedSelf?.call(promotedBy);
+            }
           }
           if (_eventType != null && _eventType!.startsWith('mod_demoted:')) {
             final rest  = _eventType!.substring('mod_demoted:'.length);
@@ -292,6 +302,12 @@ class _ChatPanelState extends State<ChatPanel> {
             final demotedBy      = colon >= 0 ? rest.substring(colon + 1) : '';
             debugPrint('[CHAT] mod_demoted — target:$targetUsername demotedBy:$demotedBy');
             widget.onModDemoted?.call(targetUsername, demotedBy);
+            // Eski backend uyumluluğu: myUsername eşleşirse self eventi tetikle
+            final my = widget.myUsername;
+            if (my != null && my.isNotEmpty && my == targetUsername) {
+              debugPrint('[CHAT] mod_demoted self-match via broadcast — demotedBy:$demotedBy');
+              widget.onModDemotedSelf?.call(demotedBy);
+            }
           }
           if (_eventType != null && _eventType!.startsWith('mod_promoted_self:')) {
             final promotedBy = _eventType!.substring('mod_promoted_self:'.length);
