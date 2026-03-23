@@ -56,4 +56,19 @@ class ModerationService {
       ),
     );
   }
+
+  /// Belirtilen kullanıcının moderatörlüğünü geri alır.
+  ///
+  /// Sadece yayının asıl host'u çağırabilir.
+  /// Başarı durumunda backend, odanın WebSocket kanalına
+  /// `{"type": "mod_demoted", "username": "...", "demoted_by": "..."}` eventi fırlatır.
+  static Future<void> demoteUser(int streamId, String username) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/moderation/$streamId/demote'),
+        headers: await _headers(),
+        body: jsonEncode({'username': username}),
+      ),
+    );
+  }
 }

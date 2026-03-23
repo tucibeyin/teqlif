@@ -46,6 +46,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   bool _bidsVisible = true;
   double? _bidsPanelTop;
   final Set<String> _mutedUsers = {};
+  final Set<String> _modUsers   = {};
 
   @override
   void initState() {
@@ -254,8 +255,11 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         streamId: widget.streamToken.streamId,
         username: username,
         isMuted: _mutedUsers.contains(username),
+        isMod: _modUsers.contains(username),
         onMuted: () => setState(() => _mutedUsers.add(username)),
         onUnmuted: () => setState(() => _mutedUsers.remove(username)),
+        onPromoted: () => setState(() => _modUsers.add(username)),
+        onDemoted: () => setState(() => _modUsers.remove(username)),
       ),
     );
   }
@@ -885,15 +889,21 @@ class _ModerationSheet extends StatefulWidget {
   final int streamId;
   final String username;
   final bool isMuted;
+  final bool isMod;
   final VoidCallback onMuted;
   final VoidCallback onUnmuted;
+  final VoidCallback onPromoted;
+  final VoidCallback onDemoted;
 
   const _ModerationSheet({
     required this.streamId,
     required this.username,
     required this.isMuted,
+    required this.isMod,
     required this.onMuted,
     required this.onUnmuted,
+    required this.onPromoted,
+    required this.onDemoted,
   });
 
   @override
@@ -992,28 +1002,51 @@ class _ModerationSheetState extends State<_ModerationSheet> {
             ),
           const SizedBox(height: 10),
 
-          // Moderatör Yap (Co-Host) — sadece yayın sahibi görebilir;
-          // _ModerationSheet yalnızca _showModSheet üzerinden açılır.
-          _ModBtn(
-            icon: '⭐',
-            label: 'Moderatör Yap',
-            color: const Color(0xFFF59E0B),
-            loading: _loading,
-            onTap: () => _act(
-              () => ModerationService.promoteUser(widget.streamId, widget.username),
-              successMsg: '@${widget.username} moderatör yapıldı',
-              onSuccess: () {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(
-                    content: Text('⭐ @${widget.username} moderatör yapıldı!'),
-                    backgroundColor: const Color(0xFF16A34A),
-                    behavior: SnackBarBehavior.floating,
-                    duration: const Duration(seconds: 3),
-                  ),
-                );
-              },
+          // Moderatör Yap / Moderatörlüğü Kaldır — XOR gösterim
+          if (!widget.isMod)
+            _ModBtn(
+              icon: '⭐',
+              label: 'Moderatör Yap',
+              color: const Color(0xFFF59E0B),
+              loading: _loading,
+              onTap: () => _act(
+                () => ModerationService.promoteUser(widget.streamId, widget.username),
+                successMsg: '@${widget.username} moderatör yapıldı',
+                onSuccess: () {
+                  widget.onPromoted();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('⭐ @${widget.username} moderatör yapıldı!'),
+                      backgroundColor: const Color(0xFF16A34A),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                },
+              ),
+            )
+          else
+            _ModBtn(
+              icon: '✖',
+              label: 'Moderatörlüğü Kaldır',
+              color: const Color(0xFF475569),
+              loading: _loading,
+              onTap: () => _act(
+                () => ModerationService.demoteUser(widget.streamId, widget.username),
+                successMsg: '@${widget.username} moderatörlükten alındı',
+                onSuccess: () {
+                  widget.onDemoted();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('✖ @${widget.username} moderatörlükten alındı'),
+                      backgroundColor: const Color(0xFF475569),
+                      behavior: SnackBarBehavior.floating,
+                      duration: const Duration(seconds: 3),
+                    ),
+                  );
+                },
+              ),
             ),
-          ),
           const SizedBox(height: 10),
 
           // Yayından At

@@ -5,6 +5,7 @@ POST /api/moderation/{stream_id}/mute     → kullanıcıyı sustur
 POST /api/moderation/{stream_id}/unmute   → susturmayı kaldır
 POST /api/moderation/{stream_id}/kick     → kullanıcıyı yayından at
 POST /api/moderation/{stream_id}/promote  → izleyiciyi moderatör (Co-Host) yap
+POST /api/moderation/{stream_id}/demote   → moderatörlüğü geri al (sadece host)
 GET  /api/moderation/{stream_id}/status   → mevcut mute/kick/mods listelerini döndür (host)
 GET  /api/moderation/{stream_id}/mods     → aktif moderatör listesi (tüm izleyiciler görebilir)
 
@@ -15,7 +16,11 @@ Durum Redis'te tutulur (stream-scoped, 24 saat TTL):
 
 Anlık event, moderation_broadcast kanalı üzerinden iletilir:
   - muted/kicked/unmuted → hedef kullanıcıya özel topic
-  - mod_promoted         → tüm izleyicilere broadcast (chat:{stream_id})
+  - mod_promoted/mod_demoted → tüm izleyicilere broadcast (chat:{stream_id})
+
+Güvenlik:
+  - Co-host, yayın sahibini (host) hedef alamaz (mute/kick/demote)
+  - Moderatör ataması ve geri alımı sadece host yapabilir (host_only=True)
 """
 import json
 
@@ -136,6 +141,9 @@ async def _resolve(
         raise NotFoundException("Kullanıcı bulunamadı")
     if target.id == current_user.id:
         raise BadRequestException("Kendinize moderasyon uygulayamazsınız")
+    # Co-host, yayın sahibini hedef alamaz
+    if not is_host and target.id == stream.host_id:
+        raise ForbiddenException("Moderatör, yayın sahibine işlem yapamaz")
 
     return stream, target
 
@@ -236,6 +244,37 @@ async def promote_moderator(
         stream_id, current_user.username, target.username,
     )
     return {"message": f"@{target.username} moderatör yapıldı"}
+
+
+@router.post("/{stream_id}/demote", status_code=status.HTTP_200_OK)
+async def demote_moderator(
+    stream_id: int,
+    body: _TargetIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Kullanıcının moderatörlüğünü geri alır.
+
+    Sadece yayının asıl host'u çağırabilir.
+    Başarı durumunda tüm izleyicilere mod_demoted eventi yayınlanır.
+    """
+    _, target = await _resolve(stream_id, body.username, current_user, db, host_only=True)
+
+    redis = await get_redis()
+    await redis.srem(mod_key(stream_id), str(target.id))
+
+    await publish_mod_event(
+        stream_id,
+        "mod_demoted",
+        target.id,
+        username=target.username,
+        demoted_by=current_user.username,
+    )
+    logger.info(
+        "[MOD] DEMOTE | stream_id=%s host=%s target=%s",
+        stream_id, current_user.username, target.username,
+    )
+    return {"message": f"@{target.username} moderatörlükten alındı"}
 
 
 @router.get("/{stream_id}/mods", status_code=status.HTTP_200_OK)

@@ -171,6 +171,20 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     );
   }
 
+  void _handleModDemoted(String targetUsername, String demotedBy) {
+    if (!mounted) return;
+    if (_currentUsername == null || _currentUsername != targetUsername) return;
+    setState(() => _isCoHost = false);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Moderatörlüğünüz @$demotedBy tarafından kaldırıldı.'),
+        backgroundColor: const Color(0xFF475569),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
   /// Co-Host için moderasyon bottom sheet'i — Moderatör Yap butonu YOK.
   void _showCoHostModSheet(String targetUsername) {
     final isMuted = _coHostMutedUsers.contains(targetUsername);
@@ -463,6 +477,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       onUnmuted: _handleUnmuted,
                       onKicked: _handleKicked,
                       onModPromoted: _handleModPromoted,
+                      onModDemoted: _handleModDemoted,
                       // Co-Host ise kullanıcı adına tıklanınca mod sheet açılır
                       onUsernameTap: _isCoHost ? _showCoHostModSheet : null,
                     ),

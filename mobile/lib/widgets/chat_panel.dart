@@ -55,6 +55,11 @@ class ChatPanel extends StatefulWidget {
   /// [promotedBy]     → atamayı yapan host'un kullanıcı adı.
   final void Function(String targetUsername, String promotedBy)? onModPromoted;
 
+  /// Viewer için: bu kullanıcının moderatörlüğü kaldırılınca çağrılır.
+  /// [targetUsername] → etkilenen kullanıcı adı (eşleşme kontrolü için).
+  /// [demotedBy]      → işlemi yapan host'un kullanıcı adı.
+  final void Function(String targetUsername, String demotedBy)? onModDemoted;
+
   const ChatPanel({
     super.key,
     required this.streamId,
@@ -65,6 +70,7 @@ class ChatPanel extends StatefulWidget {
     this.onUnmuted,
     this.onKicked,
     this.onModPromoted,
+    this.onModDemoted,
   });
 
   @override
@@ -243,6 +249,11 @@ class _ChatPanelState extends State<ChatPanel> {
               final target = json['username'] as String? ?? '';
               final by     = json['promoted_by'] as String? ?? '';
               _eventType = 'mod_promoted:$target:$by';
+            } else if (json['type'] == 'mod_demoted') {
+              // format: 'mod_demoted:{targetUsername}:{demotedBy}'
+              final target = json['username'] as String? ?? '';
+              final by     = json['demoted_by'] as String? ?? '';
+              _eventType = 'mod_demoted:$target:$by';
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -262,6 +273,14 @@ class _ChatPanelState extends State<ChatPanel> {
             final promotedBy     = colon >= 0 ? rest.substring(colon + 1) : '';
             debugPrint('[CHAT] mod_promoted — target:$targetUsername promotedBy:$promotedBy');
             widget.onModPromoted?.call(targetUsername, promotedBy);
+          }
+          if (_eventType != null && _eventType!.startsWith('mod_demoted:')) {
+            final rest  = _eventType!.substring('mod_demoted:'.length);
+            final colon = rest.indexOf(':');
+            final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
+            final demotedBy      = colon >= 0 ? rest.substring(colon + 1) : '';
+            debugPrint('[CHAT] mod_demoted — target:$targetUsername demotedBy:$demotedBy');
+            widget.onModDemoted?.call(targetUsername, demotedBy);
           }
         },
         onDone: _scheduleReconnect,

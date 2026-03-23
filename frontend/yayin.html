@@ -1140,6 +1140,7 @@
         .mod-btn-unmute  { background: #16a34a; color: #fff; display: none; }
         .mod-btn-kick    { background: #ef4444; color: #fff; }
         .mod-btn-promote { background: #8b5cf6; color: #fff; display: none; }
+        .mod-btn-demote  { background: #475569; color: #fff; display: none; }
         .mod-btn-cancel  { background: transparent; color: #94a3b8; border: 1px solid #334155; }
 
         #modMsg {
@@ -1349,6 +1350,7 @@
             <button class="mod-btn mod-btn-unmute"  id="modBtnUnmute"  data-track-id="yayin-mod-btn-susturmayı-kaldir">🔊 Susturmayı Kaldır</button>
             <button class="mod-btn mod-btn-kick"    id="modBtnKick"    data-track-id="yayin-mod-btn-yayindan-at">🚫 Yayından At</button>
             <button class="mod-btn mod-btn-promote" id="modBtnPromote" data-track-id="yayin-mod-btn-mod-yap">⭐ Moderatör Yap</button>
+            <button class="mod-btn mod-btn-demote"  id="modBtnDemote"  data-track-id="yayin-mod-btn-mod-kaldir">✖ Moderatörü Kaldır</button>
             <button class="mod-btn mod-btn-cancel"  id="modBtnCancel"  data-track-id="yayin-mod-btn-iptal">İptal</button>
             <div id="modMsg"></div>
         </div>
@@ -2086,6 +2088,27 @@
             if (typeof loadHostListings === 'function') loadHostListings();
         }
 
+        function _demoteFromCoHost() {
+            _isCoHost = false;
+
+            // Host panellerini gizle
+            const hostSetup    = document.getElementById('hostSetup');
+            const hostControls = document.getElementById('hostControls');
+            if (hostSetup)    hostSetup.style.display    = 'none';
+            if (hostControls) hostControls.style.display = 'none';
+
+            // Viewer bileşenlerini geri getir
+            const viewerControls    = document.getElementById('viewerControls');
+            const auctionListingBtn = document.getElementById('auctionListingBtn');
+            if (viewerControls)    viewerControls.style.display    = 'flex';
+            if (auctionListingBtn) auctionListingBtn.style.display = '';
+
+            // Chat tıklama yetkisini kaldır
+            Chat.setUsernameTap(null);
+
+            setAuctionMsg('Moderatörlüğünüz kaldırıldı.', 'info');
+        }
+
         function initAuction(sid, isHost) {
             _isHostPage = isHost;
             document.getElementById('auctionPanel').classList.add('visible');
@@ -2505,17 +2528,20 @@
 
         // ── Moderasyon ───────────────────────────────────────────────────
 
-        const _mutedUsers = new Set(); // host tarafında takip edilen mute listesi
+        const _mutedUsers = new Set(); // host/cohost tarafında takip edilen mute listesi
+        const _modUsers   = new Set(); // aktif moderatörler (mod_promoted/demoted eventlerinden)
         let _modTargetUsername = null;
 
         function _showModModal(username) {
             _modTargetUsername = username;
             document.getElementById('modModalTarget').textContent = `@${username}`;
             const isMuted = _mutedUsers.has(username);
+            const isMod   = _modUsers.has(username);
             document.getElementById('modBtnMute').style.display    = isMuted ? 'none' : 'block';
             document.getElementById('modBtnUnmute').style.display  = isMuted ? 'block' : 'none';
-            // Moderatör Yap butonu sadece host ekranında görünür
-            document.getElementById('modBtnPromote').style.display = _isHostPage ? 'block' : 'none';
+            // Promote / Demote: sadece gerçek host görebilir, duruma göre biri görünür
+            document.getElementById('modBtnPromote').style.display = (_isHostPage && !isMod) ? 'block' : 'none';
+            document.getElementById('modBtnDemote').style.display  = (_isHostPage && isMod)  ? 'block' : 'none';
             document.getElementById('modMsg').textContent = '';
             // Her açılışta butonları aktif et
             document.querySelectorAll('.mod-btn').forEach(b => b.disabled = false);
@@ -2554,7 +2580,12 @@
                     _setModMsg('Kullanıcı yayından atıldı.', '#f87171');
                     setTimeout(_closeModModal, 1200);
                 } else if (action === 'promote') {
+                    _modUsers.add(_modTargetUsername);
                     _setModMsg('Kullanıcı moderatör yapıldı!', '#fbbf24');
+                    setTimeout(_closeModModal, 1200);
+                } else if (action === 'demote') {
+                    _modUsers.delete(_modTargetUsername);
+                    _setModMsg('Moderatörlük geri alındı.', '#94a3b8');
                     setTimeout(_closeModModal, 1200);
                 }
             } catch (e) {
@@ -2567,6 +2598,7 @@
         document.getElementById('modBtnUnmute')?.addEventListener('click',  () => _modAction('unmute'));
         document.getElementById('modBtnKick')?.addEventListener('click',    () => _modAction('kick'));
         document.getElementById('modBtnPromote')?.addEventListener('click', () => _modAction('promote'));
+        document.getElementById('modBtnDemote')?.addEventListener('click',  () => _modAction('demote'));
         document.getElementById('modBtnCancel')?.addEventListener('click', _closeModModal);
         document.getElementById('modModal')?.addEventListener('click', (e) => {
             if (e.target === document.getElementById('modModal')) _closeModModal();
@@ -2650,6 +2682,9 @@
                 Chat.connect(sid, {
                     onViewerCount: _onViewerCount,
                     onUsernameTap: _showModModal,
+                    // Host: mod_promoted/demoted → _modUsers senkronize et
+                    onModPromoted: (msg) => { if (msg.username) _modUsers.add(msg.username); },
+                    onModDemoted:  (msg) => { if (msg.username) _modUsers.delete(msg.username); },
                 });
 
                 // Host: teklif listesinde kullanıcı adına tıklayınca mod modal aç
@@ -2666,8 +2701,15 @@
                     onUnmuted: _onSelfUnmuted,
                     onKicked:  _onSelfKicked,
                     onModPromoted: (msg) => {
+                        if (msg.username) _modUsers.add(msg.username);
                         if (_currentUsername && msg.username === _currentUsername) {
                             _promoteToCoHost(msg.promoted_by || '?');
+                        }
+                    },
+                    onModDemoted: (msg) => {
+                        if (msg.username) _modUsers.delete(msg.username);
+                        if (_currentUsername && msg.username === _currentUsername) {
+                            _demoteFromCoHost();
                         }
                     },
                 });
