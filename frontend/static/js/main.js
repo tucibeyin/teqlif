@@ -51,28 +51,37 @@ window.onTurnstileExpire = function ()       { _cfToken = null; };
 
 // Submit anında çağrılır; token hazırsa anında döner, yoksa en fazla 10s bekler (fail-open).
 async function getCaptchaToken() {
-    if (_cfToken) {
-        const tok = _cfToken;
-        _cfToken = null; // tek kullanımlık — Turnstile otomatik yenileyecek
-        return tok;
-    }
-    // Widget henüz token üretmemişse (yeni sayfa yükü) kısa süre bekle
-    return await new Promise((resolve) => {
-        const deadline = Date.now() + 10000;
-        const poll = () => {
-            if (_cfToken) {
-                const tok = _cfToken;
-                _cfToken = null;
-                resolve(tok);
-            } else if (Date.now() >= deadline) {
-                console.error('[getCaptchaToken] 10s timeout — fail-open');
-                resolve(null);
-            } else {
+    // Token henüz üretilmediyse bekle (sayfa yeni yüklendi veya önceki token tüketildi)
+    if (!_cfToken) {
+        await new Promise((resolve) => {
+            const deadline = Date.now() + 10000;
+            const poll = () => {
+                if (_cfToken) { resolve(); return; }
+                if (Date.now() >= deadline) {
+                    console.error('[getCaptchaToken] 10s timeout — fail-open');
+                    resolve();
+                    return;
+                }
                 setTimeout(poll, 200);
-            }
-        };
-        poll();
-    });
+            };
+            poll();
+        });
+    }
+
+    const tok = _cfToken;
+    _cfToken = null; // tek kullanımlık
+
+    // Sonraki işlem için hemen yeni token üretimini tetikle
+    try {
+        if (window.turnstile) {
+            const container = document.querySelector('.cf-turnstile');
+            if (container) turnstile.reset(container);
+        }
+    } catch (e) {
+        console.error('[getCaptchaToken] Turnstile reset hatası:', e);
+    }
+
+    return tok || null;
 }
 
 // Analytics ve Cookie Consent Enjeksiyonu
