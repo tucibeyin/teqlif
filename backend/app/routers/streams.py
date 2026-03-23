@@ -104,12 +104,12 @@ async def start_stream(
 ):
     uid = current_user.id
 
-    # ── 1. Kullanıcı bazlı hız sınırı: 5 dakikada 1 yayın başlatma ──────────
-    allowed, retry_after = await check_user_action_rate(uid, "stream_start", limit=1, window=300)
+    # ── 1. Kullanıcı bazlı hız sınırı: 5 dakikada 3 yayın başlatma ──────────
+    allowed, retry_after = await check_user_action_rate(uid, "stream_start", limit=3, window=300)
     if not allowed:
         logger.warning("[STREAMS] Hız sınırı aşıldı | user_id=%s | retry_after=%s", uid, retry_after)
         raise TooManyRequestsException(
-            "5 dakika içinde yalnızca 1 yayın başlatabilirsiniz. Lütfen bekleyin.",
+            "Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.",
             retry_after=retry_after,
         )
 
@@ -213,6 +213,9 @@ async def end_stream(
         await redis.delete(f"live:viewers:{stream.room_name}")
         await redis.delete(f"live:viewer_set:{stream_id}")
         await redis.delete(mod_key(stream_id))  # Co-Host listesini temizle
+        # Yayın normal sonlandırıldı → rate limit sayacını sıfırla,
+        # kullanıcı hemen yeni yayın açabilsin
+        await redis.delete(f"act_rate:{stream.host_id}:stream_start")
     except Exception:
         logger.error("Redis viewer key silinemedi | room=%s", stream.room_name, exc_info=True)
 
