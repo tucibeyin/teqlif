@@ -149,7 +149,7 @@ async def lifespan(app: FastAPI):
     await asyncio.gather(task, chat_task, mod_task, return_exceptions=True)
     # Tüm açık WS bağlantılarını 1001 ile kapat (graceful shutdown)
     await ws_manager.shutdown()
-    await arq_pool.aclose()
+    await arq_pool.close()
     clear_pool()
 
 
