@@ -52,11 +52,11 @@ class CaptchaService {
           top: -2,
           width: 2,
           height: 2,
-          child: CloudflareTurnstile(
+          child: CloudFlareTurnstile(
             siteKey: _siteKey,
             baseUrl: _baseUrl,
-            mode: TurnstileMode.invisible,
-            onTokenReceived: (token) => complete(token),
+            options: TurnstileOptions(mode: TurnstileMode.invisible),
+            onTokenRecived: (token) => complete(token),
             onError: (error) {
               LoggerService.instance.warning(
                 'CaptchaService',
