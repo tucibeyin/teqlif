@@ -9,6 +9,7 @@ import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
+import '../public_profile_screen.dart';
 
 class ViewerStreamScreen extends StatefulWidget {
   final JoinTokenOut joinToken;
@@ -149,45 +150,14 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   void _handleModPromotedSelf(String promotedBy) {
     if (!mounted || _isCoHost) return; // çift tetiklenme koruması
     setState(() => _isCoHost = true);
-    showDialog(
-      context: context,
-      barrierColor: Colors.black54,
-      builder: (ctx) => Dialog(
-        backgroundColor: const Color(0xFF1E293B),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Text('⭐', style: TextStyle(fontSize: 40)),
-              const SizedBox(height: 12),
-              const Text(
-                'Moderatör oldunuz!',
-                style: TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w700),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                '@$promotedBy sizi moderatör yaptı.\nArtık izleyicileri susturabilir ve yayından atabilirsiniz.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13, height: 1.5),
-              ),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF16A34A),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                  ),
-                  onPressed: () => Navigator.pop(ctx),
-                  child: const Text('Anladım', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w600)),
-                ),
-              ),
-            ],
-          ),
-        ),
+    // showDialog LiveKit'in native platform view'ı arkasında kalır (iOS z-order),
+    // bu yüzden SnackBar kullanıyoruz — her zaman Flutter katmanında render edilir.
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('⭐ @$promotedBy sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.'),
+        backgroundColor: const Color(0xFF16A34A),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 5),
       ),
     );
   }
@@ -499,8 +469,20 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       onKicked: _handleKicked,
                       onModPromotedSelf: _handleModPromotedSelf,
                       onModDemotedSelf: _handleModDemotedSelf,
-                      // Co-Host ise kullanıcı adına tıklanınca mod sheet açılır
-                      onUsernameTap: _isCoHost ? _showCoHostModSheet : null,
+                      // Callback her zaman non-null — _isCoHost değeri çağrı anında kontrol edilir.
+                      // Build anında null atarsak mevcut MessageItem'lar stale kalır.
+                      onUsernameTap: (username) {
+                        if (_isCoHost) {
+                          _showCoHostModSheet(username);
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => PublicProfileScreen(username: username),
+                            ),
+                          );
+                        }
+                      },
                     ),
                     // Açık artırma (co-host ise host kontrol UI'ı gösterilir)
                     AuctionPanel(
