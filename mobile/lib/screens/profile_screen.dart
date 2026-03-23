@@ -16,6 +16,7 @@ import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import '../services/upload_service.dart';
 import '../utils/error_helper.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
@@ -1089,18 +1090,17 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
     setState(() => _saving = true);
     try {
       final file = File(picked.path);
-      final uploadReq = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
-      uploadReq.headers['Authorization'] = 'Bearer $token';
-      uploadReq.files.add(await http.MultipartFile.fromPath('file', file.path));
-      final uploadStream = await uploadReq.send();
-      final uploadBody = await uploadStream.stream.bytesToString();
-      if (uploadStream.statusCode != 200) throw Exception('Upload failed');
-      final imageUrl = (jsonDecode(uploadBody) as Map)['url'] as String;
+      final upload = await UploadService.uploadFile(file);
+
+      final patchBody = <String, dynamic>{'profile_image_url': upload.url};
+      if (upload.thumbUrl != null) {
+        patchBody['profile_image_thumb_url'] = upload.thumbUrl;
+      }
 
       final patchResp = await http.patch(
         Uri.parse('$kBaseUrl/auth/me'),
         headers: {'Content-Type': 'application/json', 'Authorization': 'Bearer $token'},
-        body: jsonEncode({'profile_image_url': imageUrl}),
+        body: jsonEncode(patchBody),
       );
       if (patchResp.statusCode != 200) throw Exception('Patch failed');
       final updatedUser = jsonDecode(patchResp.body) as Map<String, dynamic>;
@@ -1110,7 +1110,7 @@ class _EditProfileScreenState extends State<_EditProfileScreen> {
         username: updatedUser['username'] as String,
         fullName: updatedUser['full_name'] as String,
       );
-      if (mounted) setState(() => _profileImageUrl = imageUrl);
+      if (mounted) setState(() => _profileImageUrl = upload.url);
     } catch (e) {
       LoggerService.instance.warning('EditProfileScreen', 'Avatar yüklenemedi: $e');
       if (!mounted) return;

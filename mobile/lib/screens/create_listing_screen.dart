@@ -10,6 +10,7 @@ import '../config/theme.dart';
 import '../services/category_service.dart';
 import '../services/city_service.dart';
 import '../services/storage_service.dart';
+import '../services/upload_service.dart';
 
 class CreateListingScreen extends StatefulWidget {
   const CreateListingScreen({super.key});
@@ -106,54 +107,29 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     );
   }
 
-  Future<String?> _uploadImage(File file, String token) async {
-    try {
-      final req = http.MultipartRequest('POST', Uri.parse('$kBaseUrl/upload'));
-      req.headers['Authorization'] = 'Bearer $token';
-      req.files.add(await http.MultipartFile.fromPath('file', file.path));
-      final streamed = await req.send();
-      final body = await streamed.stream.bytesToString();
-      debugPrint('UPLOAD [${streamed.statusCode}] ${file.path} → $body');
-      if (streamed.statusCode == 200) {
-        return jsonDecode(body)['url'] as String?;
-      }
-      // Hata detayını göster
-      if (mounted) {
-        final detail = _safeDetail(body);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fotoğraf yüklenemedi: $detail')),
-        );
-      }
-    } catch (e) {
-      debugPrint('UPLOAD EXCEPTION: $e');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Fotoğraf yüklenemedi: $e')),
-        );
-      }
-    }
-    return null;
-  }
-
-  String _safeDetail(String body) {
-    try {
-      return jsonDecode(body)['detail']?.toString() ?? body;
-    } catch (_) {
-      return body.length > 80 ? body.substring(0, 80) : body;
-    }
-  }
-
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _submitting = true);
     try {
       final token = await StorageService.getToken();
 
-      // Upload images first
+      // Upload images and collect URLs + first thumbnail
       final List<String> imageUrls = [];
+      String? thumbnailUrl;
       for (final img in _images) {
-        final url = await _uploadImage(img, token ?? '');
-        if (url != null) imageUrls.add(url);
+        try {
+          final result = await UploadService.uploadFile(img);
+          imageUrls.add(result.url);
+          // İlk fotoğrafın thumb'ını thumbnail olarak kullan
+          thumbnailUrl ??= result.thumbUrl;
+        } catch (e) {
+          debugPrint('UPLOAD EXCEPTION: $e');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Fotoğraf yüklenemedi: $e')),
+            );
+          }
+        }
       }
 
       final resp = await http.post(
@@ -171,6 +147,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             'location': _selectedCity,
           'image_urls': imageUrls,
           if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
+          if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
         }),
       );
       if (!mounted) return;
