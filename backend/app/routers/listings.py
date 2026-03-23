@@ -1,8 +1,9 @@
 import json
 from typing import Optional
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from fastapi_cache.decorator import cache
 from app.database import get_db
 from app.models.listing import Listing
 from app.models.user import User
@@ -31,7 +32,8 @@ def _row_dict(l: Listing, u: User) -> dict:
 
 
 @router.get("")
-async def get_listings(user_id: Optional[int] = None, category: Optional[str] = None, location: Optional[str] = None, db: AsyncSession = Depends(get_db)):
+@cache(expire=30)  # 30 sn mikro-cache — spike koruması, query params cache key'e dahil edilir
+async def get_listings(request: Request, user_id: Optional[int] = None, category: Optional[str] = None, location: Optional[str] = None, db: AsyncSession = Depends(get_db)):
     q = (
         select(Listing, User)
         .join(User, User.id == Listing.user_id)

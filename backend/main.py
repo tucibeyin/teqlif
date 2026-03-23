@@ -23,6 +23,9 @@ from app.routers import notifications, messages, users, listings, follows, categ
 from app.security.middleware import security_headers, SecurityMiddleware
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from fastapi_cache import FastAPICache
+from fastapi_cache.backends.redis import RedisBackend
+import redis.asyncio as aioredis
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 from app.models.listing import Listing
@@ -123,6 +126,9 @@ async def lifespan(app: FastAPI):
         await conn.run_sync(Base.metadata.create_all)
     await _seed_categories()
     await _seed_cities()
+    # FastAPI Cache — Redis backend
+    _cache_redis = aioredis.from_url(settings.redis_url, encoding="utf8", decode_responses=True)
+    FastAPICache.init(RedisBackend(_cache_redis), prefix="teqlif:cache")
     # Her worker'da Redis pub/sub dinleyicilerini başlat
     task = asyncio.create_task(pubsub_listener())
     chat_task = asyncio.create_task(chat_pubsub_listener())
