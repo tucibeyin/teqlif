@@ -50,6 +50,10 @@ class ChatPanel extends StatefulWidget {
   final VoidCallback? onUnmuted;
   /// Viewer için: yayından atılınca çağrılır
   final VoidCallback? onKicked;
+  /// Viewer için: bu kullanıcı moderatör (Co-Host) yapılınca çağrılır.
+  /// [targetUsername] → atanan kullanıcı adı (eşleşme kontrolü için).
+  /// [promotedBy]     → atamayı yapan host'un kullanıcı adı.
+  final void Function(String targetUsername, String promotedBy)? onModPromoted;
 
   const ChatPanel({
     super.key,
@@ -60,6 +64,7 @@ class ChatPanel extends StatefulWidget {
     this.onMuted,
     this.onUnmuted,
     this.onKicked,
+    this.onModPromoted,
   });
 
   @override
@@ -233,6 +238,11 @@ class _ChatPanelState extends State<ChatPanel> {
             } else if (json['type'] == 'kicked') {
               _streamEnded = true;
               _eventType = 'kicked';
+            } else if (json['type'] == 'mod_promoted') {
+              // format: 'mod_promoted:{targetUsername}:{promotedBy}'
+              final target = json['username'] as String? ?? '';
+              final by     = json['promoted_by'] as String? ?? '';
+              _eventType = 'mod_promoted:$target:$by';
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -244,6 +254,14 @@ class _ChatPanelState extends State<ChatPanel> {
           if (_eventType == 'kicked') {
             debugPrint('[CHAT] kicked — onKicked null:${widget.onKicked == null}');
             widget.onKicked?.call();
+          }
+          if (_eventType != null && _eventType!.startsWith('mod_promoted:')) {
+            final rest  = _eventType!.substring('mod_promoted:'.length);
+            final colon = rest.indexOf(':');
+            final targetUsername = colon >= 0 ? rest.substring(0, colon) : rest;
+            final promotedBy     = colon >= 0 ? rest.substring(colon + 1) : '';
+            debugPrint('[CHAT] mod_promoted — target:$targetUsername promotedBy:$promotedBy');
+            widget.onModPromoted?.call(targetUsername, promotedBy);
           }
         },
         onDone: _scheduleReconnect,

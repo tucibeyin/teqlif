@@ -11,8 +11,9 @@ const Chat = (() => {
     let _onKicked = null;
     let _onUnmuted = null;
     let _onUsernameTap = null;
+    let _onModPromoted = null;
 
-    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap } = {}) {
+    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted } = {}) {
         _streamId = streamId;
         _onStreamEnded = onStreamEnded || null;
         _onViewerCount = onViewerCount || null;
@@ -20,7 +21,12 @@ const Chat = (() => {
         _onKicked = onKicked || null;
         _onUnmuted = onUnmuted || null;
         _onUsernameTap = onUsernameTap || null;
+        _onModPromoted = onModPromoted || null;
         _connectWS();
+    }
+
+    function setUsernameTap(fn) {
+        _onUsernameTap = fn || null;
     }
 
     function _connectWS() {
@@ -68,6 +74,8 @@ const Chat = (() => {
                     if (_onKicked) _onKicked();
                 } else if (msg.type === 'unmuted') {
                     if (_onUnmuted) _onUnmuted();
+                } else if (msg.type === 'mod_promoted') {
+                    if (_onModPromoted) _onModPromoted(msg);
                 }
             } catch (_) {}
         };
@@ -226,5 +234,5 @@ const Chat = (() => {
         if (_ws) { try { _ws.close(); } catch (_) {} _ws = null; }
     }
 
-    return { connect, sendMessage, disconnect };
+    return { connect, sendMessage, disconnect, setUsernameTap };
 })();

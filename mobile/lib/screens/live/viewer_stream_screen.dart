@@ -4,6 +4,8 @@ import 'package:livekit_client/livekit_client.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
+import '../../services/moderation_service.dart';
+import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
@@ -26,6 +28,9 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   int _viewerCount = 0;
   bool _selfMuted = false;
   bool _kicked = false; // kick işlemi sırasında RoomDisconnectedEvent'i baskıla
+  bool _isCoHost = false;
+  String? _currentUsername;
+  final Set<String> _coHostMutedUsers = {};
 
   @override
   void initState() {
@@ -33,6 +38,16 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     _connect();
+    _loadCurrentUsername();
+  }
+
+  Future<void> _loadCurrentUsername() async {
+    try {
+      final info = await StorageService.getUserInfo();
+      if (mounted) _currentUsername = info?['username'] as String?;
+    } catch (e) {
+      debugPrint('[VIEWER] Kullanıcı adı yüklenemedi: $e');
+    }
   }
 
   @override
@@ -139,6 +154,37 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
       ),
     );
     Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+  }
+
+  void _handleModPromoted(String targetUsername, String promotedBy) {
+    if (!mounted) return;
+    // Sadece bu cihazın kullanıcısı hedef alındıysa dönüşüm yapılır
+    if (_currentUsername == null || _currentUsername != targetUsername) return;
+    setState(() => _isCoHost = true);
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('⭐ Tebrikler! @$promotedBy sizi moderatör yaptı.'),
+        backgroundColor: const Color(0xFF16A34A),
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 4),
+      ),
+    );
+  }
+
+  /// Co-Host için moderasyon bottom sheet'i — Moderatör Yap butonu YOK.
+  void _showCoHostModSheet(String targetUsername) {
+    final isMuted = _coHostMutedUsers.contains(targetUsername);
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _CoHostModSheet(
+        streamId: widget.joinToken.streamId,
+        username: targetUsername,
+        isMuted: isMuted,
+        onMuted:   () => setState(() => _coHostMutedUsers.add(targetUsername)),
+        onUnmuted: () => setState(() => _coHostMutedUsers.remove(targetUsername)),
+      ),
+    );
   }
 
   Future<void> _handleStreamEnded() async {
@@ -416,11 +462,15 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       onMuted: _handleMuted,
                       onUnmuted: _handleUnmuted,
                       onKicked: _handleKicked,
+                      onModPromoted: _handleModPromoted,
+                      // Co-Host ise kullanıcı adına tıklanınca mod sheet açılır
+                      onUsernameTap: _isCoHost ? _showCoHostModSheet : null,
                     ),
-                    // Açık artırma (sadece aktifse, altta sabit)
+                    // Açık artırma (co-host ise host kontrol UI'ı gösterilir)
                     AuctionPanel(
                       streamId: widget.joinToken.streamId,
                       isHost: false,
+                      isCoHost: _isCoHost,
                       enabled: !_selfMuted,
                     ),
                     const SizedBox(height: 4),
@@ -429,6 +479,198 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+// ── Co-Host Moderasyon Bottom Sheet ──────────────────────────────────────────
+// Sadece Sustur / Susturmayı Kaldır / Yayından At — "Moderatör Yap" KESİNLİKLE YOK.
+
+class _CoHostModSheet extends StatefulWidget {
+  final int streamId;
+  final String username;
+  final bool isMuted;
+  final VoidCallback onMuted;
+  final VoidCallback onUnmuted;
+
+  const _CoHostModSheet({
+    required this.streamId,
+    required this.username,
+    required this.isMuted,
+    required this.onMuted,
+    required this.onUnmuted,
+  });
+
+  @override
+  State<_CoHostModSheet> createState() => _CoHostModSheetState();
+}
+
+class _CoHostModSheetState extends State<_CoHostModSheet> {
+  bool _loading = false;
+  String? _msg;
+  bool _isError = false;
+  late bool _isMuted;
+
+  @override
+  void initState() {
+    super.initState();
+    _isMuted = widget.isMuted;
+  }
+
+  Future<void> _act(Future<void> Function() fn, {
+    required String successMsg,
+    VoidCallback? onSuccess,
+  }) async {
+    setState(() { _loading = true; _msg = null; });
+    try {
+      await fn();
+      onSuccess?.call();
+      if (mounted) setState(() { _loading = false; _msg = successMsg; _isError = false; });
+      await Future.delayed(const Duration(milliseconds: 900));
+      if (mounted) Navigator.pop(context);
+    } on Exception catch (e) {
+      if (mounted) setState(() { _loading = false; _msg = e.toString(); _isError = true; });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E293B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36, height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Text('🛡 Moderasyon',
+                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              const Spacer(),
+              Text('@${widget.username}',
+                  style: const TextStyle(color: Color(0xFF06B6D4), fontSize: 13, fontWeight: FontWeight.w600)),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const Divider(color: Colors.white12, height: 1),
+          const SizedBox(height: 14),
+
+          // Sustur / Susturmayı Kaldır
+          if (!_isMuted)
+            _CoHostModBtn(
+              icon: '🔇', label: 'Sustur',
+              color: const Color(0xFFD97706), loading: _loading,
+              onTap: () => _act(
+                () => ModerationService.mute(widget.streamId, widget.username),
+                successMsg: '@${widget.username} susturuldu',
+                onSuccess: () { widget.onMuted(); setState(() => _isMuted = true); },
+              ),
+            )
+          else
+            _CoHostModBtn(
+              icon: '🔊', label: 'Susturmayı Kaldır',
+              color: const Color(0xFF16A34A), loading: _loading,
+              onTap: () => _act(
+                () => ModerationService.unmute(widget.streamId, widget.username),
+                successMsg: 'Susturma kaldırıldı',
+                onSuccess: () { widget.onUnmuted(); setState(() => _isMuted = false); },
+              ),
+            ),
+          const SizedBox(height: 10),
+
+          // Yayından At
+          _CoHostModBtn(
+            icon: '🚫', label: 'Yayından At',
+            color: const Color(0xFFEF4444), loading: _loading,
+            onTap: () => _act(
+              () => ModerationService.kick(widget.streamId, widget.username),
+              successMsg: '@${widget.username} yayından atıldı',
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // İptal
+          SizedBox(
+            width: double.infinity,
+            child: TextButton(
+              onPressed: _loading ? null : () => Navigator.pop(context),
+              style: TextButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 12),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                  side: const BorderSide(color: Colors.white12),
+                ),
+              ),
+              child: const Text('İptal',
+                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+            ),
+          ),
+
+          if (_msg != null)
+            Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Center(
+                child: Text(
+                  _msg!,
+                  style: TextStyle(
+                    color: _isError ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
+                    fontSize: 13,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CoHostModBtn extends StatelessWidget {
+  final String icon;
+  final String label;
+  final Color color;
+  final bool loading;
+  final VoidCallback onTap;
+
+  const _CoHostModBtn({
+    required this.icon,
+    required this.label,
+    required this.color,
+    required this.loading,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        onPressed: loading ? null : onTap,
+        icon: Text(icon, style: const TextStyle(fontSize: 16)),
+        label: Text(label,
+            style: const TextStyle(
+                fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: color,
+          disabledBackgroundColor: color.withOpacity(0.45),
+          padding: const EdgeInsets.symmetric(vertical: 12),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          elevation: 0,
+        ),
       ),
     );
   }

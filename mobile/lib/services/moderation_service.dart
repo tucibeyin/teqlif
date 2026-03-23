@@ -41,4 +41,19 @@ class ModerationService {
       ),
     );
   }
+
+  /// Belirtilen kullanıcıyı yayının Co-Host (moderatör) olarak atar.
+  ///
+  /// Sadece yayının asıl host'u çağırabilir.
+  /// Başarı durumunda backend, odanın WebSocket kanalına
+  /// `{"type": "mod_promoted", "username": "...", "promoted_by": "..."}` eventi fırlatır.
+  static Future<void> promoteUser(int streamId, String username) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/moderation/$streamId/promote'),
+        headers: await _headers(),
+        body: jsonEncode({'username': username}),
+      ),
+    );
+  }
 }

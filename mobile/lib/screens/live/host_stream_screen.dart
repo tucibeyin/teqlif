@@ -992,6 +992,30 @@ class _ModerationSheetState extends State<_ModerationSheet> {
             ),
           const SizedBox(height: 10),
 
+          // Moderatör Yap (Co-Host) — sadece yayın sahibi görebilir;
+          // _ModerationSheet yalnızca _showModSheet üzerinden açılır.
+          _ModBtn(
+            icon: '⭐',
+            label: 'Moderatör Yap',
+            color: const Color(0xFFF59E0B),
+            loading: _loading,
+            onTap: () => _act(
+              () => ModerationService.promoteUser(widget.streamId, widget.username),
+              successMsg: '@${widget.username} moderatör yapıldı',
+              onSuccess: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text('⭐ @${widget.username} moderatör yapıldı!'),
+                    backgroundColor: const Color(0xFF16A34A),
+                    behavior: SnackBarBehavior.floating,
+                    duration: const Duration(seconds: 3),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+
           // Yayından At
           _ModBtn(
             icon: '🚫',

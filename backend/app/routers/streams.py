@@ -208,9 +208,11 @@ async def end_stream(
 
     # Redis temizliği — non-critical, başarısız olsa da yayın sonlandı sayılır
     try:
+        from app.routers.moderation import mod_key
         redis = await get_redis()
         await redis.delete(f"live:viewers:{stream.room_name}")
         await redis.delete(f"live:viewer_set:{stream_id}")
+        await redis.delete(mod_key(stream_id))  # Co-Host listesini temizle
     except Exception:
         logger.error("Redis viewer key silinemedi | room=%s", stream.room_name, exc_info=True)
 

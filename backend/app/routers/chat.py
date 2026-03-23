@@ -104,11 +104,22 @@ async def moderation_pubsub_listener() -> None:
                     "[MOD PUBSUB] EVENT ALINDI | type=%s stream_id=%s user_id=%s",
                     event_type, stream_id, user_id,
                 )
-                # Kullanıcıya özel topic: sadece hedef kullanıcıya gönderilir
-                await ws_manager.broadcast_local(
-                    f"chat:{stream_id}:u{user_id}",
-                    {"type": event_type},
-                )
+                if event_type == "mod_promoted":
+                    # Tüm izleyicilere broadcast — moderatör rozetini herkes görmeli
+                    await ws_manager.broadcast_local(
+                        f"chat:{stream_id}",
+                        {
+                            "type": "mod_promoted",
+                            "username": data.get("username"),
+                            "promoted_by": data.get("promoted_by"),
+                        },
+                    )
+                else:
+                    # Kullanıcıya özel topic: sadece hedef kullanıcıya gönderilir
+                    await ws_manager.broadcast_local(
+                        f"chat:{stream_id}:u{user_id}",
+                        {"type": event_type},
+                    )
             except Exception as exc:
                 logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
     except asyncio.CancelledError:

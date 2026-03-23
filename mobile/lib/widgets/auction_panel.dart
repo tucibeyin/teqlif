@@ -22,6 +22,9 @@ class AuctionPanel extends ConsumerStatefulWidget {
   final VoidCallback? onAuctionReset;
   /// false ise viewer teklif butonları devre dışı kalır (mute durumu)
   final bool enabled;
+  /// true ise Co-Host modunda çalışır: host kontrol UI'ı gösterilir,
+  /// viewer teklif butonları gizlenir. Kamera/mikrofon/yayın bitirme yetkisi yoktur.
+  final bool isCoHost;
 
   const AuctionPanel({
     super.key,
@@ -30,6 +33,7 @@ class AuctionPanel extends ConsumerStatefulWidget {
     this.onBidAdded,
     this.onAuctionReset,
     this.enabled = true,
+    this.isCoHost = false,
   });
 
   @override
@@ -37,6 +41,9 @@ class AuctionPanel extends ConsumerStatefulWidget {
 }
 
 class _AuctionPanelState extends ConsumerState<AuctionPanel> {
+  // isHost veya isCoHost ise host kontrol UI'ı gösterilir
+  bool get _isHostLike => widget.isHost || widget.isCoHost;
+
   String? _msg;
   bool _msgError = false;
   // BIN onay dialog'unun context'i — host kararına göre otomatik kapatmak için
@@ -286,8 +293,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       }
     });
 
-    // Viewer için artırma yoksa gösterme
-    if (!widget.isHost && (state.isIdle || state.isEnded)) {
+    // Pure viewer için artırma yoksa gösterme (co-host paneli her zaman görünür)
+    if (!_isHostLike && (state.isIdle || state.isEnded)) {
       return const SizedBox.shrink();
     }
 
@@ -311,7 +318,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 // Ürün + fiyat
                 Expanded(
                   child: GestureDetector(
-                    onTap: (!widget.isHost && state.listingId != null)
+                    onTap: (!_isHostLike && state.listingId != null)
                         ? () => _showListingPopup(context, state.listingId!)
                         : null,
                     child: Row(
@@ -340,8 +347,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                             ],
                           ),
                         ),
-                        // Viewer: pinlenmiş ilan varsa ikon göster
-                        if (!widget.isHost && state.listingId != null)
+                        // Pure viewer: pinlenmiş ilan varsa ikon göster
+                        if (!_isHostLike && state.listingId != null)
                           Padding(
                             padding: const EdgeInsets.only(left: 4),
                             child: Container(
@@ -361,10 +368,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   ),
                 ),
                 const SizedBox(width: 8),
-                // Host inline kontroller
-                if (widget.isHost) _hostInlineControls(state),
-                // Viewer: teklif butonu
-                if (!widget.isHost && state.isActive)
+                // Host / Co-Host inline kontroller
+                if (_isHostLike) _hostInlineControls(state),
+                // Pure viewer: teklif butonu (co-host teklif vermez, yönetir)
+                if (!_isHostLike && state.isActive)
                   _viewerBidButton(context, state),
               ],
             ),

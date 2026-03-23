@@ -4,13 +4,18 @@ Moderasyon endpoints — sadece yayın sahibi (host) kullanabilir.
 POST /api/moderation/{stream_id}/mute     → kullanıcıyı sustur
 POST /api/moderation/{stream_id}/unmute   → susturmayı kaldır
 POST /api/moderation/{stream_id}/kick     → kullanıcıyı yayından at
-GET  /api/moderation/{stream_id}/status   → mevcut mute/kick listelerini döndür (host)
+POST /api/moderation/{stream_id}/promote  → izleyiciyi moderatör (Co-Host) yap
+GET  /api/moderation/{stream_id}/status   → mevcut mute/kick/mods listelerini döndür (host)
+GET  /api/moderation/{stream_id}/mods     → aktif moderatör listesi (tüm izleyiciler görebilir)
 
 Durum Redis'te tutulur (stream-scoped, 24 saat TTL):
   stream:{stream_id}:muted  → Set<user_id>
   stream:{stream_id}:kicked → Set<user_id>
+  stream:{stream_id}:mods   → Set<user_id>  (Co-Host'lar)
 
-Anlık event, moderation_broadcast kanalı üzerinden ilgili kullanıcıya iletilir.
+Anlık event, moderation_broadcast kanalı üzerinden iletilir:
+  - muted/kicked/unmuted → hedef kullanıcıya özel topic
+  - mod_promoted         → tüm izleyicilere broadcast (chat:{stream_id})
 """
 import json
 
@@ -62,13 +67,26 @@ def kick_key(stream_id: int) -> str:
     return f"stream:{stream_id}:kicked"
 
 
-async def publish_mod_event(stream_id: int, event_type: str, target_user_id: int) -> None:
-    """Tüm worker'lara moderasyon eventi yayınla."""
+def mod_key(stream_id: int) -> str:
+    return f"stream:{stream_id}:mods"
+
+
+async def publish_mod_event(
+    stream_id: int,
+    event_type: str,
+    target_user_id: int,
+    **extra,
+) -> None:
+    """Tüm worker'lara moderasyon eventi yayınla.
+
+    extra kwargs payload'a düz olarak eklenir (örn: username=, promoted_by=).
+    """
     redis = await get_redis()
     data = json.dumps({
         "_stream_id": stream_id,
         "type": event_type,
         "user_id": target_user_id,
+        **extra,
     })
     await redis.publish(MOD_CHANNEL, data)
 
@@ -173,13 +191,64 @@ async def kick_user(
     return {"message": f"@{target.username} yayından atıldı"}
 
 
+@router.post("/{stream_id}/promote", status_code=status.HTTP_200_OK)
+async def promote_moderator(
+    stream_id: int,
+    body: _TargetIn,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """İzleyiciyi Co-Host (moderatör) olarak atar.
+
+    Sadece yayının asıl host'u çağırabilir.
+    Başarı durumunda tüm izleyicilere mod_promoted eventi yayınlanır.
+    """
+    stream, target = await _resolve(stream_id, body.username, current_user, db)
+
+    redis = await get_redis()
+    await redis.sadd(mod_key(stream_id), str(target.id))
+    await redis.expire(mod_key(stream_id), _TTL)
+
+    await publish_mod_event(
+        stream_id,
+        "mod_promoted",
+        target.id,
+        username=target.username,
+        promoted_by=current_user.username,
+    )
+    logger.info(
+        "[MOD] PROMOTE | stream_id=%s host=%s target=%s",
+        stream_id, current_user.username, target.username,
+    )
+    return {"message": f"@{target.username} moderatör yapıldı"}
+
+
+@router.get("/{stream_id}/mods", status_code=status.HTTP_200_OK)
+async def list_mods(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Aktif moderatör listesini döndürür (tüm kimliği doğrulanmış izleyiciler görebilir)."""
+    stream_res = await db.execute(
+        select(LiveStream).where(LiveStream.id == stream_id, LiveStream.is_live == True)  # noqa: E712
+    )
+    stream = stream_res.scalar_one_or_none()
+    if not stream:
+        raise NotFoundException("Aktif yayın bulunamadı")
+
+    redis = await get_redis()
+    mod_ids = await redis.smembers(mod_key(stream_id))
+    return {"mod_user_ids": [int(x) for x in mod_ids]}
+
+
 @router.get("/{stream_id}/status", status_code=status.HTTP_200_OK)
 async def mod_status(
     stream_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Host için mevcut mute/kick listelerini döndürür."""
+    """Host için mevcut mute/kick/mods listelerini döndürür."""
     stream_res = await db.execute(
         select(LiveStream).where(LiveStream.id == stream_id)
     )
@@ -192,8 +261,10 @@ async def mod_status(
     redis = await get_redis()
     muted_ids = await redis.smembers(mute_key(stream_id))
     kicked_ids = await redis.smembers(kick_key(stream_id))
+    mod_ids = await redis.smembers(mod_key(stream_id))
 
     return {
         "muted_user_ids": [int(x) for x in muted_ids],
         "kicked_user_ids": [int(x) for x in kicked_ids],
+        "mod_user_ids": [int(x) for x in mod_ids],
     }

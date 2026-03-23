@@ -1136,10 +1136,11 @@
         .mod-btn:hover { opacity: 0.88; }
         .mod-btn:disabled { opacity: 0.45; cursor: default; }
 
-        .mod-btn-mute   { background: #d97706; color: #fff; }
-        .mod-btn-unmute { background: #16a34a; color: #fff; display: none; }
-        .mod-btn-kick   { background: #ef4444; color: #fff; }
-        .mod-btn-cancel { background: transparent; color: #94a3b8; border: 1px solid #334155; }
+        .mod-btn-mute    { background: #d97706; color: #fff; }
+        .mod-btn-unmute  { background: #16a34a; color: #fff; display: none; }
+        .mod-btn-kick    { background: #ef4444; color: #fff; }
+        .mod-btn-promote { background: #8b5cf6; color: #fff; display: none; }
+        .mod-btn-cancel  { background: transparent; color: #94a3b8; border: 1px solid #334155; }
 
         #modMsg {
             font-size: 0.76rem;
@@ -1344,10 +1345,11 @@
         <div class="mod-modal-box">
             <div class="mod-modal-title">🛡 Moderasyon</div>
             <div class="mod-modal-target" id="modModalTarget">@kullanici</div>
-            <button class="mod-btn mod-btn-mute"   id="modBtnMute" data-track-id="yayin-mod-btn-sustur">🔇 Sustur</button>
-            <button class="mod-btn mod-btn-unmute" id="modBtnUnmute" data-track-id="yayin-mod-btn-susturmayı-kaldir">🔊 Susturmayı Kaldır</button>
-            <button class="mod-btn mod-btn-kick"   id="modBtnKick" data-track-id="yayin-mod-btn-yayindan-at">🚫 Yayından At</button>
-            <button class="mod-btn mod-btn-cancel" id="modBtnCancel" data-track-id="yayin-mod-btn-iptal">İptal</button>
+            <button class="mod-btn mod-btn-mute"    id="modBtnMute"    data-track-id="yayin-mod-btn-sustur">🔇 Sustur</button>
+            <button class="mod-btn mod-btn-unmute"  id="modBtnUnmute"  data-track-id="yayin-mod-btn-susturmayı-kaldir">🔊 Susturmayı Kaldır</button>
+            <button class="mod-btn mod-btn-kick"    id="modBtnKick"    data-track-id="yayin-mod-btn-yayindan-at">🚫 Yayından At</button>
+            <button class="mod-btn mod-btn-promote" id="modBtnPromote" data-track-id="yayin-mod-btn-mod-yap">⭐ Moderatör Yap</button>
+            <button class="mod-btn mod-btn-cancel"  id="modBtnCancel"  data-track-id="yayin-mod-btn-iptal">İptal</button>
             <div id="modMsg"></div>
         </div>
     </div>
@@ -2047,15 +2049,62 @@
         }
 
         let _isHostPage = false;
+        let _isCoHost   = false;
+
+        function _promoteToCoHost(promotedBy) {
+            _isCoHost = true;
+
+            // Host panellerini göster (auction kontrolü)
+            const hostSetup    = document.getElementById('hostSetup');
+            const hostControls = document.getElementById('hostControls');
+            if (hostSetup)    hostSetup.style.display    = 'flex';
+            if (hostControls) hostControls.style.display = 'flex';
+
+            // Viewer bileşenlerini gizle (co-host teklif vermez, yönetir)
+            const viewerControls   = document.getElementById('viewerControls');
+            const auctionListingBtn = document.getElementById('auctionListingBtn');
+            if (viewerControls)    viewerControls.style.display    = 'none';
+            if (auctionListingBtn) auctionListingBtn.style.display = 'none';
+
+            // Co-host'a şık bir bildirim göster
+            setAuctionMsg(`⭐ Tebrikler! @${promotedBy} sizi moderatör yaptı.`, 'success');
+
+            // Chat ve teklif listesinde kullanıcı adlarına tıklama yetkisi (event delegation)
+            document.getElementById('chatMessages')?.addEventListener('click', (e) => {
+                const span = e.target.closest('[data-username]');
+                if (span && span.dataset.username) _showModModal(span.dataset.username);
+            });
+            document.getElementById('bidsList')?.addEventListener('click', (e) => {
+                const span = e.target.closest('[data-username]');
+                if (span && span.dataset.username) _showModModal(span.dataset.username);
+            });
+
+            // Sonraki chat mesajlarında kullanıcı adı tıklamasını etkinleştir
+            Chat.setUsernameTap(_showModModal);
+
+            // Host ilanlarını yükle (moderatör ilan ekleyebilmeli)
+            if (typeof loadHostListings === 'function') loadHostListings();
+        }
 
         function initAuction(sid, isHost) {
             _isHostPage = isHost;
             document.getElementById('auctionPanel').classList.add('visible');
 
             if (!isHost) {
-                document.getElementById('hostSetup').remove();
-                document.getElementById('hostControls').remove();
-                document.getElementById('btnListingMode')?.remove();
+                // Host panelleri gizle ama DOM'da bırak — Co-Host ataması sonrası gösterilebilir
+                const _hs = document.getElementById('hostSetup');
+                const _hc = document.getElementById('hostControls');
+                if (_hs) _hs.style.display = 'none';
+                if (_hc) _hc.style.display = 'none';
+                // Host listing mode toggle — Co-Host atanırsa bağlanacak
+                document.getElementById('btnListingMode')?.addEventListener('click', toggleListingMode);
+                // Picker dışına tıklayınca kapat (host ile aynı listener)
+                document.addEventListener('click', (e) => {
+                    const picker = document.getElementById('listingPicker');
+                    if (picker && !picker.contains(e.target) && e.target.id !== 'btnListingMode') {
+                        picker.style.display = 'none';
+                    }
+                });
                 // Viewer: listing butonu tıklaması
                 const lb = document.getElementById('auctionListingBtn');
                 if (lb) lb.addEventListener('click', showListingModal);
@@ -2463,8 +2512,10 @@
             _modTargetUsername = username;
             document.getElementById('modModalTarget').textContent = `@${username}`;
             const isMuted = _mutedUsers.has(username);
-            document.getElementById('modBtnMute').style.display   = isMuted ? 'none' : 'block';
-            document.getElementById('modBtnUnmute').style.display = isMuted ? 'block' : 'none';
+            document.getElementById('modBtnMute').style.display    = isMuted ? 'none' : 'block';
+            document.getElementById('modBtnUnmute').style.display  = isMuted ? 'block' : 'none';
+            // Moderatör Yap butonu sadece host ekranında görünür
+            document.getElementById('modBtnPromote').style.display = _isHostPage ? 'block' : 'none';
             document.getElementById('modMsg').textContent = '';
             // Her açılışta butonları aktif et
             document.querySelectorAll('.mod-btn').forEach(b => b.disabled = false);
@@ -2502,6 +2553,9 @@
                 } else if (action === 'kick') {
                     _setModMsg('Kullanıcı yayından atıldı.', '#f87171');
                     setTimeout(_closeModModal, 1200);
+                } else if (action === 'promote') {
+                    _setModMsg('Kullanıcı moderatör yapıldı!', '#fbbf24');
+                    setTimeout(_closeModModal, 1200);
                 }
             } catch (e) {
                 _setModMsg(e.detail || e.message || 'Hata oluştu', '#f87171');
@@ -2509,9 +2563,10 @@
             }
         }
 
-        document.getElementById('modBtnMute')?.addEventListener('click',   () => _modAction('mute'));
-        document.getElementById('modBtnUnmute')?.addEventListener('click', () => _modAction('unmute'));
-        document.getElementById('modBtnKick')?.addEventListener('click',   () => _modAction('kick'));
+        document.getElementById('modBtnMute')?.addEventListener('click',    () => _modAction('mute'));
+        document.getElementById('modBtnUnmute')?.addEventListener('click',  () => _modAction('unmute'));
+        document.getElementById('modBtnKick')?.addEventListener('click',    () => _modAction('kick'));
+        document.getElementById('modBtnPromote')?.addEventListener('click', () => _modAction('promote'));
         document.getElementById('modBtnCancel')?.addEventListener('click', _closeModModal);
         document.getElementById('modModal')?.addEventListener('click', (e) => {
             if (e.target === document.getElementById('modModal')) _closeModModal();
@@ -2603,12 +2658,18 @@
                     if (span && span.dataset.username) _showModModal(span.dataset.username);
                 });
             } else {
+                const _currentUsername = Auth.getUser()?.username || null;
                 Chat.connect(sid, {
                     onStreamEnded: _onStreamEndedViewer,
                     onViewerCount: _onViewerCount,
                     onMuted:   _onSelfMuted,
                     onUnmuted: _onSelfUnmuted,
                     onKicked:  _onSelfKicked,
+                    onModPromoted: (msg) => {
+                        if (_currentUsername && msg.username === _currentUsername) {
+                            _promoteToCoHost(msg.promoted_by || '?');
+                        }
+                    },
                 });
             }
 
