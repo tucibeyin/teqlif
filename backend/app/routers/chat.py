@@ -81,19 +81,27 @@ class _ChatManager:
         )
 
     async def local_broadcast(self, stream_id: int, payload: dict) -> None:
-        # Snapshot → iterasyon sırasında set boyutu değişmez (RuntimeError önlenir)
+        # Snapshot alınır → iterasyon sırasında set boyutu değişmez
         targets = list(self._conns.get(stream_id, set()))
         if not targets:
             return
-        dead: Set[WebSocket] = set()
-        for ws in targets:
-            ok = await _safe_send_json(ws, payload)
-            if not ok:
-                dead.add(ws)
-        # Ölü bağlantıları temizle (snapshot dışı mutasyon — güvenli)
+
+        # Paralel fan-out: tüm bağlantılara aynı anda gönderim başlatılır.
+        # return_exceptions=True → tek bir kopuk bağlantı diğerlerini engellemez.
+        results = await asyncio.gather(
+            *[_safe_send_json(ws, payload) for ws in targets],
+            return_exceptions=True,
+        )
+
+        # Başarısız gönderimler (False veya Exception) → ölü bağlantı temizliği
         live_set = self._conns.get(stream_id, set())
-        for ws in dead:
-            live_set.discard(ws)
+        for ws, result in zip(targets, results):
+            if result is not True:
+                live_set.discard(ws)
+                logger.debug(
+                    "[CHAT WS] Ölü bağlantı temizlendi | stream_id=%s result=%s",
+                    stream_id, result,
+                )
 
     async def send_to_user(
         self, stream_id: int, user_id: int, payload: dict
@@ -166,7 +174,9 @@ async def chat_pubsub_listener() -> None:
             try:
                 data = json.loads(message["data"])
                 stream_id = data.pop("_stream_id")
-                await chat_manager.local_broadcast(stream_id, data)
+                # Fire-and-forget: broadcast bir Task'a alınır, listener
+                # Redis kuyruğunu okumaya hemen devam eder; event loop bloklanmaz.
+                asyncio.create_task(chat_manager.local_broadcast(stream_id, data))
             except Exception as exc:
                 logger.warning("[CHAT PUBSUB] Mesaj işleme hatası: %s", exc)
     except asyncio.CancelledError:
