@@ -31,6 +31,9 @@ class Settings(BaseSettings):
     admin_email: str = ""
     admin_password: str = ""
     admin_password_hash: str = ""
+    captcha_enabled: bool = False
+    captcha_provider: str = "turnstile"
+    captcha_secret_key: str = ""
 
     class Config:
         env_file = ".env"
