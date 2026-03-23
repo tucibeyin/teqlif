@@ -83,6 +83,12 @@ async def verify_captcha_token(
         )
         raise ForbiddenException("Captcha token eksik. Lütfen captcha'yı tamamlayın.")
 
+    # Token mevcut — kısa özet logla (debug)
+    logger.debug(
+        "[CAPTCHA] Token alındı | ilk_10=%s... | uzunluk=%d",
+        x_captcha_token[:10], len(x_captcha_token),
+    )
+
     # Mock mod — token varlığı yeterli, API çağrısı yok
     if not captcha_enabled:
         logger.debug("[CAPTCHA] Mock mod aktif — token mevcut, doğrulama atlandı")
