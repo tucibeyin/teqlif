@@ -168,7 +168,12 @@ async def app_exception_handler(request: Request, exc: AppException):
     """
     Projeye özel AppException ve alt sınıflarını (NotFoundException,
     DatabaseException vb.) standart formatta döner.
+    TooManyRequestsException için Retry-After header'ı eklenir.
     """
+    headers = {}
+    retry_after = getattr(exc, "retry_after", None)
+    if retry_after:
+        headers["Retry-After"] = str(retry_after)
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -178,6 +183,7 @@ async def app_exception_handler(request: Request, exc: AppException):
                 "message": exc.message,
             },
         },
+        headers=headers or None,
     )
 
 

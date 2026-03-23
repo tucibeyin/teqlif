@@ -9,8 +9,12 @@ from app.models.listing import Listing
 from app.models.user import User
 from app.utils.auth import get_current_user
 from app.schemas.stream import VALID_CATEGORIES
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.core.exceptions import NotFoundException, BadRequestException, TooManyRequestsException, ConflictException
+from app.core.action_guard import check_user_action_rate, acquire_action_lock, release_action_lock
+from app.security.captcha import verify_captcha_token
+from app.core.logger import get_logger
 
+logger = get_logger(__name__)
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
 
@@ -79,12 +83,35 @@ async def get_listing(listing_id: int, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("")
-async def create_listing(payload: dict, current_user: User = Depends(get_current_user), db: AsyncSession = Depends(get_db)):
+async def create_listing(
+    payload: dict,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+    _captcha: None = Depends(verify_captcha_token),
+):
+    uid = current_user.id
+
+    # ── 1. Kullanıcı bazlı hız sınırı: dakikada 1 ilan ──────────────────────
+    allowed, retry_after = await check_user_action_rate(uid, "listing_create", limit=1, window=60)
+    if not allowed:
+        logger.warning("[LISTINGS] Hız sınırı aşıldı | user_id=%s | retry_after=%s", uid, retry_after)
+        raise TooManyRequestsException(
+            "Dakikada en fazla 1 ilan oluşturabilirsiniz. Lütfen bekleyin.",
+            retry_after=retry_after,
+        )
+
+    # ── 2. Idempotency kilidi: 3 saniyelik race condition koruması ───────────
+    if not await acquire_action_lock(uid, "listing_create", ttl=3):
+        logger.warning("[LISTINGS] Çift istek engellendi | user_id=%s", uid)
+        raise ConflictException("İsteğiniz zaten işleniyor. Lütfen bekleyin.")
+
     category = (payload.get("category") or "diger").strip().lower()
     if category not in VALID_CATEGORIES:
+        await release_action_lock(uid, "listing_create")
         raise BadRequestException(f"Geçersiz kategori: {category}")
+
     listing = Listing(
-        user_id=current_user.id,
+        user_id=uid,
         title=payload.get("title", ""),
         description=payload.get("description"),
         price=payload.get("price"),
@@ -97,6 +124,10 @@ async def create_listing(payload: dict, current_user: User = Depends(get_current
     db.add(listing)
     await db.commit()
     await db.refresh(listing)
+
+    # İşlem başarılı — kilidi erkenden serbest bırak
+    await release_action_lock(uid, "listing_create")
+    logger.info("[LISTINGS] İlan oluşturuldu | user_id=%s listing_id=%s", uid, listing.id)
 
     # Takipçilere new_listing bildirimi gönder (non-blocking)
     import asyncio as _asyncio

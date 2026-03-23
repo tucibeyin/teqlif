@@ -18,7 +18,9 @@ from app.utils.redis_client import get_redis
 from app.config import settings
 from app.routers.upload import _detect_image_type
 from app.routers.chat import _publish_chat
-from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException, DatabaseException
+from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException, DatabaseException, TooManyRequestsException, ConflictException
+from app.core.action_guard import check_user_action_rate, acquire_action_lock, release_action_lock
+from app.security.captcha import verify_captcha_token
 from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
@@ -98,7 +100,24 @@ async def start_stream(
     background_tasks: BackgroundTasks,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    _captcha: None = Depends(verify_captcha_token),
 ):
+    uid = current_user.id
+
+    # ── 1. Kullanıcı bazlı hız sınırı: 5 dakikada 1 yayın başlatma ──────────
+    allowed, retry_after = await check_user_action_rate(uid, "stream_start", limit=1, window=300)
+    if not allowed:
+        logger.warning("[STREAMS] Hız sınırı aşıldı | user_id=%s | retry_after=%s", uid, retry_after)
+        raise TooManyRequestsException(
+            "5 dakika içinde yalnızca 1 yayın başlatabilirsiniz. Lütfen bekleyin.",
+            retry_after=retry_after,
+        )
+
+    # ── 2. Idempotency kilidi: 5 saniyelik race condition koruması ───────────
+    if not await acquire_action_lock(uid, "stream_start", ttl=5):
+        logger.warning("[STREAMS] Çift istek engellendi | user_id=%s", uid)
+        raise ConflictException("Yayın başlatma isteğiniz zaten işleniyor. Lütfen bekleyin.")
+
     result = await db.execute(
         select(LiveStream).where(
             LiveStream.host_id == current_user.id,
@@ -106,6 +125,7 @@ async def start_stream(
         )
     )
     if result.scalar_one_or_none():
+        await release_action_lock(uid, "stream_start")
         logger.warning("Kullanıcının zaten aktif yayını var | user_id=%s", current_user.id)
         raise BadRequestException("Zaten aktif bir yayınınız var")
 
@@ -123,6 +143,7 @@ async def start_stream(
         await db.refresh(stream)
     except Exception as exc:
         await db.rollback()
+        await release_action_lock(uid, "stream_start")
         logger.error(
             "Yayın DB'ye kaydedilemedi | user_id=%s room=%s",
             current_user.id, room_name,
@@ -130,6 +151,9 @@ async def start_stream(
         )
         capture_exception(exc)
         raise DatabaseException("Yayın başlatılamadı")
+
+    # İşlem başarılı — kilidi erkenden serbest bırak
+    await release_action_lock(uid, "stream_start")
 
     token = _make_token(room_name, current_user, can_publish=True)
     logger.info("Yayın başlatıldı | stream_id=%s user_id=%s room=%s", stream.id, current_user.id, room_name)

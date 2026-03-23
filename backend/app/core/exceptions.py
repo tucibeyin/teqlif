@@ -90,3 +90,14 @@ class ServiceException(AppException):
 
     def __init__(self, message: str = "Servis hatası oluştu"):
         super().__init__(status_code=500, message=message, code="SERVICE_ERROR")
+
+
+class TooManyRequestsException(AppException):
+    """
+    429 — Hız sınırı aşıldı (kullanıcı bazlı aksiyon rate limit).
+    retry_after: İstemcinin kaç saniye beklemesi gerektiği.
+    """
+
+    def __init__(self, message: str = "Çok fazla istek gönderildi. Lütfen bekleyin.", retry_after: int = 60):
+        super().__init__(status_code=429, message=message, code="RATE_LIMIT_EXCEEDED")
+        self.retry_after = retry_after
