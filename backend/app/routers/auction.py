@@ -4,7 +4,7 @@ import uuid
 from datetime import datetime, timezone
 from typing import Dict, Set
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -22,6 +22,7 @@ from app.utils.redis_client import get_redis
 from app.routers.notifications import push_notification
 from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException, DatabaseException
 from app.core.logger import get_logger, capture_exception
+from app.core.rate_limit import limiter
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auction", tags=["auction"])
@@ -356,7 +357,9 @@ async def end_auction(
 
 
 @router.post("/{stream_id}/bid", response_model=AuctionStateOut)
+@limiter.limit("30/minute")
 async def place_bid(
+    request: Request,
     stream_id: int,
     data: BidIn,
     db: AsyncSession = Depends(get_db),
@@ -525,7 +528,9 @@ return {1, prev, buyer_username}
 
 
 @router.post("/{stream_id}/buy-it-now", response_model=dict)
+@limiter.limit("10/minute")
 async def buy_it_now_request(
+    request: Request,
     stream_id: int,
     db: AsyncSession = Depends(get_db),
     current_user: User = Depends(get_current_user),

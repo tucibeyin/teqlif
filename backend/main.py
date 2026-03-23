@@ -20,7 +20,9 @@ from app.routers import auth, streams, webhooks, auction, chat, moderation
 from app.routers.auction import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics
-from app.security.middleware import security_headers, SecurityMiddleware, limiter, RateLimitExceeded, _rate_limit_exceeded_handler
+from app.security.middleware import security_headers, SecurityMiddleware
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 from app.models.listing import Listing
@@ -136,7 +138,7 @@ app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
 
 # Security setup
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 app.middleware("http")(security_headers)
 
 

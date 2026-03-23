@@ -3,20 +3,12 @@ Güvenlik middleware'leri ve rate limiting
 """
 
 import time
-from typing import Dict, Optional
-from fastapi import Request, HTTPException, status
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from fastapi import Request
 from slowapi.errors import RateLimitExceeded
 
 from app.utils.redis_client import get_redis
-
-# Rate limiter initial setup
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri="redis://localhost:6379",
-    strategy="fixed-window"
-)
+# Kanonik limiter ve standart 429 handler — app/core/rate_limit.py'de tanımlı
+from app.core.rate_limit import limiter, rate_limit_exceeded_handler as _rate_limit_exceeded_handler  # noqa: F401
 
 class SecurityMiddleware:
     """Güvenlik middleware collection"""

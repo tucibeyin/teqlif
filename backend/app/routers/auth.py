@@ -1,5 +1,5 @@
 import random
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -11,6 +11,7 @@ from app.utils.email import send_verification_code
 from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, UnauthorizedException, ServiceException
 from app.core.logger import get_logger, capture_exception
+from app.core.rate_limit import limiter
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
@@ -19,7 +20,8 @@ VERIFY_CODE_TTL = 600  # 10 dakika
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
-async def register(data: UserRegister, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def register(request: Request, data: UserRegister, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalar_one_or_none():
         raise BadRequestException("Bu e-posta adresi zaten kullanılıyor")
@@ -76,7 +78,8 @@ async def verify(data: VerifyEmail, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/login", response_model=TokenOut)
-async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def login(request: Request, data: UserLogin, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
 
@@ -94,7 +97,8 @@ async def login(data: UserLogin, db: AsyncSession = Depends(get_db)):
 
 
 @router.post("/resend-code")
-async def resend_code(data: ResendCode, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
     if not user or user.is_verified:
