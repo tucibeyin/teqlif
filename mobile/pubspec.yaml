@@ -28,6 +28,9 @@ dependencies:
   cached_network_image: ^3.3.1
   shimmer: ^3.0.0
   cloudflare_turnstile: ^1.2.0
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.0
 
 dev_dependencies:
   flutter_test:
@@ -56,6 +59,7 @@ flutter_native_splash:
   color_dark: "#06B6D4"
 
 flutter:
+  generate: true
   uses-material-design: true
   assets:
     - assets/icon.png
