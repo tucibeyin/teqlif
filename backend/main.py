@@ -17,7 +17,7 @@ from app.logging_config import setup_logging
 from app.core.exceptions import AppException
 from app.core.logger import capture_exception
 from app.routers import auth, streams, webhooks, auction, chat, moderation
-from app.routers.auction import pubsub_listener
+from app.services.auction_service import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics
 from app.security.middleware import security_headers, SecurityMiddleware

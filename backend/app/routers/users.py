@@ -1,22 +1,30 @@
+"""
+Kullanıcı router — Clean Router Pattern.
+
+Her endpoint sadece:
+  1. Bağımlılıkları (auth, db) alır
+  2. UserService'i instantiate eder
+  3. Uygun servis metodunu çağırır ve sonucu döner
+
+İş mantığı, DB sorguları ve yetki kontrolleri tamamen
+app.services.user_service.UserService'e taşınmıştır.
+"""
 from typing import Optional, List
+
 from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy import select
 
 from app.database import get_db
 from app.models.user import User
-from app.models.listing import Listing
-from app.models.follow import Follow
-from app.models.stream import LiveStream
-from app.models.block import UserBlock
 from app.schemas.block import BlockedUserOut, BlockStatusOut
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
-from app.core.exceptions import NotFoundException, BadRequestException
+from app.services.user_service import UserService
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
 
+# ── Opsiyonel kullanıcı bağımlılığı (unauthenticated profil erişimi) ─────────
 async def _optional_user(
     credentials=Depends(bearer_scheme),
     db: AsyncSession = Depends(get_db),
@@ -32,18 +40,14 @@ async def _optional_user(
     return result.scalar_one_or_none()
 
 
+# ── Endpoints ────────────────────────────────────────────────────────────────
+
 @router.get("/blocked", response_model=List[BlockedUserOut])
 async def list_blocked_users(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(User)
-        .join(UserBlock, UserBlock.blocked_id == User.id)
-        .where(UserBlock.blocker_id == current_user.id)
-        .order_by(UserBlock.created_at.desc())
-    )
-    return result.scalars().all()
+    return await UserService(db).list_blocked(current_user)
 
 
 @router.post("/{username}/block", response_model=BlockStatusOut)
@@ -52,22 +56,7 @@ async def block_user(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(User).where(User.username == username, User.is_active == True)  # noqa: E712
-    )
-    target = result.scalar_one_or_none()
-    if not target:
-        raise NotFoundException("Kullanıcı bulunamadı")
-    if target.id == current_user.id:
-        raise BadRequestException("Kendinizi engelleyemezsiniz")
-
-    block = UserBlock(blocker_id=current_user.id, blocked_id=target.id)
-    db.add(block)
-    try:
-        await db.commit()
-    except IntegrityError:
-        await db.rollback()  # zaten engellenmiş — idempotent
-    return BlockStatusOut(is_blocked=True)
+    return await UserService(db).block(username, current_user)
 
 
 @router.delete("/{username}/block", response_model=BlockStatusOut)
@@ -76,23 +65,7 @@ async def unblock_user(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(User).where(User.username == username, User.is_active == True)  # noqa: E712
-    )
-    target = result.scalar_one_or_none()
-    if not target:
-        raise NotFoundException("Kullanıcı bulunamadı")
-
-    block = await db.scalar(
-        select(UserBlock).where(
-            UserBlock.blocker_id == current_user.id,
-            UserBlock.blocked_id == target.id,
-        )
-    )
-    if block:
-        await db.delete(block)
-        await db.commit()
-    return BlockStatusOut(is_blocked=False)
+    return await UserService(db).unblock(username, current_user)
 
 
 @router.get("/{username}")
@@ -101,61 +74,4 @@ async def get_user_profile(
     current_user: Optional[User] = Depends(_optional_user),
     db: AsyncSession = Depends(get_db),
 ):
-    result = await db.execute(
-        select(User).where(User.username == username, User.is_active == True)  # noqa: E712
-    )
-    user = result.scalar_one_or_none()
-    if not user:
-        raise NotFoundException("Kullanıcı bulunamadı")
-
-    listing_count = await db.scalar(
-        select(func.count()).where(Listing.user_id == user.id, Listing.is_active == True)  # noqa: E712
-    ) or 0
-
-    follower_count = await db.scalar(
-        select(func.count()).where(Follow.followed_id == user.id)
-    ) or 0
-
-    following_count = await db.scalar(
-        select(func.count()).where(Follow.follower_id == user.id)
-    ) or 0
-
-    is_following = False
-    is_blocked = False
-    if current_user and current_user.id != user.id:
-        chk = await db.scalar(
-            select(Follow).where(
-                Follow.follower_id == current_user.id,
-                Follow.followed_id == user.id,
-            )
-        )
-        is_following = chk is not None
-
-        block_chk = await db.scalar(
-            select(UserBlock).where(
-                UserBlock.blocker_id == current_user.id,
-                UserBlock.blocked_id == user.id,
-            )
-        )
-        is_blocked = block_chk is not None
-
-    active_stream = await db.scalar(
-        select(LiveStream).where(
-            LiveStream.host_id == user.id,
-            LiveStream.is_live == True,  # noqa: E712
-        )
-    )
-
-    return {
-        "id": user.id,
-        "username": user.username,
-        "full_name": user.full_name,
-        "profile_image_url": user.profile_image_url,
-        "listing_count": listing_count,
-        "follower_count": follower_count,
-        "following_count": following_count,
-        "is_following": is_following,
-        "is_blocked": is_blocked,
-        "is_live": active_stream is not None,
-        "active_stream_id": active_stream.id if active_stream else None,
-    }
+    return await UserService(db).get_profile(username, current_user)

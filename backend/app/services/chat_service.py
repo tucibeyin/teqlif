@@ -1,0 +1,249 @@
+"""
+Chat servisi — Pub/Sub altyapısı ve mesaj iş mantığını router'dan ayırır.
+
+İçerir:
+  • chat_key / publish_chat / update_viewer_count — altyapı yardımcıları
+  • chat_pubsub_listener / moderation_pubsub_listener — arka plan görevleri
+  • ChatService — WebSocket bağlantısının iş mantığı operasyonları
+
+Dependency Injection:
+    ChatService'in hiçbir metodu `AsyncSession` almaz; tüm state Redis'te tutulur.
+    DB doğrulaması (kullanıcı/stream lookup) WebSocket bağlantısı sırasında doğrudan
+    AsyncSessionLocal ile chat.py'de yapılır (WS protokol akışına özel).
+
+Hata Yönetimi:
+    Altyapı hataları (viewer count, history) → logger.warning (non-critical, WS açık kalır)
+    Mesaj işleme hataları → logger.warning (döngü devam eder)
+"""
+import asyncio
+import json
+import uuid
+from datetime import datetime, timezone
+
+from app.utils.redis_client import get_redis
+from app.core.logger import get_logger
+from app.core.ws_manager import ws_manager, safe_send_json
+
+logger = get_logger(__name__)
+
+_CHAT_CHANNEL = "chat_broadcast"
+_MAX_HISTORY = 50
+
+
+# ── Redis key ────────────────────────────────────────────────────────────────
+def chat_key(stream_id: int) -> str:
+    return f"chat:{stream_id}:messages"
+
+
+# ── Pub/Sub yayın yardımcısı ─────────────────────────────────────────────────
+async def publish_chat(stream_id: int, payload: dict) -> None:
+    """Chat mesajını Redis Pub/Sub aracılığıyla tüm worker'lara yayar."""
+    await ws_manager.publish(_CHAT_CHANNEL, f"chat:{stream_id}", payload)
+
+
+# ── Viewer count ─────────────────────────────────────────────────────────────
+async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> None:
+    """Redis'teki izleyici sayısını günceller ve tüm istemcilere yayınlar."""
+    try:
+        redis = await get_redis()
+        key = f"live:viewers:{room_name}"
+        if delta > 0:
+            count = await redis.incr(key)
+        else:
+            count = await redis.decr(key)
+            if count < 0:
+                await redis.set(key, 0)
+                count = 0
+        await publish_chat(stream_id, {"type": "viewer_count", "count": int(count)})
+    except Exception:
+        logger.error(
+            "[CHAT] Viewer count güncellenemedi | room=%s stream_id=%s delta=%s",
+            room_name, stream_id, delta, exc_info=True,
+        )
+
+
+# ── Pub/Sub dinleyicileri (arka plan görevleri) ──────────────────────────────
+async def chat_pubsub_listener() -> None:
+    """Her worker için tek seferlik başlatılan chat pub/sub dinleyicisi."""
+    import redis.asyncio as aioredis
+    from app.config import settings
+
+    r = aioredis.from_url(settings.redis_url, decode_responses=True)
+    pubsub = r.pubsub()
+    await pubsub.subscribe(_CHAT_CHANNEL)
+    logger.info("[CHAT PUBSUB] Dinleyici başladı (worker)")
+    try:
+        async for message in pubsub.listen():
+            if message["type"] != "message":
+                continue
+            try:
+                data = json.loads(message["data"])
+                topic = data.pop("_topic")
+                asyncio.create_task(ws_manager.broadcast_local(topic, data))
+            except Exception as exc:
+                logger.warning("[CHAT PUBSUB] Mesaj işleme hatası: %s", exc)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await pubsub.unsubscribe(_CHAT_CHANNEL)
+        await r.aclose()
+
+
+async def moderation_pubsub_listener() -> None:
+    """Her worker için moderasyon event dinleyicisi (muted/kicked/unmuted/promoted/demoted)."""
+    import redis.asyncio as aioredis
+    from app.config import settings
+    from app.services.moderation_service import MOD_CHANNEL
+
+    r = aioredis.from_url(settings.redis_url, decode_responses=True)
+    pubsub = r.pubsub()
+    await pubsub.subscribe(MOD_CHANNEL)
+    logger.info("[MOD PUBSUB] Dinleyici başladı (worker)")
+    try:
+        async for message in pubsub.listen():
+            if message["type"] != "message":
+                continue
+            try:
+                data = json.loads(message["data"])
+                stream_id = int(data["_stream_id"])
+                user_id = int(data["user_id"])
+                event_type = data["type"]
+                logger.info(
+                    "[MOD PUBSUB] EVENT ALINDI | type=%s stream_id=%s user_id=%s",
+                    event_type, stream_id, user_id,
+                )
+                if event_type == "mod_promoted":
+                    await ws_manager.broadcast_local(
+                        f"chat:{stream_id}",
+                        {
+                            "type": "mod_promoted",
+                            "user_id": user_id,
+                            "username": data.get("username"),
+                            "promoted_by": data.get("promoted_by"),
+                        },
+                    )
+                    await ws_manager.broadcast_local(
+                        f"chat:{stream_id}:u{user_id}",
+                        {"type": "mod_promoted_self", "promoted_by": data.get("promoted_by")},
+                    )
+                elif event_type == "mod_demoted":
+                    await ws_manager.broadcast_local(
+                        f"chat:{stream_id}",
+                        {
+                            "type": "mod_demoted",
+                            "user_id": user_id,
+                            "username": data.get("username"),
+                            "demoted_by": data.get("demoted_by"),
+                        },
+                    )
+                    await ws_manager.broadcast_local(
+                        f"chat:{stream_id}:u{user_id}",
+                        {"type": "mod_demoted_self", "demoted_by": data.get("demoted_by")},
+                    )
+                else:
+                    await ws_manager.broadcast_local(
+                        f"chat:{stream_id}:u{user_id}",
+                        {"type": event_type},
+                    )
+            except Exception as exc:
+                logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
+    except asyncio.CancelledError:
+        pass
+    finally:
+        await pubsub.unsubscribe(MOD_CHANNEL)
+        await r.aclose()
+
+
+# ── Servis sınıfı ────────────────────────────────────────────────────────────
+class ChatService:
+    """
+    WebSocket chat bağlantısının iş mantığı operasyonlarını barındıran servis.
+
+    DB bağımlılığı yoktur; tüm state Redis'te tutulur.
+    WS protokol akışı (accept/close/receive döngüsü) chat.py router'ında kalır,
+    business operasyonları (history, mute kontrolü, mesaj kalıcılığı) buraya taşınmıştır.
+
+    Kullanım:
+        svc = ChatService()
+        history = await svc.load_history(stream_id)
+        chat_msg = await svc.process_message(...)
+    """
+
+    # ── Bağlantı Başlangıcı ──────────────────────────────────────────────────
+    async def load_history(self, stream_id: int) -> list:
+        """Son _MAX_HISTORY mesajı Redis'ten okur."""
+        redis = await get_redis()
+        history_raw = await redis.lrange(chat_key(stream_id), -_MAX_HISTORY, -1)
+        return [json.loads(m) for m in history_raw] if history_raw else []
+
+    async def get_viewer_count(self, room_name: str) -> int:
+        """Redis'ten mevcut izleyici sayısını okur."""
+        redis = await get_redis()
+        count_raw = await redis.get(f"live:viewers:{room_name}")
+        return int(count_raw) if count_raw else 0
+
+    async def get_mod_status(self, stream_id: int, user_id: int) -> bool:
+        """Kullanıcının bu yayında moderatör olup olmadığını kontrol eder."""
+        from app.services.moderation_service import mod_key
+        redis = await get_redis()
+        return bool(await redis.sismember(mod_key(stream_id), str(user_id)))
+
+    async def add_viewer(self, stream_id: int, room_name: str, username: str) -> None:
+        """Viewer count'u artırır ve viewer_set'e ekler."""
+        await update_viewer_count(room_name, stream_id, +1)
+        try:
+            redis = await get_redis()
+            await redis.sadd(f"live:viewer_set:{stream_id}", username)
+        except Exception as exc:
+            logger.warning("[CHAT] viewer_set sadd başarısız | stream_id=%s | %s", stream_id, exc)
+
+    async def remove_viewer(self, stream_id: int, room_name: str, username: str) -> None:
+        """Viewer count'u azaltır ve viewer_set'ten çıkarır."""
+        await update_viewer_count(room_name, stream_id, -1)
+        try:
+            redis = await get_redis()
+            await redis.srem(f"live:viewer_set:{stream_id}", username)
+        except Exception as exc:
+            logger.warning("[CHAT] viewer_set srem başarısız | stream_id=%s | %s", stream_id, exc)
+
+    # ── Mesaj İşle ───────────────────────────────────────────────────────────
+    async def process_message(
+        self,
+        stream_id: int,
+        user_id: int,
+        username: str,
+        profile_image_url: str | None,
+        is_host: bool,
+        content: str,
+    ) -> dict | None:
+        """
+        Mesajı işler: mute kontrolü → mod rozeti → Redis kalıcılığı → broadcast.
+
+        Kullanıcı mute'luysa None döner (caller hata mesajı gönderir).
+        Başarıda broadcast edilmiş chat_msg dict'ini döner.
+        """
+        from app.services.moderation_service import mute_key, mod_key
+
+        redis = await get_redis()
+
+        if await redis.sismember(mute_key(stream_id), str(user_id)):
+            return None  # Mute → caller "muted" error gönderir
+
+        is_mod = bool(await redis.sismember(mod_key(stream_id), str(user_id)))
+        chat_msg = {
+            "type": "message",
+            "id": str(uuid.uuid4())[:8],
+            "username": username,
+            "profile_image_url": profile_image_url,
+            "content": content,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_mod": is_mod,
+            "is_host": is_host,
+        }
+        key = chat_key(stream_id)
+        await redis.rpush(key, json.dumps(chat_msg))
+        await redis.ltrim(key, -_MAX_HISTORY, -1)
+        await redis.expire(key, 24 * 3600)
+        await publish_chat(stream_id, chat_msg)
+        logger.info("[CHAT] stream_id=%s user=%s | mesaj gönderildi", stream_id, username)
+        return chat_msg
