@@ -473,6 +473,9 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       onKicked: _handleKicked,
                       onModPromotedSelf: _handleModPromotedSelf,
                       onModDemotedSelf: _handleModDemotedSelf,
+                      onModRestored: () {
+                        if (mounted && !_isCoHost) setState(() => _isCoHost = true);
+                      },
                       // Callback her zaman non-null — _isCoHost değeri çağrı anında kontrol edilir.
                       // Build anında null atarsak mevcut MessageItem'lar stale kalır.
                       onUsernameTap: (username) {

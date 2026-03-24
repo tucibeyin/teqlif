@@ -535,6 +535,9 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                     onKicked: _handleKicked,
                     onModPromotedSelf: _handleModPromotedSelf,
                     onModDemotedSelf: _handleModDemotedSelf,
+                    onModRestored: () {
+                      if (mounted && !_isCoHost) setState(() => _isCoHost = true);
+                    },
                     onUsernameTap: (username) {
                       if (_isCoHost) {
                         _showCoHostModSheet(username);

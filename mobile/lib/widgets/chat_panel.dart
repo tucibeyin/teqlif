@@ -60,6 +60,9 @@ class ChatPanel extends StatefulWidget {
   /// Sadece bu kullanıcıya hedefli — benim moderatörlüğüm kaldırıldı.
   final void Function(String demotedBy)? onModDemotedSelf;
 
+  /// Yeniden bağlanmada sessizce moderatör statüsü geri yüklendi (bildirim yok).
+  final VoidCallback? onModRestored;
+
   const ChatPanel({
     super.key,
     required this.streamId,
@@ -73,6 +76,7 @@ class ChatPanel extends StatefulWidget {
     this.onModDemoted,
     this.onModPromotedSelf,
     this.onModDemotedSelf,
+    this.onModRestored,
   });
 
   @override
@@ -269,6 +273,10 @@ class _ChatPanelState extends State<ChatPanel> {
                 debugPrint('[CHAT] mod_demoted self-match via user_id=$targetId');
                 _eventType = 'mod_demoted_self:$by';
               }
+            } else if (json['type'] == 'mod_status') {
+              // Yeniden bağlanmada mevcut mod durumu — sessiz geri yükleme
+              final isMod = json['is_mod'] as bool? ?? false;
+              if (isMod) _eventType = 'mod_status_restored';
             } else if (json['type'] == 'mod_promoted_self') {
               // Hedefli event — sadece atanan kullanıcı alır
               final by = json['promoted_by'] as String? ?? '';
@@ -304,6 +312,10 @@ class _ChatPanelState extends State<ChatPanel> {
             final demotedBy      = colon >= 0 ? rest.substring(colon + 1) : '';
             debugPrint('[CHAT] mod_demoted — target:$targetUsername demotedBy:$demotedBy myUserId:$_myUserId');
             widget.onModDemoted?.call(targetUsername, demotedBy);
+          }
+          if (_eventType == 'mod_status_restored') {
+            debugPrint('[CHAT] mod_status_restored — sessiz geri yükleme');
+            widget.onModRestored?.call();
           }
           if (_eventType != null && _eventType!.startsWith('mod_promoted_self:')) {
             final promotedBy = _eventType!.substring('mod_promoted_self:'.length);

@@ -258,7 +258,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                 )
             await _publish_chat(stream_id, {"type": "system_join", "username": username})
 
-        # ── 8. Geçmiş mesajlar ve mevcut izleyici sayısı ─────────────────────
+        # ── 8. Geçmiş mesajlar, mevcut izleyici sayısı ve mod durumu ─────────
         try:
             redis = await get_redis()
             history_raw = await redis.lrange(_key(stream_id), -_MAX_HISTORY, -1)
@@ -272,9 +272,20 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                     "type": "viewer_count",
                     "count": int(count_raw) if count_raw else 0,
                 })
+
+            # Moderatör durumu: yeniden bağlanan mod'lara sessizce bildir
+            if not is_host:
+                from app.routers.moderation import mod_key
+                is_mod = await redis.sismember(mod_key(stream_id), str(user_id))
+                if is_mod:
+                    await safe_send_json(websocket, {"type": "mod_status", "is_mod": True})
+                    logger.info(
+                        "[CHAT WS] Moderatör bağlandı — mod_status gönderildi | stream_id=%s user_id=%s",
+                        stream_id, user_id,
+                    )
         except Exception as exc:
             logger.warning(
-                "[CHAT WS] Geçmiş/sayaç gönderilemedi | stream_id=%s | %s",
+                "[CHAT WS] Geçmiş/sayaç/mod_status gönderilemedi | stream_id=%s | %s",
                 stream_id, exc,
             )
 
