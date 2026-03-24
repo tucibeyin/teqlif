@@ -1,12 +1,14 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'l10n/app_localizations.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'config/theme.dart';
 import 'core/logger_service.dart';
 import 'firebase_options.dart';
+import 'providers/locale_provider.dart';
 import 'providers/theme_provider.dart';
 import 'screens/auth/login_screen.dart';
 import 'screens/main_screen.dart';
@@ -55,14 +57,14 @@ void main() async {
   // --- SENTRY + GLOBAL HATA YAKALAMA ENTEGRASYONU SONU ---
 }
 
-class TeqlifApp extends StatefulWidget {
+class TeqlifApp extends ConsumerStatefulWidget {
   const TeqlifApp({super.key});
 
   @override
-  State<TeqlifApp> createState() => _TeqlifAppState();
+  ConsumerState<TeqlifApp> createState() => _TeqlifAppState();
 }
 
-class _TeqlifAppState extends State<TeqlifApp> {
+class _TeqlifAppState extends ConsumerState<TeqlifApp> {
   final _lifecycleObserver = AnalyticsLifecycleObserver();
 
   @override
@@ -79,6 +81,7 @@ class _TeqlifAppState extends State<TeqlifApp> {
 
   @override
   Widget build(BuildContext context) {
+    final locale = ref.watch(localeProvider);
     return ListenableBuilder(
       listenable: ThemeProvider.instance,
       builder: (context, _) => MaterialApp(
@@ -87,6 +90,9 @@ class _TeqlifAppState extends State<TeqlifApp> {
         darkTheme: darkTheme,
         debugShowCheckedModeBanner: false,
         themeMode: ThemeProvider.instance.themeMode,
+        locale: locale,
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         navigatorObservers: [AnalyticsRouteObserver()],
         builder: (context, child) {
           return GlobalKeyboardAccessory(child: child!);

@@ -171,5 +171,7 @@
 
   "dialogDeleteListingTitle": "İlanı Sil",
   "dialogDeleteListingDesc": "Bu ilanı kalıcı olarak silmek istiyor musunuz?",
-  "dialogFaceIdActivateTitle": "Face ID'yi etkinleştirmek için doğrulayın"
+  "dialogFaceIdActivateTitle": "Face ID'yi etkinleştirmek için doğrulayın",
+
+  "settingsLanguage": "Dil"
 }

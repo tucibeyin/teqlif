@@ -171,5 +171,7 @@
 
   "dialogDeleteListingTitle": "Delete Listing",
   "dialogDeleteListingDesc": "Are you sure you want to permanently delete this listing?",
-  "dialogFaceIdActivateTitle": "Verify to enable Face ID"
+  "dialogFaceIdActivateTitle": "Verify to enable Face ID",
+
+  "settingsLanguage": "Language"
 }

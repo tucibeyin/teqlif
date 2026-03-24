@@ -3,6 +3,8 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import '../l10n/app_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -11,6 +13,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
+import '../providers/locale_provider.dart';
 import '../providers/theme_provider.dart';
 import '../services/auth_service.dart';
 import '../services/biometric_service.dart';
@@ -172,7 +175,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceAround,
                             children: [
-                              _StatItem(count: _listings.length, label: 'İlan'),
+                              _StatItem(count: _listings.length, label: AppLocalizations.of(context)!.profileListingCount),
                               GestureDetector(
                                 key: const Key('profile_stat_takipci'),
                                 onTap: _user?['id'] != null
@@ -182,14 +185,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             builder: (_) => FollowListScreen(
                                               userId: _user!['id'] as int,
                                               type: FollowListType.followers,
-                                              title: 'Takipçiler',
+                                              title: AppLocalizations.of(context)!.profileFollowersList,
                                             ),
                                           ),
                                         )
                                     : null,
                                 child: _StatItem(
                                   count: (_user?['follower_count'] as int?) ?? 0,
-                                  label: 'Takipçi',
+                                  label: AppLocalizations.of(context)!.profileFollowers,
                                 ),
                               ),
                               GestureDetector(
@@ -201,14 +204,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                             builder: (_) => FollowListScreen(
                                               userId: _user!['id'] as int,
                                               type: FollowListType.following,
-                                              title: 'Takip Edilenler',
+                                              title: AppLocalizations.of(context)!.profileFollowingList,
                                             ),
                                           ),
                                         )
                                     : null,
                                 child: _StatItem(
                                   count: (_user?['following_count'] as int?) ?? 0,
-                                  label: 'Takip',
+                                  label: AppLocalizations.of(context)!.profileFollowing,
                                 ),
                               ),
                             ],
@@ -264,7 +267,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                      child: const Text('Profili Düzenle'),
+                      child: Text(AppLocalizations.of(context)!.btnEditProfile),
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -292,32 +295,37 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
               )
             else if (_listings.isEmpty)
-              const SliverFillRemaining(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.grid_off_outlined,
-                          size: 52, color: Color(0xFFD1D5DB)),
-                      SizedBox(height: 12),
-                      Text(
-                        'Henüz ilan yok',
-                        style: TextStyle(
-                          color: Color(0xFF6B7280),
-                          fontSize: 15,
-                          fontWeight: FontWeight.w500,
-                        ),
+              SliverFillRemaining(
+                child: Builder(
+                  builder: (context) {
+                    final l = AppLocalizations.of(context)!;
+                    return Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.grid_off_outlined,
+                              size: 52, color: Color(0xFFD1D5DB)),
+                          const SizedBox(height: 12),
+                          Text(
+                            l.emptyListings,
+                            style: const TextStyle(
+                              color: Color(0xFF6B7280),
+                              fontSize: 15,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            l.profileFirstListing,
+                            style: const TextStyle(
+                              color: Color(0xFF9CA3AF),
+                              fontSize: 13,
+                            ),
+                          ),
+                        ],
                       ),
-                      SizedBox(height: 4),
-                      Text(
-                        'İlk ilanını ver!',
-                        style: TextStyle(
-                          color: Color(0xFF9CA3AF),
-                          fontSize: 13,
-                        ),
-                      ),
-                    ],
-                  ),
+                    );
+                  },
                 ),
               )
             else
@@ -452,14 +460,14 @@ class _ListingGridItem extends StatelessWidget {
 
 // ── Ayarlar ekranı ────────────────────────────────────────────────────────────
 
-class _SettingsScreen extends StatefulWidget {
+class _SettingsScreen extends ConsumerStatefulWidget {
   const _SettingsScreen();
 
   @override
-  State<_SettingsScreen> createState() => _SettingsScreenState();
+  ConsumerState<_SettingsScreen> createState() => _SettingsScreenState();
 }
 
-class _SettingsScreenState extends State<_SettingsScreen> {
+class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
   bool _biometricEnabled = false;
   bool _biometricAvailable = false;
 
@@ -504,6 +512,8 @@ class _SettingsScreenState extends State<_SettingsScreen> {
     final token = await StorageService.getToken();
     if (token == null || !mounted) return;
 
+    final l = AppLocalizations.of(context)!;
+
     await showDialog(
       context: context,
       barrierDismissible: false,
@@ -511,7 +521,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
         builder: (ctx, setS) => AlertDialog(
           backgroundColor: AppColors.card(ctx),
           title: Text(
-            'Şifre Değiştir',
+            l.profileChangePassword,
             style: TextStyle(
                 color: AppColors.textPrimary(ctx),
                 fontSize: 16,
@@ -530,7 +540,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   smartDashesType: SmartDashesType.disabled,
                   smartQuotesType: SmartQuotesType.disabled,
                   decoration: InputDecoration(
-                    labelText: 'Mevcut Şifre',
+                    labelText: l.fieldCurrentPassword,
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
                   ),
                 ),
@@ -543,7 +553,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   smartDashesType: SmartDashesType.disabled,
                   smartQuotesType: SmartQuotesType.disabled,
                   decoration: InputDecoration(
-                    labelText: 'Yeni Şifre',
+                    labelText: l.fieldNewPassword,
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
                   ),
                 ),
@@ -556,7 +566,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   smartDashesType: SmartDashesType.disabled,
                   smartQuotesType: SmartQuotesType.disabled,
                   decoration: InputDecoration(
-                    labelText: 'Yeni Şifre (Tekrar)',
+                    labelText: l.fieldNewPasswordConfirm,
                     labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
                   ),
                 ),
@@ -567,7 +577,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                     keyboardType: TextInputType.number,
                     maxLength: 6,
                     decoration: InputDecoration(
-                      labelText: 'E-posta Doğrulama Kodu',
+                      labelText: l.fieldEmailCode,
                       labelStyle: TextStyle(color: AppColors.textSecondary(ctx)),
                       counterText: '',
                     ),
@@ -585,7 +595,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
           actions: [
             TextButton(
               onPressed: loading ? null : () => Navigator.pop(ctx),
-              child: Text('İptal',
+              child: Text(l.btnCancel,
                   style: TextStyle(color: AppColors.textSecondary(ctx))),
             ),
             ElevatedButton(
@@ -602,21 +612,21 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                           newPassCtrl.text.isEmpty ||
                           confirmPassCtrl.text.isEmpty) {
                         setS(() {
-                          error = 'Tüm alanları doldurun.';
+                          error = l.validAllFields;
                           loading = false;
                         });
                         return;
                       }
                       if (newPassCtrl.text.length < 8) {
                         setS(() {
-                          error = 'Yeni şifre en az 8 karakter olmalı.';
+                          error = l.validNewPasswordMin;
                           loading = false;
                         });
                         return;
                       }
                       if (newPassCtrl.text != confirmPassCtrl.text) {
                         setS(() {
-                          error = 'Yeni şifreler eşleşmiyor.';
+                          error = l.validPasswordsMatch;
                           loading = false;
                         });
                         return;
@@ -643,7 +653,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                         } catch (e) {
                           LoggerService.instance.warning('ProfileScreen', 'Şifre kodu gönderilemedi: $e');
                           setS(() {
-                            error = 'Bağlantı hatası.';
+                            error = l.errorConnection;
                             loading = false;
                           });
                         }
@@ -651,7 +661,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                         // Kodu doğrula ve şifreyi değiştir
                         if (codeCtrl.text.trim().length != 6) {
                           setS(() {
-                            error = 'Doğrulama kodunu girin.';
+                            error = l.validVerificationCode;
                             loading = false;
                           });
                           return;
@@ -674,8 +684,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                           if (ctx.mounted) Navigator.pop(ctx);
                           if (mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                  content: Text('Şifreniz başarıyla değiştirildi.')),
+                              SnackBar(content: Text(l.msgPasswordChanged)),
                             );
                           }
                         } on AppException catch (e) {
@@ -686,7 +695,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                         } catch (e) {
                           LoggerService.instance.warning('ProfileScreen', 'Şifre değiştirme başarısız: $e');
                           setS(() {
-                            error = 'Bağlantı hatası.';
+                            error = l.errorConnection;
                             loading = false;
                           });
                         }
@@ -700,7 +709,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                       child: CircularProgressIndicator(
                           strokeWidth: 2, color: Colors.white))
                   : Text(
-                      codeSent ? 'Şifremi Değiştir' : 'Kodu Gönder',
+                      codeSent ? l.btnChangePassword : l.btnSendCode,
                       style: const TextStyle(color: Colors.white),
                     ),
             ),
@@ -714,23 +723,25 @@ class _SettingsScreenState extends State<_SettingsScreen> {
     final passCtrl = TextEditingController();
     String? error;
 
+    final l = AppLocalizations.of(context)!;
+
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setS) => AlertDialog(
           backgroundColor: Colors.white,
-          title: const Text(
-            'Hesabı Kalıcı Olarak Sil',
-            style: TextStyle(color: Color(0xFFEF4444), fontSize: 16),
+          title: Text(
+            l.profileDeleteAccount,
+            style: const TextStyle(color: Color(0xFFEF4444), fontSize: 16),
           ),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Bu işlem geri alınamaz. Tüm verileriniz 30 gün içinde kalıcı olarak silinecektir.',
-                style: TextStyle(color: Color(0xFF6B7280), fontSize: 13),
+              Text(
+                l.profileDeleteAccountDesc,
+                style: const TextStyle(color: Color(0xFF6B7280), fontSize: 13),
               ),
               const SizedBox(height: 16),
               TextField(
@@ -740,9 +751,9 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 autocorrect: false,
                 smartDashesType: SmartDashesType.disabled,
                 smartQuotesType: SmartQuotesType.disabled,
-                decoration: const InputDecoration(
-                  labelText: 'Şifreniz',
-                  hintText: 'Onaylamak için şifrenizi girin',
+                decoration: InputDecoration(
+                  labelText: l.fieldPassword,
+                  hintText: l.fieldPasswordConfirmHint,
                 ),
               ),
               if (error != null) ...[
@@ -754,7 +765,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('İptal', style: TextStyle(color: Color(0xFF6B7280))),
+              child: Text(l.btnCancel, style: const TextStyle(color: Color(0xFF6B7280))),
             ),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
@@ -764,7 +775,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               ),
               onPressed: () async {
                 if (passCtrl.text.isEmpty) {
-                  setS(() => error = 'Şifrenizi girin.');
+                  setS(() => error = l.fieldPassword);
                   return;
                 }
                 try {
@@ -777,10 +788,10 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   setS(() => error = e.message);
                 } catch (e) {
                   LoggerService.instance.warning('ProfileScreen', 'Hesap silinemedi: $e');
-                  setS(() => error = 'Hesap silinemedi. Şifrenizi kontrol edin.');
+                  setS(() => error = l.errorConnection);
                 }
               },
-              child: const Text('Hesabı Sil', style: TextStyle(color: Colors.white)),
+              child: Text(l.btnDeleteAccount, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -791,30 +802,33 @@ class _SettingsScreenState extends State<_SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final currentLocale = ref.watch(localeProvider);
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Ayarlar')),
+      appBar: AppBar(title: Text(l.navSettings)),
       backgroundColor: AppColors.bg(context),
       body: ListView(
         children: [
           const SizedBox(height: 8),
           _SettingsSection(
-            title: 'İlanlarım',
+            title: l.profileMyListings,
             items: [
               _SettingsTile(
                 icon: Icons.list_alt_outlined,
-                label: 'Aktif İlanlarım',
+                label: l.profileActiveListings,
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const _MyListingsScreen(active: true))),
               ),
               _SettingsTile(
                 icon: Icons.archive_outlined,
-                label: 'Pasif İlanlarım',
+                label: l.profilePassiveListings,
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const _MyListingsScreen(active: false))),
               ),
               _SettingsTile(
                 icon: Icons.favorite_outline,
-                label: 'Favorilerim',
+                label: l.profileFavorites,
                 onTap: () => Navigator.push(context,
                     MaterialPageRoute(builder: (_) => const _FavoritesScreen())),
               ),
@@ -822,16 +836,16 @@ class _SettingsScreenState extends State<_SettingsScreen> {
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: 'Hesap',
+            title: l.profileAccountSection,
             items: [
               _SettingsTile(
                 icon: Icons.lock_outline,
-                label: 'Şifre Değiştir',
+                label: l.profileChangePassword,
                 onTap: () => _showChangePasswordDialog(context),
               ),
               _SettingsTile(
                 icon: Icons.notifications_outlined,
-                label: 'Bildirim Ayarları',
+                label: l.profileNotificationSettings,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -841,7 +855,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.block_outlined,
-                label: 'Engellenen Kullanıcılar',
+                label: l.profileBlockedUsers,
                 onTap: () => Navigator.push(
                   context,
                   MaterialPageRoute(
@@ -854,10 +868,10 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   key: const Key('settings_switch_face_id'),
                   secondary: Icon(Icons.face_outlined,
                       color: AppColors.iconColor(context)),
-                  title: Text('Face ID ile Giriş',
+                  title: Text(l.profileFaceId,
                       style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
                   subtitle: Text(
-                    _biometricEnabled ? 'Açık' : 'Kapalı',
+                    _biometricEnabled ? l.statusOn : l.statusOff,
                     style: TextStyle(
                         fontSize: 12, color: AppColors.textSecondary(context)),
                   ),
@@ -868,9 +882,9 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               SwitchListTile(
                 key: const Key('settings_switch_karanlik_mod'),
                 secondary: Icon(Icons.dark_mode_outlined, color: AppColors.iconColor(context)),
-                title: Text('Karanlık Mod', style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
+                title: Text(l.profileDarkMode, style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
                 subtitle: Text(
-                  ThemeProvider.instance.isDark ? 'Açık' : 'Kapalı',
+                  ThemeProvider.instance.isDark ? l.statusOn : l.statusOff,
                   style: TextStyle(fontSize: 12, color: AppColors.textSecondary(context)),
                 ),
                 value: ThemeProvider.instance.isDark,
@@ -880,15 +894,36 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                   if (mounted) setState(() {});
                 },
               ),
+              ListTile(
+                key: const Key('settings_tile_dil'),
+                leading: Icon(Icons.language_outlined, color: AppColors.iconColor(context)),
+                title: Text(l.settingsLanguage,
+                    style: TextStyle(fontSize: 14, color: AppColors.textPrimary(context))),
+                trailing: SegmentedButton<String>(
+                  segments: const [
+                    ButtonSegment(value: 'tr', label: Text('TR')),
+                    ButtonSegment(value: 'en', label: Text('EN')),
+                  ],
+                  selected: {currentLocale.languageCode},
+                  showSelectedIcon: false,
+                  style: ButtonStyle(
+                    visualDensity: VisualDensity.compact,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onSelectionChanged: (selection) {
+                    ref.read(localeProvider.notifier).setLocale(Locale(selection.first));
+                  },
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 8),
           _SettingsSection(
-            title: 'Destek',
+            title: l.profileSupportSection,
             items: [
               _SettingsTile(
                 icon: Icons.help_outline,
-                label: 'Destek Merkezi',
+                label: l.profileSupportCenter,
                 onTap: () async {
                   final uri = Uri.parse('https://teqlif.com/support.html');
                   if (await canLaunchUrl(uri)) {
@@ -898,7 +933,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.description_outlined,
-                label: 'Kullanım Şartları & EULA',
+                label: l.profileTerms,
                 onTap: () async {
                   final uri = Uri.parse('https://teqlif.com/kullanim-sartlari.html');
                   if (await canLaunchUrl(uri)) {
@@ -908,7 +943,7 @@ class _SettingsScreenState extends State<_SettingsScreen> {
               ),
               _SettingsTile(
                 icon: Icons.lock_outline,
-                label: 'Gizlilik Politikası',
+                label: l.profilePrivacy,
                 onTap: () async {
                   final uri = Uri.parse('https://teqlif.com/gizlilik-politikasi');
                   if (await canLaunchUrl(uri)) {
@@ -926,9 +961,9 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 ListTile(
                   key: const Key('settings_tile_hesabi_sil'),
                   leading: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
-                  title: const Text(
-                    'Hesabı Sil',
-                    style: TextStyle(
+                  title: Text(
+                    l.btnDeleteAccount,
+                    style: const TextStyle(
                       color: Color(0xFFEF4444),
                       fontWeight: FontWeight.w600,
                     ),
@@ -939,9 +974,9 @@ class _SettingsScreenState extends State<_SettingsScreen> {
                 ListTile(
                   key: const Key('settings_tile_cikis_yap'),
                   leading: const Icon(Icons.logout, color: Color(0xFFEF4444)),
-                  title: const Text(
-                    'Çıkış Yap',
-                    style: TextStyle(
+                  title: Text(
+                    l.btnLogout,
+                    style: const TextStyle(
                       color: Color(0xFFEF4444),
                       fontWeight: FontWeight.w600,
                     ),
