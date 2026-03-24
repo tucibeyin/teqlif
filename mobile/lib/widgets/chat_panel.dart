@@ -755,8 +755,7 @@ class _MessageItem extends StatelessWidget {
       );
     }
 
-    // Normal mesaj: avatar + kullanıcı adı + içerik — Text.rich ile satır
-    // yüksekliği bozulmadan hizalama sağlanır (PlaceholderAlignment.middle).
+    // Normal mesaj: avatar + rozet + kullanıcı adı + içerik
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text.rich(
@@ -773,6 +772,58 @@ class _MessageItem extends StatelessWidget {
               alignment: PlaceholderAlignment.middle,
               child: SizedBox(width: 4),
             ),
+            // Moderatör rozeti
+            if (message.isMod)
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 3),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16A34A),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: const Text(
+                      '🛡 MOD',
+                      style: TextStyle(
+                        fontSize: 8,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                        letterSpacing: 0.3,
+                        shadows: [],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            // Host rozeti
+            if (message.isHost)
+              WidgetSpan(
+                alignment: PlaceholderAlignment.middle,
+                child: Padding(
+                  padding: const EdgeInsets.only(right: 3),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEA580C),
+                      borderRadius: BorderRadius.circular(3),
+                    ),
+                    child: const Text(
+                      '⚡ HOST',
+                      style: TextStyle(
+                        fontSize: 8,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w800,
+                        height: 1,
+                        letterSpacing: 0.3,
+                        shadows: [],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             TextSpan(
               text: '@${message.username} ',
               style: TextStyle(

@@ -461,6 +461,26 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                     ],
                   ),
                 ),
+                // Moderatör rozeti
+                if (_isCoHost) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF16A34A),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: const Text(
+                      '🛡 MOD',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        letterSpacing: 0.4,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                ],
                 // Ayrıl
                 GestureDetector(
                   key: const Key('swipe_live_btn_ayril'),

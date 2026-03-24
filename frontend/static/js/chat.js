@@ -156,6 +156,21 @@ const Chat = (() => {
         // Avatar — DOM element, onerror HTML string trick yok
         el.appendChild(_buildAvatarEl(msg.username || '', msg.profile_image_url || null));
 
+        // Moderatör rozeti
+        if (msg.is_mod) {
+            const badge = document.createElement('span');
+            badge.className = 'chat-badge chat-badge--mod';
+            badge.textContent = '🛡 MOD';
+            el.appendChild(badge);
+        }
+        // Host rozeti
+        if (msg.is_host) {
+            const badge = document.createElement('span');
+            badge.className = 'chat-badge chat-badge--host';
+            badge.textContent = '⚡ HOST';
+            el.appendChild(badge);
+        }
+
         // Kullanıcı adı
         const usernameSpan = document.createElement('span');
         usernameSpan.className = 'chat-username';

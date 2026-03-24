@@ -315,6 +315,8 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                         })
                         continue
 
+                    from app.routers.moderation import mod_key
+                    _is_mod = bool(await redis.sismember(mod_key(stream_id), str(user_id)))
                     chat_msg = {
                         "type": "message",
                         "id": str(uuid.uuid4())[:8],
@@ -322,6 +324,8 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                         "profile_image_url": profile_image_url,
                         "content": content,
                         "created_at": datetime.now(timezone.utc).isoformat(),
+                        "is_mod": _is_mod,
+                        "is_host": is_host,
                     }
                     key = _key(stream_id)
                     await redis.rpush(key, json.dumps(chat_msg))

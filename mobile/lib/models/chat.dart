@@ -5,6 +5,8 @@ class ChatMessage {
   final String content;
   final DateTime createdAt;
   final bool isSystem;
+  final bool isMod;
+  final bool isHost;
 
   const ChatMessage({
     required this.id,
@@ -13,6 +15,8 @@ class ChatMessage {
     required this.content,
     required this.createdAt,
     this.isSystem = false,
+    this.isMod = false,
+    this.isHost = false,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> j) => ChatMessage(
@@ -22,5 +26,7 @@ class ChatMessage {
         content: j['content'] as String? ?? '',
         createdAt:
             DateTime.tryParse(j['created_at'] as String? ?? '') ?? DateTime.now(),
+        isMod: j['is_mod'] as bool? ?? false,
+        isHost: j['is_host'] as bool? ?? false,
       );
 }

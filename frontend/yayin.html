@@ -941,6 +941,21 @@
             color: #e2e8f0;
         }
 
+        .chat-badge {
+            display: inline-block;
+            vertical-align: middle;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 0.6rem;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            color: #fff;
+            margin-right: 3px;
+            line-height: 1.5;
+        }
+        .chat-badge--mod  { background: #16a34a; }
+        .chat-badge--host { background: #ea580c; }
+
         .chat-empty {
             font-size: 0.8rem;
             color: #475569;
@@ -1194,6 +1209,7 @@
                 <!-- Üst bar: LIVE + izleyici + status -->
                 <div id="videoOverlay" style="display:none;">
                     <span class="live-badge">CANLI</span>
+                    <span id="modBadge" style="display:none;background:#16a34a;color:#fff;font-size:0.65rem;font-weight:800;letter-spacing:0.4px;padding:3px 8px;border-radius:12px;">🛡 MOD</span>
                     <div id="statusMsg"></div>
                     <span class="viewer-count" id="viewerCount"><span id="viewerCountText">👁 0</span><div id="viewerPopup"></div></span>
                 </div>
@@ -2056,6 +2072,10 @@
         function _promoteToCoHost(promotedBy) {
             _isCoHost = true;
 
+            // Moderatör rozeti göster
+            const modBadge = document.getElementById('modBadge');
+            if (modBadge) modBadge.style.display = '';
+
             // Host panellerini göster (auction kontrolü)
             const hostSetup    = document.getElementById('hostSetup');
             const hostControls = document.getElementById('hostControls');
@@ -2090,6 +2110,10 @@
 
         function _demoteFromCoHost() {
             _isCoHost = false;
+
+            // Moderatör rozeti gizle
+            const modBadge = document.getElementById('modBadge');
+            if (modBadge) modBadge.style.display = 'none';
 
             // Host panellerini gizle
             const hostSetup    = document.getElementById('hostSetup');
