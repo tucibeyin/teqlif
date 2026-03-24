@@ -307,8 +307,9 @@ class _ChatPanelState extends State<ChatPanel> {
           }
           if (_eventType != null && _eventType!.startsWith('mod_promoted_self:')) {
             final promotedBy = _eventType!.substring('mod_promoted_self:'.length);
-            debugPrint('[CHAT] mod_promoted_self — promotedBy:$promotedBy');
+            debugPrint('[CHAT] mod_promoted_self — promotedBy:$promotedBy | onModPromotedSelf null:${widget.onModPromotedSelf == null}');
             widget.onModPromotedSelf?.call(promotedBy);
+            debugPrint('[CHAT] mod_promoted_self — callback çağrısı tamamlandı');
           }
           if (_eventType != null && _eventType!.startsWith('mod_demoted_self:')) {
             final demotedBy = _eventType!.substring('mod_demoted_self:'.length);

@@ -148,18 +148,22 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
 
   // Hedefli event: username eşleşmesine gerek yok — ben atandım
   void _handleModPromotedSelf(String promotedBy) {
-    if (!mounted || _isCoHost) return; // çift tetiklenme koruması
+    debugPrint('[VIEWER] _handleModPromotedSelf ÇAĞRILDI — mounted:$mounted _isCoHost:$_isCoHost promotedBy:$promotedBy');
+    if (!mounted || _isCoHost) {
+      debugPrint('[VIEWER] _handleModPromotedSelf GUARD BLOK ETTİ — mounted:$mounted _isCoHost:$_isCoHost');
+      return;
+    }
+    debugPrint('[VIEWER] _handleModPromotedSelf → setState _isCoHost=true');
     setState(() => _isCoHost = true);
-    // showDialog LiveKit'in native platform view'ı arkasında kalır (iOS z-order),
-    // bu yüzden SnackBar kullanıyoruz — her zaman Flutter katmanında render edilir.
+    debugPrint('[VIEWER] _handleModPromotedSelf → SnackBar gösteriliyor');
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('⭐ @$promotedBy sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.'),
         backgroundColor: const Color(0xFF16A34A),
-        behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 5),
       ),
     );
+    debugPrint('[VIEWER] _handleModPromotedSelf → TAMAMLANDI');
   }
 
   // Hedefli event: username eşleşmesine gerek yok — benim moderatörlüğüm kaldırıldı
@@ -472,6 +476,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       // Callback her zaman non-null — _isCoHost değeri çağrı anında kontrol edilir.
                       // Build anında null atarsak mevcut MessageItem'lar stale kalır.
                       onUsernameTap: (username) {
+                        debugPrint('[VIEWER] onUsernameTap — username:$username _isCoHost:$_isCoHost');
                         if (_isCoHost) {
                           _showCoHostModSheet(username);
                         } else {
