@@ -16,6 +16,9 @@ import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 import '../../services/moderation_service.dart';
+import '../../widgets/live/host_top_bar.dart';
+import '../../widgets/live/host_bottom_controls.dart';
+import '../../widgets/live/live_video_player.dart';
 
 class HostStreamScreen extends StatefulWidget {
   final StreamTokenOut streamToken;
@@ -341,17 +344,14 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         resizeToAvoidBottomInset: false,
         body: Stack(
         children: [
-          // ── Kamera önizleme (tam ekran) ─────────────────────────────────
-          if (_localVideoTrack != null)
-            Positioned.fill(
-              child: RepaintBoundary(
-                key: _videoKey,
-                child: VideoTrackRenderer(
-                  _localVideoTrack!,
-                  fit: VideoViewFit.contain,
-                ),
-              ),
+          // ── Video katmanı (tam ekran) ────────────────────────────────────
+          Positioned.fill(
+            child: LiveVideoPlayer(
+              track: _localVideoTrack,
+              cameraEnabled: _cameraEnabled,
+              repaintKey: _videoKey,
             ),
+          ),
 
           // ── Bağlanıyor ──────────────────────────────────────────────────
           if (_connecting)
@@ -404,119 +404,32 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // ── Üst bar: LIVE + başlık + kontrol ikonları ──────────────────
+          // ── Üst bar: CANLI rozeti + izleyici + başlık + Bitir ──────────
           if (live)
             Positioned(
               top: 0,
               left: 0,
               right: 0,
-              child: Container(
-                padding: EdgeInsets.only(
-                    top: topPad + 14, left: 16, right: 16, bottom: 32),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.topCenter,
-                    end: Alignment.bottomCenter,
-                    colors: [Color(0xBB000000), Colors.transparent],
-                  ),
-                ),
-                child: Row(
-                  children: [
-                    // LIVE badge
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 9, vertical: 4),
-                      decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(5)),
-                      child: const Text('CANLI',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w800,
-                              letterSpacing: 0.5)),
-                    ),
-                    const SizedBox(width: 6),
-                    // İzleyici sayısı (tıklanabilir)
-                    GestureDetector(
-                      onTap: _showViewers,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.black45,
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Text(
-                          '👁 $_viewerCount',
-                          style: const TextStyle(
-                              color: Colors.white, fontSize: 11),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 10),
-                    // Başlık
-                    Expanded(
-                      child: Text(
-                        widget.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 14,
-                          shadows: [
-                            Shadow(blurRadius: 6, color: Colors.black)
-                          ],
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    const SizedBox(width: 6),
-                    // Mikrofon
-                    _TopIconBtn(
-                      key: const Key('host_btn_mikrofon_toggle'),
-                      icon: _micEnabled ? Icons.mic_rounded : Icons.mic_off_rounded,
-                      active: _micEnabled,
-                      onTap: _toggleMic,
-                    ),
-                    const SizedBox(width: 6),
-                    // Kamera
-                    _TopIconBtn(
-                      key: const Key('host_btn_kamera_toggle'),
-                      icon: _cameraEnabled
-                          ? Icons.videocam_rounded
-                          : Icons.videocam_off_rounded,
-                      active: _cameraEnabled,
-                      onTap: _toggleCamera,
-                    ),
-                    const SizedBox(width: 6),
-                    // Kamera çevir
-                    _TopIconBtn(
-                      key: const Key('host_btn_kamera_cevir'),
-                      icon: Icons.flip_camera_ios_rounded,
-                      active: true,
-                      onTap: _switchCamera,
-                    ),
-                    const SizedBox(width: 10),
-                    // Yayını Bitir
-                    GestureDetector(
-                      key: const Key('host_btn_yayin_bitir'),
-                      onTap: _endStream,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 14, vertical: 8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.withOpacity(0.85),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: const Text('Bitir',
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700)),
-                      ),
-                    ),
-                  ],
-                ),
+              child: HostTopBar(
+                topPad: topPad,
+                viewerCount: _viewerCount,
+                title: widget.title,
+                onViewersTap: _showViewers,
+                onEndStream: _endStream,
+              ),
+            ),
+
+          // ── Alt kontroller: mikrofon + kamera + çevir ───────────────────
+          if (live)
+            Positioned(
+              bottom: botPad + 200,
+              right: 14,
+              child: HostBottomControls(
+                micEnabled: _micEnabled,
+                cameraEnabled: _cameraEnabled,
+                onToggleMic: _toggleMic,
+                onToggleCamera: _toggleCamera,
+                onSwitchCamera: _switchCamera,
               ),
             ),
 
@@ -1134,35 +1047,3 @@ class _ModBtn extends StatelessWidget {
   }
 }
 
-// ── TopIconBtn ──────────────────────────────────────────────────────────────
-
-class _TopIconBtn extends StatelessWidget {
-  final IconData icon;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _TopIconBtn({
-    super.key,
-    required this.icon,
-    required this.active,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 38,
-        height: 38,
-        decoration: BoxDecoration(
-          color: active ? Colors.black45 : Colors.red.withOpacity(0.75),
-          shape: BoxShape.circle,
-          border: Border.all(
-              color: active ? Colors.white30 : Colors.transparent),
-        ),
-        child: Icon(icon, color: Colors.white, size: 18),
-      ),
-    );
-  }
-}

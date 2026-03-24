@@ -9,6 +9,8 @@ import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
+import '../../widgets/live/live_video_player.dart';
+import '../../widgets/live/viewer_top_bar.dart';
 import '../public_profile_screen.dart';
 
 class ViewerStreamScreen extends StatefulWidget {
@@ -248,14 +250,14 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
       resizeToAvoidBottomInset: false,
       body: Stack(
         children: [
-          // ── Video (tam ekran) ───────────────────────────────────────────
-          if (_remoteVideoTrack != null)
-            Positioned.fill(
-              child: VideoTrackRenderer(
-                _remoteVideoTrack!,
-                fit: VideoViewFit.contain,
-              ),
+          // ── Video katmanı (tam ekran) — host track'i + bekleme durumu ───
+          Positioned.fill(
+            child: LiveVideoPlayer(
+              track: _remoteVideoTrack,
+              cameraEnabled: true,
+              waitingLabel: 'Video bekleniyor...',
             ),
+          ),
 
           // ── Bağlanıyor ─────────────────────────────────────────────────
           if (_connecting && _error == null)
@@ -269,29 +271,8 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       CircularProgressIndicator(color: kPrimary),
                       SizedBox(height: 16),
                       Text('Yayına bağlanıyor...',
-                          style:
-                              TextStyle(color: Colors.white70, fontSize: 14)),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-
-          // ── Video bekleniyor ───────────────────────────────────────────
-          if (connected && _remoteVideoTrack == null)
-            const Positioned.fill(
-              child: ColoredBox(
-                color: Colors.black,
-                child: Center(
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.videocam_off_outlined,
-                          color: Colors.white24, size: 52),
-                      SizedBox(height: 12),
-                      Text('Video bekleniyor...',
-                          style:
-                              TextStyle(color: Colors.white38, fontSize: 14)),
+                          style: TextStyle(
+                              color: Colors.white70, fontSize: 14)),
                     ],
                   ),
                 ),
@@ -328,137 +309,18 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               ),
             ),
 
-          // ── Üst gradient bar ────────────────────────────────────────────
+          // ── Üst bar: geri + CANLI + izleyici + başlık + MOD + Ayrıl ────
           Positioned(
             top: 0,
             left: 0,
             right: 0,
-            child: Container(
-              padding: EdgeInsets.only(
-                  top: topPad + 14, left: 16, right: 16, bottom: 32),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Color(0xBB000000), Colors.transparent],
-                ),
-              ),
-              child: Row(
-                children: [
-                  // Geri
-                  GestureDetector(
-                    key: const Key('viewer_btn_geri'),
-                    onTap: _leave,
-                    child: Container(
-                      width: 36,
-                      height: 36,
-                      decoration: BoxDecoration(
-                        color: Colors.black38,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: const Icon(Icons.arrow_back_ios_new,
-                          color: Colors.white, size: 16),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // LIVE badge
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                        color: Colors.red,
-                        borderRadius: BorderRadius.circular(5)),
-                    child: const Text('CANLI',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 10,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.5)),
-                  ),
-                  const SizedBox(width: 6),
-                  // İzleyici sayısı
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 8, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Text(
-                      '👁 $_viewerCount',
-                      style: const TextStyle(
-                          color: Colors.white, fontSize: 11),
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  // Başlık + host
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          widget.joinToken.title,
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontWeight: FontWeight.w700,
-                            fontSize: 13,
-                            shadows: [
-                              Shadow(blurRadius: 6, color: Colors.black)
-                            ],
-                          ),
-                          overflow: TextOverflow.ellipsis,
-                        ),
-                        Text(
-                          '@${widget.joinToken.hostUsername}',
-                          style: const TextStyle(
-                              color: Colors.white60, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                  // Moderatör rozeti
-                  if (_isCoHost) ...[
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF16A34A),
-                        borderRadius: BorderRadius.circular(20),
-                      ),
-                      child: const Text(
-                        '🛡 MOD',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0.4,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                  ],
-                  // Ayrıl
-                  GestureDetector(
-                    key: const Key('viewer_btn_ayril'),
-                    onTap: _leave,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.black45,
-                        borderRadius: BorderRadius.circular(20),
-                        border: Border.all(color: Colors.white24),
-                      ),
-                      child: const Text('Ayrıl',
-                          style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600)),
-                    ),
-                  ),
-                ],
-              ),
+            child: ViewerTopBar(
+              topPad: topPad,
+              viewerCount: _viewerCount,
+              title: widget.joinToken.title,
+              hostUsername: widget.joinToken.hostUsername,
+              isCoHost: _isCoHost,
+              onLeave: _leave,
             ),
           ),
 

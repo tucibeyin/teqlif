@@ -374,6 +374,9 @@ class _ChatPanelState extends State<ChatPanel> {
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
+      isDismissible: true,
+      enableDrag: true,
+      barrierColor: Colors.black54,
       builder: (_) => _HistorySheet(history: history),
     );
   }
