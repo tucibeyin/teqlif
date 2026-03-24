@@ -1995,7 +1995,7 @@
                 listingBtn.style.display = (!_isHostPage && _currentListingId && state.status !== 'idle') ? '' : 'none';
             }
 
-            const isHost = document.getElementById('hostSetup') !== null && _isHostPage;
+            const isHost = document.getElementById('hostSetup') !== null && (_isHostPage || _isCoHost);
 
             if (isHost) {
                 hostControls.style.display = 'flex';
