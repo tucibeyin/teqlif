@@ -1273,6 +1273,7 @@
 
                 <!-- HOST: kontrol butonları -->
                 <div class="auction-host-controls" id="hostControls" style="display:none;">
+                    <button class="btn btn-orange" id="btnAuctionQuickStart" title="Ürün adı ve fiyat girmeden anında başlat" data-track-id="yayin-btn-acik-artirma-hizli-baslat">⚡ Hızlı</button>
                     <button class="btn btn-green" id="btnAuctionStart" data-track-id="yayin-btn-acik-artirma-baslat">▶ Başlat</button>
                     <button class="btn btn-amber" id="btnAuctionPause" style="display:none;" data-track-id="yayin-btn-acik-artirma-duraklat">⏸ Duraklat</button>
                     <button class="btn btn-slate" id="btnAuctionResume" style="display:none;" data-track-id="yayin-btn-acik-artirma-devam">▶ Devam</button>
@@ -1808,6 +1809,7 @@
         let _lastBidCount = 0;         // teklif sayısı takibi
         let _currentBinPrice = null;   // buy_it_now_price
         let _isBoughtItNow = false;    // son artırma Hemen Al ile mi kapandı
+        let _quickAuctionCount = 0;    // hızlı açık artırma sayacı (Ürün 1, 2, 3...)
 
         // chat.js ile aynı palet ve algoritma — bağımsız çalışır
         const _USER_PALETTE = [
@@ -2001,6 +2003,7 @@
                 hostControls.style.display = 'flex';
                 if (state.status === 'idle' || state.status === 'ended') {
                     hostSetup.style.display = 'flex';
+                    document.getElementById('btnAuctionQuickStart').style.display = '';
                     document.getElementById('btnAuctionStart').style.display = '';
                     document.getElementById('btnAuctionPause').style.display = 'none';
                     document.getElementById('btnAuctionResume').style.display = 'none';
@@ -2010,6 +2013,7 @@
                     if (state.status === 'ended') _resetListingMode();
                 } else if (state.status === 'active') {
                     hostSetup.style.display = 'none';
+                    document.getElementById('btnAuctionQuickStart').style.display = 'none';
                     document.getElementById('btnAuctionStart').style.display = 'none';
                     document.getElementById('btnAuctionPause').style.display = '';
                     document.getElementById('btnAuctionResume').style.display = 'none';
@@ -2017,6 +2021,7 @@
                     document.getElementById('btnAuctionEnd').style.display = '';
                 } else if (state.status === 'paused') {
                     hostSetup.style.display = 'none';
+                    document.getElementById('btnAuctionQuickStart').style.display = 'none';
                     document.getElementById('btnAuctionStart').style.display = 'none';
                     document.getElementById('btnAuctionPause').style.display = 'none';
                     document.getElementById('btnAuctionResume').style.display = '';
@@ -2284,6 +2289,20 @@
             document.querySelectorAll('.lp-item').forEach(el => el.classList.remove('selected'));
             _closeListingPicker();
         }
+
+        // HOST: Hızlı Başlat — dialog olmadan Ürün N / ₺1 ile anında başlat
+        document.getElementById('btnAuctionQuickStart')?.addEventListener('click', async () => {
+            _quickAuctionCount++;
+            try {
+                await Auction.startAuction(`Ürün ${_quickAuctionCount}`, 1, null, null);
+                setAuctionMsg(`⚡ Ürün ${_quickAuctionCount} başlatıldı!`, 'success');
+            } catch (e) {
+                _quickAuctionCount--;
+                console.error('[Auction] Hızlı başlatma hatası:', e);
+                if (window.Sentry) Sentry.captureException(e);
+                setAuctionMsg(e.detail || e.message || 'Hata', 'error');
+            }
+        });
 
         // HOST: Başlat
         document.getElementById('btnAuctionStart')?.addEventListener('click', async () => {
