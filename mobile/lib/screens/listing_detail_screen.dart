@@ -682,6 +682,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                           style: ElevatedButton.styleFrom(
                             backgroundColor: kPrimary,
                             foregroundColor: Colors.white,
+                            minimumSize: Size.zero, // global tema override: Row içinde sonsuz genişliği önler
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(10),
                             ),
