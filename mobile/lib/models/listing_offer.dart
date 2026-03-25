@@ -19,13 +19,13 @@ class ListingOffer {
 
   factory ListingOffer.fromJson(Map<String, dynamic> j) {
     return ListingOffer(
-      id: j['id'] as int,
-      listingId: j['listing_id'] as int,
-      userId: j['user_id'] as int,
+      id: (j['id'] as int?) ?? 0,
+      listingId: (j['listing_id'] as int?) ?? 0,
+      userId: (j['user_id'] as int?) ?? 0,
       username: j['username'] as String? ?? '',
       profileImageUrl: j['profile_image_url'] as String?,
-      amount: (j['amount'] as num).toDouble(),
-      createdAt: DateTime.parse(j['created_at'] as String),
+      amount: (j['amount'] as num?)?.toDouble() ?? 0.0,
+      createdAt: DateTime.tryParse(j['created_at'] as String? ?? '') ?? DateTime.now(),
     );
   }
 }
