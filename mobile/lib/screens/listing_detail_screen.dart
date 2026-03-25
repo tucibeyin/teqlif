@@ -163,6 +163,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     return '${buf.toString()} ₺';
   }
 
+  // Noktalı formatı silerek double parse eder: "1.234" → 1234.0
+  double? _parseFormattedPrice(String text) =>
+      double.tryParse(text.trim().replaceAll('.', '').replaceAll(',', '.'));
+
   Future<void> _loadOffers() async {
     final id = widget.listing['id'] as int;
     try {
@@ -176,7 +180,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   Future<void> _placeOffer() async {
     final l = AppLocalizations.of(context)!;
-    final amount = double.tryParse(_offerCtrl.text.trim().replaceAll(',', '.'));
+    final amount = _parseFormattedPrice(_offerCtrl.text);
     if (amount == null || amount <= 0) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l.offerInvalidAmount)),
@@ -661,7 +665,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                           child: TextField(
                             key: const Key('listing_detail_offer_input'),
                             controller: _offerCtrl,
-                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            keyboardType: TextInputType.number,
+                            inputFormatters: [_PriceInputFormatter()],
                             decoration: InputDecoration(
                               hintText: l.offerAmountHint,
                               prefixText: '₺ ',
@@ -1033,6 +1038,32 @@ class _FullscreenGalleryState extends State<_FullscreenGallery> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Kullanıcının girdiği rakamları Türkçe binlik nokta formatına çevirir.
+/// Örnek: "1234567" → "1.234.567"
+class _PriceInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    // Sadece rakamları al
+    final digits = newValue.text.replaceAll(RegExp(r'[^0-9]'), '');
+    if (digits.isEmpty) return newValue.copyWith(text: '');
+
+    // Binlik nokta ekle (_fmt ile aynı algoritma)
+    final buf = StringBuffer();
+    for (int i = 0; i < digits.length; i++) {
+      if (i > 0 && (digits.length - i) % 3 == 0) buf.write('.');
+      buf.write(digits[i]);
+    }
+    final formatted = buf.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }
