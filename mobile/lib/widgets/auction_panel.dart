@@ -51,6 +51,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   BuildContext? _binDialogCtx;
   // Bu viewer BIN talebini başlattıysa true — async username'e gerek kalmaz
   bool _iAmBinBuyer = false;
+  // Hızlı açık artırma sayacı — her yayın oturumunda Ürün 1, 2, 3... üretir
+  int _quickAuctionCount = 0;
 
   @override
   void dispose() {
@@ -72,6 +74,20 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     Future.delayed(const Duration(seconds: 3), () {
       if (mounted) setState(() => _msg = null);
     });
+  }
+
+  Future<void> _startQuickAuction() async {
+    _quickAuctionCount++;
+    try {
+      await AuctionService.startAuction(
+        widget.streamId,
+        itemName: 'Ürün $_quickAuctionCount',
+        startPrice: 1.0,
+      );
+    } catch (e) {
+      _quickAuctionCount--;
+      _setMsg(_cleanErr(e), error: true);
+    }
   }
 
   Future<void> _showStartDialog() async {
@@ -579,7 +595,11 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   Widget _hostInlineControls(AuctionState state) {
     final l = AppLocalizations.of(context)!;
     if (state.isIdle || state.isEnded) {
-      return _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog);
+      return Row(mainAxisSize: MainAxisSize.min, children: [
+        _iconBtn(Icons.bolt_rounded, Colors.orange, _startQuickAuction),
+        const SizedBox(width: 6),
+        _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog),
+      ]);
     }
     if (state.isActive) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
