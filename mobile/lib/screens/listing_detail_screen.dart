@@ -5,6 +5,8 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../models/listing_offer.dart';
+import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
 import '../l10n/app_localizations.dart';
@@ -28,6 +30,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   bool _isFavorited = false;
   bool _isActive = true;
 
+  // Teklif state'i
+  final _offersNotifier = ValueNotifier<List<ListingOffer>>([]);
+  bool _offersLoading = true;
+  bool _offerSubmitting = false;
+  final _offerCtrl = TextEditingController();
+
   @override
   void initState() {
     super.initState();
@@ -39,6 +47,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     }
     _isActive = widget.listing['is_active'] as bool? ?? true;
     _loadMyId();
+    _loadOffers();
   }
 
   Future<void> _loadMyId() async {
@@ -113,6 +122,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   @override
   void dispose() {
     _pageCtrl.dispose();
+    _offerCtrl.dispose();
+    _offersNotifier.dispose();
     super.dispose();
   }
 
@@ -125,6 +136,56 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       buf.write(s[i]);
     }
     return '${buf.toString()} ₺';
+  }
+
+  Future<void> _loadOffers() async {
+    final id = widget.listing['id'] as int;
+    try {
+      final offers = await ListingService.getOffers(id);
+      if (!mounted) return;
+      _offersNotifier.value = offers;
+    } finally {
+      if (mounted) setState(() => _offersLoading = false);
+    }
+  }
+
+  Future<void> _placeOffer() async {
+    final l = AppLocalizations.of(context)!;
+    final amount = double.tryParse(_offerCtrl.text.trim().replaceAll(',', '.'));
+    if (amount == null || amount <= 0) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.offerInvalidAmount)),
+      );
+      return;
+    }
+    setState(() => _offerSubmitting = true);
+    try {
+      final id = widget.listing['id'] as int;
+      await ListingService.placeOffer(id, amount);
+      if (!mounted) return;
+      _offerCtrl.clear();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.offerSuccess)),
+      );
+      final offers = await ListingService.getOffers(id);
+      if (mounted) _offersNotifier.value = offers;
+    } catch (e) {
+      if (!mounted) return;
+      final msg = e.toString().replaceFirst('Exception: ', '');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg.isNotEmpty ? msg : l.offerError)),
+      );
+    } finally {
+      if (mounted) setState(() => _offerSubmitting = false);
+    }
+  }
+
+  String _timeAgo(DateTime dt) {
+    final diff = DateTime.now().difference(dt);
+    if (diff.inSeconds < 60) return 'Az önce';
+    if (diff.inMinutes < 60) return '${diff.inMinutes} dk önce';
+    if (diff.inHours < 24) return '${diff.inHours} sa önce';
+    return '${diff.inDays} gün önce';
   }
 
   void _goToProfile() {
@@ -548,6 +609,120 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   ),
                 ),
               ),
+            const SizedBox(height: 8),
+
+            // Teklif Ver / Teklif Geçmişi
+            Container(
+              color: AppColors.surface(context),
+              width: double.infinity,
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l.offerHistory,
+                    style: TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.textPrimary(context),
+                    ),
+                  ),
+                  // Form — sadece ilan sahibi değilse + giriş yapılmışsa
+                  if (!isMine && _myUserId != null) ...[
+                    const SizedBox(height: 12),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: TextField(
+                            key: const Key('listing_detail_offer_input'),
+                            controller: _offerCtrl,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            decoration: InputDecoration(
+                              hintText: l.offerAmountHint,
+                              prefixText: '₺ ',
+                              isDense: true,
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              contentPadding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12,
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        ElevatedButton(
+                          key: const Key('listing_detail_offer_btn'),
+                          onPressed: _offerSubmitting ? null : _placeOffer,
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: kPrimary,
+                            foregroundColor: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 13,
+                            ),
+                          ),
+                          child: _offerSubmitting
+                              ? const SizedBox(
+                                  width: 18, height: 18,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white, strokeWidth: 2,
+                                  ),
+                                )
+                              : Text(
+                                  l.offerBtn,
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  if (!isMine && _myUserId == null) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      l.offerLoginRequired,
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: AppColors.textSecondary(context),
+                      ),
+                    ),
+                  ],
+                  const SizedBox(height: 12),
+                  ValueListenableBuilder<List<ListingOffer>>(
+                    valueListenable: _offersNotifier,
+                    builder: (context, offers, _) {
+                      if (_offersLoading) {
+                        return const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 12),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        );
+                      }
+                      if (offers.isEmpty) {
+                        return Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                          child: Text(
+                            l.offerEmpty,
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: AppColors.textSecondary(context),
+                            ),
+                          ),
+                        );
+                      }
+                      return Column(
+                        children: offers
+                            .map((o) => _buildOfferRow(context, o))
+                            .toList(),
+                      );
+                    },
+                  ),
+                ],
+              ),
+            ),
             const SizedBox(height: 90),
           ],
         ),
@@ -699,6 +874,71 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
           ],
         ),
       ));
+
+  Widget _buildOfferRow(BuildContext context, ListingOffer offer) {
+    return InkWell(
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => PublicProfileScreen(
+            username: offer.username,
+            userId: offer.userId,
+          ),
+        ),
+      ),
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 8),
+        child: Row(
+          children: [
+            CircleAvatar(
+              radius: 18,
+              backgroundColor: AppColors.primaryBg(context),
+              child: Text(
+                offer.username.isNotEmpty
+                    ? offer.username[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                  color: kPrimary,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                ),
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    '@${offer.username}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600, fontSize: 13,
+                    ),
+                  ),
+                  Text(
+                    _timeAgo(offer.createdAt),
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Text(
+              _fmt(offer.amount),
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 15,
+                color: kPrimary,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   void _openFullscreen(int startIndex) {
     Navigator.push(

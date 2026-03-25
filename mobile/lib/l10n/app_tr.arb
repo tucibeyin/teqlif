@@ -514,5 +514,13 @@
       "buyer": {"type": "String"},
       "price": {"type": "String"}
     }
-  }
+  },
+  "offerHistory": "Teklif Geçmişi",
+  "offerAmountHint": "Teklif miktarı (₺)",
+  "offerBtn": "Teklif Ver",
+  "offerSuccess": "Teklifiniz alındı!",
+  "offerError": "Teklif gönderilemedi.",
+  "offerInvalidAmount": "Geçerli bir tutar girin.",
+  "offerEmpty": "Henüz teklif yok.",
+  "offerLoginRequired": "Teklif vermek için giriş yapın."
 }
