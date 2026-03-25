@@ -2090,11 +2090,18 @@
             const modBadge = document.getElementById('modBadge');
             if (modBadge) modBadge.style.display = '';
 
-            // Host panellerini göster (auction kontrolü)
-            const hostSetup    = document.getElementById('hostSetup');
-            const hostControls = document.getElementById('hostControls');
-            if (hostSetup)    hostSetup.style.display    = 'flex';
-            if (hostControls) hostControls.style.display = 'flex';
+            // Auction UI'ını mevcut durumla yeniden senkronize et.
+            // hostSetup'ı körce 'flex' yapmak yerine updateAuctionUI çağırıyoruz;
+            // böylece açık artırma aktifse Start butonları gizli kalır.
+            updateAuctionUI({
+                status:          _currentAuctionStatus,
+                current_bid:     _currentBid,
+                current_bidder:  _currentBidder,
+                item_name:       _currentItemName,
+                listing_id:      _currentListingId,
+                buy_it_now_price: _currentBinPrice,
+                bid_count:       _lastBidCount,
+            });
 
             // Viewer bileşenlerini gizle (co-host teklif vermez, yönetir)
             const viewerControls   = document.getElementById('viewerControls');
