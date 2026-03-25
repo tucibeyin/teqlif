@@ -745,10 +745,18 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                           ),
                         );
                       }
-                      return Column(
-                        children: offers
-                            .map((o) => _buildOfferRow(context, o))
-                            .toList(),
+                      // Bir teklif yaklaşık 50px yer kaplıyor. 5 teklif = ~250px.
+                      return ConstrainedBox(
+                        constraints: const BoxConstraints(
+                          maxHeight: 250, // Max 5 öğe için
+                        ),
+                        child: SingleChildScrollView(
+                          child: Column(
+                            children: offers
+                                .map((o) => _buildOfferRow(context, o))
+                                .toList(),
+                          ),
+                        ),
                       );
                     },
                   ),
