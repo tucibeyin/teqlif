@@ -596,7 +596,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     final l = AppLocalizations.of(context)!;
     if (state.isIdle || state.isEnded) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
-        _pillIconBtn(Icons.bolt_rounded, '⚡ Hızlı', Colors.orange, _startQuickAuction),
+        _pillIconBtn(Icons.bolt_rounded, 'Hızlı', Colors.orange, _startQuickAuction),
         const SizedBox(width: 6),
         _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog),
       ]);
@@ -1009,7 +1009,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               color: const Color(0xFF059669),
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text('✅ ${l.auctionAcceptBtn}',
+            child: Text(l.auctionAcceptBtn,
                 style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
