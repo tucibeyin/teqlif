@@ -14,9 +14,23 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
 
 from app.config import settings
 from app.database import Base
-import app.models.user  # Modelleri import et ki metadata'ya girsin
-import app.models.stream
+# Tüm modeller metadata'ya kaydedilmeli — FK referansları için zorunlu
+import app.models.user  # noqa: F401
+import app.models.stream  # noqa: F401
+import app.models.listing  # noqa: F401
 import app.models.listing_offer  # noqa: F401
+import app.models.auction  # noqa: F401
+import app.models.bid  # noqa: F401
+import app.models.notification  # noqa: F401
+import app.models.message  # noqa: F401
+import app.models.follow  # noqa: F401
+import app.models.category  # noqa: F401
+import app.models.city  # noqa: F401
+import app.models.report  # noqa: F401
+import app.models.favorite  # noqa: F401
+import app.models.rating  # noqa: F401
+import app.models.block  # noqa: F401
+import app.models.analytics  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
