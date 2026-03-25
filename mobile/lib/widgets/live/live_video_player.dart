@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:livekit_client/livekit_client.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Canlı yayın — video render katmanı (host & viewer ortak).
 ///
@@ -52,21 +53,22 @@ class LiveVideoPlayer extends StatelessWidget {
 
     // ── Durum 2: Kamera kasıtlı olarak kapatıldı (host) ────────────────────
     if (!cameraEnabled) {
-      return const ColoredBox(
+      final l = AppLocalizations.of(context)!;
+      return ColoredBox(
         color: Colors.black,
         child: Center(
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Icon(
+              const Icon(
                 Icons.videocam_off_rounded,
                 color: Colors.white24,
                 size: 60,
               ),
-              SizedBox(height: 12),
+              const SizedBox(height: 12),
               Text(
-                'Kamera Kapalı',
-                style: TextStyle(
+                l.liveCameraClosed,
+                style: const TextStyle(
                   color: Colors.white30,
                   fontSize: 14,
                   fontWeight: FontWeight.w500,

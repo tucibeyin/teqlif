@@ -6,6 +6,7 @@ import '../../config/api.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../core/logger_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
 import '../../utils/error_helper.dart';
 import 'verify_screen.dart';
@@ -82,7 +83,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_eulaAccepted) {
-      showErrorSnackbar(context, Exception('Kullanım Şartları\'nı kabul etmelisiniz.'));
+      final l = AppLocalizations.of(context)!;
+      showErrorSnackbar(context, Exception(l.validTermsRequired));
       return;
     }
     setState(() { _loading = true; });
@@ -109,22 +111,23 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
-      appBar: AppBar(title: const Text('Kayıt Ol')),
+      appBar: AppBar(title: Text(l.registerTitle)),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Hesap oluştur',
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              Text(
+                l.registerSubtitle,
+                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
               ),
               const SizedBox(height: 4),
               Text(
-                'teqlif\'e katıl',
+                l.registerJoin,
                 style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
               ),
               const SizedBox(height: 28),
@@ -137,15 +140,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       controller: _fullNameCtrl,
                       textCapitalization: TextCapitalization.words,
                       maxLength: 100,
-                      decoration: const InputDecoration(
-                        labelText: 'Ad Soyad',
+                      decoration: InputDecoration(
+                        labelText: l.fieldFullName,
                         counterText: '',
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Ad soyad giriniz';
-                        if (v.trim().length < 2)
-                          return 'Ad soyad en az 2 karakter olmalı';
-                        if (v.length > 100) return 'Ad soyad en fazla 100 karakter olmalı';
+                        if (v == null || v.isEmpty) return l.fieldFullNameHint;
+                        if (v.trim().length < 2) return l.validFullNameMin;
+                        if (v.length > 100) return l.validFullNameMax;
                         return null;
                       },
                     ),
@@ -156,8 +158,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       autocorrect: false,
                       maxLength: 50,
                       decoration: InputDecoration(
-                        labelText: 'Kullanıcı Adı',
-                        helperText: 'Küçük harf, rakam ve _ kullanılabilir',
+                        labelText: l.fieldUsername,
+                        helperText: l.fieldUsernameSubtitle,
                         helperStyle: const TextStyle(fontSize: 11),
                         counterText: '',
                         suffixIcon: _usernameStatus == 'checking'
@@ -178,16 +180,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     : null,
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Kullanıcı adı giriniz';
-                        if (v.length < 3) return 'En az 3 karakter olmalı';
-                        if (v.length > 50) return 'En fazla 50 karakter olmalı';
+                        if (v == null || v.isEmpty) return l.fieldUsernameHint;
+                        if (v.length < 3) return l.validUsernameMin;
+                        if (v.length > 50) return l.validUsernameMax;
                         if (!RegExp(r'^[a-z0-9_]+$').hasMatch(v)) {
-                          return 'Sadece küçük harf, rakam ve _ kullanılabilir';
+                          return l.validUsernameChars;
                         }
-                        if (_usernameStatus == 'taken')
-                          return 'Bu kullanıcı adı zaten alınmış';
-                        if (_usernameStatus == 'checking')
-                          return 'Kullanıcı adı kontrol ediliyor...';
+                        if (_usernameStatus == 'taken') return l.validUsernameTaken;
+                        if (_usernameStatus == 'checking') return l.usernameChecking;
                         return null;
                       },
                     ),
@@ -198,16 +198,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       keyboardType: TextInputType.emailAddress,
                       autocorrect: false,
                       maxLength: 255,
-                      decoration: const InputDecoration(
-                        labelText: 'E-posta',
+                      decoration: InputDecoration(
+                        labelText: l.fieldEmail,
                         counterText: '',
                       ),
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'E-posta giriniz';
-                        if (v.length > 255) return 'E-posta en fazla 255 karakter olmalı';
+                        if (v == null || v.isEmpty) return l.fieldEmailHint;
+                        if (v.length > 255) return l.validEmailMax;
                         if (!RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$')
                             .hasMatch(v)) {
-                          return 'Geçerli bir e-posta adresi giriniz';
+                          return l.validEmailInvalid;
                         }
                         return null;
                       },
@@ -222,7 +222,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       smartDashesType: SmartDashesType.disabled,
                       smartQuotesType: SmartQuotesType.disabled,
                       decoration: InputDecoration(
-                        labelText: 'Şifre',
+                        labelText: l.fieldPassword,
                         suffixIcon: IconButton(
                           key: const Key('register_btn_password_visibility'),
                           icon: Icon(_obscure
@@ -233,8 +233,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       textInputAction: TextInputAction.done,
                       validator: (v) {
-                        if (v == null || v.isEmpty) return 'Şifre giriniz';
-                        if (v.length < 8) return 'En az 8 karakter olmalı';
+                        if (v == null || v.isEmpty) return l.fieldPasswordHint;
+                        if (v.length < 8) return l.validPasswordMin;
                         return null;
                       },
                     ),
@@ -303,7 +303,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 color: Colors.white,
                               ),
                             )
-                          : const Text('Kayıt Ol'),
+                          : Text(l.registerTitle),
                     ),
                   ],
                 ),
@@ -313,15 +313,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
                   Text(
-                    'Zaten hesabın var mı? ',
+                    l.registerHaveAccount,
                     style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
                   ),
                   GestureDetector(
                     key: const Key('register_link_giris_yap'),
                     onTap: () => Navigator.of(context).pop(),
-                    child: const Text(
-                      'Giriş yap',
-                      style: TextStyle(
+                    child: Text(
+                      l.registerLoginLink,
+                      style: const TextStyle(
                         color: kPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 14,

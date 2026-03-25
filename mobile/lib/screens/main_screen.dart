@@ -12,6 +12,7 @@ import 'profile_screen.dart';
 import 'messages_screen.dart';
 import 'search_screen.dart';
 import 'live/live_list_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -194,6 +195,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       body: IndexedStack(
         index: _currentIndex,
@@ -204,30 +206,30 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
         currentIndex: _currentIndex,
         onTap: _onNavTap,
         items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.videocam_outlined, color: Colors.red),
-            activeIcon: Icon(Icons.videocam, color: kPrimary),
-            label: 'Canlı',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.videocam_outlined, color: Colors.red),
+            activeIcon: const Icon(Icons.videocam, color: kPrimary),
+            label: l.navLive,
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.grid_view_outlined),
-            activeIcon: Icon(Icons.grid_view),
-            label: 'İlanlar',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.grid_view_outlined),
+            activeIcon: const Icon(Icons.grid_view),
+            label: l.navListings,
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.search_outlined),
-            activeIcon: Icon(Icons.search),
-            label: 'Ara',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.search_outlined),
+            activeIcon: const Icon(Icons.search),
+            label: l.navSearch,
           ),
           BottomNavigationBarItem(
             icon: _buildMessageIcon(),
             activeIcon: _buildMessageActiveIcon(),
-            label: 'Mesajlar',
+            label: l.navMessages,
           ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.person_outline),
-            activeIcon: Icon(Icons.person),
-            label: 'Profilim',
+          BottomNavigationBarItem(
+            icon: const Icon(Icons.person_outline),
+            activeIcon: const Icon(Icons.person),
+            label: l.navProfile,
           ),
         ],
       ),

@@ -7,6 +7,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
+import '../l10n/app_localizations.dart';
 import 'profile_screen.dart';
 import 'public_profile_screen.dart';
 import 'messages_screen.dart';
@@ -101,8 +102,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         final data = jsonDecode(resp.body) as Map<String, dynamic>;
         final newActive = data['is_active'] as bool? ?? !_isActive;
         setState(() => _isActive = newActive);
+        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(newActive ? 'İlan aktif yapıldı' : 'İlan pasife alındı')),
+          SnackBar(content: Text(newActive ? l.listingActivated : l.listingDeactivated)),
         );
       }
     } catch (_) {}
@@ -115,7 +117,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   String _fmt(dynamic price) {
-    if (price == null) return 'Fiyat Belirtilmemiş';
+    if (price == null) return AppLocalizations.of(context)!.listingPriceNotSet;
     final s = (price as num).toInt().toString();
     final buf = StringBuffer();
     for (int i = 0; i < s.length; i++) {
@@ -152,16 +154,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     if (user == null) return;
     final otherId = user['id'] as int?;
     if (otherId == null) return;
+    final l = AppLocalizations.of(context)!;
 
     if (_myUserId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Mesaj göndermek için giriş yapmalısınız')),
+        SnackBar(content: Text(l.listingMsgLoginRequired)),
       );
       return;
     }
     if (_myUserId == otherId) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Kendi ilanınıza mesaj gönderemezsiniz')),
+        SnackBar(content: Text(l.listingMsgOwnListing)),
       );
       return;
     }
@@ -180,16 +183,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   }
 
   void _confirmDelete(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     showDialog(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('İlanı Sil'),
-        content: const Text('Bu ilanı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.'),
+        title: Text(l.dialogDeleteListingTitle),
+        content: Text(l.listingDeleteConfirmContent),
         actions: [
           TextButton(
             key: const Key('listing_detail_dialog_btn_vazgec'),
             onPressed: () => Navigator.pop(context),
-            child: const Text('Vazgeç'),
+            child: Text(l.btnDismiss),
           ),
           TextButton(
             key: const Key('listing_detail_dialog_btn_sil'),
@@ -197,7 +201,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               Navigator.pop(context);
               await _deleteListing(context);
             },
-            child: const Text('Evet, Sil', style: TextStyle(color: Color(0xFFDC2626))),
+            child: Text(l.listingDeleteConfirmYes, style: const TextStyle(color: Color(0xFFDC2626))),
           ),
         ],
       ),
@@ -222,14 +226,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       }
     } catch (_) {
       if (mounted) {
+        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bağlantı hatası')),
+          SnackBar(content: Text(l.errorConnection)),
         );
       }
     }
   }
 
   void _openReport(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     String? selectedReason;
     final noteCtrl = TextEditingController();
     showModalBottomSheet(
@@ -248,24 +254,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text('🚩 İlanı Şikayet Et',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
+              Text('🚩 ${l.listingReportTitle}',
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700)),
               const SizedBox(height: 16),
               DropdownButtonFormField<String>(
                 key: const Key('listing_detail_report_select_neden'),
                 value: selectedReason,
-                hint: const Text('Neden seçin'),
+                hint: Text(l.listingReportSelectHint),
                 decoration: InputDecoration(
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 ),
-                items: const [
-                  DropdownMenuItem(value: 'Yanıltıcı ilan', child: Text('Yanıltıcı ilan')),
-                  DropdownMenuItem(value: 'Yasadışı ürün', child: Text('Yasadışı ürün')),
-                  DropdownMenuItem(value: 'Spam / tekrar ilan', child: Text('Spam / tekrar ilan')),
-                  DropdownMenuItem(value: 'Uygunsuz içerik', child: Text('Uygunsuz içerik')),
-                  DropdownMenuItem(value: 'Dolandırıcılık şüphesi', child: Text('Dolandırıcılık şüphesi')),
-                  DropdownMenuItem(value: 'Diğer', child: Text('Diğer')),
+                items: [
+                  DropdownMenuItem(value: l.listingReportMisleading, child: Text(l.listingReportMisleading)),
+                  DropdownMenuItem(value: l.listingReportIllegal, child: Text(l.listingReportIllegal)),
+                  DropdownMenuItem(value: l.listingReportSpam, child: Text(l.listingReportSpam)),
+                  DropdownMenuItem(value: l.listingReportInappropriate, child: Text(l.listingReportInappropriate)),
+                  DropdownMenuItem(value: l.listingReportFraud, child: Text(l.listingReportFraud)),
                 ],
                 onChanged: (v) => setModalState(() => selectedReason = v),
               ),
@@ -275,7 +280,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 controller: noteCtrl,
                 maxLines: 3,
                 decoration: InputDecoration(
-                  hintText: 'Ek açıklama (isteğe bağlı)',
+                  hintText: l.listingReportNoteHint,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),
                   contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
                 ),
@@ -293,7 +298,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   onPressed: () async {
                     if (selectedReason == null) {
                       ScaffoldMessenger.of(ctx).showSnackBar(
-                        const SnackBar(content: Text('Lütfen bir neden seçin')),
+                        SnackBar(content: Text(l.listingReportSelectRequired)),
                       );
                       return;
                     }
@@ -302,7 +307,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     Navigator.pop(ctx);
                     await _submitReport(reason);
                   },
-                  child: const Text('Şikayeti Gönder'),
+                  child: Text(l.listingReportSubmitBtn),
                 ),
               ),
             ],
@@ -323,9 +328,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         body: jsonEncode({'listing_id': id, 'reason': reason}),
       );
       if (!mounted) return;
+      final l = AppLocalizations.of(context)!;
       if (resp.statusCode == 200) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Şikayetiniz alındı. Teşekkür ederiz.')),
+          SnackBar(content: Text(l.listingReportSuccess)),
         );
       } else {
         final detail = jsonDecode(resp.body)['detail'] ?? 'Bir hata oluştu';
@@ -333,8 +339,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       }
     } catch (_) {
       if (mounted) {
+        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bağlantı hatası')),
+          SnackBar(content: Text(l.errorConnection)),
         );
       }
     }
@@ -342,6 +349,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final listing = widget.listing;
     final user = listing['user'] as Map<String, dynamic>?;
     final isMine = _myUserId != null && user?['id'] == _myUserId;
@@ -366,13 +374,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 _isActive ? Icons.visibility_off_outlined : Icons.visibility_outlined,
                 color: _isActive ? const Color(0xFF6B7280) : kPrimary,
               ),
-              tooltip: _isActive ? 'Pasife Al' : 'Aktif Yap',
+              tooltip: _isActive ? l.btnDeactivate : l.btnActivate,
               onPressed: _toggleActive,
             ),
             IconButton(
               key: const Key('listing_detail_btn_sil'),
               icon: const Icon(Icons.delete_outline, color: Color(0xFFDC2626)),
-              tooltip: 'İlanı Sil',
+              tooltip: l.listingDeleteTooltip,
               onPressed: () => _confirmDelete(context),
             ),
           ] else if (_myUserId != null) ...[
@@ -382,13 +390,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 _isFavorited ? Icons.favorite : Icons.favorite_border,
                 color: _isFavorited ? Colors.red : const Color(0xFF9CA3AF),
               ),
-              tooltip: _isFavorited ? 'Favoriden Çıkar' : 'Favorile',
+              tooltip: _isFavorited ? l.btnRemoveFavorite : l.btnRemoveFavorite,
               onPressed: _toggleFavorite,
             ),
             IconButton(
               key: const Key('listing_detail_btn_sikayet'),
               icon: const Icon(Icons.flag_outlined, color: Color(0xFF9CA3AF), size: 22),
-              tooltip: 'Şikayet Et',
+              tooltip: l.listingReportTooltip,
               onPressed: () => _openReport(context),
             ),
           ],
@@ -452,7 +460,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Açıklama',
+                    Text(l.listingDescriptionLabel,
                         style: TextStyle(
                             fontSize: 14, fontWeight: FontWeight.w700,
                             color: AppColors.textPrimary(context))),
@@ -477,7 +485,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('İlan Bilgileri',
+                  Text(l.listingInfo,
                       style: TextStyle(
                           fontSize: 14, fontWeight: FontWeight.w700,
                           color: AppColors.textPrimary(context))),
@@ -553,7 +561,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                   key: const Key('listing_detail_btn_mesaj_gonder'),
                   onPressed: _openChat,
                   icon: const Icon(Icons.chat_bubble_outline, size: 20),
-                  label: const Text('Satıcıya Mesaj Gönder'),
+                  label: Text(l.listingSendMessage),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: kPrimary,
                     foregroundColor: Colors.white,

@@ -173,5 +173,346 @@
   "dialogDeleteListingDesc": "Bu ilanı kalıcı olarak silmek istiyor musunuz?",
   "dialogFaceIdActivateTitle": "Face ID'yi etkinleştirmek için doğrulayın",
 
-  "settingsLanguage": "Dil"
+  "settingsLanguage": "Dil",
+
+  "homeAppBarTitle": "İlanlar",
+  "homeSearchingHeader": "Aranıyor...",
+  "homeResultsCount": "{count} ilan bulundu",
+  "@homeResultsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "searchUserHint": "Kullanıcı ara...",
+  "searchNoUser": "Kullanıcı bulunamadı",
+  "searchLiveStreams": "Canlı Yayınlar",
+  "searchNoContent": "Henüz içerik yok",
+
+  "msgTabMessages": "Mesajlar",
+  "msgTabNotifications": "Bildirimler",
+  "msgNoMessages": "Henüz mesajın yok",
+  "msgNoMessagesDesc": "Bir ilanla ilgilendiğinde\nburada görüntülenecek",
+  "msgSendFailed": "Mesaj gönderilemedi",
+  "msgWriteHint": "Mesaj yaz...",
+  "msgNoChat": "Henüz mesaj yok.\nİlk mesajı gönder!",
+  "msgGoToListing": "📌 İlana Git",
+
+  "notifNone": "Bildirim yok",
+  "notifNoneDesc": "Yeni bildirimler burada görünecek",
+  "notificationsTitle": "Bildirimler",
+  "notificationsMarkAllRead": "Tümünü oku",
+
+  "blockedUsersTitle": "Engellenen Kullanıcılar",
+  "blockedNone": "Engellenen kullanıcı yok",
+  "blockedUnblock": "Engeli Kaldır",
+  "blockedActionFailed": "İşlem gerçekleştirilemedi",
+
+  "followNoFollowers": "Henüz takipçi yok",
+  "followNoFollowing": "Henüz takip edilen yok",
+  "followBtnFollowing": "Takiptesin",
+  "followBtnFollow": "Takip Et",
+
+  "pubProfileUserNotFound": "Kullanıcı bulunamadı",
+  "pubProfileListingsCount": "İlanları ({count})",
+  "@pubProfileListingsCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "pubProfileStatListings": "İlanlar",
+  "pubProfileStatFollowers": "Takipçi",
+  "pubProfileStatFollowing": "Takip",
+  "pubProfileEditComingSoon": "Profil düzenleme yakında",
+  "pubProfileFollowingLabel": "Takip Ediliyor",
+  "pubProfileFollowLabel": "Takip Et",
+  "pubProfileSendMessage": "Mesaj Gönder",
+  "pubProfileUpdateRating": "Puanı Güncelle",
+  "pubProfileGiveRating": "Puan Ver",
+  "pubProfileBlock": "Engelle",
+  "pubProfileUnblock": "Engeli Kaldır",
+  "pubProfileActionFailed": "İşlem gerçekleştirilemedi",
+  "pubProfileNoReview": "Henüz değerlendirme yok",
+
+  "ratingVeryBad": "Çok kötü",
+  "ratingBad": "Kötü",
+  "ratingMedium": "Orta",
+  "ratingGood": "İyi",
+  "ratingExcellent": "Mükemmel",
+  "ratingSelectStar": "Bir yıldız seçin",
+  "ratingCommentHint": "Neden bu puanı veriyorsunuz? (isteğe bağlı)",
+  "ratingSaveFailed": "Puan kaydedilemedi",
+  "ratingReviews": "Değerlendirmeler",
+  "ratingCount": "{count} değerlendirme",
+  "@ratingCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+  "ratingStarCount": "({count} puan)",
+  "@ratingStarCount": {
+    "placeholders": {
+      "count": { "type": "int" }
+    }
+  },
+
+  "createListingPhotoCount": "Fotoğraflar ({count}/{max})",
+  "@createListingPhotoCount": {
+    "placeholders": {
+      "count": { "type": "int" },
+      "max": { "type": "int" }
+    }
+  },
+  "createListingSelectOption": "-- Seçiniz --",
+  "createListingPhotoUploadFailed": "Fotoğraf yüklenemedi: {error}",
+  "@createListingPhotoUploadFailed": {
+    "placeholders": {
+      "error": { "type": "String" }
+    }
+  },
+  "createListingConnError": "Bağlantı hatası. Lütfen tekrar deneyin.",
+
+  "notifSettingsMessagesTitle": "Mesajlar",
+  "notifSettingsMessagesDesc": "Yeni direkt mesaj geldiğinde",
+  "notifSettingsFollowsTitle": "Yeni Takipçi",
+  "notifSettingsFollowsDesc": "Biri seni takip ettiğinde",
+  "notifSettingsAuctionWonTitle": "Açık Artırma Kazandı",
+  "notifSettingsAuctionWonDesc": "Teklifin kabul edildiğinde",
+  "notifSettingsStreamStartedTitle": "Canlı Yayın",
+  "notifSettingsStreamStartedDesc": "Takip ettiğin biri yayın açtığında",
+  "notifSettingsNewListingTitle": "Yeni İlan",
+  "notifSettingsNewListingDesc": "Takip ettiğin biri ilan eklediğinde",
+  "notifSettingsNewBidTitle": "Yeni Teklif",
+  "notifSettingsNewBidDesc": "İlanına teklif geldiğinde",
+  "notifSettingsOutbidTitle": "Teklif Geçildi",
+  "notifSettingsOutbidDesc": "Açık artırmada teklifin geçildiğinde",
+
+  "btnOk": "Tamam",
+  "btnGoBack": "Geri Dön",
+  "errorGeneric": "Bir hata oluştu",
+
+  "listingPriceNotSet": "Fiyat Belirtilmemiş",
+  "listingMsgLoginRequired": "Mesaj göndermek için giriş yapmalısınız",
+  "listingMsgOwnListing": "Kendi ilanınıza mesaj gönderemezsiniz",
+  "listingActivated": "İlan aktif yapıldı",
+  "listingDeactivated": "İlan pasife alındı",
+  "listingDeleteConfirmContent": "Bu ilanı silmek istediğinize emin misiniz? Bu işlem geri alınamaz.",
+  "listingDeleteConfirmYes": "Evet, Sil",
+  "listingInfo": "İlan Bilgileri",
+  "listingLocationLabel": "Konum",
+  "listingSendMessage": "Satıcıya Mesaj Gönder",
+  "listingReportTooltip": "Şikayet Et",
+  "listingDeleteTooltip": "İlanı Sil",
+  "listingReportTitle": "🚩 İlanı Şikayet Et",
+  "listingReportSelectHint": "Neden seçin",
+  "listingReportMisleading": "Yanıltıcı ilan",
+  "listingReportIllegal": "Yasadışı ürün",
+  "listingReportSpam": "Spam / tekrar ilan",
+  "listingReportInappropriate": "Uygunsuz içerik",
+  "listingReportFraud": "Dolandırıcılık şüphesi",
+  "listingReportNoteHint": "Ek açıklama (isteğe bağlı)",
+  "listingReportSubmitBtn": "Şikayeti Gönder",
+  "listingReportSelectRequired": "Lütfen bir neden seçin",
+  "listingReportSuccess": "Şikayetiniz alındı. Teşekkür ederiz.",
+  "listingDescriptionLabel": "Açıklama",
+
+  "liveStreamsTitle": "Canlı Yayınlar",
+  "liveStartStream": "Yayın Aç",
+  "liveAllCategory": "Tümü",
+  "liveNoStreams": "Şu an aktif yayın yok",
+  "liveBeFirst": "İlk yayını sen başlat!",
+  "livePullToRefresh": "Yenilemek için aşağı çekin",
+  "liveStreamsLoadError": "Yayınlar yüklenemedi",
+  "liveStartStreamDialogTitle": "Yayın Başlat",
+  "liveStreamTitleHint": "Yayın başlığı",
+  "liveStreamTitleLabel": "Başlık *",
+  "liveCategoryLabel": "Kategori *",
+  "liveCategoryHint": "Kategori seç",
+  "liveStartBtn": "Başlat",
+  "liveStreamTitleRequired": "Yayın başlığı zorunludur",
+  "liveStreamTitleMin": "Yayın başlığı 3 karakterden fazla olmalı.",
+  "liveCategoryRequired": "Kategori seçimi zorunludur",
+  "liveLoginRequired": "Yayın başlatmak için giriş yapmalısınız",
+  "liveBadgeLabel": "CANLI",
+  "liveEndedBadge": "BİTTİ",
+  "liveConnecting": "Yayın başlatılıyor...",
+  "liveConnectingViewer": "Yayına bağlanıyor...",
+  "livePermissionRequired": "Kamera ve mikrofon izni gerekli",
+  "liveViewersTitle": "👁 İzleyiciler ({count})",
+  "@liveViewersTitle": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "liveNoViewers": "Henüz izleyici yok",
+  "liveEndStreamTitle": "Yayını Bitir",
+  "liveEndStreamConfirm": "Yayını sonlandırmak istiyor musunuz?",
+  "liveEndStreamBtn": "Bitir",
+  "liveGoBack": "Geri Dön",
+  "liveEnded": "Yayın sona erdi",
+  "liveStreamEndedTitle": "Yayın Sona Erdi",
+  "liveStreamEndedDesc": "Bu yayın yayıncı tarafından sonlandırıldı.",
+  "liveStreamEndedOverlay": "Yayın Sona Erdi",
+  "liveDiscoverStreams": "Kaydırarak başka yayınları keşfet",
+  "liveLeaveBtn": "Ayrıl",
+  "liveNextStream": "Sonraki yayın",
+  "liveCameraClosed": "Kamera Kapalı",
+  "liveWaitingVideo": "Video bekleniyor...",
+  "liveModDemotedSelf": "Moderatörlüğünüz @{username} tarafından kaldırıldı.",
+  "@liveModDemotedSelf": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "liveModPromotedSelf": "⭐ @{username} sizi moderatör yaptı! Artık izleyicileri yönetebilirsiniz.",
+  "@liveModPromotedSelf": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+
+  "modTitle": "🛡 Moderasyon",
+  "modMute": "Sustur",
+  "modUnmute": "Susturmayı Kaldır",
+  "modPromote": "Moderatör Yap",
+  "modDemote": "Moderatörlüğü Kaldır",
+  "modKick": "Yayından At",
+  "modMutedMsg": "@{username} susturuldu",
+  "@modMutedMsg": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modUnmutedMsg": "Susturma kaldırıldı",
+  "modPromotedMsg": "@{username} moderatör yapıldı",
+  "@modPromotedMsg": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modDemotedMsg": "@{username} moderatörlükten alındı",
+  "@modDemotedMsg": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modKickedMsg": "@{username} yayından atıldı",
+  "@modKickedMsg": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modPromotedSnack": "⭐ @{username} moderatör yapıldı!",
+  "@modPromotedSnack": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "modDemotedSnack": "✖ @{username} moderatörlükten alındı",
+  "@modDemotedSnack": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+
+  "chatMessageHint": "Mesaj yaz...",
+  "chatMutedHint": "🔇 Susturuldunuz",
+  "chatHistoryTitle": "Sohbet Geçmişi",
+  "chatHistoryCount": "Son {count} mesaj",
+  "@chatHistoryCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+
+  "auctionTitle": "Açık Artırma",
+  "auctionBidsHeader": "TEKLİFLER",
+  "auctionAcceptBidTitle": "✅ Teklifi Kabul Et",
+  "auctionItem": "Ürün",
+  "auctionWinnerPrice": "Kazanan Fiyat",
+  "auctionBidder": "Teklif Sahibi",
+  "auctionAcceptConfirm": "Kabul edildiğinde artırma kapanır ve özet sohbete otomatik mesaj gönderilir.",
+  "auctionCancelBtn": "İptal Et",
+  "auctionContinueBtn": "Devam Et",
+  "auctionAccepted": "Teklif kabul edildi! Özet sohbete gönderildi.",
+  "auctionEndTitle": "Açık Artırmayı Bitir",
+  "auctionEndDesc": "Sonuç kaydedilecek ve artırma kapanacak.",
+  "auctionEndBtn": "Bitir",
+  "auctionStatusActive": "AKTİF",
+  "auctionStatusPending": "ONAY BEKLİYOR ⚡",
+  "auctionStatusPaused": "DURAKLADI",
+  "auctionStatusSold": "SATILDI 🛒",
+  "auctionStatusEnded": "BİTTİ",
+  "auctionStatusIdle": "AÇIK ARTIRMA",
+  "auctionStartBtn": "▶ Başlat",
+  "auctionBidBtn": "Teklif Ver",
+  "auctionMutedBtn": "🔇 Susturuldunuz",
+  "auctionBuyNowTitle": "⚡ Hemen Al",
+  "auctionBuyNowPrice": "Hemen Al Fiyatı",
+  "auctionBuyNowConfirm": "Bu fiyatla ürünü hemen satın almak istiyor musun? Artırma sona erecek.",
+  "auctionBuyNowRequest": "⚡ Hemen Al Talebi",
+  "auctionBuyNowRequester": "Talep Eden",
+  "auctionBuyNowRequestConfirm": "Bu kişinin Hemen Al talebini onaylıyor musun?",
+  "auctionBuyNowReject": "Reddet",
+  "auctionBuyNowApprove": "Onayla",
+  "auctionWaitingHost": "Host'tan cevap bekleniyor",
+  "auctionWaitingHostDesc": "Host onayladığında satın alma tamamlanacak.",
+  "auctionApprovalWaiting": "⚡ Onay Bekleniyor",
+  "auctionApprovalWaitingDesc": "Hemen Al talebiniz host onayına gönderildi.",
+  "auctionInProgress": "⏳ İşlem Devam Ediyor",
+  "auctionInProgressDesc": "@{username} ile Hemen Al işlemi yapılıyor.",
+  "@auctionInProgressDesc": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "auctionInProgressNoBid": "Sonuçlanana kadar teklif veremezsiniz.",
+  "auctionSold": "🛒 SATILDI!",
+  "auctionBoughtBy": "@{username} tarafından Hemen Alındı",
+  "@auctionBoughtBy": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "auctionBuyNowCongrats": "🎉 Tebrikler! Satın alma tamamlandı.",
+  "auctionBuyNowSoldOther": "🛒 Ürün Hemen Satıldı! @{buyer} tarafından alındı.",
+  "@auctionBuyNowSoldOther": {
+    "placeholders": {
+      "buyer": {"type": "String"}
+    }
+  },
+  "auctionBinRejected": "Hemen Al talebiniz reddedildi, artırma devam ediyor.",
+  "auctionBinRejectedOther": "Hemen Al işlemi sonuçlandı, artırma devam ediyor.",
+  "auctionBuyNowBtn": "⚡ Hemen Al — ",
+  "auctionBuyNowBuyBtn": "Satın Al",
+  "auctionAcceptBtn": "✅ Kabul",
+  "auctionValidAmount": "Geçerli tutar girin",
+  "auctionCustomAmountHint": "Özel tutar (₺)",
+  "auctionFirstBid": "İlk teklifi sen ver!",
+  "auctionHighestBidder": "@{username} en yüksek teklif sahibi",
+  "@auctionHighestBidder": {
+    "placeholders": {
+      "username": {"type": "String"}
+    }
+  },
+  "auctionBidCount": "{count} teklif",
+  "@auctionBidCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "auctionManualEntry": "Manuel Gir",
+  "auctionFromListings": "İlanlarımdan",
+  "auctionNoActiveListings": "Aktif ilanınız yok.",
+  "auctionStartTitle": "Açık Artırma Başlat",
+  "auctionItemName": "Ürün adı",
+  "auctionStartPrice": "Başlangıç fiyatı (₺)",
+  "auctionBuyNowPriceHint": "Hemen Al fiyatı (₺, opsiyonel)",
+  "auctionBuyNowCompleted": "🛒 Hemen Al tamamlandı! @{buyer} — ₺{price}",
+  "@auctionBuyNowCompleted": {
+    "placeholders": {
+      "buyer": {"type": "String"},
+      "price": {"type": "String"}
+    }
+  }
 }

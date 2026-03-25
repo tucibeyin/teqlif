@@ -5,6 +5,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
+import '../l10n/app_localizations.dart';
 
 class NotificationSettingsScreen extends StatefulWidget {
   const NotificationSettingsScreen({super.key});
@@ -29,14 +30,14 @@ class _NotificationSettingsScreenState
     'outbid': true,
   };
 
-  static const _labels = {
-    'messages': ('Mesajlar', 'Yeni direkt mesaj geldiğinde', Icons.chat_bubble_outline),
-    'follows': ('Yeni Takipçi', 'Biri seni takip ettiğinde', Icons.person_add_outlined),
-    'auction_won': ('Açık Artırma Kazandı', 'Teklifin kabul edildiğinde', Icons.emoji_events_outlined),
-    'stream_started': ('Canlı Yayın', 'Takip ettiğin biri yayın açtığında', Icons.live_tv_outlined),
-    'new_listing': ('Yeni İlan', 'Takip ettiğin biri ilan eklediğinde', Icons.storefront_outlined),
-    'new_bid': ('Yeni Teklif', 'İlanına teklif geldiğinde', Icons.gavel_outlined),
-    'outbid': ('Teklif Geçildi', 'Açık artırmada teklifin geçildiğinde', Icons.trending_up_outlined),
+  Map<String, (String, String, IconData)> _buildLabels(AppLocalizations l) => {
+    'messages': (l.notifSettingsMessagesTitle, l.notifSettingsMessagesDesc, Icons.chat_bubble_outline),
+    'follows': (l.notifSettingsFollowsTitle, l.notifSettingsFollowsDesc, Icons.person_add_outlined),
+    'auction_won': (l.notifSettingsAuctionWonTitle, l.notifSettingsAuctionWonDesc, Icons.emoji_events_outlined),
+    'stream_started': (l.notifSettingsStreamStartedTitle, l.notifSettingsStreamStartedDesc, Icons.live_tv_outlined),
+    'new_listing': (l.notifSettingsNewListingTitle, l.notifSettingsNewListingDesc, Icons.storefront_outlined),
+    'new_bid': (l.notifSettingsNewBidTitle, l.notifSettingsNewBidDesc, Icons.gavel_outlined),
+    'outbid': (l.notifSettingsOutbidTitle, l.notifSettingsOutbidDesc, Icons.trending_up_outlined),
   };
 
   @override
@@ -95,6 +96,8 @@ class _NotificationSettingsScreenState
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final labels = _buildLabels(l);
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
@@ -102,7 +105,7 @@ class _NotificationSettingsScreenState
         foregroundColor: AppColors.textPrimary(context),
         elevation: 0,
         title: Text(
-          'Bildirim Ayarları',
+          l.notifSettingsTitle,
           style: TextStyle(
             fontSize: 16,
             fontWeight: FontWeight.w600,
@@ -117,7 +120,7 @@ class _NotificationSettingsScreenState
               : ListView(
                   padding: const EdgeInsets.symmetric(vertical: 8),
                   children: _prefs.keys.map((key) {
-                    final info = _labels[key]!;
+                    final info = labels[key]!;
                     return _NotifTile(
                       key: Key('notif_tile_$key'),
                       icon: info.$3,

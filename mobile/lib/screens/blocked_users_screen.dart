@@ -6,6 +6,7 @@ import '../config/theme.dart';
 import '../config/app_colors.dart';
 import '../services/storage_service.dart';
 import 'public_profile_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class BlockedUsersScreen extends StatefulWidget {
   const BlockedUsersScreen({super.key});
@@ -64,7 +65,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('İşlem gerçekleştirilemedi')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.blockedActionFailed)),
         );
       }
     }
@@ -72,10 +73,11 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       appBar: AppBar(
-        title: const Text('Engellenen Kullanıcılar'),
+        title: Text(l.blockedUsersTitle),
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
@@ -88,7 +90,7 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                           size: 52, color: AppColors.textTertiary(context)),
                       const SizedBox(height: 12),
                       Text(
-                        'Engellenen kullanıcı yok',
+                        l.blockedNone,
                         style: TextStyle(
                           fontSize: 15,
                           color: AppColors.textSecondary(context),
@@ -173,9 +175,9 @@ class _BlockedUsersScreenState extends State<BlockedUsersScreen> {
                             borderRadius: BorderRadius.circular(8),
                           ),
                         ),
-                        child: const Text(
-                          'Engeli Kaldır',
-                          style: TextStyle(
+                        child: Text(
+                          l.blockedUnblock,
+                          style: const TextStyle(
                               fontSize: 12, fontWeight: FontWeight.w600),
                         ),
                       ),

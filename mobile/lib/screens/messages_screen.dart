@@ -12,6 +12,7 @@ import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class MessagesScreen extends StatefulWidget {
   const MessagesScreen({super.key});
@@ -66,21 +67,22 @@ class _MessagesScreenState extends State<MessagesScreen>
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Mesajlar'),
+        title: Text(l.msgTabMessages),
         bottom: TabBar(
           controller: _tabController,
           labelColor: kPrimary,
           unselectedLabelColor: const Color(0xFF9CA3AF),
           indicatorColor: kPrimary,
           tabs: [
-            const Tab(text: 'Mesajlar'),
+            Tab(text: l.msgTabMessages),
             Tab(
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Text('Bildirimler'),
+                  Text(l.msgTabNotifications),
                   if (_unreadNotifs > 0) ...[
                     const SizedBox(width: 6),
                     Container(
@@ -173,26 +175,27 @@ class _MessagesTabState extends State<_MessagesTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
     if (_conversations.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.chat_bubble_outline, size: 64, color: Color(0xFFD1D5DB)),
-            SizedBox(height: 16),
+            const Icon(Icons.chat_bubble_outline, size: 64, color: Color(0xFFD1D5DB)),
+            const SizedBox(height: 16),
             Text(
-              'Henüz mesajın yok',
-              style: TextStyle(
+              l.msgNoMessages,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'Bir ilanla ilgilendiğinde\nburada görüntülenecek',
+              l.msgNoMessagesDesc,
               textAlign: TextAlign.center,
             ),
           ],
@@ -358,26 +361,27 @@ class _NotificationsTabState extends State<_NotificationsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     if (_loading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
     if (_notifications.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.notifications_none_outlined, size: 64, color: Color(0xFFD1D5DB)),
-            SizedBox(height: 16),
+            const Icon(Icons.notifications_none_outlined, size: 64, color: Color(0xFFD1D5DB)),
+            const SizedBox(height: 16),
             Text(
-              'Bildirim yok',
-              style: TextStyle(
+              l.notifNone,
+              style: const TextStyle(
                 fontSize: 16,
                 fontWeight: FontWeight.w600,
               ),
             ),
-            SizedBox(height: 8),
+            const SizedBox(height: 8),
             Text(
-              'Yeni bildirimler burada görünecek',
+              l.notifNoneDesc,
             ),
           ],
         ),
@@ -560,7 +564,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
         // Remove temp message on failure
         setState(() => _messages.removeWhere((m) => m['id'] == tempId));
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Mesaj gönderilemedi')),
+          SnackBar(content: Text(AppLocalizations.of(context)!.msgSendFailed)),
         );
       }
     }
@@ -588,6 +592,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.displayName),
@@ -599,11 +604,11 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
             child: _loading
                 ? const Center(child: CircularProgressIndicator(color: kPrimary))
                 : _messages.isEmpty
-                    ? const Center(
+                    ? Center(
                         child: Text(
-                          'Henüz mesaj yok.\nİlk mesajı gönder!',
+                          l.msgNoChat,
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFF9CA3AF)),
+                          style: const TextStyle(color: Color(0xFF9CA3AF)),
                         ),
                       )
                     : ListView.builder(
@@ -688,7 +693,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                       textInputAction: TextInputAction.newline,
                       maxLines: null,
                       decoration: InputDecoration(
-                        hintText: 'Mesaj yaz...',
+                        hintText: l.msgWriteHint,
                         hintStyle:
                             TextStyle(color: AppColors.textTertiary(context)),
                         filled: true,
@@ -762,6 +767,7 @@ class _MessageText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final normalColor = isMe ? Colors.white : AppColors.textPrimary(context);
     const linkColor = Color(0xFF38BDF8); // açık mavi — her iki balonda görünür
 
@@ -785,7 +791,7 @@ class _MessageText extends StatelessWidget {
       // Tıklanabilir ilan linki
       final listingId = int.parse(match.group(1)!);
       spans.add(TextSpan(
-        text: '📌 İlana Git',
+        text: l.msgGoToListing,
         style: const TextStyle(
           color: linkColor,
           fontSize: 14.5,

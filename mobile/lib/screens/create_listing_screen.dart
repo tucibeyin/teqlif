@@ -13,6 +13,7 @@ import '../services/category_service.dart';
 import '../services/city_service.dart';
 import '../services/storage_service.dart';
 import '../services/upload_service.dart';
+import '../l10n/app_localizations.dart';
 
 class CreateListingScreen extends StatefulWidget {
   const CreateListingScreen({super.key});
@@ -62,8 +63,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   Future<void> _pickImages(ImageSource source) async {
     if (_images.length >= _maxImages) {
+      final l = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('En fazla 10 fotoğraf ekleyebilirsiniz')),
+        SnackBar(content: Text(l.listingMaxPhotos)),
       );
       return;
     }
@@ -81,6 +83,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   void _showImageSourceSheet() {
+    final l = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       builder: (_) => SafeArea(
@@ -89,7 +92,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
           children: [
             ListTile(
               leading: const Icon(Icons.photo_library_outlined),
-              title: const Text('Galeriden Seç'),
+              title: Text(l.btnPickGallery),
               onTap: () {
                 Navigator.pop(context);
                 _pickImages(ImageSource.gallery);
@@ -97,7 +100,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             ),
             ListTile(
               leading: const Icon(Icons.camera_alt_outlined),
-              title: const Text('Kamera'),
+              title: Text(l.btnCamera),
               onTap: () {
                 Navigator.pop(context);
                 _pickImages(ImageSource.camera);
@@ -127,8 +130,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
         } catch (e) {
           debugPrint('UPLOAD EXCEPTION: $e');
           if (mounted) {
+            final l = AppLocalizations.of(context)!;
             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Fotoğraf yüklenemedi: $e')),
+              SnackBar(content: Text(l.createListingPhotoUploadFailed(e.toString()))),
             );
           }
         }
@@ -165,9 +169,10 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       );
 
       if (!mounted) return;
+      final l = AppLocalizations.of(context)!;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('İlan yayına alındı!'),
+        SnackBar(
+          content: Text(l.msgListingPublished),
           backgroundColor: kPrimary,
         ),
       );
@@ -179,8 +184,9 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       );
     } catch (_) {
       if (mounted) {
+        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bağlantı hatası. Lütfen tekrar deneyin.')),
+          SnackBar(content: Text(l.createListingConnError)),
         );
       }
     } finally {
@@ -190,19 +196,21 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   /// 403/429 hata kodlarını kullanıcı dostu mesaja çevirir.
   String _mapError(AppException e) {
+    final l = AppLocalizations.of(context)!;
     if (e.statusCode == 403 || e.code == 'FORBIDDEN') {
-      return 'Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.';
+      return l.errorCaptchaFailed;
     }
     if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') {
-      return 'Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.';
+      return l.errorTooFast;
     }
     return e.message;
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: const Text('İlan Ver')),
+      appBar: AppBar(title: Text(l.btnCreateListing)),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -217,7 +225,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Fotoğraflar (${_images.length}/$_maxImages)',
+                        l.createListingPhotoCount(_images.length, _maxImages),
                         style: const TextStyle(
                             fontWeight: FontWeight.w600, fontSize: 13),
                       ),
@@ -227,7 +235,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           onPressed: _showImageSourceSheet,
                           icon: const Icon(Icons.add_photo_alternate_outlined,
                               size: 18),
-                          label: const Text('Ekle'),
+                          label: Text(l.btnAdd),
                         ),
                     ],
                   ),
@@ -294,8 +302,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                                       color: kPrimary,
                                       borderRadius: BorderRadius.circular(4),
                                     ),
-                                    child: const Text('Kapak',
-                                        style: TextStyle(
+                                    child: Text(l.photoCover,
+                                        style: const TextStyle(
                                             color: Colors.white, fontSize: 10)),
                                   ),
                                 ),
@@ -326,7 +334,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                               Icon(Icons.add_photo_alternate_outlined,
                                   color: AppColors.textSecondary(context), size: 28),
                               const SizedBox(height: 4),
-                              Text('Fotoğraf ekle',
+                              Text(l.btnAddPhoto,
                                   style: TextStyle(
                                       color: AppColors.textSecondary(context), fontSize: 12)),
                             ],
@@ -343,21 +351,21 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                   TextFormField(
                     key: const Key('create_listing_input_baslik'),
                     controller: _titleCtrl,
-                    decoration: const InputDecoration(labelText: 'İlan Başlığı'),
+                    decoration: InputDecoration(labelText: l.fieldListingTitle, hintText: l.fieldListingTitleHint),
                     validator: (v) =>
-                        v == null || v.isEmpty ? 'Başlık giriniz' : null,
+                        v == null || v.isEmpty ? l.fieldListingTitleHint : null,
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
                     key: const Key('create_listing_select_kategori'),
                     value: _selectedCategory,
-                    decoration: const InputDecoration(labelText: 'Kategori'),
+                    decoration: InputDecoration(labelText: l.fieldCategory, hintText: l.fieldCategoryHint),
                     items: _categories
                         .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                         .toList(),
                     onChanged: (v) =>
                         setState(() => _selectedCategory = v ?? _selectedCategory),
-                    validator: (v) => v == null ? 'Kategori seçiniz' : null,
+                    validator: (v) => v == null ? l.fieldCategoryHint : null,
                   ),
                   const SizedBox(height: 14),
                   TextFormField(
@@ -365,21 +373,22 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     controller: _priceCtrl,
                     keyboardType: TextInputType.number,
                     inputFormatters: [_ThousandSeparatorFormatter()],
-                    decoration: const InputDecoration(
-                      labelText: 'Fiyat',
+                    decoration: InputDecoration(
+                      labelText: l.fieldPrice,
+                      hintText: l.fieldPriceHint,
                       prefixText: '₺ ',
                     ),
                     validator: (v) =>
-                        v == null || v.isEmpty ? 'Fiyat giriniz' : null,
+                        v == null || v.isEmpty ? l.fieldPriceHint : null,
                   ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
                     key: const Key('create_listing_select_konum'),
                     value: _selectedCity,
-                    decoration: const InputDecoration(labelText: 'Konum (isteğe bağlı)'),
-                    hint: const Text('Şehir seçin'),
+                    decoration: InputDecoration(labelText: l.fieldLocation),
+                    hint: Text(l.fieldLocationHint),
                     items: [
-                      const DropdownMenuItem(value: null, child: Text('-- Seçiniz --')),
+                      DropdownMenuItem(value: null, child: Text('-- ${l.fieldLocationHint} --')),
                       ..._cities.map((c) => DropdownMenuItem(value: c, child: Text(c))),
                     ],
                     onChanged: (v) => setState(() => _selectedCity = v),
@@ -395,12 +404,13 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     maxLines: 5,
                     keyboardType: TextInputType.multiline,
                     textInputAction: TextInputAction.newline,
-                    decoration: const InputDecoration(
-                      labelText: 'Açıklama',
+                    decoration: InputDecoration(
+                      labelText: l.fieldDescription,
+                      hintText: l.fieldDescriptionHint,
                       alignLabelWithHint: true,
                     ),
                     validator: (v) =>
-                        v == null || v.isEmpty ? 'Açıklama giriniz' : null,
+                        v == null || v.isEmpty ? l.fieldDescriptionHint : null,
                   ),
                 ],
               ),
@@ -417,7 +427,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           child: CircularProgressIndicator(
                               color: Colors.white, strokeWidth: 2),
                         )
-                      : const Text('İlanı Yayınla'),
+                      : Text(l.btnPublishListing),
                 ),
               ),
               const SizedBox(height: 24),

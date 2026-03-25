@@ -481,4 +481,702 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get settingsLanguage => 'Language';
+
+  @override
+  String get homeAppBarTitle => 'Listings';
+
+  @override
+  String get homeSearchingHeader => 'Searching...';
+
+  @override
+  String homeResultsCount(int count) {
+    return '$count listings found';
+  }
+
+  @override
+  String get searchUserHint => 'Search users...';
+
+  @override
+  String get searchNoUser => 'No users found';
+
+  @override
+  String get searchLiveStreams => 'Live Streams';
+
+  @override
+  String get searchNoContent => 'No content yet';
+
+  @override
+  String get msgTabMessages => 'Messages';
+
+  @override
+  String get msgTabNotifications => 'Notifications';
+
+  @override
+  String get msgNoMessages => 'No messages yet';
+
+  @override
+  String get msgNoMessagesDesc =>
+      'When you show interest in a listing,\nit will appear here';
+
+  @override
+  String get msgSendFailed => 'Failed to send message';
+
+  @override
+  String get msgWriteHint => 'Write a message...';
+
+  @override
+  String get msgNoChat => 'No messages yet.\nSend the first message!';
+
+  @override
+  String get msgGoToListing => '📌 Go to Listing';
+
+  @override
+  String get notifNone => 'No notifications';
+
+  @override
+  String get notifNoneDesc => 'New notifications will appear here';
+
+  @override
+  String get notificationsTitle => 'Notifications';
+
+  @override
+  String get notificationsMarkAllRead => 'Mark all read';
+
+  @override
+  String get blockedUsersTitle => 'Blocked Users';
+
+  @override
+  String get blockedNone => 'No blocked users';
+
+  @override
+  String get blockedUnblock => 'Unblock';
+
+  @override
+  String get blockedActionFailed => 'Action could not be completed';
+
+  @override
+  String get followNoFollowers => 'No followers yet';
+
+  @override
+  String get followNoFollowing => 'No following yet';
+
+  @override
+  String get followBtnFollowing => 'Following';
+
+  @override
+  String get followBtnFollow => 'Follow';
+
+  @override
+  String get pubProfileUserNotFound => 'User not found';
+
+  @override
+  String pubProfileListingsCount(int count) {
+    return 'Listings ($count)';
+  }
+
+  @override
+  String get pubProfileStatListings => 'Listings';
+
+  @override
+  String get pubProfileStatFollowers => 'Followers';
+
+  @override
+  String get pubProfileStatFollowing => 'Following';
+
+  @override
+  String get pubProfileEditComingSoon => 'Profile editing coming soon';
+
+  @override
+  String get pubProfileFollowingLabel => 'Following';
+
+  @override
+  String get pubProfileFollowLabel => 'Follow';
+
+  @override
+  String get pubProfileSendMessage => 'Send Message';
+
+  @override
+  String get pubProfileUpdateRating => 'Update Rating';
+
+  @override
+  String get pubProfileGiveRating => 'Give Rating';
+
+  @override
+  String get pubProfileBlock => 'Block';
+
+  @override
+  String get pubProfileUnblock => 'Unblock';
+
+  @override
+  String get pubProfileActionFailed => 'Action could not be completed';
+
+  @override
+  String get pubProfileNoReview => 'No reviews yet';
+
+  @override
+  String get ratingVeryBad => 'Very Bad';
+
+  @override
+  String get ratingBad => 'Bad';
+
+  @override
+  String get ratingMedium => 'Average';
+
+  @override
+  String get ratingGood => 'Good';
+
+  @override
+  String get ratingExcellent => 'Excellent';
+
+  @override
+  String get ratingSelectStar => 'Select a star';
+
+  @override
+  String get ratingCommentHint => 'Why this rating? (optional)';
+
+  @override
+  String get ratingSaveFailed => 'Failed to save rating';
+
+  @override
+  String get ratingReviews => 'Reviews';
+
+  @override
+  String ratingCount(int count) {
+    return '$count reviews';
+  }
+
+  @override
+  String ratingStarCount(int count) {
+    return '($count ratings)';
+  }
+
+  @override
+  String createListingPhotoCount(int count, int max) {
+    return 'Photos ($count/$max)';
+  }
+
+  @override
+  String get createListingSelectOption => '-- Select --';
+
+  @override
+  String createListingPhotoUploadFailed(String error) {
+    return 'Failed to upload photo: $error';
+  }
+
+  @override
+  String get createListingConnError => 'Connection error. Please try again.';
+
+  @override
+  String get notifSettingsMessagesTitle => 'Messages';
+
+  @override
+  String get notifSettingsMessagesDesc => 'When a new direct message arrives';
+
+  @override
+  String get notifSettingsFollowsTitle => 'New Follower';
+
+  @override
+  String get notifSettingsFollowsDesc => 'When someone follows you';
+
+  @override
+  String get notifSettingsAuctionWonTitle => 'Auction Won';
+
+  @override
+  String get notifSettingsAuctionWonDesc => 'When your bid is accepted';
+
+  @override
+  String get notifSettingsStreamStartedTitle => 'Live Stream';
+
+  @override
+  String get notifSettingsStreamStartedDesc =>
+      'When someone you follow goes live';
+
+  @override
+  String get notifSettingsNewListingTitle => 'New Listing';
+
+  @override
+  String get notifSettingsNewListingDesc =>
+      'When someone you follow adds a listing';
+
+  @override
+  String get notifSettingsNewBidTitle => 'New Bid';
+
+  @override
+  String get notifSettingsNewBidDesc => 'When your listing receives a bid';
+
+  @override
+  String get notifSettingsOutbidTitle => 'Bid Outbid';
+
+  @override
+  String get notifSettingsOutbidDesc => 'When your bid is outbid in an auction';
+
+  @override
+  String get btnOk => 'OK';
+
+  @override
+  String get btnGoBack => 'Go Back';
+
+  @override
+  String get errorGeneric => 'An error occurred';
+
+  @override
+  String get listingPriceNotSet => 'Price Not Set';
+
+  @override
+  String get listingMsgLoginRequired => 'You need to sign in to send a message';
+
+  @override
+  String get listingMsgOwnListing => 'You cannot message your own listing';
+
+  @override
+  String get listingActivated => 'Listing activated';
+
+  @override
+  String get listingDeactivated => 'Listing deactivated';
+
+  @override
+  String get listingDeleteConfirmContent =>
+      'Are you sure you want to delete this listing? This action cannot be undone.';
+
+  @override
+  String get listingDeleteConfirmYes => 'Yes, Delete';
+
+  @override
+  String get listingInfo => 'Listing Details';
+
+  @override
+  String get listingLocationLabel => 'Location';
+
+  @override
+  String get listingSendMessage => 'Message Seller';
+
+  @override
+  String get listingReportTooltip => 'Report';
+
+  @override
+  String get listingDeleteTooltip => 'Delete Listing';
+
+  @override
+  String get listingReportTitle => '🚩 Report Listing';
+
+  @override
+  String get listingReportSelectHint => 'Select reason';
+
+  @override
+  String get listingReportMisleading => 'Misleading listing';
+
+  @override
+  String get listingReportIllegal => 'Illegal product';
+
+  @override
+  String get listingReportSpam => 'Spam / duplicate listing';
+
+  @override
+  String get listingReportInappropriate => 'Inappropriate content';
+
+  @override
+  String get listingReportFraud => 'Suspected fraud';
+
+  @override
+  String get listingReportNoteHint => 'Additional notes (optional)';
+
+  @override
+  String get listingReportSubmitBtn => 'Submit Report';
+
+  @override
+  String get listingReportSelectRequired => 'Please select a reason';
+
+  @override
+  String get listingReportSuccess =>
+      'Your report has been received. Thank you.';
+
+  @override
+  String get listingDescriptionLabel => 'Description';
+
+  @override
+  String get liveStreamsTitle => 'Live Streams';
+
+  @override
+  String get liveStartStream => 'Go Live';
+
+  @override
+  String get liveAllCategory => 'All';
+
+  @override
+  String get liveNoStreams => 'No active streams right now';
+
+  @override
+  String get liveBeFirst => 'Be the first to go live!';
+
+  @override
+  String get livePullToRefresh => 'Pull down to refresh';
+
+  @override
+  String get liveStreamsLoadError => 'Failed to load streams';
+
+  @override
+  String get liveStartStreamDialogTitle => 'Start Stream';
+
+  @override
+  String get liveStreamTitleHint => 'Stream title';
+
+  @override
+  String get liveStreamTitleLabel => 'Title *';
+
+  @override
+  String get liveCategoryLabel => 'Category *';
+
+  @override
+  String get liveCategoryHint => 'Select category';
+
+  @override
+  String get liveStartBtn => 'Start';
+
+  @override
+  String get liveStreamTitleRequired => 'Stream title is required';
+
+  @override
+  String get liveStreamTitleMin =>
+      'Stream title must be longer than 3 characters.';
+
+  @override
+  String get liveCategoryRequired => 'Category selection is required';
+
+  @override
+  String get liveLoginRequired => 'You need to sign in to start a stream';
+
+  @override
+  String get liveBadgeLabel => 'LIVE';
+
+  @override
+  String get liveEndedBadge => 'ENDED';
+
+  @override
+  String get liveConnecting => 'Starting stream...';
+
+  @override
+  String get liveConnectingViewer => 'Connecting to stream...';
+
+  @override
+  String get livePermissionRequired =>
+      'Camera and microphone permission required';
+
+  @override
+  String liveViewersTitle(int count) {
+    return '👁 Viewers ($count)';
+  }
+
+  @override
+  String get liveNoViewers => 'No viewers yet';
+
+  @override
+  String get liveEndStreamTitle => 'End Stream';
+
+  @override
+  String get liveEndStreamConfirm => 'Are you sure you want to end the stream?';
+
+  @override
+  String get liveEndStreamBtn => 'End';
+
+  @override
+  String get liveGoBack => 'Go Back';
+
+  @override
+  String get liveEnded => 'Stream ended';
+
+  @override
+  String get liveStreamEndedTitle => 'Stream Ended';
+
+  @override
+  String get liveStreamEndedDesc => 'This stream was ended by the broadcaster.';
+
+  @override
+  String get liveStreamEndedOverlay => 'Stream Ended';
+
+  @override
+  String get liveDiscoverStreams => 'Swipe to discover more streams';
+
+  @override
+  String get liveLeaveBtn => 'Leave';
+
+  @override
+  String get liveNextStream => 'Next stream';
+
+  @override
+  String get liveCameraClosed => 'Camera Off';
+
+  @override
+  String get liveWaitingVideo => 'Waiting for video...';
+
+  @override
+  String liveModDemotedSelf(String username) {
+    return 'Your moderator role was removed by @$username.';
+  }
+
+  @override
+  String liveModPromotedSelf(String username) {
+    return '⭐ @$username made you a moderator! You can now manage viewers.';
+  }
+
+  @override
+  String get modTitle => '🛡 Moderation';
+
+  @override
+  String get modMute => 'Mute';
+
+  @override
+  String get modUnmute => 'Unmute';
+
+  @override
+  String get modPromote => 'Make Moderator';
+
+  @override
+  String get modDemote => 'Remove Moderator';
+
+  @override
+  String get modKick => 'Kick from Stream';
+
+  @override
+  String modMutedMsg(String username) {
+    return '@$username was muted';
+  }
+
+  @override
+  String get modUnmutedMsg => 'Mute removed';
+
+  @override
+  String modPromotedMsg(String username) {
+    return '@$username was made a moderator';
+  }
+
+  @override
+  String modDemotedMsg(String username) {
+    return '@$username was removed as moderator';
+  }
+
+  @override
+  String modKickedMsg(String username) {
+    return '@$username was kicked from the stream';
+  }
+
+  @override
+  String modPromotedSnack(String username) {
+    return '⭐ @$username is now a moderator!';
+  }
+
+  @override
+  String modDemotedSnack(String username) {
+    return '✖ @$username was removed as moderator';
+  }
+
+  @override
+  String get chatMessageHint => 'Write a message...';
+
+  @override
+  String get chatMutedHint => '🔇 You are muted';
+
+  @override
+  String get chatHistoryTitle => 'Chat History';
+
+  @override
+  String chatHistoryCount(int count) {
+    return 'Last $count messages';
+  }
+
+  @override
+  String get auctionTitle => 'Auction';
+
+  @override
+  String get auctionBidsHeader => 'BIDS';
+
+  @override
+  String get auctionAcceptBidTitle => '✅ Accept Bid';
+
+  @override
+  String get auctionItem => 'Item';
+
+  @override
+  String get auctionWinnerPrice => 'Winning Price';
+
+  @override
+  String get auctionBidder => 'Bidder';
+
+  @override
+  String get auctionAcceptConfirm =>
+      'Once accepted, the auction closes and a summary is sent to chat automatically.';
+
+  @override
+  String get auctionCancelBtn => 'Cancel';
+
+  @override
+  String get auctionContinueBtn => 'Continue';
+
+  @override
+  String get auctionAccepted => 'Bid accepted! Summary sent to chat.';
+
+  @override
+  String get auctionEndTitle => 'End Auction';
+
+  @override
+  String get auctionEndDesc =>
+      'The result will be saved and the auction will close.';
+
+  @override
+  String get auctionEndBtn => 'End';
+
+  @override
+  String get auctionStatusActive => 'ACTIVE';
+
+  @override
+  String get auctionStatusPending => 'PENDING ⚡';
+
+  @override
+  String get auctionStatusPaused => 'PAUSED';
+
+  @override
+  String get auctionStatusSold => 'SOLD 🛒';
+
+  @override
+  String get auctionStatusEnded => 'ENDED';
+
+  @override
+  String get auctionStatusIdle => 'AUCTION';
+
+  @override
+  String get auctionStartBtn => '▶ Start';
+
+  @override
+  String get auctionBidBtn => 'Place Bid';
+
+  @override
+  String get auctionMutedBtn => '🔇 You are muted';
+
+  @override
+  String get auctionBuyNowTitle => '⚡ Buy Now';
+
+  @override
+  String get auctionBuyNowPrice => 'Buy Now Price';
+
+  @override
+  String get auctionBuyNowConfirm =>
+      'Do you want to buy this item at this price? The auction will end.';
+
+  @override
+  String get auctionBuyNowRequest => '⚡ Buy Now Request';
+
+  @override
+  String get auctionBuyNowRequester => 'Requested By';
+
+  @override
+  String get auctionBuyNowRequestConfirm =>
+      'Do you want to approve this person\'s Buy Now request?';
+
+  @override
+  String get auctionBuyNowReject => 'Reject';
+
+  @override
+  String get auctionBuyNowApprove => 'Approve';
+
+  @override
+  String get auctionWaitingHost => 'Waiting for host response';
+
+  @override
+  String get auctionWaitingHostDesc =>
+      'Purchase will complete once the host approves.';
+
+  @override
+  String get auctionApprovalWaiting => '⚡ Awaiting Approval';
+
+  @override
+  String get auctionApprovalWaitingDesc =>
+      'Your Buy Now request has been sent to the host.';
+
+  @override
+  String get auctionInProgress => '⏳ Transaction in Progress';
+
+  @override
+  String auctionInProgressDesc(String username) {
+    return 'Buy Now transaction with @$username in progress.';
+  }
+
+  @override
+  String get auctionInProgressNoBid => 'You cannot bid until this is resolved.';
+
+  @override
+  String get auctionSold => '🛒 SOLD!';
+
+  @override
+  String auctionBoughtBy(String username) {
+    return 'Bought Now by @$username';
+  }
+
+  @override
+  String get auctionBuyNowCongrats => '🎉 Congratulations! Purchase complete.';
+
+  @override
+  String auctionBuyNowSoldOther(String buyer) {
+    return '🛒 Item Sold via Buy Now! Bought by @$buyer.';
+  }
+
+  @override
+  String get auctionBinRejected =>
+      'Your Buy Now request was rejected. Auction continues.';
+
+  @override
+  String get auctionBinRejectedOther =>
+      'Buy Now transaction concluded. Auction continues.';
+
+  @override
+  String get auctionBuyNowBtn => '⚡ Buy Now — ';
+
+  @override
+  String get auctionBuyNowBuyBtn => 'Buy';
+
+  @override
+  String get auctionAcceptBtn => '✅ Accept';
+
+  @override
+  String get auctionValidAmount => 'Enter a valid amount';
+
+  @override
+  String get auctionCustomAmountHint => 'Custom amount (₺)';
+
+  @override
+  String get auctionFirstBid => 'Be the first to bid!';
+
+  @override
+  String auctionHighestBidder(String username) {
+    return '@$username is the highest bidder';
+  }
+
+  @override
+  String auctionBidCount(int count) {
+    return '$count bids';
+  }
+
+  @override
+  String get auctionManualEntry => 'Enter Manually';
+
+  @override
+  String get auctionFromListings => 'From My Listings';
+
+  @override
+  String get auctionNoActiveListings => 'No active listings.';
+
+  @override
+  String get auctionStartTitle => 'Start Auction';
+
+  @override
+  String get auctionItemName => 'Item name';
+
+  @override
+  String get auctionStartPrice => 'Starting price (₺)';
+
+  @override
+  String get auctionBuyNowPriceHint => 'Buy Now price (₺, optional)';
+
+  @override
+  String auctionBuyNowCompleted(String buyer, String price) {
+    return '🛒 Buy Now complete! @$buyer — ₺$price';
+  }
 }

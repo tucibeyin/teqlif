@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
+import '../l10n/app_localizations.dart';
 import '../models/chat.dart';
 import '../screens/public_profile_screen.dart';
 import '../services/storage_service.dart';
@@ -497,8 +498,8 @@ class _ChatPanelState extends State<ChatPanel> {
                       textInputAction: TextInputAction.send,
                       decoration: InputDecoration(
                         hintText: _selfMuted
-                            ? '🔇 Susturuldunuz'
-                            : 'Mesaj yaz...',
+                            ? AppLocalizations.of(context)!.chatMutedHint
+                            : AppLocalizations.of(context)!.chatMessageHint,
                         hintStyle: const TextStyle(
                             color: Color(0xFF94A3B8), fontSize: 12),
                         counterText: '',
@@ -545,6 +546,7 @@ class _HistorySheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return DraggableScrollableSheet(
       initialChildSize: 0.55,
       minChildSize: 0.3,
@@ -576,9 +578,9 @@ class _HistorySheet extends StatelessWidget {
                   const Icon(Icons.history_rounded,
                       color: Colors.white54, size: 18),
                   const SizedBox(width: 8),
-                  const Text(
-                    'Sohbet Geçmişi',
-                    style: TextStyle(
+                  Text(
+                    l.chatHistoryTitle,
+                    style: const TextStyle(
                       color: Colors.white,
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
@@ -586,7 +588,7 @@ class _HistorySheet extends StatelessWidget {
                   ),
                   const Spacer(),
                   Text(
-                    'Son ${history.length} mesaj',
+                    l.chatHistoryCount(history.length),
                     style: const TextStyle(
                         color: Colors.white38, fontSize: 12),
                   ),

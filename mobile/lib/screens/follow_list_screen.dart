@@ -6,6 +6,7 @@ import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/storage_service.dart';
 import 'public_profile_screen.dart';
+import '../l10n/app_localizations.dart';
 
 enum FollowListType { followers, following }
 
@@ -97,6 +98,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(title: Text(widget.title)),
       body: _loading
@@ -110,8 +112,8 @@ class _FollowListScreenState extends State<FollowListScreen> {
                       const SizedBox(height: 12),
                       Text(
                         widget.type == FollowListType.followers
-                            ? 'Henüz takipçi yok'
-                            : 'Henüz takip edilen yok',
+                            ? l.followNoFollowers
+                            : l.followNoFollowing,
                         style: TextStyle(color: AppColors.textSecondary(context), fontSize: 15),
                       ),
                     ],
@@ -190,7 +192,7 @@ class _FollowListScreenState extends State<FollowListScreen> {
                                     fontWeight: FontWeight.w600,
                                   ),
                                 ),
-                                child: Text(isFollowing ? 'Takiptesin' : 'Takip Et'),
+                                child: Text(isFollowing ? l.followBtnFollowing : l.followBtnFollow),
                               ),
                             ),
                     );

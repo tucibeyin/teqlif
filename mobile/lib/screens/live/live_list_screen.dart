@@ -12,6 +12,7 @@ import '../../utils/error_helper.dart';
 import '../public_profile_screen.dart';
 import 'host_stream_screen.dart';
 import 'swipe_live_screen.dart';
+import '../../l10n/app_localizations.dart';
 
 class LiveListScreen extends StatefulWidget {
   const LiveListScreen({super.key});
@@ -60,7 +61,7 @@ class LiveListScreenState extends State<LiveListScreen> {
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e is AppException ? e.message : 'Yayınlar yüklenemedi';
+        _error = e is AppException ? e.message : (mounted ? AppLocalizations.of(context)!.liveStreamsLoadError : 'error');
       });
     }
   }
@@ -68,10 +69,11 @@ class LiveListScreenState extends State<LiveListScreen> {
   Future<void> _showStartDialog() async {
     final categories = await CategoryService.getCategories();
     final token = await StorageService.getToken();
+    if (!mounted) return;
+    final l = AppLocalizations.of(context)!;
     if (token == null) {
-      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Yayın başlatmak için giriş yapmalısınız')),
+        SnackBar(content: Text(l.liveLoginRequired)),
       );
       return;
     }
@@ -84,7 +86,7 @@ class LiveListScreenState extends State<LiveListScreen> {
       context: context,
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setStateDialog) => AlertDialog(
-          title: const Text('Yayın Başlat'),
+          title: Text(l.liveStartStreamDialogTitle),
           content: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -94,21 +96,21 @@ class LiveListScreenState extends State<LiveListScreen> {
                 controller: titleController,
                 autofocus: true,
                 maxLength: 200,
-                decoration: const InputDecoration(
-                  hintText: 'Yayın başlığı',
-                  labelText: 'Başlık *',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  hintText: l.liveStreamTitleHint,
+                  labelText: l.liveStreamTitleLabel,
+                  border: const OutlineInputBorder(),
                 ),
               ),
               const SizedBox(height: 12),
               DropdownButtonFormField<String>(
                 key: const Key('live_dialog_select_kategori'),
                 value: selectedCategory,
-                decoration: const InputDecoration(
-                  labelText: 'Kategori *',
-                  border: OutlineInputBorder(),
+                decoration: InputDecoration(
+                  labelText: l.liveCategoryLabel,
+                  border: const OutlineInputBorder(),
                 ),
-                hint: const Text('Kategori seç'),
+                hint: Text(l.liveCategoryHint),
                 items: categories
                     .map((c) => DropdownMenuItem(value: c.$1, child: Text(c.$2)))
                     .toList(),
@@ -124,7 +126,7 @@ class LiveListScreenState extends State<LiveListScreen> {
             TextButton(
               key: const Key('live_dialog_btn_iptal'),
               onPressed: () => Navigator.pop(ctx),
-              child: const Text('İptal'),
+              child: Text(l.btnCancel),
             ),
             ElevatedButton(
               key: const Key('live_dialog_btn_baslat'),
@@ -132,21 +134,21 @@ class LiveListScreenState extends State<LiveListScreen> {
               onPressed: () {
                 final t = titleController.text.trim();
                 if (t.isEmpty) {
-                  setStateDialog(() => errorText = 'Yayın başlığı zorunludur');
+                  setStateDialog(() => errorText = l.liveStreamTitleRequired);
                   return;
                 }
                 if (t.length < 3) {
                   setStateDialog(
-                      () => errorText = 'Yayın başlığı 3 karakterden fazla olmalı.');
+                      () => errorText = l.liveStreamTitleMin);
                   return;
                 }
                 if (selectedCategory == null) {
-                  setStateDialog(() => errorText = 'Kategori seçimi zorunludur');
+                  setStateDialog(() => errorText = l.liveCategoryRequired);
                   return;
                 }
                 Navigator.pop(ctx, (t, selectedCategory!));
               },
-              child: const Text('Başlat', style: TextStyle(color: Colors.white)),
+              child: Text(l.liveStartBtn, style: const TextStyle(color: Colors.white)),
             ),
           ],
         ),
@@ -177,7 +179,8 @@ class LiveListScreenState extends State<LiveListScreen> {
       ).then((_) => _load());
     } on AppException catch (e) {
       if (!mounted) return;
-      final msg = _mapCaptchaError(e);
+      final ll = AppLocalizations.of(context)!;
+      final msg = _mapCaptchaError(e, ll);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
       showErrorSnackbar(context, e);
@@ -185,12 +188,12 @@ class LiveListScreenState extends State<LiveListScreen> {
   }
 
   /// 403/429 hata kodlarını kullanıcı dostu mesaja çevirir.
-  String _mapCaptchaError(AppException e) {
+  String _mapCaptchaError(AppException e, AppLocalizations l) {
     if (e.statusCode == 403 || e.code == 'FORBIDDEN') {
-      return 'Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.';
+      return l.errorCaptchaFailed;
     }
     if (e.statusCode == 429 || e.code == 'RATE_LIMIT_EXCEEDED') {
-      return 'Çok hızlı işlem yapıyorsunuz. Lütfen biraz bekleyin.';
+      return l.errorTooFast;
     }
     return e.message;
   }
@@ -217,6 +220,7 @@ class LiveListScreenState extends State<LiveListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final cats = _categories;
     final showFilter = !_loading && cats.length >= 1;
     final filtered = _filtered;
@@ -235,9 +239,9 @@ class LiveListScreenState extends State<LiveListScreen> {
               ),
             ),
             const SizedBox(width: 8),
-            const Text(
-              'Canlı Yayınlar',
-              style: TextStyle(fontWeight: FontWeight.w700),
+            Text(
+              l.liveStreamsTitle,
+              style: const TextStyle(fontWeight: FontWeight.w700),
             ),
           ],
         ),
@@ -246,9 +250,9 @@ class LiveListScreenState extends State<LiveListScreen> {
             key: const Key('live_list_btn_yayin_ac'),
             onPressed: _showStartDialog,
             icon: const Icon(Icons.videocam_outlined, size: 18, color: Colors.red),
-            label: const Text(
-              'Yayın Aç',
-              style: TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 13),
+            label: Text(
+              l.liveStartStream,
+              style: const TextStyle(color: Colors.red, fontWeight: FontWeight.w600, fontSize: 13),
             ),
           ),
         ],
@@ -265,7 +269,7 @@ class LiveListScreenState extends State<LiveListScreen> {
                 children: [
                   _CategoryChip(
                     key: const Key('live_list_chip_tumü'),
-                    label: 'Tümü',
+                    label: l.liveAllCategory,
                     active: _selectedCategory == null,
                     onTap: () => setState(() => _selectedCategory = null),
                   ),
@@ -510,9 +514,9 @@ class _StreamGridTile extends StatelessWidget {
                         color: Colors.red,
                         borderRadius: BorderRadius.circular(4),
                       ),
-                      child: const Text(
-                        'CANLI',
-                        style: TextStyle(
+                      child: Text(
+                        AppLocalizations.of(context)!.liveBadgeLabel,
+                        style: const TextStyle(
                           color: Colors.white,
                           fontSize: 9,
                           fontWeight: FontWeight.w800,

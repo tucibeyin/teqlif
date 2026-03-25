@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Canlı yayın izleyici ekranı — üst bilgi çubuğu.
 ///
@@ -26,6 +27,7 @@ class ViewerTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.only(
         top: topPad + 14,
@@ -70,9 +72,9 @@ class ViewerTopBar extends StatelessWidget {
               color: Colors.red,
               borderRadius: BorderRadius.circular(5),
             ),
-            child: const Text(
-              'CANLI',
-              style: TextStyle(
+            child: Text(
+              l.liveBadgeLabel,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
@@ -157,9 +159,9 @@ class ViewerTopBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(color: Colors.white24),
               ),
-              child: const Text(
-                'Ayrıl',
-                style: TextStyle(
+              child: Text(
+                l.liveLeaveBtn,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w600,

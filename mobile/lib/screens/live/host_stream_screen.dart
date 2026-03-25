@@ -19,6 +19,7 @@ import '../../services/moderation_service.dart';
 import '../../widgets/live/host_top_bar.dart';
 import '../../widgets/live/host_bottom_controls.dart';
 import '../../widgets/live/live_video_player.dart';
+import '../../l10n/app_localizations.dart';
 
 class HostStreamScreen extends StatefulWidget {
   final StreamTokenOut streamToken;
@@ -74,10 +75,18 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     final micStatus = await Permission.microphone.request();
 
     if (camStatus.isDenied || micStatus.isDenied) {
-      setState(() {
-        _error = 'Kamera ve mikrofon izni gerekli';
-        _connecting = false;
-      });
+      if (mounted) {
+        final l = AppLocalizations.of(context)!;
+        setState(() {
+          _error = l.livePermissionRequired;
+          _connecting = false;
+        });
+      } else {
+        setState(() {
+          _error = 'Permission denied';
+          _connecting = false;
+        });
+      }
       return;
     }
 
@@ -165,6 +174,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       viewers = await StreamService.getViewers(widget.streamToken.streamId);
     } catch (_) {}
     if (!mounted) return;
+    final l = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
@@ -198,11 +208,11 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             ),
             const SizedBox(height: 12),
             if (viewers.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 12),
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12),
                 child: Text(
-                  'Henüz izleyici yok',
-                  style: TextStyle(color: Colors.white54, fontSize: 13),
+                  l.liveNoViewers,
+                  style: const TextStyle(color: Colors.white54, fontSize: 13),
                 ),
               )
             else
@@ -268,19 +278,20 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   }
 
   Future<void> _endStream() async {
+    final l = AppLocalizations.of(context)!;
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Yayını Bitir',
-            style: TextStyle(color: Colors.white, fontSize: 16)),
-        content: const Text('Yayını sonlandırmak istiyor musunuz?',
-            style: TextStyle(color: Color(0xFF94A3B8))),
+        title: Text(l.liveEndStreamTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 16)),
+        content: Text(l.liveEndStreamConfirm,
+            style: const TextStyle(color: Color(0xFF94A3B8))),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('İptal',
-                style: TextStyle(color: Color(0xFF64748B))),
+            child: Text(l.btnCancel,
+                style: const TextStyle(color: Color(0xFF64748B))),
           ),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -289,8 +300,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   borderRadius: BorderRadius.circular(8)),
             ),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Bitir',
-                style: TextStyle(color: Colors.white)),
+            child: Text(l.liveEndStreamBtn,
+                style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),

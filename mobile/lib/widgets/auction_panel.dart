@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/theme.dart';
+import '../l10n/app_localizations.dart';
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
 import '../models/auction.dart';
@@ -110,14 +111,15 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Future<void> _acceptBid() async {
+    final l = AppLocalizations.of(context)!;
     final state = ref.read(auctionProvider(widget.streamId));
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('✅ Teklifi Kabul Et',
-            style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text('✅ ${l.auctionAcceptBidTitle}',
+            style: const TextStyle(color: Colors.white, fontSize: 16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -131,22 +133,22 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               ),
               child: Column(
                 children: [
-                  _acceptRow('Ürün', state.itemName ?? '—'),
+                  _acceptRow(l.auctionItem, state.itemName ?? '—'),
                   const SizedBox(height: 10),
-                  _acceptRow('Kazanan Fiyat',
+                  _acceptRow(l.auctionWinnerPrice,
                       '₺${_fmt(state.currentBid)}',
                       valueColor: const Color(0xFF4ADE80),
                       valueBold: true),
                   const SizedBox(height: 10),
-                  _acceptRow('Teklif Sahibi',
+                  _acceptRow(l.auctionBidder,
                       '@${state.currentBidder ?? '—'}'),
                 ],
               ),
             ),
             const SizedBox(height: 14),
-            const Text(
-              'Kabul edildiğinde artırma kapanır ve özet sohbete otomatik mesaj gönderilir.',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
+            Text(
+              l.auctionAcceptConfirm,
+              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
               textAlign: TextAlign.center,
             ),
           ],
@@ -163,8 +165,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                       borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: const Text('İptal Et',
-                    style: TextStyle(color: Color(0xFF94A3B8))),
+                child: Text(l.auctionCancelBtn,
+                    style: const TextStyle(color: Color(0xFF94A3B8))),
               ),
             ),
             const SizedBox(width: 10),
@@ -176,8 +178,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                         borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 12)),
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Devam Et',
-                    style: TextStyle(
+                child: Text(l.auctionContinueBtn,
+                    style: const TextStyle(
                         color: Colors.white, fontWeight: FontWeight.w700)),
               ),
             ),
@@ -188,26 +190,27 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     if (ok != true) return;
     try {
       await AuctionService.acceptBid(widget.streamId);
-      _setMsg('Teklif kabul edildi! Özet sohbete gönderildi.');
+      _setMsg(l.auctionAccepted);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
     }
   }
 
   Future<void> _endAuction() async {
+    final l = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
-        title: const Text('Açık Artırmayı Bitir',
-            style: TextStyle(color: Colors.white)),
-        content: const Text('Sonuç kaydedilecek ve artırma kapanacak.',
-            style: TextStyle(color: Color(0xFF94A3B8))),
+        title: Text(l.auctionEndTitle,
+            style: const TextStyle(color: Colors.white)),
+        content: Text(l.auctionEndDesc,
+            style: const TextStyle(color: Color(0xFF94A3B8))),
         actions: [
           TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('İptal',
-                  style: TextStyle(color: Color(0xFF64748B)))),
+              child: Text(l.btnCancel,
+                  style: const TextStyle(color: Color(0xFF64748B)))),
           ElevatedButton(
             style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.red,
@@ -215,7 +218,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                     borderRadius: BorderRadius.circular(8))),
             onPressed: () => Navigator.pop(ctx, true),
             child:
-                const Text('Bitir', style: TextStyle(color: Colors.white)),
+                Text(l.auctionEndBtn, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -238,6 +241,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   // ── Build ──────────────────────────────────────────────────────────────────
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final state = ref.watch(auctionProvider(widget.streamId));
 
     // Callback'leri provider değişimine bağla
@@ -255,14 +259,14 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       // Hemen Al tamamlandığında bildirim göster
       if (prev != null && !prev.isBoughtItNow && next.isBoughtItNow) {
         if (widget.isHost) {
-          _setMsg(
-            '🛒 Hemen Al tamamlandı! @${next.buyerUsername ?? next.currentBidder ?? '?'} — ₺${_fmt(next.currentBid)}',
-          );
+          final buyer = next.buyerUsername ?? next.currentBidder ?? '?';
+          final price = _fmt(next.currentBid);
+          _setMsg(l.auctionBuyNowCompleted(buyer, price));
         } else if (_iAmBinBuyer) {
-          _setMsg('🎉 Tebrikler! Satın alma tamamlandı.');
+          _setMsg(l.auctionBuyNowCongrats);
         } else {
           final buyer = next.buyerUsername ?? next.currentBidder ?? '?';
-          _setMsg('🛒 Ürün Hemen Satıldı! @$buyer tarafından alındı.');
+          _setMsg(l.auctionBuyNowSoldOther(buyer));
         }
         _iAmBinBuyer = false;
       }
@@ -278,9 +282,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
             Navigator.of(_binDialogCtx!).pop();
             _binDialogCtx = null;
           }
-          _setMsg('Hemen Al talebiniz reddedildi, artırma devam ediyor.', error: true);
+          _setMsg(l.auctionBinRejected, error: true);
         } else {
-          _setMsg('Hemen Al işlemi sonuçlandı, artırma devam ediyor.');
+          _setMsg(l.auctionBinRejectedOther);
         }
         _iAmBinBuyer = false;
       }
@@ -415,9 +419,10 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     }
 
     final price = listing['price'];
+    final l = AppLocalizations.of(context)!;
     final priceStr = price != null
         ? '₺ ${(price as num).toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')}'
-        : 'Fiyat Belirtilmemiş';
+        : l.listingPriceNotSet;
     final seller = (listing['user'] as Map?)?['username'] ?? '';
 
     showModalBottomSheet(
@@ -545,20 +550,21 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _statusBadge(AuctionState state) {
+    final l = AppLocalizations.of(context)!;
     final String label;
     final Color color;
     if (state.status == 'active') {
-      label = 'AKTİF'; color = Colors.green;
+      label = l.auctionStatusActive; color = Colors.green;
     } else if (state.status == 'buy_it_now_pending') {
-      label = 'ONAY BEKLİYOR ⚡'; color = Colors.orange;
+      label = l.auctionStatusPending; color = Colors.orange;
     } else if (state.status == 'paused') {
-      label = 'DURAKLADI'; color = Colors.amber;
+      label = l.auctionStatusPaused; color = Colors.amber;
     } else if (state.status == 'ended' && state.isBoughtItNow) {
-      label = 'SATILDI 🛒'; color = Colors.orange;
+      label = l.auctionStatusSold; color = Colors.orange;
     } else if (state.status == 'ended') {
-      label = 'BİTTİ'; color = Colors.red;
+      label = l.auctionStatusEnded; color = Colors.red;
     } else {
-      label = 'AÇIK ARTIRMA'; color = const Color(0xFF475569);
+      label = l.auctionStatusIdle; color = const Color(0xFF475569);
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
@@ -571,8 +577,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _hostInlineControls(AuctionState state) {
+    final l = AppLocalizations.of(context)!;
     if (state.isIdle || state.isEnded) {
-      return _pillBtn('▶ Başlat', Colors.green, _showStartDialog);
+      return _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog);
     }
     if (state.isActive) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
@@ -600,6 +607,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _viewerBidButton(BuildContext context, AuctionState state) {
+    final l = AppLocalizations.of(context)!;
     final enabled = widget.enabled;
     final bin = state.buyItNowPrice;
     final showBin = enabled &&
@@ -620,7 +628,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               borderRadius: BorderRadius.circular(20),
             ),
             child: Text(
-              enabled ? 'Teklif Ver' : '🔇 Susturuldunuz',
+              enabled ? l.auctionBidBtn : l.auctionMutedBtn,
               style: TextStyle(
                 color: enabled ? Colors.white : const Color(0xFF64748B),
                 fontSize: 11,
@@ -641,7 +649,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '⚡ Hemen Al ₺${_fmt(bin)}',
+                '${l.auctionBuyNowBtn}₺${_fmt(bin)}',
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 11,
@@ -656,6 +664,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Future<void> _buyItNow(AuctionState state) async {
+    final l = AppLocalizations.of(context)!;
     var waiting = false;
 
     await showDialog<void>(
@@ -672,32 +681,32 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 backgroundColor: const Color(0xFF1E293B),
                 shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16)),
-                title: const Text('⚡ Hemen Al',
-                    style: TextStyle(color: Colors.white, fontSize: 16)),
-                content: const Column(
+                title: Text('⚡ ${l.auctionBuyNowTitle}',
+                    style: const TextStyle(color: Colors.white, fontSize: 16)),
+                content: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    SizedBox(height: 8),
-                    Text('⏳', style: TextStyle(fontSize: 36)),
-                    SizedBox(height: 12),
+                    const SizedBox(height: 8),
+                    const Text('⏳', style: TextStyle(fontSize: 36)),
+                    const SizedBox(height: 12),
                     Text(
-                      'Host\'tan cevap bekleniyor',
-                      style: TextStyle(
+                      l.auctionApprovalWaiting,
+                      style: const TextStyle(
                           color: Colors.orange,
                           fontWeight: FontWeight.w700,
                           fontSize: 15),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
-                      'Host onayladığında satın alma tamamlanacak.',
-                      style: TextStyle(
+                      l.auctionApprovalWaitingDesc,
+                      style: const TextStyle(
                           color: Color(0xFF94A3B8),
                           fontSize: 12,
                           height: 1.5),
                       textAlign: TextAlign.center,
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                   ],
                 ),
               );
@@ -707,8 +716,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
               backgroundColor: const Color(0xFF1E293B),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16)),
-              title: const Text('⚡ Hemen Al',
-                  style: TextStyle(color: Colors.white, fontSize: 16)),
+              title: Text('⚡ ${l.auctionBuyNowTitle}',
+                  style: const TextStyle(color: Colors.white, fontSize: 16)),
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -720,18 +729,18 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Column(children: [
-                      _acceptRow('Ürün', state.itemName ?? '—'),
+                      _acceptRow(l.auctionItem, state.itemName ?? '—'),
                       const SizedBox(height: 10),
-                      _acceptRow('Hemen Al Fiyatı',
+                      _acceptRow(l.auctionBuyNowPrice,
                           '₺${_fmt(state.buyItNowPrice)}',
                           valueColor: Colors.orange,
                           valueBold: true),
                     ]),
                   ),
                   const SizedBox(height: 14),
-                  const Text(
-                    'Bu fiyatla ürünü hemen satın almak istiyor musun? Artırma sona erecek.',
-                    style: TextStyle(
+                  Text(
+                    l.auctionBuyNowConfirm,
+                    style: const TextStyle(
                         color: Color(0xFF94A3B8),
                         fontSize: 12,
                         height: 1.5),
@@ -755,8 +764,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                         padding: const EdgeInsets.symmetric(
                             vertical: 12),
                       ),
-                      child: const Text('İptal',
-                          style: TextStyle(
+                      child: Text(l.btnCancel,
+                          style: const TextStyle(
                               color: Color(0xFF94A3B8))),
                     ),
                   ),
@@ -790,8 +799,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                           _setMsg(_cleanErr(e), error: true);
                         }
                       },
-                      child: const Text('Satın Al',
-                          style: TextStyle(
+                      child: Text(l.auctionBuyNowBuyBtn,
+                          style: const TextStyle(
                               color: Colors.white,
                               fontWeight: FontWeight.w700)),
                     ),
@@ -808,14 +817,15 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Future<void> _showBuyItNowRequestDialog(String buyerUsername, AuctionState state) async {
     if (!mounted) return;
+    final l = AppLocalizations.of(context)!;
     final ok = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('⚡ Hemen Al Talebi',
-            style: TextStyle(color: Colors.white, fontSize: 16)),
+        title: Text('⚡ ${l.auctionBuyNowRequest}',
+            style: const TextStyle(color: Colors.white, fontSize: 16)),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -827,18 +837,18 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Column(children: [
-                _acceptRow('Ürün', state.itemName ?? '—'),
+                _acceptRow(l.auctionItem, state.itemName ?? '—'),
                 const SizedBox(height: 10),
-                _acceptRow('Hemen Al Fiyatı', '₺${_fmt(state.buyItNowPrice)}',
+                _acceptRow(l.auctionBuyNowPrice, '₺${_fmt(state.buyItNowPrice)}',
                     valueColor: Colors.orange, valueBold: true),
                 const SizedBox(height: 10),
-                _acceptRow('Talep Eden', '@$buyerUsername'),
+                _acceptRow(l.auctionBuyNowRequester, '@$buyerUsername'),
               ]),
             ),
             const SizedBox(height: 14),
-            const Text(
-              'Bu kişinin Hemen Al talebini onaylıyor musun?',
-              style: TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
+            Text(
+              l.auctionBuyNowRequestConfirm,
+              style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 12, height: 1.5),
               textAlign: TextAlign.center,
             ),
           ],
@@ -854,8 +864,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   padding: const EdgeInsets.symmetric(vertical: 12),
                 ),
-                child: const Text('Reddet',
-                    style: TextStyle(color: Color(0xFFF87171))),
+                child: Text(l.auctionBuyNowReject,
+                    style: const TextStyle(color: Color(0xFFF87171))),
               ),
             ),
             const SizedBox(width: 10),
@@ -866,8 +876,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                     shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                     padding: const EdgeInsets.symmetric(vertical: 12)),
                 onPressed: () => Navigator.pop(ctx, true),
-                child: const Text('Onayla',
-                    style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
+                child: Text(l.auctionBuyNowApprove,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w700)),
               ),
             ),
           ]),
@@ -945,20 +955,25 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Widget _acceptBtn() {
-    return GestureDetector(
-      onTap: _acceptBid,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
-        decoration: BoxDecoration(
-          color: const Color(0xFF059669),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: const Text('✅ Kabul',
-            style: TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w700)),
-      ),
+    return Builder(
+      builder: (context) {
+        final l = AppLocalizations.of(context)!;
+        return GestureDetector(
+          onTap: _acceptBid,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: const Color(0xFF059669),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text('✅ ${l.auctionAcceptBtn}',
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w700)),
+          ),
+        );
+      },
     );
   }
 
@@ -1076,6 +1091,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final liveState = ref.watch(auctionProvider(widget.streamId));
     final base = liveState.currentBid ?? liveState.startPrice ?? 0;
 
@@ -1105,30 +1121,30 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 border: Border.all(color: Colors.orange.shade600, width: 1.5),
               ),
               child: isBuyer
-                  ? const Column(children: [
-                      Text('⚡ Onay Bekleniyor',
-                          style: TextStyle(color: Colors.orange, fontSize: 18,
+                  ? Column(children: [
+                      Text('⚡ ${l.auctionApprovalWaiting}',
+                          style: const TextStyle(color: Colors.orange, fontSize: 18,
                               fontWeight: FontWeight.w800)),
-                      SizedBox(height: 8),
-                      Text('Hemen Al talebiniz host onayına gönderildi.',
+                      const SizedBox(height: 8),
+                      Text(l.auctionApprovalWaitingDesc,
                           textAlign: TextAlign.center,
-                          style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
+                          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
                     ])
                   : Column(children: [
-                      const Text('⏳ İşlem Devam Ediyor',
-                          style: TextStyle(color: Colors.orange, fontSize: 18,
+                      Text('⏳ ${l.auctionInProgress}',
+                          style: const TextStyle(color: Colors.orange, fontSize: 18,
                               fontWeight: FontWeight.w800)),
                       const SizedBox(height: 8),
                       Text(
-                        '@${liveState.pendingBuyerUsername ?? '?'} ile Hemen Al işlemi yapılıyor.',
+                        l.auctionInProgressDesc(liveState.pendingBuyerUsername ?? '?'),
                         textAlign: TextAlign.center,
                         style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Sonuçlanana kadar teklif veremezsiniz.',
+                      Text(
+                        l.auctionInProgressNoBid,
                         textAlign: TextAlign.center,
-                        style: TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                        style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
                       ),
                     ]),
             ),
@@ -1163,8 +1179,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 border: Border.all(color: Colors.orange.shade600, width: 1.5),
               ),
               child: Column(children: [
-                const Text('🛒 SATILDI!',
-                    style: TextStyle(color: Colors.orange, fontSize: 22,
+                Text('🛒 ${l.auctionSold}',
+                    style: const TextStyle(color: Colors.orange, fontSize: 22,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 8),
                 Text(liveState.itemName ?? '',
@@ -1176,7 +1192,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                     style: const TextStyle(color: Color(0xFF4ADE80), fontSize: 20,
                         fontWeight: FontWeight.w800)),
                 const SizedBox(height: 4),
-                Text('@${liveState.buyerUsername ?? '?'} tarafından Hemen Alındı',
+                Text(l.auctionBoughtBy(liveState.buyerUsername ?? '?'),
                     style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 13)),
               ]),
             ),
@@ -1217,13 +1233,13 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                         fontSize: 16),
                   ),
                   if (liveState.currentBidder != null)
-                    Text('@${liveState.currentBidder} en yüksek teklif sahibi',
+                    Text(l.auctionHighestBidder(liveState.currentBidder!),
                         style: const TextStyle(
                             color: Color(0xFF64748B), fontSize: 12))
                   else
-                    const Text('İlk teklifi sen ver!',
+                    Text(l.auctionFirstBid,
                         style:
-                            TextStyle(color: Color(0xFF64748B), fontSize: 12)),
+                            const TextStyle(color: Color(0xFF64748B), fontSize: 12)),
                 ],
               ),
             ),
@@ -1236,7 +1252,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                     fontSize: 22),
               ),
               if (liveState.bidCount > 0)
-                Text('${liveState.bidCount} teklif',
+                Text(l.auctionBidCount(liveState.bidCount),
                     style: const TextStyle(
                         color: Color(0xFF64748B), fontSize: 11)),
               if (liveState.buyItNowPrice != null)
@@ -1294,8 +1310,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                               strokeWidth: 2, color: Colors.white),
                         )
                       else ...[
-                        const Text('⚡ Hemen Al — ',
-                            style: TextStyle(color: Colors.white,
+                        Text('${l.auctionBuyNowBtn}',
+                            style: const TextStyle(color: Colors.white,
                                 fontWeight: FontWeight.w700, fontSize: 14)),
                         Text('₺${_fmt(bin)}',
                             style: const TextStyle(color: Colors.white,
@@ -1318,7 +1334,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 inputFormatters: [ThousandsSeparatorInputFormatter()],
                 style: const TextStyle(color: Colors.white, fontSize: 14),
                 decoration: InputDecoration(
-                  hintText: 'Özel tutar (₺)',
+                  hintText: l.auctionCustomAmountHint,
                   hintStyle:
                       const TextStyle(color: Color(0xFF475569), fontSize: 13),
                   filled: true,
@@ -1351,7 +1367,7 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                             _customBidCtrl.text.replaceAll('.', '');
                         final v = double.tryParse(raw);
                         if (v == null || v <= 0) {
-                          _setMsg('Geçerli tutar girin', error: true);
+                          _setMsg(l.auctionValidAmount, error: true);
                           return;
                         }
                         _placeBid(v);
@@ -1370,8 +1386,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                         height: 18,
                         child: CircularProgressIndicator(
                             strokeWidth: 2, color: Colors.white))
-                    : const Text('Teklif Ver',
-                        style: TextStyle(
+                    : Text(l.auctionBidBtn,
+                        style: const TextStyle(
                             color: Colors.white,
                             fontWeight: FontWeight.w700)),
               ),
@@ -1482,10 +1498,11 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return AlertDialog(
       backgroundColor: const Color(0xFF1E293B),
-      title: const Text('Açık Artırma Başlat',
-          style: TextStyle(color: Colors.white, fontSize: 16)),
+      title: Text(l.auctionStartTitle,
+          style: const TextStyle(color: Colors.white, fontSize: 16)),
       contentPadding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       content: SizedBox(
         width: double.maxFinite,
@@ -1494,18 +1511,18 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
           children: [
             // Mod seçici
             Row(children: [
-              Expanded(child: _modeBtn('Manuel Gir', !_fromListing, () => setState(() { _fromListing = false; _selectedListing = null; }))),
+              Expanded(child: _modeBtn(l.auctionManualEntry, !_fromListing, () => setState(() { _fromListing = false; _selectedListing = null; }))),
               const SizedBox(width: 8),
-              Expanded(child: _modeBtn('İlanlarımdan', _fromListing, () => setState(() => _fromListing = true))),
+              Expanded(child: _modeBtn(l.auctionFromListings, _fromListing, () => setState(() => _fromListing = true))),
             ]),
             const SizedBox(height: 14),
             // İçerik
             if (!_fromListing) ...[
-              _inputField(_itemCtrl, 'Ürün adı'),
+              _inputField(_itemCtrl, l.auctionItemName),
               const SizedBox(height: 10),
-              _inputField(_priceCtrl, 'Başlangıç fiyatı (₺)', isNumber: true),
+              _inputField(_priceCtrl, l.auctionStartPrice, isNumber: true),
               const SizedBox(height: 10),
-              _inputField(_binCtrl, 'Hemen Al fiyatı (₺, opsiyonel)', isNumber: true),
+              _inputField(_binCtrl, l.auctionBuyNowPriceHint, isNumber: true),
             ] else ...[
               if (_loadingListings)
                 const Column(
@@ -1516,11 +1533,11 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                   ],
                 )
               else if (_listings.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Text('Aktif ilanınız yok.',
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 20),
+                  child: Text(l.auctionNoActiveListings,
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: Color(0xFF64748B), fontSize: 13)),
+                      style: const TextStyle(color: Color(0xFF64748B), fontSize: 13)),
                 )
               else
                 ConstrainedBox(
@@ -1593,9 +1610,9 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
                 ),
               if (_fromListing) ...[
                 const SizedBox(height: 10),
-                _inputField(_priceCtrl, 'Başlangıç fiyatı (₺)', isNumber: true),
+                _inputField(_priceCtrl, l.auctionStartPrice, isNumber: true),
                 const SizedBox(height: 10),
-                _inputField(_binCtrl, 'Hemen Al fiyatı (₺, opsiyonel)', isNumber: true),
+                _inputField(_binCtrl, l.auctionBuyNowPriceHint, isNumber: true),
               ],
             ],
           ],
@@ -1605,7 +1622,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
       actions: [
         TextButton(
           onPressed: () => Navigator.pop(context),
-          child: const Text('İptal', style: TextStyle(color: Color(0xFF64748B))),
+          child: Text(l.btnCancel, style: const TextStyle(color: Color(0xFF64748B))),
         ),
         ElevatedButton(
           style: ElevatedButton.styleFrom(
@@ -1637,7 +1654,7 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
               });
             }
           },
-          child: const Text('Başlat', style: TextStyle(color: Colors.white)),
+          child: Text(l.liveStartBtn, style: const TextStyle(color: Colors.white)),
         ),
       ],
     );

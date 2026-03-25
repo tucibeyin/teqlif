@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
+import '../../l10n/app_localizations.dart';
 import '../../services/auth_service.dart';
 import '../../services/biometric_service.dart';
 import '../../services/push_notification_service.dart';
@@ -55,31 +56,32 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _offerBiometric() async {
+    final l = AppLocalizations.of(context)!;
     final enable = await showDialog<bool>(
       context: context,
       barrierDismissible: false,
       builder: (_) => AlertDialog(
-        title: const Row(
+        title: Row(
           children: [
-            Text('🔒 ', style: TextStyle(fontSize: 20)),
-            Text('Face ID ile Giriş'),
+            const Text('🔒 ', style: TextStyle(fontSize: 20)),
+            Text(l.profileFaceId),
           ],
         ),
-        content: const Text(
-          'Bir sonraki girişinizde şifre yazmadan Face ID ile hızlıca giriş yapabilirsiniz.',
-          style: TextStyle(fontSize: 14),
+        content: Text(
+          l.loginFaceIdDesc,
+          style: const TextStyle(fontSize: 14),
         ),
         actions: [
           TextButton(
             key: const Key('login_biometric_btn_simdi_degil'),
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Şimdi Değil', style: TextStyle(color: Color(0xFF6B7280))),
+            child: Text(l.btnNotNow, style: const TextStyle(color: Color(0xFF6B7280))),
           ),
           ElevatedButton(
             key: const Key('login_biometric_btn_etkinlestir'),
             style: ElevatedButton.styleFrom(backgroundColor: kPrimary),
             onPressed: () => Navigator.pop(context, true),
-            child: const Text('Etkinleştir', style: TextStyle(color: Colors.white)),
+            child: Text(l.btnEnable, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -91,6 +93,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       body: SafeArea(
@@ -110,13 +113,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 32),
-                const Text(
-                  'Hoş geldin',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
+                Text(
+                  l.loginWelcome,
+                  style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Hesabına giriş yap',
+                  l.loginSubtitle,
                   style: TextStyle(fontSize: 14, color: AppColors.textSecondary(context)),
                 ),
                 const SizedBox(height: 28),
@@ -129,9 +132,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         controller: _emailCtrl,
                         keyboardType: TextInputType.emailAddress,
                         autocorrect: false,
-                        decoration: const InputDecoration(labelText: 'E-posta'),
+                        decoration: InputDecoration(labelText: l.fieldEmail),
                         validator: (v) =>
-                            v == null || v.isEmpty ? 'E-posta giriniz' : null,
+                            v == null || v.isEmpty ? l.fieldEmailHint : null,
                       ),
                       const SizedBox(height: 14),
                       TextFormField(
@@ -143,7 +146,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         smartDashesType: SmartDashesType.disabled,
                         smartQuotesType: SmartQuotesType.disabled,
                         decoration: InputDecoration(
-                          labelText: 'Şifre',
+                          labelText: l.fieldPassword,
                           suffixIcon: IconButton(
                             key: const Key('login_btn_password_visibility'),
                             icon: Icon(_obscure
@@ -154,7 +157,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
                         validator: (v) =>
-                            v == null || v.isEmpty ? 'Şifre giriniz' : null,
+                            v == null || v.isEmpty ? l.fieldPasswordHint : null,
                       ),
                       const SizedBox(height: 24),
                       ElevatedButton(
@@ -169,7 +172,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   color: Colors.white,
                                 ),
                               )
-                            : const Text('Giriş Yap'),
+                            : Text(l.btnLogin),
                       ),
                     ],
                   ),
@@ -179,7 +182,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'Hesabın yok mu? ',
+                      l.loginNoAccount,
                       style: TextStyle(color: AppColors.textSecondary(context), fontSize: 14),
                     ),
                     GestureDetector(
@@ -188,9 +191,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         MaterialPageRoute(
                             builder: (_) => const RegisterScreen()),
                       ),
-                      child: const Text(
-                        'Kayıt ol',
-                        style: TextStyle(
+                      child: Text(
+                        l.loginRegisterLink,
+                        style: const TextStyle(
                           color: kPrimary,
                           fontWeight: FontWeight.w600,
                           fontSize: 14,

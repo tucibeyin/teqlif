@@ -12,6 +12,7 @@ import '../../services/moderation_service.dart';
 import '../../services/stream_service.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/auction_panel.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/chat_panel.dart';
 import '../public_profile_screen.dart';
 
@@ -205,11 +206,12 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   void _handleUnmuted() {
     if (!mounted) return;
     setState(() => _selfMuted = false);
+    final l = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('🔊 Susturma kaldırıldı'),
-        backgroundColor: Color(0xFF16A34A),
-        duration: Duration(seconds: 3),
+      SnackBar(
+        content: Text('🔊 ${l.modUnmutedMsg}'),
+        backgroundColor: const Color(0xFF16A34A),
+        duration: const Duration(seconds: 3),
       ),
     );
   }
@@ -243,9 +245,10 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   void _handleModDemotedSelf(String demotedBy) {
     if (!mounted) return;
     setState(() => _isCoHost = false);
+    final l = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Moderatörlüğünüz @$demotedBy tarafından kaldırıldı.'),
+        content: Text(l.liveModDemotedSelf(demotedBy)),
         backgroundColor: const Color(0xFF475569),
         duration: const Duration(seconds: 4),
       ),
@@ -306,6 +309,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final topPad = MediaQuery.of(context).padding.top;
     final botPad = MediaQuery.of(context).padding.bottom;
     final hasThumbnail =
@@ -354,14 +358,14 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                     const Icon(Icons.videocam_off_rounded,
                         color: Colors.white38, size: 56),
                     const SizedBox(height: 12),
-                    const Text('Yayın Sona Erdi',
-                        style: TextStyle(
+                    Text(l.liveStreamEndedOverlay,
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 18,
                             fontWeight: FontWeight.w700)),
                     const SizedBox(height: 4),
-                    const Text('Kaydırarak başka yayınları keşfet',
-                        style: TextStyle(color: Colors.white60, fontSize: 13)),
+                    Text(l.liveDiscoverStreams,
+                        style: const TextStyle(color: Colors.white60, fontSize: 13)),
                     if (!widget.isLast) ...[
                       const SizedBox(height: 20),
                       const Icon(Icons.keyboard_arrow_up_rounded,
@@ -415,7 +419,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                       color: _streamEnded ? Colors.grey : Colors.red,
                       borderRadius: BorderRadius.circular(5)),
                   child: Text(
-                    _streamEnded ? 'BİTTİ' : 'CANLI',
+                    _streamEnded ? l.liveEndedBadge : l.liveBadgeLabel,
                     style: const TextStyle(
                         color: Colors.white,
                         fontSize: 10,
@@ -493,8 +497,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                       borderRadius: BorderRadius.circular(20),
                       border: Border.all(color: Colors.white24),
                     ),
-                    child: const Text('Ayrıl',
-                        style: TextStyle(
+                    child: Text(l.liveLeaveBtn,
+                        style: const TextStyle(
                             color: Colors.white,
                             fontSize: 12,
                             fontWeight: FontWeight.w600)),
@@ -511,14 +515,14 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
             bottom: botPad + 104,
             left: 0,
             right: 0,
-            child: const Center(
+            child: Center(
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.keyboard_arrow_up_rounded,
+                  const Icon(Icons.keyboard_arrow_up_rounded,
                       color: Colors.white30, size: 24),
-                  Text('Sonraki yayın',
-                      style: TextStyle(color: Colors.white30, fontSize: 11)),
+                  Text(l.liveNextStream,
+                      style: const TextStyle(color: Colors.white30, fontSize: 11)),
                 ],
               ),
             ),
@@ -648,8 +652,10 @@ class _SwipeCoHostModSheetState extends State<_SwipeCoHostModSheet> {
     }
   }
 
+
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF1E293B),
@@ -672,8 +678,8 @@ class _SwipeCoHostModSheetState extends State<_SwipeCoHostModSheet> {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Text('🛡 Moderasyon',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              Text('🛡 ${l.modTitle}',
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
               const Spacer(),
               Text('@${widget.username}',
                   style: const TextStyle(color: Color(0xFF06B6D4), fontSize: 13, fontWeight: FontWeight.w600)),
@@ -684,7 +690,7 @@ class _SwipeCoHostModSheetState extends State<_SwipeCoHostModSheet> {
           const SizedBox(height: 14),
           if (!_isMuted)
             _SwipeModBtn(
-              icon: '🔇', label: 'Sustur',
+              icon: '🔇', label: l.modMute,
               color: const Color(0xFFD97706), loading: _loading,
               onTap: () => _act(
                 () => ModerationService.mute(widget.streamId, widget.username),
@@ -694,17 +700,17 @@ class _SwipeCoHostModSheetState extends State<_SwipeCoHostModSheet> {
             )
           else
             _SwipeModBtn(
-              icon: '🔊', label: 'Susturmayı Kaldır',
+              icon: '🔊', label: l.modUnmute,
               color: const Color(0xFF16A34A), loading: _loading,
               onTap: () => _act(
                 () => ModerationService.unmute(widget.streamId, widget.username),
-                successMsg: 'Susturma kaldırıldı',
+                successMsg: l.modUnmutedMsg,
                 onSuccess: () { widget.onUnmuted(); setState(() => _isMuted = false); },
               ),
             ),
           const SizedBox(height: 10),
           _SwipeModBtn(
-            icon: '🚫', label: 'Yayından At',
+            icon: '🚫', label: l.modKick,
             color: const Color(0xFFEF4444), loading: _loading,
             onTap: () => _act(
               () => ModerationService.kick(widget.streamId, widget.username),
@@ -723,8 +729,8 @@ class _SwipeCoHostModSheetState extends State<_SwipeCoHostModSheet> {
                   side: const BorderSide(color: Colors.white12),
                 ),
               ),
-              child: const Text('İptal',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+              child: Text(l.btnCancel,
+                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
             ),
           ),
           if (_msg != null)

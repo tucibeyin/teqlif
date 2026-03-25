@@ -12,6 +12,7 @@ import '../services/stream_service.dart';
 import 'public_profile_screen.dart';
 import 'listing_detail_screen.dart';
 import 'live/swipe_live_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class SearchScreen extends StatefulWidget {
   const SearchScreen({super.key});
@@ -112,6 +113,7 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       backgroundColor: AppColors.bg(context),
       body: SafeArea(
@@ -124,7 +126,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 key: const Key('search_input_arama'),
                 controller: _controller,
                 decoration: InputDecoration(
-                  hintText: 'Kullanıcı ara...',
+                  hintText: l.searchUserHint,
                   prefixIcon: const Icon(Icons.search, size: 20),
                   suffixIcon: _hasQuery
                       ? IconButton(
@@ -145,7 +147,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             // ── İçerik ───────────────────────────────────────────────
             Expanded(
-              child: _hasQuery ? _buildUserResults() : _buildExplore(),
+              child: _hasQuery ? _buildUserResults(l) : _buildExplore(l),
             ),
           ],
         ),
@@ -153,18 +155,18 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildUserResults() {
+  Widget _buildUserResults(AppLocalizations l) {
     if (_searching) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
     if (_userResults.isEmpty) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(Icons.person_search_outlined, size: 56, color: Color(0xFFD1D5DB)),
-            SizedBox(height: 12),
-            Text('Kullanıcı bulunamadı', style: TextStyle(color: Color(0xFF6B7280))),
+            const Icon(Icons.person_search_outlined, size: 56, color: Color(0xFFD1D5DB)),
+            const SizedBox(height: 12),
+            Text(l.searchNoUser, style: const TextStyle(color: Color(0xFF6B7280))),
           ],
         ),
       );
@@ -210,7 +212,7 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildExplore() {
+  Widget _buildExplore(AppLocalizations l) {
     if (_exploreLoading) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
@@ -221,16 +223,16 @@ class _SearchScreenState extends State<SearchScreen> {
         slivers: [
           // ── Canlı Yayınlar ────────────────────────────────────────
           if (_exploreStreams.isNotEmpty) ...[
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                 child: Row(
                   children: [
-                    Icon(Icons.fiber_manual_record, color: Colors.red, size: 10),
-                    SizedBox(width: 6),
+                    const Icon(Icons.fiber_manual_record, color: Colors.red, size: 10),
+                    const SizedBox(width: 6),
                     Text(
-                      'Canlı Yayınlar',
-                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                      l.searchLiveStreams,
+                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                     ),
                   ],
                 ),
@@ -261,12 +263,12 @@ class _SearchScreenState extends State<SearchScreen> {
           ],
           // ── Son İlanlar ──────────────────────────────────────────
           if (_exploreListings.isNotEmpty) ...[
-            const SliverToBoxAdapter(
+            SliverToBoxAdapter(
               child: Padding(
-                padding: EdgeInsets.fromLTRB(16, 16, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
                 child: Text(
-                  'Son İlanlar',
-                  style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  l.homeRecentListings,
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
                 ),
               ),
             ),
@@ -299,16 +301,16 @@ class _SearchScreenState extends State<SearchScreen> {
           ],
           // ── Boş durum ────────────────────────────────────────────
           if (_exploreStreams.isEmpty && _exploreListings.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               child: Center(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Icon(Icons.explore_outlined, size: 56,
+                    const Icon(Icons.explore_outlined, size: 56,
                         color: Color(0xFFD1D5DB)),
-                    SizedBox(height: 12),
-                    Text('Henüz içerik yok',
-                        style: TextStyle(color: Color(0xFF6B7280))),
+                    const SizedBox(height: 12),
+                    Text(l.searchNoContent,
+                        style: const TextStyle(color: Color(0xFF6B7280))),
                   ],
                 ),
               ),
@@ -370,9 +372,9 @@ class _StreamCard extends StatelessWidget {
                   color: Colors.red,
                   borderRadius: BorderRadius.circular(4),
                 ),
-                child: const Text(
-                  'CANLI',
-                  style: TextStyle(
+                child: Text(
+                  AppLocalizations.of(context)!.liveBadgeLabel,
+                  style: const TextStyle(
                     color: Colors.white,
                     fontSize: 9,
                     fontWeight: FontWeight.w800,

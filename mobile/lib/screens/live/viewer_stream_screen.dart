@@ -7,6 +7,7 @@ import '../../models/stream.dart';
 import '../../services/moderation_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
+import '../../l10n/app_localizations.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 import '../../widgets/live/live_video_player.dart';
@@ -73,8 +74,9 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
 
       _listener!.on<RoomDisconnectedEvent>((_) {
         if (mounted && !_kicked) {
+          final l = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Yayın sona erdi')),
+            SnackBar(content: Text(l.liveEnded)),
           );
           Navigator.pushNamedAndRemoveUntil(
               context, '/home', (route) => false);
@@ -172,9 +174,10 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   void _handleModDemotedSelf(String demotedBy) {
     if (!mounted) return;
     setState(() => _isCoHost = false);
+    final l = AppLocalizations.of(context)!;
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('Moderatörlüğünüz @$demotedBy tarafından kaldırıldı.'),
+        content: Text(l.liveModDemotedSelf(demotedBy)),
         backgroundColor: const Color(0xFF475569),
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 4),
@@ -200,16 +203,17 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
 
   Future<void> _handleStreamEnded() async {
     if (!mounted) return;
+    final l = AppLocalizations.of(context)!;
     await showDialog(
       context: context,
       barrierDismissible: false,
       builder: (ctx) => AlertDialog(
         backgroundColor: const Color(0xFF1E293B),
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-        title: const Text('Yayın Sona Erdi',
-            style: TextStyle(color: Colors.white, fontSize: 17)),
-        content: const Text('Bu yayın yayıncı tarafından sonlandırıldı.',
-            style: TextStyle(color: Color(0xFF94A3B8))),
+        title: Text(l.liveStreamEndedTitle,
+            style: const TextStyle(color: Colors.white, fontSize: 17)),
+        content: Text(l.liveStreamEndedDesc,
+            style: const TextStyle(color: Color(0xFF94A3B8))),
         actions: [
           ElevatedButton(
             style: ElevatedButton.styleFrom(
@@ -219,7 +223,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
             ),
             onPressed: () => Navigator.pop(ctx),
             child:
-                const Text('Tamam', style: TextStyle(color: Colors.white)),
+                Text(l.btnOk, style: const TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -252,27 +256,31 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
         children: [
           // ── Video katmanı (tam ekran) — host track'i + bekleme durumu ───
           Positioned.fill(
-            child: LiveVideoPlayer(
-              track: _remoteVideoTrack,
-              cameraEnabled: true,
-              waitingLabel: 'Video bekleniyor...',
+            child: Builder(
+              builder: (ctx) => LiveVideoPlayer(
+                track: _remoteVideoTrack,
+                cameraEnabled: true,
+                waitingLabel: AppLocalizations.of(ctx)!.liveWaitingVideo,
+              ),
             ),
           ),
 
           // ── Bağlanıyor ─────────────────────────────────────────────────
           if (_connecting && _error == null)
-            const Positioned.fill(
+            Positioned.fill(
               child: ColoredBox(
                 color: Colors.black,
                 child: Center(
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      CircularProgressIndicator(color: kPrimary),
-                      SizedBox(height: 16),
-                      Text('Yayına bağlanıyor...',
-                          style: TextStyle(
-                              color: Colors.white70, fontSize: 14)),
+                      const CircularProgressIndicator(color: kPrimary),
+                      const SizedBox(height: 16),
+                      Builder(
+                        builder: (ctx) => Text(AppLocalizations.of(ctx)!.liveConnectingViewer,
+                            style: const TextStyle(
+                                color: Colors.white70, fontSize: 14)),
+                      ),
                     ],
                   ),
                 ),
@@ -298,9 +306,11 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                                 color: Colors.white70, fontSize: 14),
                             textAlign: TextAlign.center),
                         const SizedBox(height: 20),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Geri Dön'),
+                        Builder(
+                          builder: (ctx) => ElevatedButton(
+                            onPressed: () => Navigator.pop(context),
+                            child: Text(AppLocalizations.of(ctx)!.liveGoBack),
+                          ),
                         ),
                       ],
                     ),
@@ -444,6 +454,7 @@ class _CoHostModSheetState extends State<_CoHostModSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Container(
       decoration: const BoxDecoration(
         color: Color(0xFF1E293B),
@@ -466,8 +477,8 @@ class _CoHostModSheetState extends State<_CoHostModSheet> {
           const SizedBox(height: 16),
           Row(
             children: [
-              const Text('🛡 Moderasyon',
-                  style: TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
+              Text('🛡 ${l.modTitle}',
+                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
               const Spacer(),
               Text('@${widget.username}',
                   style: const TextStyle(color: Color(0xFF06B6D4), fontSize: 13, fontWeight: FontWeight.w600)),
@@ -480,7 +491,7 @@ class _CoHostModSheetState extends State<_CoHostModSheet> {
           // Sustur / Susturmayı Kaldır
           if (!_isMuted)
             _CoHostModBtn(
-              icon: '🔇', label: 'Sustur',
+              icon: '🔇', label: l.modMute,
               color: const Color(0xFFD97706), loading: _loading,
               onTap: () => _act(
                 () => ModerationService.mute(widget.streamId, widget.username),
@@ -490,11 +501,11 @@ class _CoHostModSheetState extends State<_CoHostModSheet> {
             )
           else
             _CoHostModBtn(
-              icon: '🔊', label: 'Susturmayı Kaldır',
+              icon: '🔊', label: l.modUnmute,
               color: const Color(0xFF16A34A), loading: _loading,
               onTap: () => _act(
                 () => ModerationService.unmute(widget.streamId, widget.username),
-                successMsg: 'Susturma kaldırıldı',
+                successMsg: l.modUnmutedMsg,
                 onSuccess: () { widget.onUnmuted(); setState(() => _isMuted = false); },
               ),
             ),
@@ -502,7 +513,7 @@ class _CoHostModSheetState extends State<_CoHostModSheet> {
 
           // Yayından At
           _CoHostModBtn(
-            icon: '🚫', label: 'Yayından At',
+            icon: '🚫', label: l.modKick,
             color: const Color(0xFFEF4444), loading: _loading,
             onTap: () => _act(
               () => ModerationService.kick(widget.streamId, widget.username),
@@ -523,8 +534,8 @@ class _CoHostModSheetState extends State<_CoHostModSheet> {
                   side: const BorderSide(color: Colors.white12),
                 ),
               ),
-              child: const Text('İptal',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
+              child: Text(l.btnCancel,
+                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
             ),
           ),
 

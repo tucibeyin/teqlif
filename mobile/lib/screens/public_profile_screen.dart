@@ -7,6 +7,7 @@ import '../config/theme.dart';
 import '../config/api.dart';
 import '../services/storage_service.dart';
 import '../services/notification_service.dart';
+import '../l10n/app_localizations.dart';
 import 'messages_screen.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
@@ -156,8 +157,9 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       }
     } catch (_) {
       if (mounted) {
+        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('İşlem gerçekleştirilemedi')),
+          SnackBar(content: Text(l.pubProfileActionFailed)),
         );
       }
     } finally {
@@ -210,17 +212,19 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(title: Text('@${widget.username}')),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _user == null
-              ? const Center(child: Text('Kullanıcı bulunamadı'))
+              ? Center(child: Text(l.pubProfileUserNotFound))
               : _buildBody(),
     );
   }
 
   Widget _buildBody() {
+    final l = AppLocalizations.of(context)!;
     final fullName = (_user!['full_name'] as String?) ?? widget.username;
     final userId = (_user!['id'] as int?) ?? widget.userId ?? 0;
     final initial = fullName.isNotEmpty ? fullName[0].toUpperCase() : '?';
@@ -271,7 +275,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      Expanded(child: _statCell('İlanlar', listingCount)),
+                      Expanded(child: _statCell(l.pubProfileStatListings, listingCount)),
                       _divider(),
                       Expanded(
                         child: GestureDetector(
@@ -286,7 +290,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               ),
                             ),
                           ),
-                          child: _statCell('Takipçi', followerCount),
+                          child: _statCell(l.pubProfileStatFollowers, followerCount),
                         ),
                       ),
                       _divider(),
@@ -303,7 +307,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                               ),
                             ),
                           ),
-                          child: _statCell('Takip', followingCount),
+                          child: _statCell(l.pubProfileStatFollowing, followingCount),
                         ),
                       ),
                     ],
@@ -319,13 +323,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     icon: Icons.edit_outlined,
                     primary: false,
                     onPressed: () => ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Profil düzenleme yakında')),
+                      SnackBar(content: Text(l.pubProfileEditComingSoon)),
                     ),
                   ),
                 ] else if (userId != 0) ...[
                   _actionButton(
                     key: const Key('pub_profile_btn_takip_toggle'),
-                    label: _isFollowing ? 'Takip Ediliyor' : 'Takip Et',
+                    label: _isFollowing ? l.pubProfileFollowingLabel : l.pubProfileFollowLabel,
                     icon: _isFollowing
                         ? Icons.person_remove_outlined
                         : Icons.person_add_outlined,
@@ -335,7 +339,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   const SizedBox(height: 8),
                   _actionButton(
                     key: const Key('pub_profile_btn_mesaj_gonder'),
-                    label: 'Mesaj Gönder',
+                    label: l.pubProfileSendMessage,
                     icon: Icons.chat_bubble_outline,
                     primary: false,
                     onPressed: () => Navigator.push(
@@ -353,7 +357,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                     const SizedBox(height: 8),
                     _actionButton(
                       key: const Key('pub_profile_btn_puan_ver'),
-                      label: hasMyRating ? 'Puanı Güncelle' : 'Puan Ver',
+                      label: hasMyRating ? l.pubProfileUpdateRating : l.pubProfileGiveRating,
                       icon: hasMyRating
                           ? Icons.star_rounded
                           : Icons.star_outline_rounded,
@@ -364,7 +368,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                   const SizedBox(height: 8),
                   _actionButton(
                     key: const Key('pub_profile_btn_engelle'),
-                    label: _isBlocked ? 'Engeli Kaldır' : 'Engelle',
+                    label: _isBlocked ? l.pubProfileUnblock : l.pubProfileBlock,
                     icon: Icons.block_outlined,
                     primary: false,
                     danger: true,
@@ -375,7 +379,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
                 Align(
                   alignment: Alignment.centerLeft,
                   child: Text(
-                    'İlanları (${_listings.length})',
+                    l.pubProfileListingsCount(_listings.length),
                     style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
                   ),
                 ),
@@ -553,9 +557,10 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   }
 
   Widget _buildRatingBadge(bool hasRating, dynamic avgRaw) {
+    final l = AppLocalizations.of(context)!;
     if (!hasRating) {
       return Text(
-        'Henüz değerlendirme yok',
+        l.pubProfileNoReview,
         style: TextStyle(fontSize: 12, color: AppColors.textTertiary(context)),
       );
     }
@@ -596,7 +601,7 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
             ),
             const SizedBox(width: 5),
             Text(
-              '($count puan)',
+              l.ratingCount(count),
               style: TextStyle(
                   fontSize: 12,
                   color: AppColors.textSecondary(context)),
@@ -704,14 +709,10 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
   bool _saving = false;
   late final TextEditingController _commentCtrl;
 
-  static const _labels = [
-    '',
-    'Çok kötü',
-    'Kötü',
-    'Orta',
-    'İyi',
-    'Mükemmel'
-  ];
+  List<String> _getLabels(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    return ['', l.ratingVeryBad, l.ratingBad, l.ratingMedium, l.ratingGood, l.ratingExcellent];
+  }
 
   @override
   void initState() {
@@ -744,16 +745,18 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
         widget.onSaved();
       } else {
         if (mounted) {
+          final l = AppLocalizations.of(context)!;
           ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Puan kaydedilemedi')),
+            SnackBar(content: Text(l.ratingSaveFailed)),
           );
           setState(() => _saving = false);
         }
       }
     } catch (_) {
       if (mounted) {
+        final l = AppLocalizations.of(context)!;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Bağlantı hatası')),
+          SnackBar(content: Text(l.errorConnection)),
         );
         setState(() => _saving = false);
       }
@@ -762,6 +765,8 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final labels = _getLabels(context);
     final isUpdate = widget.existingScore != null;
     return Padding(
       padding:
@@ -782,7 +787,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
             child: Text(
-              isUpdate ? 'Puanı Güncelle' : 'Puan Ver',
+              isUpdate ? l.pubProfileUpdateRating : l.pubProfileGiveRating,
               style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w700),
             ),
           ),
@@ -810,7 +815,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
           ),
           const SizedBox(height: 10),
           Text(
-            _selected > 0 ? _labels[_selected] : 'Bir yıldız seçin',
+            _selected > 0 ? labels[_selected] : l.ratingSelectStar,
             style: TextStyle(
               fontSize: 13,
               fontWeight:
@@ -830,8 +835,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
               maxLines: 3,
               maxLength: 500,
               decoration: InputDecoration(
-                hintText:
-                    'Neden bu puanı veriyorsunuz? (isteğe bağlı)',
+                hintText: l.ratingCommentHint,
                 hintStyle: TextStyle(
                     color: AppColors.textTertiary(context), fontSize: 14),
                 filled: true,
@@ -862,7 +866,7 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
                           borderRadius: BorderRadius.circular(10)),
                       side: BorderSide(color: AppColors.border(context)),
                     ),
-                    child: const Text('Vazgeç'),
+                    child: Text(l.btnCancel),
                   ),
                 ),
                 const SizedBox(width: 12),
@@ -886,8 +890,8 @@ class _RatingFormSheetState extends State<_RatingFormSheet> {
                             child: CircularProgressIndicator(
                                 strokeWidth: 2, color: Colors.white),
                           )
-                        : const Text('Kaydet',
-                            style: TextStyle(fontWeight: FontWeight.w700)),
+                        : Text(l.btnSave,
+                            style: const TextStyle(fontWeight: FontWeight.w700)),
                   ),
                 ),
               ],
@@ -961,6 +965,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     final avgRaw = widget.summary?['average'];
     final count = widget.summary?['count'] as int? ?? 0;
     final avg = avgRaw != null ? (avgRaw as num).toDouble() : null;
@@ -986,7 +991,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
           Padding(
             padding: const EdgeInsets.fromLTRB(20, 4, 20, 14),
             child: Text(
-              'Değerlendirmeler',
+              l.ratingReviews,
               style: const TextStyle(
                   fontSize: 17, fontWeight: FontWeight.w700),
             ),
@@ -1025,7 +1030,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        '$count değerlendirme',
+                        l.ratingCount(count),
                         style: TextStyle(
                             fontSize: 13,
                             color: AppColors.textSecondary(context)),
@@ -1049,7 +1054,7 @@ class _RatingsListSheetState extends State<_RatingsListSheet> {
                         child: Padding(
                           padding: const EdgeInsets.all(32),
                           child: Text(
-                            'Henüz değerlendirme yok',
+                            l.pubProfileNoReview,
                             style: TextStyle(
                                 color: AppColors.textTertiary(context)),
                           ),

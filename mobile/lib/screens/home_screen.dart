@@ -9,6 +9,7 @@ import '../services/city_service.dart';
 import '../widgets/shimmer_loading.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
+import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -25,15 +26,26 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedCity;
   List<String> _cities = [];
 
-  static const _categories = [
-    {'slug': 'elektronik', 'label': 'Elektronik', 'icon': Icons.devices_outlined},
-    {'slug': 'vasita', 'label': 'Vasıta', 'icon': Icons.directions_car_outlined},
-    {'slug': 'emlak', 'label': 'Emlak', 'icon': Icons.home_work_outlined},
-    {'slug': 'giyim', 'label': 'Giyim', 'icon': Icons.checkroom_outlined},
-    {'slug': 'spor', 'label': 'Spor', 'icon': Icons.sports_soccer_outlined},
-    {'slug': 'kitap', 'label': 'Kitap', 'icon': Icons.menu_book_outlined},
-    {'slug': 'ev', 'label': 'Ev & Yaşam', 'icon': Icons.home_outlined},
-    {'slug': 'diger', 'label': 'Diğer', 'icon': Icons.more_horiz},
+  static const _categoryMeta = [
+    {'slug': 'elektronik', 'icon': Icons.devices_outlined},
+    {'slug': 'vasita', 'icon': Icons.directions_car_outlined},
+    {'slug': 'emlak', 'icon': Icons.home_work_outlined},
+    {'slug': 'giyim', 'icon': Icons.checkroom_outlined},
+    {'slug': 'spor', 'icon': Icons.sports_soccer_outlined},
+    {'slug': 'kitap', 'icon': Icons.menu_book_outlined},
+    {'slug': 'ev', 'icon': Icons.home_outlined},
+    {'slug': 'diger', 'icon': Icons.more_horiz},
+  ];
+
+  List<Map<String, dynamic>> _buildCategories(AppLocalizations l) => [
+    {'slug': 'elektronik', 'label': l.catElectronics, 'icon': Icons.devices_outlined},
+    {'slug': 'vasita', 'label': l.catVehicles, 'icon': Icons.directions_car_outlined},
+    {'slug': 'emlak', 'label': l.catRealEstate, 'icon': Icons.home_work_outlined},
+    {'slug': 'giyim', 'label': l.catClothing, 'icon': Icons.checkroom_outlined},
+    {'slug': 'spor', 'label': l.catSports, 'icon': Icons.sports_soccer_outlined},
+    {'slug': 'kitap', 'label': l.catBooks, 'icon': Icons.menu_book_outlined},
+    {'slug': 'ev', 'label': l.catHomeLife, 'icon': Icons.home_outlined},
+    {'slug': 'diger', 'label': l.catOther, 'icon': Icons.more_horiz},
   ];
 
   bool get _hasFilter => _selectedCategory != null || _selectedCity != null;
@@ -66,15 +78,18 @@ class _HomeScreenState extends State<HomeScreen> {
           _loading = false;
         });
       } else {
+        if (!mounted) return;
+        final l = AppLocalizations.of(context)!;
         setState(() {
-          _error = 'İlanlar yüklenemedi';
+          _error = l.errorListingsLoad;
           _loading = false;
         });
       }
     } catch (_) {
       if (!mounted) return;
+      final l = AppLocalizations.of(context)!;
       setState(() {
-        _error = 'Bağlantı hatası';
+        _error = l.errorConnection;
         _loading = false;
       });
     }
@@ -89,6 +104,7 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showCityPicker() {
+    final l = AppLocalizations.of(context)!;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -114,7 +130,7 @@ class _HomeScreenState extends State<HomeScreen> {
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 4, 16, 12),
               child: Text(
-                'Şehir Seç',
+                l.citySelectTitle,
                 style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w700,
@@ -123,7 +139,7 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             ),
             ListTile(
-              title: const Text('Tüm Şehirler'),
+              title: Text(l.cityAll),
               leading: Icon(
                 _selectedCity == null
                     ? Icons.radio_button_checked
@@ -179,14 +195,16 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  String get _sectionHeader {
-    if (!_hasFilter) return 'Son İlanlar';
-    if (_loading) return 'Aranıyor...';
-    return '${_listings.length} ilan bulundu';
+  String _sectionHeader(AppLocalizations l) {
+    if (!_hasFilter) return l.homeRecentListings;
+    if (_loading) return l.homeSearchingHeader;
+    return l.homeResultsCount(_listings.length);
   }
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final categories = _buildCategories(l);
     return Scaffold(
       body: RefreshIndicator(
         onRefresh: _load,
@@ -194,9 +212,9 @@ class _HomeScreenState extends State<HomeScreen> {
           slivers: [
             // ── AppBar ──────────────────────────────────────────────
             SliverAppBar(
-              title: const Text(
-                'İlanlar',
-                style: TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
+              title: Text(
+                l.homeAppBarTitle,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
               ),
               surfaceTintColor: Colors.transparent,
               floating: true,
@@ -210,9 +228,9 @@ class _HomeScreenState extends State<HomeScreen> {
                         builder: (_) => const CreateListingScreen()),
                   ),
                   icon: const Icon(Icons.add, size: 18, color: kPrimary),
-                  label: const Text(
-                    'İlan Ver',
-                    style: TextStyle(
+                  label: Text(
+                    l.btnCreateListing,
+                    style: const TextStyle(
                         color: kPrimary,
                         fontWeight: FontWeight.w600,
                         fontSize: 13),
@@ -231,9 +249,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     child: ListView.builder(
                       scrollDirection: Axis.horizontal,
                       padding: const EdgeInsets.symmetric(horizontal: 16),
-                      itemCount: _categories.length,
+                      itemCount: categories.length,
                       itemBuilder: (context, i) {
-                        final cat = _categories[i];
+                        final cat = categories[i];
                         final slug = cat['slug'] as String;
                         final isSelected = _selectedCategory == slug;
                         return GestureDetector(
@@ -334,7 +352,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ),
                                   const SizedBox(width: 4),
                                   Text(
-                                    _selectedCity ?? 'Şehir',
+                                    _selectedCity ?? l.fieldCity,
                                     style: TextStyle(
                                       fontSize: 12,
                                       fontWeight: _selectedCity != null
@@ -362,7 +380,7 @@ class _HomeScreenState extends State<HomeScreen> {
                           if (_selectedCategory != null) ...[
                             const SizedBox(width: 8),
                             _ActiveFilterChip(
-                              label: _categories.firstWhere(
+                              label: categories.firstWhere(
                                       (c) => c['slug'] == _selectedCategory)[
                                   'label'] as String,
                               onRemove: () {
@@ -400,15 +418,15 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: Colors.red.withValues(alpha: 0.3),
                                       width: 1),
                                 ),
-                                child: const Row(
+                                child: Row(
                                   mainAxisSize: MainAxisSize.min,
                                   children: [
-                                    Icon(Icons.close,
+                                    const Icon(Icons.close,
                                         size: 13, color: Colors.red),
-                                    SizedBox(width: 4),
+                                    const SizedBox(width: 4),
                                     Text(
-                                      'Filtreleri Temizle',
-                                      style: TextStyle(
+                                      l.btnClearFilters,
+                                      style: const TextStyle(
                                         fontSize: 12,
                                         color: Colors.red,
                                         fontWeight: FontWeight.w500,
@@ -428,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                     child: Text(
-                      _sectionHeader,
+                      _sectionHeader(l),
                       style: const TextStyle(
                           fontSize: 16, fontWeight: FontWeight.w700),
                     ),
@@ -467,7 +485,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       TextButton(
                           key: const Key('home_btn_tekrar_dene'),
                           onPressed: _load,
-                          child: const Text('Tekrar Dene')),
+                          child: Text(l.btnRetry)),
                     ],
                   ),
                 ),
@@ -483,8 +501,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       const SizedBox(height: 12),
                       Text(
                         _hasFilter
-                            ? 'Bu filtreyle ilan bulunamadı'
-                            : 'Henüz ilan yok',
+                            ? l.emptyFilteredListings
+                            : l.emptyListings,
                         style: const TextStyle(color: Colors.grey),
                       ),
                       if (_hasFilter) ...[
@@ -492,7 +510,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         TextButton(
                           key: const Key('home_btn_filtreleri_temizle_bos'),
                           onPressed: _clearAll,
-                          child: const Text('Filtreleri Temizle'),
+                          child: Text(l.btnClearFilters),
                         ),
                       ],
                     ],

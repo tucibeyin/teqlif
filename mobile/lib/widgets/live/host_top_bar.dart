@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../l10n/app_localizations.dart';
 
 /// Canlı yayın host ekranı — üst bilgi çubuğu.
 ///
@@ -23,6 +24,7 @@ class HostTopBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.only(
         top: topPad + 14,
@@ -46,9 +48,9 @@ class HostTopBar extends StatelessWidget {
               color: Colors.red,
               borderRadius: BorderRadius.circular(5),
             ),
-            child: const Text(
-              'CANLI',
-              style: TextStyle(
+            child: Text(
+              l.liveBadgeLabel,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 10,
                 fontWeight: FontWeight.w800,
@@ -100,9 +102,9 @@ class HostTopBar extends StatelessWidget {
                 color: Colors.red.withOpacity(0.85),
                 borderRadius: BorderRadius.circular(20),
               ),
-              child: const Text(
-                'Bitir',
-                style: TextStyle(
+              child: Text(
+                l.liveEndStreamBtn,
+                style: const TextStyle(
                   color: Colors.white,
                   fontSize: 12,
                   fontWeight: FontWeight.w700,
