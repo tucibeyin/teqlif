@@ -17,7 +17,6 @@ import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 import '../../services/moderation_service.dart';
 import '../../widgets/live/host_top_bar.dart';
-import '../../widgets/live/host_bottom_controls.dart';
 import '../../widgets/live/live_video_player.dart';
 import '../../l10n/app_localizations.dart';
 
@@ -425,22 +424,13 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                 topPad: topPad,
                 viewerCount: _viewerCount,
                 title: widget.title,
-                onViewersTap: _showViewers,
-                onEndStream: _endStream,
-              ),
-            ),
-
-          // ── Alt kontroller: mikrofon + kamera + çevir ───────────────────
-          if (live)
-            Positioned(
-              bottom: botPad + 200,
-              right: 14,
-              child: HostBottomControls(
                 micEnabled: _micEnabled,
                 cameraEnabled: _cameraEnabled,
+                onViewersTap: _showViewers,
                 onToggleMic: _toggleMic,
                 onToggleCamera: _toggleCamera,
                 onSwitchCamera: _switchCamera,
+                onEndStream: _endStream,
               ),
             ),
 
