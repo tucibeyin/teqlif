@@ -18,6 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.models.listing import Listing
+from app.models.listing_offer import ListingOffer
 from app.models.user import User
 from app.schemas.stream import VALID_CATEGORIES
 from app.core.exceptions import (
@@ -243,3 +244,69 @@ class ListingService:
             raise DatabaseException("İlan silinemedi")
 
         return {"ok": True}
+
+    # ── Teklif Ver ───────────────────────────────────────────────────────────
+    async def create_offer(self, listing_id: int, current_user: User, amount: float) -> dict:
+        # İlanın var olduğunu doğrula
+        result = await self.db.execute(
+            select(Listing).where(Listing.id == listing_id, Listing.is_deleted == False)  # noqa: E712
+        )
+        listing = result.scalar_one_or_none()
+        if not listing:
+            raise NotFoundException("İlan bulunamadı")
+
+        # Kendi ilanına teklif verme kuralı
+        if listing.user_id == current_user.id:
+            raise BadRequestException("Kendi ilanınıza teklif veremezsiniz")
+
+        offer = ListingOffer(
+            listing_id=listing_id,
+            user_id=current_user.id,
+            amount=amount,
+        )
+        self.db.add(offer)
+        try:
+            await self.db.commit()
+            await self.db.refresh(offer)
+        except Exception as exc:
+            await self.db.rollback()
+            logger.error(
+                "[OFFERS] Teklif DB'ye kaydedilemedi | listing_id=%s user_id=%s | %s",
+                listing_id, current_user.id, exc, exc_info=True,
+            )
+            capture_exception(exc)
+            raise DatabaseException("Teklif oluşturulamadı")
+
+        logger.info(
+            "[OFFERS] Teklif verildi | listing_id=%s user_id=%s amount=%s",
+            listing_id, current_user.id, amount,
+        )
+        return {"id": offer.id, "amount": offer.amount}
+
+    # ── Teklifleri Listele ───────────────────────────────────────────────────
+    async def get_listing_offers(self, listing_id: int) -> list:
+        # İlanın varlığını kontrol et
+        listing_exists = await self.db.execute(
+            select(Listing.id).where(Listing.id == listing_id, Listing.is_deleted == False)  # noqa: E712
+        )
+        if not listing_exists.scalar_one_or_none():
+            raise NotFoundException("İlan bulunamadı")
+
+        result = await self.db.execute(
+            select(ListingOffer, User)
+            .join(User, User.id == ListingOffer.user_id)
+            .where(ListingOffer.listing_id == listing_id)
+            .order_by(ListingOffer.amount.desc())
+        )
+        return [
+            {
+                "id": o.id,
+                "listing_id": o.listing_id,
+                "amount": o.amount,
+                "created_at": o.created_at.isoformat() if o.created_at else None,
+                "user_id": u.id,
+                "username": u.username,
+                "profile_image_url": u.profile_image_url,
+            }
+            for o, u in result.all()
+        ]

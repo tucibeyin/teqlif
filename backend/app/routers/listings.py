@@ -20,6 +20,7 @@ from app.models.user import User
 from app.utils.auth import get_current_user
 from app.security.captcha import verify_captcha_token
 from app.services.listing_service import ListingService
+from app.schemas.listing import ListingOfferCreate
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
@@ -79,3 +80,21 @@ async def delete_listing(
     db: AsyncSession = Depends(get_db),
 ):
     return await ListingService(db).delete_listing(listing_id, current_user)
+
+
+@router.post("/{listing_id}/offers")
+async def create_offer(
+    listing_id: int,
+    payload: ListingOfferCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await ListingService(db).create_offer(listing_id, current_user, payload.amount)
+
+
+@router.get("/{listing_id}/offers")
+async def get_listing_offers(
+    listing_id: int,
+    db: AsyncSession = Depends(get_db),
+):
+    return await ListingService(db).get_listing_offers(listing_id)

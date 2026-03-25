@@ -16,6 +16,7 @@ from app.config import settings
 from app.database import Base
 import app.models.user  # Modelleri import et ki metadata'ya girsin
 import app.models.stream
+import app.models.listing_offer  # noqa: F401
 
 config = context.config
 config.set_main_option("sqlalchemy.url", settings.database_url)
