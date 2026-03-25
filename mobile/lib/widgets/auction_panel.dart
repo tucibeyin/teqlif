@@ -596,7 +596,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     final l = AppLocalizations.of(context)!;
     if (state.isIdle || state.isEnded) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
-        _iconBtn(Icons.bolt_rounded, Colors.orange, _startQuickAuction),
+        _pillIconBtn(Icons.bolt_rounded, '⚡ Hızlı', Colors.orange, _startQuickAuction),
         const SizedBox(width: 6),
         _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog),
       ]);
@@ -933,6 +933,29 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           borderRadius: BorderRadius.vertical(top: Radius.circular(22))),
       isScrollControlled: true,
       builder: (_) => _BidSheetContent(streamId: widget.streamId, iAmBinBuyer: _iAmBinBuyer),
+    );
+  }
+
+  Widget _pillIconBtn(IconData icon, String label, Color color, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+        decoration:
+            BoxDecoration(color: color, borderRadius: BorderRadius.circular(20)),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, color: Colors.white, size: 12),
+            const SizedBox(width: 4),
+            Text(label,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700)),
+          ],
+        ),
+      ),
     );
   }
 
