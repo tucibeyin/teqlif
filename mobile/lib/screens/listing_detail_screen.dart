@@ -35,6 +35,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
   final _offersNotifier = ValueNotifier<List<ListingOffer>>([]);
   bool _offersLoading = true;
   bool _offerSubmitting = false;
+  bool _isLoggedIn = false; // token var mı (form gösterimi için)
   final _offerCtrl = TextEditingController();
 
   @override
@@ -55,6 +56,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     final info = await StorageService.getUserInfo();
     final token = await StorageService.getToken();
     if (!mounted) return;
+
+    // Token varlığını hemen form gösterimi için kaydet
+    if (token != null && !_isLoggedIn) {
+      setState(() => _isLoggedIn = true);
+    }
 
     int? userId = info?['id'] as int?;
 
@@ -636,7 +642,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(16),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Text(
                     l.offerHistory,
@@ -647,7 +653,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                     ),
                   ),
                   // Form — sadece ilan sahibi değilse + giriş yapılmışsa
-                  if (!isMine && _myUserId != null) ...[
+                  if (!isMine && _isLoggedIn) ...[
                     const SizedBox(height: 12),
                     Row(
                       children: [
@@ -698,7 +704,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                       ],
                     ),
                   ],
-                  if (!isMine && _myUserId == null) ...[
+                  if (!isMine && !_isLoggedIn) ...[
                     const SizedBox(height: 8),
                     Text(
                       l.offerLoginRequired,
