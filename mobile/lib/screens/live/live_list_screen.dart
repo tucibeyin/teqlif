@@ -160,6 +160,18 @@ class LiveListScreenState extends State<LiveListScreen> {
 
     if (!mounted) return;
 
+    // Yükleniyor göstergesi — captcha + API çağrısı süresince
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => const PopScope(
+        canPop: false,
+        child: Center(
+          child: _StartingStreamDialog(),
+        ),
+      ),
+    );
+
     // Güvenlik doğrulaması: görünmez Turnstile challenge
     final captchaToken = await CaptchaService.getToken(context);
     if (!mounted) return;
@@ -171,6 +183,7 @@ class LiveListScreenState extends State<LiveListScreen> {
         captchaToken: captchaToken,
       );
       if (!mounted) return;
+      Navigator.pop(context); // loading dialog kapat
       Navigator.push(
         context,
         MaterialPageRoute(
@@ -179,10 +192,12 @@ class LiveListScreenState extends State<LiveListScreen> {
       ).then((_) => _load());
     } on AppException catch (e) {
       if (!mounted) return;
+      Navigator.pop(context); // loading dialog kapat
       final ll = AppLocalizations.of(context)!;
       final msg = _mapCaptchaError(e, ll);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
     } catch (e) {
+      if (mounted) Navigator.pop(context); // loading dialog kapat
       showErrorSnackbar(context, e);
     }
   }
@@ -597,4 +612,30 @@ class _StreamGridTile extends StatelessWidget {
     );
   }
 
+}
+
+class _StartingStreamDialog extends StatelessWidget {
+  const _StartingStreamDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: const Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          CircularProgressIndicator(color: kPrimary),
+          SizedBox(height: 16),
+          Text(
+            'Yayın başlatılıyor...',
+            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
+          ),
+        ],
+      ),
+    );
+  }
 }
