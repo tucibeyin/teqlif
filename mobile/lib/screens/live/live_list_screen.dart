@@ -164,10 +164,11 @@ class LiveListScreenState extends State<LiveListScreen> {
     showDialog(
       context: context,
       barrierDismissible: false,
+      barrierColor: Colors.transparent,
       builder: (_) => const PopScope(
         canPop: false,
         child: Center(
-          child: _StartingStreamDialog(),
+          child: CircularProgressIndicator(color: kPrimary),
         ),
       ),
     );
@@ -614,28 +615,3 @@ class _StreamGridTile extends StatelessWidget {
 
 }
 
-class _StartingStreamDialog extends StatelessWidget {
-  const _StartingStreamDialog();
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: const Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          CircularProgressIndicator(color: kPrimary),
-          SizedBox(height: 16),
-          Text(
-            'Yayın başlatılıyor...',
-            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
-          ),
-        ],
-      ),
-    );
-  }
-}
