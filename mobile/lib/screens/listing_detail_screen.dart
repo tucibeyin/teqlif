@@ -10,6 +10,7 @@ import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
 import '../l10n/app_localizations.dart';
+import '../services/auth_service.dart';
 import 'profile_screen.dart';
 import 'public_profile_screen.dart';
 import 'messages_screen.dart';
@@ -54,7 +55,25 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
     final info = await StorageService.getUserInfo();
     final token = await StorageService.getToken();
     if (!mounted) return;
-    setState(() => _myUserId = info?['id'] as int?);
+
+    int? userId = info?['id'] as int?;
+
+    // Fallback: SharedPreferences'ta id yoksa ama token varsa backend'den çek
+    if (userId == null && token != null) {
+      try {
+        final user = await AuthService.me();
+        await StorageService.saveUserInfo(
+          id: user.id,
+          email: user.email,
+          username: user.username,
+          fullName: user.fullName,
+        );
+        userId = user.id;
+      } catch (_) {}
+    }
+
+    if (!mounted) return;
+    setState(() => _myUserId = userId);
     if (token != null && _myUserId != null) {
       final listingUserId = (widget.listing['user'] as Map?)?['id'];
       if (listingUserId != _myUserId) {

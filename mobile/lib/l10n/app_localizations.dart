@@ -2305,6 +2305,54 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'🛒 Hemen Al tamamlandı! @{buyer} — ₺{price}'**
   String auctionBuyNowCompleted(String buyer, String price);
+
+  /// No description provided for @offerHistory.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif Geçmişi'**
+  String get offerHistory;
+
+  /// No description provided for @offerAmountHint.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif miktarı (₺)'**
+  String get offerAmountHint;
+
+  /// No description provided for @offerBtn.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif Ver'**
+  String get offerBtn;
+
+  /// No description provided for @offerSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklifiniz alındı!'**
+  String get offerSuccess;
+
+  /// No description provided for @offerError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif gönderilemedi.'**
+  String get offerError;
+
+  /// No description provided for @offerInvalidAmount.
+  ///
+  /// In tr, this message translates to:
+  /// **'Geçerli bir tutar girin.'**
+  String get offerInvalidAmount;
+
+  /// No description provided for @offerEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz teklif yok.'**
+  String get offerEmpty;
+
+  /// No description provided for @offerLoginRequired.
+  ///
+  /// In tr, this message translates to:
+  /// **'Teklif vermek için giriş yapın.'**
+  String get offerLoginRequired;
 }
 
 class _AppLocalizationsDelegate

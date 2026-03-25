@@ -1178,4 +1178,28 @@ class AppLocalizationsTr extends AppLocalizations {
   String auctionBuyNowCompleted(String buyer, String price) {
     return '🛒 Hemen Al tamamlandı! @$buyer — ₺$price';
   }
+
+  @override
+  String get offerHistory => 'Teklif Geçmişi';
+
+  @override
+  String get offerAmountHint => 'Teklif miktarı (₺)';
+
+  @override
+  String get offerBtn => 'Teklif Ver';
+
+  @override
+  String get offerSuccess => 'Teklifiniz alındı!';
+
+  @override
+  String get offerError => 'Teklif gönderilemedi.';
+
+  @override
+  String get offerInvalidAmount => 'Geçerli bir tutar girin.';
+
+  @override
+  String get offerEmpty => 'Henüz teklif yok.';
+
+  @override
+  String get offerLoginRequired => 'Teklif vermek için giriş yapın.';
 }
