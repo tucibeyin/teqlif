@@ -887,9 +887,14 @@ class AuctionService:
             chat_msg["url"] = f"/ilan/{listing_id}"
         _CHAT_KEY = f"chat:{stream_id}:messages"
         _CHAT_PUBSUB = "chat_broadcast"
-        await redis.rpush(_CHAT_KEY, json.dumps(chat_msg))
+        # History'ye is_auction_result bayrağı olmadan kaydet —
+        # servis yeniden başlayıp history replay edildiğinde tekrar
+        # gold highlight tetiklenmemesi için.
+        history_msg = {k: v for k, v in chat_msg.items() if k != "is_auction_result"}
+        await redis.rpush(_CHAT_KEY, json.dumps(history_msg))
         await redis.ltrim(_CHAT_KEY, -50, -1)
         await redis.expire(_CHAT_KEY, 24 * 3600)
+        # Gerçek zamanlı yayına tam mesajı gönder (is_auction_result dahil)
         await redis.publish(_CHAT_PUBSUB, json.dumps({"_stream_id": stream_id, **chat_msg}))
 
         state = {
