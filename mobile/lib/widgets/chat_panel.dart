@@ -761,7 +761,7 @@ class _MessageItem extends StatelessWidget {
     }
 
     // Normal mesaj: avatar + rozet + kullanıcı adı + içerik
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.symmetric(vertical: 2),
       child: Text.rich(
         TextSpan(
@@ -861,6 +861,22 @@ class _MessageItem extends StatelessWidget {
           ],
         ),
       ),
+    );
+
+    if (!message.isAuctionResult) return content;
+
+    // Açık artırma kazanan duyurusu — altın sol kenar + hafif vurgu
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 3),
+      decoration: BoxDecoration(
+        color: const Color(0x14FACC15),
+        borderRadius: BorderRadius.circular(6),
+        border: const Border(
+          left: BorderSide(color: Color(0xFFFACC15), width: 3),
+        ),
+      ),
+      padding: const EdgeInsets.fromLTRB(8, 5, 8, 5),
+      child: content,
     );
   }
 }

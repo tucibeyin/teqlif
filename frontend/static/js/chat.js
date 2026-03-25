@@ -151,7 +151,7 @@ const Chat = (() => {
 
         const color = _usernameColor(msg.username || '');
         const el = document.createElement('div');
-        el.className = 'chat-msg';
+        el.className = msg.is_auction_result ? 'chat-msg chat-msg--auction-winner' : 'chat-msg';
 
         // Avatar — DOM element, onerror HTML string trick yok
         el.appendChild(_buildAvatarEl(msg.username || '', msg.profile_image_url || null));

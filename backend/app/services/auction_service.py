@@ -880,6 +880,8 @@ class AuctionService:
             "username": user.username,
             "content": chat_summary,
             "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_host": True,
+            "is_auction_result": True,
         }
         if listing_id:
             chat_msg["url"] = f"/ilan/{listing_id}"
