@@ -660,6 +660,102 @@
             opacity: .5;
             cursor: default;
         }
+
+        /* ── Teklif Ver / Teklif Geçmişi ── */
+        .offer-card {
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 1px 6px rgba(0,0,0,.07);
+            padding: 1.4rem;
+        }
+
+        .offer-form-row {
+            display: flex;
+            gap: 8px;
+            margin-bottom: .75rem;
+        }
+
+        .offer-input {
+            flex: 1;
+            padding: .7rem .9rem;
+            border: 1.5px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: .95rem;
+            outline: none;
+            font-family: inherit;
+            transition: border-color .15s;
+            min-width: 0;
+        }
+
+        .offer-input:focus { border-color: var(--primary, #06b6d4); }
+
+        .btn-offer {
+            padding: .7rem 1.1rem;
+            background: var(--primary, #06b6d4);
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            font-size: .9rem;
+            font-weight: 600;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: opacity .15s;
+        }
+
+        .btn-offer:hover { opacity: .88; }
+        .btn-offer:disabled { opacity: .5; cursor: default; }
+
+        .offer-form-error {
+            font-size: .82rem;
+            color: #dc2626;
+            margin-bottom: .7rem;
+            display: none;
+        }
+
+        .offer-list { display: flex; flex-direction: column; gap: 7px; }
+
+        .offer-empty {
+            font-size: .88rem;
+            color: #9ca3af;
+            text-align: center;
+            padding: .6rem 0;
+        }
+
+        .offer-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: .6rem .75rem;
+            background: #f9fafb;
+            border-radius: 8px;
+        }
+
+        .offer-amount {
+            font-weight: 700;
+            color: #111;
+            font-size: .95rem;
+        }
+
+        .offer-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: 2px;
+        }
+
+        .offer-user a {
+            font-size: .82rem;
+            font-weight: 600;
+            color: var(--primary, #06b6d4);
+            text-decoration: none;
+        }
+
+        .offer-user a:hover { text-decoration: underline; }
+
+        .offer-date {
+            font-size: .75rem;
+            color: #9ca3af;
+        }
     </style>
 </head>
 
@@ -1007,16 +1103,97 @@
                                     <span class="seller-goto">${isOwner ? 'Hesabım →' : 'Profile Git →'}</span>
                                 </a>
                             </div>
+
+                            <div class="offer-card">
+                                <div class="sec-label" style="margin-bottom:.75rem">Teklif Geçmişi</div>
+                                ${!isOwner && isLoggedIn ? `
+                                <div class="offer-form-row">
+                                    <input type="number" class="offer-input" id="offerInput" placeholder="₺ Teklifinizi girin" min="1" step="1">
+                                    <button class="btn-offer" id="offerBtn" onclick="submitOffer()">Teklif Ver</button>
+                                </div>
+                                <div class="offer-form-error" id="offerError"></div>
+                                ` : !isOwner && !isLoggedIn ? `
+                                <p style="font-size:.85rem;color:#6b7280;margin:0 0 .85rem;">
+                                    Teklif vermek için <a href="/giris.html?next=/ilan/${listingId}" style="color:var(--primary,#06b6d4);font-weight:600;">giriş yapın</a>.
+                                </p>
+                                ` : ''}
+                                <div class="offer-list" id="offerList">
+                                    <div class="offer-empty">Yükleniyor...</div>
+                                </div>
+                            </div>
                         </div>
 
                     </div>`;
 
+                loadOffers();
+
             } catch (e) {
+                console.error('[İlan] Yüklenemedi:', e);
+                if (window.Sentry) Sentry.captureException(e);
                 document.getElementById('content').innerHTML = `
                     <div class="error-box">
                         <h2>İlan bulunamadı</h2>
                         <p><a href="/">Ana sayfaya dön</a></p>
                     </div>`;
+            }
+        }
+
+        /* ── Teklif Ver / Geçmişi ── */
+        async function loadOffers() {
+            const list = document.getElementById('offerList');
+            if (!list) return;
+            try {
+                const offers = await apiFetch(`/listings/${listingId}/offers`);
+                if (!offers.length) {
+                    list.innerHTML = '<div class="offer-empty">Henüz teklif yok.</div>';
+                    return;
+                }
+                list.innerHTML = offers.map(o => `
+                    <div class="offer-row">
+                        <span class="offer-amount">${fmt(o.amount)}</span>
+                        <div class="offer-meta">
+                            <span class="offer-user"><a href="/profil/${esc(o.username)}">@${esc(o.username)}</a></span>
+                            <span class="offer-date">${timeAgo(o.created_at)}</span>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('[Offers] Teklif geçmişi yüklenemedi:', e);
+                if (window.Sentry) Sentry.captureException(e);
+                if (list) list.innerHTML = '<div class="offer-empty">Teklifler yüklenemedi.</div>';
+            }
+        }
+
+        async function submitOffer() {
+            const input = document.getElementById('offerInput');
+            const errEl = document.getElementById('offerError');
+            const btn = document.getElementById('offerBtn');
+            if (!input || !errEl || !btn) return;
+
+            const amount = parseFloat(input.value);
+            errEl.style.display = 'none';
+
+            if (!amount || amount <= 0) {
+                errEl.textContent = 'Geçerli bir teklif miktarı girin.';
+                errEl.style.display = 'block';
+                return;
+            }
+
+            btn.disabled = true;
+            try {
+                await apiFetch(`/listings/${listingId}/offers`, {
+                    method: 'POST',
+                    body: JSON.stringify({ amount }),
+                });
+                input.value = '';
+                await loadOffers();
+            } catch (e) {
+                console.error('[Offers] Teklif gönderilemedi:', e);
+                if (window.Sentry) Sentry.captureException(e);
+                errEl.textContent = e?.error?.message || e?.detail || 'Teklif gönderilemedi.';
+                errEl.style.display = 'block';
+            } finally {
+                btn.disabled = false;
             }
         }
 
