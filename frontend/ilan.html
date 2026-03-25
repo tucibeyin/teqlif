@@ -712,7 +712,13 @@
             display: none;
         }
 
-        .offer-list { display: flex; flex-direction: column; gap: 7px; }
+        .offer-list {
+            display: flex;
+            flex-direction: column;
+            gap: 7px;
+            max-height: 250px;
+            overflow-y: auto;
+        }
 
         .offer-empty {
             font-size: .88rem;
