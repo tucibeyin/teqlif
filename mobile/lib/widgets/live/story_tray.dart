@@ -139,7 +139,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
     final groupsAsync = ref.watch(storyGroupsProvider);
 
     return Container(
-      color: AppColors.surface(context),
+      color: AppColors.bg(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisSize: MainAxisSize.min,
