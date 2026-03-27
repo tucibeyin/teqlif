@@ -16,7 +16,7 @@ from app.config import settings
 from app.logging_config import setup_logging
 from app.core.exceptions import AppException
 from app.core.logger import capture_exception
-from app.routers import auth, streams, webhooks, auction, chat, moderation
+from app.routers import auth, streams, webhooks, auction, chat, moderation, stories
 from app.services.auction_service import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics
@@ -49,6 +49,7 @@ import app.models.rating  # noqa: F401 — tablo kaydı için
 import app.models.block  # noqa: F401 — tablo kaydı için
 import app.models.analytics  # noqa: F401 — tablo kaydı için
 import app.models.listing_offer  # noqa: F401 — tablo kaydı için
+import app.models.story  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
@@ -303,6 +304,7 @@ app.include_router(admin_auth.router)
 app.include_router(admin_data.router)
 app.include_router(moderation.router)
 app.include_router(analytics.router)
+app.include_router(stories.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):

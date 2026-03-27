@@ -526,5 +526,11 @@
 
   "storyTrayTitle": "Takip Ettiklerin",
   "storyTrayEmpty": "Şu an takip ettiğin kimse yayında değil.",
-  "storyTrayError": "Yüklenemedi"
+  "storyTrayError": "Yüklenemedi",
+
+  "storyMyStory": "Hikayen",
+  "storyProcessing": "Video işleniyor...",
+  "storyTooLong": "Video çok uzun (en fazla 12 saniye)",
+  "storyUploadFailed": "Hikaye yüklenemedi",
+  "storyUploadSuccess": "Hikayeniz paylaşıldı!"
 }

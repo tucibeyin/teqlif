@@ -526,5 +526,11 @@
 
   "storyTrayTitle": "Following",
   "storyTrayEmpty": "Nobody you follow is live right now.",
-  "storyTrayError": "Could not load"
+  "storyTrayError": "Could not load",
+
+  "storyMyStory": "Your Story",
+  "storyProcessing": "Processing video...",
+  "storyTooLong": "Video is too long (max 12 seconds)",
+  "storyUploadFailed": "Failed to upload story",
+  "storyUploadSuccess": "Your story was shared!"
 }

@@ -1212,4 +1212,19 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storyTrayError => 'Could not load';
+
+  @override
+  String get storyMyStory => 'Your Story';
+
+  @override
+  String get storyProcessing => 'Processing video...';
+
+  @override
+  String get storyTooLong => 'Video is too long (max 12 seconds)';
+
+  @override
+  String get storyUploadFailed => 'Failed to upload story';
+
+  @override
+  String get storyUploadSuccess => 'Your story was shared!';
 }

@@ -1211,4 +1211,19 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get storyTrayError => 'Yüklenemedi';
+
+  @override
+  String get storyMyStory => 'Hikayen';
+
+  @override
+  String get storyProcessing => 'Video işleniyor...';
+
+  @override
+  String get storyTooLong => 'Video çok uzun (en fazla 12 saniye)';
+
+  @override
+  String get storyUploadFailed => 'Hikaye yüklenemedi';
+
+  @override
+  String get storyUploadSuccess => 'Hikayeniz paylaşıldı!';
 }

@@ -6,7 +6,6 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../core/app_exception.dart';
 import '../../models/stream.dart';
-import '../../providers/live_stream_provider.dart';
 import '../../services/captcha_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
@@ -15,7 +14,6 @@ import '../../utils/error_helper.dart';
 import '../../widgets/live/story_tray.dart';
 import 'host_stream_screen.dart';
 import 'swipe_live_screen.dart';
-import 'viewer_stream_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 class LiveListScreen extends ConsumerStatefulWidget {
@@ -56,8 +54,6 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     if (!mounted) return;
     setState(() => _loading = true);
     try {
-      // Takip edilen yayınları da yenile (pull-to-refresh sırasında ikisi senkronize olsun)
-      ref.invalidate(followedStreamsProvider);
       final streams = await StreamService.getActiveStreams();
       debugPrint('[LiveList] Yüklenen yayın sayısı: ${streams.length}');
       if (!mounted) return;
@@ -235,40 +231,6 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     ).then((_) => _load());
   }
 
-  /// Story tray'den gelince: aktif listede ID ile eşleştir ve SwipeLiveScreen'e geç.
-  /// Böylece TikTok tarzı yukarı/aşağı kaydırma diğer yayınlara geçmeyi sağlar.
-  /// Liste henüz yüklenmediyse ya da stream bulunamadıysa doğrudan katılım yapılır.
-  Future<void> _joinFromStory(StreamOut stream) async {
-    if (!mounted) return;
-
-    // Aktif listede ID'ye göre ara — referans değil, değer eşleşmesi
-    final idx = _streams.indexWhere((s) => s.id == stream.id);
-
-    if (idx != -1) {
-      // Bulundu: SwipeLiveScreen ile tüm aktif yayınlar arasında TikTok swipe
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => SwipeLiveScreen(streams: _streams, initialIndex: idx),
-        ),
-      ).then((_) => _load());
-    } else {
-      // Bulunamadı (liste henüz yüklenmedi vb.): doğrudan tek yayın ekranı
-      try {
-        final joinToken = await StreamService.joinStream(stream.id);
-        if (!mounted) return;
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => ViewerStreamScreen(joinToken: joinToken),
-          ),
-        ).then((_) => _load());
-      } catch (e) {
-        if (mounted) showErrorSnackbar(context, e);
-      }
-    }
-  }
-
   List<String> get _categories {
     final seen = <String>{};
     return _streams.map((s) => s.category).where(seen.add).toList();
@@ -319,8 +281,8 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       ),
       body: Column(
         children: [
-          // ── Takip edilen canlı yayınlar (Story tarzı) ───────────
-          StoryTray(onTap: _joinFromStory),
+          // ── Video Hikayeler (Story Tray) ────────────────────────
+          const StoryTray(),
 
           // ── Kategori filtre çubuğu ──────────────────────────────
           if (showFilter)

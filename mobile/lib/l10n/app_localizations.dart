@@ -2371,6 +2371,36 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Yüklenemedi'**
   String get storyTrayError;
+
+  /// No description provided for @storyMyStory.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hikayen'**
+  String get storyMyStory;
+
+  /// No description provided for @storyProcessing.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video işleniyor...'**
+  String get storyProcessing;
+
+  /// No description provided for @storyTooLong.
+  ///
+  /// In tr, this message translates to:
+  /// **'Video çok uzun (en fazla 12 saniye)'**
+  String get storyTooLong;
+
+  /// No description provided for @storyUploadFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hikaye yüklenemedi'**
+  String get storyUploadFailed;
+
+  /// No description provided for @storyUploadSuccess.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hikayeniz paylaşıldı!'**
+  String get storyUploadSuccess;
 }
 
 class _AppLocalizationsDelegate
