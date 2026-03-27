@@ -361,6 +361,73 @@
             text-align: center;
         }
 
+        /* ── "Hikayen" (+) ekleme butonu ───────────────────────────── */
+
+        /* Gri kenarlıklı halka (henüz hikaye yok veya login kullanıcı) */
+        .story-add-btn .story-ring {
+            background: none;
+            border: 2px solid var(--border);
+            padding: 0;
+        }
+
+        /* İç alan: baş harf + birincil renk arka plan */
+        .story-add-btn .story-ring-inner {
+            background: var(--primary-bg);
+            padding: 0;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* "+" badge — sağ alt köşe */
+        .story-add-badge {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: var(--white);
+            font-size: 0.85rem;
+            line-height: 20px;
+            text-align: center;
+            font-weight: 700;
+            pointer-events: none;
+        }
+
+        /* Wrapper için relative konumlandırma (badge için gerekli) */
+        .story-add-btn .story-ring-wrap {
+            position: relative;
+            width: 60px;
+            height: 60px;
+            flex-shrink: 0;
+        }
+
+        /* Yükleme sırasında tüm öğeyi soluklaştır ve dönen spinner göster */
+        .story-uploading {
+            opacity: 0.55;
+            pointer-events: none;
+        }
+
+        .story-uploading .story-ring-inner {
+            background: var(--primary-bg);
+        }
+
+        /* Dönen spinner halkası (yükleme durumu) */
+        .story-spinner {
+            width: 28px;
+            height: 28px;
+            border: 3px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: story-spin 0.75s linear infinite;
+        }
+
+        @keyframes story-spin {
+            to { transform: rotate(360deg); }
+        }
+
         /* ── İlanlar bölümü ─────────────────────────────────────────── */
         #section-ilanlar {
             max-width: 1200px;
@@ -711,9 +778,16 @@
     <!-- ── Canlı Yayınlar bölümü ──────────────────────────────────────── -->
     <div id="section-canli">
 
-        <!-- ── Story Tray: takip edilen aktif yayınlar ──────────────── -->
+        <!-- ── Story Tray: "Hikayen" butonu + takip edilen hikayeler ── -->
+        <!-- storyUploadInput: video seçici — JavaScript tarafından tetiklenir -->
+        <input type="file"
+               id="storyUploadInput"
+               accept="video/mp4,video/quicktime,video/webm"
+               style="display:none;"
+               capture="environment">
+
         <div class="story-tray-wrapper" id="storyTrayWrapper" style="display:none;">
-            <div class="story-tray-label">Takip Ettiklerin</div>
+            <div class="story-tray-label">Hikayeler</div>
             <div class="story-tray" id="storyTray"></div>
         </div>
 
