@@ -44,7 +44,9 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    // ref ve context (Riverpod, l10n) initState tamamlanmadan kullanılamaz.
+    // addPostFrameCallback ilk frame'den sonra çağırır — widget tam bağlı olur.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
   void triggerStartDialog() => _showStartDialog();
