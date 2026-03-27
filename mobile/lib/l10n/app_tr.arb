@@ -530,7 +530,7 @@
 
   "storyMyStory": "Hikayen",
   "storyProcessing": "Video işleniyor...",
-  "storyTooLong": "Video çok uzun (en fazla 12 saniye)",
+  "storyTooLong": "Video çok uzun (en fazla 15 saniye)",
   "storyUploadFailed": "Hikaye yüklenemedi",
   "storyUploadSuccess": "Hikayeniz paylaşıldı!"
 }

@@ -1,4 +1,8 @@
-/// Backend `UserStoryGroupResponse` şemasının Flutter karşılığı.
+/// Backend `UserStoryGroupResponse` hybrid şemasının Flutter karşılığı.
+///
+/// story_type değerleri:
+///   'video'         → normal video hikayesi; videoUrl dolu.
+///   'live_redirect' → kullanıcı şu an canlı yayında; streamId dolu, video alanları null.
 
 class StoryAuthor {
   final int id;
@@ -26,44 +30,66 @@ class StoryAuthor {
 
 class StoryItem {
   final int id;
-  final String videoUrl;
+
+  /// 'video' veya 'live_redirect'
+  final String storyType;
+
+  // ── Video alanları (storyType == 'video' olduğunda dolu) ──────────────────
+  final String? videoUrl;
   final String? thumbnailUrl;
-  final DateTime expiresAt;
-  final DateTime createdAt;
+  final DateTime? expiresAt;
+  final DateTime? createdAt;
+
+  // ── Canlı yayın alanı (storyType == 'live_redirect' olduğunda dolu) ───────
+  final int? streamId;
+
+  bool get isVideo => storyType == 'video';
+  bool get isLiveRedirect => storyType == 'live_redirect';
 
   StoryItem({
     required this.id,
-    required this.videoUrl,
+    required this.storyType,
+    this.videoUrl,
     this.thumbnailUrl,
-    required this.expiresAt,
-    required this.createdAt,
+    this.expiresAt,
+    this.createdAt,
+    this.streamId,
   });
 
   factory StoryItem.fromJson(Map<String, dynamic> json) => StoryItem(
         id: json['id'] as int,
-        videoUrl: json['video_url'] as String,
+        storyType: json['story_type'] as String,
+        videoUrl: json['video_url'] as String?,
         thumbnailUrl: json['thumbnail_url'] as String?,
-        expiresAt: DateTime.parse(json['expires_at'] as String),
-        createdAt: DateTime.parse(json['created_at'] as String),
+        expiresAt: json['expires_at'] != null
+            ? DateTime.parse(json['expires_at'] as String)
+            : null,
+        createdAt: json['created_at'] != null
+            ? DateTime.parse(json['created_at'] as String)
+            : null,
+        streamId: json['stream_id'] as int?,
       );
 }
 
 class UserStoryGroup {
   final StoryAuthor user;
-  final List<StoryItem> stories;
-  final DateTime latestStoryAt;
+
+  /// Hybrid öğe listesi: önce videolar (created_at ASC), sonunda live_redirect (varsa).
+  final List<StoryItem> items;
+  final DateTime latestActivityAt;
 
   UserStoryGroup({
     required this.user,
-    required this.stories,
-    required this.latestStoryAt,
+    required this.items,
+    required this.latestActivityAt,
   });
 
   factory UserStoryGroup.fromJson(Map<String, dynamic> json) => UserStoryGroup(
         user: StoryAuthor.fromJson(json['user'] as Map<String, dynamic>),
-        stories: (json['stories'] as List)
+        items: (json['items'] as List)
             .map((s) => StoryItem.fromJson(s as Map<String, dynamic>))
             .toList(),
-        latestStoryAt: DateTime.parse(json['latest_story_at'] as String),
+        latestActivityAt:
+            DateTime.parse(json['latest_activity_at'] as String),
       );
 }

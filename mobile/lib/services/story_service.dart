@@ -16,17 +16,15 @@ class StoryService {
     };
   }
 
-  // ── Takip edilen kullanıcıların gruplanmış hikayeleri ──────────────────────
+  // ── Hybrid: video hikayeleri + canlı yayın harmanlama ─────────────────────
 
-  static Future<List<UserStoryGroup>> getGroupedStories() async {
+  static Future<List<UserStoryGroup>> getFollowingStories() async {
     final headers = await _headers();
     final resp = await http.get(
       Uri.parse('$kBaseUrl/stories/following'),
       headers: headers,
     );
-    debugPrint(
-      '[StoryService] getGroupedStories → HTTP ${resp.statusCode}',
-    );
+    debugPrint('[StoryService] getFollowingStories → HTTP ${resp.statusCode}');
     if (resp.statusCode >= 400) {
       final body = _tryDecode(resp.body);
       final errMap = body['error'];
@@ -46,10 +44,12 @@ class StoryService {
       try {
         result.add(UserStoryGroup.fromJson(e as Map<String, dynamic>));
       } catch (err) {
-        debugPrint('[StoryService] UserStoryGroup.fromJson hatası: $err | veri: $e');
+        debugPrint(
+          '[StoryService] UserStoryGroup.fromJson hatası: $err | veri: $e',
+        );
       }
     }
-    debugPrint('[StoryService] getGroupedStories → ${result.length} grup');
+    debugPrint('[StoryService] getFollowingStories → ${result.length} grup');
     return result;
   }
 
@@ -75,7 +75,9 @@ class StoryService {
         errMap is Map
             ? (errMap['message'] ?? 'Hikaye yüklenemedi')
             : (decoded['detail'] ?? 'Hikaye yüklenemedi'),
-        code: errMap is Map ? (errMap['code'] ?? 'UPLOAD_ERROR') : 'HTTP_${streamed.statusCode}',
+        code: errMap is Map
+            ? (errMap['code'] ?? 'UPLOAD_ERROR')
+            : 'HTTP_${streamed.statusCode}',
         statusCode: streamed.statusCode,
       );
     }

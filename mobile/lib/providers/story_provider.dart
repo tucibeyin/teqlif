@@ -2,27 +2,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/story.dart';
 import '../services/story_service.dart';
 
-/// Takip edilen kullanıcıların kullanıcı bazlı gruplanmış hikayelerini yönetir.
+/// Takip edilen kullanıcıların hybrid (video + canlı yayın) gruplanmış
+/// hikayelerini yönetir.
 ///
 /// Kullanım:
-///   - `ref.watch(groupedStoriesProvider)` → `AsyncValue<List<UserStoryGroup>>`
-///   - Yenileme: `ref.invalidate(groupedStoriesProvider)`
+///   - `ref.watch(storyGroupsProvider)` → `AsyncValue<List<UserStoryGroup>>`
+///   - Yenileme: `ref.invalidate(storyGroupsProvider)`
 ///
 /// autoDispose: Ekran dispose olunca veri bellekten temizlenir;
 /// tekrar açıldığında yeni istek atılır.
-class GroupedStoriesNotifier
+class StoryGroupsNotifier
     extends AutoDisposeAsyncNotifier<List<UserStoryGroup>> {
   @override
-  Future<List<UserStoryGroup>> build() => StoryService.getGroupedStories();
+  Future<List<UserStoryGroup>> build() =>
+      StoryService.getFollowingStories();
 
-  /// Listeyi yeniden çeker (yükleme sonrası veya pull-to-refresh için).
   Future<void> refresh() async {
     state = const AsyncLoading();
-    state = await AsyncValue.guard(StoryService.getGroupedStories);
+    state = await AsyncValue.guard(StoryService.getFollowingStories);
   }
 }
 
-final groupedStoriesProvider = AsyncNotifierProvider.autoDispose<
-    GroupedStoriesNotifier, List<UserStoryGroup>>(
-  GroupedStoriesNotifier.new,
+final storyGroupsProvider = AsyncNotifierProvider.autoDispose<
+    StoryGroupsNotifier, List<UserStoryGroup>>(
+  StoryGroupsNotifier.new,
 );

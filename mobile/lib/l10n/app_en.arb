@@ -530,7 +530,7 @@
 
   "storyMyStory": "Your Story",
   "storyProcessing": "Processing video...",
-  "storyTooLong": "Video is too long (max 12 seconds)",
+  "storyTooLong": "Video is too long (max 15 seconds)",
   "storyUploadFailed": "Failed to upload story",
   "storyUploadSuccess": "Your story was shared!"
 }

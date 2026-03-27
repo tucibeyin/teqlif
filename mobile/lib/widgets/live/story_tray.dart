@@ -14,15 +14,14 @@ import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/story.dart';
 import '../../providers/story_provider.dart';
-import '../../screens/story/story_viewer_screen.dart';
 import '../../services/storage_service.dart';
 import '../../services/story_service.dart';
 
-/// Takip edilen kullanıcıların video hikayelerini Instagram stilinde gösterir.
+/// Takip edilen kullanıcıların hybrid hikaye tepsisini Instagram stilinde gösterir.
 ///
 /// Yatay liste:
 ///   Index 0 → "Hikayen" (+) butonu — video seçme & yükleme
-///   Index 1+ → Takip edilen kullanıcıların story grupları
+///   Index 1+ → Takip edilen kullanıcıların hybrid story grupları
 ///
 /// Scroll optimizasyonu: [ClampingScrollPhysics] kullanıldığından yatay
 /// kaydırma hareketi dikey [RefreshIndicator]'ı tetiklemez.
@@ -54,22 +53,18 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
   Future<void> _pickAndUpload() async {
     final l = AppLocalizations.of(context)!;
 
-    // Video seç (en fazla 12 saniye)
+    // Video seç (en fazla 15 saniye)
     final XFile? picked = await ImagePicker().pickVideo(
       source: ImageSource.gallery,
-      maxDuration: const Duration(seconds: 12),
+      maxDuration: const Duration(seconds: 15),
     );
     if (picked == null || !mounted) return;
 
     // Süre kontrolü — image_picker maxDuration'a rağmen bazı platformlarda
     // daha uzun video dönebilir; ekstra güvenlik katmanı.
-    final rawFile = File(picked.path);
-    final rawStat = await rawFile.stat();
-    // 12s × ~5 Mb/s (ham) = ~60 MB; bunun üstü zaten olmamalı.
-    // Video süresi için video_compress.getMediaInfo kullanılır.
     final info = await VideoCompress.getMediaInfo(picked.path);
     final durationMs = info.duration ?? 0;
-    if (durationMs > 12500 && mounted) {
+    if (durationMs > 15500 && mounted) {
       // 500ms tolerans
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l.storyTooLong)),
@@ -116,7 +111,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
       );
 
       // Listeyi yenile
-      ref.invalidate(groupedStoriesProvider);
+      ref.invalidate(storyGroupsProvider);
     } catch (e, st) {
       await Sentry.captureException(e, stackTrace: st);
       if (!mounted) return;
@@ -133,7 +128,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
 
   @override
   Widget build(BuildContext context) {
-    final groupsAsync = ref.watch(groupedStoriesProvider);
+    final groupsAsync = ref.watch(storyGroupsProvider);
 
     return Container(
       color: AppColors.surface(context),
@@ -169,13 +164,15 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         itemCount: itemCount,
         itemBuilder: (_, i) {
-          if (i == 0) return _MyStoryItem(username: _username, isUploading: _isUploading, onTap: _pickAndUpload);
+          if (i == 0) {
+            return _MyStoryItem(
+              username: _username,
+              isUploading: _isUploading,
+              onTap: _pickAndUpload,
+            );
+          }
           if (isLoading) return _buildShimmerItem(context);
-          return _StoryGroupItem(
-            group: groups![i - 1],
-            groups: groups!,
-            groupIndex: i - 1,
-          );
+          return _StoryGroupItem(group: groups![i - 1]);
         },
       ),
     );
@@ -236,7 +233,8 @@ class _MyStoryItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
-    final initial = (username?.isNotEmpty == true) ? username![0].toUpperCase() : '?';
+    final initial =
+        (username?.isNotEmpty == true) ? username![0].toUpperCase() : '?';
 
     return GestureDetector(
       onTap: isUploading ? null : onTap,
@@ -248,7 +246,7 @@ class _MyStoryItem extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                // Dış halka — gri (henüz hikaye yok) veya gradient (varsa Aşama 3)
+                // Dış halka — gri (henüz hikaye yok)
                 Container(
                   width: 62,
                   height: 62,
@@ -300,7 +298,11 @@ class _MyStoryItem extends StatelessWidget {
                         color: kPrimary,
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.add, color: Colors.white, size: 13),
+                      child: const Icon(
+                        Icons.add,
+                        color: Colors.white,
+                        size: 13,
+                      ),
                     ),
                   ),
               ],
@@ -324,80 +326,117 @@ class _MyStoryItem extends StatelessWidget {
   }
 }
 
-// ── Takip edilen kullanıcının story grubu ────────────────────────────────────
+// ── Takip edilen kullanıcının hybrid story grubu ──────────────────────────────
 
 class _StoryGroupItem extends StatelessWidget {
   final UserStoryGroup group;
-  final List<UserStoryGroup> groups;
-  final int groupIndex;
 
-  const _StoryGroupItem({
-    required this.group,
-    required this.groups,
-    required this.groupIndex,
-  });
+  const _StoryGroupItem({required this.group});
+
+  /// Grubun canlı yayın içerip içermediğini kontrol eder.
+  bool get _hasLive => group.items.any((i) => i.isLiveRedirect);
 
   @override
   Widget build(BuildContext context) {
-    // Profil küçük resmi — thumb varsa onu, yoksa tam boyutu göster
-    final avatarUrl = group.user.profileImageThumbUrl ?? group.user.profileImageUrl;
+    final avatarUrl =
+        group.user.profileImageThumbUrl ?? group.user.profileImageUrl;
     final resolvedUrl = avatarUrl != null ? imgUrl(avatarUrl) : null;
 
     return GestureDetector(
-      onTap: () => Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => StoryViewerScreen(
-            groups: groups,
-            initialGroupIndex: groupIndex,
-          ),
-        ),
-      ),
+      onTap: () {
+        // Aşama 3'te tam ekran hybrid izleyici açılacak
+        debugPrint(
+          '[StoryTray] Aşama 3\'te izleyici açılacak — user: ${group.user.username}',
+        );
+      },
       child: SizedBox(
         width: 72,
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Gradient ring → beyaz boşluk → avatar
-            Container(
-              width: 62,
-              height: 62,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: LinearGradient(
-                  colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                ),
-              ),
-              padding: const EdgeInsets.all(2.5),
-              child: Container(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.surface(context),
-                ),
-                padding: const EdgeInsets.all(1.5),
-                child: ClipOval(
-                  child: resolvedUrl != null && resolvedUrl.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: resolvedUrl,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          placeholder: (_, __) => _InitialAvatar(
-                            username: group.user.username,
-                            context: context,
+            Stack(
+              clipBehavior: Clip.none,
+              children: [
+                // Gradient ring → beyaz boşluk → avatar
+                Container(
+                  width: 62,
+                  height: 62,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    gradient: _hasLive
+                        // Canlı yayın varsa kırmızı-turuncu halka
+                        ? const LinearGradient(
+                            colors: [Color(0xFFFF4136), Color(0xFFFF851B)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          )
+                        // Sadece video hikayesi varsa normal gradient
+                        : const LinearGradient(
+                            colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
                           ),
-                          errorWidget: (_, __, ___) => _InitialAvatar(
-                            username: group.user.username,
-                            context: context,
-                          ),
-                        )
-                      : _InitialAvatar(
-                          username: group.user.username,
-                          context: context,
+                  ),
+                  padding: const EdgeInsets.all(2.5),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.surface(context),
+                    ),
+                    padding: const EdgeInsets.all(1.5),
+                    child: ClipOval(
+                      child: resolvedUrl != null && resolvedUrl.isNotEmpty
+                          ? CachedNetworkImage(
+                              imageUrl: resolvedUrl,
+                              fit: BoxFit.cover,
+                              width: double.infinity,
+                              height: double.infinity,
+                              placeholder: (_, __) => _InitialAvatar(
+                                username: group.user.username,
+                                context: context,
+                              ),
+                              errorWidget: (_, __, ___) => _InitialAvatar(
+                                username: group.user.username,
+                                context: context,
+                              ),
+                            )
+                          : _InitialAvatar(
+                              username: group.user.username,
+                              context: context,
+                            ),
+                    ),
+                  ),
+                ),
+                // Canlı yayın badge'i
+                if (_hasLive)
+                  Positioned(
+                    bottom: 0,
+                    right: 0,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4,
+                        vertical: 1.5,
+                      ),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFF4136),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(
+                          color: AppColors.surface(context),
+                          width: 1,
                         ),
-                ),
-              ),
+                      ),
+                      child: const Text(
+                        'CANLI',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 7,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.3,
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
             ),
             const SizedBox(height: 5),
             Text(

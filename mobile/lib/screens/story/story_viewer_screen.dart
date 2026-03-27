@@ -155,8 +155,8 @@ class _GroupPageState extends State<_GroupPage> {
     _releaseController();
     setState(() => _loading = true);
 
-    final story = widget.group.stories[index];
-    final url = imgUrl(story.videoUrl);
+    final story = widget.group.items[index];
+    final url = story.videoUrl != null ? imgUrl(story.videoUrl!) : '';
     if (url.isEmpty) {
       _advanceStory();
       return;
@@ -191,7 +191,7 @@ class _GroupPageState extends State<_GroupPage> {
 
   void _advanceStory() {
     if (!mounted) return;
-    if (_storyIndex < widget.group.stories.length - 1) {
+    if (_storyIndex < widget.group.items.length - 1) {
       _loadStory(_storyIndex + 1);
     } else {
       widget.onNextGroup();
@@ -274,7 +274,7 @@ class _GroupPageState extends State<_GroupPage> {
 
   // Üst ilerleme çubukları — her hikaye için 1 çizgi
   Widget _buildProgressBars(BuildContext context) {
-    final total = widget.group.stories.length;
+    final total = widget.group.items.length;
     final topPad = MediaQuery.of(context).padding.top + 10;
     return Positioned(
       top: topPad,
