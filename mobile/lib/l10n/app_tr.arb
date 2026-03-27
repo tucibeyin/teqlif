@@ -535,5 +535,8 @@
   "storyUploadSuccess": "Hikayeniz paylaşıldı!",
   "storyLiveNow": "Şu an Canlı Yayında!",
   "storyJoinLive": "Yayına Katıl",
-  "storyJoinLiveFailed": "Yayına bağlanılamadı"
+  "storyJoinLiveFailed": "Yayına bağlanılamadı",
+  "storyWhoViewed": "Kim Gördü?",
+  "storyViewersLoadFailed": "Görüntüleyenler yüklenemedi",
+  "storyNoViewersYet": "Henüz kimse görmedi"
 }

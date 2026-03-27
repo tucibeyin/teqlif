@@ -4,9 +4,12 @@ import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:video_player/video_player.dart';
 
 import '../../config/api.dart';
+import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/story.dart';
+import '../../services/storage_service.dart';
+import '../../services/story_service.dart';
 import '../../services/stream_service.dart';
 import '../live/viewer_stream_screen.dart';
 
@@ -112,6 +115,7 @@ class _GroupPage extends StatefulWidget {
 
 class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   int _itemIndex = 0;
+  int? _currentUserId;
 
   // ── Video kaynakları ──────────────────────────────────────────────────────
   VideoPlayerController? _videoCtrl;
@@ -125,12 +129,22 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
 
   StoryItem get _currentItem => widget.group.items[_itemIndex];
 
+  /// Mevcut kullanıcı bu grubun sahibi mi? (Kim Gördü? görünürlüğü için)
+  bool get _isMine =>
+      _currentUserId != null && _currentUserId == widget.group.user.id;
+
   @override
   void initState() {
     super.initState();
+    _loadCurrentUserId();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) _loadItem(0);
     });
+  }
+
+  Future<void> _loadCurrentUserId() async {
+    final info = await StorageService.getUserInfo();
+    if (mounted) setState(() => _currentUserId = info?['id'] as int?);
   }
 
   @override
@@ -214,6 +228,9 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       _videoCtrl = ctrl;
       _videoLoading = false;
     });
+
+    // Görüntüleme kaydı — backend kendi görüntülemesini ve tekrarları yoksayar
+    StoryService.recordStoryView(item.id).catchError((_) {});
   }
 
   /// Video sonuna yaklaştığında otomatik geçişi tetikler.
@@ -278,6 +295,24 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     }
   }
 
+  // ── Kim Gördü? ────────────────────────────────────────────────────────────
+
+  Future<void> _showViewersSheet() async {
+    final item = _currentItem;
+    // Videoyu durdur (sheet açıkken devam etmesin)
+    _videoCtrl?.pause();
+
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (_) => _ViewersSheet(storyId: item.id),
+    );
+
+    // Sheet kapandığında videoyu sürdür
+    _videoCtrl?.play();
+  }
+
   /// "Yayına Katıl" akışı: token çek → ViewerStreamScreen'e geç.
   Future<void> _joinLive() async {
     final item = _currentItem;
@@ -318,6 +353,8 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
         if (!isLive) _buildTapNav(),
         _buildProgressBars(context),
         _buildUserOverlay(context),
+        // Kendi hikayesindeyse altta "Kim Gördü?" butonu göster
+        if (_isMine && !isLive) _buildViewersButton(context),
       ],
     );
   }
@@ -527,6 +564,46 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     );
   }
 
+  // ── "Kim Gördü?" altta ortalanmış buton ──────────────────────────────────
+
+  Widget _buildViewersButton(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final bottomPad = MediaQuery.of(context).padding.bottom + 24;
+    return Positioned(
+      bottom: bottomPad,
+      left: 0,
+      right: 0,
+      child: Center(
+        child: GestureDetector(
+          onTap: _showViewersSheet,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
+            decoration: BoxDecoration(
+              color: Colors.black54,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.remove_red_eye_outlined,
+                    color: Colors.white, size: 18),
+                const SizedBox(width: 7),
+                Text(
+                  l.storyWhoViewed,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // ── Kullanıcı overlay (avatar + ad + kapat) ───────────────────────────────
 
   Widget _buildUserOverlay(BuildContext context) {
@@ -648,6 +725,187 @@ class _StoryProgressBar extends StatelessWidget {
         minHeight: 2.5,
         borderRadius: BorderRadius.circular(2),
       );
+}
+
+// ── Kim Gördü? bottom sheet ───────────────────────────────────────────────────
+
+class _ViewersSheet extends StatefulWidget {
+  final int storyId;
+  const _ViewersSheet({required this.storyId});
+
+  @override
+  State<_ViewersSheet> createState() => _ViewersSheetState();
+}
+
+class _ViewersSheetState extends State<_ViewersSheet> {
+  List<StoryViewer>? _viewers;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final viewers = await StoryService.getStoryViewers(widget.storyId);
+      if (mounted) setState(() { _viewers = viewers; _loading = false; });
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      if (mounted) {
+        setState(() {
+          _error = AppLocalizations.of(context)!.storyViewersLoadFailed;
+          _loading = false;
+        });
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l = AppLocalizations.of(context)!;
+    final bottomPad = MediaQuery.of(context).padding.bottom;
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.of(context).size.height * 0.6,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Tutma çubuğu
+          const SizedBox(height: 12),
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.border(context),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 14),
+          // Başlık
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Icon(Icons.remove_red_eye_outlined,
+                    size: 18, color: AppColors.textSecondary(context)),
+                const SizedBox(width: 8),
+                Text(
+                  l.storyWhoViewed,
+                  style: TextStyle(
+                    fontSize: 15,
+                    fontWeight: FontWeight.w700,
+                    color: AppColors.textPrimary(context),
+                  ),
+                ),
+                if (_viewers != null) ...[
+                  const SizedBox(width: 6),
+                  Text(
+                    '(${_viewers!.length})',
+                    style: TextStyle(
+                      fontSize: 13,
+                      color: AppColors.textSecondary(context),
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Divider(height: 1, color: AppColors.divider(context)),
+          // İçerik
+          if (_loading)
+            const Padding(
+              padding: EdgeInsets.all(40),
+              child: CircularProgressIndicator(),
+            )
+          else if (_error != null)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(
+                _error!,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary(context)),
+              ),
+            )
+          else if (_viewers!.isEmpty)
+            Padding(
+              padding: const EdgeInsets.all(32),
+              child: Text(
+                l.storyNoViewersYet,
+                textAlign: TextAlign.center,
+                style: TextStyle(color: AppColors.textSecondary(context)),
+              ),
+            )
+          else
+            Flexible(
+              child: ListView.builder(
+                shrinkWrap: true,
+                padding: EdgeInsets.only(bottom: bottomPad + 8),
+                itemCount: _viewers!.length,
+                itemBuilder: (_, i) {
+                  final v = _viewers![i];
+                  final initial =
+                      v.username.isNotEmpty ? v.username[0].toUpperCase() : '?';
+                  final timeAgo = _formatTime(context, v.viewedAt);
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: kPrimaryLight.withOpacity(0.25),
+                      child: Text(
+                        initial,
+                        style: const TextStyle(
+                          color: kPrimary,
+                          fontWeight: FontWeight.w700,
+                          fontSize: 15,
+                        ),
+                      ),
+                    ),
+                    title: Text(
+                      v.username,
+                      style: TextStyle(
+                        fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(context),
+                        fontSize: 14,
+                      ),
+                    ),
+                    subtitle: Text(
+                      v.fullName,
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 12,
+                      ),
+                    ),
+                    trailing: Text(
+                      timeAgo,
+                      style: TextStyle(
+                        color: AppColors.textSecondary(context),
+                        fontSize: 11,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _formatTime(BuildContext context, DateTime dt) {
+    final diff = DateTime.now().difference(dt.toLocal());
+    if (diff.inMinutes < 1) return 'Az önce';
+    if (diff.inHours < 1) return '${diff.inMinutes}d önce';
+    if (diff.inDays < 1) return '${diff.inHours}s önce';
+    return '${diff.inDays}g önce';
+  }
 }
 
 // ── Profil fotoğrafı yoksa baş harf ─────────────────────────────────────────

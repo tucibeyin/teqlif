@@ -34,7 +34,9 @@ class StoryTray extends ConsumerStatefulWidget {
 }
 
 class _StoryTrayState extends ConsumerState<StoryTray> {
+  int? _userId;
   String? _username;
+  String? _fullName;
   bool _isUploading = false;
 
   @override
@@ -46,7 +48,11 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
   Future<void> _loadCurrentUser() async {
     final info = await StorageService.getUserInfo();
     if (!mounted) return;
-    setState(() => _username = info?['username'] as String?);
+    setState(() {
+      _userId = info?['id'] as int?;
+      _username = info?['username'] as String?;
+      _fullName = info?['full_name'] as String?;
+    });
   }
 
   // ── Video seç → sıkıştır → yükle ─────────────────────────────────────────
@@ -111,8 +117,9 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
         SnackBar(content: Text(l.storyUploadSuccess)),
       );
 
-      // Listeyi yenile
+      // Listeleri yenile
       ref.invalidate(storyGroupsProvider);
+      ref.invalidate(myStoriesProvider);
     } catch (e, st) {
       await Sentry.captureException(e, stackTrace: st);
       if (!mounted) return;
@@ -167,9 +174,11 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
         itemBuilder: (_, i) {
           if (i == 0) {
             return _MyStoryItem(
+              userId: _userId,
               username: _username,
+              fullName: _fullName,
               isUploading: _isUploading,
-              onTap: _pickAndUpload,
+              onUpload: _pickAndUpload,
             );
           }
           if (isLoading) return _buildShimmerItem(context);
@@ -222,24 +231,57 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
   }
 }
 
-// ── "Hikayen" (+) butonu ─────────────────────────────────────────────────────
+// ── "Hikayen" butonu — kendi hikayeleri varsa gradient halka gösterir ─────────
 
-class _MyStoryItem extends StatelessWidget {
+class _MyStoryItem extends ConsumerWidget {
+  final int? userId;
   final String? username;
+  final String? fullName;
   final bool isUploading;
-  final VoidCallback onTap;
+  final VoidCallback onUpload;
 
   const _MyStoryItem({
+    required this.userId,
     required this.username,
+    required this.fullName,
     required this.isUploading,
-    required this.onTap,
+    required this.onUpload,
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l = AppLocalizations.of(context)!;
+    final myStoriesAsync = ref.watch(myStoriesProvider);
+    final myStories = myStoriesAsync.valueOrNull ?? [];
+    final hasStories = myStories.isNotEmpty && !isUploading;
     final initial =
         (username?.isNotEmpty == true) ? username![0].toUpperCase() : '?';
+
+    void onTap() {
+      if (isUploading) return;
+      if (hasStories && userId != null) {
+        // Kendi hikayelerini viewer'da aç
+        final selfGroup = UserStoryGroup(
+          user: StoryAuthor(
+            id: userId!,
+            username: username ?? '',
+            fullName: fullName ?? '',
+            profileImageUrl: null,
+            profileImageThumbUrl: null,
+          ),
+          items: myStories,
+          latestActivityAt: myStories.first.createdAt ?? DateTime.now(),
+        );
+        Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) =>
+                StoryViewerScreen(groups: [selfGroup], initialIndex: 0),
+          ),
+        );
+      } else {
+        onUpload();
+      }
+    }
 
     return GestureDetector(
       onTap: isUploading ? null : onTap,
@@ -251,48 +293,84 @@ class _MyStoryItem extends StatelessWidget {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                // Dış halka — gri (henüz hikaye yok)
-                Container(
-                  width: 62,
-                  height: 62,
-                  decoration: BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.all(
-                      color: AppColors.border(context),
-                      width: 2,
+                // Dış halka: hikaye varsa gradient, yoksa gri border
+                if (hasStories)
+                  Container(
+                    width: 62,
+                    height: 62,
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      gradient: LinearGradient(
+                        colors: [kPrimary, kPrimaryLight, Color(0xFF7C3AED)],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
                     ),
-                  ),
-                  child: ClipOval(
-                    child: isUploading
-                        ? Container(
-                            color: AppColors.primaryBg(context),
-                            child: const Center(
-                              child: SizedBox(
-                                width: 22,
-                                height: 22,
-                                child: CircularProgressIndicator(
+                    padding: const EdgeInsets.all(2.5),
+                    child: Container(
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        color: AppColors.surface(context),
+                      ),
+                      padding: const EdgeInsets.all(1.5),
+                      child: ClipOval(
+                        child: Container(
+                          color: AppColors.primaryBg(context),
+                          alignment: Alignment.center,
+                          child: Text(
+                            initial,
+                            style: const TextStyle(
+                              color: kPrimary,
+                              fontWeight: FontWeight.w700,
+                              fontSize: 22,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  Container(
+                    width: 62,
+                    height: 62,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppColors.border(context),
+                        width: 2,
+                      ),
+                    ),
+                    child: ClipOval(
+                      child: isUploading
+                          ? Container(
+                              color: AppColors.primaryBg(context),
+                              child: const Center(
+                                child: SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: kPrimary,
+                                    strokeWidth: 2.5,
+                                  ),
+                                ),
+                              ),
+                            )
+                          : Container(
+                              color: AppColors.primaryBg(context),
+                              alignment: Alignment.center,
+                              child: Text(
+                                initial,
+                                style: const TextStyle(
                                   color: kPrimary,
-                                  strokeWidth: 2.5,
+                                  fontWeight: FontWeight.w700,
+                                  fontSize: 22,
                                 ),
                               ),
                             ),
-                          )
-                        : Container(
-                            color: AppColors.primaryBg(context),
-                            alignment: Alignment.center,
-                            child: Text(
-                              initial,
-                              style: const TextStyle(
-                                color: kPrimary,
-                                fontWeight: FontWeight.w700,
-                                fontSize: 22,
-                              ),
-                            ),
-                          ),
+                    ),
                   ),
-                ),
-                // "+" badge
-                if (!isUploading)
+                // Hikaye yoksa "+" badge yükle butonu göster
+                if (!hasStories && !isUploading)
                   Positioned(
                     bottom: 0,
                     right: 0,

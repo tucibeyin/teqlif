@@ -54,6 +54,79 @@ class StoryService {
     return result;
   }
 
+  // ── Kendi hikayelerim ─────────────────────────────────────────────────────
+
+  static Future<List<StoryItem>> getMyStories() async {
+    final headers = await _headers();
+    final resp = await http.get(
+      Uri.parse('$kBaseUrl/stories/mine'),
+      headers: headers,
+    );
+    debugPrint('[StoryService] getMyStories → HTTP ${resp.statusCode}');
+    if (resp.statusCode >= 400) {
+      final body = _tryDecode(resp.body);
+      final errMap = body['error'];
+      throw AppException(
+        errMap is Map
+            ? (errMap['message'] ?? 'Bir hata oluştu')
+            : (body['detail'] ?? 'Bir hata oluştu'),
+        code: errMap is Map
+            ? (errMap['code'] ?? 'ERR_${resp.statusCode}')
+            : 'HTTP_${resp.statusCode}',
+        statusCode: resp.statusCode,
+      );
+    }
+    final data = _tryDecode(resp.body);
+    final itemsList = data['items'] as List? ?? [];
+    return itemsList
+        .map((e) => StoryItem.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
+  // ── Hikaye görüntüleme kaydı ──────────────────────────────────────────────
+
+  static Future<void> recordStoryView(int storyId) async {
+    final headers = await _headers();
+    final resp = await http.post(
+      Uri.parse('$kBaseUrl/stories/$storyId/view'),
+      headers: headers,
+    );
+    debugPrint('[StoryService] recordStoryView($storyId) → HTTP ${resp.statusCode}');
+    // 204 başarı; hata değilse sessizce geç
+    if (resp.statusCode >= 400) {
+      debugPrint('[StoryService] recordStoryView → hata: ${resp.body}');
+    }
+  }
+
+  // ── Hikaye görüntüleyenler ────────────────────────────────────────────────
+
+  static Future<List<StoryViewer>> getStoryViewers(int storyId) async {
+    final headers = await _headers();
+    final resp = await http.get(
+      Uri.parse('$kBaseUrl/stories/$storyId/viewers'),
+      headers: headers,
+    );
+    debugPrint('[StoryService] getStoryViewers($storyId) → HTTP ${resp.statusCode}');
+    if (resp.statusCode >= 400) {
+      final body = _tryDecode(resp.body);
+      final errMap = body['error'];
+      throw AppException(
+        errMap is Map
+            ? (errMap['message'] ?? 'Bir hata oluştu')
+            : (body['detail'] ?? 'Bir hata oluştu'),
+        code: errMap is Map
+            ? (errMap['code'] ?? 'ERR_${resp.statusCode}')
+            : 'HTTP_${resp.statusCode}',
+        statusCode: resp.statusCode,
+      );
+    }
+    final data = _tryDecode(resp.body);
+    final viewers = data['viewers'] as List? ?? [];
+    return viewers
+        .map((e) => StoryViewer.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // ── Hikaye yükleme (video dosyası → backend) ───────────────────────────────
 
   static Future<void> uploadStory(File videoFile) async {

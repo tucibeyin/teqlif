@@ -49,5 +49,32 @@ class UserStoryGroupResponse(BaseModel):
     latest_activity_at: datetime
 
 
+class StoryViewerOut(BaseModel):
+    """Bir hikayeyi görüntüleyen kullanıcı özeti."""
+
+    user_id: int
+    username: str
+    full_name: str
+    profile_image_thumb_url: Optional[str] = None
+    viewed_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
+class StoryViewersResponse(BaseModel):
+    """Bir hikayeyi görüntüleyen kullanıcıların listesi."""
+
+    story_id: int
+    viewers: List[StoryViewerOut]
+    total: int
+
+
+class MyStoriesResponse(BaseModel):
+    """Giriş yapan kullanıcının kendi aktif hikayelerinin listesi."""
+
+    items: List[StoryItemOut]
+    total: int
+
+
 # Geriye dönük uyumluluk — eski kod StoryOut adını kullanıyorsa import kırılmasın
 StoryOut = StoryItemOut

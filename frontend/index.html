@@ -786,6 +786,44 @@
                style="display:none;"
                capture="environment">
 
+        <!-- ── Story Viewer Overlay ────────────────────────────────── -->
+        <div id="storyViewerOverlay" style="display:none;position:fixed;inset:0;z-index:9000;background:#000;">
+            <!-- Progress barlar -->
+            <div id="svProgressBars" style="position:absolute;top:0;left:0;right:0;display:flex;gap:3px;padding:10px 10px 0;z-index:2;"></div>
+            <!-- Kullanıcı üst overlay -->
+            <div id="svUserBar" style="position:absolute;top:32px;left:12px;right:12px;display:flex;align-items:center;z-index:2;"></div>
+            <!-- Video alanı -->
+            <video id="svVideo" style="width:100%;height:100%;object-fit:cover;display:none;" playsinline muted></video>
+            <!-- Yükleniyor spinner -->
+            <div id="svSpinner" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;">
+                <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:story-spin .8s linear infinite;"></div>
+            </div>
+            <!-- Tap navigasyon -->
+            <div style="position:absolute;inset:0;display:flex;z-index:3;">
+                <div style="flex:3" onclick="svNavigate(-1)"></div>
+                <div style="flex:7" onclick="svNavigate(1)"></div>
+            </div>
+            <!-- Kim Gördü? butonu (yalnızca kendi hikayelerinde görünür) -->
+            <div id="svViewersBtn" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:4;">
+                <button onclick="svShowViewers()" style="background:rgba(0,0,0,.55);border:none;border-radius:24px;color:#fff;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Kim Gördü?
+                </button>
+            </div>
+        </div>
+
+        <!-- ── Story Viewers Modal ──────────────────────────────────── -->
+        <div id="storyViewersModal" style="display:none;position:fixed;inset:0;z-index:9500;background:rgba(0,0,0,.6);align-items:flex-end;justify-content:center;">
+            <div style="background:var(--color-surface,#fff);border-radius:20px 20px 0 0;width:100%;max-width:500px;max-height:60vh;overflow-y:auto;padding-bottom:24px;">
+                <div style="display:flex;align-items:center;padding:16px 20px 10px;border-bottom:1px solid var(--color-border,#eee);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    <span style="font-weight:700;font-size:15px;margin-left:8px;" id="svViewersTitle">Kim Gördü?</span>
+                    <button onclick="document.getElementById('storyViewersModal').style.display='none';" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#888;">×</button>
+                </div>
+                <div id="svViewersList" style="padding:8px 0;"></div>
+            </div>
+        </div>
+
         <div class="story-tray-wrapper" id="storyTrayWrapper" style="display:none;">
             <div class="story-tray-label">Hikayeler</div>
             <div class="story-tray" id="storyTray"></div>
@@ -1049,53 +1087,64 @@
          * Canlı yayın içeren grup → kırmızı halka + CANLI badge.
          * Tıklama → canlı varsa joinStream(), yoksa web izleyici henüz yok.
          */
+        // ── Story Viewer state ────────────────────────────────────────
+        let _svGroups       = [];  // List<{user, items[], isMine}>
+        let _svGroupIdx     = 0;
+        let _svItemIdx      = 0;
+        let _svTimer        = null;
+        let _svProgressAnim = null;
+        let _svCurrentUserId = null;
+
         async function loadFollowedStories() {
             if (!Auth.getToken()) return;
 
             const wrapper = document.getElementById('storyTrayWrapper');
             const tray    = document.getElementById('storyTray');
 
-            // ── "Hikayen" butonu ─────────────────────────────────────
             const me      = Auth.getUser();
             const myName  = me?.username ?? '';
             const myInitial = myName.charAt(0).toUpperCase() || '?';
-            const myImg   = me?.profile_image_url
-                ? (me.profile_image_url.startsWith('http')
-                    ? me.profile_image_url
-                    : '/api' + me.profile_image_url)
-                : null;
 
-            const myInnerHtml = myImg
-                ? `<img class="story-avatar" src="${myImg}" alt="${myName}"
-                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
-                   <div class="story-avatar-initials" style="display:none;">${myInitial}</div>`
-                : `<div class="story-avatar-initials">${myInitial}</div>`;
+            // ── Kendi hikayeleri + takip edilen gruplar (paralel) ─────
+            let myItems = [], groups = [];
+            try {
+                [myItems, groups] = await Promise.all([
+                    apiFetch('/stories/mine').then(r => r?.items ?? []).catch(() => []),
+                    apiFetch('/stories/following').then(r => Array.isArray(r) ? r : []).catch(() => []),
+                ]);
+            } catch (err) {
+                console.error('[StoryTray] Yükleme hatası:', err);
+                if (window.Sentry) Sentry.captureException(err);
+            }
+
+            const hasMyStories = myItems.length > 0;
+
+            // ── "Hikayen" butonu ─────────────────────────────────────
+            const myRingStyle = hasMyStories
+                ? 'background:linear-gradient(135deg,var(--color-primary,#6366f1) 0%,#7c3aed 100%)'
+                : '';
+            const myBadgeStyle = hasMyStories ? 'display:none' : '';
+            const myOnclick = hasMyStories
+                ? `onclick="svOpenMine()"`
+                : `onclick="if(!this.classList.contains('story-uploading'))document.getElementById('storyUploadInput').click()"`;
 
             const myStoryHtml = `
                 <div class="story-item story-add-btn" id="myStoryBtn"
-                     title="Video hikayeni paylaş"
-                     onclick="if(!this.classList.contains('story-uploading'))document.getElementById('storyUploadInput').click()">
+                     title="${hasMyStories ? 'Hikayeni gör' : 'Video hikayeni paylaş'}"
+                     ${myOnclick}>
                     <div class="story-ring-wrap">
-                        <div class="story-ring">
-                            <div class="story-ring-inner" id="myStoryInner">${myInnerHtml}</div>
+                        <div class="story-ring" style="${myRingStyle}">
+                            <div class="story-ring-inner" id="myStoryInner">
+                                <div class="story-avatar-initials">${myInitial}</div>
+                            </div>
                         </div>
-                        <div class="story-add-badge" id="myStoryBadge">+</div>
+                        <div class="story-add-badge" id="myStoryBadge" style="${myBadgeStyle}">+</div>
                     </div>
                     <span class="story-username">Hikayen</span>
                 </div>`;
 
             // ── Takip edilen gruplar ──────────────────────────────────
-            let groups = [];
-            try {
-                groups = await apiFetch('/stories/following');
-                if (!Array.isArray(groups)) groups = [];
-            } catch (err) {
-                console.error('[StoryTray] Hikayeler yüklenemedi:', err);
-                if (window.Sentry) Sentry.captureException(err);
-                // "Hikayen" butonu yine de gösterilsin
-            }
-
-            const groupsHtml = groups.map((g) => {
+            const groupsHtml = groups.map((g, gi) => {
                 const username = g.user?.username ?? '';
                 const initial  = username.charAt(0).toUpperCase() || '?';
                 const rawUrl   = g.user?.profile_image_thumb_url ?? g.user?.profile_image_url ?? null;
@@ -1103,13 +1152,12 @@
                     ? (rawUrl.startsWith('http') ? rawUrl : '/api' + rawUrl)
                     : null;
 
-                // Gruptaki ilk canlı yayın öğesini bul
                 const liveItem = Array.isArray(g.items)
                     ? g.items.find(i => i.story_type === 'live_redirect')
                     : null;
                 const hasLive  = !!liveItem;
+                const hasVideo = Array.isArray(g.items) && g.items.some(i => i.story_type === 'video');
 
-                // Halka rengi: canlı → kırmızı-turuncu, sadece video → gradient
                 const ringStyle = hasLive
                     ? 'background:linear-gradient(135deg,#ff4136 0%,#ff851b 100%)'
                     : '';
@@ -1127,9 +1175,14 @@
                                    border:1px solid #fff;">CANLI</span>`
                     : '';
 
-                const onclickAttr = hasLive
-                    ? `onclick="joinStream(${liveItem.stream_id})"`
-                    : 'style="cursor:default"';
+                let onclickAttr;
+                if (hasLive) {
+                    onclickAttr = `onclick="joinStream(${liveItem.stream_id})"`;
+                } else if (hasVideo) {
+                    onclickAttr = `onclick="svOpenGroup(${gi})"`;
+                } else {
+                    onclickAttr = 'style="cursor:default"';
+                }
 
                 return `
                     <div class="story-item" ${onclickAttr}
@@ -1145,8 +1198,224 @@
                     </div>`;
             }).join('');
 
+            // Viewer için grupları kaydet
+            _svGroups = groups.map(g => ({ ...g, isMine: false }));
+            _svCurrentUserId = me?.id ?? null;
+
             tray.innerHTML = myStoryHtml + groupsHtml;
             wrapper.style.display = 'block';
+
+            // Kendi hikayeleri ayrı grup olarak viewer state'e ekle
+            if (hasMyStories) {
+                _svGroups = [
+                    { user: { id: me?.id, username: myName, full_name: me?.full_name ?? '' }, items: myItems, isMine: true },
+                    ..._svGroups,
+                ];
+            }
+        }
+
+        // ── Story Viewer API ──────────────────────────────────────────
+
+        function svOpenMine() {
+            const mineIdx = _svGroups.findIndex(g => g.isMine);
+            if (mineIdx >= 0) svOpen(mineIdx);
+        }
+
+        function svOpenGroup(followingIdx) {
+            // following groups start at index 1 if mine exists, else 0
+            const hasMine = _svGroups.length > 0 && _svGroups[0].isMine;
+            svOpen(hasMine ? followingIdx + 1 : followingIdx);
+        }
+
+        function svOpen(groupIdx) {
+            if (!_svGroups.length) return;
+            _svGroupIdx = groupIdx;
+            _svItemIdx  = 0;
+            document.getElementById('storyViewerOverlay').style.display = 'block';
+            document.body.style.overflow = 'hidden';
+            svLoadItem();
+        }
+
+        function svClose() {
+            const overlay = document.getElementById('storyViewerOverlay');
+            overlay.style.display = 'none';
+            document.body.style.overflow = '';
+            const video = document.getElementById('svVideo');
+            video.pause();
+            video.src = '';
+            video.style.display = 'none';
+            clearTimeout(_svTimer);
+            cancelAnimationFrame(_svProgressAnim);
+            document.getElementById('svSpinner').style.display = 'flex';
+        }
+
+        function svNavigate(dir) {
+            const group = _svGroups[_svGroupIdx];
+            const videoItems = (group?.items ?? []).filter(i => i.story_type === 'video');
+            const newItem = _svItemIdx + dir;
+            if (newItem >= 0 && newItem < videoItems.length) {
+                _svItemIdx = newItem;
+                svLoadItem();
+            } else if (dir > 0) {
+                // Sonraki grup
+                if (_svGroupIdx + 1 < _svGroups.length) {
+                    _svGroupIdx++;
+                    _svItemIdx = 0;
+                    svLoadItem();
+                } else {
+                    svClose();
+                }
+            } else {
+                // Önceki grup
+                if (_svGroupIdx > 0) {
+                    _svGroupIdx--;
+                    const prevGroup = _svGroups[_svGroupIdx];
+                    const prevItems = (prevGroup?.items ?? []).filter(i => i.story_type === 'video');
+                    _svItemIdx = Math.max(0, prevItems.length - 1);
+                    svLoadItem();
+                } else {
+                    svClose();
+                }
+            }
+        }
+
+        function svLoadItem() {
+            clearTimeout(_svTimer);
+            cancelAnimationFrame(_svProgressAnim);
+
+            const group = _svGroups[_svGroupIdx];
+            if (!group) { svClose(); return; }
+
+            const videoItems = (group.items ?? []).filter(i => i.story_type === 'video');
+            if (!videoItems.length) { svNavigate(1); return; }
+
+            const item = videoItems[_svItemIdx];
+
+            // Progress barlar
+            svUpdateProgressBars(videoItems.length);
+
+            // Kullanıcı bar
+            svUpdateUserBar(group);
+
+            // Kim Gördü? butonu
+            document.getElementById('svViewersBtn').style.display =
+                group.isMine ? 'block' : 'none';
+            if (group.isMine) {
+                document.getElementById('svViewersBtn').dataset.storyId = item.id;
+            }
+
+            // Video yükle
+            const video = document.getElementById('svVideo');
+            const spinner = document.getElementById('svSpinner');
+            video.style.display = 'none';
+            spinner.style.display = 'flex';
+            video.src = item.video_url.startsWith('http') ? item.video_url : '/api' + item.video_url;
+            video.load();
+
+            const startTime = performance.now();
+            let duration = 0;
+
+            video.onloadedmetadata = () => { duration = video.duration * 1000; };
+            video.oncanplay = () => {
+                spinner.style.display = 'none';
+                video.style.display = 'block';
+                video.play().catch(() => {});
+
+                // Görüntüleme kaydı — fire and forget
+                const token = Auth.getToken();
+                if (token) {
+                    fetch(`/api/stories/${item.id}/view`, {
+                        method: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                    }).catch(() => {});
+                }
+
+                // Progress animasyonu
+                const barFill = document.getElementById(`sv-bar-fill-${_svItemIdx}`);
+                const animStart = performance.now();
+                function tick() {
+                    if (!barFill) return;
+                    const d = duration || (video.duration * 1000) || 10000;
+                    const elapsed = performance.now() - animStart;
+                    barFill.style.width = Math.min(elapsed / d * 100, 100) + '%';
+                    if (elapsed < d) {
+                        _svProgressAnim = requestAnimationFrame(tick);
+                    }
+                }
+                _svProgressAnim = requestAnimationFrame(tick);
+            };
+
+            video.onended = () => svNavigate(1);
+            video.onerror = () => svNavigate(1);
+        }
+
+        function svUpdateProgressBars(total) {
+            const container = document.getElementById('svProgressBars');
+            container.innerHTML = Array.from({ length: total }, (_, i) => `
+                <div style="flex:1;height:2.5px;background:rgba(255,255,255,.35);border-radius:2px;overflow:hidden;">
+                    <div id="sv-bar-fill-${i}"
+                         style="height:100%;background:#fff;width:${i < _svItemIdx ? '100%' : '0%'};transition:none;"></div>
+                </div>`).join('');
+        }
+
+        function svUpdateUserBar(group) {
+            const bar = document.getElementById('svUserBar');
+            const initial = (group.user?.username ?? '?').charAt(0).toUpperCase();
+            bar.innerHTML = `
+                <div style="width:34px;height:34px;border-radius:50%;border:1.5px solid #fff;overflow:hidden;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;">${initial}</div>
+                <span style="margin-left:9px;color:#fff;font-size:13.5px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.5);">${group.user?.username ?? ''}</span>
+                <button onclick="svClose()" style="margin-left:auto;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,.5);">×</button>`;
+        }
+
+        async function svShowViewers() {
+            const storyId = document.getElementById('svViewersBtn').dataset.storyId;
+            if (!storyId) return;
+
+            const modal = document.getElementById('storyViewersModal');
+            const list  = document.getElementById('svViewersList');
+            const title = document.getElementById('svViewersTitle');
+
+            list.innerHTML = '<div style="padding:24px;text-align:center;color:#888;">Yükleniyor...</div>';
+            title.textContent = 'Kim Gördü?';
+            modal.style.display = 'flex';
+
+            try {
+                const data = await apiFetch(`/stories/${storyId}/viewers`);
+                const viewers = data?.viewers ?? [];
+                title.textContent = `Kim Gördü? (${viewers.length})`;
+
+                if (!viewers.length) {
+                    list.innerHTML = '<div style="padding:24px;text-align:center;color:#888;">Henüz kimse görmedi</div>';
+                    return;
+                }
+
+                list.innerHTML = viewers.map(v => {
+                    const initial = (v.username ?? '?').charAt(0).toUpperCase();
+                    const timeAgo = _svFormatTime(v.viewed_at);
+                    return `
+                        <div style="display:flex;align-items:center;padding:10px 20px;gap:12px;">
+                            <div style="width:38px;height:38px;border-radius:50%;background:rgba(99,102,241,.15);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;color:var(--color-primary,#6366f1);flex-shrink:0;">${initial}</div>
+                            <div style="flex:1;min-width:0;">
+                                <div style="font-weight:600;font-size:14px;">${v.username}</div>
+                                <div style="font-size:12px;color:#888;">${v.full_name}</div>
+                            </div>
+                            <div style="font-size:11px;color:#aaa;flex-shrink:0;">${timeAgo}</div>
+                        </div>`;
+                }).join('');
+            } catch (err) {
+                console.error('[StoryViewers] Yükleme başarısız:', err);
+                if (window.Sentry) Sentry.captureException(err);
+                list.innerHTML = '<div style="padding:24px;text-align:center;color:#e00;">Görüntüleyenler yüklenemedi</div>';
+            }
+        }
+
+        function _svFormatTime(isoStr) {
+            if (!isoStr) return '';
+            const diff = (Date.now() - new Date(isoStr).getTime()) / 1000;
+            if (diff < 60) return 'Az önce';
+            if (diff < 3600) return `${Math.floor(diff / 60)}d önce`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}s önce`;
+            return `${Math.floor(diff / 86400)}g önce`;
         }
 
         async function joinStream(id) {

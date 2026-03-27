@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.story import UserStoryGroupResponse, StoryItemOut  # noqa: F401
+from app.schemas.story import UserStoryGroupResponse, StoryItemOut, MyStoriesResponse, StoryViewersResponse  # noqa: F401
 from app.utils.auth import get_current_user
 from app.services.story_service import StoryService
 from app.core.logger import get_logger
@@ -40,6 +40,18 @@ async def get_following_stories(
     return await StoryService(db).get_following_stories(current_user.id)
 
 
+@router.get("/mine", response_model=MyStoriesResponse)
+async def get_my_stories(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Giriş yapan kullanıcının süresi dolmamış aktif hikayelerini döner.
+    Tray'de kendi avatar'ını göstermek ve viewer'da kendi içeriklerine erişmek için kullanılır.
+    """
+    return await StoryService(db).get_my_stories(current_user.id)
+
+
 @router.post("/upload", status_code=status.HTTP_201_CREATED)
 async def upload_story(
     file: UploadFile = File(...),
@@ -52,6 +64,33 @@ async def upload_story(
     """
     story = await StoryService(db).upload_story(current_user.id, file)
     return {"id": story.id, "video_url": story.video_url, "expires_at": story.expires_at}
+
+
+@router.post("/{story_id}/view", status_code=status.HTTP_204_NO_CONTENT)
+async def record_story_view(
+    story_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Kullanıcının bir hikayeyi gördüğünü kaydeder.
+    Hikaye sahibinin kendi görüntülemesi sessizce görmezden gelinir.
+    story_id + viewer_id UNIQUE — tekrar çağrılsa 204 döner, kayıt üretmez.
+    """
+    await StoryService(db).record_story_view(story_id, current_user.id)
+
+
+@router.get("/{story_id}/viewers", response_model=StoryViewersResponse)
+async def get_story_viewers(
+    story_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Belirtilen hikayeyi görüntüleyen kullanıcıların listesini döner.
+    Yalnızca hikaye sahibi bu endpoint'i çağırabilir.
+    """
+    return await StoryService(db).get_story_viewers(story_id, current_user.id)
 
 
 @router.post("/cleanup", status_code=200)

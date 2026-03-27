@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, DateTime, ForeignKey, func
+from sqlalchemy import String, DateTime, ForeignKey, UniqueConstraint, func
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -29,5 +29,33 @@ class Story(Base):
         DateTime(timezone=True), nullable=False, index=True
     )
     created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), index=True
+    )
+
+
+class StoryView(Base):
+    """
+    Hikaye görüntüleme kaydı.
+
+    story_id + viewer_id çifti UNIQUE — aynı kişi birden fazla kayıt üretmez.
+    ondelete="CASCADE": Story silindiğinde (cleanup) kayıtlar otomatik silinir.
+    Hikaye sahibinin kendi görüntülemesi service katmanında filtrelenir.
+    """
+
+    __tablename__ = "story_views"
+    __table_args__ = (UniqueConstraint("story_id", "viewer_id", name="uq_story_viewer"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    story_id: Mapped[int] = mapped_column(
+        ForeignKey("stories.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    viewer_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
+    )
+    viewed_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now(), index=True
     )

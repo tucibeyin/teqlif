@@ -23,17 +23,17 @@ from datetime import datetime, timedelta, timezone
 from typing import List
 
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, text
 
 from fastapi import UploadFile
 
 from app.config import settings
-from app.models.story import Story
+from app.models.story import Story, StoryView
 from app.models.user import User
 from app.models.follow import Follow
 from app.models.stream import LiveStream
-from app.schemas.story import StoryAuthorOut, StoryItemOut, UserStoryGroupResponse
-from app.core.exceptions import DatabaseException, BadRequestException
+from app.schemas.story import StoryAuthorOut, StoryItemOut, UserStoryGroupResponse, StoryViewerOut, StoryViewersResponse, MyStoriesResponse
+from app.core.exceptions import DatabaseException, BadRequestException, NotFoundException
 from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
@@ -281,6 +281,164 @@ class StoryService:
             file_path,
         )
         return story
+
+    # ── Kendi hikayelerim ─────────────────────────────────────────────────────
+
+    async def get_my_stories(self, user_id: int) -> MyStoriesResponse:
+        """
+        Giriş yapan kullanıcının süresi dolmamış video hikayelerini döner.
+        En yeniden en eskiye (created_at DESC) sıralar.
+        """
+        try:
+            query = (
+                select(Story)
+                .where(Story.user_id == user_id, Story.expires_at > func.now())
+                .order_by(Story.created_at.desc())
+            )
+            result = await self.db.execute(query)
+            stories = result.scalars().all()
+        except Exception as exc:
+            logger.error(
+                "[STORY] Kendi hikayeler getirilemedi | user_id=%s | %s",
+                user_id, exc, exc_info=True,
+            )
+            capture_exception(exc)
+            raise DatabaseException("Hikayeler yüklenemedi")
+
+        items = [
+            StoryItemOut(
+                id=s.id,
+                story_type="video",
+                video_url=s.video_url,
+                thumbnail_url=s.thumbnail_url,
+                expires_at=s.expires_at,
+                created_at=s.created_at,
+                stream_id=None,
+            )
+            for s in stories
+        ]
+        logger.info(
+            "[STORY] Kendi hikayeler listelendi | user_id=%s | adet=%d",
+            user_id, len(items),
+        )
+        return MyStoriesResponse(items=items, total=len(items))
+
+    # ── Hikaye görüntüleme kaydı ──────────────────────────────────────────────
+
+    async def record_story_view(self, story_id: int, viewer_id: int) -> None:
+        """
+        Hikayeyi görüntüleyen kullanıcıyı story_views tablosuna kaydeder.
+        story_id + viewer_id UNIQUE — aynı kişi birden fazla kayıt üretmez.
+        Hikaye sahibinin kendi görüntülemesi sessizce görmezden gelinir.
+        """
+        # Hikayenin var olup olmadığını ve sahibini kontrol et
+        try:
+            result = await self.db.execute(
+                select(Story.user_id).where(Story.id == story_id)
+            )
+            row = result.scalar_one_or_none()
+        except Exception as exc:
+            logger.error(
+                "[STORY VIEW] Hikaye sorgulanamadı | story_id=%s | %s",
+                story_id, exc, exc_info=True,
+            )
+            capture_exception(exc)
+            raise DatabaseException("Görüntüleme kaydedilemedi")
+
+        if row is None:
+            raise NotFoundException("Hikaye bulunamadı")
+
+        # Kendi hikayesini görüntüleme → kayıt üretme
+        if row == viewer_id:
+            return
+
+        try:
+            await self.db.execute(
+                # INSERT ... ON CONFLICT DO NOTHING — yarış güvenli tekil kayıt
+                text(
+                    "INSERT INTO story_views (story_id, viewer_id) "
+                    "VALUES (:story_id, :viewer_id) "
+                    "ON CONFLICT ON CONSTRAINT uq_story_viewer DO NOTHING"
+                ),
+                {"story_id": story_id, "viewer_id": viewer_id},
+            )
+            await self.db.commit()
+        except Exception as exc:
+            logger.error(
+                "[STORY VIEW] Kayıt oluşturulamadı | story_id=%s | viewer_id=%s | %s",
+                story_id, viewer_id, exc, exc_info=True,
+            )
+            capture_exception(exc)
+            raise DatabaseException("Görüntüleme kaydedilemedi")
+
+        logger.info(
+            "[STORY VIEW] Kaydedildi | story_id=%s | viewer_id=%s",
+            story_id, viewer_id,
+        )
+
+    # ── Hikaye görüntüleyenler listesi ────────────────────────────────────────
+
+    async def get_story_viewers(
+        self, story_id: int, owner_id: int
+    ) -> StoryViewersResponse:
+        """
+        Belirtilen hikayeyi kimler gördü? Yalnızca hikaye sahibi görebilir.
+        Görüntülemeleri en yeni → en eski (viewed_at DESC) sıralar.
+        """
+        # Sahiplik kontrolü
+        try:
+            result = await self.db.execute(
+                select(Story.user_id).where(Story.id == story_id)
+            )
+            row = result.scalar_one_or_none()
+        except Exception as exc:
+            logger.error(
+                "[STORY VIEWERS] Hikaye sorgulanamadı | story_id=%s | %s",
+                story_id, exc, exc_info=True,
+            )
+            capture_exception(exc)
+            raise DatabaseException("Görüntüleyenler yüklenemedi")
+
+        if row is None:
+            raise NotFoundException("Hikaye bulunamadı")
+
+        if row != owner_id:
+            from app.core.exceptions import ForbiddenException
+            raise ForbiddenException("Bu hikayenin görüntüleyenlerini göremezsiniz")
+
+        # Görüntüleyenleri çek
+        try:
+            query = (
+                select(StoryView, User)
+                .join(User, User.id == StoryView.viewer_id)
+                .where(StoryView.story_id == story_id)
+                .order_by(StoryView.viewed_at.desc())
+            )
+            result = await self.db.execute(query)
+            rows = result.all()
+        except Exception as exc:
+            logger.error(
+                "[STORY VIEWERS] Görüntüleyenler getirilemedi | story_id=%s | %s",
+                story_id, exc, exc_info=True,
+            )
+            capture_exception(exc)
+            raise DatabaseException("Görüntüleyenler yüklenemedi")
+
+        viewers = [
+            StoryViewerOut(
+                user_id=user.id,
+                username=user.username,
+                full_name=user.full_name,
+                profile_image_thumb_url=getattr(user, "profile_image_thumb_url", None),
+                viewed_at=sv.viewed_at,
+            )
+            for sv, user in rows
+        ]
+        logger.info(
+            "[STORY VIEWERS] Listelendi | story_id=%s | owner_id=%s | adet=%d",
+            story_id, owner_id, len(viewers),
+        )
+        return StoryViewersResponse(story_id=story_id, viewers=viewers, total=len(viewers))
 
     # ── Süresi dolan hikayelerin temizlenmesi ─────────────────────────────────
 

@@ -535,5 +535,8 @@
   "storyUploadSuccess": "Your story was shared!",
   "storyLiveNow": "Live Now!",
   "storyJoinLive": "Join Live",
-  "storyJoinLiveFailed": "Could not join the live stream"
+  "storyJoinLiveFailed": "Could not join the live stream",
+  "storyWhoViewed": "Who Viewed?",
+  "storyViewersLoadFailed": "Could not load viewers",
+  "storyNoViewersYet": "No one has viewed this yet"
 }

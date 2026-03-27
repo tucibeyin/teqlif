@@ -71,6 +71,30 @@ class StoryItem {
       );
 }
 
+class StoryViewer {
+  final int userId;
+  final String username;
+  final String fullName;
+  final String? profileImageThumbUrl;
+  final DateTime viewedAt;
+
+  StoryViewer({
+    required this.userId,
+    required this.username,
+    required this.fullName,
+    this.profileImageThumbUrl,
+    required this.viewedAt,
+  });
+
+  factory StoryViewer.fromJson(Map<String, dynamic> json) => StoryViewer(
+        userId: json['user_id'] as int,
+        username: json['username'] as String,
+        fullName: json['full_name'] as String,
+        profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
+        viewedAt: DateTime.parse(json['viewed_at'] as String),
+      );
+}
+
 class UserStoryGroup {
   final StoryAuthor user;
 

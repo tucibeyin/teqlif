@@ -27,3 +27,23 @@ final storyGroupsProvider = AsyncNotifierProvider.autoDispose<
     StoryGroupsNotifier, List<UserStoryGroup>>(
   StoryGroupsNotifier.new,
 );
+
+/// Giriş yapan kullanıcının kendi aktif hikayelerini yönetir.
+///
+/// Kullanım:
+///   - `ref.watch(myStoriesProvider)` → `AsyncValue<List<StoryItem>>`
+///   - Yeni hikaye yüklenince: `ref.invalidate(myStoriesProvider)`
+class MyStoriesNotifier extends AutoDisposeAsyncNotifier<List<StoryItem>> {
+  @override
+  Future<List<StoryItem>> build() => StoryService.getMyStories();
+
+  Future<void> refresh() async {
+    state = const AsyncLoading();
+    state = await AsyncValue.guard(StoryService.getMyStories);
+  }
+}
+
+final myStoriesProvider =
+    AsyncNotifierProvider.autoDispose<MyStoriesNotifier, List<StoryItem>>(
+  MyStoriesNotifier.new,
+);
