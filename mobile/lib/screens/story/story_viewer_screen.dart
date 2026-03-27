@@ -14,6 +14,7 @@ import '../../services/storage_service.dart';
 import '../../services/story_service.dart';
 import '../../services/stream_service.dart';
 import '../live/viewer_stream_screen.dart';
+import '../public_profile_screen.dart';
 
 /// Tam ekran Instagram/Snapchat tarzı Hybrid Story izleyicisi.
 ///
@@ -386,17 +387,28 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final isLive = _currentItem.isLiveRedirect;
-    return Stack(
+    return GestureDetector(
+      // Aşağı kaydır → kapat | Yukarı kaydır → profil
+      onVerticalDragEnd: (details) {
+        final v = details.primaryVelocity ?? 0;
+        if (v > 400) {
+          widget.onClose();
+        } else if (v < -400) {
+          _goToProfile(context);
+        }
+      },
+      child: Stack(
       fit: StackFit.expand,
       children: [
         isLive ? _buildLiveRedirectCard(context) : _buildVideoArea(),
-        // Tap nav yalnızca video öğelerinde — canlı kart kendi butonunu yönetir
+        // Tap + swipe nav yalnızca video öğelerinde
         if (!isLive) _buildTapNav(),
         _buildProgressBars(context),
         _buildUserOverlay(context),
         // Kendi hikayesindeyse altta "Kim Gördü?" butonu göster
         if (_isMine && !isLive) _buildViewersButton(context),
       ],
+      ),
     );
   }
 
@@ -543,29 +555,51 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     );
   }
 
-  // ── Tap navigasyon (yalnızca video öğelerinde) ────────────────────────────
+  // ── Tap + Swipe navigasyon ────────────────────────────────────────────────
 
   Widget _buildTapNav() {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _retreatItem,
-            child: const SizedBox.expand(),
-          ),
-        ),
-        Expanded(
-          flex: 7,
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: _advanceItem,
-            child: const SizedBox.expand(),
-          ),
-        ),
-      ],
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      // Sol %30 tap → geri | Sağ %70 tap → ileri
+      onTapUp: (details) {
+        final width = MediaQuery.of(context).size.width;
+        if (details.localPosition.dx < width * 0.3) {
+          _retreatItem();
+        } else {
+          _advanceItem();
+        }
+      },
+      // Sola kaydır → ileri | Sağa kaydır → geri
+      onHorizontalDragEnd: (details) {
+        final v = details.primaryVelocity ?? 0;
+        if (v < -300) {
+          _advanceItem();
+        } else if (v > 300) {
+          _retreatItem();
+        }
+      },
+      child: const SizedBox.expand(),
     );
+  }
+
+  // ── Profil navigasyonu ────────────────────────────────────────────────────
+
+  void _goToProfile(BuildContext context) {
+    final user = widget.group.user;
+    _videoCtrl?.pause();
+    if (_isMine) {
+      // Kendi profili → normal profil ekranı
+      Navigator.of(context).pop();
+      return;
+    }
+    Navigator.of(context)
+        .push(MaterialPageRoute(
+          builder: (_) => PublicProfileScreen(
+            username: user.username,
+            userId: user.id,
+          ),
+        ))
+        .then((_) => _videoCtrl?.play());
   }
 
   // ── Üst progress barlar ───────────────────────────────────────────────────
