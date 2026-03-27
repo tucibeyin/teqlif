@@ -1203,4 +1203,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get offerLoginRequired => 'Login to make an offer.';
+
+  @override
+  String get storyTrayTitle => 'Following';
+
+  @override
+  String get storyTrayEmpty => 'Nobody you follow is live right now.';
+
+  @override
+  String get storyTrayError => 'Could not load';
 }

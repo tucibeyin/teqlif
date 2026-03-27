@@ -1202,4 +1202,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get offerLoginRequired => 'Teklif vermek için giriş yapın.';
+
+  @override
+  String get storyTrayTitle => 'Takip Ettiklerin';
+
+  @override
+  String get storyTrayEmpty => 'Şu an takip ettiğin kimse yayında değil.';
+
+  @override
+  String get storyTrayError => 'Yüklenemedi';
 }

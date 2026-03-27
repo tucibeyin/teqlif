@@ -2353,6 +2353,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Teklif vermek için giriş yapın.'**
   String get offerLoginRequired;
+
+  /// No description provided for @storyTrayTitle.
+  ///
+  /// In tr, this message translates to:
+  /// **'Takip Ettiklerin'**
+  String get storyTrayTitle;
+
+  /// No description provided for @storyTrayEmpty.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şu an takip ettiğin kimse yayında değil.'**
+  String get storyTrayEmpty;
+
+  /// No description provided for @storyTrayError.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yüklenemedi'**
+  String get storyTrayError;
 }
 
 class _AppLocalizationsDelegate
