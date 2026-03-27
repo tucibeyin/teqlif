@@ -2,6 +2,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/api.dart';
+import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../core/app_exception.dart';
 import '../../models/stream.dart';
@@ -536,7 +537,7 @@ class _StreamGridTile extends StatelessWidget {
       onTap: onTap,
       child: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.card(context),
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
@@ -617,9 +618,10 @@ class _StreamGridTile extends StatelessWidget {
                 children: [
                   Text(
                     stream.title,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.w600,
                       fontSize: 12.5,
+                      color: AppColors.textPrimary(context),
                     ),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
