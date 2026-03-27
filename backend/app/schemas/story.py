@@ -15,27 +15,39 @@ class StoryAuthorOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class StoryOut(BaseModel):
-    """Tek bir hikaye öğesi."""
+class StoryItemOut(BaseModel):
+    """
+    Tek bir story öğesi — video hikayesi veya canlı yayın yönlendirmesi.
+
+    story_type:
+      'video'         → normal video hikayesi; video_url, expires_at, created_at dolu.
+      'live_redirect' → kullanıcı şu an canlı; stream_id dolu, video alanları None.
+    """
 
     id: int
-    video_url: str
+    story_type: str  # 'video' | 'live_redirect'
+    video_url: Optional[str] = None
     thumbnail_url: Optional[str] = None
-    expires_at: datetime
-    created_at: datetime
+    expires_at: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+    stream_id: Optional[int] = None
 
     model_config = {"from_attributes": True}
 
 
 class UserStoryGroupResponse(BaseModel):
     """
-    Kullanıcı bazlı gruplanmış hikayeler.
+    Kullanıcı bazlı gruplanmış hybrid story listesi.
 
     Sıralama garantileri (service katmanında uygulanır):
-      - `stories` listesi: en eski → en yeni (created_at ASC)
-      - Grup listesi: en son hikaye atan kullanıcı başta (latest_story_at DESC)
+      - `items` listesi: video hikayeleri created_at ASC, en sona live_redirect (varsa).
+      - Grup listesi: en son aksiyonu (hikaye veya canlı yayın) olan kullanıcı başta.
     """
 
     user: StoryAuthorOut
-    stories: List[StoryOut]
-    latest_story_at: datetime  # istemci tarafı sıralama/gösterim için referans
+    items: List[StoryItemOut]
+    latest_activity_at: datetime
+
+
+# Geriye dönük uyumluluk — eski kod StoryOut adını kullanıyorsa import kırılmasın
+StoryOut = StoryItemOut

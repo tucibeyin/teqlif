@@ -15,7 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.story import UserStoryGroupResponse
+from app.schemas.story import UserStoryGroupResponse, StoryItemOut  # noqa: F401
 from app.utils.auth import get_current_user
 from app.services.story_service import StoryService
 from app.core.logger import get_logger
