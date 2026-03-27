@@ -51,6 +51,7 @@ async def _compress_video(src: str, out_dir: str, original_ext: str) -> tuple[st
       (None, None)                            — ffmpeg yok veya hata
     """
     if not shutil.which("ffmpeg"):
+        logger.warning("[STORY COMPRESS] ffmpeg bulunamadı — sıkıştırma atlandı")
         return None, None
 
     out_name = f"{uuid.uuid4().hex}.mp4"
