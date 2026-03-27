@@ -56,13 +56,15 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     ref.invalidate(followedStreamsProvider);
     try {
       final streams = await StreamService.getActiveStreams();
+      debugPrint('[LiveList] Yüklenen yayın sayısı: ${streams.length}');
       if (!mounted) return;
       setState(() {
         _streams = streams;
         _loading = false;
         _error = null;
       });
-    } catch (e) {
+    } catch (e, st) {
+      debugPrint('[LiveList] getActiveStreams hatası: $e\n$st');
       if (!mounted) return;
       setState(() {
         _loading = false;

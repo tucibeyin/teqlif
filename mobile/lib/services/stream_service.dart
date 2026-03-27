@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:typed_data';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../core/app_exception.dart';
@@ -18,6 +19,7 @@ class StreamService {
   static Future<List<StreamOut>> getActiveStreams() async {
     final headers = await _headers();
     final resp = await http.get(Uri.parse('$kBaseUrl/streams/active'), headers: headers);
+    debugPrint('[StreamService] getActiveStreams → HTTP ${resp.statusCode}, body: ${resp.body.length > 200 ? resp.body.substring(0, 200) : resp.body}');
     if (resp.statusCode >= 400) {
       final body = _tryDecode(resp.body);
       final errMap = body['error'];
@@ -28,7 +30,16 @@ class StreamService {
       );
     }
     final list = _tryDecodeList(resp.body);
-    return list.map((e) => StreamOut.fromJson(e as Map<String, dynamic>)).toList();
+    debugPrint('[StreamService] getActiveStreams → parse edilen öğe sayısı: ${list.length}');
+    final result = <StreamOut>[];
+    for (final e in list) {
+      try {
+        result.add(StreamOut.fromJson(e as Map<String, dynamic>));
+      } catch (err) {
+        debugPrint('[StreamService] StreamOut.fromJson hatası: $err | veri: $e');
+      }
+    }
+    return result;
   }
 
   static Future<List<StreamOut>> getFollowedLiveStreams() async {
