@@ -234,22 +234,37 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     ).then((_) => _load());
   }
 
-  /// Story tray'den gelince: joinStream API'sini çağırıp ViewerStreamScreen'e git.
-  /// Story nesnesi _streams listesiyle referans paylaşmadığından indexOf güvenilmez;
-  /// doğrudan stream.id ile katılım sağlanır.
+  /// Story tray'den gelince: aktif listede ID ile eşleştir ve SwipeLiveScreen'e geç.
+  /// Böylece TikTok tarzı yukarı/aşağı kaydırma diğer yayınlara geçmeyi sağlar.
+  /// Liste henüz yüklenmediyse ya da stream bulunamadıysa doğrudan katılım yapılır.
   Future<void> _joinFromStory(StreamOut stream) async {
     if (!mounted) return;
-    try {
-      final joinToken = await StreamService.joinStream(stream.id);
-      if (!mounted) return;
+
+    // Aktif listede ID'ye göre ara — referans değil, değer eşleşmesi
+    final idx = _streams.indexWhere((s) => s.id == stream.id);
+
+    if (idx != -1) {
+      // Bulundu: SwipeLiveScreen ile tüm aktif yayınlar arasında TikTok swipe
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => ViewerStreamScreen(joinToken: joinToken),
+          builder: (_) => SwipeLiveScreen(streams: _streams, initialIndex: idx),
         ),
       ).then((_) => _load());
-    } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+    } else {
+      // Bulunamadı (liste henüz yüklenmedi vb.): doğrudan tek yayın ekranı
+      try {
+        final joinToken = await StreamService.joinStream(stream.id);
+        if (!mounted) return;
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => ViewerStreamScreen(joinToken: joinToken),
+          ),
+        ).then((_) => _load());
+      } catch (e) {
+        if (mounted) showErrorSnackbar(context, e);
+      }
     }
   }
 
