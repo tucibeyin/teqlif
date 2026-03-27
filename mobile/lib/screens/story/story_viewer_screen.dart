@@ -354,15 +354,24 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     try {
       await StoryService.deleteStory(_currentItem.id);
       if (!mounted) return;
-      // Provider'ı geçersiz kıl → tray güncellenir
+      // Provider'ı geçersiz kıl → tray arka planda güncellenir
       ProviderScope.containerOf(context).invalidate(myStoriesProvider);
-      widget.onClose();
+      // Sıradaki hikayeye geç; kalmadıysa viewer'ı kapat
+      if (_itemIndex < widget.group.items.length - 1) {
+        _loadItem(_itemIndex + 1);
+      } else {
+        widget.onClose();
+      }
     } catch (e, st) {
       // Story zaten silinmişse (expired veya önceden silindi) başarı say
       if (e is AppException && (e.code == 'NOT_FOUND' || e.statusCode == 404)) {
         if (!mounted) return;
         ProviderScope.containerOf(context).invalidate(myStoriesProvider);
-        widget.onClose();
+        if (_itemIndex < widget.group.items.length - 1) {
+          _loadItem(_itemIndex + 1);
+        } else {
+          widget.onClose();
+        }
         return;
       }
       await Sentry.captureException(e, stackTrace: st);
