@@ -497,7 +497,9 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
 
   Widget _buildImageArea() {
     final item = _currentItem;
-    if (_videoLoading || item.thumbnailUrl == null) {
+    // Fotoğraf hikayelerde görsel video_url'e kaydedilir (thumbnail_url null olur)
+    final rawUrl = item.thumbnailUrl ?? item.videoUrl;
+    if (_videoLoading || rawUrl == null) {
       return const ColoredBox(
         color: Colors.black,
         child: Center(
@@ -505,7 +507,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
         ),
       );
     }
-    final url = imgUrl(item.thumbnailUrl!);
+    final url = imgUrl(rawUrl);
     return ColoredBox(
       color: Colors.black,
       child: Center(
