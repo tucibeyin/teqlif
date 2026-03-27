@@ -212,15 +212,17 @@ class StoryService:
           - Yalnızca video/* content-type kabul edilir.
           - Maksimum boyut: 100 MB (istemci tarafı sıkıştırma sonrası yeterli).
         """
-        _MAX_BYTES = 100 * 1024 * 1024  # 100 MB
+        _MAX_BYTES = 20 * 1024 * 1024  # 20 MB
 
-        content_type = file.content_type or ""
-        if not content_type.startswith("video/"):
-            raise BadRequestException("Yalnızca video dosyası yüklenebilir")
+        # Mobil cihazlar (özellikle iOS) zaman zaman video/* yerine
+        # application/octet-stream gönderebilir; her ikisini de kabul et.
+        content_type = (file.content_type or "").lower()
+        if not (content_type.startswith("video/") or content_type == "application/octet-stream"):
+            raise BadRequestException("Geçersiz dosya formatı (yalnızca video kabul edilir)")
 
         raw = await file.read()
         if len(raw) > _MAX_BYTES:
-            raise BadRequestException("Video dosyası 100 MB sınırını aşıyor")
+            raise BadRequestException("Dosya çok büyük (Maks 20 MB)")
 
         # Diske yaz
         stories_dir = os.path.join(settings.upload_dir, "stories")
