@@ -14,6 +14,7 @@ import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/story.dart';
 import '../../providers/story_provider.dart';
+import '../../screens/story/story_viewer_screen.dart';
 import '../../services/storage_service.dart';
 import '../../services/story_service.dart';
 
@@ -172,7 +173,11 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
             );
           }
           if (isLoading) return _buildShimmerItem(context);
-          return _StoryGroupItem(group: groups![i - 1]);
+          return _StoryGroupItem(
+            group: groups![i - 1],
+            groups: groups,
+            groupIndex: i - 1,
+          );
         },
       ),
     );
@@ -330,8 +335,14 @@ class _MyStoryItem extends StatelessWidget {
 
 class _StoryGroupItem extends StatelessWidget {
   final UserStoryGroup group;
+  final List<UserStoryGroup> groups;
+  final int groupIndex;
 
-  const _StoryGroupItem({required this.group});
+  const _StoryGroupItem({
+    required this.group,
+    required this.groups,
+    required this.groupIndex,
+  });
 
   /// Grubun canlı yayın içerip içermediğini kontrol eder.
   bool get _hasLive => group.items.any((i) => i.isLiveRedirect);
@@ -343,12 +354,14 @@ class _StoryGroupItem extends StatelessWidget {
     final resolvedUrl = avatarUrl != null ? imgUrl(avatarUrl) : null;
 
     return GestureDetector(
-      onTap: () {
-        // Aşama 3'te tam ekran hybrid izleyici açılacak
-        debugPrint(
-          '[StoryTray] Aşama 3\'te izleyici açılacak — user: ${group.user.username}',
-        );
-      },
+      onTap: () => Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => StoryViewerScreen(
+            groups: groups,
+            initialIndex: groupIndex,
+          ),
+        ),
+      ),
       child: SizedBox(
         width: 72,
         child: Column(

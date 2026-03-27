@@ -532,5 +532,8 @@
   "storyProcessing": "Processing video...",
   "storyTooLong": "Video is too long (max 15 seconds)",
   "storyUploadFailed": "Failed to upload story",
-  "storyUploadSuccess": "Your story was shared!"
+  "storyUploadSuccess": "Your story was shared!",
+  "storyLiveNow": "Live Now!",
+  "storyJoinLive": "Join Live",
+  "storyJoinLiveFailed": "Could not join the live stream"
 }

@@ -532,5 +532,8 @@
   "storyProcessing": "Video işleniyor...",
   "storyTooLong": "Video çok uzun (en fazla 15 saniye)",
   "storyUploadFailed": "Hikaye yüklenemedi",
-  "storyUploadSuccess": "Hikayeniz paylaşıldı!"
+  "storyUploadSuccess": "Hikayeniz paylaşıldı!",
+  "storyLiveNow": "Şu an Canlı Yayında!",
+  "storyJoinLive": "Yayına Katıl",
+  "storyJoinLiveFailed": "Yayına bağlanılamadı"
 }
