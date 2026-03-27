@@ -1250,7 +1250,8 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storyDelete => 'Delete Story';
 
   @override
-  String get storyDeleteConfirm => 'Are you sure you want to delete this story?';
+  String get storyDeleteConfirm =>
+      'Are you sure you want to delete this story?';
 
   @override
   String get storyDeleteFailed => 'Could not delete story';
