@@ -66,6 +66,19 @@ async def upload_story(
     return {"id": story.id, "video_url": story.video_url, "expires_at": story.expires_at}
 
 
+@router.delete("/{story_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_story(
+    story_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Kullanıcının kendi hikayesini siler.
+    Disk'teki video + thumbnail dosyaları ve DB kaydı (+ story_views CASCADE) temizlenir.
+    """
+    await StoryService(db).delete_story(current_user.id, story_id)
+
+
 @router.post("/{story_id}/view", status_code=status.HTTP_204_NO_CONTENT)
 async def record_story_view(
     story_id: int,

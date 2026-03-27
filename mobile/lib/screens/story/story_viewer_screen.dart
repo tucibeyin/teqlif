@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:video_player/video_player.dart';
 
@@ -8,6 +9,7 @@ import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/story.dart';
+import '../../providers/story_provider.dart';
 import '../../services/storage_service.dart';
 import '../../services/story_service.dart';
 import '../../services/stream_service.dart';
@@ -311,6 +313,45 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
 
     // Sheet kapandığında videoyu sürdür
     _videoCtrl?.play();
+  }
+
+  // ── Hikaye Sil ────────────────────────────────────────────────────────────
+
+  Future<void> _confirmDeleteStory() async {
+    final l = AppLocalizations.of(context)!;
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l.storyDelete),
+        content: Text(l.storyDeleteConfirm),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l.btnCancel),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: Text(l.btnDelete),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+    try {
+      await StoryService.deleteStory(_currentItem.id);
+      if (!mounted) return;
+      // Provider'ı geçersiz kıl → tray güncellenir
+      ProviderScope.containerOf(context).invalidate(myStoriesProvider);
+      widget.onClose();
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l.storyDeleteFailed)),
+        );
+      }
+    }
   }
 
   /// "Yayına Katıl" akışı: token çek → ViewerStreamScreen'e geç.
@@ -652,6 +693,36 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
               overflow: TextOverflow.ellipsis,
             ),
           ),
+          // Kendi hikayesiyse: üç nokta menü
+          if (_isMine) ...[
+            PopupMenuButton<String>(
+              icon: const Icon(
+                Icons.more_vert,
+                color: Colors.white,
+                size: 24,
+                shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
+              ),
+              color: AppColors.surface(context),
+              onSelected: (val) {
+                if (val == 'delete') _confirmDeleteStory();
+              },
+              itemBuilder: (_) => [
+                PopupMenuItem(
+                  value: 'delete',
+                  child: Row(
+                    children: [
+                      const Icon(Icons.delete_outline, color: Colors.red, size: 18),
+                      const SizedBox(width: 8),
+                      Text(
+                        AppLocalizations.of(context)!.storyDelete,
+                        style: const TextStyle(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
           // Kapat
           GestureDetector(
             onTap: widget.onClose,

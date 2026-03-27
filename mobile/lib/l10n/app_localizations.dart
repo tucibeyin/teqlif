@@ -2437,6 +2437,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Henüz kimse görmedi'**
   String get storyNoViewersYet;
+
+  /// No description provided for @storyDelete.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hikayeyi Sil'**
+  String get storyDelete;
+
+  /// No description provided for @storyDeleteConfirm.
+  ///
+  /// In tr, this message translates to:
+  /// **'Bu hikayeyi silmek istediğine emin misin?'**
+  String get storyDeleteConfirm;
+
+  /// No description provided for @storyDeleteFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Hikaye silinemedi'**
+  String get storyDeleteFailed;
 }
 
 class _AppLocalizationsDelegate

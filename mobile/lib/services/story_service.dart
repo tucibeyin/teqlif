@@ -127,6 +127,30 @@ class StoryService {
         .toList();
   }
 
+  // ── Hikaye silme ──────────────────────────────────────────────────────────
+
+  static Future<void> deleteStory(int storyId) async {
+    final headers = await _headers();
+    final resp = await http.delete(
+      Uri.parse('$kBaseUrl/stories/$storyId'),
+      headers: headers,
+    );
+    debugPrint('[StoryService] deleteStory($storyId) → HTTP ${resp.statusCode}');
+    if (resp.statusCode >= 400) {
+      final body = _tryDecode(resp.body);
+      final errMap = body['error'];
+      throw AppException(
+        errMap is Map
+            ? (errMap['message'] ?? 'Hikaye silinemedi')
+            : (body['detail'] ?? 'Hikaye silinemedi'),
+        code: errMap is Map
+            ? (errMap['code'] ?? 'ERR_${resp.statusCode}')
+            : 'HTTP_${resp.statusCode}',
+        statusCode: resp.statusCode,
+      );
+    }
+  }
+
   // ── Hikaye yükleme (video dosyası → backend) ───────────────────────────────
 
   static Future<void> uploadStory(File videoFile) async {

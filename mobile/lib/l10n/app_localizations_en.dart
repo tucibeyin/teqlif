@@ -1245,4 +1245,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storyNoViewersYet => 'No one has viewed this yet';
+
+  @override
+  String get storyDelete => 'Delete Story';
+
+  @override
+  String get storyDeleteConfirm => 'Are you sure you want to delete this story?';
+
+  @override
+  String get storyDeleteFailed => 'Could not delete story';
 }

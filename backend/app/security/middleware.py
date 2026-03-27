@@ -51,6 +51,7 @@ async def security_headers(request: Request, call_next):
         "script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.google.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://challenges.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://accounts.google.com https://cdn.jsdelivr.net; "
         "img-src 'self' data: https:; "
+        "media-src 'self' blob:; "
         "font-src 'self' https://fonts.gstatic.com https://cdn.jsdelivr.net; "
         "frame-src 'self' https://accounts.google.com https://www.google.com https://challenges.cloudflare.com; "
         "connect-src 'self' ws: wss: https://accounts.google.com https://*.sentry.io https://cdn.jsdelivr.net https://browser.sentry-cdn.com https://challenges.cloudflare.com;"

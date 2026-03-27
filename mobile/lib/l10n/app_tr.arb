@@ -538,5 +538,8 @@
   "storyJoinLiveFailed": "Yayına bağlanılamadı",
   "storyWhoViewed": "Kim Gördü?",
   "storyViewersLoadFailed": "Görüntüleyenler yüklenemedi",
-  "storyNoViewersYet": "Henüz kimse görmedi"
+  "storyNoViewersYet": "Henüz kimse görmedi",
+  "storyDelete": "Hikayeyi Sil",
+  "storyDeleteConfirm": "Bu hikayeyi silmek istediğine emin misin?",
+  "storyDeleteFailed": "Hikaye silinemedi"
 }

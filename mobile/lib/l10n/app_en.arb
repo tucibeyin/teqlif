@@ -538,5 +538,8 @@
   "storyJoinLiveFailed": "Could not join the live stream",
   "storyWhoViewed": "Who Viewed?",
   "storyViewersLoadFailed": "Could not load viewers",
-  "storyNoViewersYet": "No one has viewed this yet"
+  "storyNoViewersYet": "No one has viewed this yet",
+  "storyDelete": "Delete Story",
+  "storyDeleteConfirm": "Are you sure you want to delete this story?",
+  "storyDeleteFailed": "Could not delete story"
 }

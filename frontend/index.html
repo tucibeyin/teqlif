@@ -1363,10 +1363,23 @@
         function svUpdateUserBar(group) {
             const bar = document.getElementById('svUserBar');
             const initial = (group.user?.username ?? '?').charAt(0).toUpperCase();
+            const menuBtn = group.isMine ? `
+                <div style="position:relative;margin-left:8px;">
+                    <button id="svMenuBtn" onclick="svToggleMenu(event)" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px 6px;text-shadow:0 1px 4px rgba(0,0,0,.5);">⋯</button>
+                    <div id="svMenuDropdown" style="display:none;position:absolute;top:32px;right:0;background:#fff;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.18);min-width:150px;z-index:10;overflow:hidden;">
+                        <button onclick="svDeleteStory()" style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;border:none;background:none;color:#e53e3e;font-size:14px;cursor:pointer;font-weight:500;">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
+                            Hikayeyi Sil
+                        </button>
+                    </div>
+                </div>` : '';
             bar.innerHTML = `
                 <div style="width:34px;height:34px;border-radius:50%;border:1.5px solid #fff;overflow:hidden;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center;font-weight:700;color:#fff;font-size:14px;">${initial}</div>
                 <span style="margin-left:9px;color:#fff;font-size:13.5px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.5);">${group.user?.username ?? ''}</span>
-                <button onclick="svClose()" style="margin-left:auto;background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,.5);">×</button>`;
+                <div style="margin-left:auto;display:flex;align-items:center;gap:4px;">
+                    ${menuBtn}
+                    <button onclick="svClose()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,.5);">×</button>
+                </div>`;
         }
 
         async function svShowViewers() {
@@ -1408,6 +1421,44 @@
                 console.error('[StoryViewers] Yükleme başarısız:', err);
                 if (window.Sentry) Sentry.captureException(err);
                 list.innerHTML = '<div style="padding:24px;text-align:center;color:#e00;">Görüntüleyenler yüklenemedi</div>';
+            }
+        }
+
+        function svToggleMenu(e) {
+            e.stopPropagation();
+            const dd = document.getElementById('svMenuDropdown');
+            if (!dd) return;
+            dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+            // Dışarı tıklanınca kapat
+            if (dd.style.display === 'block') {
+                setTimeout(() => document.addEventListener('click', function _closeMenu() {
+                    dd.style.display = 'none';
+                    document.removeEventListener('click', _closeMenu);
+                }), 0);
+            }
+        }
+
+        async function svDeleteStory() {
+            const group = _svGroups[_svGroupIdx];
+            if (!group?.isMine) return;
+            const videoItems = (group.items ?? []).filter(i => i.story_type === 'video');
+            const item = videoItems[_svItemIdx];
+            if (!item?.id) return;
+
+            const dd = document.getElementById('svMenuDropdown');
+            if (dd) dd.style.display = 'none';
+
+            if (!confirm('Bu hikayeyi silmek istediğine emin misin?')) return;
+
+            try {
+                await apiFetch(`/stories/${item.id}`, { method: 'DELETE' });
+                svClose();
+                // Tray'i güncelle
+                await loadFollowedStories();
+            } catch(err) {
+                console.error('[Story] Hikaye silinemedi:', err);
+                if (window.Sentry) Sentry.captureException(err);
+                showAlert('Hikaye silinemedi.');
             }
         }
 

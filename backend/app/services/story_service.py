@@ -440,6 +440,56 @@ class StoryService:
         )
         return StoryViewersResponse(story_id=story_id, viewers=viewers, total=len(viewers))
 
+    # ── Hikaye silme (kullanıcı isteği) ───────────────────────────────────────
+
+    async def delete_story(self, user_id: int, story_id: int) -> None:
+        """
+        Kullanıcının kendi hikayesini siler.
+          - Sahiplik kontrolü: story.user_id != user_id → ForbiddenException
+          - Disk: video + thumbnail dosyaları silinir (bulunamazsa sessizce geçer)
+          - DB: story kaydı silinir; story_views CASCADE ile otomatik temizlenir
+        """
+        try:
+            result = await self.db.execute(select(Story).where(Story.id == story_id))
+            story = result.scalar_one_or_none()
+        except Exception as exc:
+            logger.error("[STORY DELETE] Sorgu hatası | story_id=%d | %s", story_id, exc, exc_info=True)
+            capture_exception(exc)
+            raise DatabaseException("Hikaye bulunamadı")
+
+        if story is None:
+            raise NotFoundException("Hikaye bulunamadı")
+        if story.user_id != user_id:
+            from app.core.exceptions import ForbiddenException
+            raise ForbiddenException("Bu hikayeyi silme yetkiniz yok")
+
+        # Disk dosyalarını sil
+        files_to_delete: list[tuple[str, str]] = []
+        if story.video_path:
+            files_to_delete.append(("video", story.video_path))
+        if story.thumbnail_url:
+            thumb_path = settings.upload_dir + story.thumbnail_url[len("/uploads"):]
+            files_to_delete.append(("thumbnail", thumb_path))
+
+        for file_label, file_path in files_to_delete:
+            try:
+                os.remove(file_path)
+                logger.info("[STORY DELETE] %s silindi: %s | story_id=%d", file_label, file_path, story_id)
+            except FileNotFoundError:
+                pass
+            except OSError as os_err:
+                logger.error("[STORY DELETE] %s silinemedi: %s | story_id=%d | %s", file_label, file_path, story_id, os_err)
+
+        try:
+            await self.db.delete(story)
+            await self.db.commit()
+        except Exception as exc:
+            logger.error("[STORY DELETE] DB silme hatası | story_id=%d | %s", story_id, exc, exc_info=True)
+            capture_exception(exc)
+            raise DatabaseException("Hikaye silinemedi")
+
+        logger.info("[STORY DELETE] Silindi | story_id=%d | user_id=%d", story_id, user_id)
+
     # ── Süresi dolan hikayelerin temizlenmesi ─────────────────────────────────
 
     @staticmethod

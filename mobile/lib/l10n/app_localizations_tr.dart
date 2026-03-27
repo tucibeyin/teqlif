@@ -1244,4 +1244,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get storyNoViewersYet => 'Henüz kimse görmedi';
+
+  @override
+  String get storyDelete => 'Hikayeyi Sil';
+
+  @override
+  String get storyDeleteConfirm => 'Bu hikayeyi silmek istediğine emin misin?';
+
+  @override
+  String get storyDeleteFailed => 'Hikaye silinemedi';
 }
