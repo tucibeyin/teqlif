@@ -60,7 +60,7 @@ class StoryTray extends ConsumerWidget {
 
   Widget _buildSkeleton() {
     return SizedBox(
-      height: 96,
+      height: 108,
       child: ListView.builder(
         scrollDirection: Axis.horizontal,
         physics: const ClampingScrollPhysics(),
@@ -147,7 +147,7 @@ class StoryTray extends ConsumerWidget {
 
   Widget _buildList(BuildContext context, List<StreamOut> streams) {
     return SizedBox(
-      height: 96,
+      height: 108,
       child: ListView.builder(
         // ClampingScrollPhysics: yatay kaydırma hiçbir zaman dikey
         // RefreshIndicator'a "taşmaz" — iki eksen birbirini kesmez.

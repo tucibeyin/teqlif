@@ -12,9 +12,9 @@ import '../../services/stream_service.dart';
 import '../../services/category_service.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/live/story_tray.dart';
-import '../public_profile_screen.dart';
 import 'host_stream_screen.dart';
 import 'swipe_live_screen.dart';
+import 'viewer_stream_screen.dart';
 import '../../l10n/app_localizations.dart';
 
 class LiveListScreen extends ConsumerStatefulWidget {
@@ -230,6 +230,25 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     ).then((_) => _load());
   }
 
+  /// Story tray'den gelince: joinStream API'sini çağırıp ViewerStreamScreen'e git.
+  /// Story nesnesi _streams listesiyle referans paylaşmadığından indexOf güvenilmez;
+  /// doğrudan stream.id ile katılım sağlanır.
+  Future<void> _joinFromStory(StreamOut stream) async {
+    if (!mounted) return;
+    try {
+      final joinToken = await StreamService.joinStream(stream.id);
+      if (!mounted) return;
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => ViewerStreamScreen(joinToken: joinToken),
+        ),
+      ).then((_) => _load());
+    } catch (e) {
+      if (mounted) showErrorSnackbar(context, e);
+    }
+  }
+
   List<String> get _categories {
     final seen = <String>{};
     return _streams.map((s) => s.category).where(seen.add).toList();
@@ -281,7 +300,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       body: Column(
         children: [
           // ── Takip edilen canlı yayınlar (Story tarzı) ───────────
-          StoryTray(onTap: _joinStream),
+          StoryTray(onTap: _joinFromStory),
 
           // ── Kategori filtre çubuğu ──────────────────────────────
           if (showFilter)
