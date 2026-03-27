@@ -60,9 +60,21 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
   Future<void> _pickAndUpload() async {
     final l = AppLocalizations.of(context)!;
 
-    // Video seç (en fazla 15 saniye)
+    // Kaynak seç: ön kamera / arka kamera / galeri
+    final source = await showModalBottomSheet<_VideoSource>(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => _VideoSourceSheet(l: l),
+    );
+    if (source == null || !mounted) return;
+
     final XFile? picked = await ImagePicker().pickVideo(
-      source: ImageSource.gallery,
+      source: source == _VideoSource.gallery
+          ? ImageSource.gallery
+          : ImageSource.camera,
+      preferredCameraDevice: source == _VideoSource.frontCamera
+          ? CameraDevice.front
+          : CameraDevice.rear,
       maxDuration: const Duration(seconds: 15),
     );
     if (picked == null || !mounted) return;
@@ -573,6 +585,81 @@ class _InitialAvatar extends StatelessWidget {
           fontSize: 20,
         ),
       ),
+    );
+  }
+}
+
+// ── Video kaynak seçimi ───────────────────────────────────────────────────────
+
+enum _VideoSource { frontCamera, rearCamera, gallery }
+
+class _VideoSourceSheet extends StatelessWidget {
+  final AppLocalizations l;
+  const _VideoSourceSheet({required this.l});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.surface(context),
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: EdgeInsets.only(
+        bottom: MediaQuery.of(context).padding.bottom + 16,
+        top: 12,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: AppColors.border(context),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          const SizedBox(height: 16),
+          _SourceTile(
+            icon: Icons.camera_front_outlined,
+            label: 'Ön Kamera',
+            onTap: () => Navigator.pop(context, _VideoSource.frontCamera),
+          ),
+          _SourceTile(
+            icon: Icons.camera_rear_outlined,
+            label: 'Arka Kamera',
+            onTap: () => Navigator.pop(context, _VideoSource.rearCamera),
+          ),
+          _SourceTile(
+            icon: Icons.photo_library_outlined,
+            label: 'Galeriden Seç',
+            onTap: () => Navigator.pop(context, _VideoSource.gallery),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _SourceTile extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+  const _SourceTile({required this.icon, required this.label, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      leading: Icon(icon, color: kPrimary, size: 26),
+      title: Text(
+        label,
+        style: TextStyle(
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textPrimary(context),
+        ),
+      ),
+      onTap: onTap,
     );
   }
 }
