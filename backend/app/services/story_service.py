@@ -300,12 +300,12 @@ class StoryService:
             raise DatabaseException("Dosya kaydedilemedi")
 
         # ffmpeg sıkıştırma — 480p / CRF 28 / AAC 128k (VideoQuality.MediumQuality)
-        compressed_path, compressed_name = await _compress_video(file_path, stories_dir, ext)
+        # Sıkıştırılmış dosya aynı path'e yazılır; filename/video_url değişmez.
+        compressed_path, _ = await _compress_video(file_path, stories_dir, ext)
         if compressed_path:
             try:
                 os.replace(compressed_path, file_path)
-                filename = compressed_name
-                logger.info("[STORY UPLOAD] Sıkıştırıldı | %s → %s", file_path, filename)
+                logger.info("[STORY UPLOAD] Sıkıştırıldı | %s", file_path)
             except OSError as exc:
                 logger.warning("[STORY UPLOAD] Sıkıştırılmış dosya taşınamadı, orijinal kullanılıyor: %s", exc)
 
