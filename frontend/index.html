@@ -1038,54 +1038,114 @@
             }
         }
 
-        /* ── Story Tray: takip edilen canlı yayınlar ────────────────── */
+        /* ── Story Tray: Hybrid hikayeler + "Hikayen" butonu ───────── */
+
+        /**
+         * Karma (video + canlı yayın) story tepsisini render eder.
+         *
+         * Index 0 → "Hikayen" (+) butonu — her zaman gösterilir (login varsa).
+         * Index 1+ → /api/stories/following'den gelen kullanıcı grupları.
+         *
+         * Canlı yayın içeren grup → kırmızı halka + CANLI badge.
+         * Tıklama → canlı varsa joinStream(), yoksa web izleyici henüz yok.
+         */
         async function loadFollowedStories() {
-            // Giriş yapmamış kullanıcıda tray gizli kalır; hata fırlatılmaz
             if (!Auth.getToken()) return;
 
             const wrapper = document.getElementById('storyTrayWrapper');
             const tray    = document.getElementById('storyTray');
 
-            let streams;
+            // ── "Hikayen" butonu ─────────────────────────────────────
+            const me      = Auth.getUser();
+            const myName  = me?.username ?? '';
+            const myInitial = myName.charAt(0).toUpperCase() || '?';
+            const myImg   = me?.profile_image_url
+                ? (me.profile_image_url.startsWith('http')
+                    ? me.profile_image_url
+                    : '/api' + me.profile_image_url)
+                : null;
+
+            const myInnerHtml = myImg
+                ? `<img class="story-avatar" src="${myImg}" alt="${myName}"
+                        onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                   <div class="story-avatar-initials" style="display:none;">${myInitial}</div>`
+                : `<div class="story-avatar-initials">${myInitial}</div>`;
+
+            const myStoryHtml = `
+                <div class="story-item story-add-btn" id="myStoryBtn"
+                     title="Video hikayeni paylaş"
+                     onclick="if(!this.classList.contains('story-uploading'))document.getElementById('storyUploadInput').click()">
+                    <div class="story-ring-wrap">
+                        <div class="story-ring">
+                            <div class="story-ring-inner" id="myStoryInner">${myInnerHtml}</div>
+                        </div>
+                        <div class="story-add-badge" id="myStoryBadge">+</div>
+                    </div>
+                    <span class="story-username">Hikayen</span>
+                </div>`;
+
+            // ── Takip edilen gruplar ──────────────────────────────────
+            let groups = [];
             try {
-                streams = await apiFetch('/streams/following/live');
+                groups = await apiFetch('/stories/following');
+                if (!Array.isArray(groups)) groups = [];
             } catch (err) {
-                // Ağ hatası veya sunucu hatası: sessizce yut, tray gizli kalır
-                console.error('[StoryTray] Takip edilen yayınlar yüklenemedi:', err);
+                console.error('[StoryTray] Hikayeler yüklenemedi:', err);
                 if (window.Sentry) Sentry.captureException(err);
-                return;
+                // "Hikayen" butonu yine de gösterilsin
             }
 
-            // Boş liste: tray gizli kalır
-            if (!Array.isArray(streams) || streams.length === 0) return;
-
-            // DOM'u doldur
-            tray.innerHTML = streams.map((s) => {
-                const username = s.host?.username ?? '';
+            const groupsHtml = groups.map((g) => {
+                const username = g.user?.username ?? '';
                 const initial  = username.charAt(0).toUpperCase() || '?';
-                const imgUrl   = s.host?.profile_image_url
-                    ? s.host.profile_image_url.startsWith('http')
-                        ? s.host.profile_image_url
-                        : '/api' + s.host.profile_image_url
+                const rawUrl   = g.user?.profile_image_thumb_url ?? g.user?.profile_image_url ?? null;
+                const imgUrl   = rawUrl
+                    ? (rawUrl.startsWith('http') ? rawUrl : '/api' + rawUrl)
                     : null;
+
+                // Gruptaki ilk canlı yayın öğesini bul
+                const liveItem = Array.isArray(g.items)
+                    ? g.items.find(i => i.story_type === 'live_redirect')
+                    : null;
+                const hasLive  = !!liveItem;
+
+                // Halka rengi: canlı → kırmızı-turuncu, sadece video → gradient
+                const ringStyle = hasLive
+                    ? 'background:linear-gradient(135deg,#ff4136 0%,#ff851b 100%)'
+                    : '';
 
                 const avatarHtml = imgUrl
                     ? `<img class="story-avatar" src="${imgUrl}" alt="${username}" loading="lazy"
-                            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                              onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
                        <div class="story-avatar-initials" style="display:none;">${initial}</div>`
                     : `<div class="story-avatar-initials">${initial}</div>`;
 
+                const liveBadge = hasLive
+                    ? `<span style="position:absolute;bottom:0;right:0;background:#ff4136;color:#fff;
+                                   font-size:6.5px;font-weight:800;padding:1.5px 3.5px;
+                                   border-radius:3px;letter-spacing:.3px;line-height:1.2;
+                                   border:1px solid #fff;">CANLI</span>`
+                    : '';
+
+                const onclickAttr = hasLive
+                    ? `onclick="joinStream(${liveItem.stream_id})"`
+                    : 'style="cursor:default"';
+
                 return `
-                    <div class="story-item" onclick="joinStream(${s.id})"
-                         title="${username} canlı yayında"
-                         data-track-id="story-tray-item-${s.id}">
-                        <div class="story-ring">
-                            <div class="story-ring-inner">${avatarHtml}</div>
+                    <div class="story-item" ${onclickAttr}
+                         title="${username}${hasLive ? ' — Canlı Yayında' : ''}"
+                         data-track-id="story-tray-item-${g.user?.id ?? ''}">
+                        <div style="position:relative;width:60px;height:60px;flex-shrink:0;">
+                            <div class="story-ring" style="${ringStyle}">
+                                <div class="story-ring-inner">${avatarHtml}</div>
+                            </div>
+                            ${liveBadge}
                         </div>
                         <span class="story-username">${username}</span>
                     </div>`;
             }).join('');
 
+            tray.innerHTML = myStoryHtml + groupsHtml;
             wrapper.style.display = 'block';
         }
 
@@ -1094,7 +1154,110 @@
             try {
                 await Stream.joinStream(id);
                 window.location.href = `/yayin.html?id=${id}`;
-            } catch (err) { showAlert(err.detail || 'Yayına katılınamadı'); }
+            } catch (err) { showAlert(err.detail || 'Yayına katılılamadı'); }
+        }
+
+        /* ── Story Upload: client-side validasyon + yükleme ─────────── */
+
+        /**
+         * HTML5 Video API ile süreyi tarayıcıda ölçer — sunucu hiç yorulmaz.
+         * createObjectURL: dosyayı diske veya ağa atmadan bellek içi URL üretir.
+         * onloadedmetadata: video.duration yalnızca başlık (ilk birkaç KB) okunduğunda
+         * tetiklenir; videonun tamamı indirilmez.
+         */
+        function _getVideoDuration(file) {
+            return new Promise((resolve, reject) => {
+                const video = document.createElement('video');
+                video.preload = 'metadata';
+                video.onloadedmetadata = () => {
+                    URL.revokeObjectURL(video.src); // bellek serbest bırak
+                    resolve(video.duration);
+                };
+                video.onerror = () => {
+                    URL.revokeObjectURL(video.src);
+                    reject(new Error('Video okunamadı'));
+                };
+                video.src = URL.createObjectURL(file);
+            });
+        }
+
+        function _setStoryUploading(active) {
+            const btn   = document.getElementById('myStoryBtn');
+            const inner = document.getElementById('myStoryInner');
+            const badge = document.getElementById('myStoryBadge');
+            if (!btn || !inner || !badge) return;
+
+            if (active) {
+                btn.classList.add('story-uploading');
+                inner.innerHTML = '<div class="story-spinner"></div>';
+                badge.style.display = 'none';
+            } else {
+                btn.classList.remove('story-uploading');
+                badge.style.display = '';
+                // İçeriği yenile: loadFollowedStories() zaten DOM'u yeniden yazar
+            }
+        }
+
+        function setupStoryUpload() {
+            const input = document.getElementById('storyUploadInput');
+            if (!input) return;
+
+            input.addEventListener('change', async () => {
+                const file = input.files[0];
+                if (!file) return;
+
+                // ── 1. Boyut kontrolü (20 MB) ─────────────────────────
+                const MAX_BYTES = 20 * 1024 * 1024;
+                if (file.size > MAX_BYTES) {
+                    showAlert('Video boyutu 20 MB\'dan küçük olmalıdır.');
+                    input.value = '';
+                    return;
+                }
+
+                // ── 2. Süre kontrolü (≤ 15 sn + 1 sn tolerans) ────────
+                let duration;
+                try {
+                    duration = await _getVideoDuration(file);
+                } catch (e) {
+                    showAlert('Video süresi ölçülemedi. Lütfen geçerli bir video seçin.');
+                    input.value = '';
+                    return;
+                }
+
+                if (duration > 16) {
+                    showAlert('Video en fazla 15 saniye olabilir.');
+                    input.value = '';
+                    return;
+                }
+
+                // ── 3. Yükleme ────────────────────────────────────────
+                _setStoryUploading(true);
+                const token = Auth.getToken();
+                const form  = new FormData();
+                form.append('file', file);
+
+                try {
+                    const res = await fetch('/api/stories/upload', {
+                        method: 'POST',
+                        headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                        body: form,
+                    });
+
+                    if (!res.ok) {
+                        const data = await res.json().catch(() => ({}));
+                        throw new Error(data?.detail ?? `Sunucu hatası (${res.status})`);
+                    }
+
+                    input.value = '';
+                    await loadFollowedStories(); // tepsisi yenile
+                } catch (err) {
+                    console.error('[StoryUpload] Yükleme başarısız:', err);
+                    if (window.Sentry) Sentry.captureException(err);
+                    showAlert(err.message || 'Hikaye yüklenemedi. Lütfen tekrar deneyin.');
+                } finally {
+                    _setStoryUploading(false);
+                }
+            });
         }
 
         /* ── İlanlar ────────────────────────────────────────────────── */
@@ -1280,6 +1443,7 @@
 
         loadStreams();
         loadFollowedStories();
+        setupStoryUpload();
     </script>
 </body>
 
