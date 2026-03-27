@@ -11,6 +11,7 @@ import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/category_service.dart';
 import '../../utils/error_helper.dart';
+import '../../providers/story_provider.dart';
 import '../../widgets/live/story_tray.dart';
 import 'host_stream_screen.dart';
 import 'swipe_live_screen.dart';
@@ -53,6 +54,9 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   Future<void> _load() async {
     if (!mounted) return;
     setState(() => _loading = true);
+    // Hikayeleri de yenile
+    ref.invalidate(storyGroupsProvider);
+    ref.invalidate(myStoriesProvider);
     try {
       final streams = await StreamService.getActiveStreams();
       debugPrint('[LiveList] Yüklenen yayın sayısı: ${streams.length}');
