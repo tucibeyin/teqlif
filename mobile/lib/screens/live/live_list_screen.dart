@@ -52,9 +52,9 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   Future<void> _load() async {
     if (!mounted) return;
     setState(() => _loading = true);
-    // Takip edilen yayınları da yenile (pull-to-refresh sırasında ikisi senkronize olsun)
-    ref.invalidate(followedStreamsProvider);
     try {
+      // Takip edilen yayınları da yenile (pull-to-refresh sırasında ikisi senkronize olsun)
+      ref.invalidate(followedStreamsProvider);
       final streams = await StreamService.getActiveStreams();
       debugPrint('[LiveList] Yüklenen yayın sayısı: ${streams.length}');
       if (!mounted) return;
