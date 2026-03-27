@@ -369,22 +369,26 @@ class _MyStoryItem extends ConsumerWidget {
                             ),
                     ),
                   ),
-                // Hikaye yoksa "+" badge yükle butonu göster
-                if (!hasStories && !isUploading)
+                // "+" badge — her zaman göster, tıklanınca yükleme başlatır
+                if (!isUploading)
                   Positioned(
                     bottom: 0,
                     right: 0,
-                    child: Container(
-                      width: 20,
-                      height: 20,
-                      decoration: const BoxDecoration(
-                        color: kPrimary,
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.add,
-                        color: Colors.white,
-                        size: 13,
+                    child: GestureDetector(
+                      onTap: onUpload,
+                      behavior: HitTestBehavior.opaque,
+                      child: Container(
+                        width: 20,
+                        height: 20,
+                        decoration: const BoxDecoration(
+                          color: kPrimary,
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.add,
+                          color: Colors.white,
+                          size: 13,
+                        ),
                       ),
                     ),
                   ),

@@ -1309,7 +1309,9 @@
             const spinner = document.getElementById('svSpinner');
             video.style.display = 'none';
             spinner.style.display = 'flex';
-            video.src = item.video_url.startsWith('http') ? item.video_url : '/api' + item.video_url;
+            video.src = item.video_url.startsWith('http') || item.video_url.startsWith('/uploads')
+                ? item.video_url
+                : '/api' + item.video_url;
             video.load();
 
             const startTime = performance.now();
