@@ -8,7 +8,7 @@ import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/story.dart';
 import '../../services/stream_service.dart';
-import 'viewer_stream_screen.dart';
+import '../live/viewer_stream_screen.dart';
 
 /// Tam ekran Instagram/Snapchat tarzı Hybrid Story izleyicisi.
 ///
@@ -398,7 +398,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                         ? CachedNetworkImage(
                             imageUrl: resolved,
                             fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) =>
+                            errorWidget: (_, __, ___) =>
                                 _InitialsBubble(username: user.username),
                           )
                         : _InitialsBubble(username: user.username),

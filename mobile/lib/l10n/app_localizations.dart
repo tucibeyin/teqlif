@@ -2387,7 +2387,7 @@ abstract class AppLocalizations {
   /// No description provided for @storyTooLong.
   ///
   /// In tr, this message translates to:
-  /// **'Video çok uzun (en fazla 12 saniye)'**
+  /// **'Video çok uzun (en fazla 15 saniye)'**
   String get storyTooLong;
 
   /// No description provided for @storyUploadFailed.
@@ -2401,6 +2401,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Hikayeniz paylaşıldı!'**
   String get storyUploadSuccess;
+
+  /// No description provided for @storyLiveNow.
+  ///
+  /// In tr, this message translates to:
+  /// **'Şu an Canlı Yayında!'**
+  String get storyLiveNow;
+
+  /// No description provided for @storyJoinLive.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayına Katıl'**
+  String get storyJoinLive;
+
+  /// No description provided for @storyJoinLiveFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Yayına bağlanılamadı'**
+  String get storyJoinLiveFailed;
 }
 
 class _AppLocalizationsDelegate

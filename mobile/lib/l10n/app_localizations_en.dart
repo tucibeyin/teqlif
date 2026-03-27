@@ -1220,11 +1220,20 @@ class AppLocalizationsEn extends AppLocalizations {
   String get storyProcessing => 'Processing video...';
 
   @override
-  String get storyTooLong => 'Video is too long (max 12 seconds)';
+  String get storyTooLong => 'Video is too long (max 15 seconds)';
 
   @override
   String get storyUploadFailed => 'Failed to upload story';
 
   @override
   String get storyUploadSuccess => 'Your story was shared!';
+
+  @override
+  String get storyLiveNow => 'Live Now!';
+
+  @override
+  String get storyJoinLive => 'Join Live';
+
+  @override
+  String get storyJoinLiveFailed => 'Could not join the live stream';
 }

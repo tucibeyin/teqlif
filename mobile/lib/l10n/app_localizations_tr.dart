@@ -1219,11 +1219,20 @@ class AppLocalizationsTr extends AppLocalizations {
   String get storyProcessing => 'Video işleniyor...';
 
   @override
-  String get storyTooLong => 'Video çok uzun (en fazla 12 saniye)';
+  String get storyTooLong => 'Video çok uzun (en fazla 15 saniye)';
 
   @override
   String get storyUploadFailed => 'Hikaye yüklenemedi';
 
   @override
   String get storyUploadSuccess => 'Hikayeniz paylaşıldı!';
+
+  @override
+  String get storyLiveNow => 'Şu an Canlı Yayında!';
+
+  @override
+  String get storyJoinLive => 'Yayına Katıl';
+
+  @override
+  String get storyJoinLiveFailed => 'Yayına bağlanılamadı';
 }
