@@ -371,6 +371,56 @@ class StreamService:
         logger.info("[STREAMS] Thumbnail güncellendi | stream_id=%s", stream_id)
         return {"thumbnail_url": stream.thumbnail_url}
 
+    # ── Takip Edilen Canlı Yayınlar ──────────────────────────────────────────
+    async def get_followed_live_streams(self, current_user_id: int) -> list:
+        """
+        Kullanıcının takip ettiği hesapların aktif yayınlarını döner.
+
+        Sorgu optimizasyonu:
+        - Follow.followed_id üzerinde index mevcut (follows tablosu) → JOIN hızlı
+        - LiveStream.host: lazy="joined" → host User bilgisi ayrı N+1 sorgusu olmadan gelir
+        - is_live filtresi + host_id JOIN tek seferde uygulanır
+        """
+        from app.models.follow import Follow
+
+        try:
+            query = (
+                select(LiveStream)
+                .join(Follow, Follow.followed_id == LiveStream.host_id)
+                .where(
+                    Follow.follower_id == current_user_id,
+                    LiveStream.is_live == True,  # noqa: E712
+                )
+                .order_by(LiveStream.started_at.desc())
+            )
+            result = await self.db.execute(query)
+            streams = result.scalars().all()
+
+            # Redis viewer count — graceful degrade
+            try:
+                redis = await get_redis()
+                for stream in streams:
+                    count = await redis.get(f"live:viewers:{stream.room_name}")
+                    stream.viewer_count = int(count) if count else 0
+            except Exception:
+                logger.error(
+                    "[STREAMS] Redis viewer count okunamadı (followed) | user_id=%s",
+                    current_user_id, exc_info=True,
+                )
+
+            logger.info(
+                "[STREAMS] Takip edilen yayınlar listelendi | user_id=%s count=%s",
+                current_user_id, len(streams),
+            )
+            return streams
+        except Exception as exc:
+            logger.error(
+                "[STREAMS] Takip edilen yayınlar getirilemedi | user_id=%s | %s",
+                current_user_id, exc, exc_info=True,
+            )
+            capture_exception(exc)
+            raise DatabaseException("Takip edilen yayınlar yüklenemedi")
+
     # ── Aktif Yayınlar ───────────────────────────────────────────────────────
     async def get_active_streams(self, current_user_id: Optional[int]) -> list:
         query = (

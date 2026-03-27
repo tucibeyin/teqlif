@@ -95,6 +95,14 @@ async def update_thumbnail(
     return await StreamService(db).update_thumbnail(stream_id, current_user, file)
 
 
+@router.get("/following/live", response_model=list[StreamOut])
+async def get_followed_live_streams(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    return await StreamService(db).get_followed_live_streams(current_user.id)
+
+
 @router.get("/active", response_model=list[StreamOut])
 async def get_active_streams(
     current_user_id: Optional[int] = Depends(_optional_user_id),
