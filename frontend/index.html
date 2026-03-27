@@ -795,6 +795,8 @@
             <div id="svUserBar" style="position:absolute;top:32px;left:12px;right:12px;display:flex;align-items:center;z-index:5;"></div>
             <!-- Video alanı -->
             <video id="svVideo" style="width:100%;height:100%;object-fit:contain;display:none;" playsinline></video>
+            <!-- Fotoğraf alanı -->
+            <img id="svImage" style="width:100%;height:100%;object-fit:contain;display:none;" alt="">
             <!-- Yükleniyor spinner -->
             <div id="svSpinner" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;">
                 <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:story-spin .8s linear infinite;"></div>
@@ -1155,7 +1157,7 @@
                     ? g.items.find(i => i.story_type === 'live_redirect')
                     : null;
                 const hasLive  = !!liveItem;
-                const hasVideo = Array.isArray(g.items) && g.items.some(i => i.story_type === 'video');
+                const hasVideo = Array.isArray(g.items) && g.items.some(i => i.story_type === 'video' || i.story_type === 'image');
 
                 const ringStyle = hasLive
                     ? 'background:linear-gradient(135deg,#ff4136 0%,#ff851b 100%)'
@@ -1252,6 +1254,11 @@
             video.src = '';
             video.load(); // tarayıcının buffer'ını temizle
             video.style.display = 'none';
+            const imgEl = document.getElementById('svImage');
+            imgEl.onload  = null;
+            imgEl.onerror = null;
+            imgEl.src = '';
+            imgEl.style.display = 'none';
             clearTimeout(_svTimer);
             cancelAnimationFrame(_svProgressAnim);
             document.getElementById('svSpinner').style.display = 'flex';
@@ -1259,9 +1266,9 @@
 
         function svNavigate(dir) {
             const group = _svGroups[_svGroupIdx];
-            const videoItems = (group?.items ?? []).filter(i => i.story_type === 'video');
+            const mediaItems = (group?.items ?? []).filter(i => i.story_type !== 'live_redirect');
             const newItem = _svItemIdx + dir;
-            if (newItem >= 0 && newItem < videoItems.length) {
+            if (newItem >= 0 && newItem < mediaItems.length) {
                 _svItemIdx = newItem;
                 svLoadItem();
             } else if (dir > 0) {
@@ -1278,7 +1285,7 @@
                 if (_svGroupIdx > 0) {
                     _svGroupIdx--;
                     const prevGroup = _svGroups[_svGroupIdx];
-                    const prevItems = (prevGroup?.items ?? []).filter(i => i.story_type === 'video');
+                    const prevItems = (prevGroup?.items ?? []).filter(i => i.story_type !== 'live_redirect');
                     _svItemIdx = Math.max(0, prevItems.length - 1);
                     svLoadItem();
                 } else {
@@ -1294,13 +1301,13 @@
             const group = _svGroups[_svGroupIdx];
             if (!group) { svClose(); return; }
 
-            const videoItems = (group.items ?? []).filter(i => i.story_type === 'video');
-            if (!videoItems.length) { svNavigate(1); return; }
+            const mediaItems = (group.items ?? []).filter(i => i.story_type !== 'live_redirect');
+            if (!mediaItems.length) { svNavigate(1); return; }
 
-            const item = videoItems[_svItemIdx];
+            const item = mediaItems[_svItemIdx];
 
             // Progress barlar
-            svUpdateProgressBars(videoItems.length);
+            svUpdateProgressBars(mediaItems.length);
 
             // Kullanıcı bar
             svUpdateUserBar(group);
@@ -1312,27 +1319,12 @@
                 document.getElementById('svViewersBtn').dataset.storyId = item.id;
             }
 
-            // Video yükle
             const video = document.getElementById('svVideo');
+            const imgEl = document.getElementById('svImage');
             const spinner = document.getElementById('svSpinner');
-            video.style.display = 'none';
-            spinner.style.display = 'flex';
-            video.src = item.video_url.startsWith('http') || item.video_url.startsWith('/uploads')
-                ? item.video_url
-                : '/api' + item.video_url;
-            video.load();
 
-            const startTime = performance.now();
-            let duration = 0;
-
-            video.onloadedmetadata = () => { duration = video.duration * 1000; };
-            video.oncanplay = () => {
-                if (!_svActive) return;
-                spinner.style.display = 'none';
-                video.style.display = 'block';
-                video.play().catch(() => {});
-
-                // Görüntüleme kaydı — fire and forget
+            // Görüntüleme kaydı yardımcısı
+            function recordView() {
                 const token = Auth.getToken();
                 if (token) {
                     fetch(`/api/stories/${item.id}/view`, {
@@ -1340,24 +1332,76 @@
                         headers: { 'Authorization': `Bearer ${token}` },
                     }).catch(() => {});
                 }
+            }
 
-                // Progress animasyonu
+            // Progress animasyonu yardımcısı (ms cinsinden süre)
+            function startProgress(durationMs) {
                 const barFill = document.getElementById(`sv-bar-fill-${_svItemIdx}`);
                 const animStart = performance.now();
                 function tick() {
                     if (!_svActive || !barFill) return;
-                    const d = duration || (video.duration * 1000) || 10000;
                     const elapsed = performance.now() - animStart;
-                    barFill.style.width = Math.min(elapsed / d * 100, 100) + '%';
-                    if (elapsed < d) {
+                    barFill.style.width = Math.min(elapsed / durationMs * 100, 100) + '%';
+                    if (elapsed < durationMs) {
                         _svProgressAnim = requestAnimationFrame(tick);
                     }
                 }
                 _svProgressAnim = requestAnimationFrame(tick);
-            };
+            }
 
-            video.onended = () => { if (_svActive) svNavigate(1); };
-            video.onerror = () => { if (_svActive) svNavigate(1); };
+            if (item.story_type === 'image') {
+                // ── Fotoğraf hikayesi ──────────────────────────────────────
+                video.style.display = 'none';
+                video.oncanplay = null;
+                video.onended = null;
+                video.onerror = null;
+                video.src = '';
+
+                imgEl.style.display = 'none';
+                spinner.style.display = 'flex';
+
+                const rawUrl = item.thumbnail_url || item.video_url || '';
+                imgEl.src = rawUrl.startsWith('http') || rawUrl.startsWith('/uploads')
+                    ? rawUrl
+                    : '/api' + rawUrl;
+
+                imgEl.onload = () => {
+                    if (!_svActive) return;
+                    spinner.style.display = 'none';
+                    imgEl.style.display = 'block';
+                    recordView();
+                    const IMAGE_DURATION = 5000;
+                    startProgress(IMAGE_DURATION);
+                    _svTimer = setTimeout(() => { if (_svActive) svNavigate(1); }, IMAGE_DURATION);
+                };
+                imgEl.onerror = () => { if (_svActive) svNavigate(1); };
+            } else {
+                // ── Video hikayesi ─────────────────────────────────────────
+                imgEl.style.display = 'none';
+                imgEl.onload = null;
+                imgEl.onerror = null;
+                imgEl.src = '';
+
+                video.style.display = 'none';
+                spinner.style.display = 'flex';
+                video.src = item.video_url.startsWith('http') || item.video_url.startsWith('/uploads')
+                    ? item.video_url
+                    : '/api' + item.video_url;
+                video.load();
+
+                let duration = 0;
+                video.onloadedmetadata = () => { duration = video.duration * 1000; };
+                video.oncanplay = () => {
+                    if (!_svActive) return;
+                    spinner.style.display = 'none';
+                    video.style.display = 'block';
+                    video.play().catch(() => {});
+                    recordView();
+                    startProgress(duration || (video.duration * 1000) || 10000);
+                };
+                video.onended = () => { if (_svActive) svNavigate(1); };
+                video.onerror = () => { if (_svActive) svNavigate(1); };
+            }
         }
 
         function svUpdateProgressBars(total) {
@@ -1450,8 +1494,8 @@
         async function svDeleteStory() {
             const group = _svGroups[_svGroupIdx];
             if (!group?.isMine) return;
-            const videoItems = (group.items ?? []).filter(i => i.story_type === 'video');
-            const item = videoItems[_svItemIdx];
+            const mediaItems = (group.items ?? []).filter(i => i.story_type !== 'live_redirect');
+            const item = mediaItems[_svItemIdx];
             if (!item?.id) return;
 
             const dd = document.getElementById('svMenuDropdown');
@@ -1475,7 +1519,7 @@
                 await apiFetch(`/stories/${item.id}`, { method: 'DELETE' });
                 // Silinen öğeyi state'den çıkar
                 group.items = group.items.filter(i => i.id !== item.id);
-                const remaining = group.items.filter(i => i.story_type === 'video');
+                const remaining = group.items.filter(i => i.story_type !== 'live_redirect');
                 if (remaining.length > 0) {
                     // Sıradaki hikayeye geç (index taşmasını düzelt)
                     if (_svItemIdx >= remaining.length) _svItemIdx = remaining.length - 1;

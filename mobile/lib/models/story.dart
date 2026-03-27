@@ -44,6 +44,7 @@ class StoryItem {
   final int? streamId;
 
   bool get isVideo => storyType == 'video';
+  bool get isImage => storyType == 'image';
   bool get isLiveRedirect => storyType == 'live_redirect';
 
   StoryItem({

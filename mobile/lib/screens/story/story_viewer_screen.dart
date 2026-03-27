@@ -196,6 +196,8 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     final item = widget.group.items[index];
     if (item.isVideo) {
       await _loadVideo(item);
+    } else if (item.isImage) {
+      _startImageCard();
     } else {
       _startLiveCard();
     }
@@ -256,6 +258,20 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   /// İki AnimationController başlatır:
   ///   [_pulseAnim]    — avatarı nefes aldırır (800ms, looping)
   ///   [_liveTimerAnim] — 5 saniye sonra sıradaki öğeye geçer
+  /// Fotoğraf hikayesi: 5 saniye göster, sonra geç.
+  void _startImageCard() {
+    final item = _currentItem;
+    _pulseAnim = null;
+    _liveTimerAnim = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 5),
+    );
+    _liveTimerAnim!.addStatusListener(_onLiveTimerDone);
+    _liveTimerAnim!.forward();
+    setState(() => _videoLoading = false);
+    StoryService.recordStoryView(item.id).catchError((_) {});
+  }
+
   void _startLiveCard() {
     _pulseAnim = AnimationController(
       vsync: this,
@@ -415,7 +431,8 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
 
   @override
   Widget build(BuildContext context) {
-    final isLive = _currentItem.isLiveRedirect;
+    final isLive  = _currentItem.isLiveRedirect;
+    final isImage = _currentItem.isImage;
     return GestureDetector(
       // Aşağı kaydır → kapat | Yukarı kaydır → profil
       onVerticalDragEnd: (details) {
@@ -429,8 +446,13 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       child: Stack(
       fit: StackFit.expand,
       children: [
-        isLive ? _buildLiveRedirectCard(context) : _buildVideoArea(),
-        // Tap + swipe nav yalnızca video öğelerinde
+        if (isLive)
+          _buildLiveRedirectCard(context)
+        else if (isImage)
+          _buildImageArea()
+        else
+          _buildVideoArea(),
+        // Tap + swipe nav yalnızca video/fotoğraf öğelerinde
         if (!isLive) _buildTapNav(),
         _buildProgressBars(context),
         _buildUserOverlay(context),
@@ -465,6 +487,39 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
             width: ctrl.value.size.width,
             height: ctrl.value.size.height,
             child: VideoPlayer(ctrl),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // ── Fotoğraf alanı ───────────────────────────────────────────────────────
+
+  Widget _buildImageArea() {
+    final item = _currentItem;
+    if (_videoLoading || item.thumbnailUrl == null) {
+      return const ColoredBox(
+        color: Colors.black,
+        child: Center(
+          child: CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
+        ),
+      );
+    }
+    final url = imgUrl(item.thumbnailUrl!);
+    return ColoredBox(
+      color: Colors.black,
+      child: Center(
+        child: CachedNetworkImage(
+          imageUrl: url,
+          fit: BoxFit.contain,
+          placeholder: (_, __) => const CircularProgressIndicator(
+            color: Colors.white54,
+            strokeWidth: 2,
+          ),
+          errorWidget: (_, __, ___) => const Icon(
+            Icons.broken_image_outlined,
+            color: Colors.white38,
+            size: 64,
           ),
         ),
       ),
@@ -657,7 +712,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
                 videoController: isActive && _currentItem.isVideo
                     ? _videoCtrl
                     : null,
-                liveAnim: isActive && _currentItem.isLiveRedirect
+                liveAnim: isActive && (_currentItem.isLiveRedirect || _currentItem.isImage)
                     ? _liveTimerAnim
                     : null,
               ),

@@ -153,22 +153,25 @@ class StoryService {
 
   // ── Hikaye yükleme (video dosyası → backend) ───────────────────────────────
 
-  static Future<void> uploadStory(File videoFile) async {
+  static Future<void> uploadStory(File mediaFile) async {
     final token = await StorageService.getToken();
     final req = http.MultipartRequest(
       'POST',
       Uri.parse('$kBaseUrl/stories/upload'),
     );
     if (token != null) req.headers['Authorization'] = 'Bearer $token';
-    // contentType açıkça video/mp4 olarak ayarlanır — bazı iOS/Android cihazlar
+    // contentType dosya uzantısına göre belirlenir — bazı iOS/Android cihazlar
     // varsayılan olarak application/octet-stream gönderir ve backend'de 400 alınır.
+    final ext = mediaFile.path.split('.').last.toLowerCase();
+    final isImage = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'].contains(ext);
+    final mediaType = isImage ? MediaType('image', ext == 'jpg' ? 'jpeg' : ext) : MediaType('video', 'mp4');
     req.files.add(await http.MultipartFile.fromPath(
       'file',
-      videoFile.path,
-      contentType: MediaType('video', 'mp4'),
+      mediaFile.path,
+      contentType: mediaType,
     ));
 
-    debugPrint('[StoryService] uploadStory → gönderiliyor: ${videoFile.path}');
+    debugPrint('[StoryService] uploadStory → gönderiliyor: ${mediaFile.path}');
     final streamed = await req.send();
     final bodyStr = await streamed.stream.bytesToString();
 

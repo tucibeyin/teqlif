@@ -22,6 +22,7 @@ class Story(Base):
         nullable=False,
         index=True,
     )
+    media_type: Mapped[str] = mapped_column(String(10), nullable=False, server_default="video")
     video_path: Mapped[str] = mapped_column(String(500), nullable=False)
     video_url: Mapped[str] = mapped_column(String(500), nullable=False)
     thumbnail_url: Mapped[str | None] = mapped_column(String(500), nullable=True)

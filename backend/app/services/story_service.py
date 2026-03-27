@@ -218,7 +218,7 @@ class StoryService:
                 items.append(
                     StoryItemOut(
                         id=story.id,
-                        story_type="video",
+                        story_type=story.media_type,
                         video_url=story.video_url,
                         thumbnail_url=story.thumbnail_url,
                         expires_at=story.expires_at,
@@ -267,11 +267,13 @@ class StoryService:
         """
         _MAX_BYTES = 20 * 1024 * 1024  # 20 MB
 
-        # Mobil cihazlar (özellikle iOS) zaman zaman video/* yerine
-        # application/octet-stream gönderebilir; her ikisini de kabul et.
         content_type = (file.content_type or "").lower()
-        if not (content_type.startswith("video/") or content_type == "application/octet-stream"):
-            raise BadRequestException("Geçersiz dosya formatı (yalnızca video kabul edilir)")
+        is_image = content_type.startswith("image/")
+        is_video = content_type.startswith("video/") or content_type == "application/octet-stream"
+        if not (is_image or is_video):
+            raise BadRequestException("Geçersiz dosya formatı (video veya fotoğraf kabul edilir)")
+
+        media_type = "image" if is_image else "video"
 
         raw = await file.read()
         if len(raw) > _MAX_BYTES:
@@ -281,7 +283,8 @@ class StoryService:
         stories_dir = os.path.join(settings.upload_dir, "stories")
         os.makedirs(stories_dir, exist_ok=True)
 
-        ext = os.path.splitext(file.filename or "video.mp4")[1] or ".mp4"
+        fallback = "photo.jpg" if is_image else "video.mp4"
+        ext = os.path.splitext(file.filename or fallback)[1] or (".jpg" if is_image else ".mp4")
         filename = f"{uuid.uuid4().hex}{ext}"
         file_path = os.path.join(stories_dir, filename)
 
@@ -299,21 +302,22 @@ class StoryService:
             capture_exception(exc)
             raise DatabaseException("Dosya kaydedilemedi")
 
-        # ffmpeg sıkıştırma — 480p / CRF 28 / AAC 128k (VideoQuality.MediumQuality)
-        # Sıkıştırılmış dosya aynı path'e yazılır; filename/video_url değişmez.
-        compressed_path, _ = await _compress_video(file_path, stories_dir, ext)
-        if compressed_path:
-            try:
-                os.replace(compressed_path, file_path)
-                logger.info("[STORY UPLOAD] Sıkıştırıldı | %s", file_path)
-            except OSError as exc:
-                logger.warning("[STORY UPLOAD] Sıkıştırılmış dosya taşınamadı, orijinal kullanılıyor: %s", exc)
+        # ffmpeg sıkıştırma — yalnızca video için
+        if is_video:
+            compressed_path, _ = await _compress_video(file_path, stories_dir, ext)
+            if compressed_path:
+                try:
+                    os.replace(compressed_path, file_path)
+                    logger.info("[STORY UPLOAD] Sıkıştırıldı | %s", file_path)
+                except OSError as exc:
+                    logger.warning("[STORY UPLOAD] Sıkıştırılmış dosya taşınamadı, orijinal kullanılıyor: %s", exc)
 
         video_url = f"/uploads/stories/{filename}"
         expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
 
         story = Story(
             user_id=user_id,
+            media_type=media_type,
             video_path=file_path,
             video_url=video_url,
             expires_at=expires_at,
@@ -371,7 +375,7 @@ class StoryService:
         items = [
             StoryItemOut(
                 id=s.id,
-                story_type="video",
+                story_type=s.media_type,
                 video_url=s.video_url,
                 thumbnail_url=s.thumbnail_url,
                 expires_at=s.expires_at,

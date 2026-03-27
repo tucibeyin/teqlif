@@ -55,21 +55,63 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
     });
   }
 
-  // ── Video seç → sıkıştır → yükle ─────────────────────────────────────────
+  // ── Medya seç → (sıkıştır) → yükle ──────────────────────────────────────
 
   Future<void> _pickAndUpload() async {
     final l = AppLocalizations.of(context)!;
 
-    // Kaynak seç: kamera veya galeri
-    final source = await showModalBottomSheet<_VideoSource>(
+    // Kaynak seç: video kamera, video galeri, fotoğraf kamera, fotoğraf galeri
+    final source = await showModalBottomSheet<_MediaSource>(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _VideoSourceSheet(l: l),
+      builder: (ctx) => _MediaSourceSheet(l: l),
     );
     if (source == null || !mounted) return;
 
+    final isPhoto =
+        source == _MediaSource.photoCamera || source == _MediaSource.photoGallery;
+
+    if (isPhoto) {
+      await _pickAndUploadPhoto(source, l);
+    } else {
+      await _pickAndUploadVideo(source, l);
+    }
+  }
+
+  Future<void> _pickAndUploadPhoto(_MediaSource source, AppLocalizations l) async {
+    final XFile? picked = await ImagePicker().pickImage(
+      source: source == _MediaSource.photoGallery
+          ? ImageSource.gallery
+          : ImageSource.camera,
+      imageQuality: 85,
+      maxWidth: 1920,
+      maxHeight: 1920,
+    );
+    if (picked == null || !mounted) return;
+
+    setState(() => _isUploading = true);
+    try {
+      await StoryService.uploadStory(File(picked.path));
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.storyUploadSuccess)),
+      );
+      ref.invalidate(storyGroupsProvider);
+      ref.invalidate(myStoriesProvider);
+    } catch (e, st) {
+      await Sentry.captureException(e, stackTrace: st);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l.storyUploadFailed)),
+      );
+    } finally {
+      if (mounted) setState(() => _isUploading = false);
+    }
+  }
+
+  Future<void> _pickAndUploadVideo(_MediaSource source, AppLocalizations l) async {
     final XFile? picked = await ImagePicker().pickVideo(
-      source: source == _VideoSource.gallery
+      source: source == _MediaSource.videoGallery
           ? ImageSource.gallery
           : ImageSource.camera,
       maxDuration: const Duration(seconds: 15),
@@ -81,7 +123,6 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
     final info = await VideoCompress.getMediaInfo(picked.path);
     final durationMs = info.duration ?? 0;
     if (durationMs > 15500 && mounted) {
-      // 500ms tolerans
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(l.storyTooLong)),
       );
@@ -91,7 +132,6 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
     setState(() => _isUploading = true);
 
     try {
-      // Sıkıştır (MediumQuality ≈ 720p — boyutu ~%60–80 oranında düşürür)
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -118,7 +158,6 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
         return;
       }
 
-      // Yükle
       await StoryService.uploadStory(File(compressed!.path!));
 
       if (!mounted) return;
@@ -126,7 +165,6 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
         SnackBar(content: Text(l.storyUploadSuccess)),
       );
 
-      // Listeleri yenile
       ref.invalidate(storyGroupsProvider);
       ref.invalidate(myStoriesProvider);
     } catch (e, st) {
@@ -586,13 +624,13 @@ class _InitialAvatar extends StatelessWidget {
   }
 }
 
-// ── Video kaynak seçimi ───────────────────────────────────────────────────────
+// ── Medya kaynak seçimi ───────────────────────────────────────────────────────
 
-enum _VideoSource { camera, gallery }
+enum _MediaSource { videoCamera, videoGallery, photoCamera, photoGallery }
 
-class _VideoSourceSheet extends StatelessWidget {
+class _MediaSourceSheet extends StatelessWidget {
   final AppLocalizations l;
-  const _VideoSourceSheet({required this.l});
+  const _MediaSourceSheet({required this.l});
 
   @override
   Widget build(BuildContext context) {
@@ -619,13 +657,23 @@ class _VideoSourceSheet extends StatelessWidget {
           const SizedBox(height: 16),
           _SourceTile(
             icon: Icons.videocam_outlined,
-            label: 'Kamera',
-            onTap: () => Navigator.pop(context, _VideoSource.camera),
+            label: 'Video Çek',
+            onTap: () => Navigator.pop(context, _MediaSource.videoCamera),
+          ),
+          _SourceTile(
+            icon: Icons.video_library_outlined,
+            label: 'Galeriden Video',
+            onTap: () => Navigator.pop(context, _MediaSource.videoGallery),
+          ),
+          _SourceTile(
+            icon: Icons.camera_alt_outlined,
+            label: 'Fotoğraf Çek',
+            onTap: () => Navigator.pop(context, _MediaSource.photoCamera),
           ),
           _SourceTile(
             icon: Icons.photo_library_outlined,
-            label: 'Galeriden Seç',
-            onTap: () => Navigator.pop(context, _VideoSource.gallery),
+            label: 'Galeriden Fotoğraf',
+            onTap: () => Navigator.pop(context, _MediaSource.photoGallery),
           ),
         ],
       ),
