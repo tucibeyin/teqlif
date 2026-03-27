@@ -31,6 +31,31 @@ class StreamService {
     return list.map((e) => StreamOut.fromJson(e as Map<String, dynamic>)).toList();
   }
 
+  static Future<List<StreamOut>> getFollowedLiveStreams() async {
+    final headers = await _headers();
+    final resp = await http.get(
+      Uri.parse('$kBaseUrl/streams/following/live'),
+      headers: headers,
+    );
+    if (resp.statusCode >= 400) {
+      final body = _tryDecode(resp.body);
+      final errMap = body['error'];
+      throw AppException(
+        errMap is Map
+            ? (errMap['message'] ?? 'Bir hata oluştu')
+            : (body['detail'] ?? 'Bir hata oluştu'),
+        code: errMap is Map
+            ? (errMap['code'] ?? 'ERR_${resp.statusCode}')
+            : 'HTTP_${resp.statusCode}',
+        statusCode: resp.statusCode,
+      );
+    }
+    final list = _tryDecodeList(resp.body);
+    return list
+        .map((e) => StreamOut.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   static Future<StreamTokenOut> startStream(
     String title,
     String category, {
