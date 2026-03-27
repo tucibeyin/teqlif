@@ -1,24 +1,27 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../config/api.dart';
 import '../../config/theme.dart';
 import '../../core/app_exception.dart';
 import '../../models/stream.dart';
+import '../../providers/live_stream_provider.dart';
 import '../../services/captcha_service.dart';
 import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../services/category_service.dart';
 import '../../utils/error_helper.dart';
+import '../../widgets/live/story_tray.dart';
 import '../public_profile_screen.dart';
 import 'host_stream_screen.dart';
 import 'swipe_live_screen.dart';
 import '../../l10n/app_localizations.dart';
 
-class LiveListScreen extends StatefulWidget {
+class LiveListScreen extends ConsumerStatefulWidget {
   const LiveListScreen({super.key});
 
   @override
-  State<LiveListScreen> createState() => LiveListScreenState();
+  ConsumerState<LiveListScreen> createState() => LiveListScreenState();
 }
 
 const _kCatLabels = {
@@ -32,7 +35,7 @@ const _kCatLabels = {
   'diger': '📦 Diğer',
 };
 
-class LiveListScreenState extends State<LiveListScreen> {
+class LiveListScreenState extends ConsumerState<LiveListScreen> {
   List<StreamOut> _streams = [];
   bool _loading = true;
   String? _selectedCategory; // null = Tümü
@@ -49,6 +52,8 @@ class LiveListScreenState extends State<LiveListScreen> {
   Future<void> _load() async {
     if (!mounted) return;
     setState(() => _loading = true);
+    // Takip edilen yayınları da yenile (pull-to-refresh sırasında ikisi senkronize olsun)
+    ref.invalidate(followedStreamsProvider);
     try {
       final streams = await StreamService.getActiveStreams();
       if (!mounted) return;
@@ -275,6 +280,9 @@ class LiveListScreenState extends State<LiveListScreen> {
       ),
       body: Column(
         children: [
+          // ── Takip edilen canlı yayınlar (Story tarzı) ───────────
+          StoryTray(onTap: _joinStream),
+
           // ── Kategori filtre çubuğu ──────────────────────────────
           if (showFilter)
             SizedBox(

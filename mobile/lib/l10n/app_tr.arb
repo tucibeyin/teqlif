@@ -522,5 +522,9 @@
   "offerError": "Teklif gönderilemedi.",
   "offerInvalidAmount": "Geçerli bir tutar girin.",
   "offerEmpty": "Henüz teklif yok.",
-  "offerLoginRequired": "Teklif vermek için giriş yapın."
+  "offerLoginRequired": "Teklif vermek için giriş yapın.",
+
+  "storyTrayTitle": "Takip Ettiklerin",
+  "storyTrayEmpty": "Şu an takip ettiğin kimse yayında değil.",
+  "storyTrayError": "Yüklenemedi"
 }

@@ -10,7 +10,7 @@ import '../services/stream_service.dart';
 ///
 /// Ekran dispose olduğunda (autoDispose) veri bellekten temizlenir;
 /// tekrar açıldığında yeni istek atılır.
-class FollowedStreamsNotifier extends AsyncNotifier<List<StreamOut>> {
+class FollowedStreamsNotifier extends AutoDisposeAsyncNotifier<List<StreamOut>> {
   @override
   Future<List<StreamOut>> build() => StreamService.getFollowedLiveStreams();
 
