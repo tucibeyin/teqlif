@@ -252,6 +252,115 @@
             margin-bottom: 0.85rem;
         }
 
+        /* ── Story Tray (Takip edilen canlı yayınlar) ───────────────── */
+        .story-tray-wrapper {
+            border-bottom: 1px solid var(--border);
+            background: var(--white);
+        }
+
+        .story-tray-label {
+            padding: 0.75rem 1.5rem 0;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--text-muted);
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+
+        .story-tray {
+            display: flex;
+            gap: 0;
+            padding: 0.6rem 1.25rem 0.85rem;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;        /* Firefox */
+        }
+
+        .story-tray::-webkit-scrollbar {
+            display: none;                /* Chrome / Safari */
+        }
+
+        /* Tek story öğesi */
+        .story-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.35rem;
+            flex-shrink: 0;
+            width: 72px;
+            cursor: pointer;
+        }
+
+        .story-item:hover .story-ring {
+            opacity: 0.85;
+            transform: scale(1.06);
+        }
+
+        /* Gradient dış halka */
+        .story-ring {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--primary-dark) 0%, var(--primary-light) 60%, #7c3aed 100%);
+            padding: 2.5px;
+            transition: transform 0.18s ease, opacity 0.18s ease;
+        }
+
+        /* Beyaz boşluk ayırıcı */
+        .story-ring-inner {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--white);
+            padding: 1.5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Avatar dairesi */
+        .story-avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+
+        /* Thumbnail yoksa baş harf fallback */
+        .story-avatar-initials {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background: var(--primary-bg);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.15rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        /* Kullanıcı adı */
+        .story-username {
+            font-size: 0.67rem;
+            font-weight: 500;
+            color: var(--text);
+            max-width: 68px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-align: center;
+        }
+
+        /* Story tray gizli durum (login değilse veya boşsa) */
+        .story-tray-empty {
+            padding: 0.5rem 1.5rem 0.75rem;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            text-align: center;
+        }
+
         /* ── İlanlar bölümü ─────────────────────────────────────────── */
         #section-ilanlar {
             max-width: 1200px;
@@ -601,6 +710,13 @@
 
     <!-- ── Canlı Yayınlar bölümü ──────────────────────────────────────── -->
     <div id="section-canli">
+
+        <!-- ── Story Tray: takip edilen aktif yayınlar ──────────────── -->
+        <div class="story-tray-wrapper" id="storyTrayWrapper" style="display:none;">
+            <div class="story-tray-label">Takip Ettiklerin</div>
+            <div class="story-tray" id="storyTray"></div>
+        </div>
+
         <!-- Kategori filtre barı -->
         <div class="stream-cat-bar" id="streamCatBar">
             <a class="cat-pill active" data-cat="" onclick="filterStreamCat(this, '')" data-track-id="anasayfa-yayin-filtre-tumü">Tümü</a>
@@ -848,6 +964,57 @@
             }
         }
 
+        /* ── Story Tray: takip edilen canlı yayınlar ────────────────── */
+        async function loadFollowedStories() {
+            // Giriş yapmamış kullanıcıda tray gizli kalır; hata fırlatılmaz
+            if (!Auth.getToken()) return;
+
+            const wrapper = document.getElementById('storyTrayWrapper');
+            const tray    = document.getElementById('storyTray');
+
+            let streams;
+            try {
+                streams = await apiFetch('/streams/following/live');
+            } catch (err) {
+                // Ağ hatası veya sunucu hatası: sessizce yut, tray gizli kalır
+                console.error('[StoryTray] Takip edilen yayınlar yüklenemedi:', err);
+                if (window.Sentry) Sentry.captureException(err);
+                return;
+            }
+
+            // Boş liste: tray gizli kalır
+            if (!Array.isArray(streams) || streams.length === 0) return;
+
+            // DOM'u doldur
+            tray.innerHTML = streams.map((s) => {
+                const username = s.host?.username ?? '';
+                const initial  = username.charAt(0).toUpperCase() || '?';
+                const imgUrl   = s.host?.profile_image_url
+                    ? s.host.profile_image_url.startsWith('http')
+                        ? s.host.profile_image_url
+                        : '/api' + s.host.profile_image_url
+                    : null;
+
+                const avatarHtml = imgUrl
+                    ? `<img class="story-avatar" src="${imgUrl}" alt="${username}" loading="lazy"
+                            onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+                       <div class="story-avatar-initials" style="display:none;">${initial}</div>`
+                    : `<div class="story-avatar-initials">${initial}</div>`;
+
+                return `
+                    <div class="story-item" onclick="joinStream(${s.id})"
+                         title="${username} canlı yayında"
+                         data-track-id="story-tray-item-${s.id}">
+                        <div class="story-ring">
+                            <div class="story-ring-inner">${avatarHtml}</div>
+                        </div>
+                        <span class="story-username">${username}</span>
+                    </div>`;
+            }).join('');
+
+            wrapper.style.display = 'block';
+        }
+
         async function joinStream(id) {
             if (!Auth.getToken()) { window.location.href = '/giris.html'; return; }
             try {
@@ -1038,6 +1205,7 @@
         });
 
         loadStreams();
+        loadFollowedStories();
     </script>
 </body>
 
