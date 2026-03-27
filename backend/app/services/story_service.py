@@ -470,31 +470,42 @@ class StoryService:
 
         deleted_count = 0
         for story in expired:
-            # ── Fiziksel dosyayı sil ──────────────────────────────────────
+            # ── Fiziksel dosyaları sil (video + thumbnail) ────────────────
+            files_to_delete: list[tuple[str, str]] = []
             if story.video_path:
+                files_to_delete.append(("video", story.video_path))
+            if story.thumbnail_url:
+                # /uploads/stories/thumb_xxx.jpg → {upload_dir}/stories/thumb_xxx.jpg
+                thumb_path = settings.upload_dir + story.thumbnail_url[len("/uploads"):]
+                files_to_delete.append(("thumbnail", thumb_path))
+
+            for file_label, file_path in files_to_delete:
                 try:
-                    os.remove(story.video_path)
+                    os.remove(file_path)
                     logger.info(
-                        "[STORY CLEANUP] Dosya silindi: %s | story_id=%d",
-                        story.video_path,
+                        "[STORY CLEANUP] %s silindi: %s | story_id=%d",
+                        file_label,
+                        file_path,
                         story.id,
                     )
                 except FileNotFoundError:
                     logger.warning(
-                        "[STORY CLEANUP] Dosya bulunamadı, atlandı: %s | story_id=%d",
-                        story.video_path,
+                        "[STORY CLEANUP] %s bulunamadı, atlandı: %s | story_id=%d",
+                        file_label,
+                        file_path,
                         story.id,
                     )
                 except OSError as os_err:
                     logger.error(
-                        "[STORY CLEANUP] Dosya silinemedi: %s | story_id=%d | hata: %s",
-                        story.video_path,
+                        "[STORY CLEANUP] %s silinemedi: %s | story_id=%d | hata: %s",
+                        file_label,
+                        file_path,
                         story.id,
                         os_err,
                         exc_info=True,
                     )
 
-            # ── DB kaydını sil ────────────────────────────────────────────
+            # ── DB kaydını sil (story_views CASCADE ile otomatik silinir) ─
             try:
                 await db.delete(story)
                 deleted_count += 1

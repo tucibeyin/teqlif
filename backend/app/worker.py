@@ -11,6 +11,7 @@ Her task:
 
 from __future__ import annotations
 
+from arq import cron
 from arq.connections import RedisSettings
 
 from app.config import settings
@@ -78,6 +79,27 @@ async def send_push_notification_task(
         raise  # ARQ görevi "failed" olarak işaretlenir
 
 
+# ── Task: Süresi Dolan Hikaye Temizliği ──────────────────────────────────────
+
+async def cleanup_expired_stories_task(ctx: dict) -> None:
+    """
+    Her saat başında çalışır; expires_at geçmiş hikayeleri diskten ve DB'den siler.
+    story_views kayıtları CASCADE ile otomatik silinir.
+    """
+    try:
+        from app.database import AsyncSessionLocal
+        from app.services.story_service import StoryService
+        async with AsyncSessionLocal() as db:
+            deleted = await StoryService.cleanup_expired_stories(db)
+            logger.info("[Worker] Story cleanup tamamlandı | silinen=%d", deleted)
+    except Exception as exc:
+        logger.error(
+            "[Worker] Story cleanup başarısız | %s", str(exc), exc_info=True
+        )
+        capture_exception(exc)
+        raise
+
+
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
 class WorkerSettings:
@@ -93,11 +115,17 @@ class WorkerSettings:
     functions = [
         send_verification_email_task,
         send_push_notification_task,
+        cleanup_expired_stories_task,
+    ]
+
+    cron_jobs = [
+        # Her saat başında süresi dolan hikayeleri temizle
+        cron(cleanup_expired_stories_task, minute=0),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
 
     max_jobs = 20
-    job_timeout = 30       # saniye
+    job_timeout = 120      # saniye (cleanup disk I/O için biraz daha uzun)
     keep_result = 3600     # 1 saat — hata ayıklama için sonuçlar saklı tutulur
     max_tries = 3          # başarısız task'lar 3 kez yeniden denenir
