@@ -419,7 +419,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       color: Colors.black,
       child: SizedBox.expand(
         child: FittedBox(
-          fit: BoxFit.cover,
+          fit: BoxFit.contain,
           child: SizedBox(
             width: ctrl.value.size.width,
             height: ctrl.value.size.height,
