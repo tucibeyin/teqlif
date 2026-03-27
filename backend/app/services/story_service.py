@@ -16,7 +16,9 @@ Hata Yönetimi:
   DB hataları   → logger.error + capture_exception → DatabaseException (500)
   Disk hataları → FileNotFoundError sessizce yutulur, OSError loglanır
 """
+import asyncio
 import os
+import shutil
 import uuid
 from collections import defaultdict
 from datetime import datetime, timedelta, timezone
@@ -37,6 +39,56 @@ from app.core.exceptions import DatabaseException, BadRequestException, NotFound
 from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
+
+
+async def _compress_video(src: str, out_dir: str, original_ext: str) -> tuple[str | None, str | None]:
+    """
+    ffmpeg ile 480p / libx264 / CRF 28 / AAC 128k sıkıştırma.
+    Mobil VideoQuality.MediumQuality ile aynı hedef kalite.
+
+    Dönüş:
+      (compressed_path, compressed_filename)  — başarılı
+      (None, None)                            — ffmpeg yok veya hata
+    """
+    if not shutil.which("ffmpeg"):
+        return None, None
+
+    out_name = f"{uuid.uuid4().hex}.mp4"
+    out_path = os.path.join(out_dir, out_name)
+
+    cmd = [
+        "ffmpeg", "-y",
+        "-i", src,
+        "-vf", "scale=-2:480",
+        "-c:v", "libx264",
+        "-crf", "28",
+        "-preset", "fast",
+        "-c:a", "aac",
+        "-b:a", "128k",
+        "-movflags", "+faststart",
+        out_path,
+    ]
+
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            *cmd,
+            stdout=asyncio.subprocess.DEVNULL,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        await asyncio.wait_for(proc.communicate(), timeout=120)
+        if proc.returncode == 0 and os.path.exists(out_path):
+            return out_path, out_name
+        if os.path.exists(out_path):
+            os.remove(out_path)
+        return None, None
+    except Exception as exc:
+        logger.warning("[STORY COMPRESS] ffmpeg başarısız, orijinal kullanılacak: %s", exc)
+        if os.path.exists(out_path):
+            try:
+                os.remove(out_path)
+            except OSError:
+                pass
+        return None, None
 
 
 class StoryService:
@@ -245,6 +297,16 @@ class StoryService:
             )
             capture_exception(exc)
             raise DatabaseException("Dosya kaydedilemedi")
+
+        # ffmpeg sıkıştırma — 480p / CRF 28 / AAC 128k (VideoQuality.MediumQuality)
+        compressed_path, compressed_name = await _compress_video(file_path, stories_dir, ext)
+        if compressed_path:
+            try:
+                os.replace(compressed_path, file_path)
+                filename = compressed_name
+                logger.info("[STORY UPLOAD] Sıkıştırıldı | %s → %s", file_path, filename)
+            except OSError as exc:
+                logger.warning("[STORY UPLOAD] Sıkıştırılmış dosya taşınamadı, orijinal kullanılıyor: %s", exc)
 
         video_url = f"/uploads/stories/{filename}"
         expires_at = datetime.now(timezone.utc) + timedelta(hours=24)
