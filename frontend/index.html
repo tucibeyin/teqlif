@@ -1473,13 +1473,23 @@
 
             try {
                 await apiFetch(`/stories/${item.id}`, { method: 'DELETE' });
-                svClose();
-                await loadFollowedStories();
+                // Silinen öğeyi state'den çıkar
+                group.items = group.items.filter(i => i.id !== item.id);
+                const remaining = group.items.filter(i => i.story_type === 'video');
+                if (remaining.length > 0) {
+                    // Sıradaki hikayeye geç (index taşmasını düzelt)
+                    if (_svItemIdx >= remaining.length) _svItemIdx = remaining.length - 1;
+                    svLoadItem();
+                } else {
+                    // Hikaye kalmadı — viewer'ı kapat
+                    svClose();
+                }
+                loadFollowedStories(); // tray'i arka planda güncelle
             } catch(err) {
                 // Story zaten silinmişse (expired veya önceden silindi) başarı say
                 if (err?.error?.code === 'NOT_FOUND') {
                     svClose();
-                    await loadFollowedStories();
+                    loadFollowedStories();
                     return;
                 }
                 console.error('[Story] Hikaye silinemedi:', err);

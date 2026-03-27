@@ -38,6 +38,8 @@ async function apiFetch(path, options = {}) {
         throw await res.json();
     }
 
+    // 204 No Content veya boş body — JSON parse etme
+    if (res.status === 204 || res.headers.get('content-length') === '0') return null;
     return res.json();
 }
 
