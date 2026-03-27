@@ -6,6 +6,7 @@ import 'package:video_player/video_player.dart';
 
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
+import '../../core/app_exception.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
 import '../../models/story.dart';
@@ -319,7 +320,13 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   // ── Hikaye Sil ────────────────────────────────────────────────────────────
 
   Future<void> _confirmDeleteStory() async {
+    // View isteği sunucuda işleniyorken DELETE gönderilmesini önlemek için
+    // önce videoyu durdur, kısa süre bekle
+    _videoCtrl?.pause();
+    await Future.delayed(const Duration(milliseconds: 300));
+
     final l = AppLocalizations.of(context)!;
+    if (!mounted) return;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -338,7 +345,12 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
         ],
       ),
     );
-    if (confirmed != true || !mounted) return;
+    if (!mounted) return;
+    if (confirmed != true) {
+      // İptal → videoyu sürdür
+      _videoCtrl?.play();
+      return;
+    }
     try {
       await StoryService.deleteStory(_currentItem.id);
       if (!mounted) return;
@@ -346,11 +358,19 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       ProviderScope.containerOf(context).invalidate(myStoriesProvider);
       widget.onClose();
     } catch (e, st) {
+      // Story zaten silinmişse (expired veya önceden silindi) başarı say
+      if (e is AppException && (e.code == 'NOT_FOUND' || e.statusCode == 404)) {
+        if (!mounted) return;
+        ProviderScope.containerOf(context).invalidate(myStoriesProvider);
+        widget.onClose();
+        return;
+      }
       await Sentry.captureException(e, stackTrace: st);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(l.storyDeleteFailed)),
         );
+        _videoCtrl?.play();
       }
     }
   }
