@@ -793,7 +793,7 @@
             <!-- Kullanıcı üst overlay -->
             <div id="svUserBar" style="position:absolute;top:32px;left:12px;right:12px;display:flex;align-items:center;z-index:2;"></div>
             <!-- Video alanı -->
-            <video id="svVideo" style="width:100%;height:100%;object-fit:contain;display:none;" playsinline muted></video>
+            <video id="svVideo" style="width:100%;height:100%;object-fit:contain;display:none;" playsinline></video>
             <!-- Yükleniyor spinner -->
             <div id="svSpinner" style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:1;">
                 <div style="width:36px;height:36px;border:3px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;animation:story-spin .8s linear infinite;"></div>
@@ -1123,22 +1123,20 @@
             const myRingStyle = hasMyStories
                 ? 'background:linear-gradient(135deg,var(--color-primary,#6366f1) 0%,#7c3aed 100%)'
                 : '';
-            const myBadgeStyle = hasMyStories ? 'display:none' : '';
-            const myOnclick = hasMyStories
-                ? `onclick="svOpenMine()"`
-                : `onclick="if(!this.classList.contains('story-uploading'))document.getElementById('storyUploadInput').click()"`;
+            const myRingOnclick = hasMyStories ? `onclick="svOpenMine()"` : `onclick="document.getElementById('storyUploadInput').click()"`;
 
             const myStoryHtml = `
                 <div class="story-item story-add-btn" id="myStoryBtn"
                      title="${hasMyStories ? 'Hikayeni gör' : 'Video hikayeni paylaş'}"
-                     ${myOnclick}>
+                     ${myRingOnclick}>
                     <div class="story-ring-wrap">
                         <div class="story-ring" style="${myRingStyle}">
                             <div class="story-ring-inner" id="myStoryInner">
                                 <div class="story-avatar-initials">${myInitial}</div>
                             </div>
                         </div>
-                        <div class="story-add-badge" id="myStoryBadge" style="${myBadgeStyle}">+</div>
+                        <div class="story-add-badge" id="myStoryBadge"
+                             onclick="event.stopPropagation();document.getElementById('storyUploadInput').click()">+</div>
                     </div>
                     <span class="story-username">Hikayen</span>
                 </div>`;
