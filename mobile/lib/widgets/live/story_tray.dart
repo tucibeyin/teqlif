@@ -60,7 +60,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
   Future<void> _pickAndUpload() async {
     final l = AppLocalizations.of(context)!;
 
-    // Kaynak seç: ön kamera / arka kamera / galeri
+    // Kaynak seç: kamera veya galeri
     final source = await showModalBottomSheet<_VideoSource>(
       context: context,
       backgroundColor: Colors.transparent,
@@ -72,9 +72,6 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
       source: source == _VideoSource.gallery
           ? ImageSource.gallery
           : ImageSource.camera,
-      preferredCameraDevice: source == _VideoSource.frontCamera
-          ? CameraDevice.front
-          : CameraDevice.rear,
       maxDuration: const Duration(seconds: 15),
     );
     if (picked == null || !mounted) return;
@@ -591,7 +588,7 @@ class _InitialAvatar extends StatelessWidget {
 
 // ── Video kaynak seçimi ───────────────────────────────────────────────────────
 
-enum _VideoSource { frontCamera, rearCamera, gallery }
+enum _VideoSource { camera, gallery }
 
 class _VideoSourceSheet extends StatelessWidget {
   final AppLocalizations l;
@@ -621,14 +618,9 @@ class _VideoSourceSheet extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _SourceTile(
-            icon: Icons.camera_front_outlined,
-            label: 'Ön Kamera',
-            onTap: () => Navigator.pop(context, _VideoSource.frontCamera),
-          ),
-          _SourceTile(
-            icon: Icons.camera_rear_outlined,
-            label: 'Arka Kamera',
-            onTap: () => Navigator.pop(context, _VideoSource.rearCamera),
+            icon: Icons.videocam_outlined,
+            label: 'Kamera',
+            onTap: () => Navigator.pop(context, _VideoSource.camera),
           ),
           _SourceTile(
             icon: Icons.photo_library_outlined,
