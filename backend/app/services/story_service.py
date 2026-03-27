@@ -60,7 +60,7 @@ async def _compress_video(src: str, out_dir: str, original_ext: str) -> tuple[st
     cmd = [
         "ffmpeg", "-y",
         "-i", src,
-        "-vf", "scale=-2:480",
+        "-vf", "scale=-2:720",
         "-c:v", "libx264",
         "-crf", "28",
         "-preset", "fast",

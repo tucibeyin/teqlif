@@ -94,7 +94,7 @@ class _StoryTrayState extends ConsumerState<StoryTray> {
 
       final compressed = await VideoCompress.compressVideo(
         picked.path,
-        quality: VideoQuality.MediumQuality,
+        quality: VideoQuality.DefaultQuality,
         deleteOrigin: false,
         includeAudio: true,
       );
