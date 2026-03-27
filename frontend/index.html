@@ -960,6 +960,7 @@
     <script src="/static/js/auth.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
     <script src="/static/js/stream.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <div class="cf-turnstile"
          data-sitekey="0x4AAAAAACu_Bb1lbiRXqw4Q"
          data-callback="onTurnstileToken"
@@ -1496,7 +1497,78 @@
             } catch (err) { showAlert(err.detail || 'Yayına katılılamadı'); }
         }
 
-        /* ── Story Upload: client-side validasyon + yükleme ─────────── */
+        /* ── Story Upload: client-side validasyon + sıkıştırma + yükleme ── */
+
+        /**
+         * ffmpeg.wasm lazy-loader.
+         * İlk çağrıda WASM yükler, sonraki çağrılarda aynı instance'ı döner.
+         * Mobil `VideoQuality.MediumQuality` = 480p / CRF 28 / AAC 128k
+         */
+        let _ffmpegInst   = null;
+        let _ffmpegLoading = null;
+
+        async function _getFFmpeg() {
+            if (_ffmpegInst) return _ffmpegInst;
+            if (_ffmpegLoading) return _ffmpegLoading;
+
+            _ffmpegLoading = (async () => {
+                if (typeof FFmpeg === 'undefined' || !FFmpeg.createFFmpeg) {
+                    throw new Error('FFmpeg kütüphanesi yüklenemedi');
+                }
+                const ff = FFmpeg.createFFmpeg({
+                    log: false,
+                    corePath: 'https://cdn.jsdelivr.net/npm/@ffmpeg/core@0.11.0/dist/ffmpeg-core.js',
+                });
+                await ff.load();
+                _ffmpegInst = ff;
+                _ffmpegLoading = null;
+                return ff;
+            })();
+
+            return _ffmpegLoading;
+        }
+
+        /**
+         * Video dosyasını 480p / H.264 / CRF-28 / AAC-128k olarak sıkıştırır.
+         * Mobil `VideoQuality.MediumQuality` ile aynı hedef kalite.
+         * Hata durumunda orijinal dosyayı döner (fallback).
+         */
+        async function _compressVideo(file, onProgress) {
+            try {
+                const ff = await _getFFmpeg();
+                const { fetchFile } = FFmpeg;
+
+                const ext     = (file.name.split('.').pop() || 'mp4').toLowerCase();
+                const inName  = `input.${ext}`;
+
+                ff.setProgress(({ ratio }) => {
+                    if (onProgress) onProgress(Math.round(ratio * 100));
+                });
+
+                ff.FS('writeFile', inName, await fetchFile(file));
+                await ff.run(
+                    '-i', inName,
+                    '-vf',     'scale=-2:480',   // 480p — MediumQuality
+                    '-c:v',    'libx264',
+                    '-crf',    '28',
+                    '-preset', 'fast',
+                    '-c:a',    'aac',
+                    '-b:a',    '128k',
+                    '-movflags', '+faststart',
+                    'output.mp4'
+                );
+
+                const data = ff.FS('readFile', 'output.mp4');
+                ff.FS('unlink', inName);
+                ff.FS('unlink', 'output.mp4');
+
+                return new File([data.buffer], 'story.mp4', { type: 'video/mp4' });
+            } catch (err) {
+                console.warn('[StoryUpload] Sıkıştırma başarısız, orijinal kullanılıyor:', err);
+                if (window.Sentry) Sentry.captureException(err);
+                return file; // fallback
+            }
+        }
 
         /**
          * HTML5 Video API ile süreyi tarayıcıda ölçer — sunucu hiç yorulmaz.
@@ -1520,7 +1592,7 @@
             });
         }
 
-        function _setStoryUploading(active) {
+        function _setStoryUploading(active, label) {
             const btn   = document.getElementById('myStoryBtn');
             const inner = document.getElementById('myStoryInner');
             const badge = document.getElementById('myStoryBadge');
@@ -1528,7 +1600,10 @@
 
             if (active) {
                 btn.classList.add('story-uploading');
-                inner.innerHTML = '<div class="story-spinner"></div>';
+                inner.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+                    <div class="story-spinner"></div>
+                    ${label ? `<span style="font-size:8px;color:#fff;font-weight:600;text-align:center;line-height:1.1;max-width:52px;overflow:hidden;">${label}</span>` : ''}
+                </div>`;
                 badge.style.display = 'none';
             } else {
                 btn.classList.remove('story-uploading');
@@ -1569,11 +1644,17 @@
                     return;
                 }
 
-                // ── 3. Yükleme ────────────────────────────────────────
-                _setStoryUploading(true);
+                // ── 3. Sıkıştırma ─────────────────────────────────────
+                _setStoryUploading(true, 'Sıkıştırılıyor...');
+                const uploadFile = await _compressVideo(file, (pct) => {
+                    _setStoryUploading(true, `Sıkıştırılıyor %${pct}`);
+                });
+
+                // ── 4. Yükleme ────────────────────────────────────────
+                _setStoryUploading(true, 'Yükleniyor...');
                 const token = Auth.getToken();
                 const form  = new FormData();
-                form.append('file', file);
+                form.append('file', uploadFile);
 
                 try {
                     const res = await fetch('/api/stories/upload', {
@@ -1783,6 +1864,8 @@
         loadStreams();
         loadFollowedStories();
         setupStoryUpload();
+        // Giriş yapmış kullanıcı için FFmpeg'i arka planda önceden yükle
+        if (Auth.getToken()) _getFFmpeg().catch(() => {});
     </script>
 </body>
 
