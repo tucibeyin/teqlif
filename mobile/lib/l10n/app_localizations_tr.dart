@@ -1235,4 +1235,13 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get storyJoinLiveFailed => 'Yayına bağlanılamadı';
+
+  @override
+  String get storyWhoViewed => 'Kim Gördü?';
+
+  @override
+  String get storyViewersLoadFailed => 'Görüntüleyenler yüklenemedi';
+
+  @override
+  String get storyNoViewersYet => 'Henüz kimse görmedi';
 }

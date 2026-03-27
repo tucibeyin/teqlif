@@ -2419,6 +2419,24 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Yayına bağlanılamadı'**
   String get storyJoinLiveFailed;
+
+  /// No description provided for @storyWhoViewed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Kim Gördü?'**
+  String get storyWhoViewed;
+
+  /// No description provided for @storyViewersLoadFailed.
+  ///
+  /// In tr, this message translates to:
+  /// **'Görüntüleyenler yüklenemedi'**
+  String get storyViewersLoadFailed;
+
+  /// No description provided for @storyNoViewersYet.
+  ///
+  /// In tr, this message translates to:
+  /// **'Henüz kimse görmedi'**
+  String get storyNoViewersYet;
 }
 
 class _AppLocalizationsDelegate

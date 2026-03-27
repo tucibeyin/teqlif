@@ -1236,4 +1236,13 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storyJoinLiveFailed => 'Could not join the live stream';
+
+  @override
+  String get storyWhoViewed => 'Who Viewed?';
+
+  @override
+  String get storyViewersLoadFailed => 'Could not load viewers';
+
+  @override
+  String get storyNoViewersYet => 'No one has viewed this yet';
 }
