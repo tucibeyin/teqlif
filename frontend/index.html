@@ -1226,22 +1226,31 @@
             svOpen(hasMine ? followingIdx + 1 : followingIdx);
         }
 
+        let _svActive = false; // viewer açık mı?
+
         function svOpen(groupIdx) {
             if (!_svGroups.length) return;
             _svGroupIdx = groupIdx;
             _svItemIdx  = 0;
+            _svActive   = true;
             document.getElementById('storyViewerOverlay').style.display = 'block';
             document.body.style.overflow = 'hidden';
             svLoadItem();
         }
 
         function svClose() {
+            _svActive = false;
             const overlay = document.getElementById('storyViewerOverlay');
             overlay.style.display = 'none';
             document.body.style.overflow = '';
             const video = document.getElementById('svVideo');
+            video.oncanplay = null;
+            video.onended   = null;
+            video.onerror   = null;
+            video.onloadedmetadata = null;
             video.pause();
             video.src = '';
+            video.load(); // tarayıcının buffer'ını temizle
             video.style.display = 'none';
             clearTimeout(_svTimer);
             cancelAnimationFrame(_svProgressAnim);
@@ -1318,6 +1327,7 @@
 
             video.onloadedmetadata = () => { duration = video.duration * 1000; };
             video.oncanplay = () => {
+                if (!_svActive) return;
                 spinner.style.display = 'none';
                 video.style.display = 'block';
                 video.play().catch(() => {});
@@ -1335,7 +1345,7 @@
                 const barFill = document.getElementById(`sv-bar-fill-${_svItemIdx}`);
                 const animStart = performance.now();
                 function tick() {
-                    if (!barFill) return;
+                    if (!_svActive || !barFill) return;
                     const d = duration || (video.duration * 1000) || 10000;
                     const elapsed = performance.now() - animStart;
                     barFill.style.width = Math.min(elapsed / d * 100, 100) + '%';
@@ -1346,8 +1356,8 @@
                 _svProgressAnim = requestAnimationFrame(tick);
             };
 
-            video.onended = () => svNavigate(1);
-            video.onerror = () => svNavigate(1);
+            video.onended = () => { if (_svActive) svNavigate(1); };
+            video.onerror = () => { if (_svActive) svNavigate(1); };
         }
 
         function svUpdateProgressBars(total) {
