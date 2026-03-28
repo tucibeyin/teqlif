@@ -348,8 +348,9 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             mainAxisSize: MainAxisSize.min,
                             children: [
+                              if (state.itemName != null)
                               Text(
-                                state.itemName ?? 'Açık Artırma',
+                                state.itemName!,
                                 style: const TextStyle(
                                     color: Colors.white,
                                     fontWeight: FontWeight.w700,
