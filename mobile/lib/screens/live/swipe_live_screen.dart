@@ -574,6 +574,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                         );
                       }
                     },
+                    pinAtBottom: true,
                   ),
                   AuctionPanel(
                     streamId: widget.stream.id,

@@ -383,6 +383,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                           );
                         }
                       },
+                      pinAtBottom: true,
                     ),
                     // Açık artırma (co-host ise host kontrol UI'ı gösterilir)
                     AuctionPanel(
