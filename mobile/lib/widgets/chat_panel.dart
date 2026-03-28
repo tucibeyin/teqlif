@@ -380,10 +380,9 @@ class ChatPanelState extends State<ChatPanel> {
 
   /// Host tarafından çağrılır — sabitlenen mesajı tüm izleyicilere gönderir.
   void sendHostPin(String content) {
-    final trimmed = content.trim();
-    if (trimmed.isEmpty) return;
+    // Boş string = kaldır komutu, gönderilmeli
     try {
-      _channel?.sink.add(jsonEncode({'type': 'host_pin', 'content': trimmed}));
+      _channel?.sink.add(jsonEncode({'type': 'host_pin', 'content': content.trim()}));
     } catch (_) {}
   }
 
@@ -430,7 +429,6 @@ class ChatPanelState extends State<ChatPanel> {
                 ),
                 GestureDetector(
                   onTap: () {
-                    _pinTimer?.cancel();
                     setState(() => _pinnedMessage = null);
                   },
                   child: const Padding(

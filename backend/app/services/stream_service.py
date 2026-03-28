@@ -264,6 +264,7 @@ class StreamService:
             await redis.delete(f"live:viewers:{stream.room_name}")
             await redis.delete(f"live:viewer_set:{stream_id}")
             await redis.delete(mod_key(stream_id))
+            await redis.delete(f"pin:{stream_id}")
             # Rate limit sayacını sıfırla; normal sonlandırmada hemen yeni yayın açılabilsin
             await redis.delete(f"act_rate:{stream.host_id}:stream_start")
         except Exception:

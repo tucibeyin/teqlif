@@ -263,127 +263,26 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   // ── Sabitleme girişi ──────────────────────────────────────────────────────
 
   void _showPinInput() {
-    final ctrl = TextEditingController();
     showModalBottomSheet<void>(
       context: context,
       backgroundColor: Colors.transparent,
       isScrollControlled: true,
       builder: (ctx) {
-        // SizedBox(width: infinity) → bottom sheet'e kesin genişlik sınırı
-        // verir; ElevatedButton sonsuz genişlik hatası almaz.
-        return SizedBox(
-          width: double.infinity,
-          child: Padding(
-            padding: EdgeInsets.only(
-                bottom: MediaQuery.of(ctx).viewInsets.bottom),
-            child: Container(
-              margin: const EdgeInsets.all(12),
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A1A2E),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: Colors.amber.withOpacity(0.4)),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Başlık
-                  const Row(
-                    children: [
-                      Icon(Icons.push_pin_rounded,
-                          color: Colors.amber, size: 16),
-                      SizedBox(width: 8),
-                      Text(
-                        'Sabitle',
-                        style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  // Metin girişi
-                  TextField(
-                    controller: ctrl,
-                    autofocus: true,
-                    maxLines: 2,
-                    minLines: 2,
-                    maxLength: 120,
-                    style: const TextStyle(
-                        color: Colors.white, fontSize: 13),
-                    decoration: InputDecoration(
-                      hintText: 'Tüm izleyicilere gösterilecek...',
-                      hintStyle: const TextStyle(
-                          color: Color(0xFF64748B), fontSize: 12),
-                      filled: true,
-                      fillColor: const Color(0xFF0F0F1E),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            const BorderSide(color: Colors.white12),
-                      ),
-                      enabledBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide:
-                            const BorderSide(color: Colors.white12),
-                      ),
-                      focusedBorder: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        borderSide: BorderSide(
-                            color: Colors.amber.withOpacity(0.6)),
-                      ),
-                      contentPadding: const EdgeInsets.all(12),
-                      counterStyle: const TextStyle(
-                          color: Colors.white38, fontSize: 10),
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  // Butonlar — Row genişliği Container tarafından kısıtlanır
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text('İptal',
-                            style: TextStyle(color: Colors.white38)),
-                      ),
-                      const SizedBox(width: 8),
-                      TextButton(
-                        onPressed: () {
-                          final content = ctrl.text.trim();
-                          if (content.isEmpty) return;
-                          _chatKey.currentState?.sendHostPin(content);
-                          Navigator.of(ctx).pop();
-                        },
-                        style: TextButton.styleFrom(
-                          backgroundColor: Colors.amber,
-                          foregroundColor: Colors.black,
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 16, vertical: 8),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10)),
-                        ),
-                        child: const Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(Icons.push_pin_rounded, size: 14),
-                            SizedBox(width: 4),
-                            Text('Sabitle',
-                                style: TextStyle(fontSize: 13)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
-            ),
-          ),
+        // StatefulBuilder → ctrl sheet'in kendi lifecycle'ında yaşar,
+        // parent rebuild'lardan etkilenmez.
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            return _PinInputSheet(
+              onPin: (content) {
+                _chatKey.currentState?.sendHostPin(content);
+                Navigator.of(ctx).pop();
+              },
+              onCancel: () => Navigator.of(ctx).pop(),
+            );
+          },
         );
       },
-    ).whenComplete(ctrl.dispose);
+    );
   }
 
   void _showModSheet(String username) {
@@ -1231,6 +1130,130 @@ class _ModBtn extends StatelessWidget {
         ),
         child: Text('$icon  $label',
             style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600)),
+      ),
+    );
+  }
+}
+
+// ── Pin giriş sheet'i — kendi state'inde ctrl tutar, parent rebuild'dan etkilenmez ──
+class _PinInputSheet extends StatefulWidget {
+  final void Function(String content) onPin;
+  final VoidCallback onCancel;
+
+  const _PinInputSheet({required this.onPin, required this.onCancel});
+
+  @override
+  State<_PinInputSheet> createState() => _PinInputSheetState();
+}
+
+class _PinInputSheetState extends State<_PinInputSheet> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: Padding(
+        padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
+        child: Container(
+          margin: const EdgeInsets.all(12),
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: const Color(0xFF1A1A2E),
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(color: Colors.amber.withOpacity(0.4)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Row(
+                children: [
+                  Icon(Icons.push_pin_rounded, color: Colors.amber, size: 16),
+                  SizedBox(width: 8),
+                  Text('Sabitle',
+                      style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600)),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _ctrl,
+                autofocus: true,
+                maxLines: 2,
+                minLines: 2,
+                maxLength: 120,
+                style: const TextStyle(color: Colors.white, fontSize: 13),
+                decoration: InputDecoration(
+                  hintText: 'Tüm izleyicilere gösterilecek...',
+                  hintStyle:
+                      const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                  filled: true,
+                  fillColor: const Color(0xFF0F0F1E),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Colors.white12),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: Colors.white12),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide:
+                        BorderSide(color: Colors.amber.withOpacity(0.6)),
+                  ),
+                  contentPadding: const EdgeInsets.all(12),
+                  counterStyle:
+                      const TextStyle(color: Colors.white38, fontSize: 10),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  TextButton(
+                    onPressed: widget.onCancel,
+                    child: const Text('İptal',
+                        style: TextStyle(color: Colors.white38)),
+                  ),
+                  const SizedBox(width: 8),
+                  TextButton(
+                    onPressed: () {
+                      final content = _ctrl.text.trim();
+                      if (content.isEmpty) return;
+                      widget.onPin(content);
+                    },
+                    style: TextButton.styleFrom(
+                      backgroundColor: Colors.amber,
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 8),
+                      shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(10)),
+                    ),
+                    child: const Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.push_pin_rounded, size: 14),
+                        SizedBox(width: 4),
+                        Text('Sabitle', style: TextStyle(fontSize: 13)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

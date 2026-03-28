@@ -156,6 +156,17 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                         "[CHAT WS] Moderatör bağlandı — mod_status gönderildi | stream_id=%s user_id=%s",
                         stream_id, user_id,
                     )
+
+            # Aktif pin varsa yeni bağlanana gönder
+            try:
+                _redis = await get_redis()
+                _saved_pin = await _redis.get(f"pin:{stream_id}")
+                if _saved_pin:
+                    _pin_str = _saved_pin.decode() if isinstance(_saved_pin, bytes) else _saved_pin
+                    await safe_send_json(websocket, {"type": "host_pin", "content": _pin_str})
+            except Exception:
+                pass
+
         except Exception as exc:
             logger.warning(
                 "[CHAT WS] Geçmiş/sayaç/mod_status gönderilemedi | stream_id=%s | %s",
@@ -197,6 +208,16 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                     # Host'un sabitlediği mesaj — tüm izleyicilere yayınla.
                     # Boş string = sabiti kaldır komutu, o da yayınlanır.
                     pin_content = str(payload.get("content", "")).strip()[:200]
+                    # Redis'e kalıcı olarak sakla (sonradan katılanlar için)
+                    try:
+                        _redis = await get_redis()
+                        _pin_key = f"pin:{stream_id}"
+                        if pin_content:
+                            await _redis.set(_pin_key, pin_content, ex=86400)
+                        else:
+                            await _redis.delete(_pin_key)
+                    except Exception as _exc:
+                        logger.warning("[CHAT WS] Pin Redis yazma hatası | %s", _exc)
                     await publish_chat(stream_id, {
                         "type": "host_pin",
                         "content": pin_content,
