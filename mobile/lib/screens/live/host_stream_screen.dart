@@ -335,8 +335,10 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   ),
                 ),
                 const SizedBox(height: 12),
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Row(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     TextButton(
                       onPressed: () => Navigator.of(ctx).pop(),
@@ -365,7 +367,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       ),
                     ),
                   ],
-                ),
+                  ),  // Row
+                ),  // Align
               ],
             ),
           ),
