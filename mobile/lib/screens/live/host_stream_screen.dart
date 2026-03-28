@@ -580,36 +580,64 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                           setState(() => _viewerCount = n),
                       onUsernameTap: _showModSheet,
                     ),
-                    // ── Pin butonu ────────────────────────────────────────
+                    // ── Pin butonları ─────────────────────────────────────
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 2),
-                      child: GestureDetector(
-                        onTap: _showPinInput,
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 10, vertical: 5),
-                          decoration: BoxDecoration(
-                            color: const Color(0x88000000),
-                            borderRadius: BorderRadius.circular(16),
-                            border: Border.all(
-                                color: Colors.amber.withOpacity(0.5)),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 2),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          // Sabitle
+                          GestureDetector(
+                            onTap: _showPinInput,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 10, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: const Color(0x88000000),
+                                borderRadius: BorderRadius.circular(16),
+                                border: Border.all(
+                                    color: Colors.amber.withOpacity(0.5)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.push_pin_rounded,
+                                      size: 13, color: Colors.amber),
+                                  SizedBox(width: 4),
+                                  Text('Sabitle',
+                                      style: TextStyle(
+                                          color: Colors.white70,
+                                          fontSize: 11,
+                                          fontWeight: FontWeight.w500)),
+                                ],
+                              ),
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              Icon(Icons.push_pin_rounded,
-                                  size: 13, color: Colors.amber),
-                              SizedBox(width: 4),
-                              Text(
-                                'Sabitle',
+                          const SizedBox(width: 6),
+                          // Sabiti Kaldır
+                          GestureDetector(
+                            onTap: () =>
+                                _chatKey.currentState?.sendHostPin(''),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 5),
+                              decoration: BoxDecoration(
+                                color: const Color(0x55000000),
+                                borderRadius: BorderRadius.circular(16),
+                                border:
+                                    Border.all(color: Colors.white24),
+                              ),
+                              child: const Text(
+                                '✕ Kaldır',
                                 style: TextStyle(
-                                    color: Colors.white70,
-                                    fontSize: 11,
+                                    color: Colors.white38,
+                                    fontSize: 10,
                                     fontWeight: FontWeight.w500),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
                     ),
                     // Açık artırma şeridi (altta sabit)

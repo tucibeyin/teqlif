@@ -104,7 +104,6 @@ class ChatPanelState extends State<ChatPanel> {
 
   // ── Sabitlenen mesaj ──────────────────────────────────────────────────────
   String? _pinnedMessage;
-  Timer? _pinTimer;
 
   @override
   void initState() {
@@ -130,7 +129,6 @@ class ChatPanelState extends State<ChatPanel> {
     _reconnecting = false;
     _heartbeat?.cancel();
     _sub?.cancel();
-    _pinTimer?.cancel();
     try {
       _channel?.sink.close();
     } catch (_) {}
@@ -293,13 +291,9 @@ class ChatPanelState extends State<ChatPanel> {
               _eventType = 'mod_demoted_self:$by';
             } else if (json['type'] == 'host_pin') {
               final content = json['content'] as String? ?? '';
-              if (content.isNotEmpty && mounted) {
-                _pinTimer?.cancel();
-                setState(() => _pinnedMessage = content);
-                // 15 saniye sonra otomatik kaldır
-                _pinTimer = Timer(const Duration(seconds: 15), () {
-                  if (mounted) setState(() => _pinnedMessage = null);
-                });
+              if (mounted) {
+                // Boş string = sabiti kaldır; dolu string = sabitle
+                setState(() => _pinnedMessage = content.isEmpty ? null : content);
               }
             }
           } catch (e) {

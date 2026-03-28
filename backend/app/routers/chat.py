@@ -194,14 +194,14 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                             "message": "Bu yayında susturuldunuz",
                         })
                 elif payload.get("type") == "host_pin" and is_host:
-                    # Host'un sabitlediği mesaj — tüm izleyicilere yayınla
+                    # Host'un sabitlediği mesaj — tüm izleyicilere yayınla.
+                    # Boş string = sabiti kaldır komutu, o da yayınlanır.
                     pin_content = str(payload.get("content", "")).strip()[:200]
-                    if pin_content:
-                        await publish_chat(stream_id, {
-                            "type": "host_pin",
-                            "content": pin_content,
-                            "username": username,
-                        })
+                    await publish_chat(stream_id, {
+                        "type": "host_pin",
+                        "content": pin_content,
+                        "username": username,
+                    })
             except Exception as exc:
                 logger.warning(
                     "[CHAT WS] Mesaj işleme hatası | stream_id=%s | %s",

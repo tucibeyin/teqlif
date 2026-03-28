@@ -252,7 +252,9 @@ const Chat = (() => {
     }
 
     function sendPin(content) {
-        if (!content || !_ws || _ws.readyState !== WebSocket.OPEN) return;
+        // content boş string olabilir (= sabiti kaldır komutu)
+        if (content === undefined || content === null) return;
+        if (!_ws || _ws.readyState !== WebSocket.OPEN) return;
         try {
             _ws.send(JSON.stringify({ type: 'host_pin', content }));
         } catch (_) {}

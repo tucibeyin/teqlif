@@ -1443,9 +1443,15 @@
                     </div>
                     <!-- Host: sabitleme butonu (yalnızca host için gösterilir) -->
                     <div id="hostPinRow">
-                        <button id="hostPinToggle" onclick="_togglePinInput()">
-                            📌 Sabitle
-                        </button>
+                        <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+                            <button id="hostPinToggle" onclick="_togglePinInput()">
+                                📌 Sabitle
+                            </button>
+                            <button id="hostPinClearBtn" onclick="_clearHostPin()" title="Sabitlenen mesajı tüm izleyicilerden kaldır"
+                                style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:4px 10px;font-size:11px;color:#94a3b8;cursor:pointer;">
+                                ✕ Sabiti Kaldır
+                            </button>
+                        </div>
                         <div id="pinInputArea">
                             <textarea id="pinTextarea" rows="2" maxlength="120"
                                 placeholder="Tüm izleyicilere gösterilecek mesaj..."></textarea>
@@ -2849,22 +2855,23 @@
         }
 
         // ── Sabitlenmiş mesaj ────────────────────────────────────────────
-        let _pinAutoHide = null;
 
         function _showPinBanner(content) {
             const banner = document.getElementById('pinBanner');
             const text   = document.getElementById('pinText');
             if (!banner || !text) return;
+            if (!content) {
+                // Boş string = sabiti kaldır
+                _hidePinBanner();
+                return;
+            }
             text.textContent = content;
             banner.classList.add('visible');
-            clearTimeout(_pinAutoHide);
-            _pinAutoHide = setTimeout(_hidePinBanner, 15000);
         }
 
         function _hidePinBanner() {
             const banner = document.getElementById('pinBanner');
             if (banner) banner.classList.remove('visible');
-            clearTimeout(_pinAutoHide);
         }
 
         // ── Host pin girişi ──────────────────────────────────────────────
@@ -2894,6 +2901,10 @@
             const cc = document.getElementById('pinCharCount');
             if (cc) cc.textContent = '0/120';
             document.getElementById('pinInputArea')?.classList.remove('open');
+        }
+
+        function _clearHostPin() {
+            Chat.sendPin('');
         }
 
         // ── Sohbet ──────────────────────────────────────────────────────
