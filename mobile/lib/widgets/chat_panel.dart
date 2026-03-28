@@ -64,6 +64,9 @@ class ChatPanel extends StatefulWidget {
   /// Yeniden bağlanmada sessizce moderatör statüsü geri yüklendi (bildirim yok).
   final VoidCallback? onModRestored;
 
+  /// true ise pin banner mesaj input'unun altında gösterilir (host ekranı için).
+  final bool pinAtBottom;
+
   const ChatPanel({
     super.key,
     required this.streamId,
@@ -78,6 +81,7 @@ class ChatPanel extends StatefulWidget {
     this.onModPromotedSelf,
     this.onModDemotedSelf,
     this.onModRestored,
+    this.pinAtBottom = false,
   });
 
   @override
@@ -405,8 +409,8 @@ class ChatPanelState extends State<ChatPanel> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // ── Sabitlenmiş mesaj banner'ı ─────────────────────────────────────
-        if (_pinnedMessage != null)
+        // ── Sabitlenmiş mesaj banner'ı (üstte — viewer varsayılanı) ────────
+        if (_pinnedMessage != null && !widget.pinAtBottom)
           Container(
             margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
@@ -597,6 +601,57 @@ class ChatPanelState extends State<ChatPanel> {
                             ? Colors.white24
                             : Colors.white,
                         size: 16),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        // ── Sabitlenmiş mesaj banner'ı (altta — host ekranı) ───────────────
+        if (_pinnedMessage != null && widget.pinAtBottom)
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.withOpacity(0.55), width: 1),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(Icons.push_pin_rounded, color: Colors.amber, size: 12),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '📌 ',
+                          style: TextStyle(fontSize: 12.5, height: 1.35, color: Colors.amber),
+                        ),
+                        TextSpan(
+                          text: _pinnedMessage!,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            height: 1.35,
+                            color: Colors.white,
+                            shadows: [Shadow(blurRadius: 12, color: Colors.black)],
+                          ),
+                        ),
+                      ],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () => setState(() => _pinnedMessage = null),
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: Icon(Icons.close, color: Colors.white38, size: 14),
                   ),
                 ),
               ],
