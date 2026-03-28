@@ -643,6 +643,124 @@
         .rsb-stars { color: #f59e0b; font-size: 1.1rem; display: block; margin-bottom: 0.15rem; }
         .rsb-count { font-size: 0.82rem; color: #6b7280; }
 
+        /* ── Settings icon row ───────────────────────────────────────── */
+        .profile-settings-row {
+            width: 100%;
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 4px;
+        }
+        .btn-settings {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--text-muted, #6b7280);
+            transition: background 0.15s, color 0.15s;
+            text-decoration: none;
+        }
+        .btn-settings:hover {
+            background: #f1f5f9;
+            color: #334155;
+        }
+        .btn-settings svg {
+            width: 22px;
+            height: 22px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* ── Edit profile modal ───────────────────────────────────────── */
+        .ep-backdrop {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.45);
+            z-index: 1200;
+            align-items: center;
+            justify-content: center;
+        }
+        .ep-backdrop.open { display: flex; }
+        .ep-modal {
+            background: #fff;
+            border-radius: 18px;
+            width: 100%;
+            max-width: 400px;
+            margin: 1rem;
+            overflow: hidden;
+            box-shadow: 0 12px 40px rgba(0,0,0,0.22);
+        }
+        .ep-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1rem 1.25rem;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .ep-header span { font-weight: 700; font-size: 1rem; }
+        .ep-close { background: none; border: none; cursor: pointer; color: #6b7280; font-size: 1.4rem; line-height: 1; padding: 0; }
+        .ep-body { padding: 1.25rem; display: flex; flex-direction: column; gap: 0.9rem; }
+        .ep-field label {
+            display: block;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 0.35rem;
+        }
+        .ep-field input {
+            width: 100%;
+            padding: 0.72rem 0.9rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            font-size: 0.93rem;
+            font-family: inherit;
+            outline: none;
+            transition: border-color 0.15s;
+            box-sizing: border-box;
+        }
+        .ep-field input:focus { border-color: var(--primary); }
+        .ep-hint { font-size: 0.76rem; color: #9ca3af; margin-top: 0.25rem; }
+        .ep-footer {
+            display: flex;
+            gap: 0.6rem;
+            padding: 0 1.25rem 1.25rem;
+        }
+        .ep-cancel {
+            flex: 1;
+            padding: 0.75rem;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: #f8fafc;
+            color: #64748b;
+            font-size: 0.92rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .ep-cancel:hover { background: #e2e8f0; }
+        .ep-save {
+            flex: 2;
+            padding: 0.75rem;
+            border: none;
+            border-radius: 10px;
+            background: var(--primary);
+            color: #fff;
+            font-size: 0.92rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background 0.15s, opacity 0.15s;
+        }
+        .ep-save:hover { background: var(--primary-dark, #0891b2); }
+        .ep-save:disabled { opacity: 0.6; cursor: default; }
+
         /* ── Block button ─────────────────────────────────────────────── */
         .btn-block {
             display: flex;
@@ -736,6 +854,31 @@
             <div id="ratingsListSummaryBar"></div>
             <div class="ratings-list-body" id="ratingsListBody">
                 <div class="follow-modal-loading">Yükleniyor...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit profile modal -->
+    <div class="ep-backdrop" id="epBackdrop" onclick="closeEditProfileModal(event)">
+        <div class="ep-modal">
+            <div class="ep-header">
+                <span>Profili Düzenle</span>
+                <button class="ep-close" onclick="closeEditProfileModal(null)">×</button>
+            </div>
+            <div class="ep-body">
+                <div class="ep-field">
+                    <label for="epFullName">Ad Soyad</label>
+                    <input type="text" id="epFullName" maxlength="100" placeholder="Adın ve soyadın" autocomplete="name">
+                </div>
+                <div class="ep-field">
+                    <label for="epUsername">Kullanıcı Adı</label>
+                    <input type="text" id="epUsername" maxlength="50" placeholder="kullanici_adi" autocomplete="username" oninput="epUsernameInput(this)">
+                    <div class="ep-hint" id="epUsernameHint">Yalnızca küçük harf, rakam ve alt çizgi (_) kullanılabilir.</div>
+                </div>
+            </div>
+            <div class="ep-footer">
+                <button class="ep-cancel" onclick="closeEditProfileModal(null)">Vazgeç</button>
+                <button class="ep-save" id="epSaveBtn" onclick="submitEditProfile()">Kaydet</button>
             </div>
         </div>
     </div>
@@ -905,10 +1048,10 @@
             if (isOwn) {
                 actionsHtml = `
                     <div class="profile-actions">
-                        <a class="btn-profile secondary" href="/hesabim.html">
+                        <button class="btn-profile secondary" onclick="openEditProfileModal()">
                             <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             Profili Düzenle
-                        </a>
+                        </button>
                     </div>`;
             } else if (loggedIn) {
                 const toName = encodeURIComponent(user.full_name || user.username);
@@ -958,6 +1101,12 @@
                 : _innerAvatar;
 
             inner.innerHTML = `
+                ${isOwn ? `
+                <div class="profile-settings-row">
+                    <a href="/hesabim.html" class="btn-settings" title="Ayarlar">
+                        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+                    </a>
+                </div>` : ''}
                 ${avatarHtml}
                 <div class="profile-name">${escHtml(user.full_name || user.username)}</div>
                 <div class="profile-handle">@${escHtml(user.username)}</div>
@@ -1295,10 +1444,86 @@
             }
         }
 
+        // ── Profil düzenleme modal ─────────────────────────────────────
+        function openEditProfileModal() {
+            const user = _profileUser;
+            if (!user) return;
+            document.getElementById('epFullName').value = user.full_name || '';
+            document.getElementById('epUsername').value = user.username || '';
+            document.getElementById('epUsernameHint').textContent = 'Yalnızca küçük harf, rakam ve alt çizgi (_) kullanılabilir.';
+            document.getElementById('epUsernameHint').style.color = '#9ca3af';
+            document.getElementById('epSaveBtn').disabled = false;
+            document.getElementById('epBackdrop').classList.add('open');
+            document.body.style.overflow = 'hidden';
+            document.getElementById('epFullName').focus();
+        }
+
+        function closeEditProfileModal(event) {
+            if (event && event.target !== document.getElementById('epBackdrop')) return;
+            document.getElementById('epBackdrop').classList.remove('open');
+            document.body.style.overflow = '';
+        }
+
+        function epUsernameInput(input) {
+            const hint = document.getElementById('epUsernameHint');
+            const val = input.value;
+            if (val && !/^[a-z0-9_]{3,50}$/.test(val)) {
+                hint.textContent = 'Geçersiz format — küçük harf, rakam ve _ kullanılabilir (3-50 karakter).';
+                hint.style.color = '#ef4444';
+            } else {
+                hint.textContent = 'Yalnızca küçük harf, rakam ve alt çizgi (_) kullanılabilir.';
+                hint.style.color = '#9ca3af';
+            }
+        }
+
+        async function submitEditProfile() {
+            const fullName = document.getElementById('epFullName').value.trim();
+            const newUsername = document.getElementById('epUsername').value.trim();
+            const btn = document.getElementById('epSaveBtn');
+
+            if (!fullName || fullName.length < 2) {
+                alert('Ad Soyad en az 2 karakter olmalıdır.');
+                return;
+            }
+            if (!newUsername || !/^[a-z0-9_]{3,50}$/.test(newUsername)) {
+                alert('Geçersiz kullanıcı adı formatı.');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.textContent = 'Kaydediliyor...';
+            try {
+                const updated = await apiFetch('/auth/me', {
+                    method: 'PATCH',
+                    body: JSON.stringify({ full_name: fullName, username: newUsername }),
+                });
+                // Local state güncelle
+                _profileUser.full_name = updated.full_name;
+                _profileUser.username = updated.username;
+                // Auth storage güncelle
+                const storedUser = Auth.getUser();
+                if (storedUser) {
+                    storedUser.full_name = updated.full_name;
+                    storedUser.username = updated.username;
+                    localStorage.setItem('teqlif_user', JSON.stringify(storedUser));
+                }
+                closeEditProfileModal(null);
+                // UI güncelle
+                document.querySelector('.profile-name').textContent = updated.full_name || updated.username;
+                document.querySelector('.profile-handle').textContent = '@' + updated.username;
+            } catch (e) {
+                alert((e && e.message) || (e && e.detail) || 'Profil güncellenemedi.');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Kaydet';
+            }
+        }
+
         document.addEventListener('keydown', e => {
             if (e.key === 'Escape') {
                 closeRatingForm(null);
                 closeRatingsList(null);
+                closeEditProfileModal(null);
             }
         });
 
