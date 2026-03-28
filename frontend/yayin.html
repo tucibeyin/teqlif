@@ -2867,7 +2867,7 @@
             }
             text.textContent = content;
             // Close butonu sadece host'a görünür
-            if (closeBtn) closeBtn.style.display = isHost ? '' : 'none';
+            if (closeBtn) closeBtn.style.display = _isHostPage ? '' : 'none';
             banner.classList.add('visible');
         }
 
@@ -2912,6 +2912,7 @@
         // ── Sohbet ──────────────────────────────────────────────────────
 
         function initChat(sid, isHost) {
+            _isHostPage = isHost; // _showPinBanner global scope'ta erişir
             const panel = document.getElementById('chatPanel');
             panel.style.display = '';
 
