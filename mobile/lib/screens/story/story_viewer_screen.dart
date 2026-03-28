@@ -132,6 +132,10 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   AnimationController? _liveTimerAnim; // 5 saniyelik otomatik geçiş
   bool _joiningLive = false;
 
+  // ── Dikey etkileşimli kaydırma ────────────────────────────────────────────
+  double _verticalDragOffset = 0.0;
+  AnimationController? _dragResetAnim;
+
   StoryItem get _currentItem => widget.group.items[_itemIndex];
 
   /// Mevcut kullanıcı bu grubun sahibi mi? (Kim Gördü? görünürlüğü için)
@@ -165,6 +169,8 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   void _releaseAll() {
     _releaseVideo();
     _releaseLiveAnims();
+    _dragResetAnim?.dispose();
+    _dragResetAnim = null;
   }
 
   void _releaseVideo() {
@@ -515,31 +521,71 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     final isLive  = _currentItem.isLiveRedirect;
     final isImage = _currentItem.isImage;
     return GestureDetector(
-      // Aşağı kaydır → kapat | Yukarı kaydır → profil
+      // ── Etkileşimli dikey kaydırma ──────────────────────────────────────
+      onVerticalDragStart: (_) {
+        // Aktif spring-back varsa iptal et; kullanıcı yeniden sürüklüyor
+        _dragResetAnim?.stop();
+        _dragResetAnim?.dispose();
+        _dragResetAnim = null;
+      },
+      onVerticalDragUpdate: (details) {
+        setState(() => _verticalDragOffset += details.delta.dy);
+      },
       onVerticalDragEnd: (details) {
-        final v = details.primaryVelocity ?? 0;
-        if (v > 400) {
+        if (_verticalDragOffset > 150) {
           widget.onClose();
-        } else if (v < -400) {
+        } else if (_verticalDragOffset < -150) {
           _goToProfile(context);
+        } else {
+          // Eşiği aşmadıysa parmak bırakıldığında yerine geri dönsün
+          final startOffset = _verticalDragOffset;
+          _dragResetAnim = AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 350),
+          );
+          final anim = CurvedAnimation(
+            parent: _dragResetAnim!,
+            curve: Curves.elasticOut, // Spring hissi
+          );
+          anim.addListener(() {
+            if (mounted) {
+              setState(() {
+                _verticalDragOffset = startOffset * (1.0 - anim.value);
+              });
+            }
+          });
+          _dragResetAnim!.addStatusListener((status) {
+            if (status == AnimationStatus.completed) {
+              if (mounted) setState(() => _verticalDragOffset = 0.0);
+              _dragResetAnim?.dispose();
+              _dragResetAnim = null;
+            }
+          });
+          _dragResetAnim!.forward();
         }
       },
-      child: Stack(
-      fit: StackFit.expand,
-      children: [
-        if (isLive)
-          _buildLiveRedirectCard(context)
-        else if (isImage)
-          _buildImageArea()
-        else
-          _buildVideoArea(),
-        // Tap + swipe nav yalnızca video/fotoğraf öğelerinde
-        if (!isLive) _buildTapNav(),
-        _buildProgressBars(context),
-        _buildUserOverlay(context),
-        // Kendi hikayesindeyse altta "Kim Gördü?" butonu göster
-        if (_isMine && !isLive) _buildViewersButton(context),
-      ],
+      child: Transform.translate(
+        offset: Offset(0, _verticalDragOffset),
+        child: Transform.scale(
+          scale: 1.0 - (_verticalDragOffset.abs() / 1000).clamp(0.0, 0.15),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              if (isLive)
+                _buildLiveRedirectCard(context)
+              else if (isImage)
+                _buildImageArea()
+              else
+                _buildVideoArea(),
+              // Tap nav yalnızca video/fotoğraf öğelerinde
+              if (!isLive) _buildTapNav(),
+              _buildProgressBars(context),
+              _buildUserOverlay(context),
+              // Kendi hikayesindeyse altta "Kim Gördü?" butonu göster
+              if (_isMine && !isLive) _buildViewersButton(context),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -728,21 +774,14 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       // Sol %30 tap → geri | Sağ %70 tap → ileri
+      // Yatay swipe kasıtlı olarak burada işlenmez; PageView'a bırakılır
+      // böylece kullanıcılar sola/sağa kaydırarak kullanıcılar arası geçiş yapar.
       onTapUp: (details) {
         final width = MediaQuery.of(context).size.width;
         if (details.localPosition.dx < width * 0.3) {
           _retreatItem();
         } else {
           _advanceItem();
-        }
-      },
-      // Sola kaydır → ileri | Sağa kaydır → geri
-      onHorizontalDragEnd: (details) {
-        final v = details.primaryVelocity ?? 0;
-        if (v < -300) {
-          _advanceItem();
-        } else if (v > 300) {
-          _retreatItem();
         }
       },
       child: const SizedBox.expand(),
