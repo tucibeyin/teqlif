@@ -13,8 +13,9 @@ const Chat = (() => {
     let _onUsernameTap = null;
     let _onModPromoted = null;
     let _onModDemoted  = null;
+    let _onHostPin     = null;
 
-    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted } = {}) {
+    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted, onHostPin } = {}) {
         _streamId = streamId;
         _onStreamEnded = onStreamEnded || null;
         _onViewerCount = onViewerCount || null;
@@ -24,6 +25,7 @@ const Chat = (() => {
         _onUsernameTap = onUsernameTap || null;
         _onModPromoted = onModPromoted || null;
         _onModDemoted  = onModDemoted  || null;
+        _onHostPin     = onHostPin     || null;
         _connectWS();
     }
 
@@ -80,6 +82,8 @@ const Chat = (() => {
                     if (_onModPromoted) _onModPromoted(msg);
                 } else if (msg.type === 'mod_demoted') {
                     if (_onModDemoted) _onModDemoted(msg);
+                } else if (msg.type === 'host_pin') {
+                    if (_onHostPin) _onHostPin(msg.content || '');
                 }
             } catch (_) {}
         };

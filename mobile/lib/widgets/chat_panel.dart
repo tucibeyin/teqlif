@@ -81,10 +81,10 @@ class ChatPanel extends StatefulWidget {
   });
 
   @override
-  State<ChatPanel> createState() => _ChatPanelState();
+  State<ChatPanel> createState() => ChatPanelState();
 }
 
-class _ChatPanelState extends State<ChatPanel> {
+class ChatPanelState extends State<ChatPanel> {
   final List<_TimedMessage> _messages = [];
   final List<ChatMessage> _history = []; // last 50 messages
   final _inputCtrl = TextEditingController();
@@ -101,6 +101,10 @@ class _ChatPanelState extends State<ChatPanel> {
   String? _token;
   int? _myUserId;
   bool _inputFocused = false;
+
+  // ── Sabitlenen mesaj ──────────────────────────────────────────────────────
+  String? _pinnedMessage;
+  Timer? _pinTimer;
 
   @override
   void initState() {
@@ -126,6 +130,7 @@ class _ChatPanelState extends State<ChatPanel> {
     _reconnecting = false;
     _heartbeat?.cancel();
     _sub?.cancel();
+    _pinTimer?.cancel();
     try {
       _channel?.sink.close();
     } catch (_) {}
@@ -286,6 +291,16 @@ class _ChatPanelState extends State<ChatPanel> {
               // Hedefli event — sadece etkilenen kullanıcı alır
               final by = json['demoted_by'] as String? ?? '';
               _eventType = 'mod_demoted_self:$by';
+            } else if (json['type'] == 'host_pin') {
+              final content = json['content'] as String? ?? '';
+              if (content.isNotEmpty && mounted) {
+                _pinTimer?.cancel();
+                setState(() => _pinnedMessage = content);
+                // 15 saniye sonra otomatik kaldır
+                _pinTimer = Timer(const Duration(seconds: 15), () {
+                  if (mounted) setState(() => _pinnedMessage = null);
+                });
+              }
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -369,6 +384,15 @@ class _ChatPanelState extends State<ChatPanel> {
     } catch (_) {}
   }
 
+  /// Host tarafından çağrılır — sabitlenen mesajı tüm izleyicilere gönderir.
+  void sendHostPin(String content) {
+    final trimmed = content.trim();
+    if (trimmed.isEmpty) return;
+    try {
+      _channel?.sink.add(jsonEncode({'type': 'host_pin', 'content': trimmed}));
+    } catch (_) {}
+  }
+
   void _showHistory() {
     final history = List<ChatMessage>.from(_history.reversed);
     showModalBottomSheet(
@@ -388,6 +412,41 @@ class _ChatPanelState extends State<ChatPanel> {
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
+        // ── Sabitlenmiş mesaj banner'ı ─────────────────────────────────────
+        if (_pinnedMessage != null)
+          Container(
+            margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+            decoration: BoxDecoration(
+              color: const Color(0xDD000000),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: Colors.amber.withOpacity(0.55)),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.push_pin_rounded, color: Colors.amber, size: 13),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: Text(
+                    _pinnedMessage!,
+                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                GestureDetector(
+                  onTap: () {
+                    _pinTimer?.cancel();
+                    setState(() => _pinnedMessage = null);
+                  },
+                  child: const Padding(
+                    padding: EdgeInsets.only(left: 6),
+                    child: Icon(Icons.close, color: Colors.white38, size: 14),
+                  ),
+                ),
+              ],
+            ),
+          ),
         if (_history.isNotEmpty)
           NotificationListener<ScrollNotification>(
             onNotification: (n) {
