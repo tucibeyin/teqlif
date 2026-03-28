@@ -899,6 +899,84 @@
             min-height: 0;
         }
 
+        /* ── Host pin butonu + inline input ────────────────────── */
+        #hostPinRow {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+            padding: 6px 10px;
+            border-top: 1px solid rgba(255,255,255,.06);
+        }
+        #hostPinRow.visible { display: flex; }
+        #hostPinToggle {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: rgba(0,0,0,.45);
+            border: 1px solid rgba(251,191,36,.45);
+            border-radius: 14px;
+            padding: 4px 11px;
+            font-size: 11px;
+            color: #fbbf24;
+            cursor: pointer;
+            width: fit-content;
+            transition: background .15s;
+        }
+        #hostPinToggle:hover { background: rgba(251,191,36,.12); }
+        #pinInputArea {
+            display: none;
+            flex-direction: column;
+            gap: 6px;
+        }
+        #pinInputArea.open { display: flex; }
+        #pinTextarea {
+            width: 100%;
+            resize: none;
+            background: #0f0f1e;
+            color: #fff;
+            border: 1px solid rgba(251,191,36,.35);
+            border-radius: 8px;
+            padding: 8px 10px;
+            font-size: 12px;
+            line-height: 1.45;
+            outline: none;
+            font-family: inherit;
+            box-sizing: border-box;
+        }
+        #pinTextarea:focus { border-color: rgba(251,191,36,.65); }
+        #pinTextarea::placeholder { color: #4a5568; }
+        .pin-send-row {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 8px;
+        }
+        #pinCharCount { font-size: 10px; color: #475569; }
+        #pinSendBtn {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            background: #fbbf24;
+            color: #000;
+            border: none;
+            border-radius: 8px;
+            padding: 5px 14px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: opacity .15s;
+        }
+        #pinSendBtn:hover { opacity: .85; }
+        #pinCancelBtn {
+            background: none;
+            border: none;
+            color: #64748b;
+            font-size: 12px;
+            cursor: pointer;
+            padding: 4px 6px;
+        }
+        #pinCancelBtn:hover { color: #94a3b8; }
+
         /* Mesajlar az olunca alta yapış; taşınca normal scroll devreye girer */
         #chatMessages > :first-child {
             margin-top: auto;
@@ -1362,6 +1440,21 @@
                     </div>
                     <div id="chatMessages">
                         <div class="chat-empty" id="chatEmpty">Henüz mesaj yok. İlk mesajı sen gönder!</div>
+                    </div>
+                    <!-- Host: sabitleme butonu (yalnızca host için gösterilir) -->
+                    <div id="hostPinRow">
+                        <button id="hostPinToggle" onclick="_togglePinInput()">
+                            📌 Sabitle
+                        </button>
+                        <div id="pinInputArea">
+                            <textarea id="pinTextarea" rows="2" maxlength="120"
+                                placeholder="Tüm izleyicilere gösterilecek mesaj..."></textarea>
+                            <div class="pin-send-row">
+                                <span id="pinCharCount">0/120</span>
+                                <button id="pinCancelBtn" onclick="_togglePinInput()">İptal</button>
+                                <button id="pinSendBtn" onclick="_sendHostPin()">📌 Sabitle</button>
+                            </div>
+                        </div>
                     </div>
                     <div class="chat-input-row" id="chatInputRow" style="display:none;">
                         <input type="text" id="chatInput" placeholder="Mesaj yaz..." maxlength="200" autocomplete="off" data-track-id="yayin-input-sohbet-mesaj">
@@ -2774,6 +2867,35 @@
             clearTimeout(_pinAutoHide);
         }
 
+        // ── Host pin girişi ──────────────────────────────────────────────
+        function _togglePinInput() {
+            const area = document.getElementById('pinInputArea');
+            if (!area) return;
+            const opening = !area.classList.contains('open');
+            area.classList.toggle('open', opening);
+            if (opening) {
+                const ta = document.getElementById('pinTextarea');
+                if (ta) ta.focus();
+            } else {
+                const ta = document.getElementById('pinTextarea');
+                if (ta) ta.value = '';
+                const cc = document.getElementById('pinCharCount');
+                if (cc) cc.textContent = '0/120';
+            }
+        }
+
+        function _sendHostPin() {
+            const ta = document.getElementById('pinTextarea');
+            if (!ta) return;
+            const content = ta.value.trim();
+            if (!content) return;
+            Chat.sendPin(content);
+            ta.value = '';
+            const cc = document.getElementById('pinCharCount');
+            if (cc) cc.textContent = '0/120';
+            document.getElementById('pinInputArea')?.classList.remove('open');
+        }
+
         // ── Sohbet ──────────────────────────────────────────────────────
 
         function initChat(sid, isHost) {
@@ -2796,6 +2918,24 @@
                     onModDemoted:  (msg) => { if (msg.username) _modUsers.delete(msg.username); },
                     onHostPin: _showPinBanner,
                 });
+
+                // Host: sabitleme butonunu göster + karakter sayacı
+                const _pinRow = document.getElementById('hostPinRow');
+                if (_pinRow) _pinRow.classList.add('visible');
+                const _pinTa = document.getElementById('pinTextarea');
+                const _pinCc = document.getElementById('pinCharCount');
+                if (_pinTa && _pinCc) {
+                    _pinTa.addEventListener('input', () => {
+                        _pinCc.textContent = `${_pinTa.value.length}/120`;
+                    });
+                    _pinTa.addEventListener('keydown', (e) => {
+                        // Ctrl/Cmd+Enter → gönder
+                        if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
+                            e.preventDefault();
+                            _sendHostPin();
+                        }
+                    });
+                }
 
                 // Host: teklif listesinde kullanıcı adına tıklayınca mod modal aç
                 document.getElementById('bidsList').addEventListener('click', (e) => {

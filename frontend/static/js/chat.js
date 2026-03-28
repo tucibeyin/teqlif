@@ -251,12 +251,19 @@ const Chat = (() => {
         } catch (_) {}
     }
 
+    function sendPin(content) {
+        if (!content || !_ws || _ws.readyState !== WebSocket.OPEN) return;
+        try {
+            _ws.send(JSON.stringify({ type: 'host_pin', content }));
+        } catch (_) {}
+    }
+
     function disconnect() {
         _streamId = null;
         clearInterval(_pingInterval);
         if (_ws) { try { _ws.close(); } catch (_) {} _ws = null; }
     }
 
-    return { connect, sendMessage, disconnect, setUsernameTap };
+    return { connect, sendMessage, sendPin, disconnect, setUsernameTap };
 
 })();
