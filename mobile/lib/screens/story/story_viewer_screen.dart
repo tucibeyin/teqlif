@@ -123,6 +123,7 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
 
   // ── Video kaynakları ──────────────────────────────────────────────────────
   VideoPlayerController? _videoCtrl;
+  VideoPlayerController? _nextVideoCtrl; // Sliding-window ön yükleme
   bool _videoLoading = true;
   bool _advancePending = false;
 
@@ -170,6 +171,9 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     _videoCtrl?.removeListener(_videoListener);
     _videoCtrl?.dispose();
     _videoCtrl = null;
+    // Ön yüklenmiş controller da serbest bırakılır
+    _nextVideoCtrl?.dispose();
+    _nextVideoCtrl = null;
   }
 
   void _releaseLiveAnims() {
@@ -185,7 +189,13 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   Future<void> _loadItem(int index) async {
     if (!mounted) return;
     _advancePending = false;
-    _releaseAll();
+
+    // Animasyonları ve mevcut video listener'ını serbest bırak;
+    // _nextVideoCtrl'ü KORUYARAK sadece aktif video'yu sıfırla.
+    _videoCtrl?.removeListener(_videoListener);
+    _videoCtrl?.dispose();
+    _videoCtrl = null;
+    _releaseLiveAnims();
 
     setState(() {
       _itemIndex = index;
@@ -197,10 +207,67 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     if (item.isVideo) {
       await _loadVideo(item);
     } else if (item.isImage) {
+      // Sırada video gelmeyecek; ön yüklenmiş controller'ı temizle
+      _nextVideoCtrl?.dispose();
+      _nextVideoCtrl = null;
       _startImageCard();
     } else {
+      _nextVideoCtrl?.dispose();
+      _nextVideoCtrl = null;
       _startLiveCard();
     }
+
+    // Sıradaki öğeyi arka planda hazırla (microtask: UI frame'ini bloke etmez)
+    Future.microtask(() => _preloadNextItem(index + 1));
+  }
+
+  // ── Sliding-window ön yükleme ─────────────────────────────────────────────
+
+  /// Sıradaki video öğesini sessizce initialize eder; play() çağırmaz.
+  /// RAM'i korumak için yalnızca TEK bir ön yüklenmiş controller tutulur:
+  /// yeni bir öğeye geçildiğinde eski _nextVideoCtrl dispose edilir.
+  Future<void> _preloadNextItem(int nextIndex) async {
+    if (!mounted) return;
+    if (nextIndex < 0 || nextIndex >= widget.group.items.length) return;
+
+    final nextItem = widget.group.items[nextIndex];
+    if (!nextItem.isVideo) return; // Fotoğraf/canlı için preload gerekmez
+
+    final nextUrl = nextItem.videoUrl != null ? imgUrl(nextItem.videoUrl!) : '';
+    if (nextUrl.isEmpty) return;
+
+    // Zaten bu URL için hazırlanmış bir controller varsa tekrar oluşturma
+    if (_nextVideoCtrl != null) {
+      final existingUrl = _nextVideoCtrl!.dataSource;
+      if (existingUrl == nextUrl) return; // Aynı video — zaten hazır
+      // Farklı video — eskiyi temizle
+      _nextVideoCtrl!.dispose();
+      _nextVideoCtrl = null;
+    }
+
+    if (!mounted) return;
+    final ctrl = VideoPlayerController.networkUrl(Uri.parse(nextUrl));
+    try {
+      await ctrl.initialize();
+    } catch (_) {
+      // Ön yükleme sessizce başarısız olabilir; asıl yükleme _loadVideo'da tekrar dener
+      await ctrl.dispose();
+      return;
+    }
+
+    if (!mounted) {
+      await ctrl.dispose();
+      return;
+    }
+
+    // Geçiş sırasında _loadItem çalışmış ve başka bir index yüklenmişse
+    // ön yüklenen bu controller artık geçersizdir
+    if (_itemIndex + 1 != nextIndex) {
+      await ctrl.dispose();
+      return;
+    }
+
+    _nextVideoCtrl = ctrl;
   }
 
   // ── Video yükle ve oynat ──────────────────────────────────────────────────
@@ -212,14 +279,28 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
       return;
     }
 
-    final ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
-    try {
-      await ctrl.initialize();
-    } catch (e, st) {
-      await Sentry.captureException(e, stackTrace: st);
-      await ctrl.dispose();
-      if (mounted) _advanceItem();
-      return;
+    VideoPlayerController ctrl;
+
+    // Ön yüklenmiş controller URL'si eşleşiyor mu?
+    if (_nextVideoCtrl != null &&
+        _nextVideoCtrl!.value.isInitialized &&
+        _nextVideoCtrl!.dataSource == url) {
+      // Hazır controller'ı doğrudan kullan — sıfır gecikme
+      ctrl = _nextVideoCtrl!;
+      _nextVideoCtrl = null;
+    } else {
+      // Ön yükleme yok ya da URL farklı; eski controller'ı temizle ve sıfırdan yükle
+      _nextVideoCtrl?.dispose();
+      _nextVideoCtrl = null;
+      ctrl = VideoPlayerController.networkUrl(Uri.parse(url));
+      try {
+        await ctrl.initialize();
+      } catch (e, st) {
+        await Sentry.captureException(e, stackTrace: st);
+        await ctrl.dispose();
+        if (mounted) _advanceItem();
+        return;
+      }
     }
 
     if (!mounted) {
