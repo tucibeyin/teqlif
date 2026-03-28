@@ -2857,15 +2857,17 @@
         // ── Sabitlenmiş mesaj ────────────────────────────────────────────
 
         function _showPinBanner(content) {
-            const banner = document.getElementById('pinBanner');
-            const text   = document.getElementById('pinText');
+            const banner    = document.getElementById('pinBanner');
+            const text      = document.getElementById('pinText');
+            const closeBtn  = banner ? banner.querySelector('.pin-close') : null;
             if (!banner || !text) return;
             if (!content) {
-                // Boş string = sabiti kaldır
                 _hidePinBanner();
                 return;
             }
             text.textContent = content;
+            // Close butonu sadece host'a görünür
+            if (closeBtn) closeBtn.style.display = isHost ? '' : 'none';
             banner.classList.add('visible');
         }
 

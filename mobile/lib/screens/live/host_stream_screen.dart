@@ -488,6 +488,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                           setState(() => _viewerCount = n),
                       onUsernameTap: _showModSheet,
                       pinAtBottom: true,
+                      pinDismissible: true,
                     ),
                     // ── Pin butonları ─────────────────────────────────────
                     Padding(
