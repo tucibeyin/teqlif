@@ -411,26 +411,43 @@ class ChatPanelState extends State<ChatPanel> {
             margin: const EdgeInsets.fromLTRB(12, 0, 12, 4),
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
             decoration: BoxDecoration(
-              color: const Color(0xDD000000),
-              borderRadius: BorderRadius.circular(10),
-              border: Border.all(color: Colors.amber.withOpacity(0.55)),
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: Colors.amber.withOpacity(0.55), width: 1),
             ),
             child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.push_pin_rounded, color: Colors.amber, size: 13),
+                const Padding(
+                  padding: EdgeInsets.only(top: 2),
+                  child: Icon(Icons.push_pin_rounded, color: Colors.amber, size: 12),
+                ),
                 const SizedBox(width: 6),
                 Expanded(
-                  child: Text(
-                    _pinnedMessage!,
-                    style: const TextStyle(color: Colors.white, fontSize: 12),
+                  child: Text.rich(
+                    TextSpan(
+                      children: [
+                        TextSpan(
+                          text: '📌 ',
+                          style: TextStyle(fontSize: 12.5, height: 1.35, color: Colors.amber),
+                        ),
+                        TextSpan(
+                          text: _pinnedMessage!,
+                          style: const TextStyle(
+                            fontSize: 12.5,
+                            height: 1.35,
+                            color: Colors.white,
+                            shadows: [Shadow(blurRadius: 12, color: Colors.black)],
+                          ),
+                        ),
+                      ],
+                    ),
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),
                 GestureDetector(
-                  onTap: () {
-                    setState(() => _pinnedMessage = null);
-                  },
+                  onTap: () => setState(() => _pinnedMessage = null),
                   child: const Padding(
                     padding: EdgeInsets.only(left: 6),
                     child: Icon(Icons.close, color: Colors.white38, size: 14),
