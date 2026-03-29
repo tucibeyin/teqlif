@@ -155,8 +155,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   Future<void> _switchCamera() async {
     if (_localVideoTrack == null) return;
     await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
-    _currentZoom = 1.0;
-    _baseZoom    = 1.0;
+    setState(() => _currentZoom = 1.0);
+    _baseZoom = 1.0;
   }
 
   Future<void> _applyZoom(double zoom) async {
@@ -392,12 +392,17 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         resizeToAvoidBottomInset: false,
         body: Stack(
         children: [
-          // ── Video katmanı (tam ekran) ────────────────────────────────────
+          // ── Video katmanı (tam ekran) — Transform.scale ile anlık zoom ──
           Positioned.fill(
-            child: LiveVideoPlayer(
-              track: _localVideoTrack,
-              cameraEnabled: _cameraEnabled,
-              repaintKey: _videoKey,
+            child: ClipRect(
+              child: Transform.scale(
+                scale: _currentZoom,
+                child: LiveVideoPlayer(
+                  track: _localVideoTrack,
+                  cameraEnabled: _cameraEnabled,
+                  repaintKey: _videoKey,
+                ),
+              ),
             ),
           ),
 
@@ -625,7 +630,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               getCurrentZoom: () => _currentZoom,
               maxZoom: _maxZoom,
               onZoomChanged: (z) {
-                _currentZoom = z;
+                // setState → Transform.scale anında güncellenir (flash yok).
+                // _applyZoom → broadcast için arka planda, best-effort.
+                setState(() => _currentZoom = z);
                 _applyZoom(z);
               },
             ),
