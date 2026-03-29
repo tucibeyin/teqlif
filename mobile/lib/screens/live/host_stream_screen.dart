@@ -618,30 +618,89 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // ── Pinch-to-zoom overlay (en üstte, saydam, sadece scale yakalar) ─
+          // ── Pinch-to-zoom overlay — Listener kullanır, gesture arena'ya
+          //    katılmaz; tek parmak tıklamalar alt widget'lara geçer. ────────
           Positioned.fill(
-            child: Listener(
-              behavior: HitTestBehavior.translucent,
-              onPointerDown: (_) {},   // pointer event'leri Flutter'a bildir
-              child: GestureDetector(
-                behavior: HitTestBehavior.translucent,
-                onScaleStart: (d) {
-                  if (d.pointerCount >= 2) _baseZoom = _currentZoom;
-                },
-                onScaleUpdate: (d) {
-                  if (d.pointerCount < 2) return;
-                  final z = (_baseZoom * d.scale).clamp(1.0, _maxZoom);
-                  _currentZoom = z;
-                  _applyZoom(z);
-                },
-                onScaleEnd: (_) => _applyZoom(_currentZoom),
-                child: const ColoredBox(color: Colors.transparent),
-              ),
+            child: _PinchZoomListener(
+              getCurrentZoom: () => _currentZoom,
+              maxZoom: _maxZoom,
+              onZoomChanged: (z) {
+                _currentZoom = z;
+                _applyZoom(z);
+              },
             ),
           ),
         ],
         ),
       ),
+    );
+  }
+}
+
+// ── Pinch-to-zoom overlay ─────────────────────────────────────────────────
+//
+// GestureDetector yerine Listener kullanılır; bu sayede ScaleGestureRecognizer
+// gesture arena'ya girmez ve tek parmak tıklamalar alt widget'lara geçer.
+// İki parmak algılandığında parmaklar arası mesafe değişimi ile zoom hesaplanır.
+class _PinchZoomListener extends StatefulWidget {
+  final double Function() getCurrentZoom;
+  final double maxZoom;
+  final void Function(double zoom) onZoomChanged;
+
+  const _PinchZoomListener({
+    required this.getCurrentZoom,
+    required this.maxZoom,
+    required this.onZoomChanged,
+  });
+
+  @override
+  State<_PinchZoomListener> createState() => _PinchZoomListenerState();
+}
+
+class _PinchZoomListenerState extends State<_PinchZoomListener> {
+  final Map<int, Offset> _pointers = {};
+  double _startDistance = 0;
+  double _startZoom = 1.0;
+
+  double _dist(Offset a, Offset b) => (a - b).distance;
+
+  void _onDown(PointerDownEvent e) {
+    _pointers[e.pointer] = e.position;
+    if (_pointers.length == 2) {
+      final pts = _pointers.values.toList();
+      _startDistance = _dist(pts[0], pts[1]);
+      _startZoom = widget.getCurrentZoom();
+    }
+  }
+
+  void _onMove(PointerMoveEvent e) {
+    _pointers[e.pointer] = e.position;
+    if (_pointers.length == 2 && _startDistance > 0) {
+      final pts = _pointers.values.toList();
+      final scale = _dist(pts[0], pts[1]) / _startDistance;
+      final zoom = (_startZoom * scale).clamp(1.0, widget.maxZoom);
+      widget.onZoomChanged(zoom);
+    }
+  }
+
+  void _onUp(PointerUpEvent e) {
+    _pointers.remove(e.pointer);
+    _startDistance = 0;
+  }
+
+  void _onCancel(PointerCancelEvent e) {
+    _pointers.remove(e.pointer);
+    _startDistance = 0;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Listener(
+      behavior: HitTestBehavior.translucent,
+      onPointerDown: _onDown,
+      onPointerMove: _onMove,
+      onPointerUp: _onUp,
+      onPointerCancel: _onCancel,
     );
   }
 }
