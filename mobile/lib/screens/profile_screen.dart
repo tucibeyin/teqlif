@@ -42,24 +42,34 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    _load().catchError((e) {
+      LoggerService.instance.warning('ProfileScreen', 'Beklenmedik hata: $e');
+      if (mounted) setState(() => _loading = false);
+    });
   }
 
   Future<void> _load() async {
     // ── A: Önce kasadan anında göster ────────────────────────────────────
-    final localInfo   = await StorageService.getUserInfo();
-    final cachedUser  = await StorageService.getCachedData(StorageService.cacheProfile);
-    final cachedListings = await StorageService.getCachedData(StorageService.cacheUserListings);
+    Map<String, dynamic>? localInfo;
+    dynamic cachedUser;
+    dynamic cachedListings;
+    try {
+      localInfo      = await StorageService.getUserInfo();
+      cachedUser     = await StorageService.getCachedData(StorageService.cacheProfile);
+      cachedListings = await StorageService.getCachedData(StorageService.cacheUserListings);
+    } catch (e) {
+      LoggerService.instance.warning('ProfileScreen', 'Kasa okunamadı: $e');
+    }
     if (mounted) {
       setState(() {
         // Tam profil cache varsa onu, yoksa temel user info'yu göster
-        if (cachedUser != null) {
+        if (cachedUser is Map) {
           _user = Map<String, dynamic>.from(cachedUser as Map);
         } else if (localInfo != null) {
           _user = localInfo;
         }
-        if (cachedListings != null) _listings = cachedListings as List;
-        _loading = (_user == null && cachedListings == null);
+        if (cachedListings is List) _listings = cachedListings as List;
+        _loading = (_user == null && cachedListings is! List);
       });
     }
 
