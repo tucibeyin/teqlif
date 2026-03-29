@@ -394,21 +394,10 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         children: [
           // ── Video katmanı (tam ekran) ────────────────────────────────────
           Positioned.fill(
-            child: GestureDetector(
-              onScaleStart: (_) => _baseZoom = _currentZoom,
-              onScaleUpdate: (details) {
-                final z = (_baseZoom * details.scale).clamp(1.0, _maxZoom);
-                if (z != _currentZoom) {
-                  _currentZoom = z;
-                  _applyZoom(z);
-                }
-              },
-              onScaleEnd: (_) => _applyZoom(_currentZoom),
-              child: LiveVideoPlayer(
-                track: _localVideoTrack,
-                cameraEnabled: _cameraEnabled,
-                repaintKey: _videoKey,
-              ),
+            child: LiveVideoPlayer(
+              track: _localVideoTrack,
+              cameraEnabled: _cameraEnabled,
+              repaintKey: _videoKey,
             ),
           ),
 
@@ -628,6 +617,28 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                 ],
               ),
             ),
+
+          // ── Pinch-to-zoom overlay (en üstte, saydam, sadece scale yakalar) ─
+          Positioned.fill(
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: (_) {},   // pointer event'leri Flutter'a bildir
+              child: GestureDetector(
+                behavior: HitTestBehavior.translucent,
+                onScaleStart: (d) {
+                  if (d.pointerCount >= 2) _baseZoom = _currentZoom;
+                },
+                onScaleUpdate: (d) {
+                  if (d.pointerCount < 2) return;
+                  final z = (_baseZoom * d.scale).clamp(1.0, _maxZoom);
+                  _currentZoom = z;
+                  _applyZoom(z);
+                },
+                onScaleEnd: (_) => _applyZoom(_currentZoom),
+                child: const ColoredBox(color: Colors.transparent),
+              ),
+            ),
+          ),
         ],
         ),
       ),
