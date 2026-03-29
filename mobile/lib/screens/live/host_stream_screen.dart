@@ -49,6 +49,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   bool _bidsVisible = true;
   double? _bidsPanelTop;
   final Set<String> _mutedUsers = {};
+  double _currentZoom = 1.0;
+  double _baseZoom    = 1.0;
+  static const double _maxZoom = 8.0;
   final Set<String> _modUsers   = {};
   final _chatKey = GlobalKey<ChatPanelState>();
 
@@ -152,6 +155,16 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   Future<void> _switchCamera() async {
     if (_localVideoTrack == null) return;
     await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
+    _currentZoom = 1.0;
+    _baseZoom    = 1.0;
+  }
+
+  Future<void> _applyZoom(double zoom) async {
+    if (_localVideoTrack == null) return;
+    try {
+      await _localVideoTrack!.mediaStreamTrack
+          .applyConstraints({'zoom': zoom});
+    } catch (_) {}
   }
 
   void _onBidAdded(String bidder, double amount, String? itemName) {
@@ -382,10 +395,20 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         children: [
           // ── Video katmanı (tam ekran) ────────────────────────────────────
           Positioned.fill(
-            child: LiveVideoPlayer(
-              track: _localVideoTrack,
-              cameraEnabled: _cameraEnabled,
-              repaintKey: _videoKey,
+            child: GestureDetector(
+              onScaleStart: (_) => _baseZoom = _currentZoom,
+              onScaleUpdate: (details) {
+                final z = (_baseZoom * details.scale).clamp(1.0, _maxZoom);
+                if (z != _currentZoom) {
+                  _currentZoom = z;
+                  _applyZoom(z);
+                }
+              },
+              child: LiveVideoPlayer(
+                track: _localVideoTrack,
+                cameraEnabled: _cameraEnabled,
+                repaintKey: _videoKey,
+              ),
             ),
           ),
 
