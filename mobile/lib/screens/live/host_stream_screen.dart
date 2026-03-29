@@ -666,37 +666,55 @@ class _PinchZoomListener extends StatefulWidget {
 
 class _PinchZoomListenerState extends State<_PinchZoomListener> {
   final Map<int, Offset> _pointers = {};
+  // _startDistance, onDown'da DEĞİL ilk onMove'da set edilir.
+  // Böylece parmakların "oturma" hareketi zoom'u etkilemez.
   double _startDistance = 0;
-  double _startZoom = 1.0;
+  double _startZoom     = 1.0;
+  bool   _gestureActive = false; // iki parmak var mı?
 
   double _dist(Offset a, Offset b) => (a - b).distance;
 
   void _onDown(PointerDownEvent e) {
     _pointers[e.pointer] = e.position;
     if (_pointers.length == 2) {
-      final pts = _pointers.values.toList();
-      _startDistance = _dist(pts[0], pts[1]);
-      _startZoom = widget.getCurrentZoom();
+      // Başlangıç zoom'unu kaydet; mesafeyi ilk harekette alacağız.
+      _startZoom     = widget.getCurrentZoom();
+      _startDistance = 0; // lazy — ilk onMove'da set edilecek
+      _gestureActive = true;
+    } else if (_pointers.length > 2) {
+      // Üçüncü parmak gelirse gesture'ı sıfırla (karışıklık önlenir).
+      _gestureActive = false;
+      _startDistance = 0;
     }
   }
 
   void _onMove(PointerMoveEvent e) {
     _pointers[e.pointer] = e.position;
-    if (_pointers.length == 2 && _startDistance > 0) {
-      final pts = _pointers.values.toList();
-      final scale = _dist(pts[0], pts[1]) / _startDistance;
-      final zoom = (_startZoom * scale).clamp(1.0, widget.maxZoom);
-      widget.onZoomChanged(zoom);
+    if (!_gestureActive || _pointers.length != 2) return;
+
+    final pts  = _pointers.values.toList();
+    final dist = _dist(pts[0], pts[1]);
+
+    if (_startDistance == 0) {
+      // İlk onMove: parmaklar oturdu, referans mesafeyi buradan al.
+      _startDistance = dist;
+      return;
     }
+
+    final scale = dist / _startDistance;
+    final zoom  = (_startZoom * scale).clamp(1.0, widget.maxZoom);
+    widget.onZoomChanged(zoom);
   }
 
   void _onUp(PointerUpEvent e) {
     _pointers.remove(e.pointer);
+    _gestureActive = false;
     _startDistance = 0;
   }
 
   void _onCancel(PointerCancelEvent e) {
     _pointers.remove(e.pointer);
+    _gestureActive = false;
     _startDistance = 0;
   }
 
