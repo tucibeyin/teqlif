@@ -46,24 +46,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _load() async {
-    // ── A: Kasa kontrolü — anında göster ─────────────────────────────────
-    final info = await StorageService.getUserInfo();
-    final cachedListings = await StorageService.getCachedData(StorageService.cacheProfile);
+    // ── A: Önce kasadan anında göster ────────────────────────────────────
+    final localInfo   = await StorageService.getUserInfo();
+    final cachedUser  = await StorageService.getCachedData(StorageService.cacheProfile);
+    final cachedListings = await StorageService.getCachedData(StorageService.cacheUserListings);
     if (mounted) {
       setState(() {
-        if (info != null) _user = info;
+        // Tam profil cache varsa onu, yoksa temel user info'yu göster
+        if (cachedUser != null) {
+          _user = Map<String, dynamic>.from(cachedUser as Map);
+        } else if (localInfo != null) {
+          _user = localInfo;
+        }
         if (cachedListings != null) _listings = cachedListings as List;
-        // Spinner sadece her ikisi de boşsa gösterilir
-        if (info == null && cachedListings == null) _loading = true;
-        else _loading = false;
+        _loading = (_user == null && cachedListings == null);
       });
     }
 
     // ── B: Arka planda API ────────────────────────────────────────────────
     try {
-      final username = info?['username'] as String?;
-      final userId = info?['id'] as int?;
-      final token = await StorageService.getToken();
+      final username = (_user ?? localInfo)?['username'] as String?;
+      final userId   = (_user ?? localInfo)?['id'] as int?;
+      final token    = await StorageService.getToken();
 
       final results = await Future.wait([
         username != null
@@ -75,16 +79,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ]);
 
       if (!mounted) return;
+      final freshUser     = (results[0] as Map<String, dynamic>?) ?? _user;
       final freshListings = results[1] as List<dynamic>;
-      // ── C: Başarı → kasa güncelle ───────────────────────────────────────
-      await StorageService.cacheData(StorageService.cacheProfile, freshListings);
+
+      // ── C: Kasayı güncelle ───────────────────────────────────────────────
+      if (freshUser != null) {
+        await StorageService.cacheData(StorageService.cacheProfile, freshUser);
+      }
+      await StorageService.cacheData(StorageService.cacheUserListings, freshListings);
+
       setState(() {
-        _user = (results[0] as Map<String, dynamic>?) ?? info;
+        if (freshUser != null) _user = freshUser;
         _listings = freshListings;
-        _loading = false;
+        _loading  = false;
       });
     } catch (e) {
-      // ── D: Hata → kasa varsa yut ────────────────────────────────────────
+      // ── D: Hata → kasa doluysa yut, boşsa loading'i kapat ──────────────
       LoggerService.instance.warning('ProfileScreen', 'Profil yüklenemedi: $e');
       if (!mounted) return;
       setState(() => _loading = false);
@@ -108,6 +118,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (url.startsWith('http')) return url;
     final origin = kBaseUrl.replaceFirst(RegExp(r'/api.*'), '');
     return '$origin$url';
+  }
+
+  /// Profil fotoğrafı — CachedNetworkImage ile disk'e önbelleğe alınır.
+  Widget _buildAvatar({required String? imageUrl, required double radius, required Widget fallback}) {
+    final bg = AppColors.primaryBg(context);
+    if (imageUrl == null) {
+      return CircleAvatar(radius: radius, backgroundColor: bg, child: fallback);
+    }
+    return ClipOval(
+      child: CachedNetworkImage(
+        imageUrl: imageUrl,
+        width: radius * 2,
+        height: radius * 2,
+        fit: BoxFit.cover,
+        placeholder: (_, __) => CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
+        errorWidget:  (_, __, ___) => CircleAvatar(radius: radius, backgroundColor: bg, child: fallback),
+      ),
+    );
   }
 
   void _openSettings() {
@@ -163,15 +191,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Avatar
-                        CircleAvatar(
-                          radius: 40,
-                          backgroundColor: AppColors.primaryBg(context),
-                          backgroundImage: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
-                              ? NetworkImage(_buildImageUrl(_user!['profile_image_url'] as String))
+                        _buildAvatar(
+                          imageUrl: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
+                              ? _buildImageUrl(_user!['profile_image_url'] as String)
                               : null,
-                          child: (_user?['profile_image_url'] as String?)?.isNotEmpty == true
-                              ? null
-                              : Text(
+                          radius: 40,
+                          fallback: Text(
                                   initial,
                                   style: const TextStyle(
                                     fontSize: 30,
