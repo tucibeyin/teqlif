@@ -50,7 +50,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   double? _bidsPanelTop;
   final Set<String> _mutedUsers = {};
   double _currentZoom = 1.0;
-  double _baseZoom    = 1.0;
   static const double _maxZoom = 8.0;
   final Set<String> _modUsers   = {};
   final _chatKey = GlobalKey<ChatPanelState>();
@@ -156,15 +155,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     if (_localVideoTrack == null) return;
     await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
     setState(() => _currentZoom = 1.0);
-    _baseZoom = 1.0;
   }
 
-  Future<void> _applyZoom(double zoom) async {
-    if (_localVideoTrack == null) return;
-    try {
-      await Helper.setZoom(_localVideoTrack!.mediaStreamTrack, zoom);
-    } catch (_) {}
-  }
 
   void _onBidAdded(String bidder, double amount, String? itemName) {
     setState(() {
@@ -629,12 +621,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             child: _PinchZoomListener(
               getCurrentZoom: () => _currentZoom,
               maxZoom: _maxZoom,
-              onZoomChanged: (z) {
-                // setState → Transform.scale anında güncellenir (flash yok).
-                // _applyZoom → broadcast için arka planda, best-effort.
-                setState(() => _currentZoom = z);
-                _applyZoom(z);
-              },
+              onZoomChanged: (z) => setState(() => _currentZoom = z),
             ),
           ),
         ],
