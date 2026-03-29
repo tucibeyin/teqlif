@@ -6,6 +6,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/city_service.dart';
+import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
 import 'create_listing_screen.dart';
 import 'listing_detail_screen.dart';
@@ -60,10 +61,22 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
+    _error = null;
+    final hasFilter = _selectedCategory != null || _selectedCity != null;
+
+    // ── A: Kasa kontrolü (yalnızca filtresiz istek için) ──────────────────
+    if (!hasFilter) {
+      final cached = await StorageService.getCachedData(StorageService.cacheFeed);
+      if (cached != null && mounted) {
+        setState(() { _listings = cached as List; _loading = false; });
+      } else if (mounted) {
+        setState(() => _loading = true);
+      }
+    } else {
+      if (mounted) setState(() => _loading = true);
+    }
+
+    // ── B: Arka planda API ─────────────────────────────────────────────────
     try {
       final params = <String, String>{};
       if (_selectedCategory != null) params['category'] = _selectedCategory!;
@@ -73,25 +86,30 @@ class _HomeScreenState extends State<HomeScreen> {
       final resp = await http.get(uri);
       if (!mounted) return;
       if (resp.statusCode == 200) {
-        setState(() {
-          _listings = jsonDecode(resp.body) as List;
-          _loading = false;
-        });
+        final fresh = jsonDecode(resp.body) as List;
+        // ── C: Başarı → filtresizse kasa güncelle ────────────────────────
+        if (!hasFilter) {
+          await StorageService.cacheData(StorageService.cacheFeed, fresh);
+        }
+        if (mounted) setState(() { _listings = fresh; _loading = false; });
       } else {
-        if (!mounted) return;
-        final l = AppLocalizations.of(context)!;
-        setState(() {
-          _error = l.errorListingsLoad;
-          _loading = false;
-        });
+        // HTTP hata → kasa varsa yut, yoksa hata göster
+        if (_listings.isEmpty && mounted) {
+          final l = AppLocalizations.of(context)!;
+          setState(() { _error = l.errorListingsLoad; _loading = false; });
+        } else if (mounted) {
+          setState(() => _loading = false);
+        }
       }
-    } catch (_) {
-      if (!mounted) return;
-      final l = AppLocalizations.of(context)!;
-      setState(() {
-        _error = l.errorConnection;
-        _loading = false;
-      });
+    } catch (e) {
+      // ── D: Bağlantı hatası ────────────────────────────────────────────
+      debugPrint('[HomeScreen] API hatası: $e');
+      if (_listings.isEmpty && mounted) {
+        final l = AppLocalizations.of(context)!;
+        setState(() { _error = l.errorConnection; _loading = false; });
+      } else if (mounted) {
+        setState(() => _loading = false);
+      }
     }
   }
 

@@ -13,6 +13,7 @@ import 'messages_screen.dart';
 import 'search_screen.dart';
 import 'live/live_list_screen.dart';
 import '../l10n/app_localizations.dart';
+import '../widgets/offline_banner.dart';
 
 class MainScreen extends StatefulWidget {
   const MainScreen({super.key});
@@ -197,9 +198,16 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: _screens,
+      body: Column(
+        children: [
+          const OfflineBanner(),
+          Expanded(
+            child: IndexedStack(
+              index: _currentIndex,
+              children: _screens,
+            ),
+          ),
+        ],
       ),
       bottomNavigationBar: BottomNavigationBar(
         key: const Key('main_bottom_nav'),

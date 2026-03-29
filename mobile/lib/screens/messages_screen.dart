@@ -149,13 +149,29 @@ class _MessagesTabState extends State<_MessagesTab> {
   }
 
   Future<void> _load({bool silent = false}) async {
-    if (!silent) setState(() => _loading = true);
-    final data = await NotificationService.getConversations();
-    if (mounted) {
+    // ── A: Kasa kontrolü ───────────────────────────────────────────────────
+    final cached = await StorageService.getCachedData(StorageService.cacheMessages);
+    if (cached != null && mounted) {
       setState(() {
-        _conversations = data;
+        _conversations = cached as List;
         _loading = false;
       });
+    } else if (!silent) {
+      if (mounted) setState(() => _loading = true);
+    }
+
+    // ── B: Arka planda API ─────────────────────────────────────────────────
+    try {
+      final data = await NotificationService.getConversations();
+      // ── C: Başarı → kasa güncelle, UI yenile ──────────────────────────
+      await StorageService.cacheData(StorageService.cacheMessages, data);
+      if (mounted) setState(() { _conversations = data; _loading = false; });
+    } catch (e) {
+      // ── D: Hata → kasa doluysa yut, boşsa boş ekran göster ───────────
+      if (cached == null && mounted) {
+        setState(() => _loading = false); // boş liste göster
+      }
+      debugPrint('[MessagesTab] API hatası (cache=${ cached != null }): $e');
     }
   }
 
@@ -320,13 +336,29 @@ class _NotificationsTabState extends State<_NotificationsTab> {
   }
 
   Future<void> _load({bool silent = false}) async {
-    if (!silent) setState(() => _loading = true);
-    final data = await NotificationService.getNotifications();
-    if (mounted) {
+    // ── A: Kasa kontrolü ───────────────────────────────────────────────────
+    final cached = await StorageService.getCachedData(StorageService.cacheNotifications);
+    if (cached != null && mounted) {
       setState(() {
-        _notifications = data;
+        _notifications = cached as List;
         _loading = false;
       });
+    } else if (!silent) {
+      if (mounted) setState(() => _loading = true);
+    }
+
+    // ── B: Arka planda API ─────────────────────────────────────────────────
+    try {
+      final data = await NotificationService.getNotifications();
+      // ── C: Başarı → kasa güncelle, UI yenile ──────────────────────────
+      await StorageService.cacheData(StorageService.cacheNotifications, data);
+      if (mounted) setState(() { _notifications = data; _loading = false; });
+    } catch (e) {
+      // ── D: Hata → kasa doluysa yut, boşsa boş ekran göster ───────────
+      if (cached == null && mounted) {
+        setState(() => _loading = false);
+      }
+      debugPrint('[NotificationsTab] API hatası (cache=${ cached != null }): $e');
     }
   }
 

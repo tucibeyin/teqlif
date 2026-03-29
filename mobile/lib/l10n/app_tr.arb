@@ -541,5 +541,7 @@
   "storyNoViewersYet": "Henüz kimse görmedi",
   "storyDelete": "Hikayeyi Sil",
   "storyDeleteConfirm": "Bu hikayeyi silmek istediğine emin misin?",
-  "storyDeleteFailed": "Hikaye silinemedi"
+  "storyDeleteFailed": "Hikaye silinemedi",
+
+  "offlineBannerMessage": "İnternet bağlantısı yok, çevrimdışı moddasınız."
 }
