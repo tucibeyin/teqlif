@@ -35,6 +35,7 @@ from app.models.user import User
 from app.models.follow import Follow
 from app.models.stream import LiveStream
 from app.schemas.story import StoryAuthorOut, StoryItemOut, UserStoryGroupResponse, StoryViewerOut, StoryViewersResponse, MyStoriesResponse
+from app.services.like_service import LikeService
 from app.core.exceptions import DatabaseException, BadRequestException, NotFoundException
 from app.core.logger import get_logger, capture_exception
 
@@ -207,6 +208,12 @@ class StoryService:
             reverse=True,
         )
 
+        # ── Batch likes (video hikayeler için) ───────────────────────────────
+        all_story_ids = [s.id for g in sorted_groups for s in g["video_stories"]]
+        like_counts, liked_set = await LikeService.batch_story_likes(
+            self.db, all_story_ids, current_user_id
+        )
+
         # ── Response inşası ───────────────────────────────────────────────────
         response: List[UserStoryGroupResponse] = []
         for g in sorted_groups:
@@ -224,6 +231,8 @@ class StoryService:
                         expires_at=story.expires_at,
                         created_at=story.created_at,
                         stream_id=None,
+                        likes_count=like_counts.get(story.id, 0),
+                        is_liked=story.id in liked_set,
                     )
                 )
 

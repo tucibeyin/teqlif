@@ -28,6 +28,7 @@ from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.stream import LiveStream
 from app.models.block import UserBlock
+from app.services.like_service import LikeService
 from app.schemas.stream import StreamStart, StreamTokenOut, JoinTokenOut
 from app.utils.redis_client import get_redis
 from app.config import settings
@@ -409,6 +410,12 @@ class StreamService:
                     current_user_id, exc_info=True,
                 )
 
+            # Batch likes count
+            stream_ids = [s.id for s in streams]
+            like_counts = await LikeService.batch_stream_likes(self.db, stream_ids)
+            for stream in streams:
+                stream.likes_count = like_counts.get(stream.id, 0)  # type: ignore[attr-defined]
+
             logger.info(
                 "[STREAMS] Takip edilen yayınlar listelendi | user_id=%s count=%s",
                 current_user_id, len(streams),
@@ -449,5 +456,11 @@ class StreamService:
                 stream.viewer_count = int(count) if count else 0
         except Exception:
             logger.error("[STREAMS] Redis viewer count okunamadı", exc_info=True)
+
+        # Batch likes count
+        stream_ids = [s.id for s in streams]
+        like_counts = await LikeService.batch_stream_likes(self.db, stream_ids)
+        for stream in streams:
+            stream.likes_count = like_counts.get(stream.id, 0)  # type: ignore[attr-defined]
 
         return streams

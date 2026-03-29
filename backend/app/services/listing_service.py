@@ -20,6 +20,7 @@ from sqlalchemy import select
 from app.models.listing import Listing
 from app.models.listing_offer import ListingOffer
 from app.models.user import User
+from app.services.like_service import LikeService
 from app.schemas.stream import VALID_CATEGORIES
 from app.core.exceptions import (
     NotFoundException,
@@ -35,7 +36,12 @@ logger = get_logger(__name__)
 
 
 # ── Yardımcı: model → dict dönüşümü ─────────────────────────────────────────
-def _row_dict(listing: Listing, user: User) -> dict:
+def _row_dict(
+    listing: Listing,
+    user: User,
+    likes_count: int = 0,
+    is_liked: bool = False,
+) -> dict:
     return {
         "id": listing.id,
         "title": listing.title,
@@ -49,6 +55,8 @@ def _row_dict(listing: Listing, user: User) -> dict:
         "created_at": listing.created_at.isoformat() if listing.created_at else None,
         "is_active": listing.is_active,
         "user": {"id": user.id, "username": user.username, "full_name": user.full_name},
+        "likes_count": likes_count,
+        "is_liked": is_liked,
     }
 
 
@@ -71,6 +79,7 @@ class ListingService:
         user_id: Optional[int] = None,
         category: Optional[str] = None,
         location: Optional[str] = None,
+        current_user_id: Optional[int] = None,
     ) -> list:
         q = (
             select(Listing, User)
@@ -85,7 +94,16 @@ class ListingService:
             q = q.where(Listing.location == location)
         q = q.order_by(Listing.created_at.desc())
         result = await self.db.execute(q)
-        return [_row_dict(l, u) for l, u in result.all()]
+        rows = result.all()
+
+        listing_ids = [listing.id for listing, _ in rows]
+        counts, liked_set = await LikeService.batch_listing_likes(
+            self.db, listing_ids, current_user_id
+        )
+        return [
+            _row_dict(listing, user, counts.get(listing.id, 0), listing.id in liked_set)
+            for listing, user in rows
+        ]
 
     # ── Kendi İlanlarım ──────────────────────────────────────────────────────
     async def get_my_listings(self, current_user: User, active: Optional[bool] = None) -> list:
@@ -98,10 +116,21 @@ class ListingService:
             q = q.where(Listing.is_active == active)  # noqa: E712
         q = q.order_by(Listing.created_at.desc())
         result = await self.db.execute(q)
-        return [_row_dict(l, u) for l, u in result.all()]
+        rows = result.all()
+
+        listing_ids = [listing.id for listing, _ in rows]
+        counts, liked_set = await LikeService.batch_listing_likes(
+            self.db, listing_ids, current_user.id
+        )
+        return [
+            _row_dict(listing, user, counts.get(listing.id, 0), listing.id in liked_set)
+            for listing, user in rows
+        ]
 
     # ── İlan Detayı ──────────────────────────────────────────────────────────
-    async def get_listing(self, listing_id: int) -> dict:
+    async def get_listing(
+        self, listing_id: int, current_user_id: Optional[int] = None
+    ) -> dict:
         result = await self.db.execute(
             select(Listing, User)
             .join(User, User.id == Listing.user_id)
@@ -110,7 +139,11 @@ class ListingService:
         row = result.first()
         if not row:
             raise NotFoundException("İlan bulunamadı")
-        return _row_dict(row[0], row[1])
+        listing, user = row
+        counts, liked_set = await LikeService.batch_listing_likes(
+            self.db, [listing.id], current_user_id
+        )
+        return _row_dict(listing, user, counts.get(listing.id, 0), listing.id in liked_set)
 
     # ── İlan Oluştur ─────────────────────────────────────────────────────────
     async def create_listing(self, payload: dict, current_user: User) -> dict:

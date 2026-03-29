@@ -47,6 +47,7 @@ class StreamOut(BaseModel):
     viewer_count: int
     started_at: datetime
     thumbnail_url: Optional[str] = None
+    likes_count: int = 0
     model_config = {"from_attributes": True}
 
 

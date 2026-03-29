@@ -18,6 +18,7 @@ from app.models.user import User
 from app.schemas.story import UserStoryGroupResponse, StoryItemOut, MyStoriesResponse, StoryViewersResponse  # noqa: F401
 from app.utils.auth import get_current_user
 from app.services.story_service import StoryService
+from app.services.like_service import LikeService
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
@@ -77,6 +78,16 @@ async def delete_story(
     Disk'teki video + thumbnail dosyaları ve DB kaydı (+ story_views CASCADE) temizlenir.
     """
     await StoryService(db).delete_story(current_user.id, story_id)
+
+
+@router.post("/{story_id}/like")
+async def toggle_story_like(
+    story_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Hikayeyi beğen / beğeniyi kaldır (toggle). Güncel `likes_count` ve `is_liked` döner."""
+    return await LikeService(db).toggle_story_like(story_id, current_user.id)
 
 
 @router.post("/{story_id}/view", status_code=status.HTTP_204_NO_CONTENT)

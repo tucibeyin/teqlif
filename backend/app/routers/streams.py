@@ -20,6 +20,7 @@ from app.schemas.stream import StreamStart, StreamOut, StreamTokenOut, JoinToken
 from app.utils.auth import get_current_user, bearer_scheme, decode_token
 from app.security.captcha import verify_captcha_token
 from app.services.stream_service import StreamService
+from app.services.like_service import LikeService
 
 router = APIRouter(prefix="/api/streams", tags=["streams"])
 
@@ -71,6 +72,20 @@ async def join_stream(
     current_user: User = Depends(get_current_user),
 ):
     return await StreamService(db).join(stream_id, current_user)
+
+
+@router.post("/{stream_id}/like", status_code=status.HTTP_200_OK)
+async def like_stream(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Canlı yayına kalp gönder (add-only, toggle yok).
+    Aynı yayına art arda birden fazla kez çağrılabilir.
+    Tüm izleyicilere WebSocket ile `stream_like` sinyali yayımlanır.
+    """
+    return await LikeService(db).add_stream_like(stream_id, current_user.id, current_user.username)
 
 
 @router.delete("/{stream_id}/leave", status_code=status.HTTP_204_NO_CONTENT)

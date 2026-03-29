@@ -31,6 +31,8 @@ class StoryItemOut(BaseModel):
     expires_at: Optional[datetime] = None
     created_at: Optional[datetime] = None
     stream_id: Optional[int] = None
+    likes_count: int = 0
+    is_liked: bool = False
 
     model_config = {"from_attributes": True}
 

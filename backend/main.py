@@ -50,6 +50,7 @@ import app.models.block  # noqa: F401 — tablo kaydı için
 import app.models.analytics  # noqa: F401 — tablo kaydı için
 import app.models.listing_offer  # noqa: F401 — tablo kaydı için
 import app.models.story  # noqa: F401 — tablo kaydı için
+import app.models.like  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data

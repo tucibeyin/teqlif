@@ -21,3 +21,6 @@ class LiveStream(Base):
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
     host: Mapped["User"] = relationship("User", lazy="joined")  # noqa: F821
+    likes: Mapped[list["StreamLike"]] = relationship(  # type: ignore[name-defined]
+        "StreamLike", cascade="all, delete-orphan", passive_deletes=True
+    )
