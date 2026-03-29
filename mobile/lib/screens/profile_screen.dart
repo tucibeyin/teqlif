@@ -46,18 +46,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _load() async {
-    setState(() => _loading = true);
-    try {
-      // 1. Önce yerel önbellekten anında göster (0ms gecikme)
-      final info = await StorageService.getUserInfo();
-      if (!mounted) return;
-      if (info != null) setState(() => _user = info);
+    // ── A: Kasa kontrolü — anında göster ─────────────────────────────────
+    final info = await StorageService.getUserInfo();
+    final cachedListings = await StorageService.getCachedData(StorageService.cacheProfile);
+    if (mounted) {
+      setState(() {
+        if (info != null) _user = info;
+        if (cachedListings != null) _listings = cachedListings as List;
+        // Spinner sadece her ikisi de boşsa gösterilir
+        if (info == null && cachedListings == null) _loading = true;
+        else _loading = false;
+      });
+    }
 
+    // ── B: Arka planda API ────────────────────────────────────────────────
+    try {
       final username = info?['username'] as String?;
       final userId = info?['id'] as int?;
       final token = await StorageService.getToken();
 
-      // 2. Profil API + ilanlar paralel olarak uçar
       final results = await Future.wait([
         username != null
             ? NotificationService.getUserByUsername(username)
@@ -68,12 +75,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ]);
 
       if (!mounted) return;
+      final freshListings = results[1] as List<dynamic>;
+      // ── C: Başarı → kasa güncelle ───────────────────────────────────────
+      await StorageService.cacheData(StorageService.cacheProfile, freshListings);
       setState(() {
         _user = (results[0] as Map<String, dynamic>?) ?? info;
-        _listings = results[1] as List<dynamic>;
+        _listings = freshListings;
         _loading = false;
       });
     } catch (e) {
+      // ── D: Hata → kasa varsa yut ────────────────────────────────────────
       LoggerService.instance.warning('ProfileScreen', 'Profil yüklenemedi: $e');
       if (!mounted) return;
       setState(() => _loading = false);

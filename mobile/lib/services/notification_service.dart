@@ -41,13 +41,9 @@ class NotificationService {
 
   /// Bildirim listesi — ağ hatası durumunda boş liste döner (graceful degrade).
   static Future<List<dynamic>> getNotifications() async {
-    try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/notifications/'), headers: await _headers());
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
-    } catch (e) {
-      LoggerService.instance.warning('NotificationService', 'Bildirimler alınamadı: $e');
-    }
-    return [];
+    final resp = await http.get(Uri.parse('$kBaseUrl/notifications/'), headers: await _headers());
+    if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
+    throw Exception('getNotifications HTTP ${resp.statusCode}');
   }
 
   /// Tümünü okundu işaretle — sessizce başarısız olabilir (background işlem).
@@ -61,15 +57,11 @@ class NotificationService {
     }
   }
 
-  /// Konuşma listesi — ağ hatası durumunda boş liste döner (graceful degrade).
+  /// Konuşma listesi — hata durumunda exception fırlatır (SWR caller yakalar).
   static Future<List<dynamic>> getConversations() async {
-    try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/messages/conversations'), headers: await _headers());
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
-    } catch (e) {
-      LoggerService.instance.warning('NotificationService', 'Konuşmalar alınamadı: $e');
-    }
-    return [];
+    final resp = await http.get(Uri.parse('$kBaseUrl/messages/conversations'), headers: await _headers());
+    if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
+    throw Exception('getConversations HTTP ${resp.statusCode}');
   }
 
   /// Mesaj geçmişi — ağ hatası durumunda boş liste döner (graceful degrade).
