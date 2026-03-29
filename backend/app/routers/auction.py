@@ -11,6 +11,7 @@ app.services.auction_service.AuctionService'e taşınmıştır.
 """
 from fastapi import APIRouter, Depends, Request, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
+import asyncio
 
 from app.database import get_db
 from app.models.user import User
@@ -141,7 +142,14 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
 
         # Bağlantıyı açık tut; client'tan gelen ping mesajlarını yoksay
         while True:
-            msg = await websocket.receive()
+            try:
+                msg = await asyncio.wait_for(websocket.receive(), timeout=40.0)
+            except asyncio.TimeoutError:
+                logger.warning("[AUCTION WS] İstemci ping timeout | stream_id=%s", stream_id)
+                break
+            except WebSocketDisconnect:
+                break
+                
             if msg.get("type") == "websocket.disconnect":
                 break
     except WebSocketDisconnect:

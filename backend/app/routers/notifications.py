@@ -4,6 +4,7 @@ from typing import List
 from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
+import asyncio
 
 from app.database import get_db, AsyncSessionLocal
 from app.models.user import User
@@ -220,9 +221,12 @@ async def notifications_ws(websocket: WebSocket, token: str = Query(...)):
         # Keep-alive döngüsü
         while True:
             try:
-                text = await websocket.receive_text()
+                text = await asyncio.wait_for(websocket.receive_text(), timeout=40.0)
                 if text.strip() == "ping":
                     await websocket.send_text("pong")
+            except asyncio.TimeoutError:
+                logger.warning("[NOTIF WS] İstemci ping timeout | user_id=%s", user_id)
+                break
             except WebSocketDisconnect:
                 break
     except WebSocketDisconnect:

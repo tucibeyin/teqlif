@@ -6,6 +6,8 @@ const Auction = (() => {
     let _isHost = false;
     let _onState = null;
 
+    let _pingInterval = null;
+
     const STATUS_LABELS = {
         idle: 'Bekleniyor',
         active: 'Aktif',
@@ -22,6 +24,15 @@ const Auction = (() => {
         const proto = location.protocol === 'https:' ? 'wss' : 'ws';
         _ws = new WebSocket(`${proto}://${location.host}/api/auction/${streamId}/ws`);
 
+        _ws.onopen = () => {
+            clearInterval(_pingInterval);
+            _pingInterval = setInterval(() => {
+                if (_ws && _ws.readyState === WebSocket.OPEN) {
+                    try { _ws.send('ping'); } catch (_) {}
+                }
+            }, 30000);
+        };
+
         _ws.onmessage = (e) => {
             try {
                 const msg = JSON.parse(e.data);
@@ -35,6 +46,7 @@ const Auction = (() => {
         };
 
         _ws.onclose = () => {
+            clearInterval(_pingInterval);
             // 3 saniye sonra yeniden bağlan (yayın devam ediyorsa)
             setTimeout(() => {
                 if (_streamId) connect(_streamId, _isHost, _onState);
@@ -43,6 +55,7 @@ const Auction = (() => {
     }
 
     function disconnect() {
+        clearInterval(_pingInterval);
         _streamId = null;
         if (_ws) { _ws.close(); _ws = null; }
     }

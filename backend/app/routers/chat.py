@@ -11,6 +11,7 @@ Geriye dönük uyumluluk re-exportları:
 """
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
 from sqlalchemy import select
+import asyncio
 
 from app.database import AsyncSessionLocal
 from app.models.user import User
@@ -176,7 +177,10 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
         # ── 9. Mesaj döngüsü ─────────────────────────────────────────────────
         while True:
             try:
-                text = await websocket.receive_text()
+                text = await asyncio.wait_for(websocket.receive_text(), timeout=40.0)
+            except asyncio.TimeoutError:
+                logger.warning("[CHAT WS] İstemci ping timeout | stream_id=%s user_id=%s", stream_id, user_id)
+                break
             except WebSocketDisconnect:
                 break
             if not text or text.strip() == "ping":
