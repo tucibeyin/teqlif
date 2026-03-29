@@ -10,6 +10,9 @@ class StorageService {
   static const cacheFeed          = 'cache_feed';
   static const cacheProfile       = 'cache_profile';
   static const cacheAuctions      = 'cache_auctions';
+  static const cacheStreams       = 'cache_streams';
+  static const cacheStories       = 'cache_stories';
+  static const cacheMyStories     = 'cache_my_stories';
 
   /// [data] (List veya Map) → JSON String olarak sakla.
   static Future<void> cacheData(String key, dynamic data) async {

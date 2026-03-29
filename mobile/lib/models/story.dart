@@ -26,6 +26,14 @@ class StoryAuthor {
         profileImageUrl: json['profile_image_url'] as String?,
         profileImageThumbUrl: json['profile_image_thumb_url'] as String?,
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'username': username,
+        'full_name': fullName,
+        'profile_image_url': profileImageUrl,
+        'profile_image_thumb_url': profileImageThumbUrl,
+      };
 }
 
 class StoryItem {
@@ -70,6 +78,16 @@ class StoryItem {
             : null,
         streamId: json['stream_id'] as int?,
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'story_type': storyType,
+        'video_url': videoUrl,
+        'thumbnail_url': thumbnailUrl,
+        'expires_at': expiresAt?.toIso8601String(),
+        'created_at': createdAt?.toIso8601String(),
+        'stream_id': streamId,
+      };
 }
 
 class StoryViewer {
@@ -117,4 +135,10 @@ class UserStoryGroup {
         latestActivityAt:
             DateTime.parse(json['latest_activity_at'] as String),
       );
+
+  Map<String, dynamic> toJson() => {
+        'user': user.toJson(),
+        'items': items.map((e) => e.toJson()).toList(),
+        'latest_activity_at': latestActivityAt.toIso8601String(),
+      };
 }

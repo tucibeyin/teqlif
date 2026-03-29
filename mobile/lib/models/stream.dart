@@ -8,6 +8,8 @@ class StreamHost {
         id: json['id'],
         username: json['username'],
       );
+
+  Map<String, dynamic> toJson() => {'id': id, 'username': username};
 }
 
 class StreamOut {
@@ -38,6 +40,16 @@ class StreamOut {
         host: StreamHost.fromJson(json['host']),
         thumbnailUrl: json['thumbnail_url'] as String?,
       );
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'room_name': roomName,
+        'title': title,
+        'category': category,
+        'viewer_count': viewerCount,
+        'host': host.toJson(),
+        'thumbnail_url': thumbnailUrl,
+      };
 }
 
 class StreamTokenOut {
