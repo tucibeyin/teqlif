@@ -51,6 +51,10 @@ class StoryItem {
   // ── Canlı yayın alanı (storyType == 'live_redirect' olduğunda dolu) ───────
   final int? streamId;
 
+  // ── Beğeni alanları ───────────────────────────────────────────────────────
+  final int likesCount;
+  final bool isLiked;
+
   bool get isVideo => storyType == 'video';
   bool get isImage => storyType == 'image';
   bool get isLiveRedirect => storyType == 'live_redirect';
@@ -63,6 +67,8 @@ class StoryItem {
     this.expiresAt,
     this.createdAt,
     this.streamId,
+    this.likesCount = 0,
+    this.isLiked = false,
   });
 
   factory StoryItem.fromJson(Map<String, dynamic> json) => StoryItem(
@@ -77,6 +83,8 @@ class StoryItem {
             ? DateTime.parse(json['created_at'] as String)
             : null,
         streamId: json['stream_id'] as int?,
+        likesCount: json['likes_count'] as int? ?? 0,
+        isLiked: json['is_liked'] as bool? ?? false,
       );
 
   Map<String, dynamic> toJson() => {
@@ -87,6 +95,8 @@ class StoryItem {
         'expires_at': expiresAt?.toIso8601String(),
         'created_at': createdAt?.toIso8601String(),
         'stream_id': streamId,
+        'likes_count': likesCount,
+        'is_liked': isLiked,
       };
 }
 

@@ -38,6 +38,29 @@ class ListingService {
     }
   }
 
+  /// [listingId] ilanı için beğeni toggle eder (beğen / beğeniyi kaldır).
+  /// Güncel [likes_count] ve [is_liked] döner.
+  static Future<Map<String, dynamic>> toggleLike(int listingId) async {
+    try {
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/listings/$listingId/like'),
+        headers: await _headers(auth: true),
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      final msg = (body['error'] as Map?)?['message'] as String? ??
+          body['detail'] as String? ??
+          'Beğeni gönderilemedi.';
+      throw Exception(msg);
+    } catch (e, st) {
+      debugPrint('[ListingService] toggleLike hatası: $e');
+      await Sentry.captureException(e, stackTrace: st);
+      rethrow;
+    }
+  }
+
   /// Verilen [listingId]'ye [amount] tutarında teklif verir.
   /// Başarısız olursa hata mesajını içeren [Exception] fırlatır.
   static Future<ListingOffer> placeOffer(int listingId, double amount) async {

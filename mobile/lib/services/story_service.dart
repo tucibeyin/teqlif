@@ -83,6 +83,33 @@ class StoryService {
         .toList();
   }
 
+  // ── Hikaye beğeni toggle ──────────────────────────────────────────────────
+
+  /// [storyId] hikayesi için beğeni toggle eder (beğen / beğeniyi kaldır).
+  /// Güncel [likes_count] ve [is_liked] döner.
+  static Future<Map<String, dynamic>> toggleLike(int storyId) async {
+    final headers = await _headers();
+    final resp = await http.post(
+      Uri.parse('$kBaseUrl/stories/$storyId/like'),
+      headers: headers,
+    );
+    debugPrint('[StoryService] toggleLike($storyId) → HTTP ${resp.statusCode}');
+    if (resp.statusCode == 200) {
+      return _tryDecode(resp.body);
+    }
+    final body = _tryDecode(resp.body);
+    final errMap = body['error'];
+    throw AppException(
+      errMap is Map
+          ? (errMap['message'] ?? 'Beğeni gönderilemedi')
+          : (body['detail'] ?? 'Beğeni gönderilemedi'),
+      code: errMap is Map
+          ? (errMap['code'] ?? 'ERR_${resp.statusCode}')
+          : 'HTTP_${resp.statusCode}',
+      statusCode: resp.statusCode,
+    );
+  }
+
   // ── Hikaye görüntüleme kaydı ──────────────────────────────────────────────
 
   static Future<void> recordStoryView(int storyId) async {

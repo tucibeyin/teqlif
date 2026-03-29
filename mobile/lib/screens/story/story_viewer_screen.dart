@@ -1,5 +1,6 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
 import 'package:video_player/video_player.dart';
@@ -136,6 +137,15 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   double _verticalDragOffset = 0.0;
   AnimationController? _dragResetAnim;
 
+  // ── Beğeni state'i ────────────────────────────────────────────────────────
+  int _currentLikesCount = 0;
+  bool _currentIsLiked = false;
+  bool _heartVisible = false;
+  AnimationController? _heartAnimCtrl;
+
+  // ── Çift tıklama position takibi ─────────────────────────────────────────
+  Offset? _lastTapPosition;
+
   StoryItem get _currentItem => widget.group.items[_itemIndex];
 
   /// Mevcut kullanıcı bu grubun sahibi mi? (Kim Gördü? görünürlüğü için)
@@ -167,6 +177,9 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   /// Tüm aktif kaynakları (video + animasyon) serbest bırakır.
   /// Her öğe değişiminde ve dispose'da çağrılır.
   void _releaseAll() {
+    _heartAnimCtrl?.stop();
+    _heartAnimCtrl?.dispose();
+    _heartAnimCtrl = null;
     _releaseVideo();
     _releaseLiveAnims();
     _dragResetAnim?.dispose();
@@ -196,20 +209,26 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     if (!mounted) return;
     _advancePending = false;
 
+    final item = widget.group.items[index];
+
     // Animasyonları ve mevcut video listener'ını serbest bırak;
     // _nextVideoCtrl'ü KORUYARAK sadece aktif video'yu sıfırla.
     _videoCtrl?.removeListener(_videoListener);
     _videoCtrl?.dispose();
     _videoCtrl = null;
     _releaseLiveAnims();
+    _heartAnimCtrl?.stop();
+    _heartAnimCtrl?.dispose();
+    _heartAnimCtrl = null;
 
     setState(() {
       _itemIndex = index;
       _videoLoading = true;
       _joiningLive = false;
+      _heartVisible = false;
+      _currentLikesCount = item.likesCount;
+      _currentIsLiked = item.isLiked;
     });
-
-    final item = widget.group.items[index];
     if (item.isVideo) {
       await _loadVideo(item);
     } else if (item.isImage) {
@@ -402,6 +421,50 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     }
   }
 
+  // ── Beğeni ───────────────────────────────────────────────────────────────
+
+  Future<void> _toggleStoryLike() async {
+    // Optimistic UI
+    HapticFeedback.lightImpact();
+    final prevLiked = _currentIsLiked;
+    final prevCount = _currentLikesCount;
+    setState(() {
+      _currentIsLiked = !_currentIsLiked;
+      _currentLikesCount += _currentIsLiked ? 1 : -1;
+    });
+    try {
+      final result = await StoryService.toggleLike(_currentItem.id);
+      if (mounted) {
+        setState(() {
+          _currentLikesCount = result['likes_count'] as int? ?? _currentLikesCount;
+          _currentIsLiked = result['is_liked'] as bool? ?? _currentIsLiked;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _currentIsLiked = prevLiked; _currentLikesCount = prevCount; });
+    }
+  }
+
+  /// Çift tıklamada büyüyüp kaybolan kalp animasyonu oynatır.
+  /// Henüz beğenilmemişse otomatik beğenir.
+  Future<void> _triggerHeartAnimation() async {
+    if (!_currentIsLiked) _toggleStoryLike();
+    _heartAnimCtrl?.stop();
+    _heartAnimCtrl?.dispose();
+    _heartAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    if (!mounted) return;
+    setState(() => _heartVisible = true);
+    try {
+      await _heartAnimCtrl!.forward();
+    } catch (_) {}
+    if (mounted) setState(() => _heartVisible = false);
+    _heartAnimCtrl?.dispose();
+    _heartAnimCtrl = null;
+  }
+
   // ── Kim Gördü? ────────────────────────────────────────────────────────────
 
   Future<void> _showViewersSheet() async {
@@ -583,6 +646,45 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
               _buildUserOverlay(context),
               // Kendi hikayesindeyse altta "Kim Gördü?" butonu göster
               if (_isMine && !isLive) _buildViewersButton(context),
+              // Beğeni butonu — yalnızca video/fotoğraf öğelerinde, sağ alt
+              if (!isLive) _buildLikeButton(context),
+              // Çift tıklama kalp animasyonu
+              if (_heartVisible && _heartAnimCtrl != null)
+                Positioned.fill(
+                  child: IgnorePointer(
+                    child: Center(
+                      child: AnimatedBuilder(
+                        animation: _heartAnimCtrl!,
+                        builder: (_, __) {
+                          final t = _heartAnimCtrl!.value;
+                          final double scale;
+                          if (t < 0.4) {
+                            scale = (t / 0.4) * 1.3;
+                          } else if (t < 0.6) {
+                            scale = 1.3 - ((t - 0.4) / 0.2) * 0.3;
+                          } else {
+                            scale = 1.0;
+                          }
+                          final opacity = t < 0.6
+                              ? 1.0
+                              : 1.0 - ((t - 0.6) / 0.4).clamp(0.0, 1.0);
+                          return Opacity(
+                            opacity: opacity,
+                            child: Transform.scale(
+                              scale: scale,
+                              child: const Icon(
+                                Icons.favorite,
+                                color: Colors.white,
+                                size: 90,
+                                shadows: [Shadow(color: Colors.black38, blurRadius: 24)],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
@@ -773,17 +875,20 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
   Widget _buildTapNav() {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
-      // Sol %30 tap → geri | Sağ %70 tap → ileri
-      // Yatay swipe kasıtlı olarak burada işlenmez; PageView'a bırakılır
-      // böylece kullanıcılar sola/sağa kaydırarak kullanıcılar arası geçiş yapar.
-      onTapUp: (details) {
+      // onTapDown: position'ı sakla; onTap bunu kullanır (onDoubleTap ile birlikte
+      // onTapUp yerine onTap kullanılıyor — ~300ms gecikme kabul edilebilir).
+      onTapDown: (details) => _lastTapPosition = details.localPosition,
+      onTap: () {
+        final pos = _lastTapPosition;
+        if (pos == null) return;
         final width = MediaQuery.of(context).size.width;
-        if (details.localPosition.dx < width * 0.3) {
+        if (pos.dx < width * 0.3) {
           _retreatItem();
         } else {
           _advanceItem();
         }
       },
+      onDoubleTap: _triggerHeartAnimation,
       child: const SizedBox.expand(),
     );
   }
@@ -880,6 +985,44 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+
+  // ── Beğeni butonu — sağ alt ──────────────────────────────────────────────
+
+  Widget _buildLikeButton(BuildContext context) {
+    final bottomPad = MediaQuery.of(context).padding.bottom + 24;
+    // "Kim Gördü?" butonu varsa biraz yukarı kaydır
+    final bottom = _isMine ? bottomPad + 56.0 : bottomPad;
+    return Positioned(
+      bottom: bottom,
+      right: 16,
+      child: GestureDetector(
+        onTap: _toggleStoryLike,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              _currentIsLiked ? Icons.favorite : Icons.favorite_border,
+              color: _currentIsLiked ? Colors.red : Colors.white,
+              size: 28,
+              shadows: const [Shadow(color: Colors.black54, blurRadius: 8)],
+            ),
+            if (_currentLikesCount > 0) ...[
+              const SizedBox(height: 3),
+              Text(
+                '$_currentLikesCount',
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  shadows: [Shadow(color: Colors.black54, blurRadius: 6)],
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );

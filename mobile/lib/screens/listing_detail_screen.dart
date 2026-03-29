@@ -24,13 +24,20 @@ class ListingDetailScreen extends StatefulWidget {
   State<ListingDetailScreen> createState() => _ListingDetailScreenState();
 }
 
-class _ListingDetailScreenState extends State<ListingDetailScreen> {
+class _ListingDetailScreenState extends State<ListingDetailScreen>
+    with SingleTickerProviderStateMixin {
   int _currentImg = 0;
   late final PageController _pageCtrl;
   late final List<String> _images;
   int? _myUserId;
   bool _isFavorited = false;
   bool _isActive = true;
+
+  // Beğeni state'i
+  late int _likesCount;
+  late bool _isLiked;
+  bool _heartVisible = false;
+  AnimationController? _heartAnimCtrl;
 
   // Teklif state'i
   final _offersNotifier = ValueNotifier<List<ListingOffer>>([]);
@@ -49,6 +56,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
       _images.add(imgUrl(widget.listing['image_url'] as String));
     }
     _isActive = widget.listing['is_active'] as bool? ?? true;
+    _likesCount = widget.listing['likes_count'] as int? ?? 0;
+    _isLiked = widget.listing['is_liked'] as bool? ?? false;
     _loadMyId();
     _loadOffers();
   }
@@ -87,6 +96,50 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
         _loadFavoriteStatus(token);
       }
     }
+  }
+
+  Future<void> _toggleLike() async {
+    final token = await StorageService.getToken();
+    if (token == null) return;
+    // Optimistic UI
+    HapticFeedback.lightImpact();
+    final prevLiked = _isLiked;
+    final prevCount = _likesCount;
+    setState(() {
+      _isLiked = !_isLiked;
+      _likesCount += _isLiked ? 1 : -1;
+    });
+    try {
+      final result = await ListingService.toggleLike(widget.listing['id'] as int);
+      if (mounted) {
+        setState(() {
+          _likesCount = result['likes_count'] as int? ?? _likesCount;
+          _isLiked = result['is_liked'] as bool? ?? _isLiked;
+        });
+      }
+    } catch (_) {
+      if (mounted) setState(() { _isLiked = prevLiked; _likesCount = prevCount; });
+    }
+  }
+
+  /// Galeriye çift tıklandığında büyüyüp kaybolan kalp animasyonu oynatır.
+  /// Henüz beğenilmemişse otomatik olarak beğenir.
+  Future<void> _triggerHeartAnimation() async {
+    if (!_isLiked) _toggleLike();
+    _heartAnimCtrl?.stop();
+    _heartAnimCtrl?.dispose();
+    _heartAnimCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    );
+    if (!mounted) return;
+    setState(() => _heartVisible = true);
+    try {
+      await _heartAnimCtrl!.forward();
+    } catch (_) {}
+    if (mounted) setState(() => _heartVisible = false);
+    _heartAnimCtrl?.dispose();
+    _heartAnimCtrl = null;
   }
 
   Future<void> _loadFavoriteStatus(String token) async {
@@ -147,6 +200,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
 
   @override
   void dispose() {
+    _heartAnimCtrl?.stop();
+    _heartAnimCtrl?.dispose();
     _pageCtrl.dispose();
     _offerCtrl.dispose();
     _offersNotifier.dispose();
@@ -513,13 +568,42 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
                         fontSize: 18, fontWeight: FontWeight.w700),
                   ),
                   const SizedBox(height: 8),
-                  Text(
-                    _fmt(listing['price']),
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: kPrimary,
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          _fmt(listing['price']),
+                          style: const TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: kPrimary,
+                          ),
+                        ),
+                      ),
+                      GestureDetector(
+                        onTap: _toggleLike,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _isLiked ? Icons.favorite : Icons.favorite_border,
+                              color: _isLiked ? Colors.red : AppColors.textSecondary(context),
+                              size: 22,
+                            ),
+                            if (_likesCount > 0) ...[
+                              const SizedBox(width: 4),
+                              Text(
+                                '$_likesCount',
+                                style: TextStyle(
+                                  color: AppColors.textSecondary(context),
+                                  fontSize: 13,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                   if (listing['location'] != null) ...[
                     const SizedBox(height: 8),
@@ -816,6 +900,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
             onPageChanged: (i) => setState(() => _currentImg = i),
             itemBuilder: (context, i) => GestureDetector(
               onTap: () => _openFullscreen(i),
+              onDoubleTap: _triggerHeartAnimation,
               child: CachedNetworkImage(
                 imageUrl: _images[i],
                 fit: BoxFit.cover,
@@ -871,6 +956,42 @@ class _ListingDetailScreenState extends State<ListingDetailScreen> {
               child: Text(
                 '${_currentImg + 1}/${_images.length}',
                 style: const TextStyle(color: Colors.white, fontSize: 12),
+              ),
+            ),
+          ),
+        // Çift tıklama kalp animasyonu
+        if (_heartVisible && _heartAnimCtrl != null)
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Center(
+                child: AnimatedBuilder(
+                  animation: _heartAnimCtrl!,
+                  builder: (_, __) {
+                    final t = _heartAnimCtrl!.value;
+                    final double scale;
+                    if (t < 0.4) {
+                      scale = (t / 0.4) * 1.3;
+                    } else if (t < 0.6) {
+                      scale = 1.3 - ((t - 0.4) / 0.2) * 0.3;
+                    } else {
+                      scale = 1.0;
+                    }
+                    final opacity =
+                        t < 0.6 ? 1.0 : 1.0 - ((t - 0.6) / 0.4).clamp(0.0, 1.0);
+                    return Opacity(
+                      opacity: opacity,
+                      child: Transform.scale(
+                        scale: scale,
+                        child: const Icon(
+                          Icons.favorite,
+                          color: Colors.white,
+                          size: 90,
+                          shadows: [Shadow(color: Colors.black38, blurRadius: 24)],
+                        ),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),

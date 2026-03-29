@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../services/city_service.dart';
+import '../services/listing_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/shimmer_loading.dart';
 import 'create_listing_screen.dart';
@@ -608,10 +610,48 @@ class _ActiveFilterChip extends StatelessWidget {
 }
 
 // ── İlan grid tile ──────────────────────────────────────────────────────────
-class _GridItem extends StatelessWidget {
+class _GridItem extends StatefulWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
   const _GridItem({super.key, required this.listing, required this.onTap});
+
+  @override
+  State<_GridItem> createState() => _GridItemState();
+}
+
+class _GridItemState extends State<_GridItem> {
+  late int _likesCount;
+  late bool _isLiked;
+
+  @override
+  void initState() {
+    super.initState();
+    _likesCount = widget.listing['likes_count'] as int? ?? 0;
+    _isLiked = widget.listing['is_liked'] as bool? ?? false;
+  }
+
+  Future<void> _toggleLike() async {
+    // Optimistic UI
+    HapticFeedback.lightImpact();
+    final prevLiked = _isLiked;
+    final prevCount = _likesCount;
+    setState(() {
+      _isLiked = !_isLiked;
+      _likesCount += _isLiked ? 1 : -1;
+    });
+    try {
+      final result = await ListingService.toggleLike(widget.listing['id'] as int);
+      if (mounted) {
+        setState(() {
+          _likesCount = result['likes_count'] as int? ?? _likesCount;
+          _isLiked = result['is_liked'] as bool? ?? _isLiked;
+        });
+      }
+    } catch (_) {
+      // Hata → eski state'e dön
+      if (mounted) setState(() { _isLiked = prevLiked; _likesCount = prevCount; });
+    }
+  }
 
   String _fmt(dynamic price) {
     if (price == null) return '';
@@ -626,15 +666,15 @@ class _GridItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imgs = listing['image_urls'] as List? ?? [];
+    final imgs = widget.listing['image_urls'] as List? ?? [];
     final raw = imgs.isNotEmpty
         ? imgs[0] as String
-        : (listing['image_url'] as String?);
+        : (widget.listing['image_url'] as String?);
     final photo = raw != null ? imgUrl(raw) : null;
-    final price = _fmt(listing['price']);
+    final price = _fmt(widget.listing['price']);
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Stack(
         fit: StackFit.expand,
         children: [
@@ -672,6 +712,43 @@ class _GridItem extends StatelessWidget {
                 ),
               ),
             ),
+          // Kalp butonu — sağ üst köşe
+          Positioned(
+            top: 6,
+            right: 6,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _toggleLike,
+              child: Container(
+                padding: const EdgeInsets.all(5),
+                decoration: const BoxDecoration(
+                  color: Colors.black45,
+                  shape: BoxShape.circle,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      _isLiked ? Icons.favorite : Icons.favorite_border,
+                      color: _isLiked ? Colors.red : Colors.white,
+                      size: 16,
+                    ),
+                    if (_likesCount > 0) ...[
+                      const SizedBox(width: 3),
+                      Text(
+                        '$_likesCount',
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
