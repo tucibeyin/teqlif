@@ -162,8 +162,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   Future<void> _applyZoom(double zoom) async {
     if (_localVideoTrack == null) return;
     try {
-      await _localVideoTrack!.mediaStreamTrack
-          .applyConstraints({'zoom': zoom});
+      await Helper.setZoom(_localVideoTrack!.mediaStreamTrack, zoom);
     } catch (_) {}
   }
 
@@ -404,6 +403,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   _applyZoom(z);
                 }
               },
+              onScaleEnd: (_) => _applyZoom(_currentZoom),
               child: LiveVideoPlayer(
                 track: _localVideoTrack,
                 cameraEnabled: _cameraEnabled,
