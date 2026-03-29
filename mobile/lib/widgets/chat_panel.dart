@@ -64,6 +64,10 @@ class ChatPanel extends StatefulWidget {
   /// Yeniden bağlanmada sessizce moderatör statüsü geri yüklendi (bildirim yok).
   final VoidCallback? onModRestored;
 
+  /// Bir izleyici kalp gönderdiğinde tetiklenir (`stream_like` WS sinyali).
+  /// [userId] ve [username] gönderen kişiyi içerir.
+  final void Function(int userId, String username)? onStreamLike;
+
   /// true ise pin banner mesaj input'unun altında gösterilir (host ekranı için).
   final bool pinAtBottom;
 
@@ -84,6 +88,7 @@ class ChatPanel extends StatefulWidget {
     this.onModPromotedSelf,
     this.onModDemotedSelf,
     this.onModRestored,
+    this.onStreamLike,
     this.pinAtBottom = false,
     this.pinDismissible = false,
   });
@@ -303,6 +308,13 @@ class ChatPanelState extends State<ChatPanel> {
                 // Boş string = sabiti kaldır; dolu string = sabitle
                 setState(() => _pinnedMessage = content.isEmpty ? null : content);
               }
+            } else if (json['type'] == 'stream_like') {
+              final likeUserId = (json['user_id'] as num?)?.toInt() ?? 0;
+              final likeUsername = json['username'] as String? ?? '';
+              // Kendi gönderdiğimiz kalpleri tekrar gösterme
+              if (_myUserId == null || likeUserId != _myUserId) {
+                _eventType = 'stream_like:$likeUserId:$likeUsername';
+              }
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -345,6 +357,13 @@ class ChatPanelState extends State<ChatPanel> {
             final demotedBy = _eventType!.substring('mod_demoted_self:'.length);
             debugPrint('[CHAT] mod_demoted_self — demotedBy:$demotedBy');
             widget.onModDemotedSelf?.call(demotedBy);
+          }
+          if (_eventType != null && _eventType!.startsWith('stream_like:')) {
+            final rest = _eventType!.substring('stream_like:'.length);
+            final colon = rest.indexOf(':');
+            final likeUserId = colon >= 0 ? int.tryParse(rest.substring(0, colon)) ?? 0 : 0;
+            final likeUsername = colon >= 0 ? rest.substring(colon + 1) : '';
+            widget.onStreamLike?.call(likeUserId, likeUsername);
           }
         },
         onDone: _scheduleReconnect,

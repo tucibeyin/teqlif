@@ -99,6 +99,14 @@ class StreamService {
     return JoinTokenOut.fromJson(body);
   }
 
+  /// Canlı yayına kalp gönder (add-only, backend throttle olmadan — istemci throttle'ı kullanır).
+  static Future<void> likeStream(int streamId) async {
+    await http.post(
+      Uri.parse('$kBaseUrl/streams/$streamId/like'),
+      headers: await _headers(),
+    );
+  }
+
   static Future<void> leaveStream(int streamId) async {
     await http.delete(
       Uri.parse('$kBaseUrl/streams/$streamId/leave'),

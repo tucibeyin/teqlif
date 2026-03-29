@@ -16,6 +16,7 @@ import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 import '../../services/moderation_service.dart';
+import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/host_top_bar.dart';
 import '../../widgets/live/live_video_player.dart';
 import '../../l10n/app_localizations.dart';
@@ -53,6 +54,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   static const double _maxZoom = 8.0;
   final Set<String> _modUsers   = {};
   final _chatKey = GlobalKey<ChatPanelState>();
+  final _heartsKey = GlobalKey<FloatingHeartsState>();
 
   @override
   void initState() {
@@ -398,6 +400,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
             ),
           ),
 
+          // ── Uçuşan kalpler katmanı ────────────────────────────────────
+          FloatingHearts(key: _heartsKey),
+
           // ── Bağlanıyor ──────────────────────────────────────────────────
           if (_connecting)
             const Positioned.fill(
@@ -496,6 +501,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       onViewerCountChanged: (n) =>
                           setState(() => _viewerCount = n),
                       onUsernameTap: _showModSheet,
+                      // İzleyiciler kalp gönderdiğinde host ekranında uçsun
+                      onStreamLike: (_, __) =>
+                          _heartsKey.currentState?.addHeart(isLocal: false),
                       pinAtBottom: true,
                       pinDismissible: true,
                     ),

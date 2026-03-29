@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -10,6 +11,7 @@ import '../../services/stream_service.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
+import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/live_video_player.dart';
 import '../../widgets/live/viewer_top_bar.dart';
 import '../public_profile_screen.dart';
@@ -35,6 +37,14 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
   bool _isCoHost = false;
   final Set<String> _coHostMutedUsers = {};
 
+  // ── Uçuşan kalpler ──────────────────────────────────────────────────────
+  final _heartsKey = GlobalKey<FloatingHeartsState>();
+
+  // ── Throttle: en fazla 1 API isteği / 1.5 saniye ──────────────────────
+  // Kullanıcı hızlı tıklarsa animasyonu anında göster, API'yi geri tut.
+  Timer? _likeThrottleTimer;
+  bool _likeThrottlePending = false;
+
   @override
   void initState() {
     super.initState();
@@ -45,6 +55,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
 
   @override
   void dispose() {
+    _likeThrottleTimer?.cancel();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _listener?.dispose();
@@ -233,6 +244,36 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
     }
   }
 
+  /// Kalp butonuna veya çift tıklamaya basıldığında çağrılır.
+  ///
+  /// Throttle mantığı:
+  /// - Animasyon ANINDA tetiklenir (UI hiç beklemez).
+  /// - API isteği, _likeThrottleTimer süresi dolduğunda TEK BİR KEZ atılır.
+  ///   Bu sayede 1.5 sn içindeki seri tıklamalar tek bir HTTP isteğine indirgenir.
+  void _onHeartTap() {
+    HapticFeedback.lightImpact();
+    // Yerel kalbi anında uçur
+    _heartsKey.currentState?.addHeart(isLocal: true);
+
+    if (_likeThrottleTimer?.isActive ?? false) {
+      // Timer çalışıyor → sadece "beklemede" bayrağını işaretle
+      _likeThrottlePending = true;
+    } else {
+      // İlk tıklama ya da timer dolmuş → isteği hemen at, yeni timer başlat
+      _fireLikeRequest();
+      _likeThrottleTimer = Timer(const Duration(milliseconds: 1500), () {
+        if (_likeThrottlePending) {
+          _likeThrottlePending = false;
+          _fireLikeRequest();
+        }
+      });
+    }
+  }
+
+  void _fireLikeRequest() {
+    StreamService.likeStream(widget.joinToken.streamId).catchError((_) {});
+  }
+
   Future<void> _leave() async {
     try {
       await StreamService.leaveStream(widget.joinToken.streamId);
@@ -256,11 +297,14 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
         children: [
           // ── Video katmanı (tam ekran) — host track'i + bekleme durumu ───
           Positioned.fill(
-            child: Builder(
-              builder: (ctx) => LiveVideoPlayer(
-                track: _remoteVideoTrack,
-                cameraEnabled: true,
-                waitingLabel: AppLocalizations.of(ctx)!.liveWaitingVideo,
+            child: GestureDetector(
+              onDoubleTap: _onHeartTap,
+              child: Builder(
+                builder: (ctx) => LiveVideoPlayer(
+                  track: _remoteVideoTrack,
+                  cameraEnabled: true,
+                  waitingLabel: AppLocalizations.of(ctx)!.liveWaitingVideo,
+                ),
               ),
             ),
           ),
@@ -319,6 +363,9 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               ),
             ),
 
+          // ── Uçuşan kalpler katmanı ────────────────────────────────────
+          FloatingHearts(key: _heartsKey),
+
           // ── Üst bar: geri + CANLI + izleyici + başlık + MOD + Ayrıl ────
           Positioned(
             top: 0,
@@ -368,6 +415,9 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       onModRestored: () {
                         if (mounted && !_isCoHost) setState(() => _isCoHost = true);
                       },
+                      // Başka izleyicilerin attığı kalpleri ekranda göster
+                      onStreamLike: (_, __) =>
+                          _heartsKey.currentState?.addHeart(isLocal: false),
                       // Callback her zaman non-null — _isCoHost değeri çağrı anında kontrol edilir.
                       // Build anında null atarsak mevcut MessageItem'lar stale kalır.
                       onUsernameTap: (username) {
@@ -385,12 +435,38 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       },
                       pinAtBottom: true,
                     ),
-                    // Açık artırma (co-host ise host kontrol UI'ı gösterilir)
-                    AuctionPanel(
-                      streamId: widget.joinToken.streamId,
-                      isHost: false,
-                      isCoHost: _isCoHost,
-                      enabled: !_selfMuted,
+                    // Açık artırma + kalp butonu
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: AuctionPanel(
+                            streamId: widget.joinToken.streamId,
+                            isHost: false,
+                            isCoHost: _isCoHost,
+                            enabled: !_selfMuted,
+                          ),
+                        ),
+                        // Kalp butonu — sağ köşe
+                        GestureDetector(
+                          onTap: _onHeartTap,
+                          child: Container(
+                            margin: const EdgeInsets.only(right: 10, bottom: 6),
+                            width: 46,
+                            height: 46,
+                            decoration: BoxDecoration(
+                              color: Colors.white12,
+                              shape: BoxShape.circle,
+                              border: Border.all(color: Colors.white24),
+                            ),
+                            child: const Icon(
+                              Icons.favorite,
+                              color: Color(0xFFFF4081),
+                              size: 24,
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                   ],
