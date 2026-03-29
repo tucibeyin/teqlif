@@ -1,7 +1,29 @@
+import 'dart:convert';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
   static const _tokenKey = 'teqlif_token';
+
+  // ── Kasa (Cache) key sabitleri ────────────────────────────────────────────
+  static const cacheMessages      = 'cache_messages';
+  static const cacheNotifications = 'cache_notifications';
+  static const cacheFeed          = 'cache_feed';
+  static const cacheProfile       = 'cache_profile';
+  static const cacheAuctions      = 'cache_auctions';
+
+  /// [data] (List veya Map) → JSON String olarak sakla.
+  static Future<void> cacheData(String key, dynamic data) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(key, jsonEncode(data));
+  }
+
+  /// Saklanan JSON String'i decode ederek döner; yoksa null.
+  static Future<dynamic> getCachedData(String key) async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(key);
+    if (raw == null) return null;
+    return jsonDecode(raw);
+  }
   static const _userEmailKey = 'teqlif_user_email';
   static const _userNameKey = 'teqlif_user_name';
   static const _userFullNameKey = 'teqlif_user_fullname';
