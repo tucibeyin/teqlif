@@ -1253,4 +1253,8 @@ class AppLocalizationsTr extends AppLocalizations {
 
   @override
   String get storyDeleteFailed => 'Hikaye silinemedi';
+
+  @override
+  String get offlineBannerMessage =>
+      'İnternet bağlantısı yok, çevrimdışı moddasınız.';
 }

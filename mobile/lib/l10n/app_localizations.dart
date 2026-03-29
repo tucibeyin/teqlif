@@ -2455,6 +2455,12 @@ abstract class AppLocalizations {
   /// In tr, this message translates to:
   /// **'Hikaye silinemedi'**
   String get storyDeleteFailed;
+
+  /// No description provided for @offlineBannerMessage.
+  ///
+  /// In tr, this message translates to:
+  /// **'İnternet bağlantısı yok, çevrimdışı moddasınız.'**
+  String get offlineBannerMessage;
 }
 
 class _AppLocalizationsDelegate

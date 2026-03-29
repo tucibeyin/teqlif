@@ -1255,4 +1255,8 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get storyDeleteFailed => 'Could not delete story';
+
+  @override
+  String get offlineBannerMessage =>
+      'No internet connection, you are in offline mode.';
 }
