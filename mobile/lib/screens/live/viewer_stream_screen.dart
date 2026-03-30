@@ -401,7 +401,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Sohbet (mesajlar üstte yüzer)
+                    // Sohbet — kalp butonu mesaj input'unun sağına eklendi
                     ChatPanel(
                       streamId: widget.joinToken.streamId,
                       onStreamEnded: _handleStreamEnded,
@@ -415,11 +415,8 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       onModRestored: () {
                         if (mounted && !_isCoHost) setState(() => _isCoHost = true);
                       },
-                      // Başka izleyicilerin attığı kalpleri ekranda göster
                       onStreamLike: (_, __) =>
                           _heartsKey.currentState?.addHeart(isLocal: false),
-                      // Callback her zaman non-null — _isCoHost değeri çağrı anında kontrol edilir.
-                      // Build anında null atarsak mevcut MessageItem'lar stale kalır.
                       onUsernameTap: (username) {
                         debugPrint('[VIEWER] onUsernameTap — username:$username _isCoHost:$_isCoHost');
                         if (_isCoHost) {
@@ -434,41 +431,29 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                         }
                       },
                       pinAtBottom: true,
+                      trailingAction: GestureDetector(
+                        onTap: _onHeartTap,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white30, width: 1.5),
+                          ),
+                          child: const Icon(
+                            Icons.favorite,
+                            color: Color(0xFFFF4081),
+                            size: 20,
+                          ),
+                        ),
+                      ),
                     ),
-                    // Açık artırma + kalp butonu yan yana
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: AuctionPanel(
-                            streamId: widget.joinToken.streamId,
-                            isHost: false,
-                            isCoHost: _isCoHost,
-                            enabled: !_selfMuted,
-                          ),
-                        ),
-                        Padding(
-                          padding: const EdgeInsets.only(right: 8, bottom: 4),
-                          child: GestureDetector(
-                            onTap: _onHeartTap,
-                            child: Container(
-                              width: 50,
-                              height: 50,
-                              decoration: BoxDecoration(
-                                color: Colors.black54,
-                                shape: BoxShape.circle,
-                                border: Border.all(
-                                    color: Colors.white30, width: 1.5),
-                              ),
-                              child: const Icon(
-                                Icons.favorite,
-                                color: Color(0xFFFF4081),
-                                size: 26,
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
+                    AuctionPanel(
+                      streamId: widget.joinToken.streamId,
+                      isHost: false,
+                      isCoHost: _isCoHost,
+                      enabled: !_selfMuted,
                     ),
                     const SizedBox(height: 4),
                   ],

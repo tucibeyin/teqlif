@@ -74,6 +74,9 @@ class ChatPanel extends StatefulWidget {
   /// true ise pin banner'da ✕ kapat butonu gösterilir (sadece host).
   final bool pinDismissible;
 
+  /// Mesaj gönder butonunun sağına eklenen isteğe bağlı widget (ör. kalp butonu).
+  final Widget? trailingAction;
+
   const ChatPanel({
     super.key,
     required this.streamId,
@@ -91,6 +94,7 @@ class ChatPanel extends StatefulWidget {
     this.onStreamLike,
     this.pinAtBottom = false,
     this.pinDismissible = false,
+    this.trailingAction,
   });
 
   @override
@@ -632,6 +636,10 @@ class ChatPanelState extends State<ChatPanel> {
                         size: 16),
                   ),
                 ),
+                if (widget.trailingAction != null) ...[
+                  const SizedBox(width: 8),
+                  widget.trailingAction!,
+                ],
               ],
             ),
           ),
