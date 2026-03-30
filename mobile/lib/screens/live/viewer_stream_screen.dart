@@ -430,40 +430,30 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                         }
                       },
                       pinAtBottom: true,
+                      trailingAction: GestureDetector(
+                        onTap: _onHeartTap,
+                        child: Container(
+                          width: 38,
+                          height: 38,
+                          decoration: BoxDecoration(
+                            color: Colors.black54,
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                                color: Colors.white30, width: 1.5),
+                          ),
+                          child: const Icon(
+                            Icons.favorite,
+                            color: Color(0xFFFF4081),
+                            size: 20,
+                          ),
+                        ),
+                      ),
                     ),
-                    // AuctionPanel + kalp butonu aynı satırda
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        Expanded(
-                          child: AuctionPanel(
-                            streamId: widget.joinToken.streamId,
-                            isHost: false,
-                            isCoHost: _isCoHost,
-                            enabled: !_selfMuted,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        GestureDetector(
-                          onTap: _onHeartTap,
-                          child: Container(
-                            width: 44,
-                            height: 44,
-                            margin: const EdgeInsets.only(right: 12),
-                            decoration: BoxDecoration(
-                              color: Colors.black54,
-                              shape: BoxShape.circle,
-                              border: Border.all(
-                                  color: Colors.white30, width: 1.5),
-                            ),
-                            child: const Icon(
-                              Icons.favorite,
-                              color: Color(0xFFFF4081),
-                              size: 22,
-                            ),
-                          ),
-                        ),
-                      ],
+                    AuctionPanel(
+                      streamId: widget.joinToken.streamId,
+                      isHost: false,
+                      isCoHost: _isCoHost,
+                      enabled: !_selfMuted,
                     ),
                     const SizedBox(height: 4),
                   ],

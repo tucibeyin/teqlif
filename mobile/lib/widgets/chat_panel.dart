@@ -74,6 +74,10 @@ class ChatPanel extends StatefulWidget {
   /// true ise pin banner'da ✕ kapat butonu gösterilir (sadece host).
   final bool pinDismissible;
 
+  /// Input row'unun en sağına eklenen widget — token kontrolünden bağımsız,
+  /// her zaman render edilir (ör. viewer kalp butonu).
+  final Widget? trailingAction;
+
   const ChatPanel({
     super.key,
     required this.streamId,
@@ -91,6 +95,7 @@ class ChatPanel extends StatefulWidget {
     this.onStreamLike,
     this.pinAtBottom = false,
     this.pinDismissible = false,
+    this.trailingAction,
   });
 
   @override
@@ -547,11 +552,11 @@ class ChatPanelState extends State<ChatPanel> {
               ),
             ),
           ),
-        if (_token != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-            child: Row(
-              children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+          child: Row(
+            children: [
+              if (_token != null) ...[
                 if (_history.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
@@ -632,8 +637,14 @@ class ChatPanelState extends State<ChatPanel> {
                   ),
                 ),
               ],
-            ),
+              // trailingAction her zaman görünür — token bağımsız
+              if (widget.trailingAction != null) ...[
+                const SizedBox(width: 8),
+                widget.trailingAction!,
+              ],
+            ],
           ),
+        ),
         if (_pinnedMessage != null && widget.pinAtBottom)
           _buildPinBanner(bottomMargin: true),
       ],
