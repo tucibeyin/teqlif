@@ -1299,7 +1299,7 @@
             <div class="video-wrap" id="videoContainer">
 
                 <!-- Medya elementleri -->
-                <video id="mainVideo" autoplay playsinline muted style="display:none;"></video>
+                <video id="mainVideo" autoplay playsinline muted style="display:none;" ondblclick="_onStreamHeart()"></video>
                 <audio id="remoteAudio" autoplay style="display:none;"></audio>
 
                 <!-- Bağlanıyor spinner -->
@@ -1340,6 +1340,12 @@
                         <button class="btn btn-slate" id="btnLeave" style="display:none;" data-track-id="yayin-btn-ayril">Ayrıl</button>
                     </div>
                 </div>
+
+                <!-- Kalp butonu (görüntüleyici için sağ alt) -->
+                <button id="streamHeartBtn" onclick="_onStreamHeart()"
+                        style="display:none;position:absolute;bottom:70px;right:16px;z-index:10;background:rgba(0,0,0,.45);border:none;border-radius:50%;width:46px;height:46px;cursor:pointer;align-items:center;justify-content:center;font-size:24px;line-height:1;transition:transform .1s;">
+                    ❤️
+                </button>
 
             </div><!-- /.video-wrap -->
 
@@ -1731,6 +1737,9 @@
                 }).catch(() => {});
             } else {
                 document.getElementById('btnLeave').style.display = '';
+                // Kalp butonu sadece izleyicide görünür
+                const _hBtn = document.getElementById('streamHeartBtn');
+                if (_hBtn) _hBtn.style.display = 'flex';
                 // mainVideo daima muted — ses remoteAudio elementi üzerinden çıkar
             }
 
@@ -2211,6 +2220,44 @@
         }
 
         let _isHostPage = false;
+
+        // ── Canlı yayın kalp throttle ────────────────────────────────────
+        let _heartThrottleTimer   = null;
+        let _heartThrottlePending = false;
+
+        function _onStreamHeart() {
+            _spawnFloatingHeart(true);
+            if (_heartThrottleTimer) {
+                _heartThrottlePending = true;
+            } else {
+                _fireLikeRequest();
+                _heartThrottleTimer = setTimeout(() => {
+                    _heartThrottleTimer = null;
+                    if (_heartThrottlePending) {
+                        _heartThrottlePending = false;
+                        _fireLikeRequest();
+                    }
+                }, 1500);
+            }
+        }
+
+        function _fireLikeRequest() {
+            if (!streamId || !Auth.getToken()) return;
+            apiFetch(`/streams/${streamId}/like`, { method: 'POST' }).catch(() => {});
+        }
+
+        function _spawnFloatingHeart(isLocal) {
+            const container = document.getElementById('videoContainer');
+            if (!container) return;
+            const heart = document.createElement('div');
+            heart.className = 'floating-heart';
+            const driftX = (Math.random() * 50 - 25) | 0;
+            heart.style.setProperty('--hx', `${driftX}px`);
+            heart.textContent = isLocal ? '❤️' : '🩷';
+            container.appendChild(heart);
+            heart.addEventListener('animationend', () => heart.remove(), { once: true });
+            setTimeout(() => { if (heart.parentNode) heart.remove(); }, 2200);
+        }
         let _isCoHost   = false;
 
         function _promoteToCoHost(promotedBy) {
@@ -2931,6 +2978,8 @@
                     onModPromoted: (msg) => { if (msg.username) _modUsers.add(msg.username); },
                     onModDemoted:  (msg) => { if (msg.username) _modUsers.delete(msg.username); },
                     onHostPin: _showPinBanner,
+                    onStreamLike: () => _spawnFloatingHeart(false),
+                    myUserId: Auth.getUser()?.id ?? null,
                 });
 
                 // Host: sabitleme butonunu göster + karakter sayacı
@@ -2977,6 +3026,8 @@
                         }
                     },
                     onHostPin: _showPinBanner,
+                    onStreamLike: () => _spawnFloatingHeart(false),
+                    myUserId: Auth.getUser()?.id ?? null,
                 });
             }
 

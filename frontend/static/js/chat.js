@@ -14,8 +14,10 @@ const Chat = (() => {
     let _onModPromoted = null;
     let _onModDemoted  = null;
     let _onHostPin     = null;
+    let _onStreamLike  = null;
+    let _myUserId      = null;
 
-    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted, onHostPin } = {}) {
+    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted, onHostPin, onStreamLike, myUserId } = {}) {
         _streamId = streamId;
         _onStreamEnded = onStreamEnded || null;
         _onViewerCount = onViewerCount || null;
@@ -26,6 +28,8 @@ const Chat = (() => {
         _onModPromoted = onModPromoted || null;
         _onModDemoted  = onModDemoted  || null;
         _onHostPin     = onHostPin     || null;
+        _onStreamLike  = onStreamLike  || null;
+        _myUserId      = myUserId      || null;
         _connectWS();
     }
 
@@ -84,6 +88,12 @@ const Chat = (() => {
                     if (_onModDemoted) _onModDemoted(msg);
                 } else if (msg.type === 'host_pin') {
                     if (_onHostPin) _onHostPin(msg.content || '');
+                } else if (msg.type === 'stream_like') {
+                    // Kendi gönderdiğimiz echo'yu görmezden gel
+                    const senderId = msg.user_id;
+                    if (_onStreamLike && (!_myUserId || senderId !== _myUserId)) {
+                        _onStreamLike(senderId, msg.username || '');
+                    }
                 }
             } catch (_) {}
         };

@@ -803,8 +803,8 @@
             </div>
             <!-- Tap navigasyon (z-index:2 — üst bar ve butonların altında kalır) -->
             <div style="position:absolute;inset:0;display:flex;z-index:2;">
-                <div style="flex:3" onclick="svNavigate(-1)"></div>
-                <div style="flex:7" onclick="svNavigate(1)"></div>
+                <div style="flex:3" onclick="svNavigate(-1)" ondblclick="svTriggerHeart()"></div>
+                <div style="flex:7" onclick="svNavigate(1)"  ondblclick="svTriggerHeart()"></div>
             </div>
             <!-- Kim Gördü? butonu (yalnızca kendi hikayelerinde görünür) -->
             <div id="svViewersBtn" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:5;">
@@ -812,6 +812,17 @@
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     Kim Gördü?
                 </button>
+            </div>
+            <!-- Hikaye Beğeni butonu — sağ alt -->
+            <div id="svLikeBtn" style="position:absolute;bottom:32px;right:18px;z-index:5;display:none;flex-direction:column;align-items:center;gap:3px;">
+                <button id="svLikeHeart" onclick="svToggleLike()"
+                        style="background:none;border:none;cursor:pointer;padding:4px;line-height:1;">
+                    <svg id="svLikeIcon" width="28" height="28" viewBox="0 0 24 24" fill="none"
+                         stroke="#fff" stroke-width="2" style="filter:drop-shadow(0 1px 4px rgba(0,0,0,.5));">
+                        <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                    </svg>
+                </button>
+                <span id="svLikeCount" style="color:#fff;font-size:11px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.5);min-height:14px;"></span>
             </div>
         </div>
 
@@ -1096,7 +1107,9 @@
         let _svItemIdx      = 0;
         let _svTimer        = null;
         let _svProgressAnim = null;
-        let _svCurrentUserId = null;
+        let _svCurrentUserId  = null;
+        let _svCurrentLiked   = false;
+        let _svCurrentLikesCount = 0;
 
         async function loadFollowedStories() {
             if (!Auth.getToken()) return;
@@ -1306,6 +1319,24 @@
 
             const item = mediaItems[_svItemIdx];
 
+            // Beğeni durumunu güncelle
+            _svCurrentLiked      = item.is_liked      ?? false;
+            _svCurrentLikesCount = item.likes_count    ?? 0;
+            const likeBtn  = document.getElementById('svLikeBtn');
+            const likeIcon = document.getElementById('svLikeIcon');
+            const likeCnt  = document.getElementById('svLikeCount');
+            if (likeBtn) {
+                // Kendi hikayen değilse butonu göster
+                likeBtn.style.display = group.isMine ? 'none' : 'flex';
+                if (likeIcon) {
+                    likeIcon.setAttribute('fill',   _svCurrentLiked ? '#e53e3e' : 'none');
+                    likeIcon.setAttribute('stroke', _svCurrentLiked ? '#e53e3e' : '#fff');
+                }
+                if (likeCnt) {
+                    likeCnt.textContent = _svCurrentLikesCount > 0 ? _svCurrentLikesCount : '';
+                }
+            }
+
             // Progress barlar
             svUpdateProgressBars(mediaItems.length);
 
@@ -1402,6 +1433,70 @@
                 video.onended = () => { if (_svActive) svNavigate(1); };
                 video.onerror = () => { if (_svActive) svNavigate(1); };
             }
+        }
+
+        async function svToggleLike() {
+            const group = _svGroups[_svGroupIdx];
+            if (!group || group.isMine) return;
+            const mediaItems = (group.items ?? []).filter(i => i.story_type !== 'live_redirect');
+            const item = mediaItems[_svItemIdx];
+            if (!item) return;
+
+            // Optimistic update
+            const prevLiked = _svCurrentLiked;
+            const prevCount = _svCurrentLikesCount;
+            _svCurrentLiked = !_svCurrentLiked;
+            _svCurrentLikesCount += _svCurrentLiked ? 1 : -1;
+            item.is_liked    = _svCurrentLiked;
+            item.likes_count = _svCurrentLikesCount;
+
+            const likeIcon = document.getElementById('svLikeIcon');
+            const likeCnt  = document.getElementById('svLikeCount');
+            if (likeIcon) {
+                likeIcon.setAttribute('fill',   _svCurrentLiked ? '#e53e3e' : 'none');
+                likeIcon.setAttribute('stroke', _svCurrentLiked ? '#e53e3e' : '#fff');
+            }
+            if (likeCnt) likeCnt.textContent = _svCurrentLikesCount > 0 ? _svCurrentLikesCount : '';
+
+            if (_svCurrentLiked) svTriggerHeart();
+
+            try {
+                const result = await apiFetch(`/stories/${item.id}/like`, { method: 'POST' });
+                _svCurrentLiked      = result.is_liked      ?? _svCurrentLiked;
+                _svCurrentLikesCount = result.likes_count   ?? _svCurrentLikesCount;
+                item.is_liked    = _svCurrentLiked;
+                item.likes_count = _svCurrentLikesCount;
+                if (likeIcon) {
+                    likeIcon.setAttribute('fill',   _svCurrentLiked ? '#e53e3e' : 'none');
+                    likeIcon.setAttribute('stroke', _svCurrentLiked ? '#e53e3e' : '#fff');
+                }
+                if (likeCnt) likeCnt.textContent = _svCurrentLikesCount > 0 ? _svCurrentLikesCount : '';
+            } catch (_) {
+                // Sessiz rollback
+                _svCurrentLiked      = prevLiked;
+                _svCurrentLikesCount = prevCount;
+                item.is_liked    = prevLiked;
+                item.likes_count = prevCount;
+                if (likeIcon) {
+                    likeIcon.setAttribute('fill',   prevLiked ? '#e53e3e' : 'none');
+                    likeIcon.setAttribute('stroke', prevLiked ? '#e53e3e' : '#fff');
+                }
+                if (likeCnt) likeCnt.textContent = prevCount > 0 ? prevCount : '';
+            }
+        }
+
+        function svTriggerHeart() {
+            const overlay = document.getElementById('storyViewerOverlay');
+            if (!overlay) return;
+            const heart = document.createElement('div');
+            heart.className = 'floating-heart';
+            const driftX = (Math.random() * 40 - 20) | 0;
+            heart.style.setProperty('--hx', `${driftX}px`);
+            heart.textContent = '❤️';
+            overlay.appendChild(heart);
+            heart.addEventListener('animationend', () => heart.remove(), { once: true });
+            // Güvenlik yedek temizleme (animationend tetiklenmezse)
+            setTimeout(() => { if (heart.parentNode) heart.remove(); }, 2200);
         }
 
         function svUpdateProgressBars(total) {
@@ -1748,11 +1843,20 @@
 
             list.innerHTML = _filteredListings.map(l => `
                 <div class="listing-item" onclick="window.location='/ilan/${l.id}'">
-                    <div class="listing-img">
+                    <div class="listing-img" style="position:relative;">
                         ${l.image_url
                     ? `<img src="${escHtml(l.image_url)}" style="width:100%;height:100%;object-fit:cover;">`
                     : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`
                 }
+                        <button class="tile-like-chip" id="like-listing-${l.id}"
+                                onclick="event.stopPropagation(); toggleListingLike(${l.id}, this);"
+                                title="Beğen">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="${l.is_liked ? '#ef4444' : 'none'}"
+                                 stroke="${l.is_liked ? '#ef4444' : '#fff'}" stroke-width="2.2">
+                                <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/>
+                            </svg>
+                            <span id="like-count-listing-${l.id}">${(l.likes_count || 0) > 0 ? (l.likes_count) : ''}</span>
+                        </button>
                     </div>
                     <div class="listing-body">
                         <div>
@@ -1765,6 +1869,7 @@
                         </div>
                     </div>
                 </div>`).join('');
+            _rebuildListingMap();
         }
 
         function formatDate(dateStr) {
@@ -1774,6 +1879,47 @@
             if (diff < 3600) return Math.floor(diff / 60) + ' dk önce';
             if (diff < 86400) return Math.floor(diff / 3600) + ' sa önce';
             return Math.floor(diff / 86400) + ' gün önce';
+        }
+
+        /* ── İlan Beğeni Toggle (Optimistic UI) ────────────────────────── */
+        // Listing nesneleri _filteredListings içinde tutulur; id → nesne haritası
+        const _listingMap = {};
+        // _filteredListings değiştiğinde map'i güncelle (renderListings sonrasında çağrılır)
+        function _rebuildListingMap() {
+            (_filteredListings || []).forEach(l => { _listingMap[l.id] = l; });
+        }
+
+        async function toggleListingLike(id, btn) {
+            if (!Auth.getToken()) { window.location.href = '/giris.html?next=/'; return; }
+            const l = _listingMap[id];
+            if (!l) return;
+            // Optimistic
+            const prevLiked = l.is_liked;
+            const prevCount = l.likes_count || 0;
+            l.is_liked = !l.is_liked;
+            l.likes_count = prevCount + (l.is_liked ? 1 : -1);
+            _applyListingLikeUI(id, l.is_liked, l.likes_count);
+            try {
+                const res = await apiFetch(`/listings/${id}/like`, { method: 'POST' });
+                if (res) { l.is_liked = res.is_liked; l.likes_count = res.likes_count; }
+                _applyListingLikeUI(id, l.is_liked, l.likes_count);
+            } catch (_) {
+                // Geri al
+                l.is_liked = prevLiked; l.likes_count = prevCount;
+                _applyListingLikeUI(id, prevLiked, prevCount);
+            }
+        }
+
+        function _applyListingLikeUI(id, liked, count) {
+            const btn = document.getElementById(`like-listing-${id}`);
+            const countEl = document.getElementById(`like-count-listing-${id}`);
+            if (!btn) return;
+            const svg = btn.querySelector('svg');
+            if (svg) {
+                svg.setAttribute('fill', liked ? '#ef4444' : 'none');
+                svg.setAttribute('stroke', liked ? '#ef4444' : '#fff');
+            }
+            if (countEl) countEl.textContent = count > 0 ? count : '';
         }
 
         /* ── Yardımcılar ────────────────────────────────────────────── */
