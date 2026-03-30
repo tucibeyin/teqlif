@@ -366,6 +366,30 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
           // ── Uçuşan kalpler katmanı ────────────────────────────────────
           FloatingHearts(key: _heartsKey),
 
+          // ── Kalp butonu (sadece izleyici, sağ alt) ────────────────────
+          if (connected)
+            Positioned(
+              right: 12,
+              bottom: botPad + 96,
+              child: GestureDetector(
+                onTap: _onHeartTap,
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white30, width: 1.5),
+                  ),
+                  child: const Icon(
+                    Icons.favorite,
+                    color: Color(0xFFFF4081),
+                    size: 26,
+                  ),
+                ),
+              ),
+            ),
+
           // ── Üst bar: geri + CANLI + izleyici + başlık + MOD + Ayrıl ────
           Positioned(
             top: 0,
@@ -435,38 +459,11 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       },
                       pinAtBottom: true,
                     ),
-                    // Açık artırma + kalp butonu
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
-                      children: [
-                        Expanded(
-                          child: AuctionPanel(
-                            streamId: widget.joinToken.streamId,
-                            isHost: false,
-                            isCoHost: _isCoHost,
-                            enabled: !_selfMuted,
-                          ),
-                        ),
-                        // Kalp butonu — sağ köşe
-                        GestureDetector(
-                          onTap: _onHeartTap,
-                          child: Container(
-                            margin: const EdgeInsets.only(right: 10, bottom: 6),
-                            width: 46,
-                            height: 46,
-                            decoration: BoxDecoration(
-                              color: Colors.white12,
-                              shape: BoxShape.circle,
-                              border: Border.all(color: Colors.white24),
-                            ),
-                            child: const Icon(
-                              Icons.favorite,
-                              color: Color(0xFFFF4081),
-                              size: 24,
-                            ),
-                          ),
-                        ),
-                      ],
+                    AuctionPanel(
+                      streamId: widget.joinToken.streamId,
+                      isHost: false,
+                      isCoHost: _isCoHost,
+                      enabled: !_selfMuted,
                     ),
                     const SizedBox(height: 4),
                   ],

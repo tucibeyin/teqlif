@@ -111,13 +111,19 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     });
     try {
       final result = await ListingService.toggleLike(widget.listing['id'] as int);
+      final newCount = result['likes_count'] as int? ?? _likesCount;
+      final newLiked = result['is_liked'] as bool? ?? _isLiked;
+      widget.listing['likes_count'] = newCount;
+      widget.listing['is_liked'] = newLiked;
       if (mounted) {
         setState(() {
-          _likesCount = result['likes_count'] as int? ?? _likesCount;
-          _isLiked = result['is_liked'] as bool? ?? _isLiked;
+          _likesCount = newCount;
+          _isLiked = newLiked;
         });
       }
     } catch (_) {
+      widget.listing['likes_count'] = prevCount;
+      widget.listing['is_liked'] = prevLiked;
       if (mounted) setState(() { _isLiked = prevLiked; _likesCount = prevCount; });
     }
   }

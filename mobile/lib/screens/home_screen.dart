@@ -641,14 +641,21 @@ class _GridItemState extends State<_GridItem> {
     });
     try {
       final result = await ListingService.toggleLike(widget.listing['id'] as int);
+      final newCount = result['likes_count'] as int? ?? _likesCount;
+      final newLiked = result['is_liked'] as bool? ?? _isLiked;
+      // widget.listing map'ini de güncelle — parent rebuild olursa initState doğru değeri okur
+      widget.listing['likes_count'] = newCount;
+      widget.listing['is_liked'] = newLiked;
       if (mounted) {
         setState(() {
-          _likesCount = result['likes_count'] as int? ?? _likesCount;
-          _isLiked = result['is_liked'] as bool? ?? _isLiked;
+          _likesCount = newCount;
+          _isLiked = newLiked;
         });
       }
     } catch (_) {
       // Hata → eski state'e dön
+      widget.listing['likes_count'] = prevCount;
+      widget.listing['is_liked'] = prevLiked;
       if (mounted) setState(() { _isLiked = prevLiked; _likesCount = prevCount; });
     }
   }
