@@ -551,12 +551,12 @@ class ChatPanelState extends State<ChatPanel> {
               ),
             ),
           ),
-        if (_token != null)
-          Padding(
-            padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
-            child: Row(
-              children: [
-                // History button
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 4, 12, 0),
+          child: Row(
+            children: [
+              // Mesaj girişi + gönder — sadece giriş yapılmışsa
+              if (_token != null) ...[
                 if (_history.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(right: 6),
@@ -636,13 +636,15 @@ class ChatPanelState extends State<ChatPanel> {
                         size: 16),
                   ),
                 ),
-                if (widget.trailingAction != null) ...[
-                  const SizedBox(width: 8),
-                  widget.trailingAction!,
-                ],
               ],
-            ),
+              // trailingAction her zaman gösterilir (token bağımsız)
+              if (widget.trailingAction != null) ...[
+                if (_token != null) const SizedBox(width: 8),
+                widget.trailingAction!,
+              ],
+            ],
           ),
+        ),
         if (_pinnedMessage != null && widget.pinAtBottom)
           _buildPinBanner(bottomMargin: true),
       ],
