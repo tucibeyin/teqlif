@@ -129,12 +129,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         }
       }
 
+      // _room set edilince live = true → UI hemen görünür.
+      // _localVideoTrack null ise LiveVideoPlayer siyah gösterir,
+      // LocalTrackPublishedEvent veya _pollForTrack track'i set eder.
       setState(() {
         _room = room;
         _localVideoTrack = foundTrack;
-        // Bağlantı kuruldu + kamera aktif → UI'ı her zaman göster.
-        // _localVideoTrack null ise LiveVideoPlayer siyah gösterir,
-        // LocalTrackPublishedEvent veya _pollForTrack track'i set eder.
         _connecting = false;
       });
 
@@ -402,7 +402,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     final botPad = MediaQuery.of(context).padding.bottom;
     final screenH = MediaQuery.of(context).size.height;
     _bidsPanelTop ??= topPad + 66;
-    final live = !_connecting && _error == null;
+    // Oda bağlıysa UI her zaman gösterilir — _connecting flag'ine bağımlı değil
+    final live = _room != null && _error == null;
 
     return PopScope(
       canPop: false,
@@ -428,8 +429,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           // ── Uçuşan kalpler katmanı ────────────────────────────────────
           FloatingHearts(key: _heartsKey),
 
-          // ── Bağlanıyor ──────────────────────────────────────────────────
-          if (_connecting)
+          // ── Bağlanıyor — sadece oda henüz bağlı değilken ───────────────
+          if (_room == null && _error == null)
             const Positioned.fill(
               child: ColoredBox(
                 color: Colors.black,
