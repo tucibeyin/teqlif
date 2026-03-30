@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -14,6 +15,7 @@ import '../../utils/error_helper.dart';
 import '../../widgets/auction_panel.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/chat_panel.dart';
+import '../../widgets/live/floating_hearts.dart';
 import '../public_profile_screen.dart';
 
 class SwipeLiveScreen extends StatefulWidget {
@@ -102,6 +104,9 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   bool _kicked = false;
   bool _isCoHost = false;
   final Set<String> _coHostMutedUsers = {};
+  final _heartsKey = GlobalKey<FloatingHeartsState>();
+  Timer? _likeThrottleTimer;
+  bool _likeThrottlePending = false;
 
   @override
   void initState() {
@@ -287,6 +292,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
   // dispose'da await kullanamayız, senkron temizlik
   void _deactivateSync() {
+    _likeThrottleTimer?.cancel();
     _listener?.dispose();
     _listener = null;
     final room = _room;
@@ -298,6 +304,26 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     } catch (e) {
       LoggerService.instance.warning('SwipeLivePage._deactivateSync', 'leaveStream başarısız: $e');
     }
+  }
+
+  void _onHeartTap() {
+    HapticFeedback.lightImpact();
+    _heartsKey.currentState?.addHeart(isLocal: true);
+    if (_likeThrottleTimer?.isActive ?? false) {
+      _likeThrottlePending = true;
+    } else {
+      _fireLikeRequest();
+      _likeThrottleTimer = Timer(const Duration(milliseconds: 1500), () {
+        if (_likeThrottlePending) {
+          _likeThrottlePending = false;
+          _fireLikeRequest();
+        }
+      });
+    }
+  }
+
+  void _fireLikeRequest() {
+    StreamService.likeStream(widget.stream.id).catchError((_) {});
   }
 
   Future<void> _leave() async {
@@ -509,6 +535,9 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
           ),
         ),
 
+        // ── Uçuşan kalpler ───────────────────────────────────────────────
+        FloatingHearts(key: _heartsKey),
+
         // ── Swipe ipucu (son sayfa değilse) ─────────────────────────────
         if (!widget.isLast && !_streamEnded)
           Positioned(
@@ -528,63 +557,94 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
             ),
           ),
 
-        // ── Alt panel: sohbet + açık artırma ────────────────────────────
+        // ── Alt panel: sohbet + açık artırma + kalp butonu ──────────────
         if (widget.isActive && _token != null && !_streamEnded)
           Positioned(
             bottom: 0,
             left: 0,
             right: 0,
-            child: Container(
-              padding: EdgeInsets.only(bottom: botPad + 8),
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.bottomCenter,
-                  end: Alignment.topCenter,
-                  colors: [Color(0xCC000000), Colors.transparent],
-                  stops: [0.0, 1.0],
+            child: Stack(
+              clipBehavior: Clip.none,
+              children: [
+                Container(
+                  padding: EdgeInsets.only(bottom: botPad + 8, right: 58),
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.bottomCenter,
+                      end: Alignment.topCenter,
+                      colors: [Color(0xCC000000), Colors.transparent],
+                      stops: [0.0, 1.0],
+                    ),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      ChatPanel(
+                        streamId: widget.stream.id,
+                        onStreamEnded: () =>
+                            setState(() => _streamEnded = true),
+                        onViewerCountChanged: (n) =>
+                            setState(() => _viewerCount = n),
+                        onMuted: _handleMuted,
+                        onUnmuted: _handleUnmuted,
+                        onKicked: _handleKicked,
+                        onModPromotedSelf: _handleModPromotedSelf,
+                        onModDemotedSelf: _handleModDemotedSelf,
+                        onModRestored: () {
+                          if (mounted && !_isCoHost)
+                            setState(() => _isCoHost = true);
+                        },
+                        onStreamLike: (_, __) =>
+                            _heartsKey.currentState?.addHeart(isLocal: false),
+                        onUsernameTap: (username) {
+                          if (_isCoHost) {
+                            _showCoHostModSheet(username);
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    PublicProfileScreen(username: username),
+                              ),
+                            );
+                          }
+                        },
+                        pinAtBottom: true,
+                      ),
+                      AuctionPanel(
+                        streamId: widget.stream.id,
+                        isHost: false,
+                        isCoHost: _isCoHost,
+                        enabled: !_selfMuted,
+                      ),
+                      const SizedBox(height: 4),
+                    ],
+                  ),
                 ),
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  ChatPanel(
-                    streamId: widget.stream.id,
-                    onStreamEnded: () =>
-                        setState(() => _streamEnded = true),
-                    onViewerCountChanged: (n) =>
-                        setState(() => _viewerCount = n),
-                    onMuted: _handleMuted,
-                    onUnmuted: _handleUnmuted,
-                    onKicked: _handleKicked,
-                    onModPromotedSelf: _handleModPromotedSelf,
-                    onModDemotedSelf: _handleModDemotedSelf,
-                    onModRestored: () {
-                      if (mounted && !_isCoHost) setState(() => _isCoHost = true);
-                    },
-                    onUsernameTap: (username) {
-                      if (_isCoHost) {
-                        _showCoHostModSheet(username);
-                      } else {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => PublicProfileScreen(username: username),
-                          ),
-                        );
-                      }
-                    },
-                    pinAtBottom: true,
+                // Kalp butonu — sağ alta sabit
+                Positioned(
+                  right: 8,
+                  bottom: botPad + 12,
+                  child: GestureDetector(
+                    onTap: _onHeartTap,
+                    child: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white30, width: 1.5),
+                      ),
+                      child: const Icon(
+                        Icons.favorite,
+                        color: Color(0xFFFF4081),
+                        size: 22,
+                      ),
+                    ),
                   ),
-                  AuctionPanel(
-                    streamId: widget.stream.id,
-                    isHost: false,
-                    isCoHost: _isCoHost,
-                    enabled: !_selfMuted,
-                  ),
-                  const SizedBox(height: 4),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
       ],
