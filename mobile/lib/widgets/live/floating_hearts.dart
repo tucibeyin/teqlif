@@ -88,13 +88,16 @@ class FloatingHeartsState extends State<FloatingHearts>
 
   @override
   Widget build(BuildContext context) {
-    if (_hearts.isEmpty) return const SizedBox.shrink();
-
+    // Her zaman Positioned.fill döndür — non-positioned↔positioned geçişi
+    // parent Stack'te layout reset'e neden oluyor.
     return Positioned.fill(
       child: IgnorePointer(
-        child: Stack(
-          children: _hearts.map((h) => _HeartWidget(particle: h)).toList(),
-        ),
+        child: _hearts.isEmpty
+            ? const SizedBox.shrink()
+            : Stack(
+                children:
+                    _hearts.map((h) => _HeartWidget(particle: h)).toList(),
+              ),
       ),
     );
   }
