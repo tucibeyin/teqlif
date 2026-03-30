@@ -99,10 +99,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       _listener = room.createListener();
 
       _listener!.on<LocalTrackPublishedEvent>((event) {
-        if (event.publication.track is LocalVideoTrack) {
+        if (event.publication.track is LocalVideoTrack && mounted) {
           setState(() {
             _localVideoTrack = event.publication.track as LocalVideoTrack;
-            _connecting = false; // Track hazır → ekranı aç
           });
         }
       });
@@ -121,7 +120,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       await room.localParticipant?.setCameraEnabled(true);
       await room.localParticipant?.setMicrophoneEnabled(true);
 
-      // Track zaten publish edilmişse (nadir) hemen al
+      // Track zaten publish edilmişse hemen al
       LocalVideoTrack? foundTrack;
       for (final pub in room.localParticipant!.videoTrackPublications) {
         if (pub.track != null) {
@@ -132,13 +131,15 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
       setState(() {
         _room = room;
-        if (foundTrack != null) {
-          _localVideoTrack = foundTrack;
-          _connecting = false; // Track hazır → ekranı hemen aç
-        }
-        // foundTrack null ise _connecting = true kalır,
-        // LocalTrackPublishedEvent gelince false olur.
+        _localVideoTrack = foundTrack;
+        // Bağlantı kuruldu + kamera aktif → UI'ı her zaman göster.
+        // _localVideoTrack null ise LiveVideoPlayer siyah gösterir,
+        // LocalTrackPublishedEvent veya _pollForTrack track'i set eder.
+        _connecting = false;
       });
+
+      // Track hâlâ gelmemişse kısa aralıklarla kontrol et
+      if (foundTrack == null) _pollForTrack();
       // Yayın başladıktan 5 saniye sonra otomatik kapak fotoğrafı çek
       _thumbTimer = Timer(const Duration(seconds: 5), _autoCaptureThumbnail);
     } catch (e) {
@@ -147,6 +148,22 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         _connecting = false;
       });
     }
+  }
+
+  /// LocalTrackPublishedEvent bazen geç veya null track ile gelir.
+  /// Kamera track'i 100ms aralıklarla kontrol eder, max 5 saniye bekler.
+  void _pollForTrack([int attempt = 0]) {
+    if (!mounted || _localVideoTrack != null || attempt >= 50) return;
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (!mounted || _localVideoTrack != null) return;
+      for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
+        if (pub.track != null) {
+          setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
+          return;
+        }
+      }
+      _pollForTrack(attempt + 1);
+    });
   }
 
   Future<void> _toggleMic() async {
