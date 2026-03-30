@@ -102,6 +102,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         if (event.publication.track is LocalVideoTrack) {
           setState(() {
             _localVideoTrack = event.publication.track as LocalVideoTrack;
+            _connecting = false; // Track hazır → ekranı aç
           });
         }
       });
@@ -120,16 +121,23 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       await room.localParticipant?.setCameraEnabled(true);
       await room.localParticipant?.setMicrophoneEnabled(true);
 
+      // Track zaten publish edilmişse (nadir) hemen al
+      LocalVideoTrack? foundTrack;
       for (final pub in room.localParticipant!.videoTrackPublications) {
         if (pub.track != null) {
-          _localVideoTrack = pub.track as LocalVideoTrack;
+          foundTrack = pub.track as LocalVideoTrack;
           break;
         }
       }
 
       setState(() {
         _room = room;
-        _connecting = false;
+        if (foundTrack != null) {
+          _localVideoTrack = foundTrack;
+          _connecting = false; // Track hazır → ekranı hemen aç
+        }
+        // foundTrack null ise _connecting = true kalır,
+        // LocalTrackPublishedEvent gelince false olur.
       });
       // Yayın başladıktan 5 saniye sonra otomatik kapak fotoğrafı çek
       _thumbTimer = Timer(const Duration(seconds: 5), _autoCaptureThumbnail);
