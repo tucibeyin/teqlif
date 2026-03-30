@@ -586,29 +586,24 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           ),
                         ),
                       ),
-                      GestureDetector(
-                        onTap: _toggleLike,
-                        child: Row(
+                      // Fiyat yanı — sadece beğeni sayısını göster (buton aşağıda)
+                      if (_likesCount > 0)
+                        Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(
-                              _isLiked ? Icons.favorite : Icons.favorite_border,
-                              color: _isLiked ? Colors.red : AppColors.textSecondary(context),
-                              size: 22,
-                            ),
-                            if (_likesCount > 0) ...[
-                              const SizedBox(width: 4),
-                              Text(
-                                '$_likesCount',
-                                style: TextStyle(
-                                  color: AppColors.textSecondary(context),
-                                  fontSize: 13,
-                                ),
+                            Icon(Icons.favorite,
+                                color: Colors.red.withValues(alpha: 0.8),
+                                size: 16),
+                            const SizedBox(width: 4),
+                            Text(
+                              '$_likesCount',
+                              style: TextStyle(
+                                color: AppColors.textSecondary(context),
+                                fontSize: 13,
                               ),
-                            ],
+                            ),
                           ],
                         ),
-                      ),
                     ],
                   ),
                   if (listing['location'] != null) ...[
@@ -862,20 +857,70 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           : SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: ElevatedButton.icon(
-                  key: const Key('listing_detail_btn_mesaj_gonder'),
-                  onPressed: _openChat,
-                  icon: const Icon(Icons.chat_bubble_outline, size: 20),
-                  label: Text(l.listingSendMessage),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: kPrimary,
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12)),
-                    textStyle: const TextStyle(
-                        fontSize: 16, fontWeight: FontWeight.w600),
-                  ),
+                child: Row(
+                  children: [
+                    // Beğeni butonu
+                    OutlinedButton(
+                      key: const Key('listing_detail_btn_begeni'),
+                      onPressed: _myUserId != null ? _toggleLike : null,
+                      style: OutlinedButton.styleFrom(
+                        minimumSize: const Size(60, 50),
+                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(
+                          color: _isLiked
+                              ? Colors.red
+                              : AppColors.border(context),
+                          width: 1.5,
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(
+                            _isLiked ? Icons.favorite : Icons.favorite_border,
+                            color: _isLiked
+                                ? Colors.red
+                                : AppColors.textSecondary(context),
+                            size: 22,
+                          ),
+                          if (_likesCount > 0) ...[
+                            const SizedBox(width: 4),
+                            Text(
+                              '$_likesCount',
+                              style: TextStyle(
+                                color: _isLiked
+                                    ? Colors.red
+                                    : AppColors.textSecondary(context),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Mesaj gönder butonu
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        key: const Key('listing_detail_btn_mesaj_gonder'),
+                        onPressed: _openChat,
+                        icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                        label: Text(l.listingSendMessage),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kPrimary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          textStyle: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),

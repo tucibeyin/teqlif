@@ -1092,7 +1092,11 @@
                         ? `<button class="btn-toggle ${_isActive ? '' : 'passive'}" id="toggleBtn" onclick="toggleActive()">
                                            ${_isActive ? '✓ Aktif — Pasife Al' : '✕ Pasif — Aktif Yap'}
                                        </button>
-                                       <button class="btn-delete" onclick="openDeleteModal()">İlanı Sil</button>`
+                                       <button class="btn-delete" onclick="openDeleteModal()">İlanı Sil</button>
+                                       <div style="display:flex;align-items:center;gap:6px;padding:.5rem 0;color:#e53e3e;font-size:.9rem;">
+                                           <svg width="15" height="15" viewBox="0 0 24 24" fill="#e53e3e" stroke="#e53e3e" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                           <span>${_likesCount} beğeni</span>
+                                       </div>`
                         : isLoggedIn
                             ? `<button class="btn-fav ${_isFavorited ? 'active' : ''}" id="favBtn" onclick="toggleFav()">
                                                ${_isFavorited ? '❤ Favorilerimde' : '♡ Favorilere Ekle'}
@@ -1103,7 +1107,11 @@
                                                ${_likesCount > 0 ? `<span id="likeCnt" style="font-size:.8rem;opacity:.75;">(${_likesCount})</span>` : `<span id="likeCnt" style="font-size:.8rem;opacity:.75;"></span>`}
                                            </button>
                                            <a href="/mesajlar?to_id=${data.user.id}&to_name=${encodeURIComponent(data.user.full_name || data.user.username)}&to_handle=${encodeURIComponent(data.user.username)}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
-                            : `<a href="/giris.html?next=/ilan/${listingId}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
+                            : `<a href="/giris.html?next=/ilan/${listingId}" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:.6rem 1rem;border-radius:8px;border:1.5px solid #e5e7eb;background:transparent;color:#6b7280;font-size:.9rem;font-weight:600;cursor:pointer;text-decoration:none;margin-bottom:.5rem;">
+                                               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                                               Beğen${_likesCount > 0 ? ` (${_likesCount})` : ''}
+                                           </a>
+                                           <a href="/giris.html?next=/ilan/${listingId}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
                     }
                                 ${!isOwner ? `<a href="/profil/${esc(data.user.username)}" class="btn-msg">Profili Gör</a>` : ''}
                             </div>

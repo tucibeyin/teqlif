@@ -381,7 +381,7 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
             ),
           ),
 
-          // ── Alt panel: sohbet + açık artırma ───────────────────────────
+          // ── Alt panel: sohbet + açık artırma + kalp butonu ────────────
           if (connected)
             Positioned(
               bottom: 0,
@@ -435,38 +435,43 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                       },
                       pinAtBottom: true,
                     ),
-                    AuctionPanel(
-                      streamId: widget.joinToken.streamId,
-                      isHost: false,
-                      isCoHost: _isCoHost,
-                      enabled: !_selfMuted,
+                    // Açık artırma + kalp butonu yan yana
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Expanded(
+                          child: AuctionPanel(
+                            streamId: widget.joinToken.streamId,
+                            isHost: false,
+                            isCoHost: _isCoHost,
+                            enabled: !_selfMuted,
+                          ),
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.only(right: 8, bottom: 4),
+                          child: GestureDetector(
+                            onTap: _onHeartTap,
+                            child: Container(
+                              width: 50,
+                              height: 50,
+                              decoration: BoxDecoration(
+                                color: Colors.black54,
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                    color: Colors.white30, width: 1.5),
+                              ),
+                              child: const Icon(
+                                Icons.favorite,
+                                color: Color(0xFFFF4081),
+                                size: 26,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: 4),
                   ],
-                ),
-              ),
-            ),
-
-          // ── Kalp butonu (sadece izleyici, sağ alt) — bottom panel'den sonra (üstte) ──
-          if (connected)
-            Positioned(
-              right: 12,
-              bottom: botPad + 96,
-              child: GestureDetector(
-                onTap: _onHeartTap,
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white30, width: 1.5),
-                  ),
-                  child: const Icon(
-                    Icons.favorite,
-                    color: Color(0xFFFF4081),
-                    size: 26,
-                  ),
                 ),
               ),
             ),
