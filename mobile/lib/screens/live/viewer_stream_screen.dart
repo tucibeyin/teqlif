@@ -366,30 +366,6 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
           // ── Uçuşan kalpler katmanı ────────────────────────────────────
           FloatingHearts(key: _heartsKey),
 
-          // ── Kalp butonu (sadece izleyici, sağ alt) ────────────────────
-          if (connected)
-            Positioned(
-              right: 12,
-              bottom: botPad + 96,
-              child: GestureDetector(
-                onTap: _onHeartTap,
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: BoxDecoration(
-                    color: Colors.black54,
-                    shape: BoxShape.circle,
-                    border: Border.all(color: Colors.white30, width: 1.5),
-                  ),
-                  child: const Icon(
-                    Icons.favorite,
-                    color: Color(0xFFFF4081),
-                    size: 26,
-                  ),
-                ),
-              ),
-            ),
-
           // ── Üst bar: geri + CANLI + izleyici + başlık + MOD + Ayrıl ────
           Positioned(
             top: 0,
@@ -467,6 +443,30 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
                     ),
                     const SizedBox(height: 4),
                   ],
+                ),
+              ),
+            ),
+
+          // ── Kalp butonu (sadece izleyici, sağ alt) — bottom panel'den sonra (üstte) ──
+          if (connected)
+            Positioned(
+              right: 12,
+              bottom: botPad + 96,
+              child: GestureDetector(
+                onTap: _onHeartTap,
+                child: Container(
+                  width: 50,
+                  height: 50,
+                  decoration: BoxDecoration(
+                    color: Colors.black54,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white30, width: 1.5),
+                  ),
+                  child: const Icon(
+                    Icons.favorite,
+                    color: Color(0xFFFF4081),
+                    size: 26,
+                  ),
                 ),
               ),
             ),

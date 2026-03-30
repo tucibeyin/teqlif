@@ -85,7 +85,11 @@ class _HomeScreenState extends State<HomeScreen> {
       if (_selectedCity != null) params['location'] = _selectedCity!;
       final uri = Uri.parse('$kBaseUrl/listings')
           .replace(queryParameters: params.isEmpty ? null : params);
-      final resp = await http.get(uri);
+      final token = await StorageService.getToken();
+      final resp = await http.get(
+        uri,
+        headers: token != null ? {'Authorization': 'Bearer $token'} : null,
+      );
       if (!mounted) return;
       if (resp.statusCode == 200) {
         final fresh = jsonDecode(resp.body) as List;
@@ -628,6 +632,16 @@ class _GridItemState extends State<_GridItem> {
     super.initState();
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
     _isLiked = widget.listing['is_liked'] as bool? ?? false;
+  }
+
+  @override
+  void didUpdateWidget(_GridItem oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Farklı ilan geldi → State'i sıfırla; aynı ilan → yerel beğeni durumunu koru
+    if (oldWidget.listing['id'] != widget.listing['id']) {
+      _likesCount = widget.listing['likes_count'] as int? ?? 0;
+      _isLiked = widget.listing['is_liked'] as bool? ?? false;
+    }
   }
 
   Future<void> _toggleLike() async {

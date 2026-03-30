@@ -1061,6 +1061,7 @@
                                     <div class="detail-meta">
                                         ${catLabel ? `<span class="cat-badge">${catLabel}</span>` : ''}
                                         <span class="ilan-date">${timeAgo(data.created_at)}</span>
+                                        ${_likesCount > 0 ? `<span style="font-size:.8rem;color:#e53e3e;">♥ ${_likesCount}</span>` : ''}
                                     </div>
                                     <h1 class="detail-title">${esc(data.title)}</h1>
                                     ${data.location ? `
