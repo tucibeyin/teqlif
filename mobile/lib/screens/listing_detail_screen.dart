@@ -859,19 +859,36 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 padding: const EdgeInsets.all(12),
                 child: Row(
                   children: [
-                    // Beğeni butonu
+                    // Mesaj gönder butonu (expanded — sola yaslanır)
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        key: const Key('listing_detail_btn_mesaj_gonder'),
+                        onPressed: _openChat,
+                        icon: const Icon(Icons.chat_bubble_outline, size: 20),
+                        label: Text(l.listingSendMessage),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: kPrimary,
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(12)),
+                          textStyle: const TextStyle(
+                              fontSize: 16, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    // Beğeni butonu (sağda sabit genişlik)
                     OutlinedButton(
                       key: const Key('listing_detail_btn_begeni'),
                       onPressed: _myUserId != null ? _toggleLike : null,
                       style: OutlinedButton.styleFrom(
-                        minimumSize: const Size(60, 50),
-                        padding: const EdgeInsets.symmetric(horizontal: 14),
+                        minimumSize: const Size(56, 50),
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
                         shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12)),
                         side: BorderSide(
-                          color: _isLiked
-                              ? Colors.red
-                              : AppColors.border(context),
+                          color: _isLiked ? Colors.red : AppColors.border(context),
                           width: 1.5,
                         ),
                       ),
@@ -899,25 +916,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                             ),
                           ],
                         ],
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    // Mesaj gönder butonu
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        key: const Key('listing_detail_btn_mesaj_gonder'),
-                        onPressed: _openChat,
-                        icon: const Icon(Icons.chat_bubble_outline, size: 20),
-                        label: Text(l.listingSendMessage),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: kPrimary,
-                          foregroundColor: Colors.white,
-                          minimumSize: const Size(double.infinity, 50),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12)),
-                          textStyle: const TextStyle(
-                              fontSize: 16, fontWeight: FontWeight.w600),
-                        ),
                       ),
                     ),
                   ],
