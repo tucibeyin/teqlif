@@ -387,77 +387,93 @@ class _ViewerStreamScreenState extends State<ViewerStreamScreen> {
               bottom: 0,
               left: 0,
               right: 0,
-              child: Container(
-                padding: EdgeInsets.only(bottom: botPad + 8),
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(
-                    begin: Alignment.bottomCenter,
-                    end: Alignment.topCenter,
-                    colors: [Color(0xCC000000), Colors.transparent],
-                    stops: [0.0, 1.0],
+              child: Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  // Gradient arka plan + içerik
+                  Container(
+                    padding: EdgeInsets.only(
+                        bottom: botPad + 8, right: 58),
+                    decoration: const BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.topCenter,
+                        colors: [Color(0xCC000000), Colors.transparent],
+                        stops: [0.0, 1.0],
+                      ),
+                    ),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        ChatPanel(
+                          streamId: widget.joinToken.streamId,
+                          onStreamEnded: _handleStreamEnded,
+                          onViewerCountChanged: (n) =>
+                              setState(() => _viewerCount = n),
+                          onMuted: _handleMuted,
+                          onUnmuted: _handleUnmuted,
+                          onKicked: _handleKicked,
+                          onModPromotedSelf: _handleModPromotedSelf,
+                          onModDemotedSelf: _handleModDemotedSelf,
+                          onModRestored: () {
+                            if (mounted && !_isCoHost)
+                              setState(() => _isCoHost = true);
+                          },
+                          onStreamLike: (_, __) =>
+                              _heartsKey.currentState
+                                  ?.addHeart(isLocal: false),
+                          onUsernameTap: (username) {
+                            debugPrint(
+                                '[VIEWER] onUsernameTap — username:$username _isCoHost:$_isCoHost');
+                            if (_isCoHost) {
+                              _showCoHostModSheet(username);
+                            } else {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => PublicProfileScreen(
+                                      username: username),
+                                ),
+                              );
+                            }
+                          },
+                          pinAtBottom: true,
+                        ),
+                        AuctionPanel(
+                          streamId: widget.joinToken.streamId,
+                          isHost: false,
+                          isCoHost: _isCoHost,
+                          enabled: !_selfMuted,
+                        ),
+                        const SizedBox(height: 4),
+                      ],
+                    ),
                   ),
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    ChatPanel(
-                      streamId: widget.joinToken.streamId,
-                      onStreamEnded: _handleStreamEnded,
-                      onViewerCountChanged: (n) =>
-                          setState(() => _viewerCount = n),
-                      onMuted: _handleMuted,
-                      onUnmuted: _handleUnmuted,
-                      onKicked: _handleKicked,
-                      onModPromotedSelf: _handleModPromotedSelf,
-                      onModDemotedSelf: _handleModDemotedSelf,
-                      onModRestored: () {
-                        if (mounted && !_isCoHost) setState(() => _isCoHost = true);
-                      },
-                      onStreamLike: (_, __) =>
-                          _heartsKey.currentState?.addHeart(isLocal: false),
-                      onUsernameTap: (username) {
-                        debugPrint('[VIEWER] onUsernameTap — username:$username _isCoHost:$_isCoHost');
-                        if (_isCoHost) {
-                          _showCoHostModSheet(username);
-                        } else {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => PublicProfileScreen(username: username),
-                            ),
-                          );
-                        }
-                      },
-                      pinAtBottom: true,
-                      trailingAction: GestureDetector(
-                        onTap: _onHeartTap,
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                                color: Colors.white30, width: 1.5),
-                          ),
-                          child: const Icon(
-                            Icons.favorite,
-                            color: Color(0xFFFF4081),
-                            size: 20,
-                          ),
+                  // Kalp butonu — sağ alta sabit, ChatPanel input hizasında
+                  Positioned(
+                    right: 8,
+                    bottom: botPad + 12,
+                    child: GestureDetector(
+                      onTap: _onHeartTap,
+                      child: Container(
+                        width: 42,
+                        height: 42,
+                        decoration: BoxDecoration(
+                          color: Colors.black54,
+                          shape: BoxShape.circle,
+                          border:
+                              Border.all(color: Colors.white30, width: 1.5),
+                        ),
+                        child: const Icon(
+                          Icons.favorite,
+                          color: Color(0xFFFF4081),
+                          size: 22,
                         ),
                       ),
                     ),
-                    AuctionPanel(
-                      streamId: widget.joinToken.streamId,
-                      isHost: false,
-                      isCoHost: _isCoHost,
-                      enabled: !_selfMuted,
-                    ),
-                    const SizedBox(height: 4),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
         ],
