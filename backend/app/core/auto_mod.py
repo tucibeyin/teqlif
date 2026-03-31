@@ -44,6 +44,7 @@ class AutoMod:
     """
 
     def __init__(self) -> None:
+        self._custom_words_lower: set[str] = set()
         if _PROFANITY_AVAILABLE:
             self._load_custom_words()
 
@@ -61,10 +62,12 @@ class AutoMod:
         except Exception as exc:
             logger.error("[AUTO_MOD] bad_words.txt okunamadı: %s", exc)
 
-        _profanity.load_censor_words()
-        if custom_words:
-            _profanity.add_censor_words(custom_words)
-            logger.info("[AUTO_MOD] %d özel kelime yüklendi", len(custom_words))
+        # load_censor_words(custom_censor_list) — built-in liste + custom kelimeler
+        # tek seferde yükler; add_censor_words bazı sürümlerde contains_profanity'de
+        # algılanmayabiliyor.
+        _profanity.load_censor_words(custom_censor_list=custom_words)
+        self._custom_words_lower = {w.lower() for w in custom_words}
+        logger.info("[AUTO_MOD] %d özel kelime yüklendi", len(custom_words))
 
     def contains_profanity(self, text: str) -> bool:
         """
@@ -80,7 +83,12 @@ class AutoMod:
         """
         if not _PROFANITY_AVAILABLE:
             return False
-        return _profanity.contains_profanity(text)
+        # better_profanity kontrolü
+        if _profanity.contains_profanity(text):
+            return True
+        # Fallback: custom kelimeleri kelime kelime kontrol et
+        text_lower = text.lower()
+        return any(word in text_lower for word in self._custom_words_lower)
 
 
 # Uygulama genelinde kullanılan singleton
