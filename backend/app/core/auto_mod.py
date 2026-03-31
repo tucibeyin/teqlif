@@ -65,7 +65,7 @@ class AutoMod:
         # load_censor_words(custom_censor_list) — built-in liste + custom kelimeler
         # tek seferde yükler; add_censor_words bazı sürümlerde contains_profanity'de
         # algılanmayabiliyor.
-        _profanity.load_censor_words(custom_censor_list=custom_words)
+        _profanity.load_censor_words()
         self._custom_words_lower = {w.lower() for w in custom_words}
         logger.info("[AUTO_MOD] %d özel kelime yüklendi", len(custom_words))
 
