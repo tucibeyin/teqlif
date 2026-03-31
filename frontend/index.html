@@ -527,6 +527,58 @@
             cursor: pointer;
         }
 
+        /* Görünüm toggle butonları */
+        .view-toggle {
+            display: flex;
+            gap: 2px;
+            background: #f1f5f9;
+            border-radius: 7px;
+            padding: 3px;
+        }
+        .view-toggle button {
+            background: none;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            padding: 5px 8px;
+            color: #94a3b8;
+            display: flex;
+            align-items: center;
+            transition: background 0.15s, color 0.15s;
+        }
+        .view-toggle button.active {
+            background: #fff;
+            color: #06b6d4;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+        }
+
+        /* Grid görünümü */
+        .listing-list.view-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 12px;
+        }
+        .listing-list.view-grid .listing-item {
+            flex-direction: column;
+            border-bottom: none;
+            border-radius: 10px !important;
+            border: 1px solid #f1f5f9;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+        }
+        .listing-list.view-grid .listing-item:first-child,
+        .listing-list.view-grid .listing-item:last-child {
+            border-radius: 10px !important;
+        }
+        .listing-list.view-grid .listing-img {
+            width: 100%;
+            height: 150px;
+            margin: 0;
+            border-radius: 10px 10px 0 0;
+        }
+        .listing-list.view-grid .listing-item-desc {
+            display: none;
+        }
+
         /* İlan listesi */
         .listing-list {
             display: flex;
@@ -895,6 +947,14 @@
                     <option value="price_asc">Fiyat: Düşükten Yükseğe</option>
                     <option value="price_desc">Fiyat: Yüksekten Düşüğe</option>
                 </select>
+                <div class="view-toggle">
+                    <button id="btnViewList" class="active" onclick="setListingView('list')" title="Liste görünümü">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                    </button>
+                    <button id="btnViewGrid" onclick="setListingView('grid')" title="Grid görünümü">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1824,9 +1884,24 @@
         }
 
 
+        let _listingView = localStorage.getItem('listingView') || 'list';
+
+        function setListingView(mode) {
+            _listingView = mode;
+            localStorage.setItem('listingView', mode);
+            const list = document.getElementById('listingList');
+            list.classList.toggle('view-grid', mode === 'grid');
+            document.getElementById('btnViewList').classList.toggle('active', mode === 'list');
+            document.getElementById('btnViewGrid').classList.toggle('active', mode === 'grid');
+        }
+
         function renderListings() {
             const list = document.getElementById('listingList');
             const count = document.getElementById('listingCount');
+            // Kayıtlı görünüm tercihini uygula
+            list.classList.toggle('view-grid', _listingView === 'grid');
+            document.getElementById('btnViewList').classList.toggle('active', _listingView === 'list');
+            document.getElementById('btnViewGrid').classList.toggle('active', _listingView === 'grid');
             count.textContent = `${_filteredListings.length} ilan`;
 
             if (!_filteredListings.length) {
