@@ -9,16 +9,29 @@ Kullanım:
 
 Özel kelimeler `app/core/bad_words.txt` dosyasından yüklenir (her satır bir kelime).
 better_profanity'nin varsayılan İngilizce listesi de aktiftir; iki liste birleştirilir.
+
+Dayanıklılık: better_profanity kurulu değilse AutoMod yine de çalışır,
+contains_profanity() her zaman False döner (filtreleme devre dışı, mesajlar akar).
 """
 
 import os
-from better_profanity import profanity
-
 from app.core.logger import get_logger
 
 logger = get_logger(__name__)
 
 _BAD_WORDS_PATH = os.path.join(os.path.dirname(__file__), "bad_words.txt")
+
+# better_profanity opsiyonel — kurulu değilse filtreleme sessizce devre dışı kalır
+try:
+    from better_profanity import profanity as _profanity
+    _PROFANITY_AVAILABLE = True
+except ImportError:
+    _profanity = None  # type: ignore[assignment]
+    _PROFANITY_AVAILABLE = False
+    logger.warning(
+        "[AUTO_MOD] better_profanity kurulu değil — küfür filtresi devre dışı. "
+        "`pip install better-profanity==0.7.0` ile kurabilirsiniz."
+    )
 
 
 class AutoMod:
@@ -31,7 +44,8 @@ class AutoMod:
     """
 
     def __init__(self) -> None:
-        self._load_custom_words()
+        if _PROFANITY_AVAILABLE:
+            self._load_custom_words()
 
     def _load_custom_words(self) -> None:
         """bad_words.txt'i okuyup better_profanity'ye ekler."""
@@ -47,26 +61,26 @@ class AutoMod:
         except Exception as exc:
             logger.error("[AUTO_MOD] bad_words.txt okunamadı: %s", exc)
 
-        # load_censor_words: mevcut listeye ekler (extend=True varsayılan değil,
-        # bu yüzden önce profanity.load_censor_words() ile built-in'i yükle,
-        # ardından custom_words'ü ekle)
-        profanity.load_censor_words()
+        _profanity.load_censor_words()
         if custom_words:
-            profanity.add_censor_words(custom_words)
+            _profanity.add_censor_words(custom_words)
             logger.info("[AUTO_MOD] %d özel kelime yüklendi", len(custom_words))
 
     def contains_profanity(self, text: str) -> bool:
         """
         Metinde yasaklı kelime varsa True döner.
+        better_profanity kurulu değilse her zaman False döner.
 
         Args:
             text: Kontrol edilecek ham metin.
 
         Returns:
-            True  → yasaklı kelime bulundu (mesaj reddedilmeli / gizlenmeli).
-            False → temiz.
+            True  → yasaklı kelime bulundu (mesaj gizlenmeli).
+            False → temiz veya filtre devre dışı.
         """
-        return profanity.contains_profanity(text)
+        if not _PROFANITY_AVAILABLE:
+            return False
+        return _profanity.contains_profanity(text)
 
 
 # Uygulama genelinde kullanılan singleton
