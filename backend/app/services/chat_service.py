@@ -206,6 +206,29 @@ class ChatService:
         except Exception as exc:
             logger.warning("[CHAT] viewer_set srem başarısız | stream_id=%s | %s", stream_id, exc)
 
+    # ── Shadowban cache yardımcısı ────────────────────────────────────────────
+    async def is_shadowbanned(self, user_id: int) -> bool:
+        """
+        Kullanıcının shadowban durumunu Redis cache'den okur.
+        Cache'de yoksa DB'den çekip 5 dakika boyunca cache'ler.
+        """
+        redis = await get_redis()
+        cache_key = f"shadowban:{user_id}"
+        cached = await redis.get(cache_key)
+        if cached is not None:
+            return cached == b"1" or cached == "1"
+
+        from app.database import AsyncSessionLocal
+        from app.models.user import User
+        from sqlalchemy import select
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(select(User.is_shadowbanned).where(User.id == user_id))
+            row = result.scalar_one_or_none()
+            banned = bool(row) if row is not None else False
+
+        await redis.set(cache_key, "1" if banned else "0", ex=300)
+        return banned
+
     # ── Mesaj İşle ───────────────────────────────────────────────────────────
     async def process_message(
         self,
@@ -217,17 +240,26 @@ class ChatService:
         content: str,
     ) -> dict | None:
         """
-        Mesajı işler: mute kontrolü → mod rozeti → Redis kalıcılığı → broadcast.
+        Mesajı işler: mute → shadowban/auto-mod → mod rozeti → Redis → broadcast.
 
-        Kullanıcı mute'luysa None döner (caller hata mesajı gönderir).
-        Başarıda broadcast edilmiş chat_msg dict'ini döner.
+        Dönüş değerleri:
+          None        → kullanıcı mute'lu (caller "muted" hatası gönderir)
+          dict        → mesaj (is_hidden=True ise ghost; caller sadece gönderene yollar)
         """
         from app.services.moderation_service import mute_key, mod_key
+        from app.core.auto_mod import auto_mod
 
         redis = await get_redis()
 
+        # Mute kontrolü (en hızlı, Redis set üyesi)
         if await redis.sismember(mute_key(stream_id), str(user_id)):
-            return None  # Mute → caller "muted" error gönderir
+            return None  # caller "muted" error gönderir
+
+        # Shadowban ve küfür kontrolü
+        hidden = (
+            await self.is_shadowbanned(user_id)
+            or auto_mod.contains_profanity(content)
+        )
 
         is_mod = bool(await redis.sismember(mod_key(stream_id), str(user_id)))
         chat_msg = {
@@ -239,11 +271,22 @@ class ChatService:
             "created_at": datetime.now(timezone.utc).isoformat(),
             "is_mod": is_mod,
             "is_host": is_host,
+            "is_hidden": hidden,
         }
+
+        # Redis'e kaydet (ghost mesajlar da loglanır, sadece broadcast filtresi farklı)
         key = chat_key(stream_id)
         await redis.rpush(key, json.dumps(chat_msg))
         await redis.ltrim(key, -_MAX_HISTORY, -1)
         await redis.expire(key, 24 * 3600)
-        await publish_chat(stream_id, chat_msg)
-        logger.info("[CHAT] stream_id=%s user=%s | mesaj gönderildi", stream_id, username)
+
+        if not hidden:
+            await publish_chat(stream_id, chat_msg)
+            logger.info("[CHAT] stream_id=%s user=%s | mesaj gönderildi", stream_id, username)
+        else:
+            logger.info(
+                "[CHAT] stream_id=%s user=%s | ghost mesaj (shadowban veya küfür)",
+                stream_id, username,
+            )
+
         return chat_msg

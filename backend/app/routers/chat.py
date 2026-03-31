@@ -141,7 +141,12 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
 
         # ── 8. Geçmiş mesajlar, mevcut izleyici sayısı ve mod durumu ─────────
         try:
-            history = await svc.load_history(stream_id)
+            history_raw = await svc.load_history(stream_id)
+            # Ghost mesajları filtrele: is_hidden=True olanları sadece kendi sahibi görür
+            history = [
+                m for m in history_raw
+                if not m.get("is_hidden") or m.get("username") == username
+            ]
             if history:
                 await safe_send_json(websocket, {"type": "history", "messages": history})
 
@@ -208,6 +213,9 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                             "code": "muted",
                             "message": "Bu yayında susturuldunuz",
                         })
+                    elif result.get("is_hidden"):
+                        # Shadowban / küfür: mesajı sadece gönderene yolla (ghost)
+                        await safe_send_json(websocket, result)
                 elif payload.get("type") == "host_pin" and is_host:
                     # Host'un sabitlediği mesaj — tüm izleyicilere yayınla.
                     # Boş string = sabiti kaldır komutu, o da yayınlanır.

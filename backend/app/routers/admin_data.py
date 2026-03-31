@@ -63,6 +63,29 @@ async def update_user_info(user_id: int, data: AdminUserUpdate, db: AsyncSession
     await db.commit()
     return {"message": "Bilgiler güncellendi."}
 
+@router.post("/users/{user_id}/shadowban")
+async def toggle_shadowban(
+    user_id: int,
+    db: AsyncSession = Depends(get_db),
+    admin: User = Depends(check_admin_access),
+):
+    """Kullanıcının shadowban durumunu tersine çevirir (toggle).
+    Aynı zamanda Redis cache'ini geçersiz kılar, etki anında başlar."""
+    user = await db.get(User, user_id)
+    if not user:
+        raise NotFoundException("Kullanıcı bulunamadı")
+    user.is_shadowbanned = not user.is_shadowbanned
+    await db.commit()
+    # Redis cache'ini temizle — bir sonraki mesajda DB'den taze değer okunur
+    try:
+        redis = await get_redis()
+        await redis.delete(f"shadowban:{user_id}")
+    except Exception as exc:
+        logger.warning("[ADMIN] shadowban Redis cache temizlenemedi | user_id=%s | %s", user_id, exc)
+    status = "shadowbanned" if user.is_shadowbanned else "unshadowbanned"
+    logger.info("[ADMIN] %s → %s | admin=%s", user.username, status, admin.email)
+    return {"user_id": user_id, "username": user.username, "is_shadowbanned": user.is_shadowbanned}
+
 @router.patch("/users/{user_id}/password")
 async def reset_user_password(user_id: int, data: AdminPasswordReset, db: AsyncSession = Depends(get_db), admin: User = Depends(check_admin_access)):
     user = await db.get(User, user_id)
