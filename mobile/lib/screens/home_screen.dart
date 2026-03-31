@@ -240,6 +240,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 l.homeAppBarTitle,
                 style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 20),
               ),
+              centerTitle: false,
               surfaceTintColor: Colors.transparent,
               floating: true,
               snap: true,
