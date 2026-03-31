@@ -664,6 +664,7 @@ class _HistorySheet extends StatelessWidget {
       initialChildSize: 0.55,
       minChildSize: 0.3,
       maxChildSize: 0.85,
+      expand: false,
       builder: (_, controller) => Container(
         decoration: const BoxDecoration(
           color: Color(0xF0111827),
