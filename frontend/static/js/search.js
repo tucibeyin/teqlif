@@ -99,7 +99,11 @@
         }
 
         if (listings.length > 0) {
-            listingsGrid.innerHTML = listings.map(listingTileHtml).join('');
+            listingsGrid.innerHTML = listings.map((l, idx) => {
+                const ad = (idx > 0 && idx % 5 === 0) ? adCardHtml() : '';
+                return ad + listingTileHtml(l);
+            }).join('');
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
             listingsSection.style.display = 'block';
         }
 
@@ -198,6 +202,19 @@
         if (users.length === 0 && listings.length === 0 && streams.length === 0) {
             searchEmpty.style.display = 'block';
         }
+    }
+
+    /* ── Reklam kartı ────────────────────────────────────────── */
+    function adCardHtml() {
+        return `<div class="teqlif-ad-container">
+            <div class="ad-badge">Sponsorlu</div>
+            <ins class="adsbygoogle"
+                 style="display:block"
+                 data-ad-format="fluid"
+                 data-ad-layout-key="-fb+5w+4e-db+86"
+                 data-ad-client="ca-pub-2403555634390058"
+                 data-ad-slot="otomatik_reklam_alani"></ins>
+        </div>`;
     }
 
     /* ── HTML şablonları ──────────────────────────────────────── */

@@ -790,6 +790,7 @@
             font-family: inherit;
         }
     </style>
+    <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-2403555634390058" crossorigin="anonymous"></script>
 </head>
 
 <body>
@@ -1916,7 +1917,19 @@
                 return;
             }
 
-            list.innerHTML = _filteredListings.map(l => `
+            const _adCardHtml = `<div class="teqlif-ad-container">
+                <div class="ad-badge">Sponsorlu</div>
+                <ins class="adsbygoogle"
+                     style="display:block"
+                     data-ad-format="fluid"
+                     data-ad-layout-key="-fb+5w+4e-db+86"
+                     data-ad-client="ca-pub-2403555634390058"
+                     data-ad-slot="otomatik_reklam_alani"></ins>
+            </div>`;
+
+            list.innerHTML = _filteredListings.map((l, idx) => {
+                const ad = (idx > 0 && idx % 5 === 0) ? _adCardHtml : '';
+                return ad + `
                 <div class="listing-item" onclick="window.location='/ilan/${l.id}'">
                     <div class="listing-img" style="position:relative;">
                         ${l.image_url
@@ -1943,7 +1956,10 @@
                             <span class="listing-item-info">${escHtml(l.location || '')} · ${formatDate(l.created_at)}</span>
                         </div>
                     </div>
-                </div>`).join('');
+                </div>`;
+            }).join('');
+            // Yeni eklenen adsbygoogle ins elementlerini başlat
+            (window.adsbygoogle = window.adsbygoogle || []).push({});
             _rebuildListingMap();
         }
 

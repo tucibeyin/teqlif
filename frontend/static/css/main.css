@@ -458,3 +458,49 @@ footer {
                     0 0 28px 8px rgba(245, 133, 41, 0.1);
     }
 }
+
+/* ── AdSense Native In-Feed Reklam Kartı ───────────────────────────── */
+.teqlif-ad-container {
+    position: relative;
+    background: var(--white, #fff);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: var(--radius-md, 10px);
+    overflow: hidden;
+    min-height: 100px;
+}
+.ad-badge {
+    position: absolute;
+    top: 7px;
+    right: 9px;
+    font-size: 10px;
+    font-weight: 500;
+    color: #94a3b8;
+    letter-spacing: 0.3px;
+    background: rgba(241,245,249,0.92);
+    padding: 2px 6px;
+    border-radius: 4px;
+    z-index: 1;
+    pointer-events: none;
+}
+/* Liste görünümü: ilan listesi içine girdiğinde tam genişlik */
+.listing-list .teqlif-ad-container {
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+    border-top: none;
+}
+.listing-list .teqlif-ad-container:last-child {
+    border-radius: 0 0 10px 10px;
+    border-bottom: 1px solid #f1f5f9;
+}
+/* Grid görünümü: kart boyutuna uyum */
+.listing-list.view-grid .teqlif-ad-container {
+    border-radius: 10px;
+    border: 1px solid var(--border, #e2e8f0);
+    min-height: 150px;
+}
+/* Keşfet grid'i */
+.listings-grid .teqlif-ad-container,
+.search-listings-grid .teqlif-ad-container {
+    min-height: 140px;
+}
