@@ -1,2 +1,26 @@
-badword1
-badword2
+# --- TİCARİ VE KOMİSYON ATLATMA (Platform Dışına Yönlendirme) ---
+sahibinden
+letgo
+dolap
+gardrops
+
+# --- DOLANDIRICILIK VE SPAM (Scam) ---
+bedava
+kazandınız
+şifrenizi
+linke tıkla
+linkte
+tıklayın
+profilimdeki link
+ücretsiz bakiye
+
+# --- HAKARET VE TOKSİKLİK (Başlangıç Seviyesi) ---
+salak
+aptal
+gerizekalı
+sahtekar
+dolandırıcı
+hırsız
+şerefsiz
+adi
+pislik
