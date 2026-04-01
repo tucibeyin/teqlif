@@ -16,10 +16,6 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   TextEditingController? _activeController;
   bool _isObscure = false;
 
-  // Accessory bar kendi FocusNode'u — focus buraya geçince _handleFocusChange
-  // yeni bir controller aramaz, mevcut _activeController korunur.
-  final _accessoryFocusNode = FocusNode();
-
   // Accessory bar'ın ekran konumunu tespit etmek için key
   final _accessoryBarKey = GlobalKey();
 
@@ -32,15 +28,11 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   @override
   void dispose() {
     FocusManager.instance.removeListener(_handleFocusChange);
-    _accessoryFocusNode.dispose();
     super.dispose();
   }
 
   void _handleFocusChange() {
     final primaryFocus = FocusManager.instance.primaryFocus;
-
-    // Accessory bar TextField'a geçince mevcut state'i koru
-    if (primaryFocus == _accessoryFocusNode) return;
 
     if (primaryFocus != null && primaryFocus.context != null) {
       final state = primaryFocus.context!.findAncestorStateOfType<EditableTextState>() ??
@@ -92,9 +84,7 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
           if (barBox.size.contains(localPos)) return;
         }
         final primaryFocus = FocusManager.instance.primaryFocus;
-        if (primaryFocus != null &&
-            primaryFocus.hasFocus &&
-            primaryFocus != _accessoryFocusNode) {
+        if (primaryFocus != null && primaryFocus.hasFocus) {
           primaryFocus.unfocus();
         }
       },
@@ -107,7 +97,6 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
               key: _accessoryBarKey,
               controller: _activeController!,
               isObscure: _isObscure,
-              focusNode: _accessoryFocusNode,
             ),
         ],
       ),
@@ -118,14 +107,32 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
 class _AccessoryBar extends StatelessWidget {
   final TextEditingController controller;
   final bool isObscure;
-  final FocusNode focusNode;
 
   const _AccessoryBar({
     super.key,
     required this.controller,
-    required this.focusNode,
     this.isObscure = false,
   });
+
+  static const _textStyle = TextStyle(
+    fontSize: 13,
+    fontWeight: FontWeight.w500,
+    decoration: TextDecoration.none,
+  );
+
+  void _onTapDown(TapDownDetails details, double maxWidth) {
+    final text = controller.text;
+    if (text.isEmpty) return;
+
+    final tp = TextPainter(
+      text: TextSpan(text: text, style: _textStyle),
+      maxLines: 1,
+      textDirection: TextDirection.ltr,
+    )..layout(maxWidth: maxWidth);
+
+    final pos = tp.getPositionForOffset(details.localPosition);
+    controller.selection = TextSelection.collapsed(offset: pos.offset);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -162,29 +169,34 @@ class _AccessoryBar extends StatelessWidget {
                     Expanded(
                       child: isObscure
                           ? const SizedBox.shrink()
-                          : TextField(
-                              controller: controller,
-                              focusNode: focusNode,
-                              maxLines: 1,
-                              style: TextStyle(
-                                color: AppColors.textPrimary(context),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
-                                decoration: TextDecoration.none,
-                              ),
-                              decoration: InputDecoration(
-                                hintText: 'Yazılıyor...',
-                                hintStyle: TextStyle(
-                                  color: AppColors.textTertiary(context),
-                                  fontSize: 13,
-                                  fontStyle: FontStyle.italic,
-                                ),
-                                border: InputBorder.none,
-                                isDense: true,
-                                contentPadding: EdgeInsets.zero,
-                              ),
-                              cursorColor: kPrimary,
-                              cursorWidth: 1.5,
+                          : LayoutBuilder(
+                              builder: (_, constraints) {
+                                return GestureDetector(
+                                  behavior: HitTestBehavior.opaque,
+                                  onTapDown: (d) => _onTapDown(d, constraints.maxWidth),
+                                  child: ValueListenableBuilder<TextEditingValue>(
+                                    valueListenable: controller,
+                                    builder: (context, value, _) {
+                                      final isEmpty = value.text.isEmpty;
+                                      return SizedBox(
+                                        height: 28,
+                                        child: Text(
+                                          isEmpty ? 'Yazılıyor...' : value.text,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.fade,
+                                          softWrap: false,
+                                          style: _textStyle.copyWith(
+                                            fontStyle: isEmpty ? FontStyle.italic : FontStyle.normal,
+                                            color: isEmpty
+                                                ? AppColors.textTertiary(context)
+                                                : AppColors.textPrimary(context),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
                             ),
                     ),
                     const SizedBox(width: 12),
