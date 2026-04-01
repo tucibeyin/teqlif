@@ -2190,13 +2190,16 @@
 
             // Teklif listesi güncelle
             const newBidCount = state.bid_count || 0;
-            if (state.status === 'idle') {
-                // Önceki grupları koru — sadece yeni artırma için grubu sıfırla
-                _currentGroupEl = null;
+            if (state.status === 'idle' || state.status === 'ended') {
+                // Artırma kapandı — grubu pasife al, pointer'ı sıfırla
+                if (_currentGroupEl) {
+                    _currentGroupEl.closest('.bid-group')?.classList.remove('active');
+                    _currentGroupEl = null;
+                }
                 _lastBidCount = 0;
             } else {
-                // idle/ended → active geçişinde yeni grup başlat
-                if (state.status === 'active' && _prevAuctionStatus !== 'active' && _currentGroupEl === null) {
+                // → active geçişinde yeni grup başlat
+                if (state.status === 'active' && _currentGroupEl === null) {
                     _startBidGroup(state.item_name || _currentItemName || 'Açık Artırma');
                 }
                 if (newBidCount > _lastBidCount && state.current_bidder && state.current_bid != null) {
