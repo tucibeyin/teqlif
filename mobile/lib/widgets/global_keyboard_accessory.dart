@@ -16,6 +16,10 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   TextEditingController? _activeController;
   bool _isObscure = false;
 
+  // Accessory bar kendi FocusNode'u — focus buraya geçince _handleFocusChange
+  // yeni bir controller aramaz, mevcut _activeController korunur.
+  final _accessoryFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
@@ -25,11 +29,15 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   @override
   void dispose() {
     FocusManager.instance.removeListener(_handleFocusChange);
+    _accessoryFocusNode.dispose();
     super.dispose();
   }
 
   void _handleFocusChange() {
     final primaryFocus = FocusManager.instance.primaryFocus;
+
+    // Accessory bar TextField'a geçince mevcut state'i koru
+    if (primaryFocus == _accessoryFocusNode) return;
 
     if (primaryFocus != null && primaryFocus.context != null) {
       final state = primaryFocus.context!.findAncestorStateOfType<EditableTextState>() ??
@@ -74,10 +82,10 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   Widget build(BuildContext context) {
     return Listener(
       onPointerDown: (_) {
-        // We use Listener instead of GestureDetector to ensure we catch the tap
-        // even if it's handled by other widgets (like buttons or scrollables).
         final primaryFocus = FocusManager.instance.primaryFocus;
-        if (primaryFocus != null && primaryFocus.hasFocus) {
+        if (primaryFocus != null &&
+            primaryFocus.hasFocus &&
+            primaryFocus != _accessoryFocusNode) {
           primaryFocus.unfocus();
         }
       },
@@ -86,7 +94,11 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
         children: [
           widget.child,
           if (_activeController != null)
-            _AccessoryBar(controller: _activeController!, isObscure: _isObscure),
+            _AccessoryBar(
+              controller: _activeController!,
+              isObscure: _isObscure,
+              focusNode: _accessoryFocusNode,
+            ),
         ],
       ),
     );
@@ -96,8 +108,13 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
 class _AccessoryBar extends StatelessWidget {
   final TextEditingController controller;
   final bool isObscure;
+  final FocusNode focusNode;
 
-  const _AccessoryBar({required this.controller, this.isObscure = false});
+  const _AccessoryBar({
+    required this.controller,
+    required this.focusNode,
+    this.isObscure = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -134,28 +151,29 @@ class _AccessoryBar extends StatelessWidget {
                     Expanded(
                       child: isObscure
                           ? const SizedBox.shrink()
-                          : ValueListenableBuilder<TextEditingValue>(
-                              valueListenable: controller,
-                              builder: (context, value, _) {
-                                final text = value.text.isEmpty ? 'Yazılıyor...' : value.text;
-                                return Text(
-                                  text,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.clip,
-                                  textDirection: value.text.isEmpty
-                                      ? TextDirection.ltr
-                                      : TextDirection.rtl,
-                                  style: TextStyle(
-                                    decoration: TextDecoration.none,
-                                    fontStyle: value.text.isEmpty ? FontStyle.italic : FontStyle.normal,
-                                    color: value.text.isEmpty
-                                        ? AppColors.textTertiary(context)
-                                        : AppColors.textPrimary(context),
-                                    fontSize: 13,
-                                    fontWeight: value.text.isEmpty ? FontWeight.normal : FontWeight.w500,
-                                  ),
-                                );
-                              },
+                          : TextField(
+                              controller: controller,
+                              focusNode: focusNode,
+                              maxLines: 1,
+                              style: TextStyle(
+                                color: AppColors.textPrimary(context),
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                decoration: TextDecoration.none,
+                              ),
+                              decoration: InputDecoration(
+                                hintText: 'Yazılıyor...',
+                                hintStyle: TextStyle(
+                                  color: AppColors.textTertiary(context),
+                                  fontSize: 13,
+                                  fontStyle: FontStyle.italic,
+                                ),
+                                border: InputBorder.none,
+                                isDense: true,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                              cursorColor: kPrimary,
+                              cursorWidth: 1.5,
                             ),
                     ),
                     const SizedBox(width: 12),
@@ -187,5 +205,3 @@ class _AccessoryBar extends StatelessWidget {
     );
   }
 }
-
-
