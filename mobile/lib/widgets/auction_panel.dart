@@ -1262,7 +1262,10 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                   color: Colors.white24, borderRadius: BorderRadius.circular(2)),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 14),
+          // Canlı durum rozeti
+          _AuctionStatusBadge(state: liveState),
+          const SizedBox(height: 14),
           // Başlık + güncel fiyat
           Row(children: [
             Expanded(
@@ -1754,6 +1757,41 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
             borderRadius: BorderRadius.circular(8),
             borderSide: const BorderSide(color: kPrimary)),
       ),
+    );
+  }
+}
+
+// ── Açık artırma durum rozeti ──────────────────────────────────────────────
+
+class _AuctionStatusBadge extends StatelessWidget {
+  final AuctionState state;
+  const _AuctionStatusBadge({required this.state});
+
+  @override
+  Widget build(BuildContext context) {
+    final (label, color, icon) = switch (state.status) {
+      'active'            => ('Aktif',   const Color(0xFF16A34A), Icons.circle),
+      'paused'            => ('Durdu',   const Color(0xFFF59E0B), Icons.pause_circle),
+      'ended'             => ('Bitti',   const Color(0xFF64748B), Icons.stop_circle_outlined),
+      'buy_it_now_pending'=> ('Bekliyor',const Color(0xFFF97316), Icons.hourglass_top),
+      _                   => ('Bekleniyor', const Color(0xFF475569), Icons.radio_button_unchecked),
+    };
+
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, color: color, size: 10),
+        const SizedBox(width: 5),
+        Text(
+          label,
+          style: TextStyle(
+            color: color,
+            fontSize: 11,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 0.4,
+          ),
+        ),
+      ],
     );
   }
 }
