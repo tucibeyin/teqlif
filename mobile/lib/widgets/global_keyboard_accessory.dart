@@ -141,7 +141,10 @@ class _AccessoryBar extends StatelessWidget {
                                 return Text(
                                   text,
                                   maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                  overflow: TextOverflow.clip,
+                                  textDirection: value.text.isEmpty
+                                      ? TextDirection.ltr
+                                      : TextDirection.rtl,
                                   style: TextStyle(
                                     decoration: TextDecoration.none,
                                     fontStyle: value.text.isEmpty ? FontStyle.italic : FontStyle.normal,
