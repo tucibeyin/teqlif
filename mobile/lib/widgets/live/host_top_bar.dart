@@ -283,10 +283,11 @@ class _MarqueeTextState extends State<_MarqueeText>
         }
 
         return ClipRect(
-          child: Transform.translate(
-            offset: Offset(offsetX, 0),
-            child: SizedBox(
-              width: _textWidth,
+          child: OverflowBox(
+            alignment: Alignment.centerLeft,
+            maxWidth: double.infinity,
+            child: Transform.translate(
+              offset: Offset(offsetX, 0),
               child: Text(
                 widget.text,
                 style: widget.style,
