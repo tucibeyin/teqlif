@@ -20,6 +20,9 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   // yeni bir controller aramaz, mevcut _activeController korunur.
   final _accessoryFocusNode = FocusNode();
 
+  // Accessory bar'ın ekran konumunu tespit etmek için key
+  final _accessoryBarKey = GlobalKey();
+
   @override
   void initState() {
     super.initState();
@@ -81,7 +84,13 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   @override
   Widget build(BuildContext context) {
     return Listener(
-      onPointerDown: (_) {
+      onPointerDown: (event) {
+        // Accessory bar alanına yapılan tap'ı atla — klavye kapanmasın
+        final barBox = _accessoryBarKey.currentContext?.findRenderObject() as RenderBox?;
+        if (barBox != null) {
+          final localPos = barBox.globalToLocal(event.position);
+          if (barBox.size.contains(localPos)) return;
+        }
         final primaryFocus = FocusManager.instance.primaryFocus;
         if (primaryFocus != null &&
             primaryFocus.hasFocus &&
@@ -95,6 +104,7 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
           widget.child,
           if (_activeController != null)
             _AccessoryBar(
+              key: _accessoryBarKey,
               controller: _activeController!,
               isObscure: _isObscure,
               focusNode: _accessoryFocusNode,
@@ -111,6 +121,7 @@ class _AccessoryBar extends StatelessWidget {
   final FocusNode focusNode;
 
   const _AccessoryBar({
+    super.key,
     required this.controller,
     required this.focusNode,
     this.isObscure = false,
