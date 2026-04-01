@@ -49,103 +49,108 @@ class HostTopBar extends StatelessWidget {
           colors: [Color(0xBB000000), Colors.transparent],
         ),
       ),
-      child: Row(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
         children: [
-          // CANLI rozeti
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.red,
-              borderRadius: BorderRadius.circular(5),
-            ),
-            child: Text(
-              l.liveBadgeLabel,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 10,
-                fontWeight: FontWeight.w800,
-                letterSpacing: 0.5,
-              ),
-            ),
-          ),
-          const SizedBox(width: 6),
-
-          // İzleyici sayısı (tıklanabilir)
-          GestureDetector(
-            onTap: onViewersTap,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.black45,
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                '👁 $viewerCount',
-                style: const TextStyle(color: Colors.white, fontSize: 11),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-
-          // Kayar başlık
-          Expanded(
-            child: _MarqueeText(
-              text: title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                shadows: [Shadow(blurRadius: 6, color: Colors.black)],
-              ),
-            ),
-          ),
-          const SizedBox(width: 8),
-
-          // Mikrofon toggle
-          _TopCtrlBtn(
-            key: const Key('host_btn_mikrofon_toggle'),
-            icon: micEnabled ? Icons.mic_rounded : Icons.mic_off_rounded,
-            active: micEnabled,
-            onTap: onToggleMic,
-          ),
-          const SizedBox(width: 6),
-
-          // Kamera toggle
-          _TopCtrlBtn(
-            key: const Key('host_btn_kamera_toggle'),
-            icon: cameraEnabled ? Icons.videocam_rounded : Icons.videocam_off_rounded,
-            active: cameraEnabled,
-            onTap: onToggleCamera,
-          ),
-          const SizedBox(width: 6),
-
-          // Kamera değiştir
-          _TopCtrlBtn(
-            key: const Key('host_btn_kamera_cevir'),
-            icon: Icons.flip_camera_ios_rounded,
-            active: true,
-            onTap: onSwitchCamera,
-          ),
-          const SizedBox(width: 10),
-
-          // Yayını Bitir
-          GestureDetector(
-            key: const Key('host_btn_yayin_bitir'),
-            onTap: onEndStream,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-              decoration: BoxDecoration(
-                color: Colors.red.withValues(alpha: 0.85),
-                borderRadius: BorderRadius.circular(20),
-              ),
-              child: Text(
-                l.liveEndStreamBtn,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
+          // ── Satır 1: Kontroller ──────────────────────────────────
+          Row(
+            children: [
+              // CANLI rozeti
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                decoration: BoxDecoration(
+                  color: Colors.red,
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: Text(
+                  l.liveBadgeLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    fontWeight: FontWeight.w800,
+                    letterSpacing: 0.5,
+                  ),
                 ),
               ),
+              const SizedBox(width: 6),
+
+              // İzleyici sayısı (tıklanabilir)
+              GestureDetector(
+                onTap: onViewersTap,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.black45,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    '👁 $viewerCount',
+                    style: const TextStyle(color: Colors.white, fontSize: 11),
+                  ),
+                ),
+              ),
+              const Spacer(),
+
+              // Mikrofon toggle
+              _TopCtrlBtn(
+                key: const Key('host_btn_mikrofon_toggle'),
+                icon: micEnabled ? Icons.mic_rounded : Icons.mic_off_rounded,
+                active: micEnabled,
+                onTap: onToggleMic,
+              ),
+              const SizedBox(width: 6),
+
+              // Kamera toggle
+              _TopCtrlBtn(
+                key: const Key('host_btn_kamera_toggle'),
+                icon: cameraEnabled ? Icons.videocam_rounded : Icons.videocam_off_rounded,
+                active: cameraEnabled,
+                onTap: onToggleCamera,
+              ),
+              const SizedBox(width: 6),
+
+              // Kamera değiştir
+              _TopCtrlBtn(
+                key: const Key('host_btn_kamera_cevir'),
+                icon: Icons.flip_camera_ios_rounded,
+                active: true,
+                onTap: onSwitchCamera,
+              ),
+              const SizedBox(width: 10),
+
+              // Yayını Bitir
+              GestureDetector(
+                key: const Key('host_btn_yayin_bitir'),
+                onTap: onEndStream,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.withValues(alpha: 0.85),
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    l.liveEndStreamBtn,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          // ── Satır 2: Kayar başlık ────────────────────────────────
+          const SizedBox(height: 8),
+          _MarqueeText(
+            text: title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 14,
+              shadows: [Shadow(blurRadius: 6, color: Colors.black)],
             ),
           ),
         ],
