@@ -1772,7 +1772,7 @@ class _AuctionStatusBadge extends StatelessWidget {
     final (label, color, icon) = switch (state.status) {
       'active'            => ('Aktif',   const Color(0xFF16A34A), Icons.circle),
       'paused'            => ('Durdu',   const Color(0xFFF59E0B), Icons.pause_circle),
-      'ended'             => ('Bitti',   const Color(0xFF64748B), Icons.stop_circle_outlined),
+      'ended'             => ('Bitti',   const Color(0xFFEF4444), Icons.stop_circle_outlined),
       'buy_it_now_pending'=> ('Bekliyor',const Color(0xFFF97316), Icons.hourglass_top),
       _                   => ('Bekleniyor', const Color(0xFF475569), Icons.radio_button_unchecked),
     };
