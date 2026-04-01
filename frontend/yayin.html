@@ -1212,6 +1212,39 @@
             padding-top: 1rem;
         }
 
+        .bid-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .bid-group-header {
+            font-size: 0.68rem;
+            font-weight: 800;
+            color: #94a3b8;
+            letter-spacing: 0.5px;
+            padding: 0.3rem 0.5rem;
+            background: rgba(148, 163, 184, 0.08);
+            border-radius: 6px;
+            border-left: 2px solid #475569;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+
+        .bid-group.active .bid-group-header {
+            color: #4ade80;
+            border-left-color: #4ade80;
+            background: rgba(74, 222, 128, 0.06);
+        }
+
+        .bid-group-items {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
         /* ── Moderasyon Modal ───────────────────────────────────────── */
         #modModal {
             position: fixed;
@@ -1955,6 +1988,7 @@
         let _selectedListingId = null; // host için seçilen ilan
         let _listingMode = false;      // host: listing mi manual mı
         let _lastBidCount = 0;         // teklif sayısı takibi
+        let _currentGroupEl = null;    // aktif artırma bid-group-items konteyneri
         let _currentBinPrice = null;   // buy_it_now_price
         let _isBoughtItNow = false;    // son artırma Hemen Al ile mi kapandı
         let _quickAuctionCount = 0;    // hızlı açık artırma sayacı (Ürün 1, 2, 3...)
@@ -1978,8 +2012,10 @@
             if (!list) return;
             const empty = document.getElementById('bidsEmpty');
             if (empty) empty.remove();
-            // Mevcut sıra numaralarını güncelle
-            list.querySelectorAll('.bid-rank').forEach((el, i) => {
+            // Grup yoksa doğrudan listeye ekle (eski davranış — fallback)
+            const container = _currentGroupEl || list;
+            // Mevcut grup içindeki sıra numaralarını güncelle
+            container.querySelectorAll('.bid-rank').forEach((el, i) => {
                 el.textContent = `#${i + 2}`;
                 el.classList.remove('first');
             });
@@ -1988,13 +2024,35 @@
             const div = document.createElement('div');
             div.className = 'bid-item';
             div.innerHTML = `<span class="bid-rank first">#1</span><span class="bid-user${_isHostPage ? ' clickable' : ''}" data-username="${u}" style="color:${color}">@${u}</span><span class="bid-amount">₺${Number(amount).toLocaleString('tr-TR')}</span>`;
-            list.insertBefore(div, list.firstChild);
+            container.insertBefore(div, container.firstChild);
+        }
+
+        function _startBidGroup(itemName) {
+            const list = document.getElementById('bidsList');
+            if (!list) return;
+            const empty = document.getElementById('bidsEmpty');
+            if (empty) empty.remove();
+            // Önceki aktif grubu passive yap
+            list.querySelectorAll('.bid-group.active').forEach(g => g.classList.remove('active'));
+            const group = document.createElement('div');
+            group.className = 'bid-group active';
+            const header = document.createElement('div');
+            header.className = 'bid-group-header';
+            header.textContent = itemName || 'Açık Artırma';
+            const items = document.createElement('div');
+            items.className = 'bid-group-items';
+            group.appendChild(header);
+            group.appendChild(items);
+            list.appendChild(group);
+            list.scrollTop = list.scrollHeight;
+            _currentGroupEl = items;
         }
 
         function _clearBidsList() {
             const list = document.getElementById('bidsList');
             if (!list) return;
             list.innerHTML = '<div class="bids-empty" id="bidsEmpty">Henüz teklif yok.</div>';
+            _currentGroupEl = null;
         }
 
         function updateAuctionUI(msg) {
@@ -2068,6 +2126,7 @@
             }
 
             const state = msg; // type === 'state' — normal alanlar mevcut
+            const _prevAuctionStatus = _currentAuctionStatus;
             _currentAuctionStatus = state.status;
             _currentListingId = state.listing_id || null;
             _currentBidder = state.current_bidder || null;
@@ -2130,9 +2189,14 @@
             // Teklif listesi güncelle
             const newBidCount = state.bid_count || 0;
             if (state.status === 'idle') {
-                _clearBidsList();
+                // Önceki grupları koru — sadece yeni artırma için grubu sıfırla
+                _currentGroupEl = null;
                 _lastBidCount = 0;
             } else {
+                // idle/ended → active geçişinde yeni grup başlat
+                if (state.status === 'active' && _prevAuctionStatus !== 'active' && _currentGroupEl === null) {
+                    _startBidGroup(state.item_name || _currentItemName || 'Açık Artırma');
+                }
                 if (newBidCount > _lastBidCount && state.current_bidder && state.current_bid != null) {
                     _addBidEntry(state.current_bidder, state.current_bid);
                 }
