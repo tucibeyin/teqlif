@@ -16,7 +16,6 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   TextEditingController? _activeController;
   bool _isObscure = false;
 
-  // Accessory bar'ın ekran konumunu tespit etmek için key
   final _accessoryBarKey = GlobalKey();
 
   @override
@@ -104,7 +103,7 @@ class _GlobalKeyboardAccessoryState extends State<GlobalKeyboardAccessory> {
   }
 }
 
-class _AccessoryBar extends StatelessWidget {
+class _AccessoryBar extends StatefulWidget {
   final TextEditingController controller;
   final bool isObscure;
 
@@ -114,24 +113,77 @@ class _AccessoryBar extends StatelessWidget {
     this.isObscure = false,
   });
 
+  @override
+  State<_AccessoryBar> createState() => _AccessoryBarState();
+}
+
+class _AccessoryBarState extends State<_AccessoryBar> {
+  final _scrollCtrl = ScrollController();
+
   static const _textStyle = TextStyle(
     fontSize: 13,
     fontWeight: FontWeight.w500,
     decoration: TextDecoration.none,
   );
 
-  void _onTapDown(TapDownDetails details, double maxWidth) {
-    final text = controller.text;
+  @override
+  void initState() {
+    super.initState();
+    widget.controller.addListener(_scrollToCursor);
+  }
+
+  @override
+  void dispose() {
+    widget.controller.removeListener(_scrollToCursor);
+    _scrollCtrl.dispose();
+    super.dispose();
+  }
+
+  void _scrollToCursor() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!_scrollCtrl.hasClients) return;
+      final text = widget.controller.text;
+      final cursorOffset = widget.controller.selection.baseOffset;
+      if (cursorOffset < 0) return;
+
+      final textBefore = text.substring(0, cursorOffset.clamp(0, text.length));
+      final tp = TextPainter(
+        text: TextSpan(text: textBefore, style: _textStyle),
+        maxLines: 1,
+        textDirection: TextDirection.ltr,
+      )..layout();
+
+      final cursorX = tp.width;
+      final viewportWidth = _scrollCtrl.position.viewportDimension;
+      final currentScroll = _scrollCtrl.offset;
+
+      if (cursorX < currentScroll) {
+        _scrollCtrl.jumpTo((cursorX - 8).clamp(0.0, double.infinity));
+      } else if (cursorX > currentScroll + viewportWidth - 12) {
+        _scrollCtrl.jumpTo(cursorX - viewportWidth + 12);
+      }
+    });
+  }
+
+  void _onTapDown(TapDownDetails details) {
+    final text = widget.controller.text;
     if (text.isEmpty) return;
+
+    // Tap koordinatını scroll offset'e göre düzelt
+    final scrollOffset = _scrollCtrl.hasClients ? _scrollCtrl.offset : 0.0;
+    final adjustedPos = Offset(
+      details.localPosition.dx + scrollOffset,
+      details.localPosition.dy,
+    );
 
     final tp = TextPainter(
       text: TextSpan(text: text, style: _textStyle),
       maxLines: 1,
       textDirection: TextDirection.ltr,
-    )..layout(maxWidth: maxWidth);
+    )..layout();
 
-    final pos = tp.getPositionForOffset(details.localPosition);
-    controller.selection = TextSelection.collapsed(offset: pos.offset);
+    final pos = tp.getPositionForOffset(adjustedPos);
+    widget.controller.selection = TextSelection.collapsed(offset: pos.offset);
   }
 
   @override
@@ -167,36 +219,67 @@ class _AccessoryBar extends StatelessWidget {
                 child: Row(
                   children: [
                     Expanded(
-                      child: isObscure
+                      child: widget.isObscure
                           ? const SizedBox.shrink()
-                          : LayoutBuilder(
-                              builder: (_, constraints) {
-                                return GestureDetector(
-                                  behavior: HitTestBehavior.opaque,
-                                  onTapDown: (d) => _onTapDown(d, constraints.maxWidth),
+                          : GestureDetector(
+                              behavior: HitTestBehavior.opaque,
+                              onTapDown: _onTapDown,
+                              child: SizedBox(
+                                height: 28,
+                                child: SingleChildScrollView(
+                                  controller: _scrollCtrl,
+                                  scrollDirection: Axis.horizontal,
+                                  physics: const NeverScrollableScrollPhysics(),
                                   child: ValueListenableBuilder<TextEditingValue>(
-                                    valueListenable: controller,
+                                    valueListenable: widget.controller,
                                     builder: (context, value, _) {
                                       final isEmpty = value.text.isEmpty;
-                                      return SizedBox(
-                                        height: 28,
-                                        child: Text(
-                                          isEmpty ? 'Yazılıyor...' : value.text,
-                                          maxLines: 1,
-                                          overflow: TextOverflow.fade,
-                                          softWrap: false,
-                                          style: _textStyle.copyWith(
-                                            fontStyle: isEmpty ? FontStyle.italic : FontStyle.normal,
-                                            color: isEmpty
-                                                ? AppColors.textTertiary(context)
-                                                : AppColors.textPrimary(context),
+
+                                      if (isEmpty) {
+                                        return Align(
+                                          alignment: Alignment.centerLeft,
+                                          child: Text(
+                                            'Yazılıyor...',
+                                            style: _textStyle.copyWith(
+                                              fontStyle: FontStyle.italic,
+                                              color: AppColors.textTertiary(context),
+                                            ),
                                           ),
-                                        ),
+                                        );
+                                      }
+
+                                      final cursorPos = value.selection.baseOffset
+                                          .clamp(0, value.text.length);
+                                      final textBefore = value.text.substring(0, cursorPos);
+                                      final textAfter = value.text.substring(cursorPos);
+
+                                      return Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        crossAxisAlignment: CrossAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            textBefore,
+                                            style: _textStyle.copyWith(
+                                              color: AppColors.textPrimary(context),
+                                            ),
+                                          ),
+                                          Container(
+                                            width: 1.5,
+                                            height: 18,
+                                            color: kPrimary,
+                                          ),
+                                          Text(
+                                            textAfter,
+                                            style: _textStyle.copyWith(
+                                              color: AppColors.textPrimary(context),
+                                            ),
+                                          ),
+                                        ],
                                       );
                                     },
                                   ),
-                                );
-                              },
+                                ),
+                              ),
                             ),
                     ),
                     const SizedBox(width: 12),
