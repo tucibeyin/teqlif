@@ -106,6 +106,7 @@ class ChatPanelState extends State<ChatPanel> {
   final List<_TimedMessage> _messages = [];
   final List<ChatMessage> _history = []; // last 50 messages
   final _inputCtrl = TextEditingController();
+  final _inputScrollCtrl = ScrollController();
   final _focusNode = FocusNode();
   final _scrollController = ScrollController();
   bool _autoScroll = true; // kullanıcı yukarı kaydırınca false olur
@@ -154,6 +155,7 @@ class ChatPanelState extends State<ChatPanel> {
       m.dispose();
     }
     _inputCtrl.dispose();
+    _inputScrollCtrl.dispose();
     _focusNode.dispose();
     _scrollController.dispose();
     super.dispose();
@@ -589,6 +591,7 @@ class ChatPanelState extends State<ChatPanel> {
                     child: TextField(
                       key: const Key('chat_panel_input_mesaj'),
                       controller: _inputCtrl,
+                      scrollController: _inputScrollCtrl,
                       focusNode: _focusNode,
                       enabled: !_selfMuted,
                       style: TextStyle(
@@ -597,6 +600,14 @@ class ChatPanelState extends State<ChatPanel> {
                       maxLength: 200,
                       maxLines: 1,
                       textInputAction: TextInputAction.send,
+                      onChanged: (_) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          if (_inputScrollCtrl.hasClients) {
+                            _inputScrollCtrl.jumpTo(
+                                _inputScrollCtrl.position.maxScrollExtent);
+                          }
+                        });
+                      },
                       decoration: InputDecoration(
                         hintText: _selfMuted
                             ? AppLocalizations.of(context)!.chatMutedHint
