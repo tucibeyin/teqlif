@@ -3,11 +3,10 @@ import '../../l10n/app_localizations.dart';
 
 /// Canlı yayın host ekranı — üst bilgi çubuğu.
 ///
-/// CANLI rozeti, izleyici sayacı (tıklanabilir), başlık,
+/// CANLI rozeti, izleyici sayacı (tıklanabilir), kayar başlık,
 /// mikrofon/kamera/çevirme kontrolleri ve "Bitir" butonu içerir.
-/// Tüm etkileşimler callback ile üst widget'a iletilir; bu widget
-/// tamamen stateless'tır.
-class HostTopBar extends StatelessWidget {
+/// Tüm etkileşimler callback ile üst widget'a iletilir.
+class HostTopBar extends StatefulWidget {
   final double topPad;
   final int viewerCount;
   final String title;
@@ -34,11 +33,63 @@ class HostTopBar extends StatelessWidget {
   });
 
   @override
+  State<HostTopBar> createState() => _HostTopBarState();
+}
+
+class _HostTopBarState extends State<HostTopBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _marqueeCtrl;
+  late final Animation<Offset> _marqueeAnim;
+
+  // Bir turda kaç saniye? Başlık uzunluğuna göre ayarlanır.
+  static const _speed = 40.0; // piksel/saniye
+
+  @override
+  void initState() {
+    super.initState();
+    _startMarquee();
+  }
+
+  void _startMarquee() {
+    // Tahmini metin uzunluğu: karakter * ortalama 8px
+    final charCount = widget.title.length;
+    final estimatedWidth = (charCount * 8.0).clamp(80.0, 600.0);
+    final durationMs = ((estimatedWidth / _speed) * 1000).round();
+
+    _marqueeCtrl = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: durationMs),
+    );
+    // Sağdan sola: başlangıç x=1.5 (sağ dışarı), bitiş x=-1.5 (sol dışarı)
+    _marqueeAnim = Tween<Offset>(
+      begin: const Offset(1.5, 0),
+      end: const Offset(-1.5, 0),
+    ).animate(CurvedAnimation(parent: _marqueeCtrl, curve: Curves.linear));
+
+    _marqueeCtrl.repeat();
+  }
+
+  @override
+  void didUpdateWidget(HostTopBar old) {
+    super.didUpdateWidget(old);
+    if (old.title != widget.title) {
+      _marqueeCtrl.dispose();
+      _startMarquee();
+    }
+  }
+
+  @override
+  void dispose() {
+    _marqueeCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Container(
       padding: EdgeInsets.only(
-        top: topPad + 14,
+        top: widget.topPad + 14,
         left: 16,
         right: 16,
         bottom: 32,
@@ -73,7 +124,7 @@ class HostTopBar extends StatelessWidget {
 
           // İzleyici sayısı (tıklanabilir)
           GestureDetector(
-            onTap: onViewersTap,
+            onTap: widget.onViewersTap,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
               decoration: BoxDecoration(
@@ -81,24 +132,30 @@ class HostTopBar extends StatelessWidget {
                 borderRadius: BorderRadius.circular(20),
               ),
               child: Text(
-                '👁 $viewerCount',
+                '👁 ${widget.viewerCount}',
                 style: const TextStyle(color: Colors.white, fontSize: 11),
               ),
             ),
           ),
           const SizedBox(width: 10),
 
-          // Başlık
+          // Kayar başlık
           Expanded(
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 14,
-                shadows: [Shadow(blurRadius: 6, color: Colors.black)],
+            child: ClipRect(
+              child: SlideTransition(
+                position: _marqueeAnim,
+                child: Text(
+                  widget.title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w700,
+                    fontSize: 14,
+                    shadows: [Shadow(blurRadius: 6, color: Colors.black)],
+                  ),
+                  maxLines: 1,
+                  softWrap: false,
+                ),
               ),
-              overflow: TextOverflow.ellipsis,
             ),
           ),
           const SizedBox(width: 8),
@@ -106,18 +163,18 @@ class HostTopBar extends StatelessWidget {
           // Mikrofon toggle
           _TopCtrlBtn(
             key: const Key('host_btn_mikrofon_toggle'),
-            icon: micEnabled ? Icons.mic_rounded : Icons.mic_off_rounded,
-            active: micEnabled,
-            onTap: onToggleMic,
+            icon: widget.micEnabled ? Icons.mic_rounded : Icons.mic_off_rounded,
+            active: widget.micEnabled,
+            onTap: widget.onToggleMic,
           ),
           const SizedBox(width: 6),
 
           // Kamera toggle
           _TopCtrlBtn(
             key: const Key('host_btn_kamera_toggle'),
-            icon: cameraEnabled ? Icons.videocam_rounded : Icons.videocam_off_rounded,
-            active: cameraEnabled,
-            onTap: onToggleCamera,
+            icon: widget.cameraEnabled ? Icons.videocam_rounded : Icons.videocam_off_rounded,
+            active: widget.cameraEnabled,
+            onTap: widget.onToggleCamera,
           ),
           const SizedBox(width: 6),
 
@@ -126,14 +183,14 @@ class HostTopBar extends StatelessWidget {
             key: const Key('host_btn_kamera_cevir'),
             icon: Icons.flip_camera_ios_rounded,
             active: true,
-            onTap: onSwitchCamera,
+            onTap: widget.onSwitchCamera,
           ),
           const SizedBox(width: 10),
 
           // Yayını Bitir
           GestureDetector(
             key: const Key('host_btn_yayin_bitir'),
-            onTap: onEndStream,
+            onTap: widget.onEndStream,
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
               decoration: BoxDecoration(
