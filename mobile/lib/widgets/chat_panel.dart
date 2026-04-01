@@ -455,10 +455,6 @@ class ChatPanelState extends State<ChatPanel> {
               TextSpan(
                 children: [
                   TextSpan(
-                    text: '📌 ',
-                    style: TextStyle(fontSize: 12.5, height: 1.35, color: Colors.amber),
-                  ),
-                  TextSpan(
                     text: _pinnedMessage!,
                     style: const TextStyle(
                       fontSize: 12.5,
