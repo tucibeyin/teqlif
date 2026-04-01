@@ -173,13 +173,10 @@ class _MarqueeTextState extends State<_MarqueeText>
     with SingleTickerProviderStateMixin {
   AnimationController? _ctrl;
 
-  // Piksel/saniye — kullanıcı "fazla hızlı" dedi, 25 px/sn yavaş ve doğal
-  static const double _speed = 25.0;
+  static const double _speed   = 25.0; // piksel/saniye
+  static const int    _pauseMs = 800;  // tur arası bekleme (ms)
 
-  // Bir turdan sonra sağ kenara dönmeden önce bekleme süresi (ms)
-  static const int _pauseMs = 800;
-
-  double _textWidth = 0;
+  double _textWidth      = 0;
   double _containerWidth = 0;
 
   @override
@@ -188,8 +185,8 @@ class _MarqueeTextState extends State<_MarqueeText>
     super.dispose();
   }
 
+  /// Metin genişliğini ölç, controller'ı (yeniden) başlat.
   void _rebuild(double containerW) {
-    // Gerçek metin genişliğini ölç
     final tp = TextPainter(
       text: TextSpan(text: widget.text, style: widget.style),
       maxLines: 1,
@@ -197,38 +194,28 @@ class _MarqueeTextState extends State<_MarqueeText>
     )..layout(maxWidth: double.infinity);
 
     final newTextW = tp.width;
-    final needsScroll = newTextW > containerW;
-
-    // Aynı boyutlarda yeniden build gelirse controller'ı dokunma
     if (_textWidth == newTextW && _containerWidth == containerW) return;
-    _textWidth = newTextW;
+    _textWidth      = newTextW;
     _containerWidth = containerW;
 
     _ctrl?.dispose();
     _ctrl = null;
 
-    if (!needsScroll) return; // Metin sığıyor — animasyon gerekmez
+    if (newTextW <= containerW) return; // sığıyor — animasyon yok
 
-    // Toplam kayma mesafesi: container sağ kenarından text sol kenarına
     final totalDist = containerW + newTextW;
-    final scrollMs = (totalDist / _speed * 1000).round();
+    final scrollMs  = (totalDist / _speed * 1000).round();
 
     _ctrl = AnimationController(
       vsync: this,
       duration: Duration(milliseconds: scrollMs + _pauseMs),
-    )..addListener(() {
-        // setState her frame'de çağrılır — AnimatedBuilder yerine doğrudan
-        if (mounted) setState(() {});
-      });
-
-    _ctrl!.repeat();
+    )..repeat();
   }
 
   @override
   void didUpdateWidget(_MarqueeText old) {
     super.didUpdateWidget(old);
     if (old.text != widget.text || old.style != widget.style) {
-      // Boyutu sıfırla — bir sonraki build'de _rebuild yeniden çalışır
       _textWidth = 0;
       _containerWidth = 0;
       _ctrl?.dispose();
@@ -242,21 +229,16 @@ class _MarqueeTextState extends State<_MarqueeText>
       builder: (_, constraints) {
         final containerW = constraints.maxWidth;
 
-        // Ölçüm henüz yapılmadıysa veya boyut değiştiyse yeniden hesapla
         if (_containerWidth != containerW || _textWidth == 0) {
-          // Build sırasında setState çağrılamaz → addPostFrameCallback
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _rebuild(containerW);
-              setState(() {});
-            }
+            if (mounted) { _rebuild(containerW); setState(() {}); }
           });
         }
 
         final ctrl = _ctrl;
 
-        // Animasyon hazır değil veya metin sığıyor → sabit göster
-        if (ctrl == null || _textWidth == 0) {
+        // Henüz ölçülmedi veya metin sığıyor → statik
+        if (ctrl == null || _textWidth <= _containerWidth) {
           return Text(
             widget.text,
             style: widget.style,
@@ -265,37 +247,47 @@ class _MarqueeTextState extends State<_MarqueeText>
           );
         }
 
-        // t ∈ [0, 1]: scroll bölümü ve pause bölümü
-        final totalDist = containerW + _textWidth;
-        final scrollMs = totalDist / _speed * 1000;
-        final totalMs = scrollMs + _pauseMs;
-        // Animasyonun scroll'a düşen oranı
-        final scrollFraction = scrollMs / totalMs;
-        final t = ctrl.value;
+        return AnimatedBuilder(
+          animation: ctrl,
+          builder: (_, __) {
+            final totalDist     = _containerWidth + _textWidth;
+            final scrollMs      = totalDist / _speed * 1000;
+            final totalMs       = scrollMs + _pauseMs;
+            final scrollFrac    = scrollMs / totalMs;
+            final t             = ctrl.value;
 
-        double offsetX;
-        if (t < scrollFraction) {
-          // Aktif kayma: container sağ kenarından başla, text sol kenarına git
-          offsetX = containerW - (t / scrollFraction) * totalDist;
-        } else {
-          // Duraklama: metin tamamen solda, ekran dışı — sessiz bekleme
-          offsetX = -_textWidth;
-        }
+            // Sağdan sola: containerW → -_textWidth
+            final double left;
+            if (t < scrollFrac) {
+              left = _containerWidth - (t / scrollFrac) * totalDist;
+            } else {
+              left = -_textWidth; // duraklama: tamamen sol dışı
+            }
 
-        return ClipRect(
-          child: OverflowBox(
-            alignment: Alignment.centerLeft,
-            maxWidth: double.infinity,
-            child: Transform.translate(
-              offset: Offset(offsetX, 0),
-              child: Text(
-                widget.text,
-                style: widget.style,
-                maxLines: 1,
-                softWrap: false,
+            // ClipRect: containerW kadar görünür alan
+            // Stack + Positioned: text hiçbir constraint almıyor
+            return SizedBox(
+              height: 20,
+              child: ClipRect(
+                child: Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    Positioned(
+                      left: left,
+                      top: 0,
+                      bottom: 0,
+                      child: Text(
+                        widget.text,
+                        style: widget.style,
+                        maxLines: 1,
+                        softWrap: false,
+                      ),
+                    ),
+                  ],
+                ),
               ),
-            ),
-          ),
+            );
+          },
         );
       },
     );
