@@ -2277,10 +2277,18 @@
             if (banner) banner.style.display = 'none';
         }
 
+        let _auctionMsgTimer = null;
         function setAuctionMsg(msg, type = '') {
             const el = document.getElementById('auctionMsg');
             el.textContent = msg;
             el.className = type;
+            clearTimeout(_auctionMsgTimer);
+            if (msg) {
+                _auctionMsgTimer = setTimeout(() => {
+                    el.textContent = '';
+                    el.className = '';
+                }, 6000);
+            }
         }
 
         let _isHostPage = false;
@@ -2680,6 +2688,7 @@
             try {
                 await Auction.acceptBid();
                 setAuctionMsg('Teklif kabul edildi! Özet sohbete gönderildi.', 'success');
+                setTimeout(() => setAuctionMsg('', ''), 5000);
             } catch (e) { setAuctionMsg(e.message, 'error'); }
         });
 
