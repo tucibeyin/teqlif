@@ -2045,8 +2045,8 @@
             items.className = 'bid-group-items';
             group.appendChild(header);
             group.appendChild(items);
-            list.appendChild(group);
-            list.scrollTop = list.scrollHeight;
+            list.prepend(group);
+            list.scrollTop = 0;
             _currentGroupEl = items;
         }
 
