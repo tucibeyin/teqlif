@@ -2,7 +2,7 @@
 
 <img src="https://img.shields.io/badge/-%E2%9A%A1%20Teqlif-06B6D4?style=for-the-badge&labelColor=0F172A&color=06B6D4" height="48" alt="Teqlif"/>
 
-### Canlı yayın destekli · Gerçek zamanlı açık artırma · İlan platformu
+### Live-streaming · Real-time auctions · Marketplace platform
 
 <br/>
 
@@ -17,58 +17,58 @@
 
 <br/>
 
-**[📱 Mobil Mimari](#-mobil-uygulama-mimarisi) · [🏗 Sistem Mimarisi](#️-sistem-mimarisi) · [🗄 Veritabanı](#-veritabanı-şeması) · [🔒 Güvenlik](#-güvenlik-katmanları) · [⚙️ Kurulum](#️-kurulum)**
+**[📱 Mobile Architecture](#-mobile-app-architecture) · [🏗 System Architecture](#️-system-architecture) · [🗄 Database](#-database-schema) · [🔒 Security](#-security-layers) · [⚙️ Setup](#️-setup)**
 
 </div>
 
 ---
 
-## 🎯 Teqlif Nedir?
+## 🎯 What is Teqlif?
 
-**Teqlif**, alışverişi canlı yayın deneyimiyle birleştiren Türkiye odaklı çok platformlu bir **C2C ticaret uygulamasıdır.** Kullanıcılar ilan açar, doğrudan satın alabilir ya da gerçek zamanlı açık artırmayla rekabetçi teklifler verebilir. Satıcılar canlı yayınları sırasında ürünlerini tanıtıp anlık açık artırma başlatabilir.
+**Teqlif** is a multi-platform **C2C marketplace** that merges social live-streaming with commerce, focused on the Turkish market. Users can list items, buy directly, or compete in real-time auctions. Sellers can showcase products during live broadcasts and launch instant auctions — turning shopping into entertainment.
 
-| | Özellik | Açıklama |
+| | Feature | Description |
 |---|---|---|
-| 📢 | **İlan Yönetimi** | Kategori/şehir bazlı ilan, görsel yükleme, doğrudan teklif alma |
-| 🔴 | **Canlı Yayın** | WebRTC/LiveKit ile host + izleyici full-duplex |
-| 🔨 | **Gerçek Zamanlı Açık Artırma** | WebSocket üzerinden anlık teklif, sayaç, kazanan bildirimi |
-| 💬 | **Canlı Sohbet** | Yayın içi moderasyonlu mesajlaşma |
-| 👥 | **Sosyal Katman** | Takip, hikaye (story), beğeni, değerlendirme, engelleme |
-| 🛡 | **Moderasyon** | Co-host atama, susturma, yayından atma |
-| 🔔 | **Push Bildirim** | Firebase FCM anlık bildirimler |
-| 🌐 | **Web Arayüzü** | Vanilla JS hafif, SEO-uyumlu web paneli |
+| 📢 | **Listing Management** | Category/city-based listings, image upload, direct offer system |
+| 🔴 | **Live Streaming** | Low-latency host + viewer streams via WebRTC / LiveKit |
+| 🔨 | **Real-time Auctions** | Live bidding, countdown timer, winner notification over WebSocket |
+| 💬 | **Live Chat** | Moderated real-time messaging within streams |
+| 👥 | **Social Layer** | Follow, story, likes, ratings, blocking |
+| 🛡 | **Moderation** | Co-host assignment, mute, kick |
+| 🔔 | **Push Notifications** | Instant alerts via Firebase FCM |
+| 🌐 | **Web Interface** | Lightweight, SEO-friendly Vanilla JS web panel |
 
 ---
 
-## 🏗️ Sistem Mimarisi
+## 🏗️ System Architecture
 
 ```mermaid
 graph TB
-    subgraph CLIENTS["📱 Client Katmanı"]
+    subgraph CLIENTS["📱 Client Layer"]
         MOB["Flutter Mobile<br/>iOS + Android"]
-        WEB["Vanilla JS / HTML<br/>Web Arayüzü"]
+        WEB["Vanilla JS / HTML<br/>Web Interface"]
     end
 
     subgraph EDGE["🔀 Edge"]
         NGINX["Nginx<br/>Reverse Proxy · SSL · Static"]
     end
 
-    subgraph BACKEND["⚙️ Backend Katmanı"]
+    subgraph BACKEND["⚙️ Backend Layer"]
         API["FastAPI<br/>Uvicorn Async"]
         WORKER["ARQ Worker<br/>Async Job Queue"]
     end
 
-    subgraph REALTIME["⚡ Gerçek Zamanlı"]
+    subgraph REALTIME["⚡ Real-time"]
         WS["WebSocket Manager<br/>pubsub_listener · chat_listener"]
         LK["LiveKit Server<br/>WebRTC SFU"]
     end
 
-    subgraph DATA["🗄 Veri Katmanı"]
-        PG["PostgreSQL<br/>asyncpg · 20 Tablo"]
+    subgraph DATA["🗄 Data Layer"]
+        PG["PostgreSQL<br/>asyncpg · 20 Tables"]
         RD["Redis<br/>Pub/Sub · Cache · Rate Limit"]
     end
 
-    subgraph EXTERNAL["☁️ Dış Servisler"]
+    subgraph EXTERNAL["☁️ External Services"]
         FB["Firebase<br/>FCM Push"]
         ST["Sentry<br/>Error Tracking"]
         CF["Cloudflare<br/>Turnstile CAPTCHA"]
@@ -102,14 +102,14 @@ graph TB
 
 ---
 
-## 📊 Veri Akışı Diyagramları
+## 📊 Data Flow Diagrams
 
 <details>
-<summary><strong>🔨 Gerçek Zamanlı Açık Artırma — Teklif Akışı</strong></summary>
+<summary><strong>🔨 Real-time Auction — Bid Flow</strong></summary>
 
 ```mermaid
 sequenceDiagram
-    actor Kullanıcı
+    actor User
     participant API as FastAPI Router
     participant RL as Rate Limiter<br/>(slowapi)
     participant AUTH as JWT Auth
@@ -117,33 +117,33 @@ sequenceDiagram
     participant PG as PostgreSQL
     participant PS as Pub/Sub
     participant WS as WebSocket<br/>Manager
-    participant Others as Diğer İstemciler
+    participant Others as Other Clients
 
-    Kullanıcı->>API: POST /api/auction/{id}/bid
-    API->>RL: Rate limit kontrolü (2/s)
-    alt Limit aşıldı
-        RL-->>Kullanıcı: 429 Too Many Requests
+    User->>API: POST /api/auction/{id}/bid
+    API->>RL: Rate limit check (2/s)
+    alt Limit exceeded
+        RL-->>User: 429 Too Many Requests
     end
-    RL->>AUTH: JWT doğrula
-    alt Geçersiz token
-        AUTH-->>Kullanıcı: 401 Unauthorized
+    RL->>AUTH: Validate JWT
+    alt Invalid token
+        AUTH-->>User: 401 Unauthorized
     end
-    AUTH->>REDIS: Atomik Lua Script<br/>(açık artırma aktif? teklif > mevcut?)
-    alt Geçersiz teklif
-        REDIS-->>Kullanıcı: 400 Bad Request
+    AUTH->>REDIS: Atomic Lua Script<br/>(auction active? bid > current?)
+    alt Invalid bid
+        REDIS-->>User: 400 Bad Request
     end
-    REDIS->>PG: Bid kaydı yaz
+    REDIS->>PG: Write bid record
     PG-->>REDIS: OK
     REDIS->>PS: PUBLISH auction_broadcast
-    PS->>WS: pubsub_listener tetiklendi
-    WS->>Kullanıcı: ✅ Yeni teklif (kendi ekranı)
-    WS->>Others: 🔔 Yeni teklif (tüm izleyiciler)
+    PS->>WS: pubsub_listener triggered
+    WS->>User: ✅ New bid (own screen)
+    WS->>Others: 🔔 New bid (all viewers)
 ```
 
 </details>
 
 <details>
-<summary><strong>🔴 Canlı Yayın Bağlantı Akışı</strong></summary>
+<summary><strong>🔴 Live Stream Connection Flow</strong></summary>
 
 ```mermaid
 sequenceDiagram
@@ -153,16 +153,16 @@ sequenceDiagram
     participant LK as LiveKit Server
     participant WS as WebSocket
 
-    Host->>API: POST /api/streams (yayın başlat)
-    API->>LK: Room oluştur + Host token
+    Host->>API: POST /api/streams (start broadcast)
+    API->>LK: Create room + Host token
     LK-->>API: room_id + token
     API-->>Host: JoinTokenOut
     Host->>LK: room.connect(token)
-    Host->>LK: Video/Audio publish
-    Note over LK: Room aktif
+    Host->>LK: Publish Video/Audio
+    Note over LK: Room is live
 
     Viewer->>API: POST /api/streams/{id}/join
-    API->>LK: Viewer token al
+    API->>LK: Get viewer token
     LK-->>API: token
     API-->>Viewer: JoinTokenOut
     Viewer->>LK: room.connect(token)
@@ -174,15 +174,15 @@ sequenceDiagram
 </details>
 
 <details>
-<summary><strong>💬 WebSocket Mesaj Dağıtım Mimarisi</strong></summary>
+<summary><strong>💬 WebSocket Broadcast Architecture</strong></summary>
 
 ```mermaid
 graph LR
-    subgraph SOURCES["Kaynak Eventler"]
-        BID["Yeni Teklif"]
-        CHAT["Yeni Mesaj"]
-        MOD["Moderasyon\n(kick/mute)"]
-        LIKE["Beğeni"]
+    subgraph SOURCES["Source Events"]
+        BID["New Bid"]
+        CHAT["New Message"]
+        MOD["Moderation\n(kick/mute)"]
+        LIKE["Like"]
         CNT["Viewer Count"]
     end
 
@@ -197,9 +197,9 @@ graph LR
         HB["heartbeat_checker"]
     end
 
-    subgraph CLIENTS["Bağlı İstemciler"]
-        M1["📱 Mobil #1"]
-        M2["📱 Mobil #2"]
+    subgraph CLIENTS["Connected Clients"]
+        M1["📱 Mobile #1"]
+        M2["📱 Mobile #2"]
         W1["🌐 Web #1"]
     end
 
@@ -221,11 +221,11 @@ graph LR
 </details>
 
 <details>
-<summary><strong>🔔 Push Bildirim Akışı</strong></summary>
+<summary><strong>🔔 Push Notification Flow</strong></summary>
 
 ```mermaid
 flowchart LR
-    E["Tetikleyici Event\n(Yeni teklif / Takipçi / Yayın)"]
+    E["Trigger Event\n(New bid / New follower / Stream started)"]
     --> API["FastAPI Router"]
     --> ARQ["ARQ Worker Queue"]
     --> FB["Firebase Admin SDK"]
@@ -237,7 +237,7 @@ flowchart LR
 
 ---
 
-## 🗄 Veritabanı Şeması
+## 🗄 Database Schema
 
 ```mermaid
 erDiagram
@@ -386,34 +386,34 @@ erDiagram
         datetime created_at
     }
 
-    users ||--o{ listings : "oluşturur"
-    users ||--o{ streams : "yayınlar"
-    users ||--o{ bids : "teklif verir"
-    users ||--o{ stories : "paylaşır"
-    users ||--o{ messages : "gönderir"
-    users ||--o{ follows : "takip eder"
-    users ||--o{ favorites : "favoriler"
-    users ||--o{ ratings : "değerlendirir"
-    users ||--o{ purchases : "satın alır"
-    listings ||--o| auctions : "barındırır"
-    auctions ||--o{ bids : "alır"
-    listings ||--o{ listing_offers : "alır"
-    listings ||--o{ favorites : "favorilenir"
+    users ||--o{ listings : "creates"
+    users ||--o{ streams : "broadcasts"
+    users ||--o{ bids : "places"
+    users ||--o{ stories : "shares"
+    users ||--o{ messages : "sends"
+    users ||--o{ follows : "follows"
+    users ||--o{ favorites : "saves"
+    users ||--o{ ratings : "rates"
+    users ||--o{ purchases : "buys"
+    listings ||--o| auctions : "hosts"
+    auctions ||--o{ bids : "receives"
+    listings ||--o{ listing_offers : "receives"
+    listings ||--o{ favorites : "saved by"
 ```
 
 ---
 
-## 📱 Mobil Uygulama Mimarisi
+## 📱 Mobile App Architecture
 
 <details>
-<summary><strong>Navigasyon Haritası</strong></summary>
+<summary><strong>Navigation Map</strong></summary>
 
 ```mermaid
 flowchart TD
-    SPLASH["SplashScreen\n(JWT kontrol)"]
+    SPLASH["SplashScreen\n(JWT check)"]
 
-    SPLASH -->|Oturum var| MAIN
-    SPLASH -->|Oturum yok| LOGIN
+    SPLASH -->|Session exists| MAIN
+    SPLASH -->|No session| LOGIN
 
     subgraph AUTH["🔐 Auth Flow"]
         LOGIN["LoginScreen"] --> REG["RegisterScreen"]
@@ -423,7 +423,7 @@ flowchart TD
     AUTH --> MAIN
 
     subgraph MAIN["🏠 MainScreen — BottomNav"]
-        HOME["Tab 0\nHomeScreen\n(İlanlar + Hikayeler)"]
+        HOME["Tab 0\nHomeScreen\n(Listings + Stories)"]
         SEARCH["Tab 1\nSearchScreen"]
         NEW["Tab 2\nCreateListingScreen"]
         LIVE["Tab 3\nLiveListScreen"]
@@ -432,39 +432,39 @@ flowchart TD
 
     HOME --> DETAIL["ListingDetailScreen\n+ AuctionPanel (WS)"]
     HOME --> STORY["StoryViewerScreen"]
-    SEARCH --> SWIPE["SwipeLiveScreen\n(TikTok PageView)"]
+    SEARCH --> SWIPE["SwipeLiveScreen\n(TikTok-style PageView)"]
     LIVE --> SWIPE
-    PROFILE --> EDIT["Profil Düzenleme"]
-    PROFILE --> HOST["HostStreamScreen\n(Kamera + Mikrofon)"]
+    PROFILE --> EDIT["Edit Profile"]
+    PROFILE --> HOST["HostStreamScreen\n(Camera + Microphone)"]
     DETAIL --> PUBLIC["PublicProfileScreen"]
-    PUBLIC --> VIEWER["ViewerStreamScreen\n(Tek Yayın)"]
+    PUBLIC --> VIEWER["ViewerStreamScreen\n(Single stream)"]
     STORY --> VIEWER
 ```
 
 </details>
 
 <details>
-<summary><strong>Canlı Yayın Ekranları — UX Farkları</strong></summary>
+<summary><strong>Live Stream Screens — UX Differences</strong></summary>
 
 ```mermaid
 graph LR
     subgraph SWIPE["SwipeLiveScreen\n(TikTok UX)"]
-        S1["List·StreamOut alır"]
-        S2["PageView dikey scroll"]
-        S3["Lazy token fetch\nher sayfa değişiminde"]
+        S1["Takes List·StreamOut"]
+        S2["Vertical PageView scroll"]
+        S3["Lazy token fetch\non each page change"]
         S4["isActive lifecycle\nactivate / deactivate"]
-        S5["Yayın sonu → Overlay\nsonraki yayına geç"]
+        S5["Stream ended → Overlay\nswipe to next stream"]
     end
 
-    subgraph VIEWER["ViewerStreamScreen\n(Tekli UX)"]
-        V1["JoinTokenOut alır\n(hazır token)"]
-        V2["Tek tam sayfa"]
-        V3["mount → connect\nbir kez"]
+    subgraph VIEWER["ViewerStreamScreen\n(Single UX)"]
+        V1["Takes JoinTokenOut\n(pre-fetched token)"]
+        V2["Single full-page"]
+        V3["mount → connect\nonce only"]
         V4["LiveVideoPlayer widget"]
-        V5["Yayın sonu → AlertDialog\nhome'a gitme"]
+        V5["Stream ended → AlertDialog\nnavigate home"]
     end
 
-    subgraph CALLERS["Çağrı Noktaları"]
+    subgraph CALLERS["Call Sites"]
         LS["live_list_screen.dart"]
         SS["search_screen.dart"]
         PP["public_profile_screen.dart"]
@@ -480,7 +480,7 @@ graph LR
 </details>
 
 <details>
-<summary><strong>Flutter Klasör Yapısı</strong></summary>
+<summary><strong>Flutter Folder Structure</strong></summary>
 
 ```
 mobile/lib/
@@ -488,237 +488,237 @@ mobile/lib/
 ├── 📄 main.dart                    # App entry, Riverpod, Firebase init
 │
 ├── 📁 config/
-│   ├── api.dart                    # Base URL, endpoint sabitleri
+│   ├── api.dart                    # Base URL, endpoint constants
 │   └── theme.dart                  # kPrimary (#06B6D4), dark/light tokens
 │
-├── 📁 models/                      # JSON → Dart (17 model)
+├── 📁 models/                      # JSON → Dart (17 models)
 │   ├── stream.dart                 # StreamOut, JoinTokenOut
 │   ├── listing.dart                # ListingOut, ListingOffer
 │   ├── auction.dart                # AuctionOut, BidOut
 │   └── user.dart, story.dart ...
 │
-├── 📁 services/                    # API çağrıları + iş mantığı (17 servis)
+├── 📁 services/                    # API calls + business logic (17 services)
 │   ├── auth_service.dart           # JWT, login, register, refresh
-│   ├── stream_service.dart         # Yayın CRUD + join/leave/like
-│   ├── auction_service.dart        # Teklif endpoint'leri
-│   ├── story_service.dart          # Hikaye yükle/izle/sil
-│   ├── ws_service.dart             # WebSocket bağlantı yöneticisi
+│   ├── stream_service.dart         # Stream CRUD + join/leave/like
+│   ├── auction_service.dart        # Bid endpoints
+│   ├── story_service.dart          # Story upload/view/delete
+│   ├── ws_service.dart             # WebSocket connection manager
 │   ├── storage_service.dart        # SharedPreferences (token, user)
 │   └── push_notification_service.dart
 │
-├── 📁 providers/                   # Riverpod state provider'ları
+├── 📁 providers/                   # Riverpod state providers
 │
 ├── 📁 screens/
 │   ├── main_screen.dart            # BottomNav
-│   ├── home_screen.dart            # Ana akış
-│   ├── listing_detail_screen.dart  # İlan detayı + teklif formu
-│   ├── search_screen.dart          # Arama + SwipeLiveScreen
-│   ├── profile_screen.dart         # Kendi profil
-│   ├── public_profile_screen.dart  # Başka profil + Yayın izle
-│   ├── messages_screen.dart        # DM konuşmaları
+│   ├── home_screen.dart            # Main feed
+│   ├── listing_detail_screen.dart  # Listing detail + offer form
+│   ├── search_screen.dart          # Search + SwipeLiveScreen
+│   ├── profile_screen.dart         # Own profile
+│   ├── public_profile_screen.dart  # Other user profile + watch stream
+│   ├── messages_screen.dart        # DM conversations
 │   ├── live/
-│   │   ├── host_stream_screen.dart      # Yayıncı ekranı
-│   │   ├── viewer_stream_screen.dart    # Tekli izleme
-│   │   ├── swipe_live_screen.dart       # TikTok-stili PageView
-│   │   └── live_list_screen.dart        # Aktif yayınlar listesi
+│   │   ├── host_stream_screen.dart      # Broadcaster view
+│   │   ├── viewer_stream_screen.dart    # Single-stream viewer
+│   │   ├── swipe_live_screen.dart       # TikTok-style PageView
+│   │   └── live_list_screen.dart        # Active streams list
 │   └── story/
 │       └── story_viewer_screen.dart
 │
 └── 📁 widgets/
-    ├── auction_panel.dart           # Teklif girişi + aktif artırma UI
-    ├── chat_panel.dart              # Gerçek zamanlı sohbet (WS)
+    ├── auction_panel.dart           # Bid input + live auction UI
+    ├── chat_panel.dart              # Real-time chat (WebSocket)
     ├── global_keyboard_accessory.dart
     └── live/
-        ├── floating_hearts.dart     # Uçuşan kalpler animasyonu
+        ├── floating_hearts.dart     # Floating hearts animation
         ├── live_video_player.dart   # Video render wrapper
-        └── viewer_top_bar.dart      # CANLI etiketi + izleyici sayacı
+        └── viewer_top_bar.dart      # LIVE badge + viewer counter
 ```
 
 </details>
 
 ---
 
-## 🛠 Teknoloji Yığını
+## 🛠 Tech Stack
 
 <details>
 <summary><strong>Backend (Python)</strong></summary>
 
-| Katman | Paket | Versiyon | Kullanım |
+| Layer | Package | Version | Purpose |
 |---|---|---|---|
 | **Framework** | FastAPI | 0.115.0 | Async REST API + WebSocket |
 | **Server** | Uvicorn (standard) | 0.30.6 | ASGI runtime |
-| **ORM** | SQLAlchemy (asyncio) | 2.0.35 | Async DB operasyonları |
-| **DB Driver** | asyncpg | 0.30.0 | PostgreSQL async sürücüsü |
-| **Migration** | Alembic | 1.13.3 | Şema versiyonlama |
-| **Cache** | fastapi-cache2 (Redis) | 0.2.2 | Endpoint önbellekleme |
-| **Pub/Sub** | redis | 5.1.1 | Gerçek zamanlı mesaj dağıtımı |
-| **Job Queue** | ARQ | 0.25.0 | Async iş kuyruğu |
+| **ORM** | SQLAlchemy (asyncio) | 2.0.35 | Async database operations |
+| **DB Driver** | asyncpg | 0.30.0 | PostgreSQL async driver |
+| **Migration** | Alembic | 1.13.3 | Schema versioning |
+| **Cache** | fastapi-cache2 (Redis) | 0.2.2 | Endpoint caching |
+| **Pub/Sub** | redis | 5.1.1 | Real-time message broadcasting |
+| **Job Queue** | ARQ | 0.25.0 | Async background jobs |
 | **Auth** | python-jose + passlib | 3.3.0 / 1.7.4 | JWT + Bcrypt |
-| **Media** | livekit-api | 0.8.2 | Canlı yayın token yönetimi |
-| **Push** | firebase-admin | 6.5.0 | FCM bildirimleri |
-| **Monitoring** | sentry-sdk[fastapi] | 2.0.0 | Hata izleme |
-| **Rate Limit** | slowapi | 0.1.9 | Endpoint bazlı limit |
-| **XSS Koruma** | bleach | 6.1.0 | Input sanitizasyonu |
-| **Captcha** | itsdangerous + CF | 2.2.0 | Turnstile doğrulama |
-| **Content Filter** | better-profanity | 0.7.0 | Küfür filtreleme |
-| **Template** | Jinja2 | 3.1.4 | Admin panel |
-| **Image** | Pillow | 10.4.0 | Görsel işleme |
+| **Media** | livekit-api | 0.8.2 | Live stream token management |
+| **Push** | firebase-admin | 6.5.0 | FCM notifications |
+| **Monitoring** | sentry-sdk[fastapi] | 2.0.0 | Error tracking |
+| **Rate Limiting** | slowapi | 0.1.9 | Per-endpoint rate limits |
+| **XSS Protection** | bleach | 6.1.0 | Input sanitization |
+| **Captcha** | itsdangerous + CF | 2.2.0 | Turnstile validation |
+| **Content Filter** | better-profanity | 0.7.0 | Profanity filtering |
+| **Template** | Jinja2 | 3.1.4 | Admin panel templates |
+| **Image** | Pillow | 10.4.0 | Image processing |
 
 </details>
 
 <details>
-<summary><strong>Mobil (Flutter / Dart)</strong></summary>
+<summary><strong>Mobile (Flutter / Dart)</strong></summary>
 
-| Paket | Versiyon | Kullanım |
+| Package | Version | Purpose |
 |---|---|---|
-| `livekit_client` | ^2.3.0 | WebRTC canlı yayın |
-| `web_socket_channel` | ^3.0.0 | Gerçek zamanlı WebSocket |
-| `flutter_riverpod` | ^2.4.9 | State yönetimi |
-| `firebase_messaging` | ^16.1.2 | Push notification |
-| `local_auth` | ^2.3.0 | Biyometrik giriş |
-| `sentry_flutter` | ^9.14.0 | Mobil hata izleme |
-| `cached_network_image` | ^3.3.1 | Görsel önbellekleme |
-| `image_picker` | ^1.1.0 | Kamera / Galeri |
-| `video_compress` | ^3.1.3 | Yükleme öncesi sıkıştırma |
-| `connectivity_plus` | ^6.1.4 | Ağ durumu takibi |
-| `cloudflare_turnstile` | ^1.2.0 | Captcha entegrasyonu |
-| `shimmer` | ^3.0.0 | Yükleme iskelet efekti |
-| `wakelock_plus` | ^1.2.10 | Yayın sırasında ekran aktif |
-| `intl` | ^0.20.0 | i18n / Lokalizasyon |
-| `app_badge_plus` | ^1.1.0 | Uygulama rozeti |
-| `url_launcher` | ^6.3.0 | Dış link açma |
+| `livekit_client` | ^2.3.0 | WebRTC live streaming |
+| `web_socket_channel` | ^3.0.0 | Real-time WebSocket |
+| `flutter_riverpod` | ^2.4.9 | State management |
+| `firebase_messaging` | ^16.1.2 | Push notifications |
+| `local_auth` | ^2.3.0 | Biometric login |
+| `sentry_flutter` | ^9.14.0 | Mobile error tracking |
+| `cached_network_image` | ^3.3.1 | Image caching |
+| `image_picker` | ^1.1.0 | Camera / Gallery |
+| `video_compress` | ^3.1.3 | Pre-upload compression |
+| `connectivity_plus` | ^6.1.4 | Network status |
+| `cloudflare_turnstile` | ^1.2.0 | CAPTCHA integration |
+| `shimmer` | ^3.0.0 | Loading skeleton effect |
+| `wakelock_plus` | ^1.2.10 | Keep screen on during stream |
+| `intl` | ^0.20.0 | i18n / Localization |
+| `app_badge_plus` | ^1.1.0 | App icon badge |
+| `url_launcher` | ^6.3.0 | Open external links |
 
 </details>
 
 <details>
-<summary><strong>Altyapı</strong></summary>
+<summary><strong>Infrastructure</strong></summary>
 
-| Bileşen | Teknoloji | Rol |
+| Component | Technology | Role |
 |---|---|---|
-| **Web Sunucu** | Nginx | Reverse proxy, SSL termination, static dosya servisi |
-| **Süreç Yöneticisi** | Systemd | `teqlif-backend.service`, `teqlif-worker.service` |
-| **Veritabanı** | PostgreSQL 14+ | Ana kalıcı depolama (20 tablo) |
-| **Önbellek** | Redis 7+ | Pub/Sub, rate limit counter, session cache |
-| **Medya Sunucusu** | LiveKit Cloud | WebRTC SFU — video/audio track yönetimi |
-| **Push** | Firebase FCM | iOS (APNs üzerinden) + Android bildirim |
-| **Hata Takibi** | Sentry | Backend + Flutter çift taraflı izleme |
-| **Bot Koruması** | Cloudflare Turnstile | Kayıt / giriş captcha |
-| **Dağıtım** | Fastlane | Android build + deploy otomasyonu |
+| **Web Server** | Nginx | Reverse proxy, SSL termination, static file serving |
+| **Process Manager** | Systemd | `teqlif-backend.service`, `teqlif-worker.service` |
+| **Database** | PostgreSQL 14+ | Primary persistent storage (20 tables) |
+| **Cache** | Redis 7+ | Pub/Sub, rate limit counters, session cache |
+| **Media Server** | LiveKit Cloud | WebRTC SFU — video/audio track management |
+| **Push** | Firebase FCM | iOS (via APNs) + Android notifications |
+| **Error Tracking** | Sentry | Dual-side monitoring (backend + Flutter) |
+| **Bot Protection** | Cloudflare Turnstile | Registration / login CAPTCHA |
+| **Deployment** | Fastlane | Android build + deploy automation |
 
 </details>
 
 ---
 
-## 🌐 API Haritası
+## 🌐 API Map
 
 <details>
-<summary><strong>Tüm endpointleri göster (50+)</strong></summary>
+<summary><strong>View all endpoints (50+)</strong></summary>
 
 ### 🔐 Auth
-| Method | Endpoint | Açıklama |
+| Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/auth/register` | Kayıt (Turnstile captcha zorunlu) |
-| `POST` | `/api/auth/login` | JWT token al |
-| `POST` | `/api/auth/refresh` | Token yenile |
-| `POST` | `/api/auth/logout` | Çıkış |
+| `POST` | `/api/auth/register` | Register (Turnstile CAPTCHA required) |
+| `POST` | `/api/auth/login` | Get JWT token |
+| `POST` | `/api/auth/refresh` | Refresh token |
+| `POST` | `/api/auth/logout` | Log out |
 | `POST` | `/api/auth/google` | Google OAuth |
-| `GET` | `/api/auth/me` | Oturum bilgisi |
+| `GET` | `/api/auth/me` | Current session info |
 
-### 📢 İlanlar
-| Method | Endpoint | Açıklama |
+### 📢 Listings
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/listings` | İlan listesi (filtreli, sayfalama) |
-| `POST` | `/api/listings` | İlan oluştur |
-| `GET` | `/api/listings/{id}` | İlan detayı |
-| `PUT` | `/api/listings/{id}` | İlan güncelle |
-| `DELETE` | `/api/listings/{id}` | İlan sil |
-| `POST` | `/api/listings/{id}/offer` | Fiyat teklifi gönder |
-| `GET` | `/api/listings/{id}/offers` | Gelen teklifler |
+| `GET` | `/api/listings` | Listing feed (filterable, paginated) |
+| `POST` | `/api/listings` | Create listing |
+| `GET` | `/api/listings/{id}` | Listing detail |
+| `PUT` | `/api/listings/{id}` | Update listing |
+| `DELETE` | `/api/listings/{id}` | Delete listing |
+| `POST` | `/api/listings/{id}/offer` | Submit price offer |
+| `GET` | `/api/listings/{id}/offers` | Incoming offers |
 
-### 🔨 Açık Artırma
-| Method | Endpoint | Açıklama |
+### 🔨 Auctions
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/auction/{id}` | Aktif açık artırma bilgisi |
-| `POST` | `/api/auction/{id}/bid` | **Teklif ver** (rate limited: 2/s) |
-| `WS` | `/ws/auction/{stream_id}` | Canlı teklif akışı |
+| `GET` | `/api/auction/{id}` | Active auction info |
+| `POST` | `/api/auction/{id}/bid` | **Place bid** (rate limited: 2/s) |
+| `WS` | `/ws/auction/{stream_id}` | Live bid stream |
 
-### 🔴 Yayın (Stream)
-| Method | Endpoint | Açıklama |
+### 🔴 Streams
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/streams` | Aktif yayınlar |
-| `POST` | `/api/streams` | Yayın başlat |
-| `GET` | `/api/streams/{id}` | Yayın detayı |
-| `DELETE` | `/api/streams/{id}` | Yayını bitir |
-| `POST` | `/api/streams/{id}/join` | İzleyici token al |
-| `POST` | `/api/streams/{id}/leave` | Yayından ayrıl |
-| `POST` | `/api/streams/{id}/like` | Beğen |
-| `WS` | `/ws/stream/{id}` | Sohbet + izleyici sayısı |
+| `GET` | `/api/streams` | Active streams |
+| `POST` | `/api/streams` | Start a stream |
+| `GET` | `/api/streams/{id}` | Stream detail |
+| `DELETE` | `/api/streams/{id}` | End stream |
+| `POST` | `/api/streams/{id}/join` | Get viewer token |
+| `POST` | `/api/streams/{id}/leave` | Leave stream |
+| `POST` | `/api/streams/{id}/like` | Like stream |
+| `WS` | `/ws/stream/{id}` | Chat + viewer count |
 
-### 👥 Sosyal
-| Method | Endpoint | Açıklama |
+### 👥 Social
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/users/{username}` | Kullanıcı profili |
-| `POST` | `/api/follows/{username}` | Takip et |
-| `DELETE` | `/api/follows/{username}` | Takibi bırak |
-| `GET` | `/api/search` | Arama (ilan + kullanıcı) |
-| `POST` | `/api/favorites/{id}` | Favoriye ekle |
-| `GET` | `/api/favorites` | Favorilerim |
-| `GET` | `/api/stories` | Takip edilen hikayeler |
-| `POST` | `/api/stories` | Hikaye paylaş |
-| `POST` | `/api/ratings/{username}` | Değerlendir |
-| `POST` | `/api/reports` | Şikayet et |
+| `GET` | `/api/users/{username}` | User profile |
+| `POST` | `/api/follows/{username}` | Follow user |
+| `DELETE` | `/api/follows/{username}` | Unfollow user |
+| `GET` | `/api/search` | Search (listings + users) |
+| `POST` | `/api/favorites/{id}` | Save to favorites |
+| `GET` | `/api/favorites` | My favorites |
+| `GET` | `/api/stories` | Stories from followed users |
+| `POST` | `/api/stories` | Share a story |
+| `POST` | `/api/ratings/{username}` | Rate a user |
+| `POST` | `/api/reports` | Report content |
 
-### 💬 Mesajlaşma
-| Method | Endpoint | Açıklama |
+### 💬 Messaging
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/messages` | Konuşma listesi |
-| `POST` | `/api/messages/{username}` | Mesaj gönder |
-| `WS` | `/ws/messages` | Gerçek zamanlı mesaj |
+| `GET` | `/api/messages` | Conversation list |
+| `POST` | `/api/messages/{username}` | Send message |
+| `WS` | `/ws/messages` | Real-time messaging |
 
-### 🛡 Moderasyon
-| Method | Endpoint | Açıklama |
+### 🛡 Moderation
+| Method | Endpoint | Description |
 |---|---|---|
-| `POST` | `/api/moderation/{stream_id}/mute` | Sustur |
-| `POST` | `/api/moderation/{stream_id}/unmute` | Susturmayı kaldır |
-| `POST` | `/api/moderation/{stream_id}/kick` | Yayından at |
-| `POST` | `/api/moderation/{stream_id}/promote` | Co-host ata |
-| `POST` | `/api/moderation/{stream_id}/demote` | Co-host indir |
+| `POST` | `/api/moderation/{stream_id}/mute` | Mute user |
+| `POST` | `/api/moderation/{stream_id}/unmute` | Unmute user |
+| `POST` | `/api/moderation/{stream_id}/kick` | Kick from stream |
+| `POST` | `/api/moderation/{stream_id}/promote` | Assign co-host |
+| `POST` | `/api/moderation/{stream_id}/demote` | Remove co-host |
 
 </details>
 
 ---
 
-## 🔒 Güvenlik Katmanları
+## 🔒 Security Layers
 
 ```mermaid
 flowchart TD
-    REQ(["İstek Geldi"])
+    REQ(["Request Received"])
 
     REQ --> L1
     L1{"1️⃣ Nginx\nRate Limiting\nlimit_req_zone"}
-    L1 -->|Aşıldı| R1["❌ 429"]
+    L1 -->|Exceeded| R1["❌ 429"]
     L1 -->|OK| L2
 
-    L2{"2️⃣ SecurityMiddleware\nXSS · CORS · Header"}
-    L2 -->|Şüpheli| R2["❌ 400"]
+    L2{"2️⃣ SecurityMiddleware\nXSS · CORS · Headers"}
+    L2 -->|Suspicious| R2["❌ 400"]
     L2 -->|OK| L3
 
-    L3{"3️⃣ slowapi\nEndpoint Bazlı Limit\nRedis Counter"}
-    L3 -->|Aşıldı| R3["❌ 429"]
+    L3{"3️⃣ slowapi\nPer-endpoint Limit\nRedis Counter"}
+    L3 -->|Exceeded| R3["❌ 429"]
     L3 -->|OK| L4
 
-    L4{"4️⃣ JWT Doğrulama\npython-jose\nHMAC-SHA256"}
-    L4 -->|Geçersiz| R4["❌ 401"]
+    L4{"4️⃣ JWT Validation\npython-jose\nHMAC-SHA256"}
+    L4 -->|Invalid| R4["❌ 401"]
     L4 -->|OK| L5
 
-    L5{"5️⃣ Sanitizer\nbleach ile XSS\nTüm string girdiler"}
+    L5{"5️⃣ Sanitizer\nbleach XSS cleanup\nAll string inputs"}
     L5 -->|OK| L6
 
-    L6{"6️⃣ Yetkilendirme\nKaynak sahipliği\n(kendi ilanı?)"}
-    L6 -->|Yetkisiz| R6["❌ 403"]
+    L6{"6️⃣ Authorization\nResource ownership\n(owns listing?)"}
+    L6 -->|Forbidden| R6["❌ 403"]
     L6 -->|OK| BIZ
 
-    BIZ(["✅ İş Mantığı"])
+    BIZ(["✅ Business Logic"])
 
     style REQ fill:#06B6D4,color:#0F172A
     style BIZ fill:#16A34A,color:#fff
@@ -730,11 +730,11 @@ flowchart TD
 ```
 
 > [!NOTE]
-> Ek katmanlar: **Cloudflare Turnstile** (bot koruması) · **better-profanity** (içerik filtresi) · **Bcrypt** (şifre hash, cost:12) · **SSL/TLS** (Let's Encrypt via Nginx) · **Sentry** (güvenlik istisnaları dahil tüm exception izleme)
+> Additional layers: **Cloudflare Turnstile** (bot protection) · **better-profanity** (content filter) · **Bcrypt** (password hash, cost:12) · **SSL/TLS** (Let's Encrypt via Nginx) · **Sentry** (all exceptions including security events)
 
 ---
 
-## 🚀 Deployment Mimarisi
+## 🚀 Deployment Architecture
 
 ```mermaid
 graph TB
@@ -752,31 +752,31 @@ graph TB
         WORKER <--> RD
     end
 
-    INTERNET(["🌐 İnternet"]) --> NGINX
+    INTERNET(["🌐 Internet"]) --> NGINX
     API <-->|"LiveKit API\n(token)"| LKC["☁️ LiveKit Cloud\nWebRTC SFU"]
     WORKER --> FCM["☁️ Firebase\nFCM"]
     API --> SENTRY["☁️ Sentry\nError Tracking"]
 ```
 
-**Systemd Servisleri:**
+**Systemd Services:**
 
-| Servis | Açıklama |
+| Service | Description |
 |---|---|
 | `teqlif-backend.service` | FastAPI (uvicorn async) |
 | `teqlif-worker.service` | ARQ async job worker |
-| `postgresql.service` | Veritabanı |
+| `postgresql.service` | Database |
 | `redis.service` | Cache + Pub/Sub |
-| `nginx.service` | Ters proxy + SSL |
+| `nginx.service` | Reverse proxy + SSL |
 
 ---
 
-## ⚙️ Kurulum
+## ⚙️ Setup
 
 > [!IMPORTANT]
-> PostgreSQL 14+, Redis 7+ ve Python 3.11+ gereklidir.
+> PostgreSQL 14+, Redis 7+ and Python 3.11+ are required.
 
 <details>
-<summary><strong>Backend Kurulumu</strong></summary>
+<summary><strong>Backend Setup</strong></summary>
 
 ```bash
 cd teqlif/backend
@@ -784,35 +784,35 @@ cd teqlif/backend
 # Virtual environment
 python -m venv .venv && source .venv/bin/activate
 
-# Bağımlılıklar
+# Install dependencies
 pip install -r requirements.txt
 
-# Ortam değişkenleri
+# Configure environment
 cp .env.example .env
-# .env içinde: DATABASE_URL, REDIS_URL, LIVEKIT_*, JWT_SECRET, FIREBASE_*, SENTRY_DSN
+# Fill in: DATABASE_URL, REDIS_URL, LIVEKIT_*, JWT_SECRET, FIREBASE_*, SENTRY_DSN
 
-# Migration
+# Run migrations
 alembic upgrade head
 
-# Backend başlat
+# Start backend
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
-# Worker başlat (ayrı terminal)
+# Start worker (separate terminal)
 arq app.worker.WorkerSettings
 ```
 
 </details>
 
 <details>
-<summary><strong>Mobil Kurulumu</strong></summary>
+<summary><strong>Mobile Setup</strong></summary>
 
 ```bash
 cd teqlif/mobile
 
-# Bağımlılıklar
+# Install dependencies
 flutter pub get
 
-# Lokalizasyon dosyalarını oluştur
+# Generate localization files
 flutter gen-l10n
 
 # iOS
@@ -821,97 +821,97 @@ flutter run -d ios
 # Android
 flutter run -d android
 
-# Release build (Android)
+# Android release build
 fastlane android build
 ```
 
 </details>
 
 <details>
-<summary><strong>Veritabanı Komutları</strong></summary>
+<summary><strong>Database Commands</strong></summary>
 
 ```bash
-# Yeni migration oluştur (model değişikliği sonrası ZORUNLU)
-alembic revision --autogenerate -m "aciklama"
+# Create new migration (REQUIRED after every model change)
+alembic revision --autogenerate -m "description"
 
-# Migration uygula
+# Apply migrations
 alembic upgrade head
 
-# Bir adım geri al
+# Rollback one step
 alembic downgrade -1
 
-# Migration geçmişini gör
+# View migration history
 alembic history --verbose
 ```
 
 > [!WARNING]
-> Model dosyasındaki her değişiklikten sonra mutlaka `alembic revision --autogenerate` çalıştırın. Aksi hâlde canlı ortamda şema uyumsuzluğu oluşur.
+> Always run `alembic revision --autogenerate` after every model file change. Skipping this will cause schema mismatch in production.
 
 </details>
 
 ---
 
-## 📐 Geliştirici Kuralları
+## 📐 Developer Guidelines
 
 > [!TIP]
-> Bu kurallar hem backend hem mobil için bağlayıcıdır. PR'larda bu kurallara aykırı değişiklikler kabul edilmez.
+> These rules are binding for both backend and mobile. PRs containing violations will not be merged.
 
 <details>
-<summary><strong>Backend Kuralları</strong></summary>
+<summary><strong>Backend Rules</strong></summary>
 
-- ✅ **Tam asenkronluk** — Tüm I/O `async/await` ile yazılmalıdır; `time.sleep()` yasaktır
-- ✅ **Modüler router** — `main.py` şişirilmez; yeni domain → `/app/routers/` altına yeni dosya
-- ✅ **Girdi sanitizasyonu** — `sanitizer.py` tüm kullanıcı girdilerine uygulanmalıdır
-- ✅ **ENV yönetimi** — Gizli anahtarlar `config.py` (Pydantic Settings) üzerinden; hard-code yasaktır
-- ✅ **Hata loglama** — Beklenmedik hatalar `sentry_sdk.capture_exception()` ile iletilmeli
-- ✅ **Migration zorunluluğu** — Model değişikliği = Alembic migration; sıfır istisna
+- ✅ **Full async** — All I/O must use `async/await`; `time.sleep()` is forbidden
+- ✅ **Modular routers** — Never bloat `main.py`; new domain → new file under `/app/routers/`
+- ✅ **Input sanitization** — `sanitizer.py` must be applied to all user-provided strings
+- ✅ **ENV management** — All secrets through `config.py` (Pydantic Settings); hard-coded secrets are forbidden
+- ✅ **Error logging** — Unexpected exceptions must be forwarded via `sentry_sdk.capture_exception()`
+- ✅ **Migration required** — Every model change requires an Alembic migration; zero exceptions
 
 </details>
 
 <details>
-<summary><strong>Mobil Kuralları</strong></summary>
+<summary><strong>Mobile Rules</strong></summary>
 
-- ✅ **Servis katmanı** — Tüm API çağrıları `/services/*.dart` üzerinden; widget içinden HTTP yasaktır
-- ✅ **Widget bölme** — 300 satırı geçen ekranlar alt widget'lara bölünür
-- ✅ **Renk yönetimi** — `Theme.of(context)` veya `kPrimary` kullanılır; `Colors.white` hard-code yasaktır
-- ✅ **Klavye** — Tüm form ekranlarında `global_keyboard_accessory.dart` veya `resizeToAvoidBottomInset` yapısına dikkat
-- ✅ **Performans** — Liste güncellemelerinde `StreamBuilder` / localized state tercih edilir; tüm ekranı `setState` ile yeniden çizmekten kaçınılır
+- ✅ **Service layer** — All API calls go through `/services/*.dart`; HTTP calls inside widgets are forbidden
+- ✅ **Widget splitting** — Screens exceeding 300 lines must be broken into sub-widgets
+- ✅ **Color management** — Use `Theme.of(context)` or `kPrimary`; hard-coded `Colors.white` is forbidden
+- ✅ **Keyboard handling** — All form screens must handle keyboard via `global_keyboard_accessory.dart` or `resizeToAvoidBottomInset`
+- ✅ **Performance** — Prefer `StreamBuilder` / localized state over full-screen `setState` for list updates
 
 </details>
 
 <details>
-<summary><strong>Web Kuralları</strong></summary>
+<summary><strong>Web Rules</strong></summary>
 
-- ✅ **Framework yok** — React, Vue, Tailwind eklenmez; Vanilla JS + saf CSS
-- ✅ **DOM performansı** — Tüm listeyi yeniden oluşturmak yerine sadece değişen element güncellenir
-- ✅ **Mobile-first** — `grid` + `flexbox` + `media queries` ile responsive tasarım
-- ✅ **WebSocket reconnect** — Bağlantı kesildiğinde otomatik yeniden bağlanma + kullanıcı uyarısı
+- ✅ **No frameworks** — React, Vue, and Tailwind are not allowed; Vanilla JS + plain CSS only
+- ✅ **DOM performance** — Update only the changed element; never wipe and recreate the entire list
+- ✅ **Mobile-first** — Responsive with `grid` + `flexbox` + `media queries`
+- ✅ **WebSocket reconnect** — Auto-reconnect on disconnect with user-facing indicator
 
 </details>
 
 ---
 
-## 🎨 Tasarım Sistemi
+## 🎨 Design System
 
-| Token | Renk | Hex | Kullanım |
+| Token | Color | Hex | Usage |
 |---|---|:---:|---|
-| `kPrimary` | 🟦 Cyan-500 | `#06B6D4` | Ana buton, vurgu, aktif ikonlar |
-| `Dark BG` | ⬛ Slate-900 | `#0F172A` | Sayfa arka planı |
-| `Surface` | ⬛ Slate-800 | `#1E293B` | Kart, panel, bottom sheet |
-| `Border` | ⬛ Slate-700 | `#334155` | Ayırıcı çizgiler |
-| `Text Primary` | ⬜ Slate-100 | `#F1F5F9` | Ana metin |
-| `Text Secondary` | 🔘 Slate-400 | `#94A3B8` | İkincil, açıklama metni |
-| `Success` | 🟩 Green-600 | `#16A34A` | Başarı mesajı, moderatör atama |
-| `Warning` | 🟧 Amber-600 | `#D97706` | Uyarı, susturma bildirimi |
-| `Error` | 🟥 Red-500 | `#EF4444` | Hata, kick bildirimi |
-| `Live` | 🟥 Red-500 | `#EF4444` | CANLI etiketi |
-| `CoHost` | 🌊 Cyan-400 | `#22D3EE` | Co-host kullanıcı adı vurgusu |
+| `kPrimary` | 🟦 Cyan-500 | `#06B6D4` | Primary button, accent, active icons |
+| `Dark BG` | ⬛ Slate-900 | `#0F172A` | Page background |
+| `Surface` | ⬛ Slate-800 | `#1E293B` | Cards, panels, bottom sheets |
+| `Border` | ⬛ Slate-700 | `#334155` | Dividers |
+| `Text Primary` | ⬜ Slate-100 | `#F1F5F9` | Main text |
+| `Text Secondary` | 🔘 Slate-400 | `#94A3B8` | Secondary / caption text |
+| `Success` | 🟩 Green-600 | `#16A34A` | Success messages, co-host promotion |
+| `Warning` | 🟧 Amber-600 | `#D97706` | Warnings, mute notification |
+| `Error` | 🟥 Red-500 | `#EF4444` | Errors, kick notification |
+| `Live` | 🟥 Red-500 | `#EF4444` | LIVE badge |
+| `CoHost` | 🌊 Cyan-400 | `#22D3EE` | Co-host username highlight |
 
 ---
 
 <div align="center">
 
-**⚡ Teqlif** — Canlı. Gerçek. Anlık.
+**⚡ Teqlif** — Live. Real. Instant.
 
 *Made with ❤️ in Turkey*
 
