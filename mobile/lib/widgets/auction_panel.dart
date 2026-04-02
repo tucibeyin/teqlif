@@ -15,6 +15,9 @@ import '../services/auction_service.dart';
 import '../services/storage_service.dart';
 import '../utils/price_formatter.dart';
 import 'shimmer_loading.dart';
+import 'smart_bid_picker.dart';
+import 'swipe_to_bid_button.dart';
+import '../utils/bid_calculator.dart';
 
 class AuctionPanel extends ConsumerStatefulWidget {
   final int streamId;
@@ -1053,6 +1056,18 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
   String? _msg;
   bool _msgError = false;
   bool _loading = false;
+  int _selectedBid = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final state = ref.read(auctionProvider(widget.streamId));
+      final base = (state.currentBid ?? state.startPrice ?? 0).toInt();
+      setState(() => _selectedBid = generateNextBids(base, 1).first);
+    });
+  }
 
   @override
   void dispose() {
@@ -1092,26 +1107,6 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
     } finally {
       if (mounted) setState(() => _loading = false);
     }
-  }
-
-  Widget _presetBtn(String label, double amount) {
-    return GestureDetector(
-      onTap: _loading ? null : () => _placeBid(amount),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 13),
-        decoration: BoxDecoration(
-            color: _loading
-                ? const Color(0xFF1E293B)
-                : const Color(0xFF334155),
-            borderRadius: BorderRadius.circular(10)),
-        child: Text(label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-                color: _loading ? const Color(0xFF475569) : Colors.white,
-                fontSize: 13,
-                fontWeight: FontWeight.w600)),
-      ),
-    );
   }
 
   Future<void> _buyItNow() async {
@@ -1309,19 +1304,21 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                         fontWeight: FontWeight.w600)),
             ]),
           ]),
-          const SizedBox(height: 18),
-          // Preset butonlar 2×2
-          Row(children: [
-            Expanded(child: _presetBtn('+₺100', base + 100)),
-            const SizedBox(width: 8),
-            Expanded(child: _presetBtn('+₺250', base + 250)),
-          ]),
-          const SizedBox(height: 8),
-          Row(children: [
-            Expanded(child: _presetBtn('+₺500', base + 500)),
-            const SizedBox(width: 8),
-            Expanded(child: _presetBtn('+₺1000', base + 1000)),
-          ]),
+          const SizedBox(height: 14),
+          SmartBidPicker(
+            currentHighestBid: base.toInt(),
+            onBidSelected: (bid) => setState(() => _selectedBid = bid),
+          ),
+          const SizedBox(height: 14),
+          SwipeToBidButton(
+            text: _selectedBid > 0
+                ? '${_fmt(_selectedBid.toDouble())} ₺ Teklif Ver'
+                : 'Teklif Ver',
+            isLoading: _loading,
+            onSwipeComplete: () {
+              if (_selectedBid > 0) _placeBid(_selectedBid.toDouble());
+            },
+          ),
           // Hemen Al butonu — buyItNowPrice varsa ve currentBid < buyItNowPrice ise göster
           Builder(builder: (_) {
             final bin = liveState.buyItNowPrice;
