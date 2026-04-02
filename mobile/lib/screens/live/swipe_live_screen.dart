@@ -16,6 +16,7 @@ import '../../widgets/auction_panel.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/chat_panel.dart';
 import '../../widgets/live/floating_hearts.dart';
+import '../../widgets/live/viewer_top_bar.dart';
 import '../public_profile_screen.dart';
 
 class SwipeLiveScreen extends StatefulWidget {
@@ -408,130 +409,14 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
           top: 0,
           left: 0,
           right: 0,
-          child: Container(
-            padding: EdgeInsets.only(
-                top: topPad + 14, left: 16, right: 16, bottom: 32),
-            decoration: const BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xBB000000), Colors.transparent],
-              ),
-            ),
-            child: Row(
-              children: [
-                // Geri
-                GestureDetector(
-                  key: const Key('swipe_live_btn_geri'),
-                  onTap: _leave,
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.black38,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: const Icon(Icons.arrow_back_ios_new,
-                        color: Colors.white, size: 16),
-                  ),
-                ),
-                const SizedBox(width: 10),
-                // CANLI badge
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                  decoration: BoxDecoration(
-                      color: _streamEnded ? Colors.grey : Colors.red,
-                      borderRadius: BorderRadius.circular(5)),
-                  child: Text(
-                    _streamEnded ? l.liveEndedBadge : l.liveBadgeLabel,
-                    style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.5),
-                  ),
-                ),
-                const SizedBox(width: 6),
-                // İzleyici sayısı
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: Colors.black45,
-                    borderRadius: BorderRadius.circular(20),
-                  ),
-                  child: Text('👁 $_viewerCount',
-                      style:
-                          const TextStyle(color: Colors.white, fontSize: 11)),
-                ),
-                const SizedBox(width: 10),
-                // Başlık + host
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Text(
-                        widget.stream.title,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontWeight: FontWeight.w700,
-                          fontSize: 13,
-                          shadows: [Shadow(blurRadius: 6, color: Colors.black)],
-                        ),
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      Text(
-                        '@${widget.stream.host.username}',
-                        style: const TextStyle(
-                            color: Colors.white60, fontSize: 11),
-                      ),
-                    ],
-                  ),
-                ),
-                // Moderatör rozeti
-                if (_isCoHost) ...[
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF16A34A),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: const Text(
-                      '🛡 MOD',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.w800,
-                        letterSpacing: 0.4,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                ],
-                // Ayrıl
-                GestureDetector(
-                  key: const Key('swipe_live_btn_ayril'),
-                  onTap: _leave,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 14, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: Colors.black45,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(color: Colors.white24),
-                    ),
-                    child: Text(l.liveLeaveBtn,
-                        style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600)),
-                  ),
-                ),
-              ],
-            ),
+          child: ViewerTopBar(
+            topPad: topPad,
+            viewerCount: _viewerCount,
+            title: widget.stream.title,
+            hostUsername: widget.stream.host.username,
+            isCoHost: _isCoHost,
+            streamEnded: _streamEnded,
+            onLeave: _leave,
           ),
         ),
 

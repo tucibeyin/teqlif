@@ -11,6 +11,7 @@ class ViewerTopBar extends StatelessWidget {
   final String title;
   final String hostUsername;
   final bool isCoHost;
+  final bool streamEnded;
   final VoidCallback onLeave;
 
   const ViewerTopBar({
@@ -21,6 +22,7 @@ class ViewerTopBar extends StatelessWidget {
     required this.hostUsername,
     required this.isCoHost,
     required this.onLeave,
+    this.streamEnded = false,
   });
 
   @override
@@ -68,15 +70,15 @@ class ViewerTopBar extends StatelessWidget {
               ),
               const SizedBox(width: 10),
 
-              // CANLI rozeti
+              // CANLI / BİTTİ rozeti
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                 decoration: BoxDecoration(
-                  color: Colors.red,
+                  color: streamEnded ? Colors.grey : Colors.red,
                   borderRadius: BorderRadius.circular(5),
                 ),
                 child: Text(
-                  l.liveBadgeLabel,
+                  streamEnded ? l.liveEndedBadge : l.liveBadgeLabel,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 10,
