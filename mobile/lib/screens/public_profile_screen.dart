@@ -11,8 +11,7 @@ import '../l10n/app_localizations.dart';
 import 'messages_screen.dart';
 import 'follow_list_screen.dart';
 import 'listing_detail_screen.dart';
-import 'live/viewer_stream_screen.dart';
-import '../services/stream_service.dart';
+import 'live/swipe_live_screen.dart';
 
 const _starColor = Color(0xFFF59E0B);
 
@@ -527,33 +526,13 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
     return avatar;
   }
 
-  Future<void> _goToLiveStream(int streamId) async {
-    showDialog(
-      context: context,
-      barrierDismissible: false,
-      builder: (_) => const Center(
-        child: CircularProgressIndicator(color: kPrimary),
+  void _goToLiveStream(int streamId) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SwipeLiveScreen.single(streamId: streamId),
       ),
     );
-    try {
-      final joinToken = await StreamService.joinStream(streamId);
-      if (!mounted) return;
-      Navigator.pop(context);
-      Navigator.push(
-        context,
-        MaterialPageRoute(
-          builder: (_) => ViewerStreamScreen(joinToken: joinToken),
-        ),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      Navigator.pop(context);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(e.toString().replaceFirst('Exception: ', '')),
-        ),
-      );
-    }
   }
 
   Widget _buildRatingBadge(bool hasRating, dynamic avgRaw) {

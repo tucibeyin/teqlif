@@ -31,6 +31,18 @@ class StreamOut {
     this.thumbnailUrl,
   });
 
+  /// JoinTokenOut'tan minimal bir StreamOut stub'ı oluşturur.
+  /// Yalnızca id, roomName, title, hostUsername alanları doludur.
+  /// SwipeLiveScreen.single() tarafından kullanılır.
+  factory StreamOut.fromJoinToken(JoinTokenOut t) => StreamOut(
+        id: t.streamId,
+        roomName: t.roomName,
+        title: t.title,
+        category: '',
+        viewerCount: 0,
+        host: StreamHost(id: 0, username: t.hostUsername),
+      );
+
   factory StreamOut.fromJson(Map<String, dynamic> json) => StreamOut(
         id: json['id'],
         roomName: json['room_name'],

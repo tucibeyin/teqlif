@@ -9,12 +9,12 @@ import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../core/app_exception.dart';
 import '../../core/logger_service.dart';
-import '../../services/moderation_service.dart';
 import '../../services/stream_service.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/auction_panel.dart';
 import '../../l10n/app_localizations.dart';
 import '../../widgets/chat_panel.dart';
+import '../../widgets/live/cohost_mod_sheet.dart';
 import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/viewer_top_bar.dart';
 import '../public_profile_screen.dart';
@@ -28,6 +28,25 @@ class SwipeLiveScreen extends StatefulWidget {
     required this.streams,
     required this.initialIndex,
   });
+
+  /// Tek bir yayına doğrudan streamId ile katılmak için kullanılır.
+  /// SwipeLiveScreen iç yapısı lazy token çekeceğinden önceden joinStream
+  /// çağırmaya gerek yoktur.
+  factory SwipeLiveScreen.single({required int streamId}) {
+    return SwipeLiveScreen(
+      streams: [
+        StreamOut(
+          id: streamId,
+          roomName: '',
+          title: '',
+          category: '',
+          viewerCount: 0,
+          host: StreamHost(id: 0, username: ''),
+        ),
+      ],
+      initialIndex: 0,
+    );
+  }
 
   @override
   State<SwipeLiveScreen> createState() => _SwipeLiveScreenState();
@@ -108,6 +127,11 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   final _heartsKey = GlobalKey<FloatingHeartsState>();
   Timer? _likeThrottleTimer;
   bool _likeThrottlePending = false;
+  // single() modunda token geldikten sonra doldurulur
+  String? _resolvedTitle;
+  String? _resolvedHostUsername;
+  // leaveStream'in çift çağrılmasını önler
+  bool _leftStream = false;
 
   @override
   void initState() {
@@ -133,6 +157,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
   Future<void> _activate() async {
     if (!mounted) return;
+    _leftStream = false;
     setState(() {
       _loading = true;
       _remoteVideoTrack = null;
@@ -141,6 +166,14 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     try {
       final token = await StreamService.joinStream(widget.stream.id);
       if (!mounted) return;
+
+      // single() modu: stub'daki boş title/username'i token'dan doldur
+      if (_resolvedTitle == null) {
+        setState(() {
+          _resolvedTitle = token.title;
+          _resolvedHostUsername = token.hostUsername;
+        });
+      }
 
       final room = Room();
       _listener = room.createListener();
@@ -266,7 +299,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => _SwipeCoHostModSheet(
+      builder: (ctx) => CoHostModSheet(
         streamId: widget.stream.id,
         username: targetUsername,
         isMuted: isMuted,
@@ -282,10 +315,13 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     final room = _room;
     _room = null;
     _token = null;
-    try {
-      await StreamService.leaveStream(widget.stream.id);
-    } catch (e) {
-      LoggerService.instance.warning('SwipeLivePage._deactivate', 'leaveStream başarısız: $e');
+    if (!_leftStream) {
+      _leftStream = true;
+      try {
+        await StreamService.leaveStream(widget.stream.id);
+      } catch (e) {
+        LoggerService.instance.warning('SwipeLivePage._deactivate', 'leaveStream başarısız: $e');
+      }
     }
     await room?.disconnect();
     if (mounted) setState(() => _remoteVideoTrack = null);
@@ -300,10 +336,13 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     _room = null;
     _token = null;
     room?.disconnect();
-    try {
-      StreamService.leaveStream(widget.stream.id);
-    } catch (e) {
-      LoggerService.instance.warning('SwipeLivePage._deactivateSync', 'leaveStream başarısız: $e');
+    if (!_leftStream) {
+      _leftStream = true;
+      try {
+        StreamService.leaveStream(widget.stream.id);
+      } catch (e) {
+        LoggerService.instance.warning('SwipeLivePage._deactivateSync', 'leaveStream başarısız: $e');
+      }
     }
   }
 
@@ -412,8 +451,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
           child: ViewerTopBar(
             topPad: topPad,
             viewerCount: _viewerCount,
-            title: widget.stream.title,
-            hostUsername: widget.stream.host.username,
+            title: _resolvedTitle ?? widget.stream.title,
+            hostUsername: _resolvedHostUsername ?? widget.stream.host.username,
             isCoHost: _isCoHost,
             streamEnded: _streamEnded,
             onLeave: _leave,
@@ -540,187 +579,3 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
       );
 }
 
-// ── Co-Host Moderasyon Bottom Sheet ──────────────────────────────────────────
-class _SwipeCoHostModSheet extends StatefulWidget {
-  final int streamId;
-  final String username;
-  final bool isMuted;
-  final VoidCallback onMuted;
-  final VoidCallback onUnmuted;
-
-  const _SwipeCoHostModSheet({
-    required this.streamId,
-    required this.username,
-    required this.isMuted,
-    required this.onMuted,
-    required this.onUnmuted,
-  });
-
-  @override
-  State<_SwipeCoHostModSheet> createState() => _SwipeCoHostModSheetState();
-}
-
-class _SwipeCoHostModSheetState extends State<_SwipeCoHostModSheet> {
-  bool _loading = false;
-  String? _msg;
-  bool _isError = false;
-  late bool _isMuted;
-
-  @override
-  void initState() {
-    super.initState();
-    _isMuted = widget.isMuted;
-  }
-
-  Future<void> _act(Future<void> Function() fn, {
-    required String successMsg,
-    VoidCallback? onSuccess,
-  }) async {
-    setState(() { _loading = true; _msg = null; });
-    try {
-      await fn();
-      onSuccess?.call();
-      if (mounted) setState(() { _loading = false; _msg = successMsg; _isError = false; });
-      await Future.delayed(const Duration(milliseconds: 900));
-      if (mounted) Navigator.pop(context);
-    } on Exception catch (e) {
-      if (mounted) setState(() { _loading = false; _msg = e.toString(); _isError = true; });
-    }
-  }
-
-
-  @override
-  Widget build(BuildContext context) {
-    final l = AppLocalizations.of(context)!;
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF1E293B),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 36, height: 4,
-              decoration: BoxDecoration(
-                color: Colors.white24,
-                borderRadius: BorderRadius.circular(2),
-              ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              Text('🛡 ${l.modTitle}',
-                  style: const TextStyle(color: Colors.white, fontSize: 15, fontWeight: FontWeight.w700)),
-              const Spacer(),
-              Text('@${widget.username}',
-                  style: const TextStyle(color: Color(0xFF06B6D4), fontSize: 13, fontWeight: FontWeight.w600)),
-            ],
-          ),
-          const SizedBox(height: 16),
-          const Divider(color: Colors.white12, height: 1),
-          const SizedBox(height: 14),
-          if (!_isMuted)
-            _SwipeModBtn(
-              icon: '🔇', label: l.modMute,
-              color: const Color(0xFFD97706), loading: _loading,
-              onTap: () => _act(
-                () => ModerationService.mute(widget.streamId, widget.username),
-                successMsg: '@${widget.username} susturuldu',
-                onSuccess: () { widget.onMuted(); setState(() => _isMuted = true); },
-              ),
-            )
-          else
-            _SwipeModBtn(
-              icon: '🔊', label: l.modUnmute,
-              color: const Color(0xFF16A34A), loading: _loading,
-              onTap: () => _act(
-                () => ModerationService.unmute(widget.streamId, widget.username),
-                successMsg: l.modUnmutedMsg,
-                onSuccess: () { widget.onUnmuted(); setState(() => _isMuted = false); },
-              ),
-            ),
-          const SizedBox(height: 10),
-          _SwipeModBtn(
-            icon: '🚫', label: l.modKick,
-            color: const Color(0xFFEF4444), loading: _loading,
-            onTap: () => _act(
-              () => ModerationService.kick(widget.streamId, widget.username),
-              successMsg: '@${widget.username} yayından atıldı',
-            ),
-          ),
-          const SizedBox(height: 10),
-          SizedBox(
-            width: double.infinity,
-            child: TextButton(
-              onPressed: _loading ? null : () => Navigator.pop(context),
-              style: TextButton.styleFrom(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(10),
-                  side: const BorderSide(color: Colors.white12),
-                ),
-              ),
-              child: Text(l.btnCancel,
-                  style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14)),
-            ),
-          ),
-          if (_msg != null)
-            Padding(
-              padding: const EdgeInsets.only(top: 10),
-              child: Center(
-                child: Text(
-                  _msg!,
-                  style: TextStyle(
-                    color: _isError ? const Color(0xFFF87171) : const Color(0xFF4ADE80),
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-}
-
-class _SwipeModBtn extends StatelessWidget {
-  final String icon;
-  final String label;
-  final Color color;
-  final bool loading;
-  final VoidCallback onTap;
-
-  const _SwipeModBtn({
-    required this.icon,
-    required this.label,
-    required this.color,
-    required this.loading,
-    required this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton.icon(
-        onPressed: loading ? null : onTap,
-        icon: Text(icon, style: const TextStyle(fontSize: 16)),
-        label: Text(label,
-            style: const TextStyle(
-                fontSize: 14, fontWeight: FontWeight.w600, color: Colors.white)),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: color,
-          disabledBackgroundColor: color.withOpacity(0.45),
-          padding: const EdgeInsets.symmetric(vertical: 12),
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          elevation: 0,
-        ),
-      ),
-    );
-  }
-}

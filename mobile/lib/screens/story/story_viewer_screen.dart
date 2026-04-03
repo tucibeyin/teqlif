@@ -14,8 +14,7 @@ import '../../models/story.dart';
 import '../../providers/story_provider.dart';
 import '../../services/storage_service.dart';
 import '../../services/story_service.dart';
-import '../../services/stream_service.dart';
-import '../live/viewer_stream_screen.dart';
+import '../live/swipe_live_screen.dart';
 import '../public_profile_screen.dart';
 
 /// Tam ekran Instagram/Snapchat tarzı Hybrid Story izleyicisi.
@@ -550,31 +549,17 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     }
   }
 
-  /// "Yayına Katıl" akışı: token çek → ViewerStreamScreen'e geç.
+  /// "Yayına Katıl" akışı: SwipeLiveScreen.single ile tek yayına katıl.
   Future<void> _joinLive() async {
     final item = _currentItem;
     if (item.streamId == null || !mounted) return;
     setState(() => _joiningLive = true);
-    try {
-      final token = await StreamService.joinStream(item.streamId!);
-      if (!mounted) return;
-      await Navigator.of(context).push(
-        MaterialPageRoute(
-          builder: (_) => ViewerStreamScreen(joinToken: token),
-        ),
-      );
-    } catch (e, st) {
-      await Sentry.captureException(e, stackTrace: st);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(AppLocalizations.of(context)!.storyJoinLiveFailed),
-          ),
-        );
-      }
-    } finally {
-      if (mounted) setState(() => _joiningLive = false);
-    }
+    await Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (_) => SwipeLiveScreen.single(streamId: item.streamId!),
+      ),
+    );
+    if (mounted) setState(() => _joiningLive = false);
   }
 
   // ── Build ─────────────────────────────────────────────────────────────────
