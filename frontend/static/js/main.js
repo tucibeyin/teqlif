@@ -125,4 +125,71 @@ document.addEventListener("DOMContentLoaded", () => {
         script.src = baseScriptPath + scriptVersion;
         document.body.appendChild(script);
     }
+
+    initTeqlifTour();
 });
+
+// ── Onboarding Turu (Driver.js) ──────────────────────────────────────────────
+function restartTeqlifTour() {
+    localStorage.removeItem('teqlif_tour_seen');
+    window.location.href = '/index.html';
+}
+
+function initTeqlifTour() {
+    if (localStorage.getItem('teqlif_tour_seen')) return;
+
+    const driverObj = window.driver.js.driver({
+        showProgress: true,
+        animate: true,
+        overlayColor: 'rgba(0,0,0,0.65)',
+        nextBtnText: 'İleri →',
+        prevBtnText: '← Geri',
+        doneBtnText: 'Başlayalım! 🚀',
+        onDestroyed: () => {
+            localStorage.setItem('teqlif_tour_seen', 'true');
+        },
+        steps: [
+            {
+                // Adım 1 — Genel hoşgeldin (element yok, ortada popover)
+                popover: {
+                    title: "Teqlif'e Hoş Geldin! 🎉",
+                    description: "Burada canlı yayınlarla ürün alıp satabilir, açık artırmalara katılabilirsin. Sana etrafı gezdirmeme izin ver.",
+                    side: 'over',
+                    align: 'center',
+                },
+            },
+            {
+                // Adım 2 — Kategori / Tab filtreleri
+                element: '.tab-pills',
+                popover: {
+                    title: 'Kategoriler',
+                    description: 'Buradan ilgilendiğin kategorideki ürünleri ve ihaleleri hızlıca filtreleyebilirsin.',
+                    side: 'bottom',
+                    align: 'start',
+                },
+            },
+            {
+                // Adım 3 — İlanlar / Yayınlar akışı
+                element: '#section-canli',
+                popover: {
+                    title: 'Keşfet',
+                    description: 'Burada güncel ilanları görebilir, beğendiklerine çift tıklayarak favorilerine ekleyebilirsin.',
+                    side: 'top',
+                    align: 'center',
+                },
+            },
+            {
+                // Adım 4 — Canlı yayın butonu
+                element: '#tab-canli',
+                popover: {
+                    title: 'Aksiyon Burada!',
+                    description: 'Canlı mezatlara katılmak veya kendi ürününü canlı yayında satmak için buraya tıklayabilirsin.',
+                    side: 'bottom',
+                    align: 'start',
+                },
+            },
+        ],
+    });
+
+    driverObj.drive();
+}

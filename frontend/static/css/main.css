@@ -504,3 +504,84 @@ footer {
 .search-listings-grid .teqlif-ad-container {
     min-height: 140px;
 }
+
+/* ── Driver.js Onboarding Turu — Teqlif Premium Tema ─────────────────────── */
+.driver-popover {
+    background: #1a1a2e !important;
+    border: 1px solid rgba(6, 182, 212, 0.2) !important;
+    border-radius: 16px !important;
+    color: #f1f5f9 !important;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(6, 182, 212, 0.08) !important;
+    padding: 20px 22px 18px !important;
+    max-width: 320px !important;
+}
+
+.driver-popover-title {
+    font-size: 1rem !important;
+    font-weight: 700 !important;
+    color: #f8fafc !important;
+    margin-bottom: 8px !important;
+    letter-spacing: -0.01em !important;
+}
+
+.driver-popover-description {
+    font-size: 0.875rem !important;
+    color: #94a3b8 !important;
+    line-height: 1.55 !important;
+}
+
+.driver-popover-footer {
+    margin-top: 16px !important;
+    gap: 8px !important;
+}
+
+.driver-popover-footer button {
+    border-radius: 8px !important;
+    font-size: 0.82rem !important;
+    font-weight: 600 !important;
+    padding: 7px 14px !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+    cursor: pointer !important;
+    transition: background 0.15s !important;
+}
+
+.driver-popover-footer button:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+}
+
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+    background: var(--primary) !important;
+    border-color: var(--primary) !important;
+    color: #fff !important;
+}
+
+.driver-popover-next-btn:hover,
+.driver-popover-done-btn:hover {
+    background: var(--primary-dark) !important;
+    border-color: var(--primary-dark) !important;
+}
+
+.driver-popover-arrow-side-left .driver-popover-arrow {
+    border-right-color: #1a1a2e !important;
+}
+.driver-popover-arrow-side-right .driver-popover-arrow {
+    border-left-color: #1a1a2e !important;
+}
+.driver-popover-arrow-side-top .driver-popover-arrow {
+    border-bottom-color: #1a1a2e !important;
+}
+.driver-popover-arrow-side-bottom .driver-popover-arrow {
+    border-top-color: #1a1a2e !important;
+}
+
+.driver-popover-progress-text {
+    color: #64748b !important;
+    font-size: 0.75rem !important;
+}
+
+#driver-dummy-element {
+    background: transparent !important;
+}
