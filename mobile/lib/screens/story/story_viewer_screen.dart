@@ -13,7 +13,9 @@ import '../../l10n/app_localizations.dart';
 import '../../models/story.dart';
 import '../../providers/story_provider.dart';
 import '../../services/storage_service.dart';
+import '../../models/stream.dart';
 import '../../services/story_service.dart';
+import '../../services/stream_service.dart';
 import '../live/swipe_live_screen.dart';
 import '../public_profile_screen.dart';
 
@@ -549,14 +551,28 @@ class _GroupPageState extends State<_GroupPage> with TickerProviderStateMixin {
     }
   }
 
-  /// "Yayına Katıl" akışı: SwipeLiveScreen.single ile tek yayına katıl.
+  /// "Yayına Katıl" akışı: aktif yayın listesini çekip SwipeLiveScreen'e geçer.
+  /// Hedef yayın listede varsa swipe yapılabilir; yoksa (gizli/bitmiş) single moda düşer.
   Future<void> _joinLive() async {
-    final item = _currentItem;
-    if (item.streamId == null || !mounted) return;
+    final streamId = _currentItem.streamId;
+    if (streamId == null || !mounted) return;
     setState(() => _joiningLive = true);
+
+    List<StreamOut> streams;
+    try {
+      streams = await StreamService.getActiveStreams();
+    } catch (_) {
+      streams = [];
+    }
+
+    if (!mounted) return;
+
+    final idx = streams.indexWhere((s) => s.id == streamId);
     await Navigator.of(context).push(
       MaterialPageRoute(
-        builder: (_) => SwipeLiveScreen.single(streamId: item.streamId!),
+        builder: (_) => idx != -1
+            ? SwipeLiveScreen(streams: streams, initialIndex: idx)
+            : SwipeLiveScreen.single(streamId: streamId),
       ),
     );
     if (mounted) setState(() => _joiningLive = false);
