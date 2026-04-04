@@ -129,6 +129,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   bool _kicked = false;
   bool _isCoHost = false;
   bool _isSelfCoHost = false;          // Ben sahneye çıktım → local kamera açık
+  double? _pipTop;                     // Sürüklenebilir PiP konumu
+  double? _pipLeft;
   final Set<String> _coHostMutedUsers = {};
   final _heartsKey = GlobalKey<FloatingHeartsState>();
   Timer? _likeThrottleTimer;
@@ -671,72 +673,90 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
         // Öncelik: kendin co-host → local kamera. Değilse diğerinin track'i.
         if (_isSelfCoHost && _localVideoTrack != null)
           Positioned(
-            top: topPad + 70,
-            right: 16,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 110,
-                height: 160,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Stack(
-                  children: [
-                    VideoTrackRenderer(
-                      _localVideoTrack!,
-                      fit: VideoViewFit.contain,
-                    ),
-                    Positioned(
-                      bottom: 0,
-                      left: 0,
-                      right: 0,
-                      child: GestureDetector(
-                        onTap: () async {
-                          final sid = _token?.streamId;
-                          if (sid != null) {
-                            try { await StreamService.leaveCoHost(sid); } catch (_) {}
-                          }
-                          _handleCoHostRemoved();
-                        },
-                        child: Container(
-                          color: const Color(0xDDEF4444),
-                          padding: const EdgeInsets.symmetric(vertical: 5),
-                          alignment: Alignment.center,
-                          child: const Text(
-                            '✕ Sahneden Çık',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 10,
-                              fontWeight: FontWeight.w700,
+            top: _pipTop ?? (topPad + 70),
+            left: _pipLeft ?? (MediaQuery.of(context).size.width - 110 - 16),
+            child: GestureDetector(
+              onPanUpdate: (d) {
+                final s = MediaQuery.of(context).size;
+                setState(() {
+                  _pipTop  = ((_pipTop  ?? (topPad + 70)) + d.delta.dy).clamp(0.0, s.height - 160);
+                  _pipLeft = ((_pipLeft ?? (s.width - 110 - 16)) + d.delta.dx).clamp(0.0, s.width - 110);
+                });
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 110,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Stack(
+                    children: [
+                      VideoTrackRenderer(
+                        _localVideoTrack!,
+                        fit: VideoViewFit.contain,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () async {
+                            final sid = _token?.streamId;
+                            if (sid != null) {
+                              try { await StreamService.leaveCoHost(sid); } catch (_) {}
+                            }
+                            _handleCoHostRemoved();
+                          },
+                          child: Container(
+                            color: const Color(0xDDEF4444),
+                            padding: const EdgeInsets.symmetric(vertical: 5),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              '✕ Sahneden Çık',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
                             ),
                           ),
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               ),
             ),
           )
         else if (!_isSelfCoHost && _coHostVideoTrack != null)
           Positioned(
-            top: topPad + 70,
-            right: 16,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: Container(
-                width: 110,
-                height: 160,
-                decoration: BoxDecoration(
-                  border: Border.all(color: Colors.white, width: 2),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: VideoTrackRenderer(
-                  _coHostVideoTrack!,
-                  fit: VideoViewFit.contain,
-                  mirrorMode: VideoViewMirrorMode.mirror,
+            top: _pipTop ?? (topPad + 70),
+            left: _pipLeft ?? (MediaQuery.of(context).size.width - 110 - 16),
+            child: GestureDetector(
+              onPanUpdate: (d) {
+                final s = MediaQuery.of(context).size;
+                setState(() {
+                  _pipTop  = ((_pipTop  ?? (topPad + 70)) + d.delta.dy).clamp(0.0, s.height - 160);
+                  _pipLeft = ((_pipLeft ?? (s.width - 110 - 16)) + d.delta.dx).clamp(0.0, s.width - 110);
+                });
+              },
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 110,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: VideoTrackRenderer(
+                    _coHostVideoTrack!,
+                    fit: VideoViewFit.contain,
+                    mirrorMode: VideoViewMirrorMode.mirror,
+                  ),
                 ),
               ),
             ),

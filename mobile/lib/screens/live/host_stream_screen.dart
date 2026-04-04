@@ -55,6 +55,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   final Set<String> _modUsers   = {};
   VideoTrack? _coHostTrack;
   String? _coHostUsername;
+  double? _pipTop;
+  double? _pipLeft;
   final _chatKey = GlobalKey<ChatPanelState>();
   final _heartsKey = GlobalKey<FloatingHeartsState>();
 
@@ -658,11 +660,19 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
               ),
             ),
 
-          // ── Co-Host PiP kutusu — sağ üst ────────────────────────────────
+          // ── Co-Host PiP kutusu — sürüklenebilir ─────────────────────────
           if (live && _coHostTrack != null)
             Positioned(
-              top: topPad + 70,
-              right: 16,
+              top: _pipTop ?? (topPad + 70),
+              left: _pipLeft ?? (MediaQuery.of(context).size.width - 110 - 16),
+              child: GestureDetector(
+                onPanUpdate: (d) {
+                  final s = MediaQuery.of(context).size;
+                  setState(() {
+                    _pipTop  = ((_pipTop  ?? (topPad + 70)) + d.delta.dy).clamp(0.0, s.height - 160);
+                    _pipLeft = ((_pipLeft ?? (s.width - 110 - 16)) + d.delta.dx).clamp(0.0, s.width - 110);
+                  });
+                },
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
                 child: Container(
@@ -711,6 +721,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   ),
                 ),
               ),
+            ),
             ),
 
           // ── Teklif Listesi — her zaman en üstte (alt panelin üstüne gelince tıklanabilir kalsın) ──

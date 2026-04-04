@@ -75,6 +75,7 @@ const Stream = (() => {
         localVidEl.muted = true; // kendi sesini duymamalı
         pipEl.innerHTML = '';
         pipEl.appendChild(localVidEl);
+        _makePipDraggable(pipEl);
 
         // Host identity: viewer olarak kaydedilen stream datasından al (= str(host.id))
         const hostIdentity = load()?.host_livekit_identity || null;
@@ -112,6 +113,48 @@ const Stream = (() => {
 /* ── LiveKit Oda Yönetimi ── */
 var _room = null;
 
+/* PiP sürükleme — mouse ve touch destekli */
+function _makePipDraggable(pipEl) {
+    let dragging = false, ox = 0, oy = 0;
+
+    function start(cx, cy) {
+        dragging = true;
+        const r = pipEl.getBoundingClientRect();
+        // right → left'e geç; absolute konumu bozmasın
+        pipEl.style.right = 'auto';
+        pipEl.style.left  = r.left + 'px';
+        pipEl.style.top   = r.top  + 'px';
+        ox = cx - r.left;
+        oy = cy - r.top;
+    }
+
+    function move(cx, cy) {
+        if (!dragging) return;
+        const maxX = window.innerWidth  - pipEl.offsetWidth;
+        const maxY = window.innerHeight - pipEl.offsetHeight;
+        pipEl.style.left = Math.max(0, Math.min(maxX, cx - ox)) + 'px';
+        pipEl.style.top  = Math.max(0, Math.min(maxY, cy - oy)) + 'px';
+    }
+
+    const onMouseMove = (e) => move(e.clientX, e.clientY);
+    const onTouchMove = (e) => {
+        if (!dragging) return;
+        e.preventDefault();
+        move(e.touches[0].clientX, e.touches[0].clientY);
+    };
+    const onEnd = () => { dragging = false; };
+
+    pipEl.addEventListener('mousedown',  (e) => { start(e.clientX, e.clientY); e.preventDefault(); });
+    pipEl.addEventListener('touchstart', (e) => { start(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+    document.addEventListener('mousemove', onMouseMove);
+    document.addEventListener('mouseup',   onEnd);
+    document.addEventListener('touchmove', onTouchMove, { passive: false });
+    document.addEventListener('touchend',  onEnd);
+
+    pipEl.style.cursor      = 'grab';
+    pipEl.style.touchAction = 'none';
+}
+
 async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVideoEl, remoteVideoEl, remoteAudioEl, onDisconnect, onRemoteVideo, onCoHostPip }) {
     const { Room, RoomEvent, Track } = LivekitClient;
 
@@ -145,6 +188,7 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
         pipEl.innerHTML = '';
         pipEl.appendChild(vidEl);
         track.attach(vidEl);
+        _makePipDraggable(pipEl);
         if (onCoHostPip) onCoHostPip(pipEl);
     }
 
