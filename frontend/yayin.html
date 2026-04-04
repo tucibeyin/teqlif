@@ -2973,8 +2973,9 @@
             if (!target || !streamId) return;
             try {
                 if (action === 'remove') {
-                    await Stream.removeCoHost(streamId, target);
                     _coHostUsername = null;
+                    document.getElementById('videoContainer')?.querySelector('.cohost-pip')?.remove();
+                    await Stream.removeCoHost(streamId, target);
                 } else {
                     await Stream.inviteCoHost(streamId, target);
                     const msg = document.createElement('div');
@@ -3005,9 +3006,11 @@
             btn.textContent = '✕ Sahneden Al';
             btn.onclick = async () => {
                 if (!_coHostUsername || !streamId) return;
+                const target = _coHostUsername;
+                _coHostUsername = null;
+                pipEl.remove(); // anında kaldır, TrackUnsubscribed'ı bekleme
                 try {
-                    await Stream.removeCoHost(streamId, _coHostUsername);
-                    _coHostUsername = null;
+                    await Stream.removeCoHost(streamId, target);
                 } catch (e) {
                     console.error('[COHOST] removeCoHost hatası:', e);
                 }
@@ -3054,12 +3057,14 @@
             }
         });
 
-        function _handleCoHostRemoved() {
+        async function _handleCoHostRemoved() {
             if (!_isSelfCoHost) return;
             _isSelfCoHost = false;
             // PiP kutusunu kaldır
             const pipEl = document.getElementById('videoContainer')?.querySelector('.cohost-pip');
             if (pipEl) pipEl.remove();
+            // Co-host odasından çık — kamera/mikrofon kapanır, TrackUnsubscribed tetiklenir
+            await disconnectRoom();
             // Viewer olarak yeniden bağlan
             const info = Stream.load();
             if (info) {
@@ -3225,6 +3230,11 @@
                         // PiP zaten oluşmuşsa butonu ekle; yoksa onCoHostPip callback'i ekler
                         const pipEl = document.getElementById('videoContainer')?.querySelector('.cohost-pip');
                         if (pipEl) _addHostRemoveBtn(pipEl);
+                    },
+                    onCoHostRemoved: () => {
+                        // Başka bir client tarafından kaldırıldı — PiP'i temizle
+                        _coHostUsername = null;
+                        document.getElementById('videoContainer')?.querySelector('.cohost-pip')?.remove();
                     },
                     myUserId: Auth.getUser()?.id ?? null,
                 });

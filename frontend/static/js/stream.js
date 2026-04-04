@@ -160,8 +160,14 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
                 _attachCohostPip(track);
             }
         } else if (track.kind === Track.Kind.Audio) {
-            if (remoteAudioEl) {
+            if (_isHostParticipant(participant) && remoteAudioEl) {
+                // Host sesi → belirlenmiş audio elementi
                 track.attach(remoteAudioEl);
+            } else if (!_isHostParticipant(participant)) {
+                // Co-host sesi → yeni audio elementi (aynı elementa iki track bağlanamaz)
+                const audioEl = track.attach();
+                audioEl.autoplay = true;
+                document.body.appendChild(audioEl);
             }
         }
     });
@@ -180,7 +186,11 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
     });
 
     _room.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
-        track.detach();
+        const els = track.detach();
+        // Otomatik oluşturulan co-host audio elementlerini DOM'dan kaldır
+        els.forEach(el => {
+            if (el.tagName === 'AUDIO' && el !== remoteAudioEl) el.remove();
+        });
         // Co-host sahneden ayrıldıysa PiP kutusunu kaldır
         if (track.kind === Track.Kind.Video && participant && participant.sid !== _hostParticipantSid) {
             const container = document.getElementById('videoContainer');
@@ -257,8 +267,14 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
                         } else if (!isHost) {
                             _attachCohostPip(pub.track);
                         }
-                    } else if (pub.track.kind === Track.Kind.Audio && remoteAudioEl) {
-                        pub.track.attach(remoteAudioEl);
+                    } else if (pub.track.kind === Track.Kind.Audio) {
+                        if (isHost && remoteAudioEl) {
+                            pub.track.attach(remoteAudioEl);
+                        } else if (!isHost) {
+                            const audioEl = pub.track.attach();
+                            audioEl.autoplay = true;
+                            document.body.appendChild(audioEl);
+                        }
                     }
                 } else if (!pub.isSubscribed) {
                     pub.setSubscribed(true);
