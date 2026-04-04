@@ -3292,6 +3292,9 @@
                     onCoHostRemoved: (targetUsername) => {
                         if (_currentUsername && targetUsername === _currentUsername) {
                             _handleCoHostRemoved();
+                        } else if (!_isSelfCoHost) {
+                            // Başka birisi sahneden kaldırıldı — PiP'i temizle
+                            document.getElementById('videoContainer')?.querySelector('.cohost-pip')?.remove();
                         }
                     },
                     myUserId: Auth.getUser()?.id ?? null,
