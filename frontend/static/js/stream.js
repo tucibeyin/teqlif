@@ -76,10 +76,13 @@ const Stream = (() => {
         pipEl.innerHTML = '';
         pipEl.appendChild(localVidEl);
 
+        // Host identity: viewer olarak kaydedilen stream datasından al
+        const hostIdentity = load()?.host_username || null;
         const room = await connectRoom({
             livekit_url: data.livekit_url,
             token: data.token,
             isHost: true,            // can_publish=true → kamera/mikrofon aç
+            hostIdentity,            // gerçek host'u doğru tanımla
             localVideoEl: localVidEl,
             remoteVideoEl: document.getElementById('mainVideo'),
             remoteAudioEl: document.getElementById('remoteAudio'),
@@ -105,7 +108,7 @@ const Stream = (() => {
 /* ── LiveKit Oda Yönetimi ── */
 var _room = null;
 
-async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVideoEl, remoteAudioEl, onDisconnect, onRemoteVideo, onCoHostPip }) {
+async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVideoEl, remoteVideoEl, remoteAudioEl, onDisconnect, onRemoteVideo, onCoHostPip }) {
     const { Room, RoomEvent, Track } = LivekitClient;
 
     _room = new Room({
@@ -113,45 +116,50 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
         dynacast: true,
     });
 
-    // İlk video track'i kimin olduğunu takip et (host sid)
+    // Host SID'ini takip et — identity bazlı belirlenir (varsa), yoksa ilk video fallback
     let _hostParticipantSid = null;
+
+    function _isHostParticipant(participant) {
+        if (hostIdentity) return participant.identity === hostIdentity;
+        // Fallback: henüz host belirlenmemişse ilk video track = host
+        return _hostParticipantSid === null;
+    }
+
+    function _attachCohostPip(track) {
+        const container = document.getElementById('videoContainer');
+        if (!container) return;
+        let pipEl = container.querySelector('.cohost-pip');
+        if (!pipEl) {
+            pipEl = document.createElement('div');
+            pipEl.className = 'cohost-pip';
+            container.appendChild(pipEl);
+        }
+        const vidEl = document.createElement('video');
+        vidEl.autoplay = true;
+        vidEl.playsInline = true;
+        vidEl.muted = true;
+        pipEl.innerHTML = '';
+        pipEl.appendChild(vidEl);
+        track.attach(vidEl);
+        if (onCoHostPip) onCoHostPip(pipEl);
+    }
 
     // Uzak track geldiğinde (yeni katılanlar veya bağlantı sonrası)
     _room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
         console.log('[LiveKit] TrackSubscribed:', track.kind, 'participant:', participant.identity);
         if (track.kind === Track.Kind.Video) {
-            if (_hostParticipantSid === null) {
-                // İlk video track = host → ana ekrana
+            if (_isHostParticipant(participant)) {
+                // Host'un video track'i → ana ekrana
                 _hostParticipantSid = participant.sid;
                 if (remoteVideoEl) {
                     track.attach(remoteVideoEl);
                     if (onRemoteVideo) onRemoteVideo();
                 }
-            } else if (participant.sid !== _hostParticipantSid) {
-                // İkinci farklı katılımcı = co-host → PiP kutusu
-                const container = document.getElementById('videoContainer');
-                if (container) {
-                    let pipEl = container.querySelector('.cohost-pip');
-                    if (!pipEl) {
-                        pipEl = document.createElement('div');
-                        pipEl.className = 'cohost-pip';
-                        container.appendChild(pipEl);
-                    }
-                    const vidEl = document.createElement('video');
-                    vidEl.autoplay = true;
-                    vidEl.playsInline = true;
-                    vidEl.muted = true;
-                    pipEl.innerHTML = '';
-                    pipEl.appendChild(vidEl);
-                    track.attach(vidEl);
-                    if (onCoHostPip) onCoHostPip(pipEl);
-                }
+            } else {
+                // Co-host'un video track'i → PiP
+                _attachCohostPip(track);
             }
         } else if (track.kind === Track.Kind.Audio) {
-            // TrackSubscribed sadece REMOTE track'ler için tetiklenir.
-            // Host kendi sesini buradan almaz; gelen audio her zaman
-            // başka bir katılımcıya (co-host veya viewer) aittir.
-            // Hem host hem viewer: remote audio'yu çal.
             if (remoteAudioEl) {
                 track.attach(remoteAudioEl);
             }
@@ -195,10 +203,29 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
     console.log('[LiveKit] Bağlandı. RemoteParticipants:', _room.remoteParticipants.size);
 
     if (isHost) {
-        // Host olarak bağlandık — kendi SID'imizi hemen kaydet.
-        // TrackSubscribed sadece remote track'ler için çalışır; gelen
-        // ilk remote VideoTrack host'un değil co-host'un track'idir.
-        _hostParticipantSid = _room.localParticipant.sid;
+        if (!hostIdentity) {
+            // Gerçek host: kendi SID'i = host SID
+            _hostParticipantSid = _room.localParticipant.sid;
+        } else {
+            // Co-host (sahneye kabul edildi): gerçek host'u identity üzerinden bul
+            for (const p of _room.remoteParticipants.values()) {
+                if (p.identity === hostIdentity) {
+                    _hostParticipantSid = p.sid;
+                    for (const pub of p.trackPublications.values()) {
+                        if (pub.isSubscribed && pub.track) {
+                            if (pub.track.kind === Track.Kind.Video && remoteVideoEl) {
+                                pub.track.attach(remoteVideoEl);
+                                if (onRemoteVideo) onRemoteVideo();
+                            } else if (pub.track.kind === Track.Kind.Audio && remoteAudioEl) {
+                                pub.track.attach(remoteAudioEl);
+                            }
+                        } else if (!pub.isSubscribed) {
+                            pub.setSubscribed(true);
+                        }
+                    }
+                }
+            }
+        }
 
         await _room.localParticipant.setCameraEnabled(true);
         await _room.localParticipant.setMicrophoneEnabled(true);
@@ -218,17 +245,22 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
         // Bağlantı sonrası mevcut yayınlanan track'leri kontrol et (race condition fix)
         for (const participant of _room.remoteParticipants.values()) {
             console.log('[LiveKit] Mevcut katılımcı:', participant.identity, '| trackPublications:', participant.trackPublications.size);
+            const isHost = _isHostParticipant(participant);
+            if (isHost) _hostParticipantSid = participant.sid;
             for (const pub of participant.trackPublications.values()) {
                 console.log('[LiveKit] Track:', pub.kind, 'isSubscribed:', pub.isSubscribed, 'track:', !!pub.track);
                 if (pub.isSubscribed && pub.track) {
-                    if (pub.track.kind === Track.Kind.Video && remoteVideoEl) {
-                        pub.track.attach(remoteVideoEl);
-                        if (onRemoteVideo) onRemoteVideo();
+                    if (pub.track.kind === Track.Kind.Video) {
+                        if (isHost && remoteVideoEl) {
+                            pub.track.attach(remoteVideoEl);
+                            if (onRemoteVideo) onRemoteVideo();
+                        } else if (!isHost) {
+                            _attachCohostPip(pub.track);
+                        }
                     } else if (pub.track.kind === Track.Kind.Audio && remoteAudioEl) {
                         pub.track.attach(remoteAudioEl);
                     }
                 } else if (!pub.isSubscribed) {
-                    // Auto-subscribe devre dışıysa manuel abone ol
                     pub.setSubscribed(true);
                 }
             }

@@ -197,8 +197,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
       _listener!.on<TrackSubscribedEvent>((e) {
         if (e.track is VideoTrack && mounted) {
           final vTrack = e.track as VideoTrack;
-          if (_hostParticipantSid == null) {
-            // İlk video track = host'un track'i → ana ekrana
+          final isHostTrack = e.participant.identity == token.hostUsername;
+          if (isHostTrack) {
             setState(() {
               _remoteVideoTrack = vTrack;
               _hostParticipantSid = e.participant.sid;
@@ -230,13 +230,14 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
       // Zaten yayında olan track'leri kontrol et
       for (final p in room.remoteParticipants.values) {
+        final isHostParticipant = p.identity == token.hostUsername;
+        if (isHostParticipant) _hostParticipantSid = p.sid;
         for (final pub in p.videoTrackPublications) {
           if (pub.track != null) {
             final vTrack = pub.track as VideoTrack;
-            if (_hostParticipantSid == null) {
+            if (isHostParticipant) {
               _remoteVideoTrack = vTrack;
-              _hostParticipantSid = p.sid;
-            } else if (p.sid != _hostParticipantSid) {
+            } else {
               _coHostVideoTrack = vTrack;
             }
           }
