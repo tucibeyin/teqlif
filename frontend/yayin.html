@@ -2886,8 +2886,28 @@
             // Promote / Demote: sadece gerçek host görebilir, duruma göre biri görünür
             document.getElementById('modBtnPromote').style.display = (_isHostPage && !isMod) ? 'block' : 'none';
             document.getElementById('modBtnDemote').style.display  = (_isHostPage && isMod)  ? 'block' : 'none';
-            // Sahneye Davet Et: sadece gerçek host görebilir
-            document.getElementById('modBtnCoHost').style.display  = _isHostPage ? 'block' : 'none';
+            // Sahneye Davet Et / Sahneden Al: sadece gerçek host, duruma göre
+            const cohostBtn = document.getElementById('modBtnCoHost');
+            if (_isHostPage) {
+                if (!_coHostUsername) {
+                    // Sahnede kimse yok → davet et
+                    cohostBtn.textContent = '🎬 Sahneye Davet Et';
+                    cohostBtn.style.background = '#6366f1';
+                    cohostBtn.dataset.cohostAction = 'invite';
+                    cohostBtn.style.display = 'block';
+                } else if (_coHostUsername === username) {
+                    // Bu kişi sahnede → sahneden al
+                    cohostBtn.textContent = '📵 Sahneden Al';
+                    cohostBtn.style.background = '#ef4444';
+                    cohostBtn.dataset.cohostAction = 'remove';
+                    cohostBtn.style.display = 'block';
+                } else {
+                    // Başkası sahnede → bu kişiyi davet edemez
+                    cohostBtn.style.display = 'none';
+                }
+            } else {
+                cohostBtn.style.display = 'none';
+            }
             document.getElementById('modMsg').textContent = '';
             // Her açılışta butonları aktif et
             document.querySelectorAll('.mod-btn').forEach(b => b.disabled = false);
@@ -2947,17 +2967,23 @@
         document.getElementById('modBtnDemote')?.addEventListener('click',  () => _modAction('demote'));
         document.getElementById('modBtnCoHost')?.addEventListener('click',  async () => {
             const target = _modTargetUsername;
+            const action = document.getElementById('modBtnCoHost').dataset.cohostAction;
             _closeModModal();
             if (!target || !streamId) return;
             try {
-                await Stream.inviteCoHost(streamId, target);
-                const msg = document.createElement('div');
-                msg.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#6366f1;color:#fff;padding:10px 20px;border-radius:10px;font-size:0.88rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
-                msg.textContent = `🎬 @${target} sahneye davet edildi`;
-                document.body.appendChild(msg);
-                setTimeout(() => msg.remove(), 3000);
+                if (action === 'remove') {
+                    await Stream.removeCoHost(streamId, target);
+                    _coHostUsername = null;
+                } else {
+                    await Stream.inviteCoHost(streamId, target);
+                    const msg = document.createElement('div');
+                    msg.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#6366f1;color:#fff;padding:10px 20px;border-radius:10px;font-size:0.88rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+                    msg.textContent = `🎬 @${target} sahneye davet edildi`;
+                    document.body.appendChild(msg);
+                    setTimeout(() => msg.remove(), 3000);
+                }
             } catch (e) {
-                console.error('Sahne daveti gönderilemedi:', e);
+                console.error('[COHOST] Modal aksiyonu başarısız:', e);
             }
         });
         document.getElementById('modBtnCancel')?.addEventListener('click', _closeModModal);

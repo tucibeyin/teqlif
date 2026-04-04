@@ -364,6 +364,13 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         streamId: widget.streamToken.streamId,
         username: username,
         isMuted: _mutedUsers.contains(username),
+        currentCoHostUsername: _coHostUsername,
+        onRemoveCoHost: _coHostUsername == username ? () async {
+          try {
+            await StreamService.removeCoHost(widget.streamToken.streamId, username);
+            setState(() => _coHostUsername = null);
+          } catch (_) {}
+        } : null,
         isMod: _modUsers.contains(username),
         onMuted: () => setState(() => _mutedUsers.add(username)),
         onUnmuted: () => setState(() => _mutedUsers.remove(username)),
@@ -1135,6 +1142,9 @@ class _ModerationSheet extends StatefulWidget {
   final VoidCallback onPromoted;
   final VoidCallback onDemoted;
   final VoidCallback? onInviteCoHost;
+  final VoidCallback? onRemoveCoHost;
+  /// Şu an sahnede olan kullanıcının adı (null = kimse yok)
+  final String? currentCoHostUsername;
 
   const _ModerationSheet({
     required this.streamId,
@@ -1146,6 +1156,8 @@ class _ModerationSheet extends StatefulWidget {
     required this.onPromoted,
     required this.onDemoted,
     this.onInviteCoHost,
+    this.onRemoveCoHost,
+    this.currentCoHostUsername,
   });
 
   @override
@@ -1291,8 +1303,8 @@ class _ModerationSheetState extends State<_ModerationSheet> {
             ),
           const SizedBox(height: 10),
 
-          // Sahneye Davet Et
-          if (widget.onInviteCoHost != null) ...[
+          // Sahneye Davet Et / Sahneden Al
+          if (widget.currentCoHostUsername == null && widget.onInviteCoHost != null) ...[
             _ModBtn(
               icon: '🎬',
               label: 'Sahneye Davet Et',
@@ -1301,6 +1313,18 @@ class _ModerationSheetState extends State<_ModerationSheet> {
               onTap: () {
                 Navigator.pop(context);
                 widget.onInviteCoHost!();
+              },
+            ),
+            const SizedBox(height: 10),
+          ] else if (widget.currentCoHostUsername == widget.username && widget.onRemoveCoHost != null) ...[
+            _ModBtn(
+              icon: '📵',
+              label: 'Sahneden Al',
+              color: const Color(0xFFEF4444),
+              loading: _loading,
+              onTap: () {
+                Navigator.pop(context);
+                widget.onRemoveCoHost!();
               },
             ),
             const SizedBox(height: 10),
