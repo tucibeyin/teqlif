@@ -101,7 +101,11 @@ const Stream = (() => {
         });
     }
 
-    return { save, load, clear, startStream, joinStream, endStream, leaveStream, inviteCoHost, acceptCoHostInvite, removeCoHost };
+    async function leaveCoHost(streamId) {
+        await apiFetch(`/streams/${streamId}/cohost/leave`, { method: 'POST' });
+    }
+
+    return { save, load, clear, startStream, joinStream, endStream, leaveStream, inviteCoHost, acceptCoHostInvite, removeCoHost, leaveCoHost };
 })();
 
 

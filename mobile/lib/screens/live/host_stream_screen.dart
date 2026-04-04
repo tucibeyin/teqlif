@@ -580,6 +580,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                           _heartsKey.currentState?.addHeart(isLocal: false),
                       onCoHostAccepted: (username) =>
                           setState(() => _coHostUsername = username),
+                      onCoHostRemoved: (_) =>
+                          setState(() => _coHostUsername = null),
                       pinAtBottom: true,
                       pinDismissible: true,
                     ),

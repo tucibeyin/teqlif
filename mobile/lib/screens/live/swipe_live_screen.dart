@@ -693,7 +693,13 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                       left: 0,
                       right: 0,
                       child: GestureDetector(
-                        onTap: _handleCoHostRemoved,
+                        onTap: () async {
+                          final sid = _token?.streamId;
+                          if (sid != null) {
+                            try { await StreamService.leaveCoHost(sid); } catch (_) {}
+                          }
+                          _handleCoHostRemoved();
+                        },
                         child: Container(
                           color: const Color(0xDDEF4444),
                           padding: const EdgeInsets.symmetric(vertical: 5),

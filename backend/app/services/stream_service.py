@@ -537,6 +537,26 @@ class StreamService:
         )
         return {"message": f"@{target_username} sahneden kaldırıldı"}
 
+    # ── Co-Host: Gönüllü Ayrılma ────────────────────────────────────────────
+    async def leave_cohost(self, stream_id: int, current_user: User) -> dict:
+        """Co-host kendi isteğiyle sahneden ayrılır — cohost_removed WS yayınlanır."""
+        from app.services.chat_service import publish_chat
+
+        result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+        stream = result.scalar_one_or_none()
+        if not stream or not stream.is_live:
+            raise NotFoundException("Aktif yayın bulunamadı")
+
+        await publish_chat(stream_id, {
+            "type": "cohost_removed",
+            "target_username": current_user.username,
+        })
+        logger.info(
+            "[COHOST] Konuk sahneden kendi isteğiyle ayrıldı | stream_id=%s user=%s",
+            stream_id, current_user.username,
+        )
+        return {"message": "Sahneden ayrıldınız"}
+
     # ── Aktif Yayınlar ───────────────────────────────────────────────────────
     async def get_active_streams(self, current_user_id: Optional[int]) -> list:
         query = (

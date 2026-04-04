@@ -3063,6 +3063,10 @@
             // PiP kutusunu kaldır
             const pipEl = document.getElementById('videoContainer')?.querySelector('.cohost-pip');
             if (pipEl) pipEl.remove();
+            // Gönüllü ayrılmayı herkese bildir (host dahil modal sync olsun)
+            if (streamId) {
+                try { await Stream.leaveCoHost(streamId); } catch (_) {}
+            }
             // Co-host odasından çık — kamera/mikrofon kapanır, TrackUnsubscribed tetiklenir
             await disconnectRoom();
             // Viewer olarak yeniden bağlan

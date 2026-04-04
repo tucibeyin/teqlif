@@ -144,6 +144,15 @@ async def remove_cohost(
     return await StreamService(db).remove_cohost(stream_id, body.target_username, current_user)
 
 
+@router.post("/{stream_id}/cohost/leave", status_code=status.HTTP_200_OK)
+async def leave_cohost(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await StreamService(db).leave_cohost(stream_id, current_user)
+
+
 @router.get("/following/live", response_model=list[StreamOut])
 async def get_followed_live_streams(
     current_user: User = Depends(get_current_user),

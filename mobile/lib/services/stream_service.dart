@@ -178,6 +178,16 @@ class StreamService {
     );
   }
 
+  /// Gönüllü sahneden ayrıl — cohost_removed WS sinyali yayınlanır (viewer → POST /cohost/leave).
+  static Future<void> leaveCoHost(int streamId) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/streams/$streamId/cohost/leave'),
+        headers: await _headers(),
+      ),
+    );
+  }
+
   static Map<String, dynamic> _tryDecode(String body) {
     try { return jsonDecode(body) as Map<String, dynamic>; } catch (_) { return {}; }
   }
