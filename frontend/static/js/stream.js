@@ -117,7 +117,9 @@ var _room = null;
 function _makePipDraggable(pipEl) {
     let dragging = false, ox = 0, oy = 0;
 
-    function start(cx, cy) {
+    function start(cx, cy, target) {
+        // Buton tıklamalarında drag başlatma
+        if (target && target.closest('.pip-remove-btn')) return;
         dragging = true;
         const r = pipEl.getBoundingClientRect();
         // right → left'e geç; absolute konumu bozmasın
@@ -144,8 +146,8 @@ function _makePipDraggable(pipEl) {
     };
     const onEnd = () => { dragging = false; };
 
-    pipEl.addEventListener('mousedown',  (e) => { start(e.clientX, e.clientY); e.preventDefault(); });
-    pipEl.addEventListener('touchstart', (e) => { start(e.touches[0].clientX, e.touches[0].clientY); e.preventDefault(); }, { passive: false });
+    pipEl.addEventListener('mousedown',  (e) => { start(e.clientX, e.clientY, e.target); e.preventDefault(); });
+    pipEl.addEventListener('touchstart', (e) => { start(e.touches[0].clientX, e.touches[0].clientY, e.target); e.preventDefault(); }, { passive: false });
     document.addEventListener('mousemove', onMouseMove);
     document.addEventListener('mouseup',   onEnd);
     document.addEventListener('touchmove', onTouchMove, { passive: false });
