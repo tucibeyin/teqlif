@@ -3042,7 +3042,7 @@
                     isHost: false,
                     remoteVideoEl: document.getElementById('mainVideo'),
                     remoteAudioEl: document.getElementById('remoteAudio'),
-                    onDisconnect: _onStreamEndedViewer,
+                    onDisconnect: () => { if (!_isSelfCoHost) _onStreamEndedViewer(); },
                     onRemoteVideo: () => {},
                 });
             }
