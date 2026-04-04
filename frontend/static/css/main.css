@@ -607,3 +607,23 @@ footer {
     object-fit: cover;
     display: block;
 }
+
+.pip-remove-btn {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    background: rgba(239, 68, 68, 0.88);
+    color: #fff;
+    border: none;
+    padding: 5px 0;
+    font-size: 0.7rem;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.3px;
+    transition: background 0.15s;
+}
+
+.pip-remove-btn:hover {
+    background: rgba(220, 38, 38, 1);
+}

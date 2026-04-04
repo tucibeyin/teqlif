@@ -105,7 +105,7 @@ const Stream = (() => {
 /* ── LiveKit Oda Yönetimi ── */
 var _room = null;
 
-async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVideoEl, remoteAudioEl, onDisconnect, onRemoteVideo }) {
+async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVideoEl, remoteAudioEl, onDisconnect, onRemoteVideo, onCoHostPip }) {
     const { Room, RoomEvent, Track } = LivekitClient;
 
     _room = new Room({
@@ -144,6 +144,7 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
                     pipEl.innerHTML = '';
                     pipEl.appendChild(vidEl);
                     track.attach(vidEl);
+                    if (onCoHostPip) onCoHostPip(pipEl);
                 }
             }
         } else if (track.kind === Track.Kind.Audio) {

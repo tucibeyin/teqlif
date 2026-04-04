@@ -17,9 +17,10 @@ const Chat = (() => {
     let _onStreamLike     = null;
     let _onCoHostInvite   = null;
     let _onCoHostRemoved  = null;
+    let _onCoHostAccepted = null;
     let _myUserId         = null;
 
-    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted, onHostPin, onStreamLike, onCoHostInvite, onCoHostRemoved, myUserId } = {}) {
+    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted, onHostPin, onStreamLike, onCoHostInvite, onCoHostRemoved, onCoHostAccepted, myUserId } = {}) {
         _streamId = streamId;
         _onStreamEnded   = onStreamEnded   || null;
         _onViewerCount   = onViewerCount   || null;
@@ -31,9 +32,10 @@ const Chat = (() => {
         _onModDemoted    = onModDemoted    || null;
         _onHostPin       = onHostPin       || null;
         _onStreamLike    = onStreamLike    || null;
-        _onCoHostInvite  = onCoHostInvite  || null;
-        _onCoHostRemoved = onCoHostRemoved || null;
-        _myUserId        = myUserId        || null;
+        _onCoHostInvite   = onCoHostInvite   || null;
+        _onCoHostRemoved  = onCoHostRemoved  || null;
+        _onCoHostAccepted = onCoHostAccepted || null;
+        _myUserId         = myUserId         || null;
         _connectWS();
     }
 
@@ -102,6 +104,8 @@ const Chat = (() => {
                     if (_onCoHostInvite) _onCoHostInvite(msg.host_username || '', msg.target_username || '');
                 } else if (msg.type === 'cohost_removed') {
                     if (_onCoHostRemoved) _onCoHostRemoved(msg.target_username || '');
+                } else if (msg.type === 'cohost_accepted') {
+                    if (_onCoHostAccepted) _onCoHostAccepted(msg.username || '');
                 }
             } catch (_) {}
         };

@@ -1826,6 +1826,7 @@
                         showVideo();
                         setStatus('');
                     },
+                    onCoHostPip: isHost ? (pipEl) => _addHostRemoveBtn(pipEl) : null,
                 });
 
                 if (isHost) {
@@ -2964,6 +2965,29 @@
             if (e.target === document.getElementById('modModal')) _closeModModal();
         });
 
+        // ── Co-Host: host tarafı ────────────────────────────────────────
+
+        let _coHostUsername = null; // cohost_accepted WS eventinden gelir
+
+        function _addHostRemoveBtn(pipEl) {
+            // Önceki butonu temizle
+            pipEl.querySelector('.pip-remove-btn')?.remove();
+            const btn = document.createElement('button');
+            btn.className = 'pip-remove-btn';
+            btn.title = 'Sahneden Kaldır';
+            btn.textContent = '✕ Sahneden Al';
+            btn.onclick = async () => {
+                if (!_coHostUsername || !streamId) return;
+                try {
+                    await Stream.removeCoHost(streamId, _coHostUsername);
+                    _coHostUsername = null;
+                } catch (e) {
+                    console.error('[COHOST] removeCoHost hatası:', e);
+                }
+            };
+            pipEl.appendChild(btn);
+        }
+
         // ── Co-Host: davet modalı (viewer) ──────────────────────────────
 
         let _isSelfCoHost = false;
@@ -2983,6 +3007,15 @@
             try {
                 await Stream.acceptCoHostInvite(streamId);
                 _isSelfCoHost = true;
+                // PiP'e "Sahneden Çık" butonu ekle
+                const pipEl = document.getElementById('videoContainer')?.querySelector('.cohost-pip');
+                if (pipEl) {
+                    const btn = document.createElement('button');
+                    btn.className = 'pip-remove-btn';
+                    btn.textContent = '✕ Sahneden Çık';
+                    btn.onclick = _handleCoHostRemoved;
+                    pipEl.appendChild(btn);
+                }
             } catch (e) {
                 console.error('[COHOST] Sahneye bağlanılamadı:', e);
                 const el = document.createElement('div');
@@ -3158,6 +3191,12 @@
                     onModDemoted:  (msg) => { if (msg.username) _modUsers.delete(msg.username); },
                     onHostPin: _showPinBanner,
                     onStreamLike: () => _spawnFloatingHeart(false),
+                    onCoHostAccepted: (username) => {
+                        _coHostUsername = username;
+                        // PiP zaten oluşmuşsa butonu ekle; yoksa onCoHostPip callback'i ekler
+                        const pipEl = document.getElementById('videoContainer')?.querySelector('.cohost-pip');
+                        if (pipEl) _addHostRemoveBtn(pipEl);
+                    },
                     myUserId: Auth.getUser()?.id ?? null,
                 });
 
