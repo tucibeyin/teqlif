@@ -157,7 +157,11 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
                 }
             } else {
                 // Co-host'un video track'i → PiP
-                _attachCohostPip(track);
+                // Ghost/stale track koruması: gerçek medya yoksa PiP açma
+                const mst = track.mediaStreamTrack;
+                if (mst && mst.readyState === 'live') {
+                    _attachCohostPip(track);
+                }
             }
         } else if (track.kind === Track.Kind.Audio) {
             if (_isHostParticipant(participant) && remoteAudioEl) {
@@ -167,6 +171,7 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
                 // Co-host sesi → yeni audio elementi (aynı elementa iki track bağlanamaz)
                 const audioEl = track.attach();
                 audioEl.autoplay = true;
+                audioEl.dataset.cohost = '1';
                 document.body.appendChild(audioEl);
             }
         }
@@ -183,6 +188,17 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
 
     _room.on(RoomEvent.ConnectionStateChanged, (state) => {
         console.log('[LiveKit] ConnectionStateChanged:', state);
+    });
+
+    // Katılımcı odadan ayrıldığında — co-host ise PiP'i temizle
+    _room.on(RoomEvent.ParticipantDisconnected, (participant) => {
+        if (participant.sid !== _hostParticipantSid) {
+            const container = document.getElementById('videoContainer');
+            const pipEl = container?.querySelector('.cohost-pip');
+            if (pipEl) pipEl.remove();
+            // Co-host audio elementini temizle
+            document.querySelectorAll('audio[data-cohost]').forEach(el => el.remove());
+        }
     });
 
     _room.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
@@ -265,7 +281,10 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
                             pub.track.attach(remoteVideoEl);
                             if (onRemoteVideo) onRemoteVideo();
                         } else if (!isHost) {
-                            _attachCohostPip(pub.track);
+                            const mst = pub.track.mediaStreamTrack;
+                            if (mst && mst.readyState === 'live') {
+                                _attachCohostPip(pub.track);
+                            }
                         }
                     } else if (pub.track.kind === Track.Kind.Audio) {
                         if (isHost && remoteAudioEl) {
@@ -273,11 +292,14 @@ async function connectRoom({ livekit_url, token, isHost, hostIdentity, localVide
                         } else if (!isHost) {
                             const audioEl = pub.track.attach();
                             audioEl.autoplay = true;
+                            audioEl.dataset.cohost = '1';
                             document.body.appendChild(audioEl);
                         }
                     }
                 } else if (!pub.isSubscribed) {
-                    pub.setSubscribed(true);
+                    // Sadece host track'lerini manuel subscribe et;
+                    // co-host track'leri autoSubscribe + TrackPublished ile gelir
+                    if (isHost) pub.setSubscribed(true);
                 }
             }
         }
