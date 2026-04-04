@@ -75,6 +75,9 @@ class ChatPanel extends StatefulWidget {
   /// Host, sahnedeki konuğu kaldırdığında tüm odaya gelir.
   final void Function(String targetUsername)? onCoHostRemoved;
 
+  /// Bir kullanıcı co-host davetini kabul ettiğinde tüm odaya gelir.
+  final void Function(String username)? onCoHostAccepted;
+
   /// true ise pin banner mesaj input'unun altında gösterilir (host ekranı için).
   final bool pinAtBottom;
 
@@ -105,6 +108,7 @@ class ChatPanel extends StatefulWidget {
     this.trailingAction,
     this.onCoHostInvite,
     this.onCoHostRemoved,
+    this.onCoHostAccepted,
   });
 
   @override
@@ -338,6 +342,9 @@ class ChatPanelState extends State<ChatPanel> {
             } else if (json['type'] == 'cohost_removed') {
               final targetUsername = json['target_username'] as String? ?? '';
               _eventType = 'cohost_removed:$targetUsername';
+            } else if (json['type'] == 'cohost_accepted') {
+              final username = json['username'] as String? ?? '';
+              _eventType = 'cohost_accepted:$username';
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -398,6 +405,10 @@ class ChatPanelState extends State<ChatPanel> {
           if (_eventType != null && _eventType!.startsWith('cohost_removed:')) {
             final targetUsername = _eventType!.substring('cohost_removed:'.length);
             widget.onCoHostRemoved?.call(targetUsername);
+          }
+          if (_eventType != null && _eventType!.startsWith('cohost_accepted:')) {
+            final username = _eventType!.substring('cohost_accepted:'.length);
+            widget.onCoHostAccepted?.call(username);
           }
         },
         onDone: _scheduleReconnect,

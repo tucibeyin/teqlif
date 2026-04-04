@@ -54,6 +54,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   static const double _maxZoom = 8.0;
   final Set<String> _modUsers   = {};
   VideoTrack? _coHostTrack;
+  String? _coHostUsername;
   final _chatKey = GlobalKey<ChatPanelState>();
   final _heartsKey = GlobalKey<FloatingHeartsState>();
 
@@ -570,6 +571,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                       // İzleyiciler kalp gönderdiğinde host ekranında uçsun
                       onStreamLike: (_, __) =>
                           _heartsKey.currentState?.addHeart(isLocal: false),
+                      onCoHostAccepted: (username) =>
+                          setState(() => _coHostUsername = username),
                       pinAtBottom: true,
                       pinDismissible: true,
                     ),
@@ -660,9 +663,42 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     border: Border.all(color: Colors.white, width: 2),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: VideoTrackRenderer(
-                    _coHostTrack!,
-                    fit: VideoViewFit.contain,
+                  child: Stack(
+                    children: [
+                      VideoTrackRenderer(
+                        _coHostTrack!,
+                        fit: VideoViewFit.contain,
+                      ),
+                      Positioned(
+                        bottom: 0,
+                        left: 0,
+                        right: 0,
+                        child: GestureDetector(
+                          onTap: () async {
+                            final target = _coHostUsername;
+                            if (target == null) return;
+                            try {
+                              await StreamService.removeCoHost(
+                                  widget.streamToken.streamId, target);
+                              setState(() => _coHostUsername = null);
+                            } catch (_) {}
+                          },
+                          child: Container(
+                            color: const Color(0xDDEF4444),
+                            padding: const EdgeInsets.symmetric(vertical: 5),
+                            alignment: Alignment.center,
+                            child: const Text(
+                              '✕ Sahneden Al',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ),

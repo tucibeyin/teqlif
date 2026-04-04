@@ -680,9 +680,34 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                   border: Border.all(color: Colors.white, width: 2),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: VideoTrackRenderer(
-                  _localVideoTrack!,
-                  fit: VideoViewFit.contain,
+                child: Stack(
+                  children: [
+                    VideoTrackRenderer(
+                      _localVideoTrack!,
+                      fit: VideoViewFit.contain,
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      left: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: _handleCoHostRemoved,
+                        child: Container(
+                          color: const Color(0xDDEF4444),
+                          padding: const EdgeInsets.symmetric(vertical: 5),
+                          alignment: Alignment.center,
+                          child: const Text(
+                            '✕ Sahneden Çık',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
             ),
