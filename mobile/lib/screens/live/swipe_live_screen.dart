@@ -593,6 +593,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
             child: VideoTrackRenderer(
               _remoteVideoTrack!,
               fit: VideoViewFit.contain,
+              mirrorMode: VideoViewMirrorMode.off,
             ),
           )
         else if (!widget.isActive && hasThumbnail)
@@ -729,6 +730,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                 child: VideoTrackRenderer(
                   _coHostVideoTrack!,
                   fit: VideoViewFit.contain,
+                  mirrorMode: VideoViewMirrorMode.off,
                 ),
               ),
             ),
