@@ -12,6 +12,7 @@ app.services.stream_service.StreamService'e taşınmıştır.
 from typing import Optional
 
 from fastapi import APIRouter, Depends, UploadFile, File, status, BackgroundTasks
+from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
@@ -23,6 +24,10 @@ from app.services.stream_service import StreamService
 from app.services.like_service import LikeService
 
 router = APIRouter(prefix="/api/streams", tags=["streams"])
+
+
+class _CohostTargetBody(BaseModel):
+    target_username: str
 
 
 # ── Opsiyonel token çözümleyici (unauthenticated erişim için) ────────────────
@@ -108,6 +113,35 @@ async def update_thumbnail(
     current_user: User = Depends(get_current_user),
 ):
     return await StreamService(db).update_thumbnail(stream_id, current_user, file)
+
+
+@router.post("/{stream_id}/cohost/invite", status_code=status.HTTP_200_OK)
+async def invite_cohost(
+    stream_id: int,
+    body: _CohostTargetBody,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await StreamService(db).invite_cohost(stream_id, body.target_username, current_user)
+
+
+@router.post("/{stream_id}/cohost/accept", response_model=StreamTokenOut)
+async def accept_cohost(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await StreamService(db).accept_cohost_invite(stream_id, current_user)
+
+
+@router.post("/{stream_id}/cohost/remove", status_code=status.HTTP_200_OK)
+async def remove_cohost(
+    stream_id: int,
+    body: _CohostTargetBody,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    return await StreamService(db).remove_cohost(stream_id, body.target_username, current_user)
 
 
 @router.get("/following/live", response_model=list[StreamOut])

@@ -11,25 +11,29 @@ const Chat = (() => {
     let _onKicked = null;
     let _onUnmuted = null;
     let _onUsernameTap = null;
-    let _onModPromoted = null;
-    let _onModDemoted  = null;
-    let _onHostPin     = null;
-    let _onStreamLike  = null;
-    let _myUserId      = null;
+    let _onModPromoted    = null;
+    let _onModDemoted     = null;
+    let _onHostPin        = null;
+    let _onStreamLike     = null;
+    let _onCoHostInvite   = null;
+    let _onCoHostRemoved  = null;
+    let _myUserId         = null;
 
-    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted, onHostPin, onStreamLike, myUserId } = {}) {
+    function connect(streamId, { onStreamEnded, onViewerCount, onMuted, onKicked, onUnmuted, onUsernameTap, onModPromoted, onModDemoted, onHostPin, onStreamLike, onCoHostInvite, onCoHostRemoved, myUserId } = {}) {
         _streamId = streamId;
-        _onStreamEnded = onStreamEnded || null;
-        _onViewerCount = onViewerCount || null;
-        _onMuted = onMuted || null;
-        _onKicked = onKicked || null;
-        _onUnmuted = onUnmuted || null;
-        _onUsernameTap = onUsernameTap || null;
-        _onModPromoted = onModPromoted || null;
-        _onModDemoted  = onModDemoted  || null;
-        _onHostPin     = onHostPin     || null;
-        _onStreamLike  = onStreamLike  || null;
-        _myUserId      = myUserId      || null;
+        _onStreamEnded   = onStreamEnded   || null;
+        _onViewerCount   = onViewerCount   || null;
+        _onMuted         = onMuted         || null;
+        _onKicked        = onKicked        || null;
+        _onUnmuted       = onUnmuted       || null;
+        _onUsernameTap   = onUsernameTap   || null;
+        _onModPromoted   = onModPromoted   || null;
+        _onModDemoted    = onModDemoted    || null;
+        _onHostPin       = onHostPin       || null;
+        _onStreamLike    = onStreamLike    || null;
+        _onCoHostInvite  = onCoHostInvite  || null;
+        _onCoHostRemoved = onCoHostRemoved || null;
+        _myUserId        = myUserId        || null;
         _connectWS();
     }
 
@@ -94,6 +98,10 @@ const Chat = (() => {
                     if (_onStreamLike && (!_myUserId || senderId !== _myUserId)) {
                         _onStreamLike(senderId, msg.username || '');
                     }
+                } else if (msg.type === 'cohost_invite') {
+                    if (_onCoHostInvite) _onCoHostInvite(msg.host_username || '', msg.target_username || '');
+                } else if (msg.type === 'cohost_removed') {
+                    if (_onCoHostRemoved) _onCoHostRemoved(msg.target_username || '');
                 }
             } catch (_) {}
         };

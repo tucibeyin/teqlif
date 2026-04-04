@@ -429,6 +429,113 @@ class StreamService:
             capture_exception(exc)
             raise DatabaseException("Takip edilen yayınlar yüklenemedi")
 
+    # ── Co-Host: Sahneye Davet Et ────────────────────────────────────────────
+    async def invite_cohost(self, stream_id: int, target_username: str, host: User) -> dict:
+        """Host, bir izleyiciyi sahneye davet eder.
+
+        1. Host yetkisi doğrulanır.
+        2. Hedef kullanıcı bulunur.
+        3. Redis'te `cohost_invite:{stream_id}:{target.id}` anahtarı 60s TTL ile oluşturulur.
+        4. Odaya `cohost_invite` WS sinyali yayınlanır (sadece target_username eşleşen client pop-up gösterir).
+        """
+        from app.services.chat_service import publish_chat
+
+        result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+        stream = result.scalar_one_or_none()
+        if not stream or not stream.is_live:
+            raise NotFoundException("Aktif yayın bulunamadı")
+        if stream.host_id != host.id:
+            raise ForbiddenException("Sadece yayın sahibi davet gönderebilir")
+
+        target_res = await self.db.execute(select(User).where(User.username == target_username))
+        target = target_res.scalar_one_or_none()
+        if not target:
+            raise NotFoundException("Kullanıcı bulunamadı")
+        if target.id == host.id:
+            raise BadRequestException("Kendinizi davet edemezsiniz")
+
+        redis = await get_redis()
+        invite_key = f"cohost_invite:{stream_id}:{target.id}"
+        await redis.set(invite_key, "1", ex=60)
+
+        await publish_chat(stream_id, {
+            "type": "cohost_invite",
+            "target_username": target.username,
+            "host_username": host.username,
+        })
+        logger.info(
+            "[COHOST] Davet gönderildi | stream_id=%s host=%s target=%s",
+            stream_id, host.username, target.username,
+        )
+        return {"message": f"@{target.username} sahneye davet edildi"}
+
+    # ── Co-Host: Daveti Kabul Et ─────────────────────────────────────────────
+    async def accept_cohost_invite(self, stream_id: int, current_user: User) -> StreamTokenOut:
+        """Davet edilen izleyici sahneye çıkmak için can_publish=True token alır.
+
+        1. Redis'teki davet anahtarı kontrol edilir (yoksa 403).
+        2. Anahtar silinir (tek kullanım).
+        3. `can_publish=True` yeni token üretilir ve döndürülür.
+        4. Odaya `cohost_accepted` WS sinyali yayınlanır.
+        """
+        from app.services.chat_service import publish_chat
+
+        result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+        stream = result.scalar_one_or_none()
+        if not stream or not stream.is_live:
+            raise NotFoundException("Aktif yayın bulunamadı")
+
+        redis = await get_redis()
+        invite_key = f"cohost_invite:{stream_id}:{current_user.id}"
+        exists = await redis.get(invite_key)
+        if not exists:
+            raise ForbiddenException("Geçerli bir sahne davetiniz yok")
+
+        await redis.delete(invite_key)
+
+        token = make_livekit_token(stream.room_name, current_user, can_publish=True)
+
+        await publish_chat(stream_id, {
+            "type": "cohost_accepted",
+            "username": current_user.username,
+        })
+        logger.info(
+            "[COHOST] Davet kabul edildi | stream_id=%s user=%s",
+            stream_id, current_user.username,
+        )
+        return StreamTokenOut(
+            stream_id=stream.id,
+            room_name=stream.room_name,
+            livekit_url=settings.livekit_url,
+            token=token,
+        )
+
+    # ── Co-Host: Sahneden Kaldır ─────────────────────────────────────────────
+    async def remove_cohost(self, stream_id: int, target_username: str, host: User) -> dict:
+        """Host, sahneye çıkan konuğu sahneden kaldırır.
+
+        Sadece `cohost_removed` WS sinyali yayınlanır.
+        İstemci bu sinyali alınca kamerasını kapatıp viewer token'ına döner.
+        """
+        from app.services.chat_service import publish_chat
+
+        result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
+        stream = result.scalar_one_or_none()
+        if not stream or not stream.is_live:
+            raise NotFoundException("Aktif yayın bulunamadı")
+        if stream.host_id != host.id:
+            raise ForbiddenException("Sadece yayın sahibi sahne konuğunu kaldırabilir")
+
+        await publish_chat(stream_id, {
+            "type": "cohost_removed",
+            "target_username": target_username,
+        })
+        logger.info(
+            "[COHOST] Konuk sahneden kaldırıldı | stream_id=%s host=%s target=%s",
+            stream_id, host.username, target_username,
+        )
+        return {"message": f"@{target_username} sahneden kaldırıldı"}
+
     # ── Aktif Yayınlar ───────────────────────────────────────────────────────
     async def get_active_streams(self, current_user_id: Optional[int]) -> list:
         query = (

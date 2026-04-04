@@ -1298,12 +1298,13 @@
         .mod-btn:hover { opacity: 0.88; }
         .mod-btn:disabled { opacity: 0.45; cursor: default; }
 
-        .mod-btn-mute    { background: #d97706; color: #fff; }
-        .mod-btn-unmute  { background: #16a34a; color: #fff; display: none; }
-        .mod-btn-kick    { background: #ef4444; color: #fff; }
-        .mod-btn-promote { background: #8b5cf6; color: #fff; display: none; }
-        .mod-btn-demote  { background: #475569; color: #fff; display: none; }
-        .mod-btn-cancel  { background: transparent; color: #94a3b8; border: 1px solid #334155; }
+        .mod-btn-mute       { background: #d97706; color: #fff; }
+        .mod-btn-unmute     { background: #16a34a; color: #fff; display: none; }
+        .mod-btn-kick       { background: #ef4444; color: #fff; }
+        .mod-btn-promote    { background: #8b5cf6; color: #fff; display: none; }
+        .mod-btn-demote     { background: #475569; color: #fff; display: none; }
+        .mod-btn-cohost     { background: #6366f1; color: #fff; display: none; }
+        .mod-btn-cancel     { background: transparent; color: #94a3b8; border: 1px solid #334155; }
 
         #modMsg {
             font-size: 0.76rem;
@@ -1548,8 +1549,36 @@
             <button class="mod-btn mod-btn-kick"    id="modBtnKick"    data-track-id="yayin-mod-btn-yayindan-at">🚫 Yayından At</button>
             <button class="mod-btn mod-btn-promote" id="modBtnPromote" data-track-id="yayin-mod-btn-mod-yap">⭐ Moderatör Yap</button>
             <button class="mod-btn mod-btn-demote"  id="modBtnDemote"  data-track-id="yayin-mod-btn-mod-kaldir">✖ Moderatörü Kaldır</button>
+            <button class="mod-btn mod-btn-cohost"  id="modBtnCoHost"  data-track-id="yayin-mod-btn-sahne-davet">🎬 Sahneye Davet Et</button>
             <button class="mod-btn mod-btn-cancel"  id="modBtnCancel"  data-track-id="yayin-mod-btn-iptal">İptal</button>
             <div id="modMsg"></div>
+        </div>
+    </div>
+
+    <!-- Co-Host Sahne Daveti Modalı (viewer için) -->
+    <div id="cohostInviteModal" style="
+        display:none; position:fixed; inset:0; z-index:9999;
+        background:rgba(0,0,0,0.75); backdrop-filter:blur(4px);
+        align-items:center; justify-content:center;">
+        <div style="
+            background:#1e293b; border:1px solid #6366f1; border-radius:16px;
+            padding:28px 24px; max-width:340px; width:90%; box-shadow:0 20px 60px rgba(0,0,0,0.6);">
+            <div style="font-size:1.1rem; font-weight:700; color:#fff; margin-bottom:10px;">🎬 Sahneye Davet Edildiniz!</div>
+            <p id="cohostInviteText" style="color:#94a3b8; font-size:0.85rem; margin:0 0 22px; line-height:1.55;">
+                Kameranız ve mikrofonunuz açılacak. Kabul ediyor musunuz?
+            </p>
+            <div style="display:flex; gap:10px;">
+                <button id="cohostInviteReject" style="
+                    flex:1; padding:11px; border:1px solid #334155; background:transparent;
+                    color:#94a3b8; border-radius:10px; cursor:pointer; font-size:0.88rem;">
+                    Reddet
+                </button>
+                <button id="cohostInviteAccept" style="
+                    flex:1; padding:11px; border:none; background:#6366f1;
+                    color:#fff; border-radius:10px; cursor:pointer; font-size:0.88rem; font-weight:700;">
+                    Kabul Et
+                </button>
+            </div>
         </div>
     </div>
 
@@ -2856,6 +2885,8 @@
             // Promote / Demote: sadece gerçek host görebilir, duruma göre biri görünür
             document.getElementById('modBtnPromote').style.display = (_isHostPage && !isMod) ? 'block' : 'none';
             document.getElementById('modBtnDemote').style.display  = (_isHostPage && isMod)  ? 'block' : 'none';
+            // Sahneye Davet Et: sadece gerçek host görebilir
+            document.getElementById('modBtnCoHost').style.display  = _isHostPage ? 'block' : 'none';
             document.getElementById('modMsg').textContent = '';
             // Her açılışta butonları aktif et
             document.querySelectorAll('.mod-btn').forEach(b => b.disabled = false);
@@ -2913,10 +2944,80 @@
         document.getElementById('modBtnKick')?.addEventListener('click',    () => _modAction('kick'));
         document.getElementById('modBtnPromote')?.addEventListener('click', () => _modAction('promote'));
         document.getElementById('modBtnDemote')?.addEventListener('click',  () => _modAction('demote'));
+        document.getElementById('modBtnCoHost')?.addEventListener('click',  async () => {
+            const target = _modTargetUsername;
+            _closeModModal();
+            if (!target || !streamId) return;
+            try {
+                await Stream.inviteCoHost(streamId, target);
+                const msg = document.createElement('div');
+                msg.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#6366f1;color:#fff;padding:10px 20px;border-radius:10px;font-size:0.88rem;font-weight:600;box-shadow:0 4px 16px rgba(0,0,0,0.4);';
+                msg.textContent = `🎬 @${target} sahneye davet edildi`;
+                document.body.appendChild(msg);
+                setTimeout(() => msg.remove(), 3000);
+            } catch (e) {
+                console.error('Sahne daveti gönderilemedi:', e);
+            }
+        });
         document.getElementById('modBtnCancel')?.addEventListener('click', _closeModModal);
         document.getElementById('modModal')?.addEventListener('click', (e) => {
             if (e.target === document.getElementById('modModal')) _closeModModal();
         });
+
+        // ── Co-Host: davet modalı (viewer) ──────────────────────────────
+
+        let _isSelfCoHost = false;
+
+        function _showCoHostInviteModal(hostUsername) {
+            document.getElementById('cohostInviteText').textContent =
+                `@${hostUsername} seni sahneye davet ediyor! Kameran ve mikrofonun açılacak. Kabul ediyor musun?`;
+            document.getElementById('cohostInviteModal').style.display = 'flex';
+        }
+
+        document.getElementById('cohostInviteReject')?.addEventListener('click', () => {
+            document.getElementById('cohostInviteModal').style.display = 'none';
+        });
+
+        document.getElementById('cohostInviteAccept')?.addEventListener('click', async () => {
+            document.getElementById('cohostInviteModal').style.display = 'none';
+            try {
+                await Stream.acceptCoHostInvite(streamId);
+                _isSelfCoHost = true;
+            } catch (e) {
+                console.error('[COHOST] Sahneye bağlanılamadı:', e);
+                const el = document.createElement('div');
+                el.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#ef4444;color:#fff;padding:10px 20px;border-radius:10px;font-size:0.88rem;';
+                el.textContent = 'Sahneye bağlanılamadı: ' + (e.message || 'Hata');
+                document.body.appendChild(el);
+                setTimeout(() => el.remove(), 4000);
+            }
+        });
+
+        function _handleCoHostRemoved() {
+            if (!_isSelfCoHost) return;
+            _isSelfCoHost = false;
+            // PiP kutusunu kaldır
+            const pipEl = document.getElementById('videoContainer')?.querySelector('.cohost-pip');
+            if (pipEl) pipEl.remove();
+            // Viewer olarak yeniden bağlan
+            const info = Stream.load();
+            if (info) {
+                connectRoom({
+                    livekit_url: info.livekit_url,
+                    token: info.token,
+                    isHost: false,
+                    remoteVideoEl: document.getElementById('mainVideo'),
+                    remoteAudioEl: document.getElementById('remoteAudio'),
+                    onDisconnect: _onStreamEndedViewer,
+                    onRemoteVideo: () => {},
+                });
+            }
+            const el = document.createElement('div');
+            el.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#475569;color:#fff;padding:10px 20px;border-radius:10px;font-size:0.88rem;';
+            el.textContent = '📵 Sahneden kaldırıldınız';
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 3000);
+        }
 
         // ── Viewer: muted/kicked event handler ──────────────────────────
 
@@ -3105,6 +3206,16 @@
                     },
                     onHostPin: _showPinBanner,
                     onStreamLike: () => _spawnFloatingHeart(false),
+                    onCoHostInvite: (hostUsername, targetUsername) => {
+                        if (_currentUsername && targetUsername === _currentUsername && !_isSelfCoHost) {
+                            _showCoHostInviteModal(hostUsername);
+                        }
+                    },
+                    onCoHostRemoved: (targetUsername) => {
+                        if (_currentUsername && targetUsername === _currentUsername) {
+                            _handleCoHostRemoved();
+                        }
+                    },
                     myUserId: Auth.getUser()?.id ?? null,
                 });
             }

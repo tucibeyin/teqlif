@@ -145,6 +145,39 @@ class StreamService {
     return (_tryDecode(bodyStr)['thumbnail_url'] as String);
   }
 
+  /// Bir izleyiciyi sahneye davet et (host → POST /cohost/invite).
+  static Future<void> inviteCoHost(int streamId, String username) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/streams/$streamId/cohost/invite'),
+        headers: await _headers(),
+        body: jsonEncode({'target_username': username}),
+      ),
+    );
+  }
+
+  /// Sahne davetini kabul et — yeni can_publish=true token döner (viewer → POST /cohost/accept).
+  static Future<StreamTokenOut> acceptCoHostInvite(int streamId) async {
+    final body = await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/streams/$streamId/cohost/accept'),
+        headers: await _headers(),
+      ),
+    );
+    return StreamTokenOut.fromJson(body);
+  }
+
+  /// Sahnedeki konuğu kaldır (host → POST /cohost/remove).
+  static Future<void> removeCoHost(int streamId, String username) async {
+    await apiCall(
+      () async => http.post(
+        Uri.parse('$kBaseUrl/streams/$streamId/cohost/remove'),
+        headers: await _headers(),
+        body: jsonEncode({'target_username': username}),
+      ),
+    );
+  }
+
   static Map<String, dynamic> _tryDecode(String body) {
     try { return jsonDecode(body) as Map<String, dynamic>; } catch (_) { return {}; }
   }

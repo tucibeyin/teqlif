@@ -48,7 +48,57 @@ const Stream = (() => {
         await apiFetch(`/streams/${streamId}/leave`, { method: 'DELETE' });
     }
 
-    return { save, load, clear, startStream, joinStream, endStream, leaveStream };
+    async function inviteCoHost(streamId, username) {
+        await apiFetch(`/streams/${streamId}/cohost/invite`, {
+            method: 'POST',
+            body: JSON.stringify({ target_username: username }),
+        });
+    }
+
+    /** Sahne davetini kabul et — yeni can_publish=true token döner.
+     *  Mevcut odadan çıkar, yeni tokenla bağlanır ve local kamerayı .cohost-pip içinde gösterir. */
+    async function acceptCoHostInvite(streamId) {
+        const data = await apiFetch(`/streams/${streamId}/cohost/accept`, { method: 'POST' });
+        // Mevcut bağlantıyı kes
+        await disconnectRoom();
+        // Yeni tokenla bağlan (publisher)
+        const container = document.getElementById('videoContainer');
+        let pipEl = container?.querySelector('.cohost-pip');
+        if (!pipEl) {
+            pipEl = document.createElement('div');
+            pipEl.className = 'cohost-pip';
+            container?.appendChild(pipEl);
+        }
+        const localVidEl = document.createElement('video');
+        localVidEl.autoplay = true;
+        localVidEl.playsInline = true;
+        localVidEl.muted = true; // kendi sesini duymamalı
+        pipEl.innerHTML = '';
+        pipEl.appendChild(localVidEl);
+
+        const room = await connectRoom({
+            livekit_url: data.livekit_url,
+            token: data.token,
+            isHost: true,            // can_publish=true → kamera/mikrofon aç
+            localVideoEl: localVidEl,
+            remoteVideoEl: document.getElementById('mainVideo'),
+            remoteAudioEl: document.getElementById('remoteAudio'),
+            onDisconnect: () => {
+                pipEl.remove();
+            },
+            onRemoteVideo: () => {},
+        });
+        return room;
+    }
+
+    async function removeCoHost(streamId, username) {
+        await apiFetch(`/streams/${streamId}/cohost/remove`, {
+            method: 'POST',
+            body: JSON.stringify({ target_username: username }),
+        });
+    }
+
+    return { save, load, clear, startStream, joinStream, endStream, leaveStream, inviteCoHost, acceptCoHostInvite, removeCoHost };
 })();
 
 
@@ -63,12 +113,39 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
         dynacast: true,
     });
 
+    // İlk video track'i kimin olduğunu takip et (host sid)
+    let _hostParticipantSid = null;
+
     // Uzak track geldiğinde (yeni katılanlar veya bağlantı sonrası)
     _room.on(RoomEvent.TrackSubscribed, (track, _pub, participant) => {
         console.log('[LiveKit] TrackSubscribed:', track.kind, 'participant:', participant.identity);
-        if (track.kind === Track.Kind.Video && remoteVideoEl) {
-            track.attach(remoteVideoEl);
-            if (onRemoteVideo) onRemoteVideo();
+        if (track.kind === Track.Kind.Video) {
+            if (_hostParticipantSid === null) {
+                // İlk video track = host → ana ekrana
+                _hostParticipantSid = participant.sid;
+                if (remoteVideoEl) {
+                    track.attach(remoteVideoEl);
+                    if (onRemoteVideo) onRemoteVideo();
+                }
+            } else if (participant.sid !== _hostParticipantSid) {
+                // İkinci farklı katılımcı = co-host → PiP kutusu
+                const container = document.getElementById('videoContainer');
+                if (container) {
+                    let pipEl = container.querySelector('.cohost-pip');
+                    if (!pipEl) {
+                        pipEl = document.createElement('div');
+                        pipEl.className = 'cohost-pip';
+                        container.appendChild(pipEl);
+                    }
+                    const vidEl = document.createElement('video');
+                    vidEl.autoplay = true;
+                    vidEl.playsInline = true;
+                    vidEl.muted = true;
+                    pipEl.innerHTML = '';
+                    pipEl.appendChild(vidEl);
+                    track.attach(vidEl);
+                }
+            }
         } else if (track.kind === Track.Kind.Audio) {
             if (!isHost && remoteAudioEl) {
                 track.attach(remoteAudioEl);
@@ -93,8 +170,14 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
         console.log('[LiveKit] ConnectionStateChanged:', state);
     });
 
-    _room.on(RoomEvent.TrackUnsubscribed, (track) => {
+    _room.on(RoomEvent.TrackUnsubscribed, (track, _pub, participant) => {
         track.detach();
+        // Co-host sahneden ayrıldıysa PiP kutusunu kaldır
+        if (track.kind === Track.Kind.Video && participant && participant.sid !== _hostParticipantSid) {
+            const container = document.getElementById('videoContainer');
+            const pipEl = container?.querySelector('.cohost-pip');
+            if (pipEl) pipEl.remove();
+        }
     });
 
     _room.on(RoomEvent.Disconnected, () => {

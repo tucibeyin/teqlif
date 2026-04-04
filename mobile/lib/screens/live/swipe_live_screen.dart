@@ -3,12 +3,14 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/api.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
 import '../../core/app_exception.dart';
 import '../../core/logger_service.dart';
+import '../../services/storage_service.dart';
 import '../../services/stream_service.dart';
 import '../../utils/error_helper.dart';
 import '../../widgets/auction_panel.dart';
@@ -116,13 +118,17 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   Room? _room;
   EventsListener<RoomEvent>? _listener;
   JoinTokenOut? _token;
-  VideoTrack? _remoteVideoTrack;
+  VideoTrack? _remoteVideoTrack;       // Ana ekran — host'un video track'i
+  VideoTrack? _coHostVideoTrack;       // PiP — başka birinin co-host track'i
+  LocalVideoTrack? _localVideoTrack;   // PiP — kendim co-host olduğumda kamera
+  String? _hostParticipantSid;         // İlk video track'i kimin olduğunu takip eder
   bool _loading = false;
   bool _streamEnded = false;
   int _viewerCount = 0;
   bool _selfMuted = false;
   bool _kicked = false;
   bool _isCoHost = false;
+  bool _isSelfCoHost = false;          // Ben sahneye çıktım → local kamera açık
   final Set<String> _coHostMutedUsers = {};
   final _heartsKey = GlobalKey<FloatingHeartsState>();
   Timer? _likeThrottleTimer;
@@ -130,6 +136,8 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   // single() modunda token geldikten sonra doldurulur
   String? _resolvedTitle;
   String? _resolvedHostUsername;
+  // Sahne daveti kontrol için kendi kullanıcı adım
+  String? _myUsername;
   // leaveStream'in çift çağrılmasını önler
   bool _leftStream = false;
 
@@ -161,8 +169,16 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     setState(() {
       _loading = true;
       _remoteVideoTrack = null;
+      _coHostVideoTrack = null;
       _streamEnded = false;
     });
+
+    // Kendi kullanıcı adını yükle (sahne daveti kontrolü için)
+    if (_myUsername == null) {
+      final info = await StorageService.getUserInfo();
+      _myUsername = info?['username'] as String?;
+    }
+
     try {
       final token = await StreamService.joinStream(widget.stream.id);
       if (!mounted) return;
@@ -180,12 +196,26 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
       _listener!.on<TrackSubscribedEvent>((e) {
         if (e.track is VideoTrack && mounted) {
-          setState(() => _remoteVideoTrack = e.track as VideoTrack);
+          final vTrack = e.track as VideoTrack;
+          if (_hostParticipantSid == null) {
+            // İlk video track = host'un track'i → ana ekrana
+            setState(() {
+              _remoteVideoTrack = vTrack;
+              _hostParticipantSid = e.participant.sid;
+            });
+          } else if (e.participant.sid != _hostParticipantSid) {
+            // Farklı katılımcı = co-host → PiP'e
+            setState(() => _coHostVideoTrack = vTrack);
+          }
         }
       });
       _listener!.on<TrackUnsubscribedEvent>((e) {
         if (e.track is VideoTrack && mounted) {
-          setState(() => _remoteVideoTrack = null);
+          if (e.track == _remoteVideoTrack) {
+            setState(() => _remoteVideoTrack = null);
+          } else if (e.track == _coHostVideoTrack) {
+            setState(() => _coHostVideoTrack = null);
+          }
         }
       });
       _listener!.on<RoomDisconnectedEvent>((_) {
@@ -202,8 +232,13 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
       for (final p in room.remoteParticipants.values) {
         for (final pub in p.videoTrackPublications) {
           if (pub.track != null) {
-            _remoteVideoTrack = pub.track as VideoTrack;
-            break;
+            final vTrack = pub.track as VideoTrack;
+            if (_hostParticipantSid == null) {
+              _remoteVideoTrack = vTrack;
+              _hostParticipantSid = p.sid;
+            } else if (p.sid != _hostParticipantSid) {
+              _coHostVideoTrack = vTrack;
+            }
           }
         }
       }
@@ -294,6 +329,165 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     );
   }
 
+  void _showCoHostInviteDialog(String hostUsername) {
+    showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Row(
+          children: [
+            Text('🎬', style: TextStyle(fontSize: 22)),
+            SizedBox(width: 8),
+            Text(
+              'Sahneye Davet Edildiniz!',
+              style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w700),
+            ),
+          ],
+        ),
+        content: Text(
+          '@$hostUsername sizi sahneye davet etti.\nKameranız açılacak — kabul ediyor musunuz?',
+          style: const TextStyle(color: Color(0xFF94A3B8), fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Reddet', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF6366F1),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Kabul Et', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    ).then((accepted) {
+      if (accepted == true) _acceptCoHostInvite();
+    });
+  }
+
+  void _handleCoHostRemoved() {
+    if (!mounted) return;
+    // Kamerayı kapat, local track'i temizle
+    _room?.localParticipant?.setCameraEnabled(false);
+    _room?.localParticipant?.setMicrophoneEnabled(false);
+    setState(() {
+      _localVideoTrack = null;
+      _isSelfCoHost = false;
+    });
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('📵 Sahneden kaldırıldınız'),
+        backgroundColor: Color(0xFF475569),
+        duration: Duration(seconds: 3),
+      ),
+    );
+  }
+
+  Future<void> _acceptCoHostInvite() async {
+    // 1. Kamera ve mikrofon izni iste
+    final camStatus = await Permission.camera.request();
+    final micStatus = await Permission.microphone.request();
+    if (!mounted) return;
+    if (camStatus.isDenied || micStatus.isDenied) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Sahneye çıkmak için kamera ve mikrofon izni gerekli'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // 2. Yeni can_publish=true token al
+    late StreamTokenOut newToken;
+    try {
+      newToken = await StreamService.acceptCoHostInvite(widget.stream.id);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sahne bağlantısı kurulamadı: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+
+    // 3. Mevcut odadan çık (leaveStream çağırmıyoruz, yeniden join edeceğiz)
+    _listener?.dispose();
+    _listener = null;
+    await _room?.disconnect();
+    _room = null;
+    _hostParticipantSid = null;
+    _coHostVideoTrack = null;
+
+    // 4. Yeni token ile odaya yayıncı olarak bağlan
+    try {
+      final room = Room();
+      _listener = room.createListener();
+
+      // Host'un track'ini ana ekrana bağla
+      _listener!.on<TrackSubscribedEvent>((e) {
+        if (e.track is VideoTrack && mounted) {
+          setState(() {
+            _remoteVideoTrack = e.track as VideoTrack;
+            _hostParticipantSid = e.participant.sid;
+          });
+        }
+      });
+      _listener!.on<TrackUnsubscribedEvent>((e) {
+        if (e.track is VideoTrack && e.track == _remoteVideoTrack && mounted) {
+          setState(() => _remoteVideoTrack = null);
+        }
+      });
+      _listener!.on<LocalTrackPublishedEvent>((e) {
+        if (e.publication.track is LocalVideoTrack && mounted) {
+          setState(() => _localVideoTrack = e.publication.track as LocalVideoTrack);
+        }
+      });
+      _listener!.on<RoomDisconnectedEvent>((_) {
+        if (mounted) {
+          setState(() {
+            _remoteVideoTrack = null;
+            _localVideoTrack = null;
+            _isSelfCoHost = false;
+          });
+        }
+      });
+
+      await room.connect(
+        newToken.livekitUrl,
+        newToken.token,
+        connectOptions: const ConnectOptions(autoSubscribe: true),
+      );
+      await room.localParticipant?.setCameraEnabled(true);
+      await room.localParticipant?.setMicrophoneEnabled(true);
+
+      if (mounted) {
+        setState(() {
+          _room = room;
+          _isSelfCoHost = true;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Sahneye bağlanılamadı: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
   void _showCoHostModSheet(String targetUsername) {
     final isMuted = _coHostMutedUsers.contains(targetUsername);
     showModalBottomSheet(
@@ -324,7 +518,15 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
       }
     }
     await room?.disconnect();
-    if (mounted) setState(() => _remoteVideoTrack = null);
+    if (mounted) {
+      setState(() {
+        _remoteVideoTrack = null;
+        _coHostVideoTrack = null;
+        _localVideoTrack = null;
+        _hostParticipantSid = null;
+        _isSelfCoHost = false;
+      });
+    }
   }
 
   // dispose'da await kullanamayız, senkron temizlik
@@ -335,6 +537,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
     final room = _room;
     _room = null;
     _token = null;
+    _hostParticipantSid = null;
     room?.disconnect();
     if (!_leftStream) {
       _leftStream = true;
@@ -462,6 +665,49 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
         // ── Uçuşan kalpler ───────────────────────────────────────────────
         FloatingHearts(key: _heartsKey),
 
+        // ── Co-Host PiP kutusu — sağ üst ────────────────────────────────
+        // Öncelik: kendin co-host → local kamera. Değilse diğerinin track'i.
+        if (_isSelfCoHost && _localVideoTrack != null)
+          Positioned(
+            top: topPad + 70,
+            right: 16,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 110,
+                height: 160,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: VideoTrackRenderer(
+                  _localVideoTrack!,
+                  fit: VideoViewFit.contain,
+                ),
+              ),
+            ),
+          )
+        else if (!_isSelfCoHost && _coHostVideoTrack != null)
+          Positioned(
+            top: topPad + 70,
+            right: 16,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Container(
+                width: 110,
+                height: 160,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: VideoTrackRenderer(
+                  _coHostVideoTrack!,
+                  fit: VideoViewFit.contain,
+                ),
+              ),
+            ),
+          ),
+
         // ── Swipe ipucu (son sayfa değilse) ─────────────────────────────
         if (!widget.isLast && !_streamEnded)
           Positioned(
@@ -518,6 +764,18 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                     },
                     onStreamLike: (_, __) =>
                         _heartsKey.currentState?.addHeart(isLocal: false),
+                    onCoHostInvite: (hostUsername, targetUsername) {
+                      if (!mounted || _isSelfCoHost) return;
+                      if (targetUsername == _myUsername) {
+                        _showCoHostInviteDialog(hostUsername);
+                      }
+                    },
+                    onCoHostRemoved: (targetUsername) {
+                      if (!mounted || !_isSelfCoHost) return;
+                      if (targetUsername == _myUsername) {
+                        _handleCoHostRemoved();
+                      }
+                    },
                     onUsernameTap: (username) {
                       if (_isCoHost) {
                         _showCoHostModSheet(username);

@@ -68,6 +68,13 @@ class ChatPanel extends StatefulWidget {
   /// [userId] ve [username] gönderen kişiyi içerir.
   final void Function(int userId, String username)? onStreamLike;
 
+  /// Host, birini sahneye davet ettiğinde tüm odaya gelir.
+  /// [hostUsername] daveti gönderen host, [targetUsername] davet edilen kullanıcı.
+  final void Function(String hostUsername, String targetUsername)? onCoHostInvite;
+
+  /// Host, sahnedeki konuğu kaldırdığında tüm odaya gelir.
+  final void Function(String targetUsername)? onCoHostRemoved;
+
   /// true ise pin banner mesaj input'unun altında gösterilir (host ekranı için).
   final bool pinAtBottom;
 
@@ -96,6 +103,8 @@ class ChatPanel extends StatefulWidget {
     this.pinAtBottom = false,
     this.pinDismissible = false,
     this.trailingAction,
+    this.onCoHostInvite,
+    this.onCoHostRemoved,
   });
 
   @override
@@ -322,6 +331,13 @@ class ChatPanelState extends State<ChatPanel> {
               if (_myUserId == null || likeUserId != _myUserId) {
                 _eventType = 'stream_like:$likeUserId:$likeUsername';
               }
+            } else if (json['type'] == 'cohost_invite') {
+              final hostUsername   = json['host_username'] as String? ?? '';
+              final targetUsername = json['target_username'] as String? ?? '';
+              _eventType = 'cohost_invite:$hostUsername:$targetUsername';
+            } else if (json['type'] == 'cohost_removed') {
+              final targetUsername = json['target_username'] as String? ?? '';
+              _eventType = 'cohost_removed:$targetUsername';
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -371,6 +387,17 @@ class ChatPanelState extends State<ChatPanel> {
             final likeUserId = colon >= 0 ? int.tryParse(rest.substring(0, colon)) ?? 0 : 0;
             final likeUsername = colon >= 0 ? rest.substring(colon + 1) : '';
             widget.onStreamLike?.call(likeUserId, likeUsername);
+          }
+          if (_eventType != null && _eventType!.startsWith('cohost_invite:')) {
+            final rest  = _eventType!.substring('cohost_invite:'.length);
+            final colon = rest.indexOf(':');
+            final hostUsername   = colon >= 0 ? rest.substring(0, colon) : rest;
+            final targetUsername = colon >= 0 ? rest.substring(colon + 1) : '';
+            widget.onCoHostInvite?.call(hostUsername, targetUsername);
+          }
+          if (_eventType != null && _eventType!.startsWith('cohost_removed:')) {
+            final targetUsername = _eventType!.substring('cohost_removed:'.length);
+            widget.onCoHostRemoved?.call(targetUsername);
           }
         },
         onDone: _scheduleReconnect,

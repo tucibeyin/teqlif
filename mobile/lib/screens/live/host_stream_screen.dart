@@ -53,6 +53,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   double _currentZoom = 1.0;
   static const double _maxZoom = 8.0;
   final Set<String> _modUsers   = {};
+  VideoTrack? _coHostTrack;
   final _chatKey = GlobalKey<ChatPanelState>();
   final _heartsKey = GlobalKey<FloatingHeartsState>();
 
@@ -103,6 +104,18 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           setState(() {
             _localVideoTrack = event.publication.track as LocalVideoTrack;
           });
+        }
+      });
+
+      // Sahneye çıkan izleyicinin video track'ini PiP'e bağla
+      _listener!.on<TrackSubscribedEvent>((event) {
+        if (event.track is VideoTrack && mounted) {
+          setState(() => _coHostTrack = event.track as VideoTrack);
+        }
+      });
+      _listener!.on<TrackUnsubscribedEvent>((event) {
+        if (event.track is VideoTrack && event.track == _coHostTrack && mounted) {
+          setState(() => _coHostTrack = null);
         }
       });
 
@@ -316,6 +329,32 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     );
   }
 
+  Future<void> _inviteCoHost(String username) async {
+    try {
+      await StreamService.inviteCoHost(widget.streamToken.streamId, username);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎬 @$username sahneye davet edildi'),
+            backgroundColor: const Color(0xFF6366F1),
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 3),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Davet gönderilemedi: $e'),
+            backgroundColor: Colors.red,
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    }
+  }
+
   void _showModSheet(String username) {
     showModalBottomSheet(
       context: context,
@@ -329,6 +368,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         onUnmuted: () => setState(() => _mutedUsers.remove(username)),
         onPromoted: () => setState(() => _modUsers.add(username)),
         onDemoted: () => setState(() => _modUsers.remove(username)),
+        onInviteCoHost: () => _inviteCoHost(username),
       ),
     );
   }
@@ -602,6 +642,28 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                     ),
                     const SizedBox(height: 4),
                   ],
+                ),
+              ),
+            ),
+
+          // ── Co-Host PiP kutusu — sağ üst ────────────────────────────────
+          if (live && _coHostTrack != null)
+            Positioned(
+              top: topPad + 70,
+              right: 16,
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  width: 110,
+                  height: 160,
+                  decoration: BoxDecoration(
+                    border: Border.all(color: Colors.white, width: 2),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: VideoTrackRenderer(
+                    _coHostTrack!,
+                    fit: VideoViewFit.contain,
+                  ),
                 ),
               ),
             ),
@@ -1036,6 +1098,7 @@ class _ModerationSheet extends StatefulWidget {
   final VoidCallback onUnmuted;
   final VoidCallback onPromoted;
   final VoidCallback onDemoted;
+  final VoidCallback? onInviteCoHost;
 
   const _ModerationSheet({
     required this.streamId,
@@ -1046,6 +1109,7 @@ class _ModerationSheet extends StatefulWidget {
     required this.onUnmuted,
     required this.onPromoted,
     required this.onDemoted,
+    this.onInviteCoHost,
   });
 
   @override
@@ -1190,6 +1254,21 @@ class _ModerationSheetState extends State<_ModerationSheet> {
               ),
             ),
           const SizedBox(height: 10),
+
+          // Sahneye Davet Et
+          if (widget.onInviteCoHost != null) ...[
+            _ModBtn(
+              icon: '🎬',
+              label: 'Sahneye Davet Et',
+              color: const Color(0xFF6366F1),
+              loading: _loading,
+              onTap: () {
+                Navigator.pop(context);
+                widget.onInviteCoHost!();
+              },
+            ),
+            const SizedBox(height: 10),
+          ],
 
           // Yayından At
           _ModBtn(
