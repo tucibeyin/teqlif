@@ -76,8 +76,8 @@ const Stream = (() => {
         pipEl.innerHTML = '';
         pipEl.appendChild(localVidEl);
 
-        // Host identity: viewer olarak kaydedilen stream datasından al
-        const hostIdentity = load()?.host_username || null;
+        // Host identity: viewer olarak kaydedilen stream datasından al (= str(host.id))
+        const hostIdentity = load()?.host_livekit_identity || null;
         const room = await connectRoom({
             livekit_url: data.livekit_url,
             token: data.token,

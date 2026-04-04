@@ -92,6 +92,7 @@ class JoinTokenOut {
   final String token;
   final String title;
   final String hostUsername;
+  final String hostLivekitIdentity;  // LiveKit identity = str(host.id)
 
   JoinTokenOut({
     required this.streamId,
@@ -100,6 +101,7 @@ class JoinTokenOut {
     required this.token,
     required this.title,
     required this.hostUsername,
+    required this.hostLivekitIdentity,
   });
 
   factory JoinTokenOut.fromJson(Map<String, dynamic> json) => JoinTokenOut(
@@ -109,5 +111,6 @@ class JoinTokenOut {
         token: json['token'],
         title: json['title'],
         hostUsername: json['host_username'],
+        hostLivekitIdentity: json['host_livekit_identity'],
       );
 }

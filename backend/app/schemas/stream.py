@@ -65,3 +65,4 @@ class JoinTokenOut(BaseModel):
     token: str
     title: str
     host_username: str
+    host_livekit_identity: str  # LiveKit token identity = str(host.id)

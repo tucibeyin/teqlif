@@ -312,6 +312,7 @@ class StreamService:
             token=token,
             title=stream.title,
             host_username=stream.host.username,
+            host_livekit_identity=str(stream.host_id),
         )
 
     # ── İzleyici Listesi ─────────────────────────────────────────────────────
