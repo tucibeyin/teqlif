@@ -147,24 +147,24 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
                 }
             }
         } else if (track.kind === Track.Kind.Audio) {
-            if (!isHost && remoteAudioEl) {
+            // TrackSubscribed sadece REMOTE track'ler için tetiklenir.
+            // Host kendi sesini buradan almaz; gelen audio her zaman
+            // başka bir katılımcıya (co-host veya viewer) aittir.
+            // Hem host hem viewer: remote audio'yu çal.
+            if (remoteAudioEl) {
                 track.attach(remoteAudioEl);
-            } else if (isHost) {
-                // Host kendi sesini duymamalı — SDK'nın iç AudioManager'ını sıfırla
-                try { track.setVolume(0); } catch (_) {}
             }
         }
     });
 
     // Track yayınlandığında ama henüz abone olunmadıysa (auto-subscribe devre dışıysa fallback)
-    if (!isHost) {
-        _room.on(RoomEvent.TrackPublished, (pub, participant) => {
-            console.log('[LiveKit] TrackPublished:', pub.kind, 'isSubscribed:', pub.isSubscribed, 'participant:', participant.identity);
-            if (!pub.isSubscribed) {
-                pub.setSubscribed(true);
-            }
-        });
-    }
+    // Host dahil herkes için aktif — co-host publish ettiğinde host da alabilsin.
+    _room.on(RoomEvent.TrackPublished, (pub, participant) => {
+        console.log('[LiveKit] TrackPublished:', pub.kind, 'isSubscribed:', pub.isSubscribed, 'participant:', participant.identity);
+        if (!pub.isSubscribed) {
+            pub.setSubscribed(true);
+        }
+    });
 
     _room.on(RoomEvent.ConnectionStateChanged, (state) => {
         console.log('[LiveKit] ConnectionStateChanged:', state);
@@ -194,6 +194,11 @@ async function connectRoom({ livekit_url, token, isHost, localVideoEl, remoteVid
     console.log('[LiveKit] Bağlandı. RemoteParticipants:', _room.remoteParticipants.size);
 
     if (isHost) {
+        // Host olarak bağlandık — kendi SID'imizi hemen kaydet.
+        // TrackSubscribed sadece remote track'ler için çalışır; gelen
+        // ilk remote VideoTrack host'un değil co-host'un track'idir.
+        _hostParticipantSid = _room.localParticipant.sid;
+
         await _room.localParticipant.setCameraEnabled(true);
         await _room.localParticipant.setMicrophoneEnabled(true);
 
