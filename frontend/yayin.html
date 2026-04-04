@@ -1817,7 +1817,7 @@
                     remoteVideoEl: isHost ? null : mainVideo,
                     remoteAudioEl: isHost ? null : remoteAudio,
                     onDisconnect: () => {
-                        if (!isHost) {
+                        if (!isHost && !_isSelfCoHost) {
                             _onStreamEndedViewer();
                         }
                     },
@@ -3004,9 +3004,9 @@
 
         document.getElementById('cohostInviteAccept')?.addEventListener('click', async () => {
             document.getElementById('cohostInviteModal').style.display = 'none';
+            _isSelfCoHost = true; // disconnectRoom() tetiklenmeden önce set et
             try {
                 await Stream.acceptCoHostInvite(streamId);
-                _isSelfCoHost = true;
                 // PiP'e "Sahneden Çık" butonu ekle
                 const pipEl = document.getElementById('videoContainer')?.querySelector('.cohost-pip');
                 if (pipEl) {
@@ -3017,6 +3017,7 @@
                     pipEl.appendChild(btn);
                 }
             } catch (e) {
+                _isSelfCoHost = false; // bağlantı başarısız — flag'i geri al
                 console.error('[COHOST] Sahneye bağlanılamadı:', e);
                 const el = document.createElement('div');
                 el.style.cssText = 'position:fixed;top:24px;left:50%;transform:translateX(-50%);z-index:9999;background:#ef4444;color:#fff;padding:10px 20px;border-radius:10px;font-size:0.88rem;';
