@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:confetti/confetti.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:livekit_client/livekit_client.dart';
@@ -142,10 +143,13 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
   String? _myUsername;
   // leaveStream'in çift çağrılmasını önler
   bool _leftStream = false;
+  // Kazanan konfetisi
+  late ConfettiController _confettiController;
 
   @override
   void initState() {
     super.initState();
+    _confettiController = ConfettiController(duration: const Duration(seconds: 3));
     if (widget.isActive) _activate();
   }
 
@@ -161,8 +165,15 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
 
   @override
   void dispose() {
+    _confettiController.dispose();
     _deactivateSync();
     super.dispose();
+  }
+
+  void _onAuctionWon() {
+    _confettiController.play();
+    HapticFeedback.heavyImpact();
+    Future.delayed(const Duration(milliseconds: 200), HapticFeedback.vibrate);
   }
 
   Future<void> _activate() async {
@@ -868,12 +879,32 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                     isCoHost: _isCoHost,
                     enabled: !_selfMuted,
                     hostUserId: int.tryParse(_token?.hostLivekitIdentity ?? ''),
+                    myUsername: _myUsername,
+                    onWin: _onAuctionWon,
                   ),
                   const SizedBox(height: 4),
                 ],
               ),
             ),
           ),
+        // ── Kazanan konfetisi — tüm ekranı kaplar ───────────────────────
+        Align(
+          alignment: Alignment.topCenter,
+          child: ConfettiWidget(
+            confettiController: _confettiController,
+            blastDirectionality: BlastDirectionality.explosive,
+            emissionFrequency: 0.05,
+            numberOfParticles: 50,
+            gravity: 0.2,
+            colors: const [
+              Color(0xFFFBBF24), // amber
+              Color(0xFF06B6D4), // cyan (tema rengi)
+              Color(0xFF22D3EE), // cyan-light
+              Color(0xFFF97316), // orange
+              Colors.white,
+            ],
+          ),
+        ),
       ],
     );
   }

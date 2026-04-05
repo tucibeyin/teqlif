@@ -31,6 +31,10 @@ class AuctionPanel extends ConsumerStatefulWidget {
   final bool isCoHost;
   /// Moderatör/co-host ilanları bu user'dan yükler (null → kendi ilanları = gerçek host)
   final int? hostUserId;
+  /// Mevcut kullanıcının adı — kazanma tespiti için
+  final String? myUsername;
+  /// İhaleyi kazandığında tetiklenir (konfeti/titreşim için)
+  final VoidCallback? onWin;
 
   const AuctionPanel({
     super.key,
@@ -41,6 +45,8 @@ class AuctionPanel extends ConsumerStatefulWidget {
     this.enabled = true,
     this.isCoHost = false,
     this.hostUserId,
+    this.myUsername,
+    this.onWin,
   });
 
   @override
@@ -278,6 +284,16 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       if (prev != null && next.isIdle && !prev.isIdle) {
         widget.onAuctionReset?.call();
       }
+      // Kazanan tespiti: normal bitiş
+      if (prev != null &&
+          !prev.isEnded &&
+          next.isEnded &&
+          !next.isBoughtItNow &&
+          next.currentBidder != null &&
+          widget.myUsername != null &&
+          next.currentBidder == widget.myUsername) {
+        widget.onWin?.call();
+      }
       // Hemen Al tamamlandığında bildirim göster
       if (prev != null && !prev.isBoughtItNow && next.isBoughtItNow) {
         if (widget.isHost) {
@@ -286,6 +302,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
           _setMsg(l.auctionBuyNowCompleted(buyer, price));
         } else if (_iAmBinBuyer) {
           _setMsg(l.auctionBuyNowCongrats);
+          widget.onWin?.call();
         } else {
           final buyer = next.buyerUsername ?? next.currentBidder ?? '?';
           _setMsg(l.auctionBuyNowSoldOther(buyer));
