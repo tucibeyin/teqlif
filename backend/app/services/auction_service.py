@@ -273,12 +273,19 @@ class AuctionService:
 
     # ── Yardımcı: stream & host doğrulama ───────────────────────────────────
     async def _require_host(self, stream_id: int, user: User) -> LiveStream:
+        from app.services.moderation_service import mod_key
+        from app.utils.redis_client import get_redis
+
         result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
         if not stream:
             raise NotFoundException("Yayın bulunamadı")
         if stream.host_id != user.id:
-            raise ForbiddenException("Sadece host bu işlemi yapabilir")
+            # Moderatör de bu işlemi yapabilir
+            redis = await get_redis()
+            is_mod = await redis.sismember(mod_key(stream_id), str(user.id))
+            if not is_mod:
+                raise ForbiddenException("Sadece host veya moderatör bu işlemi yapabilir")
         if not stream.is_live:
             raise BadRequestException("Yayın aktif değil")
         return stream
