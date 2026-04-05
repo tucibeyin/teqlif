@@ -2484,7 +2484,16 @@
 
         async function loadHostListings() {
             try {
-                _hostListings = await apiFetch('/listings/my?active=true');
+                // Gerçek host → kendi ilanları. Moderatör → host'un ilanları.
+                const info = Stream.load();
+                const hostId = info?.host_livekit_identity; // = str(host.id), viewer'da dolu
+                if (!_isHostPage && hostId) {
+                    // Moderatör: host'un ilanlarını yükle
+                    _hostListings = await apiFetch(`/listings?user_id=${hostId}&active=true`);
+                } else {
+                    // Gerçek host: kendi ilanları
+                    _hostListings = await apiFetch('/listings/my?active=true');
+                }
                 _buildPickerItems();
             } catch (_) { }
         }
