@@ -1317,6 +1317,7 @@
         .bid-user.clickable { cursor: pointer; }
         .bid-user.clickable:hover { text-decoration: underline; }
     </style>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 
 <body>
@@ -2152,6 +2153,7 @@
                     setAuctionMsg(`🛒 Hemen Al tamamlandı! @${buyer}${price ? ' — ' + price : ''}`, 'success');
                 } else if (wasBuyer) {
                     setAuctionMsg('🎉 Tebrikler! Satın alma tamamlandı.', 'success');
+                    Auction.fireWinnerConfetti();
                 } else {
                     setAuctionMsg(`🛒 Ürün Hemen Satıldı! @${buyer}${price ? ' — ' + price : ''}`, '');
                 }
@@ -2173,6 +2175,14 @@
             if (state.status === 'idle' || state.status === 'active') {
                 _isBoughtItNow = false;
                 _hideSoldBanner();
+            }
+
+            // Normal bitiş konfetisi: active/paused → ended geçişinde kazanan kullanıcıya patlat
+            if (state.status === 'ended' && _prevAuctionStatus !== 'ended' && !_isBoughtItNow) {
+                const myUsername = Auth.getUser()?.username;
+                if (myUsername && state.current_bidder && state.current_bidder === myUsername) {
+                    Auction.fireWinnerConfetti();
+                }
             }
 
             const panel = document.getElementById('auctionPanel');

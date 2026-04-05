@@ -108,5 +108,48 @@ const Auction = (() => {
         return await apiFetch(`/auction/${_streamId}/accept`, { method: 'POST' });
     }
 
-    return { connect, disconnect, startAuction, pauseAuction, resumeAuction, endAuction, placeBid, acceptBid, buyItNow, acceptBuyItNow, rejectBuyItNow, STATUS_LABELS };
+    // ── Kazanan konfetisi ─────────────────────────────────────────────────
+    function fireWinnerConfetti() {
+        if (typeof confetti !== 'function') return;
+
+        console.log('[Auction] Konfeti patlatıldı, kazanan biziz!');
+
+        const COLORS = ['#fbbf24', '#06b6d4', '#22d3ee', '#ffffff', '#f97316'];
+
+        // Sol alt köşeden fırlatma
+        confetti({
+            particleCount: 80,
+            angle: 60,
+            spread: 55,
+            startVelocity: 55,
+            origin: { x: 0, y: 1 },
+            colors: COLORS,
+            gravity: 0.9,
+        });
+
+        // Sağ alt köşeden fırlatma
+        confetti({
+            particleCount: 80,
+            angle: 120,
+            spread: 55,
+            startVelocity: 55,
+            origin: { x: 1, y: 1 },
+            colors: COLORS,
+            gravity: 0.9,
+        });
+
+        // 400ms sonra merkezi bir burst
+        setTimeout(() => {
+            confetti({
+                particleCount: 60,
+                spread: 80,
+                startVelocity: 40,
+                origin: { x: 0.5, y: 0.65 },
+                colors: COLORS,
+                gravity: 1.1,
+            });
+        }, 400);
+    }
+
+    return { connect, disconnect, startAuction, pauseAuction, resumeAuction, endAuction, placeBid, acceptBid, buyItNow, acceptBuyItNow, rejectBuyItNow, fireWinnerConfetti, STATUS_LABELS };
 })();
