@@ -110,7 +110,10 @@ const Auction = (() => {
 
     // ── Kazanan konfetisi ─────────────────────────────────────────────────
     function fireWinnerConfetti() {
-        if (typeof confetti !== 'function') return;
+        if (typeof confetti !== 'function') {
+            console.warn('[Auction] confetti yüklenemedi — typeof:', typeof confetti);
+            return;
+        }
 
         console.log('[Auction] Konfeti patlatıldı, kazanan biziz!');
 
