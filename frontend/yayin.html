@@ -1317,7 +1317,6 @@
         .bid-user.clickable { cursor: pointer; }
         .bid-user.clickable:hover { text-decoration: underline; }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
 </head>
 
 <body>
@@ -1586,6 +1585,7 @@
     <script src="/static/js/main.js?v=4"></script>
     <script src="/static/js/auth.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <script src="/static/js/stream.js?v=4"></script>
     <script src="/static/js/auction.js?v=7"></script>
     <script src="/static/js/chat.js?v=8"></script>
@@ -2018,6 +2018,7 @@
         let _currentBid = 0;
         let _currentBidder = null;
         let _currentItemName = null;
+        let _iAmLeadingBidder = false; // En yüksek teklif bende → bitiş konfetisi için
         let _currentListingId = null;  // viewer için pinlenmiş ilan
         let _selectedListingId = null; // host için seçilen ilan
         let _listingMode = false;      // host: listing mi manual mı
@@ -2172,22 +2173,30 @@
 
             // idle VEYA active'e geçişte buy-it-now bayrağını sıfırla.
             // Buy-it-now sonrası yeni artırma idle'dan geçmeden doğrudan active gelir.
-            if (state.status === 'idle' || state.status === 'active') {
+            if (state.status === 'idle') {
                 _isBoughtItNow = false;
+                _iAmLeadingBidder = false;
                 _hideSoldBanner();
             }
+            if (state.status === 'active') {
+                _isBoughtItNow = false;
+                _hideSoldBanner();
+                // En yüksek teklif bende mi? — ended'te konfeti için takip et
+                const _me = Auth.getUser()?.username;
+                _iAmLeadingBidder = !!(_me && state.current_bidder && state.current_bidder === _me);
+            }
 
-            // Normal bitiş konfetisi: active/paused → ended geçişinde kazanan kullanıcıya patlat
+            // Normal bitiş konfetisi: leading bidder idiysen patlat
             if (state.status === 'ended' && _prevAuctionStatus !== 'ended' && !_isBoughtItNow) {
-                const myUsername = Auth.getUser()?.username;
                 console.log('[Auction] Bitiş tespiti:', {
                     winner: state.current_bidder,
-                    myUsername,
-                    match: state.current_bidder === myUsername,
+                    iAmLeading: _iAmLeadingBidder,
+                    confettiAvailable: typeof confetti === 'function',
                 });
-                if (myUsername && state.current_bidder && state.current_bidder === myUsername) {
+                if (_iAmLeadingBidder) {
                     Auction.fireWinnerConfetti();
                 }
+                _iAmLeadingBidder = false;
             }
 
             const panel = document.getElementById('auctionPanel');
