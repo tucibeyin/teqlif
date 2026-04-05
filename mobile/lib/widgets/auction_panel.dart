@@ -29,6 +29,8 @@ class AuctionPanel extends ConsumerStatefulWidget {
   /// true ise Co-Host modunda çalışır: host kontrol UI'ı gösterilir,
   /// viewer teklif butonları gizlenir. Kamera/mikrofon/yayın bitirme yetkisi yoktur.
   final bool isCoHost;
+  /// Moderatör/co-host ilanları bu user'dan yükler (null → kendi ilanları = gerçek host)
+  final int? hostUserId;
 
   const AuctionPanel({
     super.key,
@@ -38,6 +40,7 @@ class AuctionPanel extends ConsumerStatefulWidget {
     this.onAuctionReset,
     this.enabled = true,
     this.isCoHost = false,
+    this.hostUserId,
   });
 
   @override
@@ -96,7 +99,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   Future<void> _showStartDialog() async {
     final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (ctx) => _StartAuctionDialog(),
+      builder: (ctx) => _StartAuctionDialog(hostUserId: widget.hostUserId),
     );
 
     if (result == null) return;
@@ -1490,6 +1493,8 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
 // ── Açık artırma başlatma dialogu ─────────────────────────────────────────────
 
 class _StartAuctionDialog extends StatefulWidget {
+  final int? hostUserId;
+  const _StartAuctionDialog({this.hostUserId});
   @override
   State<_StartAuctionDialog> createState() => _StartAuctionDialogState();
 }
@@ -1522,10 +1527,11 @@ class _StartAuctionDialogState extends State<_StartAuctionDialog> {
     try {
       final token = await StorageService.getToken();
       if (token == null) return;
-      final resp = await http.get(
-        Uri.parse('$kBaseUrl/listings/my?active=true'),
-        headers: {'Authorization': 'Bearer $token'},
-      );
+      // Moderatör/co-host → host'un ilanlarını yükle; gerçek host → kendi ilanları
+      final uri = widget.hostUserId != null
+          ? Uri.parse('$kBaseUrl/listings?user_id=${widget.hostUserId}&active=true')
+          : Uri.parse('$kBaseUrl/listings/my?active=true');
+      final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
       if (resp.statusCode == 200 && mounted) {
         setState(() => _listings = jsonDecode(resp.body) as List);
       }

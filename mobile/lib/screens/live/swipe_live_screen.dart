@@ -867,6 +867,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
                     isHost: false,
                     isCoHost: _isCoHost,
                     enabled: !_selfMuted,
+                    hostUserId: int.tryParse(_token?.hostLivekitIdentity ?? ''),
                   ),
                   const SizedBox(height: 4),
                 ],
