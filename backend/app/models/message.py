@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import Boolean, DateTime, Text, Integer, String, ForeignKey, func
+from sqlalchemy import Boolean, DateTime, Text, Integer, String, ForeignKey, func, Index
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.database import Base
@@ -7,6 +7,10 @@ from app.database import Base
 
 class DirectMessage(Base):
     __tablename__ = "direct_messages"
+    __table_args__ = (
+        # Konuşma sorgularında ve cleanup cron'unda kullanılır
+        Index("ix_direct_messages_conv_created", "sender_id", "receiver_id", "created_at"),
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     sender_id: Mapped[int] = mapped_column(Integer, ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)

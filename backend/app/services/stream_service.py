@@ -272,6 +272,17 @@ class StreamService:
         except Exception:
             logger.error("[STREAMS] Redis temizliği başarısız | room=%s", stream.room_name, exc_info=True)
 
+        # stream_likes temizle — yayın bitince kalp animasyon kayıtlarının değeri kalmaz
+        try:
+            from sqlalchemy import text
+            await self.db.execute(
+                text("DELETE FROM stream_likes WHERE stream_id = :sid"),
+                {"sid": stream_id},
+            )
+            await self.db.commit()
+        except Exception:
+            logger.warning("[STREAMS] stream_likes temizlenemedi | stream_id=%s", stream_id, exc_info=True)
+
         # Chat stream_ended eventi — non-critical
         try:
             await _publish_chat(stream_id, {"type": WS.STREAM_ENDED})
