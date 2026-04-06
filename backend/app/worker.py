@@ -65,9 +65,25 @@ async def send_push_notification_task(
         logger.warning("[Worker] send_push_notification_task: fcm_token boş, atlanıyor")
         return
     try:
-        from app.services.firebase_service import send_push
+        from app.services.firebase_service import send_push, InvalidFCMTokenError
         await send_push(fcm_token, title, body, badge=badge, notif_type=notif_type)
         logger.info("[Worker] Push bildirimi gönderildi | token=%s…", fcm_token[:12])
+    except InvalidFCMTokenError:
+        # Token geçersiz/silinmiş — DB'den temizle, retry yapma
+        logger.warning("[Worker] Geçersiz FCM token temizleniyor | token=%s…", fcm_token[:12])
+        try:
+            from app.database import AsyncSessionLocal
+            from app.models.user import User
+            from sqlalchemy import update as sa_update
+            async with AsyncSessionLocal() as db:
+                await db.execute(
+                    sa_update(User).where(User.fcm_token == fcm_token).values(fcm_token=None)
+                )
+                await db.commit()
+            logger.info("[Worker] FCM token temizlendi | token=%s…", fcm_token[:12])
+        except Exception as db_exc:
+            logger.error("[Worker] FCM token temizlenemedi | %s", db_exc)
+        # raise edilmez — ARQ retry yapmasın, kalıcı hata
     except Exception as exc:
         logger.error(
             "[Worker] Push bildirimi gönderilemedi | token=%s… | %s",
@@ -76,7 +92,7 @@ async def send_push_notification_task(
             exc_info=True,
         )
         capture_exception(exc)
-        raise  # ARQ görevi "failed" olarak işaretlenir
+        raise  # ARQ görevi "failed" olarak işaretlenir (geçici hatalar için retry)
 
 
 # ── Task: Süresi Dolan Hikaye Temizliği ──────────────────────────────────────

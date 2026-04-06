@@ -4,6 +4,13 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+class InvalidFCMTokenError(Exception):
+    """FCM token geçersiz veya süresi dolmuş — DB'den temizlenmeli."""
+    def __init__(self, token: str):
+        self.token = token
+        super().__init__(f"Invalid FCM token: {token[:12]}…")
+
+
 def _get_firebase_app():
     from app.config import settings
     if not settings.firebase_service_account:
@@ -60,4 +67,13 @@ async def send_push(
         )
         logger.info("[FCM] Push başarılı | message_id=%s", result)
     except Exception as exc:
+        # Token geçersiz/silinmiş → özel hata fırlat, worker DB'den temizler
+        try:
+            from firebase_admin import exceptions as fb_exceptions
+            if isinstance(exc, fb_exceptions.NotFoundError):
+                raise InvalidFCMTokenError(token) from exc
+        except InvalidFCMTokenError:
+            raise
+        except ImportError:
+            pass
         logger.error("[FCM] Push başarısız | %s", exc)
