@@ -27,6 +27,7 @@ from app.services.chat_service import (
     chat_pubsub_listener,        # noqa: F401 — main.py bu ismi buradan import eder
     moderation_pubsub_listener,  # noqa: F401 — main.py bu ismi buradan import eder
 )
+from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["chat"])
@@ -137,7 +138,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
         # ── 7. İzleyici sayacı ve katılma bildirimi ───────────────────────────
         if not is_host and room_name:
             await svc.add_viewer(stream_id, room_name, username)
-            await publish_chat(stream_id, {"type": "system_join", "username": username})
+            await publish_chat(stream_id, {"type": WS.SYSTEM_JOIN, "username": username})
 
         # ── 8. Geçmiş mesajlar, mevcut izleyici sayısı ve mod durumu ─────────
         try:
@@ -148,16 +149,16 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                 if not m.get("is_hidden") or m.get("username") == username
             ]
             if history:
-                await safe_send_json(websocket, {"type": "history", "messages": history})
+                await safe_send_json(websocket, {"type": WS.HISTORY, "messages": history})
 
             if room_name:
                 count = await svc.get_viewer_count(room_name)
-                await safe_send_json(websocket, {"type": "viewer_count", "count": count})
+                await safe_send_json(websocket, {"type": WS.VIEWER_COUNT, "count": count})
 
             if not is_host:
                 is_mod = await svc.get_mod_status(stream_id, user_id)
                 if is_mod:
-                    await safe_send_json(websocket, {"type": "mod_status", "is_mod": True})
+                    await safe_send_json(websocket, {"type": WS.MOD_STATUS, "is_mod": True})
                     logger.info(
                         "[CHAT WS] Moderatör bağlandı — mod_status gönderildi | stream_id=%s user_id=%s",
                         stream_id, user_id,
@@ -169,7 +170,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                 _saved_pin = await _redis.get(f"pin:{stream_id}")
                 if _saved_pin:
                     _pin_str = _saved_pin.decode() if isinstance(_saved_pin, bytes) else _saved_pin
-                    await safe_send_json(websocket, {"type": "host_pin", "content": _pin_str})
+                    await safe_send_json(websocket, {"type": WS.HOST_PIN, "content": _pin_str})
             except Exception:
                 pass
 
@@ -193,7 +194,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
             try:
                 import json as _json
                 payload = _json.loads(text)
-                if payload.get("type") == "message":
+                if payload.get("type") == WS.MESSAGE:
                     content = str(payload.get("content", "")).strip()[:500]
                     if not content:
                         continue
@@ -216,7 +217,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                     elif result.get("is_hidden"):
                         # Shadowban / küfür: mesajı sadece gönderene yolla (ghost)
                         await safe_send_json(websocket, result)
-                elif payload.get("type") == "host_pin" and is_host:
+                elif payload.get("type") == WS.HOST_PIN and is_host:
                     # Host'un sabitlediği mesaj — tüm izleyicilere yayınla.
                     # Boş string = sabiti kaldır komutu, o da yayınlanır.
                     pin_content = str(payload.get("content", "")).strip()[:200]
@@ -231,7 +232,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...))
                     except Exception as _exc:
                         logger.warning("[CHAT WS] Pin Redis yazma hatası | %s", _exc)
                     await publish_chat(stream_id, {
-                        "type": "host_pin",
+                        "type": WS.HOST_PIN,
                         "content": pin_content,
                         "username": username,
                     })

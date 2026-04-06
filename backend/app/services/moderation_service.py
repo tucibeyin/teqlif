@@ -25,6 +25,7 @@ from app.models.user import User
 from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException
 from app.core.logger import get_logger
+from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 
@@ -159,7 +160,7 @@ class ModerationService:
         await redis.sadd(mute_key(stream_id), str(target.id))
         await redis.expire(mute_key(stream_id), _TTL)
 
-        await publish_mod_event(stream_id, "muted", target.id)
+        await publish_mod_event(stream_id, WS.MUTED, target.id)
         logger.info(
             "[MOD] MUTE | stream_id=%s by=%s target=%s",
             stream_id, current_user.username, target.username,
@@ -173,7 +174,7 @@ class ModerationService:
         redis = await get_redis()
         await redis.srem(mute_key(stream_id), str(target.id))
 
-        await publish_mod_event(stream_id, "unmuted", target.id)
+        await publish_mod_event(stream_id, WS.UNMUTED, target.id)
         logger.info(
             "[MOD] UNMUTE | stream_id=%s by=%s target=%s",
             stream_id, current_user.username, target.username,
@@ -188,7 +189,7 @@ class ModerationService:
         await redis.sadd(kick_key(stream_id), str(target.id))
         await redis.expire(kick_key(stream_id), _TTL)
 
-        await publish_mod_event(stream_id, "kicked", target.id)
+        await publish_mod_event(stream_id, WS.KICKED, target.id)
         # LiveKit odasından zorla çıkar
         await remove_from_livekit(stream.room_name, target.id)
         logger.info(
@@ -210,7 +211,7 @@ class ModerationService:
 
         await publish_mod_event(
             stream_id,
-            "mod_promoted",
+            WS.MOD_PROMOTED,
             target.id,
             username=target.username,
             promoted_by=current_user.username,
@@ -233,7 +234,7 @@ class ModerationService:
 
         await publish_mod_event(
             stream_id,
-            "mod_demoted",
+            WS.MOD_DEMOTED,
             target.id,
             username=target.username,
             demoted_by=current_user.username,

@@ -42,6 +42,7 @@ from app.core.exceptions import (
 )
 from app.core.action_guard import check_user_action_rate, acquire_action_lock, release_action_lock
 from app.core.logger import get_logger, capture_exception
+from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 
@@ -273,7 +274,7 @@ class StreamService:
 
         # Chat stream_ended eventi — non-critical
         try:
-            await _publish_chat(stream_id, {"type": "stream_ended"})
+            await _publish_chat(stream_id, {"type": WS.STREAM_ENDED})
         except Exception:
             logger.error("[STREAMS] stream_ended yayınlanamadı | stream_id=%s", stream_id, exc_info=True)
 
@@ -460,7 +461,7 @@ class StreamService:
         await redis.set(invite_key, "1", ex=60)
 
         await publish_chat(stream_id, {
-            "type": "cohost_invite",
+            "type": WS.COHOST_INVITE,
             "target_username": target.username,
             "host_username": host.username,
         })
@@ -497,7 +498,7 @@ class StreamService:
         token = make_livekit_token(stream.room_name, current_user, can_publish=True)
 
         await publish_chat(stream_id, {
-            "type": "cohost_accepted",
+            "type": WS.COHOST_ACCEPTED,
             "username": current_user.username,
         })
         logger.info(
@@ -528,7 +529,7 @@ class StreamService:
             raise ForbiddenException("Sadece yayın sahibi sahne konuğunu kaldırabilir")
 
         await publish_chat(stream_id, {
-            "type": "cohost_removed",
+            "type": WS.COHOST_REMOVED,
             "target_username": target_username,
         })
         logger.info(
@@ -548,7 +549,7 @@ class StreamService:
             raise NotFoundException("Aktif yayın bulunamadı")
 
         await publish_chat(stream_id, {
-            "type": "cohost_removed",
+            "type": WS.COHOST_REMOVED,
             "target_username": current_user.username,
         })
         logger.info(

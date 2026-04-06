@@ -26,6 +26,7 @@ from app.models.story import Story
 from app.models.stream import LiveStream
 from app.core.exceptions import NotFoundException, DatabaseException
 from app.core.logger import get_logger, capture_exception
+from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 
@@ -179,7 +180,7 @@ class LikeService:
         try:
             from app.services.chat_service import publish_chat
             await publish_chat(stream_id, {
-                "type": "stream_like",
+                "type": WS.STREAM_LIKE,
                 "user_id": user_id,
                 "username": username,
             })

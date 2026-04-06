@@ -39,6 +39,7 @@ from app.core.exceptions import (
     DatabaseException,
 )
 from app.core.logger import get_logger, capture_exception
+from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 
@@ -335,7 +336,7 @@ class AuctionService:
         await redis.expire(key, 24 * 3600)
 
         state = await get_auction_state(stream_id)
-        await publish_auction(stream_id, {"type": "state", **state})
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[AÇIK ARTIRMA] BAŞLADI | stream_id=%s item=%r start_price=%s | ws_hedef=%s",
             stream_id, data.item_name, data.start_price, manager.conn_count(stream_id),
@@ -353,7 +354,7 @@ class AuctionService:
 
         await redis.hset(key, "status", "paused")
         state = await get_auction_state(stream_id)
-        await publish_auction(stream_id, {"type": "state", **state})
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DURAKLATILDI | stream_id=%s | ws_hedef=%s",
                     stream_id, manager.conn_count(stream_id))
         return state
@@ -369,7 +370,7 @@ class AuctionService:
 
         await redis.hset(key, "status", "active")
         state = await get_auction_state(stream_id)
-        await publish_auction(stream_id, {"type": "state", **state})
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info("[AÇIK ARTIRMA] DEVAM ETTİ | stream_id=%s | ws_hedef=%s",
                     stream_id, manager.conn_count(stream_id))
         return state
@@ -424,7 +425,7 @@ class AuctionService:
             "current_bidder": data.get("current_bidder_name") or None,
             "start_price": float(data.get("start_price", 0)),
         }
-        await publish_auction(stream_id, {"type": "state", **state})
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[AÇIK ARTIRMA] BİTTİ | stream_id=%s winner=%s price=%s bid_count=%s",
             stream_id, state["current_bidder"], state["current_bid"], state["bid_count"],
@@ -497,7 +498,7 @@ class AuctionService:
             raise BadRequestException("Eş zamanlı teklif: teklifiniz geçildi, lütfen tekrar deneyin")
 
         state = await get_auction_state(stream_id)
-        await publish_auction(stream_id, {"type": "state", **state})
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[TEKLİF] KAYDEDILDI+YAYINLANDI | stream_id=%s user=%s amount=%s | ws_hedef=%s",
             stream_id, user.username, data.amount, manager.conn_count(stream_id),
@@ -575,9 +576,9 @@ class AuctionService:
         item_name = redis_data.get("item_name", "")
 
         state = await get_auction_state(stream_id)
-        await publish_auction(stream_id, {"type": "state", **state})
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         await publish_auction(stream_id, {
-            "type": "buy_it_now_requested",
+            "type": WS.BUY_IT_NOW_REQUESTED,
             "buyer": {"id": user.id, "username": user.username},
             "price": bin_price,
             "item_name": item_name,
@@ -717,9 +718,9 @@ class AuctionService:
             "buy_it_now_price": bin_price,
             "listing_id": listing_id,
         }
-        await publish_auction(stream_id, {"type": "state", **state})
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         await publish_auction(stream_id, {
-            "type": "auction_ended_by_buy_it_now",
+            "type": WS.AUCTION_ENDED_BY_BUY_IT_NOW,
             "listing_id": listing_id,
             "buyer": {"id": buyer_id, "username": buyer_username},
             "price": bin_price,
@@ -728,7 +729,7 @@ class AuctionService:
 
         # Chat'e herkese görünür özet mesajı
         chat_msg = {
-            "type": "message",
+            "type": WS.MESSAGE,
             "id": str(uuid.uuid4())[:8],
             "username": buyer_username,
             "content": (
@@ -768,9 +769,9 @@ class AuctionService:
         buyer_username = val[2]
 
         state = await get_auction_state(stream_id)
-        await publish_auction(stream_id, {"type": "state", **state})
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         await publish_auction(stream_id, {
-            "type": "buy_it_now_rejected",
+            "type": WS.BUY_IT_NOW_REJECTED,
             "buyer_username": buyer_username,
         })
 
@@ -882,7 +883,7 @@ class AuctionService:
             f"📦 {item_name} — {fmt_price(final_price)} — 🏅 @{winner_name}"
         )
         chat_msg = {
-            "type": "message",
+            "type": WS.MESSAGE,
             "id": str(uuid.uuid4())[:8],
             "username": user.username,
             "content": chat_summary,
@@ -914,7 +915,7 @@ class AuctionService:
             "start_price": float(data.get("start_price", 0)),
             "listing_id": listing_id,
         }
-        await publish_auction(stream_id, {"type": "state", **state})
+        await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
         logger.info(
             "[AÇIK ARTIRMA] TEKLİF KABUL EDİLDİ | stream_id=%s winner=%s price=%s",
             stream_id, winner_name, final_price,

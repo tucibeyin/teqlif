@@ -25,6 +25,7 @@ from app.services.auction_service import (
     pubsub_listener,  # noqa: F401 — main.py bu ismi buradan import eder
     get_auction_state,
 )
+from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auction", tags=["auction"])
@@ -138,7 +139,7 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
             "[WS] İLK STATE GÖNDERİLDİ | stream_id=%s status=%s",
             stream_id, state.get("status"),
         )
-        await websocket.send_json({"type": "state", **state})
+        await websocket.send_json({"type": WS.AUCTION_STATE, **state})
 
         # Bağlantıyı açık tut; client'tan gelen ping mesajlarını yoksay
         while True:

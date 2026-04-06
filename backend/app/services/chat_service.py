@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from app.utils.redis_client import get_redis
 from app.core.logger import get_logger
 from app.core.ws_manager import ws_manager, safe_send_json
+from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 
@@ -54,7 +55,7 @@ async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> Non
             if count < 0:
                 await redis.set(key, 0)
                 count = 0
-        await publish_chat(stream_id, {"type": "viewer_count", "count": int(count)})
+        await publish_chat(stream_id, {"type": WS.VIEWER_COUNT, "count": int(count)})
     except Exception:
         logger.error(
             "[CHAT] Viewer count güncellenemedi | room=%s stream_id=%s delta=%s",
@@ -112,11 +113,11 @@ async def moderation_pubsub_listener() -> None:
                     "[MOD PUBSUB] EVENT ALINDI | type=%s stream_id=%s user_id=%s",
                     event_type, stream_id, user_id,
                 )
-                if event_type == "mod_promoted":
+                if event_type == WS.MOD_PROMOTED:
                     await ws_manager.broadcast_local(
                         f"chat:{stream_id}",
                         {
-                            "type": "mod_promoted",
+                            "type": WS.MOD_PROMOTED,
                             "user_id": user_id,
                             "username": data.get("username"),
                             "promoted_by": data.get("promoted_by"),
@@ -124,13 +125,13 @@ async def moderation_pubsub_listener() -> None:
                     )
                     await ws_manager.broadcast_local(
                         f"chat:{stream_id}:u{user_id}",
-                        {"type": "mod_promoted_self", "promoted_by": data.get("promoted_by")},
+                        {"type": WS.MOD_PROMOTED_SELF, "promoted_by": data.get("promoted_by")},
                     )
-                elif event_type == "mod_demoted":
+                elif event_type == WS.MOD_DEMOTED:
                     await ws_manager.broadcast_local(
                         f"chat:{stream_id}",
                         {
-                            "type": "mod_demoted",
+                            "type": WS.MOD_DEMOTED,
                             "user_id": user_id,
                             "username": data.get("username"),
                             "demoted_by": data.get("demoted_by"),
@@ -138,7 +139,7 @@ async def moderation_pubsub_listener() -> None:
                     )
                     await ws_manager.broadcast_local(
                         f"chat:{stream_id}:u{user_id}",
-                        {"type": "mod_demoted_self", "demoted_by": data.get("demoted_by")},
+                        {"type": WS.MOD_DEMOTED_SELF, "demoted_by": data.get("demoted_by")},
                     )
                 else:
                     await ws_manager.broadcast_local(
@@ -263,7 +264,7 @@ class ChatService:
 
         is_mod = bool(await redis.sismember(mod_key(stream_id), str(user_id)))
         chat_msg = {
-            "type": "message",
+            "type": WS.MESSAGE,
             "id": str(uuid.uuid4())[:8],
             "username": username,
             "profile_image_url": profile_image_url,

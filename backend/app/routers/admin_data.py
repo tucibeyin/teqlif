@@ -18,6 +18,7 @@ from app.routers.chat import _publish_chat
 from sqlalchemy.exc import IntegrityError
 from app.core.exceptions import ForbiddenException, NotFoundException, BadRequestException
 from app.core.logger import get_logger, capture_exception
+from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 
@@ -137,7 +138,7 @@ async def admin_end_stream(stream_id: int, db: AsyncSession = Depends(get_db), a
     try:
         redis = await get_redis()
         await redis.delete(f"live:viewers:{stream.room_name}")
-        await _publish_chat(stream_id, {"type": "stream_ended", "message": "Yayın sistem yöneticisi tarafından sonlandırıldı."})
+        await _publish_chat(stream_id, {"type": WS.STREAM_ENDED, "message": "Yayın sistem yöneticisi tarafından sonlandırıldı."})
     except Exception as exc:
         logger.warning("[ADMIN] Redis temizleme/chat yayını başarısız | stream_id=%s | %s", stream_id, exc)
     return {"message": "Yayın kapatıldı."}
