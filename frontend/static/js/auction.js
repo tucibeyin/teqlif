@@ -119,10 +119,17 @@ const Auction = (() => {
 
         console.log('[Auction] Konfeti patlatıldı, kazanan biziz!');
 
+        // body'nin overflow:hidden veya transform bağlamından kaçmak için
+        // canvas'ı doğrudan <html> elemanına ekle, 5s sonra temizle
+        const canvas = document.createElement('canvas');
+        canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:2147483647;pointer-events:none;';
+        document.documentElement.appendChild(canvas);
+
+        const shoot = confetti.create(canvas, { resize: true, useWorker: false });
         const COLORS = ['#fbbf24', '#06b6d4', '#22d3ee', '#ffffff', '#f97316'];
 
         // Sol alt köşeden fırlatma
-        confetti({
+        shoot({
             particleCount: 80,
             angle: 60,
             spread: 55,
@@ -133,7 +140,7 @@ const Auction = (() => {
         });
 
         // Sağ alt köşeden fırlatma
-        confetti({
+        shoot({
             particleCount: 80,
             angle: 120,
             spread: 55,
@@ -145,7 +152,7 @@ const Auction = (() => {
 
         // 400ms sonra merkezi bir burst
         setTimeout(() => {
-            confetti({
+            shoot({
                 particleCount: 60,
                 spread: 80,
                 startVelocity: 40,
@@ -154,6 +161,9 @@ const Auction = (() => {
                 gravity: 1.1,
             });
         }, 400);
+
+        // 5 saniye sonra canvas'ı temizle
+        setTimeout(() => canvas.remove(), 5000);
     }
 
     return { connect, disconnect, startAuction, pauseAuction, resumeAuction, endAuction, placeBid, acceptBid, buyItNow, acceptBuyItNow, rejectBuyItNow, fireWinnerConfetti, STATUS_LABELS };
