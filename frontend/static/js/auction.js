@@ -1,5 +1,7 @@
 /* auction.js — Real-time açık artırma (WebSocket) */
 
+console.log('[Auction] yüklendi | confetti:', typeof confetti);
+
 const Auction = (() => {
     let _ws = null;
     let _streamId = null;

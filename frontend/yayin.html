@@ -1585,9 +1585,9 @@
     <script src="/static/js/main.js?v=4"></script>
     <script src="/static/js/auth.js?v=4"></script>
     <script src="https://cdn.jsdelivr.net/npm/livekit-client@2/dist/livekit-client.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+    <script src="/static/js/confetti.min.js"></script>
     <script src="/static/js/stream.js?v=4"></script>
-    <script src="/static/js/auction.js?v=7"></script>
+    <script src="/static/js/auction.js?v=8"></script>
     <script src="/static/js/chat.js?v=8"></script>
 
     <!-- Host: Hemen Al Talep Onay Modalı -->
@@ -2188,12 +2188,18 @@
 
             // Normal bitiş konfetisi: leading bidder idiysen patlat
             if (state.status === 'ended' && _prevAuctionStatus !== 'ended' && !_isBoughtItNow) {
+                const _meNow = Auth.getUser()?.username;
+                // İkili kontrol: flag (active'de takip) VEYA direkt ended state karşılaştırması
+                const _isWinner = _iAmLeadingBidder ||
+                    !!(_meNow && state.current_bidder && state.current_bidder === _meNow);
                 console.log('[Auction] Bitiş tespiti:', {
                     winner: state.current_bidder,
+                    me: _meNow,
                     iAmLeading: _iAmLeadingBidder,
+                    isWinner: _isWinner,
                     confettiAvailable: typeof confetti === 'function',
                 });
-                if (_iAmLeadingBidder) {
+                if (_isWinner) {
                     Auction.fireWinnerConfetti();
                 }
                 _iAmLeadingBidder = false;
