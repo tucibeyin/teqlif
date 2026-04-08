@@ -944,60 +944,6 @@ abstract class AppLocalizations {
   /// **'0### ### ## ##'**
   String get fieldPhoneHint;
 
-  /// No description provided for @phoneVerifTitle.
-  ///
-  /// In tr, this message translates to:
-  /// **'SMS Doğrulama'**
-  String get phoneVerifTitle;
-
-  /// No description provided for @phoneVerifDesc.
-  ///
-  /// In tr, this message translates to:
-  /// **'Telefon numaranıza gönderilen 6 haneli kodu girin.'**
-  String get phoneVerifDesc;
-
-  /// No description provided for @phoneVerifCodeHint.
-  ///
-  /// In tr, this message translates to:
-  /// **'6 haneli kod'**
-  String get phoneVerifCodeHint;
-
-  /// No description provided for @phoneVerifConfirm.
-  ///
-  /// In tr, this message translates to:
-  /// **'Onayla'**
-  String get phoneVerifConfirm;
-
-  /// No description provided for @phoneVerifSending.
-  ///
-  /// In tr, this message translates to:
-  /// **'SMS gönderiliyor...'**
-  String get phoneVerifSending;
-
-  /// No description provided for @phoneVerifSkip.
-  ///
-  /// In tr, this message translates to:
-  /// **'Telefon doğrulamasını atla'**
-  String get phoneVerifSkip;
-
-  /// No description provided for @phoneVerifInvalidCode.
-  ///
-  /// In tr, this message translates to:
-  /// **'Geçersiz kod. Tekrar deneyin.'**
-  String get phoneVerifInvalidCode;
-
-  /// No description provided for @phoneVerifTimeout.
-  ///
-  /// In tr, this message translates to:
-  /// **'Zaman aşımı. Tekrar deneyin.'**
-  String get phoneVerifTimeout;
-
-  /// No description provided for @phoneVerifAlreadyUsed.
-  ///
-  /// In tr, this message translates to:
-  /// **'Bu telefon numarası zaten kayıtlı.'**
-  String get phoneVerifAlreadyUsed;
-
   /// No description provided for @emptyListings.
   ///
   /// In tr, this message translates to:

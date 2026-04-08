@@ -438,34 +438,6 @@ class AppLocalizationsEn extends AppLocalizations {
   String get fieldPhoneHint => '0### ### ## ##';
 
   @override
-  String get phoneVerifTitle => 'SMS Verification';
-
-  @override
-  String get phoneVerifDesc => 'Enter the 6-digit code sent to your phone.';
-
-  @override
-  String get phoneVerifCodeHint => '6-digit code';
-
-  @override
-  String get phoneVerifConfirm => 'Confirm';
-
-  @override
-  String get phoneVerifSending => 'Sending SMS...';
-
-  @override
-  String get phoneVerifSkip => 'Skip phone verification';
-
-  @override
-  String get phoneVerifInvalidCode => 'Invalid code. Please try again.';
-
-  @override
-  String get phoneVerifTimeout => 'Timed out. Please try again.';
-
-  @override
-  String get phoneVerifAlreadyUsed =>
-      'This phone number is already registered.';
-
-  @override
   String get emptyListings => 'No listings yet';
 
   @override
