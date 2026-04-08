@@ -10,7 +10,6 @@ class UserRegister(BaseModel):
     full_name: str
     password: str
     phone: str | None = None
-    firebase_token: str | None = None
 
     @field_validator("username")
     @classmethod

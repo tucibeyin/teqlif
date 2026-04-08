@@ -71,8 +71,6 @@
                         <input type="tel" id="registerPhone" placeholder="0555 555 55 55" autocomplete="tel" inputmode="numeric" maxlength="14" data-track-id="kayit-input-telefon">
                         <small style="color:var(--text-muted);font-size:0.78rem;">Telefon numaranı ekleyerek hesabını daha güvenli hale getir.</small>
                     </div>
-                    <!-- Firebase invisible reCAPTCHA — JS tarafından doldurulur, görünmez -->
-                    <div id="recaptcha-container" style="display:none;"></div>
                     <div class="form-group">
                         <label for="password">Şifre</label>
                         <input type="password" id="password" placeholder="En az 8 karakter" required
@@ -159,50 +157,8 @@
         </div>
     </footer>
 
-    <!-- SMS OTP Modal -->
-    <div id="smsModal" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.55);align-items:flex-end;justify-content:center;">
-        <div style="background:var(--card-bg,#1a1a2e);border-radius:20px 20px 0 0;padding:28px 24px 36px;width:100%;max-width:480px;box-shadow:0 -4px 32px rgba(0,0,0,0.3);">
-            <div style="display:flex;align-items:flex-start;gap:12px;margin-bottom:22px;">
-                <div style="background:rgba(6,182,212,0.12);border-radius:10px;padding:8px;flex-shrink:0;">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#06b6d4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
-                </div>
-                <div>
-                    <div style="font-size:1.05rem;font-weight:700;margin-bottom:3px;">SMS Doğrulama</div>
-                    <div id="smsModalDesc" style="font-size:0.85rem;color:var(--text-muted);">Telefon numaranıza gönderilen 6 haneli kodu girin.</div>
-                </div>
-            </div>
-            <input type="text" id="smsCode" placeholder="——————" maxlength="6" inputmode="numeric" autocomplete="one-time-code"
-                style="width:100%;text-align:center;font-size:2rem;font-weight:700;letter-spacing:0.7rem;border:2px solid var(--border,#2d2d44);border-radius:12px;padding:14px 8px;background:var(--input-bg,#13131f);color:inherit;box-sizing:border-box;outline:none;transition:border-color 0.2s;">
-            <div id="smsError" style="min-height:1.2rem;font-size:0.82rem;color:#ef4444;margin-top:6px;text-align:center;"></div>
-            <button id="smsConfirmBtn" onclick="window._smsConfirm()" style="width:100%;margin-top:14px;padding:13px;background:var(--primary,#06b6d4);color:#fff;border:none;border-radius:12px;font-size:1rem;font-weight:600;cursor:pointer;">
-                Onayla
-            </button>
-            <button onclick="window._smsSkip()" style="width:100%;margin-top:10px;padding:10px;background:transparent;border:none;color:var(--text-muted);font-size:0.85rem;cursor:pointer;text-decoration:underline;">
-                Telefon doğrulamasını atla
-            </button>
-        </div>
-    </div>
-
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
-    <script type="module">
-        // Firebase modüler SDK — sadece auth ve phone için
-        import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
-        import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
-
-        // Config'i backend'den al — .env'de tutulur, HTML'e gömülmez
-        const resp = await fetch('/api/config/public');
-        const cfg = await resp.json();
-
-        const app = initializeApp(cfg.firebase, 'phone-auth');
-        const auth = getAuth(app);
-        auth.languageCode = 'tr';
-
-        // Global'e aç — auth.js bağımsız kalır, kayit.html script'i Firebase'i yönetir
-        window._firebaseAuth = auth;
-        window._RecaptchaVerifier = RecaptchaVerifier;
-        window._signInWithPhoneNumber = signInWithPhoneNumber;
-    </script>
     <script>
         if (Auth.getToken()) window.location.href = '/';
 
@@ -259,120 +215,13 @@
             phoneInput.value = out;
         });
 
-        // ── E.164 dönüşümü: 0555 555 55 55 → +905555555555 ──────────────
-        function toE164(masked) {
-            const digits = masked.replace(/\D/g, '');
-            return digits.startsWith('0') ? '+90' + digits.slice(1) : '+90' + digits;
-        }
-
-        // ── Kayıt yardımcısı: backend'e gönder ───────────────────────────
-        async function doRegister({ phone = null, firebaseToken = null } = {}) {
-            registeredEmail = document.getElementById('email').value.trim();
-            const payload = {
-                full_name: document.getElementById('full_name').value.trim(),
-                username: document.getElementById('username').value.trim(),
-                email: registeredEmail,
-                password: document.getElementById('password').value,
-            };
-            if (phone) payload.phone = phone;
-            if (firebaseToken) payload.firebase_token = firebaseToken;
-            await Auth.register(payload);
-            document.getElementById('stepRegister').style.display = 'none';
-            document.getElementById('stepVerify').style.display = 'block';
-            document.getElementById('verifySubtitle').textContent =
-                registeredEmail + ' adresine 6 haneli doğrulama kodu gönderdik.';
-            document.getElementById('code').focus();
-        }
-
-        // ── SMS Modal yönetimi ────────────────────────────────────────────
-        let _confirmationResult = null;
-        let _pendingPhone = null;
-
-        function showSmsModal(phoneE164) {
-            document.getElementById('smsModalDesc').textContent =
-                phoneE164 + ' numarasına gönderilen 6 haneli kodu girin.';
-            document.getElementById('smsCode').value = '';
-            document.getElementById('smsError').textContent = '';
-            const modal = document.getElementById('smsModal');
-            modal.style.display = 'flex';
-            setTimeout(() => document.getElementById('smsCode').focus(), 100);
-        }
-
-        function hideSmsModal() {
-            document.getElementById('smsModal').style.display = 'none';
-        }
-
         const btn = document.getElementById('registerBtn');
         const alertEl = document.getElementById('alertRegister');
-
-        window._smsConfirm = async () => {
-            const code = document.getElementById('smsCode').value.trim();
-            const errEl = document.getElementById('smsError');
-            const confirmBtn = document.getElementById('smsConfirmBtn');
-            if (code.length !== 6) {
-                errEl.textContent = 'Lütfen 6 haneli kodu girin.';
-                return;
-            }
-            confirmBtn.disabled = true;
-            confirmBtn.textContent = 'Doğrulanıyor...';
-            errEl.textContent = '';
-            try {
-                const cred = await _confirmationResult.confirm(code);
-                const idToken = await cred.user.getIdToken();
-                hideSmsModal();
-                await doRegister({ phone: _pendingPhone, firebaseToken: idToken });
-            } catch (err) {
-                const code_ = err.code || '';
-                const msg = (code_ === 'auth/invalid-verification-code' || code_ === 'auth/invalid-verification-id')
-                    ? 'Geçersiz kod. Tekrar deneyin.'
-                    : (code_ === 'auth/code-expired' || code_ === 'auth/session-expired')
-                    ? 'Kodun süresi dolmuş. Sayfayı yenileyip tekrar deneyin.'
-                    : (err.detail || err.message || 'Bir hata oluştu.');
-                errEl.textContent = msg;
-                if (err.detail) {
-                    // Backend hatası (409 vb.) — modal kapat, form alert göster
-                    hideSmsModal();
-                    alertEl.textContent = msg;
-                    alertEl.className = 'alert alert-error show';
-                    btn.disabled = false;
-                    btn.textContent = 'Kayıt Ol';
-                }
-            } finally {
-                confirmBtn.disabled = false;
-                confirmBtn.textContent = 'Onayla';
-            }
-        };
-
-        window._smsSkip = async () => {
-            hideSmsModal();
-            btn.disabled = true;
-            btn.textContent = 'Kaydediliyor...';
-            try {
-                await doRegister();
-            } catch (err) {
-                alertEl.textContent = err.detail || 'Bir hata oluştu';
-                alertEl.className = 'alert alert-error show';
-            } finally {
-                btn.disabled = false;
-                btn.textContent = 'Kayıt Ol';
-            }
-        };
-
-        // Modal backdrop tıklamasında kapat
-        document.getElementById('smsModal').addEventListener('click', (e) => {
-            if (e.target === document.getElementById('smsModal')) hideSmsModal();
-        });
-
-        // Enter tuşuyla onayla
-        document.getElementById('smsCode').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') window._smsConfirm();
-        });
 
         document.getElementById('registerForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             alertEl.className = 'alert';
 
-            // Kullanıcı adı format kontrolü
             const unVal = _unInput.value.trim();
             if (!/^[a-z0-9_]{3,50}$/.test(unVal)) {
                 alertEl.textContent = 'Kullanıcı adı geçersiz. Sadece küçük harf, rakam ve _ kullanılabilir (min 3 karakter).';
@@ -385,57 +234,32 @@
                 return;
             }
 
-            const rawPhone = document.getElementById('registerPhone').value.trim();
-            const hasPhone = rawPhone.replace(/\D/g, '').length === 11;
-
             btn.disabled = true;
+            btn.textContent = 'Kaydediliyor...';
 
-            if (!hasPhone) {
-                // DURUM A — telefon boş, normal kayıt
-                btn.textContent = 'Kaydediliyor...';
-                try {
-                    await doRegister();
-                } catch (err) {
-                    alertEl.textContent = err.detail || 'Bir hata oluştu';
-                    alertEl.className = 'alert alert-error show';
-                    btn.disabled = false;
-                    btn.textContent = 'Kayıt Ol';
-                }
-            } else {
-                // DURUM B — SMS doğrulama
-                btn.textContent = 'SMS gönderiliyor...';
-                _pendingPhone = toE164(rawPhone);
-                try {
-                    // RecaptchaVerifier her submit'te taze oluşturulmalı
-                    if (window._recaptchaVerifier) {
-                        try { window._recaptchaVerifier.clear(); } catch {}
-                    }
-                    window._recaptchaVerifier = new window._RecaptchaVerifier(
-                        window._firebaseAuth,
-                        'recaptcha-container',
-                        { size: 'invisible' }
-                    );
-                    _confirmationResult = await window._signInWithPhoneNumber(
-                        window._firebaseAuth,
-                        _pendingPhone,
-                        window._recaptchaVerifier
-                    );
-                    btn.disabled = false;
-                    btn.textContent = 'Kayıt Ol';
-                    showSmsModal(_pendingPhone);
-                } catch (err) {
-                    const code_ = err.code || '';
-                    const msg = code_ === 'auth/invalid-phone-number'
-                        ? 'Geçersiz telefon numarası.'
-                        : code_ === 'auth/too-many-requests'
-                        ? 'Çok fazla deneme. Lütfen bekleyin.'
-                        : (err.message || 'SMS gönderilemedi.');
-                    alertEl.textContent = msg;
-                    alertEl.className = 'alert alert-error show';
-                    btn.disabled = false;
-                    btn.textContent = 'Kayıt Ol';
-                    try { window._recaptchaVerifier.clear(); } catch {}
-                }
+            try {
+                registeredEmail = document.getElementById('email').value.trim();
+                const rawPhone = phoneInput.value.trim();
+                const digits = rawPhone.replace(/\D/g, '');
+                const payload = {
+                    full_name: document.getElementById('full_name').value.trim(),
+                    username: document.getElementById('username').value.trim(),
+                    email: registeredEmail,
+                    password: document.getElementById('password').value,
+                };
+                if (digits.length === 11) payload.phone = '+90' + digits.slice(1);
+
+                await Auth.register(payload);
+                document.getElementById('stepRegister').style.display = 'none';
+                document.getElementById('stepVerify').style.display = 'block';
+                document.getElementById('verifySubtitle').textContent =
+                    registeredEmail + ' adresine 6 haneli doğrulama kodu gönderdik.';
+                document.getElementById('code').focus();
+            } catch (err) {
+                alertEl.textContent = err.detail || err.message || 'Bir hata oluştu';
+                alertEl.className = 'alert alert-error show';
+                btn.disabled = false;
+                btn.textContent = 'Kayıt Ol';
             }
         });
 

@@ -30,13 +30,10 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
     if result.scalar_one_or_none():
         raise BadRequestException("Bu kullanıcı adı zaten alınmış")
 
-    # ── Opsiyonel telefon doğrulaması ────────────────────────────────────────
-    verified_phone: str | None = None
-    if data.firebase_token:
-        from app.services.firebase_service import verify_phone_token
+    # ── Opsiyonel telefon numarası ───────────────────────────────────────────
+    if data.phone:
         from app.core.exceptions import ConflictException
-        verified_phone = await verify_phone_token(data.firebase_token)
-        result = await db.execute(select(User).where(User.phone == verified_phone))
+        result = await db.execute(select(User).where(User.phone == data.phone))
         if result.scalar_one_or_none():
             raise ConflictException("Bu telefon numarası zaten kayıtlı")
 
@@ -46,7 +43,7 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
         full_name=data.full_name,
         hashed_password=hash_password(data.password),
         is_verified=False,
-        phone=verified_phone,
+        phone=data.phone or None,
     )
     db.add(user)
     await db.commit()
