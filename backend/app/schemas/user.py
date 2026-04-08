@@ -9,6 +9,8 @@ class UserRegister(BaseModel):
     username: str
     full_name: str
     password: str
+    phone: str | None = None
+    firebase_token: str | None = None
 
     @field_validator("username")
     @classmethod
@@ -44,6 +46,7 @@ class UserOut(BaseModel):
     full_name: str
     is_active: bool
     is_verified: bool
+    phone: Optional[str] = None
     profile_image_url: Optional[str] = None
     profile_image_thumb_url: Optional[str] = None
     created_at: datetime

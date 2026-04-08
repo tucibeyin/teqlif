@@ -4,6 +4,33 @@ import logging
 logger = logging.getLogger(__name__)
 
 
+async def verify_phone_token(id_token: str) -> str:
+    """
+    Firebase Phone Auth ID token'ını doğrular.
+    Geçerliyse E.164 formatında telefon numarasını döndürür (+905551234567).
+    Geçersizse ForbiddenException fırlatır.
+    """
+    from app.core.exceptions import ForbiddenException, ServiceException
+
+    app = _get_firebase_app()
+    if app is None:
+        raise ServiceException("Firebase yapılandırılmamış")
+    try:
+        from firebase_admin import auth as fb_auth
+        decoded = await asyncio.get_event_loop().run_in_executor(
+            None, fb_auth.verify_id_token, id_token
+        )
+        phone_number: str | None = decoded.get("phone_number")
+        if not phone_number:
+            raise ForbiddenException("Token içinde telefon numarası bulunamadı")
+        return phone_number
+    except (ForbiddenException, ServiceException):
+        raise
+    except Exception as exc:
+        logger.warning("[FCM] Telefon token doğrulama başarısız | %s", exc)
+        raise ForbiddenException("Geçersiz veya süresi dolmuş telefon doğrulama token'ı") from exc
+
+
 class InvalidFCMTokenError(Exception):
     """FCM token geçersiz veya süresi dolmuş — DB'den temizlenmeli."""
     def __init__(self, token: str):
