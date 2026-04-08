@@ -30,13 +30,6 @@ class Settings(BaseSettings):
         parsed = urlparse(self.livekit_url)
         return f"{parsed.scheme}://{parsed.netloc}"
     firebase_service_account: str = ""  # path to service account JSON
-    # Firebase Web SDK config (public — kayit.html'e /api/config/public üzerinden servis edilir)
-    firebase_web_api_key: str = ""
-    firebase_web_auth_domain: str = ""
-    firebase_web_project_id: str = ""
-    firebase_web_storage_bucket: str = ""
-    firebase_web_messaging_sender_id: str = ""
-    firebase_web_app_id: str = ""
     sentry_backend_dsn: str | None = None
     google_client_id: str = ""
     admin_email: str = ""

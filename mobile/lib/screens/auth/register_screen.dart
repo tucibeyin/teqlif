@@ -90,13 +90,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   /// Telefon numarasını E.164 formatına çevirir: 0532... → +90532...
-  String _toE164(String masked) {
-    final digits = masked.replaceAll(RegExp(r'\D'), '');
-    if (digits.startsWith('0')) return '+90${digits.substring(1)}';
-    return '+90$digits';
-  }
-
-  /// Telefon numarasını E.164 formatına çevirir: 0532... → +90532...
   String? _toE164(String masked) {
     final digits = masked.replaceAll(RegExp(r'\D'), '');
     if (digits.length != 11) return null;

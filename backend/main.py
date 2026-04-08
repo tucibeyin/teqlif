@@ -458,22 +458,3 @@ async def sitemap_xml():
 @app.api_route("/api/health", methods=["GET", "HEAD"])
 async def health():
     return {"status": "ok", "version": "0.1.0"}
-
-
-@app.get("/api/config/public", include_in_schema=False)
-async def public_config():
-    """
-    Frontend'e açık, gizli olmayan yapılandırma değerleri.
-    Yalnızca Firebase Web SDK'nın ihtiyaç duyduğu public anahtarlar döner.
-    Secret/private değerler buraya eklenmez.
-    """
-    return {
-        "firebase": {
-            "apiKey": settings.firebase_web_api_key,
-            "authDomain": settings.firebase_web_auth_domain,
-            "projectId": settings.firebase_web_project_id,
-            "storageBucket": settings.firebase_web_storage_bucket,
-            "messagingSenderId": settings.firebase_web_messaging_sender_id,
-            "appId": settings.firebase_web_app_id,
-        }
-    }
