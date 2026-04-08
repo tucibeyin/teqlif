@@ -5,11 +5,18 @@ PODS:
     - Flutter
   - device_info_plus (0.0.1):
     - Flutter
+  - Firebase/Auth (12.9.0):
+    - Firebase/CoreOnly
+    - FirebaseAuth (~> 12.9.0)
   - Firebase/CoreOnly (12.9.0):
     - FirebaseCore (~> 12.9.0)
   - Firebase/Messaging (12.9.0):
     - Firebase/CoreOnly
     - FirebaseMessaging (~> 12.9.0)
+  - firebase_auth (6.2.0):
+    - Firebase/Auth (= 12.9.0)
+    - firebase_core
+    - Flutter
   - firebase_core (4.5.0):
     - Firebase/CoreOnly (= 12.9.0)
     - Flutter
@@ -17,10 +24,23 @@ PODS:
     - Firebase/Messaging (= 12.9.0)
     - firebase_core
     - Flutter
+  - FirebaseAppCheckInterop (12.9.0)
+  - FirebaseAuth (12.9.0):
+    - FirebaseAppCheckInterop (~> 12.9.0)
+    - FirebaseAuthInterop (~> 12.9.0)
+    - FirebaseCore (~> 12.9.0)
+    - FirebaseCoreExtension (~> 12.9.0)
+    - GoogleUtilities/AppDelegateSwizzler (~> 8.1)
+    - GoogleUtilities/Environment (~> 8.1)
+    - GTMSessionFetcher/Core (< 6.0, >= 3.4)
+    - RecaptchaInterop (~> 101.0)
+  - FirebaseAuthInterop (12.9.0)
   - FirebaseCore (12.9.0):
     - FirebaseCoreInternal (~> 12.9.0)
     - GoogleUtilities/Environment (~> 8.1)
     - GoogleUtilities/Logger (~> 8.1)
+  - FirebaseCoreExtension (12.9.0):
+    - FirebaseCore (~> 12.9.0)
   - FirebaseCoreInternal (12.9.0):
     - "GoogleUtilities/NSData+zlib (~> 8.1)"
   - FirebaseInstallations (12.9.0):
@@ -70,6 +90,7 @@ PODS:
   - GoogleUtilities/UserDefaults (8.1.0):
     - GoogleUtilities/Logger
     - GoogleUtilities/Privacy
+  - GTMSessionFetcher/Core (5.2.0)
   - image_picker_ios (0.0.1):
     - Flutter
   - livekit_client (2.5.4):
@@ -89,6 +110,7 @@ PODS:
   - permission_handler_apple (9.3.0):
     - Flutter
   - PromisesObjC (2.4.0)
+  - RecaptchaInterop (101.0.0)
   - Sentry/HybridSDK (8.56.2)
   - sentry_flutter (9.14.0):
     - Flutter
@@ -118,6 +140,7 @@ DEPENDENCIES:
   - app_badge_plus (from `.symlinks/plugins/app_badge_plus/ios`)
   - connectivity_plus (from `.symlinks/plugins/connectivity_plus/ios`)
   - device_info_plus (from `.symlinks/plugins/device_info_plus/ios`)
+  - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_messaging (from `.symlinks/plugins/firebase_messaging/ios`)
   - Flutter (from `Flutter`)
@@ -140,14 +163,20 @@ DEPENDENCIES:
 SPEC REPOS:
   trunk:
     - Firebase
+    - FirebaseAppCheckInterop
+    - FirebaseAuth
+    - FirebaseAuthInterop
     - FirebaseCore
+    - FirebaseCoreExtension
     - FirebaseCoreInternal
     - FirebaseInstallations
     - FirebaseMessaging
     - GoogleDataTransport
     - GoogleUtilities
+    - GTMSessionFetcher
     - nanopb
     - PromisesObjC
+    - RecaptchaInterop
     - Sentry
     - WebRTC-SDK
 
@@ -158,6 +187,8 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/connectivity_plus/ios"
   device_info_plus:
     :path: ".symlinks/plugins/device_info_plus/ios"
+  firebase_auth:
+    :path: ".symlinks/plugins/firebase_auth/ios"
   firebase_core:
     :path: ".symlinks/plugins/firebase_core/ios"
   firebase_messaging:
@@ -200,9 +231,14 @@ SPEC CHECKSUMS:
   connectivity_plus: cb623214f4e1f6ef8fe7403d580fdad517d2f7dd
   device_info_plus: 21fcca2080fbcd348be798aa36c3e5ed849eefbe
   Firebase: 065f2bb395062046623036d8e6dc857bc2521d56
+  firebase_auth: eeb19010b5aa7c83cc85f23b6c4f009ea28461f1
   firebase_core: afac1aac13c931e0401c7e74ed1276112030efab
   firebase_messaging: 7cb2727feb789751fc6936bcc8e08408970e2820
+  FirebaseAppCheckInterop: 4bade10286cc977e516f75d2d8312cbdfa534789
+  FirebaseAuth: 3a39f6436c21ebfd7919b698228b4f89ff94c23b
+  FirebaseAuthInterop: f8f6ff72dc24621906497fbe5cf3c42ee815e59c
   FirebaseCore: 428912f751178b06bef0a1793effeb4a5e09a9b8
+  FirebaseCoreExtension: e911052d59cd0da237a45d706fc0f81654f035c1
   FirebaseCoreInternal: b321eafae5362113bc182956fafc9922cfc77b72
   FirebaseInstallations: 7b64ffd006032b2b019a59b803858df5112d9eaa
   FirebaseMessaging: 7d6cdbff969127c4151c824fe432f0e301210f15
@@ -211,6 +247,7 @@ SPEC CHECKSUMS:
   flutter_webrtc: c3e21fc0dcd9d8eb246ae4d5256fcbeb2f5ecd22
   GoogleDataTransport: aae35b7ea0c09004c3797d53c8c41f66f219d6a7
   GoogleUtilities: 00c88b9a86066ef77f0da2fab05f65d7768ed8e1
+  GTMSessionFetcher: 904bdd2a82c635bcd6f44edf94cc8775c5d1d6e6
   image_picker_ios: e0ece4aa2a75771a7de3fa735d26d90817041326
   livekit_client: 53ca658779b78710fb458cccee28b53a13356c15
   local_auth_darwin: c3ee6cce0a8d56be34c8ccb66ba31f7f180aaebb
@@ -218,6 +255,7 @@ SPEC CHECKSUMS:
   package_info_plus: af8e2ca6888548050f16fa2f1938db7b5a5df499
   permission_handler_apple: 4ed2196e43d0651e8ff7ca3483a069d469701f2d
   PromisesObjC: f5707f49cb48b9636751c5b2e7d227e43fba9f47
+  RecaptchaInterop: 11e0b637842dfb48308d242afc3f448062325aba
   Sentry: b53951377b78e21a734f5dc8318e333dbfc682d7
   sentry_flutter: 841fa2fe08dc72eb95e2320b76e3f751f3400cf5
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb
