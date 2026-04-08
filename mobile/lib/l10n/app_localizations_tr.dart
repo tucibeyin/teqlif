@@ -431,6 +431,40 @@ class AppLocalizationsTr extends AppLocalizations {
       'Kullanıcı adı kontrol ediliyor, lütfen bekleyin...';
 
   @override
+  String get fieldPhone => 'Telefon Numarası (İsteğe Bağlı)';
+
+  @override
+  String get fieldPhoneHint => '0### ### ## ##';
+
+  @override
+  String get phoneVerifTitle => 'SMS Doğrulama';
+
+  @override
+  String get phoneVerifDesc =>
+      'Telefon numaranıza gönderilen 6 haneli kodu girin.';
+
+  @override
+  String get phoneVerifCodeHint => '6 haneli kod';
+
+  @override
+  String get phoneVerifConfirm => 'Onayla';
+
+  @override
+  String get phoneVerifSending => 'SMS gönderiliyor...';
+
+  @override
+  String get phoneVerifSkip => 'Telefon doğrulamasını atla';
+
+  @override
+  String get phoneVerifInvalidCode => 'Geçersiz kod. Tekrar deneyin.';
+
+  @override
+  String get phoneVerifTimeout => 'Zaman aşımı. Tekrar deneyin.';
+
+  @override
+  String get phoneVerifAlreadyUsed => 'Bu telefon numarası zaten kayıtlı.';
+
+  @override
   String get emptyListings => 'Henüz ilan yok';
 
   @override
