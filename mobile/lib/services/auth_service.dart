@@ -19,17 +19,22 @@ class AuthService {
     required String username,
     required String fullName,
     required String password,
+    String? phone,
+    String? firebaseToken,
   }) async {
+    final payload = {
+      'email': email,
+      'username': username,
+      'full_name': fullName,
+      'password': password,
+      if (phone != null) 'phone': phone,
+      if (firebaseToken != null) 'firebase_token': firebaseToken,
+    };
     final body = await apiCall(
       () => http.post(
         Uri.parse('$kBaseUrl/auth/register'),
         headers: {'Content-Type': 'application/json'},
-        body: jsonEncode({
-          'email': email,
-          'username': username,
-          'full_name': fullName,
-          'password': password,
-        }),
+        body: jsonEncode(payload),
       ),
     );
     return body['message'] as String;

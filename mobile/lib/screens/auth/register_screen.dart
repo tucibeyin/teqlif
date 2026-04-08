@@ -1,6 +1,8 @@
 import 'dart:async';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../config/api.dart';
 import '../../config/app_colors.dart';
@@ -24,6 +26,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _usernameCtrl = TextEditingController();
   final _fullNameCtrl = TextEditingController();
   final _passCtrl = TextEditingController();
+  final _phoneCtrl = TextEditingController();
+  final _phoneMask = MaskTextInputFormatter(
+    mask: '0### ### ## ##',
+    filter: {'#': RegExp(r'[0-9]')},
+    type: MaskAutoCompletionType.lazy,
+  );
+
   bool _loading = false;
   bool _obscure = true;
   bool _eulaAccepted = false;
@@ -45,6 +54,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _usernameCtrl.dispose();
     _fullNameCtrl.dispose();
     _passCtrl.dispose();
+    _phoneCtrl.dispose();
     super.dispose();
   }
 
@@ -80,6 +90,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (await canLaunchUrl(uri)) launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
+  /// Telefon numarasını E.164 formatına çevirir: 0532... → +90532...
+  String _toE164(String masked) {
+    final digits = masked.replaceAll(RegExp(r'\D'), '');
+    if (digits.startsWith('0')) return '+90${digits.substring(1)}';
+    return '+90$digits';
+  }
+
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
     if (!_eulaAccepted) {
@@ -87,13 +104,242 @@ class _RegisterScreenState extends State<RegisterScreen> {
       showErrorSnackbar(context, Exception(l.validTermsRequired));
       return;
     }
-    setState(() { _loading = true; });
+
+    final rawPhone = _phoneCtrl.text.trim();
+    final hasPhone = rawPhone.length >= 11; // "0### ### ## ##" = 14 char with spaces, digits = 11
+
+    if (!hasPhone) {
+      // DURUM A — telefon boş, normal kayıt
+      await _doRegister(phone: null, firebaseToken: null);
+    } else {
+      // DURUM B — telefon dolu, SMS doğrulama başlat
+      await _startPhoneVerification(_toE164(rawPhone));
+    }
+  }
+
+  Future<void> _startPhoneVerification(String phoneE164) async {
+    final l = AppLocalizations.of(context)!;
+    setState(() => _loading = true);
+
+    final codeCtrl = TextEditingController();
+    String? _verificationId;
+    bool _codeSent = false;
+    bool _dialogLoading = false;
+    String? _dialogError;
+
+    // Bottom sheet controller — SMS geldikten sonra açılacak
+    Future<void> showCodeSheet(StateSetter setDialogState) async {}
+
+    await FirebaseAuth.instance.verifyPhoneNumber(
+      phoneNumber: phoneE164,
+      timeout: const Duration(seconds: 60),
+      verificationCompleted: (PhoneAuthCredential credential) async {
+        // Android otomatik doğrulama — direkt sign in
+        try {
+          final userCred = await FirebaseAuth.instance.signInWithCredential(credential);
+          final idToken = await userCred.user?.getIdToken();
+          if (!mounted) return;
+          Navigator.of(context).pop(); // bottom sheet'i kapat
+          await _doRegister(phone: phoneE164, firebaseToken: idToken);
+        } catch (e) {
+          if (mounted) setState(() => _loading = false);
+        }
+      },
+      verificationFailed: (FirebaseAuthException e) {
+        if (!mounted) return;
+        setState(() => _loading = false);
+        final msg = e.code == 'invalid-phone-number'
+            ? 'Geçersiz telefon numarası.'
+            : e.message ?? 'SMS gönderilemedi.';
+        showErrorSnackbar(context, Exception(msg));
+      },
+      codeSent: (String verificationId, int? resendToken) {
+        _verificationId = verificationId;
+        if (!mounted) return;
+        setState(() => _loading = false);
+
+        // SMS kodu giriş bottom sheet'i aç
+        showModalBottomSheet(
+          context: context,
+          isScrollControlled: true,
+          backgroundColor: AppColors.card(context),
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          builder: (ctx) => StatefulBuilder(
+            builder: (ctx, setS) {
+              return Padding(
+                padding: EdgeInsets.only(
+                  left: 24,
+                  right: 24,
+                  top: 28,
+                  bottom: MediaQuery.of(ctx).viewInsets.bottom + 28,
+                ),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Başlık
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(8),
+                          decoration: BoxDecoration(
+                            color: kPrimary.withAlpha(25),
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          child: const Icon(Icons.sms_outlined, color: kPrimary, size: 22),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                l.phoneVerifTitle,
+                                style: const TextStyle(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 2),
+                              Text(
+                                l.phoneVerifDesc,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.textSecondary(ctx),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 24),
+                    // Kod alanı
+                    TextField(
+                      controller: codeCtrl,
+                      keyboardType: TextInputType.number,
+                      maxLength: 6,
+                      autofocus: true,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(
+                        fontSize: 28,
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 12,
+                      ),
+                      decoration: InputDecoration(
+                        counterText: '',
+                        hintText: '------',
+                        hintStyle: TextStyle(
+                          color: AppColors.textSecondary(ctx),
+                          letterSpacing: 12,
+                          fontSize: 28,
+                        ),
+                        errorText: _dialogError,
+                      ),
+                      onChanged: (_) {
+                        if (_dialogError != null) setS(() => _dialogError = null);
+                      },
+                    ),
+                    const SizedBox(height: 20),
+                    // Onayla butonu
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: _dialogLoading
+                            ? null
+                            : () async {
+                                final code = codeCtrl.text.trim();
+                                if (code.length != 6) {
+                                  setS(() => _dialogError = l.phoneVerifInvalidCode);
+                                  return;
+                                }
+                                setS(() {
+                                  _dialogLoading = true;
+                                  _dialogError = null;
+                                });
+                                try {
+                                  final credential = PhoneAuthProvider.credential(
+                                    verificationId: _verificationId!,
+                                    smsCode: code,
+                                  );
+                                  final userCred = await FirebaseAuth.instance
+                                      .signInWithCredential(credential);
+                                  final idToken = await userCred.user?.getIdToken();
+                                  if (!mounted) return;
+                                  Navigator.of(ctx).pop();
+                                  await _doRegister(phone: phoneE164, firebaseToken: idToken);
+                                } on FirebaseAuthException catch (e) {
+                                  final msg = (e.code == 'invalid-verification-code' ||
+                                          e.code == 'invalid-verification-id')
+                                      ? l.phoneVerifInvalidCode
+                                      : (e.code == 'session-expired'
+                                          ? l.phoneVerifTimeout
+                                          : (e.message ?? l.phoneVerifInvalidCode));
+                                  setS(() {
+                                    _dialogLoading = false;
+                                    _dialogError = msg;
+                                  });
+                                } catch (e) {
+                                  setS(() {
+                                    _dialogLoading = false;
+                                    _dialogError = l.phoneVerifInvalidCode;
+                                  });
+                                }
+                              },
+                        child: _dialogLoading
+                            ? const SizedBox(
+                                height: 20,
+                                width: 20,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.white,
+                                ),
+                              )
+                            : Text(l.phoneVerifConfirm),
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    // Atla butonu
+                    Center(
+                      child: TextButton(
+                        onPressed: () {
+                          Navigator.of(ctx).pop();
+                          _doRegister(phone: null, firebaseToken: null);
+                        },
+                        child: Text(
+                          l.phoneVerifSkip,
+                          style: TextStyle(
+                            color: AppColors.textSecondary(ctx),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            },
+          ),
+        );
+      },
+      codeAutoRetrievalTimeout: (String verificationId) {
+        _verificationId = verificationId;
+      },
+    );
+  }
+
+  Future<void> _doRegister({required String? phone, required String? firebaseToken}) async {
+    setState(() => _loading = true);
     try {
       await AuthService.register(
         email: _emailCtrl.text.trim(),
         username: _usernameCtrl.text.trim(),
         fullName: _fullNameCtrl.text.trim(),
         password: _passCtrl.text,
+        phone: phone,
+        firebaseToken: firebaseToken,
       );
       if (mounted) {
         Navigator.of(context).push(
@@ -211,6 +457,31 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         }
                         return null;
                       },
+                    ),
+                    const SizedBox(height: 14),
+                    // ── Telefon Numarası (İsteğe Bağlı) ──────────────────────
+                    TextFormField(
+                      key: const Key('register_input_telefon'),
+                      controller: _phoneCtrl,
+                      keyboardType: TextInputType.phone,
+                      inputFormatters: [_phoneMask],
+                      decoration: InputDecoration(
+                        labelText: l.fieldPhone,
+                        hintText: l.fieldPhoneHint,
+                        prefixIcon: const Icon(Icons.phone_outlined, size: 20),
+                        suffixIcon: _phoneCtrl.text.isNotEmpty
+                            ? IconButton(
+                                icon: const Icon(Icons.clear, size: 18),
+                                onPressed: () {
+                                  _phoneCtrl.clear();
+                                  _phoneMask.clear();
+                                  setState(() {});
+                                },
+                              )
+                            : null,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                      // Telefon opsiyonel — validasyon yok
                     ),
                     const SizedBox(height: 14),
                     TextFormField(

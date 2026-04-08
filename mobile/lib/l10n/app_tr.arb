@@ -154,6 +154,18 @@
   "usernameChecking": "Kullanıcı adı kontrol ediliyor...",
   "usernameCheckingWait": "Kullanıcı adı kontrol ediliyor, lütfen bekleyin...",
 
+  "fieldPhone": "Telefon Numarası (İsteğe Bağlı)",
+  "fieldPhoneHint": "0### ### ## ##",
+  "phoneVerifTitle": "SMS Doğrulama",
+  "phoneVerifDesc": "Telefon numaranıza gönderilen 6 haneli kodu girin.",
+  "phoneVerifCodeHint": "6 haneli kod",
+  "phoneVerifConfirm": "Onayla",
+  "phoneVerifSending": "SMS gönderiliyor...",
+  "phoneVerifSkip": "Telefon doğrulamasını atla",
+  "phoneVerifInvalidCode": "Geçersiz kod. Tekrar deneyin.",
+  "phoneVerifTimeout": "Zaman aşımı. Tekrar deneyin.",
+  "phoneVerifAlreadyUsed": "Bu telefon numarası zaten kayıtlı.",
+
   "emptyListings": "Henüz ilan yok",
   "emptyFilteredListings": "Bu filtreyle ilan bulunamadı",
   "emptyActiveListings": "Aktif ilan yok",
