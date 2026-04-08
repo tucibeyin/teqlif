@@ -190,16 +190,11 @@
         import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
         import { getAuth, RecaptchaVerifier, signInWithPhoneNumber } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
-        const firebaseConfig = {
-            apiKey: "AIzaSyBV6l2Z_D_KHn9_tU6PtUrhBom3YY2AzVY",
-            authDomain: "teqlif-a24ee.firebaseapp.com",
-            projectId: "teqlif-a24ee",
-            storageBucket: "teqlif-a24ee.firebasestorage.app",
-            messagingSenderId: "232766108005",
-            appId: "FIREBASE_WEB_APP_ID", // Firebase Console > Project Settings > Web App'ten al
-        };
+        // Config'i backend'den al — .env'de tutulur, HTML'e gömülmez
+        const resp = await fetch('/api/config/public');
+        const cfg = await resp.json();
 
-        const app = initializeApp(firebaseConfig, 'phone-auth');
+        const app = initializeApp(cfg.firebase, 'phone-auth');
         const auth = getAuth(app);
         auth.languageCode = 'tr';
 
