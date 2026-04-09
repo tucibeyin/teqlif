@@ -9,7 +9,7 @@ from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyE
 from app.utils.auth import hash_password, verify_password, create_access_token, get_current_user
 from app.utils.email import send_verification_code
 from app.utils.redis_client import get_redis
-from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, UnauthorizedException, ServiceException
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 
@@ -105,7 +105,7 @@ async def login(request: Request, data: UserLogin, db: AsyncSession = Depends(ge
         raise ForbiddenException("Hesabınız devre dışı")
 
     if not user.is_verified:
-        raise ForbiddenException("E-posta adresinizi doğrulamanız gerekiyor")
+        raise EmailNotVerifiedException()
 
     token = create_access_token(user.id)
     return TokenOut(access_token=token, user=UserOut.model_validate(user))

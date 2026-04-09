@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/app_exception.dart';
 import '../../config/app_colors.dart';
 import '../../config/theme.dart';
 import '../../l10n/app_localizations.dart';
@@ -50,7 +51,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pushReplacementNamed('/home');
       }
     } catch (e) {
-      if (e.toString().contains('doğrulamanız gerekiyor') && mounted) {
+      if (e is AppException && e.code == 'EMAIL_NOT_VERIFIED' && mounted) {
         final email = _emailCtrl.text.trim();
         try { await AuthService.resendCode(email); } catch (_) {}
         if (mounted) {

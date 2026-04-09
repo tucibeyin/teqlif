@@ -117,7 +117,7 @@
                 );
                 window.location.href = '/';
             } catch (err) {
-                if (err.detail === 'E-posta adresinizi doğrulamanız gerekiyor') {
+                if (err.error?.code === 'EMAIL_NOT_VERIFIED') {
                     const email = document.getElementById('email').value.trim();
                     try {
                         await apiFetch('/auth/resend-code', {
@@ -128,7 +128,7 @@
                     window.location.href = '/kayit.html?email=' + encodeURIComponent(email) + '&verify=1';
                     return;
                 }
-                alertEl.textContent = err.detail || 'Bir hata oluştu';
+                alertEl.textContent = err.error?.message || err.detail || 'Bir hata oluştu';
                 alertEl.className = 'alert alert-error show';
                 btn.disabled = false;
                 btn.textContent = 'Giriş Yap';

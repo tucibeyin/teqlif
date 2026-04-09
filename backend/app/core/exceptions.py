@@ -48,6 +48,13 @@ class ForbiddenException(AppException):
         super().__init__(status_code=403, message=message, code="FORBIDDEN")
 
 
+class EmailNotVerifiedException(AppException):
+    """403 — E-posta adresi henüz doğrulanmamış."""
+
+    def __init__(self, message: str = "E-posta adresinizi doğrulamanız gerekiyor"):
+        super().__init__(status_code=403, message=message, code="EMAIL_NOT_VERIFIED")
+
+
 class UnauthorizedException(AppException):
     """401 — Kimlik doğrulama hatası (yanlış şifre, geçersiz token vb.)."""
 
