@@ -306,7 +306,7 @@
             await Stream.joinStream(id);
             window.location.href = `/yayin.html?id=${id}`;
         } catch (err) {
-            showToast(err.detail || 'Yayına katılınamadı');
+            showToast(err.error?.message || 'Yayına katılınamadı');
         }
     };
 

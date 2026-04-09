@@ -268,7 +268,7 @@
                     registeredEmail + ' adresine 6 haneli doğrulama kodu gönderdik.';
                 document.getElementById('code').focus();
             } catch (err) {
-                alertEl.textContent = err.detail || err.message || 'Bir hata oluştu';
+                alertEl.textContent = err.error?.message || 'Bir hata oluştu';
                 alertEl.className = 'alert alert-error show';
                 btn.disabled = false;
                 btn.textContent = 'Kayıt Ol';
@@ -288,7 +288,7 @@
                 await Auth.verify(registeredEmail, document.getElementById('code').value);
                 window.location.href = '/';
             } catch (err) {
-                alertEl.textContent = err.detail || 'Kod hatalı veya süresi dolmuş';
+                alertEl.textContent = err.error?.message || 'Kod hatalı veya süresi dolmuş';
                 alertEl.className = 'alert alert-error show';
                 btn.disabled = false;
                 btn.textContent = 'Doğrula';
@@ -306,7 +306,7 @@
                 alertEl.textContent = 'Kod tekrar gönderildi.';
                 alertEl.className = 'alert alert-success show';
             } catch (err) {
-                alertEl.textContent = err.detail || 'Gönderim başarısız';
+                alertEl.textContent = err.error?.message || 'Gönderim başarısız';
                 alertEl.className = 'alert alert-error show';
             }
         });

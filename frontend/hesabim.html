@@ -794,7 +794,7 @@
                 renderProfile(updated);
                 closeModal('editModal');
             } catch (err) {
-                alertEl.textContent = err.detail || 'Kaydedilemedi.';
+                alertEl.textContent = err.error?.message || 'Kaydedilemedi.';
                 alertEl.style.display = 'block';
             } finally {
                 btn.disabled = false;
@@ -845,7 +845,7 @@
                 document.getElementById('newPass2').value = '';
                 closeModal('passModal');
             } catch (err) {
-                alertEl.textContent = err.detail || 'Şifre değiştirilemedi.';
+                alertEl.textContent = err.error?.message || 'Şifre değiştirilemedi.';
                 alertEl.style.display = 'block';
             } finally {
                 btn.disabled = false;
@@ -883,7 +883,7 @@
                 });
                 Auth.logout();
             } catch (err) {
-                alertEl.textContent = err.detail || 'Hesap silinemedi. Şifrenizi kontrol edin.';
+                alertEl.textContent = err.error?.message || 'Hesap silinemedi. Şifrenizi kontrol edin.';
                 alertEl.style.display = 'block';
                 btn.disabled = false;
                 btn.textContent = 'Hesabı Sil';

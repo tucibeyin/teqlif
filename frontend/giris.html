@@ -128,7 +128,7 @@
                     window.location.href = '/kayit.html?email=' + encodeURIComponent(email) + '&verify=1';
                     return;
                 }
-                alertEl.textContent = err.error?.message || err.detail || 'Bir hata oluştu';
+                alertEl.textContent = err.error?.message || 'Bir hata oluştu';
                 alertEl.className = 'alert alert-error show';
                 btn.disabled = false;
                 btn.textContent = 'Giriş Yap';

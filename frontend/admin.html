@@ -641,7 +641,7 @@
                 closeAddUserModal(); loadUsers();
             } else {
                 const err = await res.json();
-                alert("Hata: " + (err.detail || "Kullanıcı eklenemedi."));
+                alert("Hata: " + (err.error?.message || "Kullanıcı eklenemedi."));
             }
         }
 
@@ -655,7 +655,7 @@
                 alert(`@${username} başarıyla silindi.`); loadUsers();
             } else {
                 const err = await res.json();
-                alert("Silinemedi: " + (err.detail || "Sistemde ilişkili verisi var."));
+                alert("Silinemedi: " + (err.error?.message || "Sistemde ilişkili verisi var."));
             }
         }
 

@@ -537,7 +537,7 @@
                 } else if (errCode === 'FORBIDDEN' || err?.error?.status === 403) {
                     showAlert('Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.', 'error');
                 } else {
-                    showAlert(err?.error?.message || err.detail || 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');
+                    showAlert(err?.error?.message || 'Bir hata oluştu, lütfen tekrar deneyin.', 'error');
                 }
             } finally {
                 btn.disabled = false;

@@ -1715,7 +1715,7 @@
             try {
                 await Stream.joinStream(id);
                 window.location.href = `/yayin.html?id=${id}`;
-            } catch (err) { showAlert(err.detail || 'Yayına katılılamadı'); }
+            } catch (err) { showAlert(err.error?.message || 'Yayına katılılamadı'); }
         }
 
         /* ── Story Upload: client-side validasyon + yükleme ─────────── */
@@ -1813,7 +1813,7 @@
                 } catch (err) {
                     console.error('[StoryUpload] Yükleme başarısız:', err);
                     if (window.Sentry) Sentry.captureException(err);
-                    showAlert(err.message || 'Hikaye yüklenemedi. Lütfen tekrar deneyin.');
+                    showAlert(err.error?.message || err.message || 'Hikaye yüklenemedi. Lütfen tekrar deneyin.');
                 } finally {
                     _setStoryUploading(false);
                 }
@@ -2074,7 +2074,7 @@
                 } else if (errCode === 'FORBIDDEN' || (err?.error?.status === 403)) {
                     modalAlert.textContent = 'Güvenlik doğrulaması başarısız. Lütfen tekrar deneyin.';
                 } else {
-                    modalAlert.textContent = err?.error?.message || err.detail || 'Yayın başlatılamadı';
+                    modalAlert.textContent = err?.error?.message || 'Yayın başlatılamadı';
                 }
                 modalAlert.style.display = 'block';
                 console.error('[LiveStart] Yayın başlatma hatası:', err);
