@@ -164,6 +164,18 @@
 
         let registeredEmail = '';
 
+        // ── Doğrulanmamış kullanıcı login'den yönlendirildiyse ────────
+        (function () {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('verify') === '1' && params.get('email')) {
+                registeredEmail = params.get('email');
+                document.getElementById('stepRegister').style.display = 'none';
+                document.getElementById('stepVerify').style.display = 'block';
+                document.getElementById('verifySubtitle').textContent =
+                    registeredEmail + ' adresine 6 haneli doğrulama kodu gönderdik.';
+            }
+        })();
+
         // ── Kullanıcı adı gerçek zamanlı kontrol ─────────────────────
         let _unTimer = null;
         let _unOk = null; // null=kontrol edilmedi/geçersiz, true=uygun, false=alınmış

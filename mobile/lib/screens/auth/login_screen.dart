@@ -8,6 +8,7 @@ import '../../services/push_notification_service.dart';
 import '../../services/storage_service.dart';
 import '../../utils/error_helper.dart';
 import 'register_screen.dart';
+import 'verify_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -49,7 +50,17 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.of(context).pushReplacementNamed('/home');
       }
     } catch (e) {
-      if (mounted) showErrorSnackbar(context, e);
+      if (e.toString().contains('doğrulamanız gerekiyor') && mounted) {
+        final email = _emailCtrl.text.trim();
+        try { await AuthService.resendCode(email); } catch (_) {}
+        if (mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => VerifyScreen(email: email)),
+          );
+        }
+      } else if (mounted) {
+        showErrorSnackbar(context, e);
+      }
     } finally {
       if (mounted) setState(() { _loading = false; });
     }

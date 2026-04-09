@@ -117,6 +117,17 @@
                 );
                 window.location.href = '/';
             } catch (err) {
+                if (err.detail === 'E-posta adresinizi doğrulamanız gerekiyor') {
+                    const email = document.getElementById('email').value.trim();
+                    try {
+                        await apiFetch('/auth/resend-code', {
+                            method: 'POST',
+                            body: JSON.stringify({ email }),
+                        });
+                    } catch (_) {}
+                    window.location.href = '/kayit.html?email=' + encodeURIComponent(email) + '&verify=1';
+                    return;
+                }
                 alertEl.textContent = err.detail || 'Bir hata oluştu';
                 alertEl.className = 'alert alert-error show';
                 btn.disabled = false;
