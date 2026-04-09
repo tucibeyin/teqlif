@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import 'package:sentry_flutter/sentry_flutter.dart';
 import '../config/api.dart';
+import '../core/app_exception.dart';
 import '../models/listing_offer.dart';
 import 'storage_service.dart';
 
@@ -50,10 +51,12 @@ class ListingService {
         return jsonDecode(resp.body) as Map<String, dynamic>;
       }
       final body = jsonDecode(resp.body) as Map<String, dynamic>;
-      final msg = (body['error'] as Map?)?['message'] as String? ??
-          body['detail'] as String? ??
-          'Beğeni gönderilemedi.';
-      throw Exception(msg);
+      final errMap = body['error'] as Map?;
+      throw AppException(
+        errMap?['message'] as String? ?? 'Beğeni gönderilemedi.',
+        code: errMap?['code'] as String? ?? 'ERR_${resp.statusCode}',
+        statusCode: resp.statusCode,
+      );
     } catch (e, st) {
       debugPrint('[ListingService] toggleLike hatası: $e');
       await Sentry.captureException(e, stackTrace: st);
@@ -76,10 +79,12 @@ class ListingService {
         );
       }
       final body = jsonDecode(resp.body) as Map<String, dynamic>;
-      final msg = (body['error'] as Map?)?['message'] as String? ??
-          body['detail'] as String? ??
-          'Teklif gönderilemedi.';
-      throw Exception(msg);
+      final errMap = body['error'] as Map?;
+      throw AppException(
+        errMap?['message'] as String? ?? 'Teklif gönderilemedi.',
+        code: errMap?['code'] as String? ?? 'ERR_${resp.statusCode}',
+        statusCode: resp.statusCode,
+      );
     } catch (e, st) {
       debugPrint('[ListingService] placeOffer hatası: $e');
       await Sentry.captureException(e, stackTrace: st);
