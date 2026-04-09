@@ -219,7 +219,8 @@ class ListingService:
                         pref_key="new_listing",
                     ))
             except Exception as exc:
-                logger.error("[LISTINGS] Takipçi bildirimi gönderilemedi | user_id=%s | %s", uid, exc)
+                logger.error("[LISTINGS] Takipçi bildirimi gönderilemedi | user_id=%s", uid, exc_info=True)
+                capture_exception(exc)
 
         _asyncio.create_task(_notify_followers())
         return {"id": listing.id}

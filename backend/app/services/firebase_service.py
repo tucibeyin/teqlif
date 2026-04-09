@@ -1,7 +1,8 @@
 import asyncio
-import logging
 
-logger = logging.getLogger(__name__)
+from app.core.logger import get_logger, capture_exception
+
+logger = get_logger(__name__)
 
 
 
@@ -26,7 +27,8 @@ def _get_firebase_app():
             logger.info("[FCM] Firebase başarıyla başlatıldı")
         return firebase_admin.get_app()
     except Exception as exc:
-        logger.error("[FCM] Firebase init failed: %s", exc)
+        logger.error("[FCM] Firebase init failed: %s", exc, exc_info=True)
+        capture_exception(exc)
         return None
 
 

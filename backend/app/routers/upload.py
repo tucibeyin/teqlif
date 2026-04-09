@@ -7,7 +7,7 @@ from app.config import settings
 from app.models.user import User
 from app.utils.auth import get_current_user
 from app.core.exceptions import BadRequestException
-from app.core.logger import get_logger
+from app.core.logger import get_logger, capture_exception
 
 logger = get_logger(__name__)
 
@@ -41,7 +41,7 @@ def _make_thumbnail(data: bytes, ext: str) -> bytes:
         from PIL import ImageOps
         img = ImageOps.exif_transpose(img)
     except Exception:
-        pass
+        logger.debug("EXIF yönlendirme uygulanamadı — atlanıyor")
 
     # RGBA / P modunu RGB'ye çevir (JPEG kaydetmek için gerekli)
     if img.mode not in ("RGB", "L"):
@@ -102,6 +102,7 @@ async def upload_image(
             f.write(thumb_data)
     except Exception as e:
         logger.error("Thumbnail oluşturulamadı: %s", str(e), exc_info=True)
+        capture_exception(e)
         # Thumbnail başarısız olsa bile orijinali döndür; thumb_url None
         return {"url": f"/uploads/{filename}", "thumb_url": None}
 
