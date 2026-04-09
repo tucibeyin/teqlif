@@ -62,7 +62,7 @@ const Auth = (() => {
 // ── Unread count helper ────────────────────────────────────────────────────────
 async function getUnreadCount() {
     try {
-        const [notifResp, msgResp] = await Promise.all([
+        const [notifResult, msgResult] = await Promise.allSettled([
             fetch('/api/notifications/unread-count', {
                 headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
             }),
@@ -71,12 +71,12 @@ async function getUnreadCount() {
             }),
         ]);
         let total = 0;
-        if (notifResp.ok) {
-            const d = await notifResp.json();
+        if (notifResult.status === 'fulfilled' && notifResult.value.ok) {
+            const d = await notifResult.value.json();
             total += (d.count || 0);
         }
-        if (msgResp.ok) {
-            const d = await msgResp.json();
+        if (msgResult.status === 'fulfilled' && msgResult.value.ok) {
+            const d = await msgResult.value.json();
             total += (d.count || 0);
         }
         return total;

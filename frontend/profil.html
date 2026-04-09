@@ -1366,12 +1366,14 @@
             body.innerHTML = '<div class="follow-modal-loading">Yükleniyor...</div>';
             summaryBar.innerHTML = '';
             try {
-                const [list, summary] = await Promise.all([
+                const [listResult, summaryResult] = await Promise.allSettled([
                     apiFetch(`/ratings/${userId}`),
                     apiFetch(`/ratings/${userId}/summary`),
                 ]);
+                const list = listResult.status === 'fulfilled' ? listResult.value : [];
+                const summary = summaryResult.status === 'fulfilled' ? summaryResult.value : {};
                 // Summary bar
-                if (summary.average) {
+                if (summary?.average) {
                     const filled = Math.round(summary.average);
                     summaryBar.innerHTML = `
                         <div class="ratings-summary-bar">
