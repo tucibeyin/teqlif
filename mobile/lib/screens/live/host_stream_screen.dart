@@ -41,6 +41,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   LocalVideoTrack? _localVideoTrack;
   bool _micEnabled = true;
   bool _cameraEnabled = true;
+  bool _isFrontCamera = true;
   bool _connecting = true;
   String? _error;
   final _videoKey = GlobalKey();
@@ -197,7 +198,10 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   Future<void> _switchCamera() async {
     if (_localVideoTrack == null) return;
     await Helper.switchCamera(_localVideoTrack!.mediaStreamTrack);
-    setState(() => _currentZoom = 1.0);
+    setState(() {
+      _isFrontCamera = !_isFrontCamera;
+      _currentZoom = 1.0;
+    });
   }
 
 
@@ -471,6 +475,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                   track: _localVideoTrack,
                   cameraEnabled: _cameraEnabled,
                   repaintKey: _videoKey,
+                  isFrontCamera: _isFrontCamera,
                 ),
               ),
             ),

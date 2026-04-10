@@ -30,23 +30,35 @@ class LiveVideoPlayer extends StatelessWidget {
   /// Viewer ekranı için 'Video bekleniyor...' gibi bir değer geçilir.
   final String? waitingLabel;
 
+  /// Host'un aktif kamera yönü. Ön kamera auto-mirror, arka kamera
+  /// açıkça mirror gerektirir. Viewer (remote track) için null geçilir.
+  final bool? isFrontCamera;
+
   const LiveVideoPlayer({
     super.key,
     required this.track,
     required this.cameraEnabled,
     this.repaintKey,
     this.waitingLabel,
+    this.isFrontCamera,
   });
 
   @override
   Widget build(BuildContext context) {
     // ── Durum 1: Aktif video track ──────────────────────────────────────────
     if (track != null) {
+      // Ön kamera: auto (LiveKit zaten mirror uygular)
+      // Arka kamera: açıkça mirror (isFrontCamera == false)
+      // Remote/viewer track: auto (isFrontCamera == null)
+      final mirror = isFrontCamera == false
+          ? VideoViewMirrorMode.mirror
+          : VideoViewMirrorMode.auto;
       return RepaintBoundary(
         key: repaintKey,
         child: VideoTrackRenderer(
           track!,
           fit: VideoViewFit.contain,
+          mirrorMode: mirror,
         ),
       );
     }
