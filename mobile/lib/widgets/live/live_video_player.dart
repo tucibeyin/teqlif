@@ -47,19 +47,24 @@ class LiveVideoPlayer extends StatelessWidget {
   Widget build(BuildContext context) {
     // ── Durum 1: Aktif video track ──────────────────────────────────────────
     if (track != null) {
-      // Ön kamera: auto (LiveKit zaten mirror uygular)
-      // Arka kamera: açıkça mirror (isFrontCamera == false)
-      // Remote/viewer track: auto (isFrontCamera == null)
-      final mirror = isFrontCamera == false
-          ? VideoViewMirrorMode.mirror
-          : VideoViewMirrorMode.auto;
+      final renderer = VideoTrackRenderer(
+        track!,
+        fit: VideoViewFit.contain,
+        mirrorMode: VideoViewMirrorMode.off,
+      );
+      // Ön kamera: yatay flip (selfie doğal görünüm)
+      // Arka kamera: flip yok (gerçek yön)
+      // Remote/viewer (isFrontCamera == null): flip yok
+      final needsFlip = isFrontCamera == true;
       return RepaintBoundary(
         key: repaintKey,
-        child: VideoTrackRenderer(
-          track!,
-          fit: VideoViewFit.contain,
-          mirrorMode: mirror,
-        ),
+        child: needsFlip
+            ? Transform(
+                alignment: Alignment.center,
+                transform: Matrix4.diagonal3Values(-1, 1, 1),
+                child: renderer,
+              )
+            : renderer,
       );
     }
 
