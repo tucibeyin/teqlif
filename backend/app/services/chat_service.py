@@ -20,10 +20,18 @@ import json
 import uuid
 from datetime import datetime, timezone
 
-from app.utils.redis_client import get_redis
+import redis.asyncio as aioredis
+from sqlalchemy import select
+
+from app.config import settings
+from app.core.auto_mod import auto_mod
 from app.core.logger import get_logger
 from app.core.ws_manager import ws_manager, safe_send_json
 from app.constants import ws_types as WS
+from app.database import AsyncSessionLocal
+from app.models.user import User
+from app.services.moderation_service import mute_key, mod_key, MOD_CHANNEL
+from app.utils.redis_client import get_redis
 
 logger = get_logger(__name__)
 
@@ -66,9 +74,6 @@ async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> Non
 # ── Pub/Sub dinleyicileri (arka plan görevleri) ──────────────────────────────
 async def chat_pubsub_listener() -> None:
     """Her worker için tek seferlik başlatılan chat pub/sub dinleyicisi."""
-    import redis.asyncio as aioredis
-    from app.config import settings
-
     r = aioredis.from_url(settings.redis_url, decode_responses=True)
     pubsub = r.pubsub()
     await pubsub.subscribe(_CHAT_CHANNEL)
@@ -92,10 +97,6 @@ async def chat_pubsub_listener() -> None:
 
 async def moderation_pubsub_listener() -> None:
     """Her worker için moderasyon event dinleyicisi (muted/kicked/unmuted/promoted/demoted)."""
-    import redis.asyncio as aioredis
-    from app.config import settings
-    from app.services.moderation_service import MOD_CHANNEL
-
     r = aioredis.from_url(settings.redis_url, decode_responses=True)
     pubsub = r.pubsub()
     await pubsub.subscribe(MOD_CHANNEL)
@@ -106,46 +107,7 @@ async def moderation_pubsub_listener() -> None:
                 continue
             try:
                 data = json.loads(message["data"])
-                stream_id = int(data["_stream_id"])
-                user_id = int(data["user_id"])
-                event_type = data["type"]
-                logger.info(
-                    "[MOD PUBSUB] EVENT ALINDI | type=%s stream_id=%s user_id=%s",
-                    event_type, stream_id, user_id,
-                )
-                if event_type == WS.MOD_PROMOTED:
-                    await ws_manager.broadcast_local(
-                        f"chat:{stream_id}",
-                        {
-                            "type": WS.MOD_PROMOTED,
-                            "user_id": user_id,
-                            "username": data.get("username"),
-                            "promoted_by": data.get("promoted_by"),
-                        },
-                    )
-                    await ws_manager.broadcast_local(
-                        f"chat:{stream_id}:u{user_id}",
-                        {"type": WS.MOD_PROMOTED_SELF, "promoted_by": data.get("promoted_by")},
-                    )
-                elif event_type == WS.MOD_DEMOTED:
-                    await ws_manager.broadcast_local(
-                        f"chat:{stream_id}",
-                        {
-                            "type": WS.MOD_DEMOTED,
-                            "user_id": user_id,
-                            "username": data.get("username"),
-                            "demoted_by": data.get("demoted_by"),
-                        },
-                    )
-                    await ws_manager.broadcast_local(
-                        f"chat:{stream_id}:u{user_id}",
-                        {"type": WS.MOD_DEMOTED_SELF, "demoted_by": data.get("demoted_by")},
-                    )
-                else:
-                    await ws_manager.broadcast_local(
-                        f"chat:{stream_id}:u{user_id}",
-                        {"type": event_type},
-                    )
+                await _dispatch_mod_event(data)
             except Exception as exc:
                 logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
     except asyncio.CancelledError:
@@ -153,6 +115,50 @@ async def moderation_pubsub_listener() -> None:
     finally:
         await pubsub.unsubscribe(MOD_CHANNEL)
         await r.aclose()
+
+
+async def _dispatch_mod_event(data: dict) -> None:
+    """Moderasyon event verisini ilgili WebSocket topic'lerine dağıtır."""
+    stream_id = int(data["_stream_id"])
+    user_id = int(data["user_id"])
+    event_type = data["type"]
+    logger.info(
+        "[MOD PUBSUB] EVENT ALINDI | type=%s stream_id=%s user_id=%s",
+        event_type, stream_id, user_id,
+    )
+    if event_type == WS.MOD_PROMOTED:
+        await ws_manager.broadcast_local(
+            f"chat:{stream_id}",
+            {
+                "type": WS.MOD_PROMOTED,
+                "user_id": user_id,
+                "username": data.get("username"),
+                "promoted_by": data.get("promoted_by"),
+            },
+        )
+        await ws_manager.broadcast_local(
+            f"chat:{stream_id}:u{user_id}",
+            {"type": WS.MOD_PROMOTED_SELF, "promoted_by": data.get("promoted_by")},
+        )
+    elif event_type == WS.MOD_DEMOTED:
+        await ws_manager.broadcast_local(
+            f"chat:{stream_id}",
+            {
+                "type": WS.MOD_DEMOTED,
+                "user_id": user_id,
+                "username": data.get("username"),
+                "demoted_by": data.get("demoted_by"),
+            },
+        )
+        await ws_manager.broadcast_local(
+            f"chat:{stream_id}:u{user_id}",
+            {"type": WS.MOD_DEMOTED_SELF, "demoted_by": data.get("demoted_by")},
+        )
+    else:
+        await ws_manager.broadcast_local(
+            f"chat:{stream_id}:u{user_id}",
+            {"type": event_type},
+        )
 
 
 # ── Servis sınıfı ────────────────────────────────────────────────────────────
@@ -185,7 +191,6 @@ class ChatService:
 
     async def get_mod_status(self, stream_id: int, user_id: int) -> bool:
         """Kullanıcının bu yayında moderatör olup olmadığını kontrol eder."""
-        from app.services.moderation_service import mod_key
         redis = await get_redis()
         return bool(await redis.sismember(mod_key(stream_id), str(user_id)))
 
@@ -219,9 +224,6 @@ class ChatService:
         if cached is not None:
             return cached == b"1" or cached == "1"
 
-        from app.database import AsyncSessionLocal
-        from app.models.user import User
-        from sqlalchemy import select
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(User.is_shadowbanned).where(User.id == user_id))
             row = result.scalar_one_or_none()
@@ -233,12 +235,10 @@ class ChatService:
     # ── Mesaj İşle ───────────────────────────────────────────────────────────
     async def _check_muted(self, redis, stream_id: int, user_id: int) -> bool:
         """Kullanıcının bu yayında mute'lu olup olmadığını kontrol eder."""
-        from app.services.moderation_service import mute_key
         return bool(await redis.sismember(mute_key(stream_id), str(user_id)))
 
     async def _apply_content_filters(self, user_id: int, content: str) -> bool:
         """Shadowban veya küfür içeriyorsa True (mesaj gizlenecek) döner."""
-        from app.core.auto_mod import auto_mod
         return await self.is_shadowbanned(user_id) or auto_mod.contains_profanity(content)
 
     async def _build_message_obj(
@@ -246,7 +246,6 @@ class ChatService:
         profile_image_url: str | None, content: str, is_host: bool, is_hidden: bool,
     ) -> dict:
         """Mesaj sözlüğünü oluşturur; moderatör rozetini Redis'ten kontrol eder."""
-        from app.services.moderation_service import mod_key
         is_mod = bool(await redis.sismember(mod_key(stream_id), str(user_id)))
         return {
             "type": WS.MESSAGE,

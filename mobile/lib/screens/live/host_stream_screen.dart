@@ -99,11 +99,6 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           _error = l.livePermissionRequired;
           _connecting = false;
         });
-      } else {
-        setState(() {
-          _error = 'Permission denied';
-          _connecting = false;
-        });
       }
       return;
     }
@@ -239,84 +234,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     showModalBottomSheet(
       context: context,
       backgroundColor: Colors.transparent,
-      builder: (_) => Container(
-        decoration: const BoxDecoration(
-          color: Color(0xFF1E293B),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-        ),
-        padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 36, height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.white24,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(
-              '👁 İzleyiciler (${viewers.length})',
-              style: const TextStyle(
-                color: Colors.white,
-                fontWeight: FontWeight.w700,
-                fontSize: 15,
-              ),
-            ),
-            const SizedBox(height: 12),
-            if (viewers.isEmpty)
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                child: Text(
-                  l.liveNoViewers,
-                  style: const TextStyle(color: Colors.white54, fontSize: 13),
-                ),
-              )
-            else
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 260),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: viewers.length,
-                  itemBuilder: (_, i) {
-                    final uname = viewers[i];
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 6),
-                      child: Row(
-                        children: [
-                          CircleAvatar(
-                            radius: 14,
-                            backgroundColor: usernameColor(uname).withOpacity(0.25),
-                            child: Text(
-                              uname.isNotEmpty ? uname[0].toUpperCase() : '?',
-                              style: TextStyle(
-                                color: usernameColor(uname),
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(width: 10),
-                          Text(
-                            '@$uname',
-                            style: TextStyle(
-                              color: usernameColor(uname),
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                ),
-              ),
-          ],
-        ),
+      builder: (_) => _ViewersBottomSheet(
+        viewers: viewers,
+        noViewersText: l.liveNoViewers,
       ),
     );
   }
@@ -804,6 +724,102 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           ),
         ],
         ),
+      ),
+    );
+  }
+}
+
+// ── İzleyiciler BottomSheet ────────────────────────────────────────────────
+
+class _ViewersBottomSheet extends StatelessWidget {
+  final List<String> viewers;
+  final String noViewersText;
+
+  const _ViewersBottomSheet({
+    required this.viewers,
+    required this.noViewersText,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        color: Color(0xFF1E293B),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 36,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            '👁 İzleyiciler (${viewers.length})',
+            style: const TextStyle(
+              color: Colors.white,
+              fontWeight: FontWeight.w700,
+              fontSize: 15,
+            ),
+          ),
+          const SizedBox(height: 12),
+          if (viewers.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Text(
+                noViewersText,
+                style: const TextStyle(color: Colors.white54, fontSize: 13),
+              ),
+            )
+          else
+            ConstrainedBox(
+              constraints: const BoxConstraints(maxHeight: 260),
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: viewers.length,
+                itemBuilder: (_, i) {
+                  final uname = viewers[i];
+                  return Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 6),
+                    child: Row(
+                      children: [
+                        CircleAvatar(
+                          radius: 14,
+                          backgroundColor: usernameColor(uname).withOpacity(0.25),
+                          child: Text(
+                            uname.isNotEmpty ? uname[0].toUpperCase() : '?',
+                            style: TextStyle(
+                              color: usernameColor(uname),
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Text(
+                          '@$uname',
+                          style: TextStyle(
+                            color: usernameColor(uname),
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
       ),
     );
   }

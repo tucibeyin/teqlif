@@ -10,7 +10,7 @@ from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyE
 from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, get_current_user
 from app.utils.email import send_verification_code
 from app.utils.redis_client import get_redis
-from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException
+from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException, ConflictException
 from app.core.logger import get_logger, capture_exception
 from app.core.rate_limit import limiter
 
@@ -23,8 +23,13 @@ _VERIFY_CODE_RANGE = 900_000   # üretilecek kod aralığı (100000–999999)
 _USERNAME_RE = re.compile(r"^[a-z0-9_]{3,50}$")
 
 
-async def _send_verification_email(request: Request, email: str, full_name: str, code: str) -> None:
-    """Doğrulama e-postasını ARQ kuyruğu üzerinden gönderir; başarısız olursa doğrudan gönderir."""
+async def _send_verification_email(
+    request: Request, email: str, full_name: str, code: str, *, raise_on_failure: bool = False
+) -> None:
+    """Doğrulama e-postasını ARQ kuyruğu üzerinden gönderir; başarısız olursa doğrudan gönderir.
+
+    raise_on_failure=True ise doğrudan gönderim de başarısız olursa ServiceException fırlatır.
+    """
     try:
         await request.app.state.arq_pool.enqueue_job(
             "send_verification_email_task", email, full_name, code
@@ -34,16 +39,18 @@ async def _send_verification_email(request: Request, email: str, full_name: str,
         try:
             await send_verification_code(email, full_name, code)
         except Exception as e2:
-            logger.warning("Doğrulama e-postası gönderilemedi [%s]: %s", email, str(e2))
+            logger.error(
+                "Doğrulama e-postası gönderilemedi [%s]: %s", email, str(e2), exc_info=True
+            )
             capture_exception(e2)
+            if raise_on_failure:
+                raise ServiceException("E-posta gönderilemedi")
 
 
 async def _create_user_and_send_code(
     request: Request, data: UserRegister, db: AsyncSession
 ) -> None:
     """Yeni kullanıcıyı oluşturur, doğrulama kodunu Redis'e kaydeder ve e-posta gönderir."""
-    from app.core.exceptions import ConflictException
-
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalar_one_or_none():
         raise BadRequestException("Bu e-posta adresi zaten kullanılıyor")
@@ -139,22 +146,7 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
-
-    # E-posta kuyruğa alınır — API yanıtı bloklanmaz
-    try:
-        await request.app.state.arq_pool.enqueue_job(
-            "send_verification_email_task", data.email, user.full_name, code
-        )
-    except Exception as e:
-        # ARQ pool erişim hatası — yedek olarak direkt gönder
-        logger.warning("ARQ enqueue başarısız, direkt gönderilecek [%s]: %s", data.email, str(e))
-        try:
-            await send_verification_code(data.email, user.full_name, code)
-        except Exception as e2:
-            logger.error("Doğrulama kodu e-postası gönderilemedi [%s]: %s", data.email, str(e2), exc_info=True)
-            capture_exception(e2)
-            raise ServiceException("E-posta gönderilemedi")
-
+    await _send_verification_email(request, data.email, user.full_name, code, raise_on_failure=True)
     return {"message": "Kod tekrar gönderildi"}
 
 
