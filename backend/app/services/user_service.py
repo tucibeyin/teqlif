@@ -12,6 +12,7 @@ Hata Yönetimi:
     Zaten engellenmiş (409) → IntegrityError yakalanır, idempotent olarak 200 döner
     İş kuralları             → BadRequest / NotFound
 """
+import asyncio
 from typing import Optional, List
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
@@ -119,46 +120,56 @@ class UserService:
         if not user:
             raise NotFoundException("Kullanıcı bulunamadı")
 
-        listing_count = await self.db.scalar(
-            select(func.count()).where(
-                Listing.user_id == user.id,
-                Listing.is_active == True,  # noqa: E712
-            )
-        ) or 0
-
-        follower_count = await self.db.scalar(
-            select(func.count()).where(Follow.followed_id == user.id)
-        ) or 0
-
-        following_count = await self.db.scalar(
-            select(func.count()).where(Follow.follower_id == user.id)
-        ) or 0
+        # Bağımsız count sorgularını paralel çalıştır — N+1 yerine tek tur
+        (
+            listing_count,
+            follower_count,
+            following_count,
+            active_stream,
+        ) = await asyncio.gather(
+            self.db.scalar(
+                select(func.count()).where(
+                    Listing.user_id == user.id,
+                    Listing.is_active == True,  # noqa: E712
+                )
+            ),
+            self.db.scalar(
+                select(func.count()).where(Follow.followed_id == user.id)
+            ),
+            self.db.scalar(
+                select(func.count()).where(Follow.follower_id == user.id)
+            ),
+            self.db.scalar(
+                select(LiveStream).where(
+                    LiveStream.host_id == user.id,
+                    LiveStream.is_live == True,  # noqa: E712
+                )
+            ),
+        )
+        listing_count  = listing_count  or 0
+        follower_count = follower_count or 0
+        following_count = following_count or 0
 
         is_following = False
         is_blocked = False
         if current_user and current_user.id != user.id:
-            chk = await self.db.scalar(
-                select(Follow).where(
-                    Follow.follower_id == current_user.id,
-                    Follow.followed_id == user.id,
-                )
+            # İlişki sorguları da paralel
+            follow_chk, block_chk = await asyncio.gather(
+                self.db.scalar(
+                    select(Follow).where(
+                        Follow.follower_id == current_user.id,
+                        Follow.followed_id == user.id,
+                    )
+                ),
+                self.db.scalar(
+                    select(UserBlock).where(
+                        UserBlock.blocker_id == current_user.id,
+                        UserBlock.blocked_id == user.id,
+                    )
+                ),
             )
-            is_following = chk is not None
-
-            block_chk = await self.db.scalar(
-                select(UserBlock).where(
-                    UserBlock.blocker_id == current_user.id,
-                    UserBlock.blocked_id == user.id,
-                )
-            )
-            is_blocked = block_chk is not None
-
-        active_stream = await self.db.scalar(
-            select(LiveStream).where(
-                LiveStream.host_id == user.id,
-                LiveStream.is_live == True,  # noqa: E712
-            )
-        )
+            is_following = follow_chk is not None
+            is_blocked   = block_chk  is not None
 
         return {
             "id": user.id,

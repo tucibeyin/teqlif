@@ -16,7 +16,9 @@ from app.core.rate_limit import limiter
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auth", tags=["auth"])
 
-VERIFY_CODE_TTL = 600  # 10 dakika
+VERIFY_CODE_TTL = 600          # 10 dakika
+_VERIFY_CODE_MIN = 100_000     # 6 haneli kod alt sınırı
+_VERIFY_CODE_RANGE = 900_000   # üretilecek kod aralığı (100000–999999)
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -49,7 +51,7 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
     await db.commit()
 
     # 6 haneli kod üret, Redis'e kaydet
-    code = str(100000 + secrets.randbelow(900000))
+    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
 
@@ -125,7 +127,7 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
     if not user or user.is_verified:
         raise BadRequestException("Geçersiz istek")
 
-    code = str(100000 + secrets.randbelow(900000))
+    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
 
@@ -229,7 +231,7 @@ async def refresh_token(request: Request, payload: dict, db: AsyncSession = Depe
 async def change_password_send_code(
     current_user: User = Depends(get_current_user),
 ):
-    code = str(100000 + secrets.randbelow(900000))
+    code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"chpwd:{current_user.id}", VERIFY_CODE_TTL, code)
     try:

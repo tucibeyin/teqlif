@@ -1,8 +1,11 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
+import '../core/logger_service.dart';
 import '../models/user.dart';
 import 'storage_service.dart';
+
+final _log = LoggerService.instance;
 
 class AuthService {
   static Future<Map<String, String>> _headers({bool auth = false}) async {
@@ -119,7 +122,8 @@ class AuthService {
         StorageService.saveRefreshToken(body['refresh_token'] as String),
       ]);
       return true;
-    } catch (_) {
+    } catch (e, st) {
+      _log.captureException(e, stackTrace: st, tag: 'AuthService.tryRefresh');
       return false;
     }
   }

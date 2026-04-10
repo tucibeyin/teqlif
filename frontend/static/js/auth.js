@@ -12,7 +12,8 @@ const Auth = (() => {
         try {
             const u = localStorage.getItem(USER_KEY);
             return u && u !== 'undefined' ? JSON.parse(u) : null;
-        } catch {
+        } catch (err) {
+            console.warn('[Auth] getUser JSON parse hatası:', err);
             return null;
         }
     }
@@ -44,7 +45,9 @@ const Auth = (() => {
             localStorage.setItem(TOKEN_KEY, data.access_token);
             localStorage.setItem(REFRESH_KEY, data.refresh_token);
             return true;
-        } catch {
+        } catch (err) {
+            console.error('[Auth] tryRefresh ağ hatası:', err);
+            if (window.Sentry) Sentry.captureException(err);
             return false;
         }
     }
@@ -102,7 +105,8 @@ async function getUnreadCount() {
             total += (d.count || 0);
         }
         return total;
-    } catch {
+    } catch (err) {
+        console.warn('[Auth] getUnreadCount hatası:', err);
         return 0;
     }
 }

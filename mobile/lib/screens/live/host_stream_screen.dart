@@ -19,7 +19,16 @@ import '../../services/moderation_service.dart';
 import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/host_top_bar.dart';
 import '../../widgets/live/live_video_player.dart';
+import '../../core/logger_service.dart';
 import '../../l10n/app_localizations.dart';
+
+final _log = LoggerService.instance;
+
+// ── Host stream sabitleri ──────────────────────────────────────────────────────
+const _kThumbnailInitialDelaySeconds  = 5;    // yayın başlayınca ilk thumbnail gecikmesi
+const _kThumbnailRefreshSeconds       = 60;   // thumbnail yenileme aralığı
+const _kTrackPollIntervalMs           = 100;  // video track kontrol aralığı (ms)
+const _kTrackPollMaxAttempts          = 50;   // max kontrol sayısı (= 5 saniye)
 
 class HostStreamScreen extends StatefulWidget {
   final StreamTokenOut streamToken;
@@ -155,10 +164,10 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
         _connecting = false;
       });
 
-      // Track hâlâ gelmemişse kısa aralıklarla kontrol et
-      if (foundTrack == null) _pollForTrack();
+      // Track hâlâ gelmemişse event listener yeterli değilse fallback polling
+      if (foundTrack == null) _waitForTrack();
       // Yayın başladıktan 5 saniye sonra otomatik kapak fotoğrafı çek
-      _thumbTimer = Timer(const Duration(seconds: 5), _autoCaptureThumbnail);
+      _thumbTimer = Timer(const Duration(seconds: _kThumbnailInitialDelaySeconds), _autoCaptureThumbnail);
     } catch (e) {
       setState(() {
         _error = 'Bağlantı hatası: ${e.toString()}';
@@ -167,20 +176,19 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     }
   }
 
-  /// LocalTrackPublishedEvent bazen geç veya null track ile gelir.
-  /// Kamera track'i 100ms aralıklarla kontrol eder, max 5 saniye bekler.
-  void _pollForTrack([int attempt = 0]) {
-    if (!mounted || _localVideoTrack != null || attempt >= 50) return;
-    Future.delayed(const Duration(milliseconds: 100), () {
+  /// LocalTrackPublishedEvent bazen geç gelir; bu metod event gelene kadar
+  /// kısa aralıklarla yayınlamaları kontrol eder, max [_kTrackPollMaxAttempts]×[_kTrackPollIntervalMs]ms bekler.
+  Future<void> _waitForTrack() async {
+    for (int attempt = 0; attempt < _kTrackPollMaxAttempts; attempt++) {
+      await Future.delayed(const Duration(milliseconds: _kTrackPollIntervalMs));
       if (!mounted || _localVideoTrack != null) return;
       for (final pub in _room?.localParticipant?.videoTrackPublications ?? []) {
         if (pub.track != null) {
-          setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
+          if (mounted) setState(() => _localVideoTrack = pub.track as LocalVideoTrack);
           return;
         }
       }
-      _pollForTrack(attempt + 1);
-    });
+    }
   }
 
   Future<void> _toggleMic() async {
@@ -223,7 +231,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     List<String> viewers = [];
     try {
       viewers = await StreamService.getViewers(widget.streamToken.streamId);
-    } catch (_) {}
+    } catch (e, st) {
+      _log.captureException(e, stackTrace: st, tag: 'HostStream.showViewers');
+    }
     if (!mounted) return;
     final l = AppLocalizations.of(context)!;
     showModalBottomSheet(
@@ -375,7 +385,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
           try {
             await StreamService.removeCoHost(widget.streamToken.streamId, username);
             setState(() => _coHostUsername = null);
-          } catch (_) {}
+          } catch (e, st) {
+            _log.captureException(e, stackTrace: st, tag: 'HostStream.removeCoHost');
+          }
         } : null,
         isMod: _modUsers.contains(username),
         onMuted: () => setState(() => _mutedUsers.add(username)),
@@ -421,7 +433,10 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
 
     try {
       await StreamService.endStream(widget.streamToken.streamId);
-    } catch (_) {}
+    } catch (e, st) {
+      // Ağ hatası olsa bile yayın ekranından çıkmaya devam et
+      _log.captureException(e, stackTrace: st, tag: 'HostStream.endStream');
+    }
 
     await _room?.disconnect();
     if (mounted) {
@@ -445,9 +460,12 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       );
       // Her 60 saniyede bir güncelle
       if (mounted) {
-        _thumbTimer = Timer(const Duration(seconds: 60), _autoCaptureThumbnail);
+        _thumbTimer = Timer(const Duration(seconds: _kThumbnailRefreshSeconds), _autoCaptureThumbnail);
       }
-    } catch (_) {}
+    } catch (e, st) {
+      _log.captureException(e,
+          stackTrace: st, tag: 'HostStream.thumbnail', shouldCapture: false);
+    }
   }
 
   @override
@@ -705,7 +723,10 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                               await StreamService.removeCoHost(
                                   widget.streamToken.streamId, target);
                               setState(() => _coHostUsername = null);
-                            } catch (_) {}
+                            } catch (e, st) {
+                              _log.captureException(e,
+                                  stackTrace: st, tag: 'HostStream.removeCoHost.topBar');
+                            }
                           },
                           child: Container(
                             color: const Color(0xDDEF4444),

@@ -46,6 +46,28 @@ from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
 
+_MAX_THUMBNAIL_BYTES = 10 * 1024 * 1024   # 10 MB
+_ROOM_NAME_PREFIX    = "stream"            # oda adı biçimi: stream_{user_id}_{uuid8}
+_ROOM_UUID_LENGTH    = 8                   # room_name içindeki UUID kısaltma uzunluğu
+
+
+async def _fill_viewer_counts(streams: list, tag: str = "") -> None:
+    """
+    Redis MGET ile tüm yayınların izleyici sayısını tek sorguda doldurur.
+    Redis erişilemezse izleyici sayıları 0 kalır (graceful degrade).
+    """
+    if not streams:
+        return
+    try:
+        redis = await get_redis()
+        keys = [f"live:viewers:{s.room_name}" for s in streams]
+        counts = await redis.mget(*keys)
+        for stream, count in zip(streams, counts):
+            stream.viewer_count = int(count) if count else 0  # type: ignore[attr-defined]
+    except Exception:
+        logger.error("[STREAMS] Redis viewer count okunamadı%s",
+                     f" | {tag}" if tag else "", exc_info=True)
+
 
 # ── LiveKit yardımcıları ─────────────────────────────────────────────────────
 
@@ -183,7 +205,7 @@ class StreamService:
             logger.warning("[STREAMS] Zaten aktif yayın var | user_id=%s", uid)
             raise BadRequestException("Zaten aktif bir yayınınız var")
 
-        room_name = f"stream_{uid}_{uuid.uuid4().hex[:8]}"
+        room_name = f"{_ROOM_NAME_PREFIX}_{uid}_{uuid.uuid4().hex[:_ROOM_UUID_LENGTH]}"
         stream = LiveStream(
             room_name=room_name,
             title=data.title,
@@ -231,9 +253,19 @@ class StreamService:
         from app.services.moderation_service import mod_key
         from app.services.chat_service import publish_chat as _publish_chat
 
+        stream = await self._fetch_stream_for_end(stream_id, user)
+        await self._mark_stream_ended(stream, stream_id)
+        await self._cleanup_redis(stream, stream_id, mod_key)
+        await self._cleanup_stream_likes(stream_id)
+        await self._broadcast_stream_ended(stream_id, _publish_chat)
+        await delete_livekit_room(stream.room_name)
+
+        logger.info("[STREAMS] Yayın sonlandırıldı | stream_id=%s user_id=%s", stream_id, user.id)
+        return {"message": "Yayın sonlandırıldı"}
+
+    async def _fetch_stream_for_end(self, stream_id: int, user: User) -> "LiveStream":
         result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
-
         if not stream:
             logger.warning("[STREAMS] Sonlandırma: bulunamadı | stream_id=%s user_id=%s",
                            stream_id, user.id)
@@ -246,7 +278,9 @@ class StreamService:
             raise ForbiddenException("Bu yayını sonlandırma yetkiniz yok")
         if not stream.is_live:
             raise BadRequestException("Yayın zaten sonlanmış")
+        return stream
 
+    async def _mark_stream_ended(self, stream: "LiveStream", stream_id: int) -> None:
         stream.is_live = False
         stream.ended_at = datetime.now(timezone.utc)
         try:
@@ -260,19 +294,20 @@ class StreamService:
             capture_exception(exc)
             raise DatabaseException("Yayın sonlandırılamadı")
 
-        # Redis temizliği — non-critical
+    async def _cleanup_redis(self, stream: "LiveStream", stream_id: int, mod_key) -> None:
         try:
             redis = await get_redis()
             await redis.delete(f"live:viewers:{stream.room_name}")
             await redis.delete(f"live:viewer_set:{stream_id}")
             await redis.delete(mod_key(stream_id))
             await redis.delete(f"pin:{stream_id}")
-            # Rate limit sayacını sıfırla; normal sonlandırmada hemen yeni yayın açılabilsin
+            # Rate limit sayacını sıfırla; hemen yeni yayın açılabilsin
             await redis.delete(f"act_rate:{stream.host_id}:stream_start")
         except Exception:
-            logger.error("[STREAMS] Redis temizliği başarısız | room=%s", stream.room_name, exc_info=True)
+            logger.error("[STREAMS] Redis temizliği başarısız | room=%s",
+                         stream.room_name, exc_info=True)
 
-        # stream_likes temizle — yayın bitince kalp animasyon kayıtlarının değeri kalmaz
+    async def _cleanup_stream_likes(self, stream_id: int) -> None:
         try:
             from sqlalchemy import text
             await self.db.execute(
@@ -281,19 +316,15 @@ class StreamService:
             )
             await self.db.commit()
         except Exception:
-            logger.warning("[STREAMS] stream_likes temizlenemedi | stream_id=%s", stream_id, exc_info=True)
+            logger.warning("[STREAMS] stream_likes temizlenemedi | stream_id=%s",
+                           stream_id, exc_info=True)
 
-        # Chat stream_ended eventi — non-critical
+    async def _broadcast_stream_ended(self, stream_id: int, publish_chat) -> None:
         try:
-            await _publish_chat(stream_id, {"type": WS.STREAM_ENDED})
+            await publish_chat(stream_id, {"type": WS.STREAM_ENDED})
         except Exception:
-            logger.error("[STREAMS] stream_ended yayınlanamadı | stream_id=%s", stream_id, exc_info=True)
-
-        # LiveKit odasını kapat → tüm viewer'lar RoomDisconnectedEvent alır
-        await delete_livekit_room(stream.room_name)
-
-        logger.info("[STREAMS] Yayın sonlandırıldı | stream_id=%s user_id=%s", stream_id, user.id)
-        return {"message": "Yayın sonlandırıldı"}
+            logger.error("[STREAMS] stream_ended yayınlanamadı | stream_id=%s",
+                         stream_id, exc_info=True)
 
     # ── Yayına Katıl ─────────────────────────────────────────────────────────
     async def join(self, stream_id: int, user: User) -> JoinTokenOut:
@@ -359,7 +390,7 @@ class StreamService:
             raise BadRequestException("Yayın aktif değil")
 
         data = await file.read()
-        if len(data) > 10 * 1024 * 1024:
+        if len(data) > _MAX_THUMBNAIL_BYTES:
             raise BadRequestException("Dosya 10 MB'ı geçemez")
 
         ext = _detect_image_type(data)
@@ -411,17 +442,8 @@ class StreamService:
             result = await self.db.execute(query)
             streams = result.scalars().all()
 
-            # Redis viewer count — graceful degrade
-            try:
-                redis = await get_redis()
-                for stream in streams:
-                    count = await redis.get(f"live:viewers:{stream.room_name}")
-                    stream.viewer_count = int(count) if count else 0
-            except Exception:
-                logger.error(
-                    "[STREAMS] Redis viewer count okunamadı (followed) | user_id=%s",
-                    current_user_id, exc_info=True,
-                )
+            # Redis viewer count — MGET ile tek sorguda (graceful degrade)
+            await _fill_viewer_counts(streams, tag=f"followed user_id={current_user_id}")
 
             # Batch likes count
             stream_ids = [s.id for s in streams]
@@ -588,14 +610,8 @@ class StreamService:
         result = await self.db.execute(query)
         streams = result.scalars().all()
 
-        # Redis viewer count — Redis erişilemese bile liste döner (graceful degrade)
-        try:
-            redis = await get_redis()
-            for stream in streams:
-                count = await redis.get(f"live:viewers:{stream.room_name}")
-                stream.viewer_count = int(count) if count else 0
-        except Exception:
-            logger.error("[STREAMS] Redis viewer count okunamadı", exc_info=True)
+        # Redis viewer count — MGET ile tek sorguda (graceful degrade)
+        await _fill_viewer_counts(streams, tag="active")
 
         # Batch likes count
         stream_ids = [s.id for s in streams]

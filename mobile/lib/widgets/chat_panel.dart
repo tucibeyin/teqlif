@@ -7,11 +7,110 @@ import 'package:flutter/material.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
 import '../config/theme.dart';
+import '../core/logger_service.dart';
 import '../l10n/app_localizations.dart';
 import '../models/chat.dart';
 import '../screens/public_profile_screen.dart';
 import '../services/storage_service.dart';
 import '../utils/username_color.dart';
+
+final _log = LoggerService.instance;
+
+// ── WebSocket yöneticisi ───────────────────────────────────────────────────────
+/// ChatPanel'in WebSocket bağlantı, ping ve yeniden bağlanma mantığını
+/// tek bir sınıfta toplar; ChatPanelState yalnızca UI durumunu yönetir.
+class _ChatWsManager {
+  final String wsUrl;
+  final String token;
+  final void Function(dynamic data) onData;
+  final void Function() onDone;
+
+  WebSocketChannel? _channel;
+  StreamSubscription? _sub;
+  Timer? _heartbeat;
+  bool _reconnecting = false;
+
+  _ChatWsManager({
+    required this.wsUrl,
+    required this.token,
+    required this.onData,
+    required this.onDone,
+  });
+
+  void connect() {
+    _heartbeat?.cancel();
+    try {
+      _channel = WebSocketChannel.connect(Uri.parse(wsUrl));
+      _channel!.sink.add(jsonEncode({'type': 'auth', 'token': token}));
+      _sub = _channel!.stream.listen(
+        onData,
+        onDone: _handleDisconnect,
+        onError: (error, StackTrace stack) {
+          _log.captureException(error,
+              stackTrace: stack, tag: 'ChatWsManager', shouldCapture: false);
+          _handleDisconnect();
+        },
+        cancelOnError: false,
+      );
+      _heartbeat = Timer.periodic(
+        const Duration(seconds: _kHeartbeatSeconds),
+        (_) {
+          try {
+            _channel?.sink.add('ping');
+          } catch (_) {} // ping fire-and-forget
+        },
+      );
+    } catch (e, st) {
+      _log.captureException(e, stackTrace: st, tag: 'ChatWsManager.connect');
+      _handleDisconnect();
+    }
+  }
+
+  void _handleDisconnect() {
+    _heartbeat?.cancel();
+    _sub?.cancel();
+    onDone();
+  }
+
+  void send(Map<String, dynamic> payload) {
+    try {
+      _channel?.sink.add(jsonEncode(payload));
+    } catch (e, st) {
+      _log.captureException(e, stackTrace: st, tag: 'ChatWsManager.send');
+    }
+  }
+
+  void scheduleReconnect({
+    required bool Function() shouldReconnect,
+    required void Function() reconnect,
+  }) {
+    if (_reconnecting) return;
+    _reconnecting = true;
+    _heartbeat?.cancel();
+    Future.delayed(const Duration(seconds: _kReconnectSeconds), () {
+      _reconnecting = false;
+      if (shouldReconnect()) reconnect();
+    });
+  }
+
+  void dispose() {
+    _heartbeat?.cancel();
+    _sub?.cancel();
+    try {
+      _channel?.sink.close();
+    } catch (_) {} // cleanup — kapalıysa sorun yok
+  }
+}
+
+// ── Chat sabitleri ─────────────────────────────────────────────────────────────
+const _kMessageProtectedCount = 5;    // en son N mesaj expire edilmez
+const _kMaxVisibleMessages    = 20;   // ListView'de gösterilen max mesaj sayısı
+const _kHistoryCapacity       = 50;   // geçmiş listesinde tutulan max mesaj sayısı
+const _kMessageExpireSeconds  = 6;    // mesaj ekranda kalma süresi (saniye)
+const _kFadeMilliseconds      = 700;  // mesaj kaybolma animasyon süresi (ms)
+const _kHeartbeatSeconds      = 25;   // WebSocket ping aralığı (saniye)
+const _kReconnectSeconds      = 4;    // bağlantı kopunca yeniden bağlanma gecikmesi
+const _kMessageRowHeight      = 22.0; // chat satırı yüksekliği (piksel)
 
 class _TimedMessage {
   final ChatMessage message;
@@ -20,14 +119,14 @@ class _TimedMessage {
   bool _permanent = false; // true → timer expired but last-3 protection kept it
 
   _TimedMessage(this.message, {required bool Function() shouldRemove, required VoidCallback onExpired}) {
-    Future.delayed(const Duration(seconds: 6), () {
+    Future.delayed(const Duration(seconds: _kMessageExpireSeconds), () {
       if (_disposed) return;
       if (!shouldRemove()) {
         _permanent = true;
-        return; // keep it — it's in the last 3
+        return;
       }
       opacity.value = 0.0;
-      Future.delayed(const Duration(milliseconds: 700), () {
+      Future.delayed(const Duration(milliseconds: _kFadeMilliseconds), () {
         if (!_disposed) onExpired();
       });
     });
@@ -117,18 +216,15 @@ class ChatPanel extends StatefulWidget {
 
 class ChatPanelState extends State<ChatPanel> {
   final List<_TimedMessage> _messages = [];
-  final List<ChatMessage> _history = []; // last 50 messages
+  final List<ChatMessage> _history = [];
   final _inputCtrl = TextEditingController();
   final _inputScrollCtrl = ScrollController();
   final _focusNode = FocusNode();
   final _scrollController = ScrollController();
-  bool _autoScroll = true; // kullanıcı yukarı kaydırınca false olur
+  bool _autoScroll = true;
   bool _selfMuted = false;
 
-  WebSocketChannel? _channel;
-  StreamSubscription? _sub;
-  Timer? _heartbeat;
-  bool _reconnecting = false;
+  _ChatWsManager? _ws;
   bool _streamEnded = false;
   String? _token;
   int? _myUserId;
@@ -158,12 +254,7 @@ class ChatPanelState extends State<ChatPanel> {
 
   @override
   void dispose() {
-    _reconnecting = false;
-    _heartbeat?.cancel();
-    _sub?.cancel();
-    try {
-      _channel?.sink.close();
-    } catch (_) {}
+    _ws?.dispose();
     for (final m in _messages) {
       m.dispose();
     }
@@ -201,7 +292,7 @@ class ChatPanelState extends State<ChatPanel> {
       shouldRemove: () {
         final idx = _messages.indexOf(timed);
         if (idx < 0) return true;
-        return idx < _messages.length - 5;
+        return idx < _messages.length - _kMessageProtectedCount;
       },
       onExpired: () {
         if (mounted) {
@@ -211,11 +302,11 @@ class ChatPanelState extends State<ChatPanel> {
     );
     setState(() {
       _messages.add(timed);
-      if (_messages.length > 20) {
+      if (_messages.length > _kMaxVisibleMessages) {
         _messages.removeAt(0).dispose();
       }
       _history.add(msg);
-      if (_history.length > 50) {
+      if (_history.length > _kHistoryCapacity) {
         _history.removeAt(0);
       }
     });
@@ -227,7 +318,7 @@ class ChatPanelState extends State<ChatPanel> {
   /// mesajları fade-out yaparak listeden temizler.
   void _evictStalePermanents() {
     final toEvict = <_TimedMessage>[];
-    final protectedStart = _messages.length - 5;
+    final protectedStart = _messages.length - _kMessageProtectedCount;
     for (int i = 0; i < _messages.length; i++) {
       if (_messages[i]._permanent && i < protectedStart) {
         toEvict.add(_messages[i]);
@@ -236,7 +327,7 @@ class ChatPanelState extends State<ChatPanel> {
     for (final m in toEvict) {
       m._permanent = false;
       m.opacity.value = 0.0;
-      Future.delayed(const Duration(milliseconds: 700), () {
+      Future.delayed(const Duration(milliseconds: _kFadeMilliseconds), () {
         if (mounted) {
           setState(() => _messages.removeWhere((x) => x == m));
         }
@@ -246,15 +337,13 @@ class ChatPanelState extends State<ChatPanel> {
 
   void _connectWS() {
     if (!mounted || _token == null) return;
-    _heartbeat?.cancel();
-    try {
-      final uri = Uri.parse('$_wsBaseUrl/chat/${widget.streamId}/ws');
-      _channel = WebSocketChannel.connect(uri);
-      // Token URL'de taşınmaz — bağlantı açılır açılmaz ilk mesaj olarak gönderilir
-      _channel!.sink.add(jsonEncode({'type': 'auth', 'token': _token}));
-      _sub = _channel!.stream.listen(
-        (data) {
-          if (!mounted) return;
+    _ws?.dispose();
+    _ws = _ChatWsManager(
+      wsUrl: '$_wsBaseUrl/chat/${widget.streamId}/ws',
+      token: _token!,
+      onDone: _scheduleReconnect,
+      onData: (data) {
+        if (!mounted) return;
           String? _eventType;
           try {
             final json = jsonDecode(data as String) as Map<String, dynamic>;
@@ -410,52 +499,30 @@ class ChatPanelState extends State<ChatPanel> {
             final username = _eventType!.substring('cohost_accepted:'.length);
             widget.onCoHostAccepted?.call(username);
           }
-        },
-        onDone: _scheduleReconnect,
-        onError: (_) => _scheduleReconnect(),
-        cancelOnError: false,
-      );
-      _heartbeat = Timer.periodic(const Duration(seconds: 25), (_) {
-        if (!mounted) return;
-        try {
-          _channel?.sink.add('ping');
-        } catch (_) {}
-      });
-    } catch (_) {
-      _scheduleReconnect();
-    }
+      },
+    );
+    _ws!.connect();
   }
 
   void _scheduleReconnect() {
-    if (_reconnecting || !mounted || _streamEnded) return;
-    _reconnecting = true;
-    _heartbeat?.cancel();
-    Future.delayed(const Duration(seconds: 4), () {
-      if (!mounted) return;
-      _reconnecting = false;
-      _sub?.cancel();
-      try {
-        _channel?.sink.close();
-      } catch (_) {}
-      _connectWS();
-    });
+    if (_streamEnded || !mounted) return;
+    _ws?.scheduleReconnect(
+      shouldReconnect: () => mounted && !_streamEnded,
+      reconnect: _connectWS,
+    );
   }
 
   void _sendMessage() {
     final content = _inputCtrl.text.trim();
     if (content.isEmpty) return;
-    try {
-      _channel?.sink.add(jsonEncode({'type': 'message', 'content': content}));
-      _inputCtrl.clear();
-    } catch (_) {}
+    _ws?.send({'type': 'message', 'content': content});
+    _inputCtrl.clear();
   }
 
   /// Host tarafından çağrılır — sabitlenen mesajı tüm izleyicilere gönderir.
+  /// Boş string = sabiti kaldır komutu, gönderilmeli.
   void sendHostPin(String content) {
-    // Boş string = kaldır komutu, gönderilmeli
-    try {
-      _channel?.sink.add(jsonEncode({'type': 'host_pin', 'content': content.trim()}));
-    } catch (_) {}
+    _ws?.send({'type': 'host_pin', 'content': content.trim()});
   }
 
   void _showHistory() {
@@ -549,13 +616,13 @@ class ChatPanelState extends State<ChatPanel> {
               // Her mesaj yaklaşık 22px, +4 ListView top padding.
               duration: const Duration(milliseconds: 200),
               curve: Curves.easeOut,
-              height: _messages.length.clamp(5, 8) * 22.0 + 4.0,
+              height: _messages.length.clamp(5, 8) * _kMessageRowHeight + 4.0,
               child: ListView.builder(
                 controller: _scrollController,
                 reverse: true,
                 padding: const EdgeInsets.fromLTRB(14, 4, 14, 0),
                 // Scroll alanı: history'nin son 20'si
-                itemCount: min(_history.length, 20),
+                itemCount: min(_history.length, _kMaxVisibleMessages),
                 itemBuilder: (_, i) {
                   // i=0 → en yeni mesaj (reverse:true'da alta denk gelir)
                   final msg = _history[_history.length - 1 - i];

@@ -1,5 +1,10 @@
 /* chat.js — Real-time canlı yayın sohbeti (WebSocket) */
 
+// ── Sabitler ──────────────────────────────────────────────────────────────────
+const CHAT_PING_INTERVAL_MS  = 25_000; // WebSocket keepalive ping aralığı
+const CHAT_RECONNECT_DELAY_MS = 4_000; // bağlantı kopunca yeniden bağlanma gecikmesi
+const CHAT_MAX_MESSAGES      = 50;     // listede tutulacak maksimum mesaj sayısı
+
 const Chat = (() => {
     let _ws = null;
     let _streamId = null;
@@ -66,7 +71,7 @@ const Chat = (() => {
                 if (_ws && _ws.readyState === WebSocket.OPEN) {
                     try { _ws.send('ping'); } catch (_) {}
                 }
-            }, 25000);
+            }, CHAT_PING_INTERVAL_MS);
         };
 
         _ws.onmessage = (e) => {
@@ -109,7 +114,9 @@ const Chat = (() => {
                 } else if (msg.type === 'cohost_accepted') {
                     if (_onCoHostAccepted) _onCoHostAccepted(msg.username || '');
                 }
-            } catch (_) {}
+            } catch (err) {
+                console.warn('[Chat] Mesaj parse hatası:', err);
+            }
         };
 
         _ws.onclose = () => {
@@ -117,7 +124,8 @@ const Chat = (() => {
             _scheduleReconnect();
         };
 
-        _ws.onerror = () => {
+        _ws.onerror = (err) => {
+            console.warn('[Chat] WebSocket hatası:', err);
             try { _ws.close(); } catch (_) {}
         };
     }
@@ -129,7 +137,7 @@ const Chat = (() => {
             if (!_streamId) return;
             _reconnecting = false;
             _connectWS();
-        }, 4000);
+        }, CHAT_RECONNECT_DELAY_MS);
     }
 
     const _PALETTE = [
@@ -230,8 +238,7 @@ const Chat = (() => {
 
         list.appendChild(el);
 
-        // En fazla 50 mesaj göster
-        while (list.children.length > 50) {
+        while (list.children.length > CHAT_MAX_MESSAGES) {
             list.removeChild(list.firstChild);
         }
 
@@ -256,7 +263,7 @@ const Chat = (() => {
             }
         }
         list.appendChild(el);
-        while (list.children.length > 50) list.removeChild(list.firstChild);
+        while (list.children.length > CHAT_MAX_MESSAGES) list.removeChild(list.firstChild);
         list.scrollTop = list.scrollHeight;
     }
 
