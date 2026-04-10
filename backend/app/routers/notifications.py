@@ -1,7 +1,7 @@
 from datetime import datetime, timezone
 from typing import List
 
-from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, Depends, WebSocket, WebSocketDisconnect
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, update, delete, func
 import asyncio
@@ -162,21 +162,29 @@ async def delete_notification(
 
 
 @router.websocket("/ws")
-async def notifications_ws(websocket: WebSocket, token: str = Query(...)):
-    # ── 1. Hızlı senkron token kontrolü (accept() öncesi — close() çağrılmaz) ─
-    user_id = decode_token(token)
-    if not user_id:
-        logger.warning("[NOTIF WS] Geçersiz token, bağlantı reddedildi")
-        return
-
-    # ── 2. Bağlantıyı kabul et ────────────────────────────────────────────────
+async def notifications_ws(websocket: WebSocket):
+    # ── 1. Bağlantıyı kabul et (token URL'de taşınmaz) ───────────────────────
     try:
         await websocket.accept()
     except Exception as exc:
-        logger.error("[NOTIF WS] accept() başarısız | user_id=%s | %s", user_id, exc, exc_info=True)
+        logger.error("[NOTIF WS] accept() başarısız | %s", exc, exc_info=True)
         return
 
-    # ── 3. DB doğrulama (accept() sonrası — close() artık güvenli) ───────────
+    # ── 2. İlk mesajdan token al (5s timeout) ────────────────────────────────
+    try:
+        raw = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
+        token = raw.get("token", "") if isinstance(raw, dict) else ""
+    except (asyncio.TimeoutError, Exception):
+        await websocket.close(code=4001)
+        return
+
+    user_id = decode_token(token)
+    if not user_id:
+        logger.warning("[NOTIF WS] Geçersiz token, bağlantı kapatıldı")
+        await websocket.close(code=4001)
+        return
+
+    # ── 3. DB doğrulama ───────────────────────────────────────────────────────
     try:
         async with AsyncSessionLocal() as db:
             result = await db.execute(select(User).where(User.id == user_id))

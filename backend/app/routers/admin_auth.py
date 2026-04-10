@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api/admin-auth", tags=["admin-auth"])
 
 
 @router.post("/verify-google")
-async def verify_google(token: str = Body(..., embed=True)):
+async def verify_google(token: str = Body(..., embed=True), db: AsyncSession = Depends(get_db)):
     try:
         idinfo = id_token.verify_oauth2_token(
             token,
@@ -27,6 +27,11 @@ async def verify_google(token: str = Body(..., embed=True)):
         raise UnauthorizedException("Geçersiz Google Token.")
 
     if idinfo["email"] != settings.admin_email:
+        raise ForbiddenException("Bu alan sadece sistem yöneticisine özeldir.")
+
+    result = await db.execute(select(User).where(User.email == settings.admin_email))
+    admin = result.scalar_one_or_none()
+    if not admin or not admin.is_admin:
         raise ForbiddenException("Bu alan sadece sistem yöneticisine özeldir.")
 
     return {"status": "google_ok", "email": idinfo["email"]}
@@ -42,10 +47,6 @@ async def verify_password(
 ):
     admin_security = AdminSecurity()
     is_valid = admin_security.verify_admin_password(password)
-
-    # Geçici geriye dönük uyumluluk: eski düz metin şifre desteği
-    if not is_valid and settings.admin_password:
-        is_valid = password == settings.admin_password
 
     if not is_valid:
         raise UnauthorizedException("Yönetici şifresi hatalı.")

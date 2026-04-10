@@ -26,7 +26,7 @@ router = APIRouter(prefix="/api/admin-data", tags=["admin-data"])
 
 # --- GÜVENLİK DUVARI ---
 async def check_admin_access(current_user: User = Depends(get_current_user)):
-    if current_user.email != settings.admin_email:
+    if not current_user.is_admin or current_user.email != settings.admin_email:
         raise ForbiddenException("Admin yetkisi bulunamadı.")
     return current_user
 

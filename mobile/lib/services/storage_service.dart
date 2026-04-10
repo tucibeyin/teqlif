@@ -1,8 +1,14 @@
 import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class StorageService {
   static const _tokenKey = 'teqlif_token';
+  static const _refreshTokenKey = 'teqlif_refresh_token';
+  // Token ve kimlik bilgileri için güvenli depolama (Keystore/Keychain)
+  static const _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
 
   // ── Kasa (Cache) key sabitleri ────────────────────────────────────────────
   static const cacheMessages      = 'cache_messages';
@@ -34,13 +40,19 @@ class StorageService {
   static const _userIdKey = 'teqlif_user_id';
 
   static Future<void> saveToken(String token) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    await _secureStorage.write(key: _tokenKey, value: token);
   }
 
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    return _secureStorage.read(key: _tokenKey);
+  }
+
+  static Future<void> saveRefreshToken(String token) async {
+    await _secureStorage.write(key: _refreshTokenKey, value: token);
+  }
+
+  static Future<String?> getRefreshToken() async {
+    return _secureStorage.read(key: _refreshTokenKey);
   }
 
   static Future<void> saveUserInfo({
@@ -49,22 +61,25 @@ class StorageService {
     required String username,
     required String fullName,
   }) async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_userIdKey, id);
-    await prefs.setString(_userEmailKey, email);
-    await prefs.setString(_userNameKey, username);
-    await prefs.setString(_userFullNameKey, fullName);
+    await Future.wait([
+      _secureStorage.write(key: _userIdKey, value: id.toString()),
+      _secureStorage.write(key: _userEmailKey, value: email),
+      _secureStorage.write(key: _userNameKey, value: username),
+      _secureStorage.write(key: _userFullNameKey, value: fullName),
+    ]);
   }
 
   static Future<Map<String, dynamic>?> getUserInfo() async {
-    final prefs = await SharedPreferences.getInstance();
-    final id = prefs.getInt(_userIdKey);
+    final id = await _secureStorage.read(key: _userIdKey);
     if (id == null) return null;
+    final email = await _secureStorage.read(key: _userEmailKey);
+    final username = await _secureStorage.read(key: _userNameKey);
+    final fullName = await _secureStorage.read(key: _userFullNameKey);
     return {
-      'id': id,
-      'email': prefs.getString(_userEmailKey) ?? '',
-      'username': prefs.getString(_userNameKey) ?? '',
-      'full_name': prefs.getString(_userFullNameKey) ?? '',
+      'id': int.tryParse(id) ?? 0,
+      'email': email ?? '',
+      'username': username ?? '',
+      'full_name': fullName ?? '',
     };
   }
 
@@ -81,8 +96,10 @@ class StorageService {
   }
 
   static Future<void> clear() async {
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    await Future.wait([
+      _secureStorage.deleteAll(),
+      SharedPreferences.getInstance().then((p) => p.clear()),
+    ]);
   }
 
   static const _darkModeKey = 'teqlif_dark_mode';

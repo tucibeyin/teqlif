@@ -48,7 +48,7 @@ const Chat = (() => {
         if (!token || !_streamId) return;
 
         const proto = location.protocol === 'https:' ? 'wss' : 'ws';
-        const url = `${proto}://${location.host}/api/chat/${_streamId}/ws?token=${encodeURIComponent(token)}`;
+        const url = `${proto}://${location.host}/api/chat/${_streamId}/ws`;
 
         try {
             _ws = new WebSocket(url);
@@ -59,6 +59,8 @@ const Chat = (() => {
 
         _ws.onopen = () => {
             _reconnecting = false;
+            // Token bağlantı açıldıktan sonra ilk mesaj olarak gönderilir (URL'de taşınmaz)
+            try { _ws.send(JSON.stringify({ type: 'auth', token })); } catch (_) {}
             clearInterval(_pingInterval);
             _pingInterval = setInterval(() => {
                 if (_ws && _ws.readyState === WebSocket.OPEN) {

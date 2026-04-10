@@ -10,7 +10,7 @@ class Settings(BaseSettings):
     redis_url: str = "redis://localhost:6379"
     secret_key: str
     algorithm: str = "HS256"
-    access_token_expire_minutes: int = 60
+    access_token_expire_minutes: int = 30
     upload_dir: str = "/var/www/teqlif/uploads"
     brevo_api_key: str = ""
     brevo_sender_email: str = "noreply@teqlif.com"
@@ -33,7 +33,6 @@ class Settings(BaseSettings):
     sentry_backend_dsn: str | None = None
     google_client_id: str = ""
     admin_email: str = ""
-    admin_password: str = ""
     admin_password_hash: str = ""
     captcha_enabled: bool = False
     captcha_provider: str = "turnstile"

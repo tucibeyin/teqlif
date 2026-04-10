@@ -1,4 +1,4 @@
-import random
+import secrets
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -6,7 +6,7 @@ from sqlalchemy import select
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS
-from app.utils.auth import hash_password, verify_password, create_access_token, get_current_user
+from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, get_current_user
 from app.utils.email import send_verification_code
 from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException
@@ -49,7 +49,7 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
     await db.commit()
 
     # 6 haneli kod üret, Redis'e kaydet
-    code = str(random.randint(100000, 999999))
+    code = str(100000 + secrets.randbelow(900000))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
 
@@ -71,7 +71,8 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
 
 
 @router.post("/verify", response_model=TokenOut)
-async def verify(data: VerifyEmail, db: AsyncSession = Depends(get_db)):
+@limiter.limit("5/minute")
+async def verify(request: Request, data: VerifyEmail, db: AsyncSession = Depends(get_db)):
     redis = await get_redis()
     stored_code = await redis.get(f"verify:{data.email}")
 
@@ -89,7 +90,9 @@ async def verify(data: VerifyEmail, db: AsyncSession = Depends(get_db)):
     await redis.delete(f"verify:{data.email}")
 
     token = create_access_token(user.id)
-    return TokenOut(access_token=token, user=UserOut.model_validate(user))
+    refresh = create_refresh_token()
+    await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, str(user.id))
+    return TokenOut(access_token=token, refresh_token=refresh, user=UserOut.model_validate(user))
 
 
 @router.post("/login", response_model=TokenOut)
@@ -107,8 +110,11 @@ async def login(request: Request, data: UserLogin, db: AsyncSession = Depends(ge
     if not user.is_verified:
         raise EmailNotVerifiedException()
 
+    redis = await get_redis()
     token = create_access_token(user.id)
-    return TokenOut(access_token=token, user=UserOut.model_validate(user))
+    refresh = create_refresh_token()
+    await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, str(user.id))
+    return TokenOut(access_token=token, refresh_token=refresh, user=UserOut.model_validate(user))
 
 
 @router.post("/resend-code")
@@ -119,7 +125,7 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
     if not user or user.is_verified:
         raise BadRequestException("Geçersiz istek")
 
-    code = str(random.randint(100000, 999999))
+    code = str(100000 + secrets.randbelow(900000))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
 
@@ -193,11 +199,37 @@ async def update_me(
     return current_user
 
 
+@router.post("/refresh")
+@limiter.limit("20/minute")
+async def refresh_token(request: Request, payload: dict, db: AsyncSession = Depends(get_db)):
+    token = payload.get("refresh_token", "")
+    if not token:
+        raise BadRequestException("refresh_token gerekli")
+
+    redis = await get_redis()
+    user_id_str = await redis.get(f"refresh:{token}")
+    if not user_id_str:
+        raise UnauthorizedException("Geçersiz veya süresi dolmuş refresh token")
+
+    result = await db.execute(select(User).where(User.id == int(user_id_str)))
+    user = result.scalar_one_or_none()
+    if not user or not user.is_active:
+        raise UnauthorizedException("Kullanıcı bulunamadı")
+
+    # Eski token'ı sil (rotation), yeni token çifti üret
+    await redis.delete(f"refresh:{token}")
+    new_access = create_access_token(user.id)
+    new_refresh = create_refresh_token()
+    await redis.setex(f"refresh:{new_refresh}", REFRESH_TOKEN_TTL, str(user.id))
+
+    return {"access_token": new_access, "refresh_token": new_refresh, "token_type": "bearer"}
+
+
 @router.post("/change-password/send-code")
 async def change_password_send_code(
     current_user: User = Depends(get_current_user),
 ):
-    code = str(random.randint(100000, 999999))
+    code = str(100000 + secrets.randbelow(900000))
     redis = await get_redis()
     await redis.setex(f"chpwd:{current_user.id}", VERIFY_CODE_TTL, code)
     try:

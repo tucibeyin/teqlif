@@ -9,7 +9,7 @@ Geriye dönük uyumluluk re-exportları:
   _publish_chat, chat_pubsub_listener, moderation_pubsub_listener
   → stream_service.py ve main.py bu isimleri buradan import eder.
 """
-from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Query
+from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from sqlalchemy import select
 import asyncio
 
@@ -39,24 +39,32 @@ _publish_chat = publish_chat  # noqa: F401
 
 # ── WebSocket endpoint ────────────────────────────────────────────────────────
 @router.websocket("/{stream_id}/ws")
-async def chat_ws(stream_id: int, websocket: WebSocket, token: str = Query(...)):
-    # ── 1. Hızlı senkron token kontrolü (accept() ÖNCESİ — DB yükü sıfır) ────
-    user_id = decode_token(token)
-    if not user_id:
-        logger.warning("[CHAT WS] Geçersiz token, bağlantı reddedildi | stream_id=%s", stream_id)
-        return
-
-    # ── 2. Bağlantıyı kabul et (bu noktadan sonra close() güvenle çağrılabilir) ─
+async def chat_ws(stream_id: int, websocket: WebSocket):
+    # ── 1. Bağlantıyı kabul et (token URL'de taşınmaz) ───────────────────────
     try:
         await websocket.accept()
     except Exception as exc:
         logger.error(
-            "[CHAT WS] accept() başarısız | stream_id=%s user_id=%s | %s",
-            stream_id, user_id, exc, exc_info=True,
+            "[CHAT WS] accept() başarısız | stream_id=%s | %s",
+            stream_id, exc, exc_info=True,
         )
         return
 
-    # ── 3. DB doğrulama (accept() sonrası — artık close(code=...) güvenli) ────
+    # ── 2. İlk mesajdan token al (5s timeout) ────────────────────────────────
+    try:
+        raw = await asyncio.wait_for(websocket.receive_json(), timeout=5.0)
+        token = raw.get("token", "") if isinstance(raw, dict) else ""
+    except (asyncio.TimeoutError, Exception):
+        await websocket.close(code=4001)
+        return
+
+    user_id = decode_token(token)
+    if not user_id:
+        logger.warning("[CHAT WS] Geçersiz token, bağlantı kapatıldı | stream_id=%s", stream_id)
+        await websocket.close(code=4001)
+        return
+
+    # ── 3. DB doğrulama ───────────────────────────────────────────────────────
     is_host = False
     room_name = None
     username: str | None = None

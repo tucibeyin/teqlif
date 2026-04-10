@@ -1,3 +1,4 @@
+import secrets
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -10,6 +11,8 @@ from sqlalchemy import select
 
 from app.config import settings
 from app.database import get_db
+
+REFRESH_TOKEN_TTL = 60 * 60 * 24 * 30  # 30 gün (saniye)
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -26,6 +29,11 @@ def verify_password(plain: str, hashed: str) -> bool:
 def create_access_token(user_id: int) -> str:
     expire = datetime.now(timezone.utc) + timedelta(minutes=settings.access_token_expire_minutes)
     return jwt.encode({"sub": str(user_id), "exp": expire}, settings.secret_key, algorithm=settings.algorithm)
+
+
+def create_refresh_token() -> str:
+    """Kriptografik güvenli 48 karakterlik opak refresh token üretir."""
+    return secrets.token_urlsafe(36)
 
 
 def decode_token(token: str) -> Optional[int]:

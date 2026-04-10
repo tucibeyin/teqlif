@@ -51,13 +51,9 @@ class AdminSecurity:
             stored_hash = settings.admin_password_hash
         
         if not stored_hash:
-            # settings.admin_password_hash boşsa, eski düz metin admin_password ile dene
-            if settings.admin_password:
-                return password == settings.admin_password
             return False
-        
+
         if not stored_hash.startswith('$2b$'):
-            # Legacy düz metin kontrolü (geçici uyumluluk)
             return False
         
         return admin_pwd_ctx.verify(password, stored_hash)

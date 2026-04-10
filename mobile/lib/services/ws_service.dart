@@ -101,8 +101,10 @@ class WsService {
         .replaceFirst('http://', 'ws://');
 
     try {
-      final uri = Uri.parse('$wsBase/messages/ws?token=$token');
+      final uri = Uri.parse('$wsBase/messages/ws');
       _channel = WebSocketChannel.connect(uri);
+      // Token URL'de taşınmaz — bağlantı açılır açılmaz ilk mesaj olarak gönderilir
+      _channel!.sink.add(jsonEncode({'type': 'auth', 'token': token}));
 
       _channelSub = _channel!.stream.listen(
         (raw) {

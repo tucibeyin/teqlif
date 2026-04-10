@@ -1,5 +1,6 @@
 const Auth = (() => {
     const TOKEN_KEY = 'teqlif_token';
+    const REFRESH_KEY = 'teqlif_refresh';
     const USER_KEY = 'teqlif_user';
 
     function getToken() {
@@ -18,13 +19,34 @@ const Auth = (() => {
 
     function _save(data) {
         localStorage.setItem(TOKEN_KEY, data.access_token);
-        localStorage.setItem(USER_KEY, JSON.stringify(data.user));
+        if (data.refresh_token) localStorage.setItem(REFRESH_KEY, data.refresh_token);
+        if (data.user) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     }
 
     function logout() {
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_KEY);
         localStorage.removeItem(USER_KEY);
         window.location.href = '/giris.html';
+    }
+
+    async function tryRefresh() {
+        const rt = localStorage.getItem(REFRESH_KEY);
+        if (!rt) return false;
+        try {
+            const res = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ refresh_token: rt }),
+            });
+            if (!res.ok) { logout(); return false; }
+            const data = await res.json();
+            localStorage.setItem(TOKEN_KEY, data.access_token);
+            localStorage.setItem(REFRESH_KEY, data.refresh_token);
+            return true;
+        } catch {
+            return false;
+        }
     }
 
     async function login(email, password) {
@@ -56,7 +78,7 @@ const Auth = (() => {
         return apiFetch('/auth/me');
     }
 
-    return { getToken, getUser, login, register, verify, logout, me };
+    return { getToken, getUser, login, register, verify, logout, tryRefresh, me };
 })();
 
 // ── Unread count helper ────────────────────────────────────────────────────────

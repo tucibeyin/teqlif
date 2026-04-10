@@ -49,7 +49,11 @@ class AuthService {
         body: jsonEncode({'email': email, 'code': code}),
       ),
     );
-    await StorageService.saveToken(body['access_token'] as String);
+    await Future.wait([
+      StorageService.saveToken(body['access_token'] as String),
+      if (body['refresh_token'] != null)
+        StorageService.saveRefreshToken(body['refresh_token'] as String),
+    ]);
     final user = User.fromJson(body['user'] as Map<String, dynamic>);
     await StorageService.saveUserInfo(
       id: user.id,
@@ -82,7 +86,11 @@ class AuthService {
         body: jsonEncode({'email': email, 'password': password}),
       ),
     );
-    await StorageService.saveToken(body['access_token'] as String);
+    await Future.wait([
+      StorageService.saveToken(body['access_token'] as String),
+      if (body['refresh_token'] != null)
+        StorageService.saveRefreshToken(body['refresh_token'] as String),
+    ]);
     final user = User.fromJson(body['user'] as Map<String, dynamic>);
     await StorageService.saveUserInfo(
       id: user.id,
@@ -91,6 +99,29 @@ class AuthService {
       fullName: user.fullName,
     );
     return user;
+  }
+
+  /// Access token süresi dolduğunda yeni token çifti alır.
+  /// Başarısız olursa false döner (logout gerekli).
+  static Future<bool> tryRefresh() async {
+    final rt = await StorageService.getRefreshToken();
+    if (rt == null) return false;
+    try {
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/auth/refresh'),
+        headers: {'Content-Type': 'application/json'},
+        body: jsonEncode({'refresh_token': rt}),
+      );
+      if (resp.statusCode != 200) return false;
+      final body = jsonDecode(resp.body) as Map<String, dynamic>;
+      await Future.wait([
+        StorageService.saveToken(body['access_token'] as String),
+        StorageService.saveRefreshToken(body['refresh_token'] as String),
+      ]);
+      return true;
+    } catch (_) {
+      return false;
+    }
   }
 
   static Future<User> me() async {

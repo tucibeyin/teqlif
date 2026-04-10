@@ -2,8 +2,30 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
+import '../services/storage_service.dart';
 
 const String kBaseUrl = 'https://teqlif.com/api';
+
+Future<bool> _tryRefreshOnce() async {
+  final rt = await StorageService.getRefreshToken();
+  if (rt == null) return false;
+  try {
+    final resp = await http.post(
+      Uri.parse('$kBaseUrl/auth/refresh'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({'refresh_token': rt}),
+    );
+    if (resp.statusCode != 200) return false;
+    final body = jsonDecode(resp.body) as Map<String, dynamic>;
+    await Future.wait([
+      StorageService.saveToken(body['access_token'] as String),
+      StorageService.saveRefreshToken(body['refresh_token'] as String),
+    ]);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
 const String kBaseHost = 'https://teqlif.com';
 
 /// /uploads/... → https://teqlif.com/uploads/...
@@ -34,8 +56,9 @@ String imgUrl(String? path) {
 /// final body = await apiCall(() => http.get(Uri.parse('$kBaseUrl/endpoint')));
 /// ```
 Future<Map<String, dynamic>> apiCall(
-  Future<http.Response> Function() request,
-) async {
+  Future<http.Response> Function() request, {
+  bool _retried = false,
+}) async {
   try {
     final response = await request();
     final Map<String, dynamic> body;
@@ -64,6 +87,13 @@ Future<Map<String, dynamic>> apiCall(
     }
 
     if (response.statusCode >= 400) {
+      // 401 → refresh dene, bir kez retry yap
+      if (response.statusCode == 401 && !_retried) {
+        // import döngüsünü kırmak için lazy import
+        final refreshed = await _tryRefreshOnce();
+        if (refreshed) return apiCall(request, _retried: true);
+      }
+
       // Yeni format: {"success": false, "error": {"code": "...", "message": "..."}}
       if (body['error'] is Map) {
         final error = body['error'] as Map<String, dynamic>;

@@ -248,10 +248,10 @@ class ChatPanelState extends State<ChatPanel> {
     if (!mounted || _token == null) return;
     _heartbeat?.cancel();
     try {
-      final uri = Uri.parse(
-        '$_wsBaseUrl/chat/${widget.streamId}/ws?token=${Uri.encodeComponent(_token!)}',
-      );
+      final uri = Uri.parse('$_wsBaseUrl/chat/${widget.streamId}/ws');
       _channel = WebSocketChannel.connect(uri);
+      // Token URL'de taşınmaz — bağlantı açılır açılmaz ilk mesaj olarak gönderilir
+      _channel!.sink.add(jsonEncode({'type': 'auth', 'token': _token}));
       _sub = _channel!.stream.listen(
         (data) {
           if (!mounted) return;
