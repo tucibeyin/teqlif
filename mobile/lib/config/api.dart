@@ -57,7 +57,7 @@ String imgUrl(String? path) {
 /// ```
 Future<Map<String, dynamic>> apiCall(
   Future<http.Response> Function() request, {
-  bool _retried = false,
+  bool retried = false,
 }) async {
   try {
     final response = await request();
@@ -88,10 +88,10 @@ Future<Map<String, dynamic>> apiCall(
 
     if (response.statusCode >= 400) {
       // 401 → refresh dene, bir kez retry yap
-      if (response.statusCode == 401 && !_retried) {
+      if (response.statusCode == 401 && !retried) {
         // import döngüsünü kırmak için lazy import
         final refreshed = await _tryRefreshOnce();
-        if (refreshed) return apiCall(request, _retried: true);
+        if (refreshed) return apiCall(request, retried: true);
       }
 
       // Yeni format: {"success": false, "error": {"code": "...", "message": "..."}}
