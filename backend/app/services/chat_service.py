@@ -231,6 +231,53 @@ class ChatService:
         return banned
 
     # ── Mesaj İşle ───────────────────────────────────────────────────────────
+    async def _check_muted(self, redis, stream_id: int, user_id: int) -> bool:
+        """Kullanıcının bu yayında mute'lu olup olmadığını kontrol eder."""
+        from app.services.moderation_service import mute_key
+        return bool(await redis.sismember(mute_key(stream_id), str(user_id)))
+
+    async def _apply_content_filters(self, user_id: int, content: str) -> bool:
+        """Shadowban veya küfür içeriyorsa True (mesaj gizlenecek) döner."""
+        from app.core.auto_mod import auto_mod
+        return await self.is_shadowbanned(user_id) or auto_mod.contains_profanity(content)
+
+    async def _build_message_obj(
+        self, redis, stream_id: int, user_id: int, username: str,
+        profile_image_url: str | None, content: str, is_host: bool, is_hidden: bool,
+    ) -> dict:
+        """Mesaj sözlüğünü oluşturur; moderatör rozetini Redis'ten kontrol eder."""
+        from app.services.moderation_service import mod_key
+        is_mod = bool(await redis.sismember(mod_key(stream_id), str(user_id)))
+        return {
+            "type": WS.MESSAGE,
+            "id": str(uuid.uuid4())[:8],
+            "username": username,
+            "profile_image_url": profile_image_url,
+            "content": content,
+            "created_at": datetime.now(timezone.utc).isoformat(),
+            "is_mod": is_mod,
+            "is_host": is_host,
+            "is_hidden": is_hidden,
+        }
+
+    async def _persist_and_publish(
+        self, redis, stream_id: int, chat_msg: dict, username: str
+    ) -> None:
+        """Mesajı Redis'e kaydeder; gizli değilse Pub/Sub ile yayınlar."""
+        key = chat_key(stream_id)
+        await redis.rpush(key, json.dumps(chat_msg))
+        await redis.ltrim(key, -_MAX_HISTORY, -1)
+        await redis.expire(key, 24 * 3600)
+
+        if not chat_msg["is_hidden"]:
+            await publish_chat(stream_id, chat_msg)
+            logger.info("[CHAT] stream_id=%s user=%s | mesaj gönderildi", stream_id, username)
+        else:
+            logger.info(
+                "[CHAT] stream_id=%s user=%s | ghost mesaj (shadowban veya küfür)",
+                stream_id, username,
+            )
+
     async def process_message(
         self,
         stream_id: int,
@@ -247,47 +294,14 @@ class ChatService:
           None        → kullanıcı mute'lu (caller "muted" hatası gönderir)
           dict        → mesaj (is_hidden=True ise ghost; caller sadece gönderene yollar)
         """
-        from app.services.moderation_service import mute_key, mod_key
-        from app.core.auto_mod import auto_mod
-
         redis = await get_redis()
 
-        # Mute kontrolü (en hızlı, Redis set üyesi)
-        if await redis.sismember(mute_key(stream_id), str(user_id)):
-            return None  # caller "muted" error gönderir
+        if await self._check_muted(redis, stream_id, user_id):
+            return None
 
-        # Shadowban ve küfür kontrolü
-        hidden = (
-            await self.is_shadowbanned(user_id)
-            or auto_mod.contains_profanity(content)
+        is_hidden = await self._apply_content_filters(user_id, content)
+        chat_msg = await self._build_message_obj(
+            redis, stream_id, user_id, username, profile_image_url, content, is_host, is_hidden
         )
-
-        is_mod = bool(await redis.sismember(mod_key(stream_id), str(user_id)))
-        chat_msg = {
-            "type": WS.MESSAGE,
-            "id": str(uuid.uuid4())[:8],
-            "username": username,
-            "profile_image_url": profile_image_url,
-            "content": content,
-            "created_at": datetime.now(timezone.utc).isoformat(),
-            "is_mod": is_mod,
-            "is_host": is_host,
-            "is_hidden": hidden,
-        }
-
-        # Redis'e kaydet (ghost mesajlar da loglanır, sadece broadcast filtresi farklı)
-        key = chat_key(stream_id)
-        await redis.rpush(key, json.dumps(chat_msg))
-        await redis.ltrim(key, -_MAX_HISTORY, -1)
-        await redis.expire(key, 24 * 3600)
-
-        if not hidden:
-            await publish_chat(stream_id, chat_msg)
-            logger.info("[CHAT] stream_id=%s user=%s | mesaj gönderildi", stream_id, username)
-        else:
-            logger.info(
-                "[CHAT] stream_id=%s user=%s | ghost mesaj (shadowban veya küfür)",
-                stream_id, username,
-            )
-
+        await self._persist_and_publish(redis, stream_id, chat_msg, username)
         return chat_msg

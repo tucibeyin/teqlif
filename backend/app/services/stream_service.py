@@ -51,6 +51,16 @@ _ROOM_NAME_PREFIX    = "stream"            # oda adı biçimi: stream_{user_id}_
 _ROOM_UUID_LENGTH    = 8                   # room_name içindeki UUID kısaltma uzunluğu
 
 
+def _apply_block_filter(query, host_id_col, current_user_id: int):
+    """Engelleme filtrelerini verilen SQLAlchemy query'ye uygular."""
+    blocked_by_me = select(UserBlock.blocked_id).where(UserBlock.blocker_id == current_user_id)
+    blocking_me   = select(UserBlock.blocker_id).where(UserBlock.blocked_id == current_user_id)
+    return query.where(
+        host_id_col.not_in(blocked_by_me),
+        host_id_col.not_in(blocking_me),
+    )
+
+
 async def _fill_viewer_counts(streams: list, tag: str = "") -> None:
     """
     Redis MGET ile tüm yayınların izleyici sayısını tek sorguda doldurur.
@@ -600,12 +610,7 @@ class StreamService:
         )
 
         if current_user_id:
-            blocked_by_me = select(UserBlock.blocked_id).where(UserBlock.blocker_id == current_user_id)
-            blocking_me = select(UserBlock.blocker_id).where(UserBlock.blocked_id == current_user_id)
-            query = query.where(
-                LiveStream.host_id.not_in(blocked_by_me),
-                LiveStream.host_id.not_in(blocking_me),
-            )
+            query = _apply_block_filter(query, LiveStream.host_id, current_user_id)
 
         result = await self.db.execute(query)
         streams = result.scalars().all()

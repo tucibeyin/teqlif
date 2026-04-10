@@ -49,14 +49,8 @@ async def search_users(
         .limit(20)
     )
 
-    # Engelleme filtresi: giriş yapmış kullanıcıdan engellenen veya onu engelleyen kişileri gizle
     if current_user_id:
-        blocked_by_me = select(UserBlock.blocked_id).where(UserBlock.blocker_id == current_user_id)
-        blocking_me = select(UserBlock.blocker_id).where(UserBlock.blocked_id == current_user_id)
-        query = query.where(
-            User.id.not_in(blocked_by_me),
-            User.id.not_in(blocking_me),
-        )
+        query = _block_filters(query, User.id, current_user_id)
 
     result = await db.execute(query)
     users = result.scalars().all()

@@ -20,15 +20,7 @@ class StreamService {
     final headers = await _headers();
     final resp = await http.get(Uri.parse('$kBaseUrl/streams/active'), headers: headers);
     debugPrint('[StreamService] getActiveStreams → HTTP ${resp.statusCode}, body: ${resp.body.length > 200 ? resp.body.substring(0, 200) : resp.body}');
-    if (resp.statusCode >= 400) {
-      final body = _tryDecode(resp.body);
-      final errMap = body['error'];
-      throw AppException(
-        errMap is Map ? (errMap['message'] ?? 'Bir hata oluştu') : (body['detail'] ?? 'Bir hata oluştu'),
-        code: errMap is Map ? (errMap['code'] ?? 'ERR_${resp.statusCode}') : 'HTTP_${resp.statusCode}',
-        statusCode: resp.statusCode,
-      );
-    }
+    if (resp.statusCode >= 400) _throwHttpError(resp.statusCode, resp.body);
     final list = _tryDecodeList(resp.body);
     debugPrint('[StreamService] getActiveStreams → parse edilen öğe sayısı: ${list.length}');
     final result = <StreamOut>[];
@@ -48,19 +40,7 @@ class StreamService {
       Uri.parse('$kBaseUrl/streams/following/live'),
       headers: headers,
     );
-    if (resp.statusCode >= 400) {
-      final body = _tryDecode(resp.body);
-      final errMap = body['error'];
-      throw AppException(
-        errMap is Map
-            ? (errMap['message'] ?? 'Bir hata oluştu')
-            : (body['detail'] ?? 'Bir hata oluştu'),
-        code: errMap is Map
-            ? (errMap['code'] ?? 'ERR_${resp.statusCode}')
-            : 'HTTP_${resp.statusCode}',
-        statusCode: resp.statusCode,
-      );
-    }
+    if (resp.statusCode >= 400) _throwHttpError(resp.statusCode, resp.body);
     final list = _tryDecodeList(resp.body);
     return list
         .map((e) => StreamOut.fromJson(e as Map<String, dynamic>))
@@ -135,12 +115,7 @@ class StreamService {
     final streamed = await req.send();
     final bodyStr = await streamed.stream.bytesToString();
     if (streamed.statusCode >= 400) {
-      final decoded = _tryDecode(bodyStr);
-      final errMap = decoded['error'];
-      throw AppException(
-        errMap is Map ? (errMap['message'] ?? 'Thumbnail yüklenemedi') : (decoded['detail'] ?? 'Thumbnail yüklenemedi'),
-        statusCode: streamed.statusCode,
-      );
+      _throwHttpError(streamed.statusCode, bodyStr, fallback: 'Thumbnail yüklenemedi');
     }
     return (_tryDecode(bodyStr)['thumbnail_url'] as String);
   }
@@ -185,6 +160,17 @@ class StreamService {
         Uri.parse('$kBaseUrl/streams/$streamId/cohost/leave'),
         headers: await _headers(),
       ),
+    );
+  }
+
+  /// HTTP hata yanıtını parse eder ve [AppException] fırlatır.
+  static Never _throwHttpError(int statusCode, String body, {String fallback = 'Bir hata oluştu'}) {
+    final decoded = _tryDecode(body);
+    final errMap = decoded['error'];
+    throw AppException(
+      errMap is Map ? (errMap['message'] ?? fallback) : (decoded['detail'] ?? fallback),
+      code: errMap is Map ? (errMap['code'] ?? 'ERR_$statusCode') : 'HTTP_$statusCode',
+      statusCode: statusCode,
     );
   }
 

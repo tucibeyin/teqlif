@@ -35,6 +35,47 @@ String imgUrl(String? path) {
   return '$kBaseHost$path';
 }
 
+/// JSON olmayan hata yanıtını [AppException]'a dönüştürür.
+/// 502/503/504 → SERVER_DOWN, diğer 4xx → INVALID_RESPONSE.
+/// Hata yoksa null döner (başarılı yanıt için JSON olmayabilir).
+AppException? _parseGatewayError(http.Response response) {
+  if (response.statusCode == 502 ||
+      response.statusCode == 503 ||
+      response.statusCode == 504) {
+    return AppException(
+      'Sistemlerimizde anlık bir bakım çalışması var. Lütfen birazdan tekrar deneyin.',
+      code: 'SERVER_DOWN',
+      statusCode: response.statusCode,
+    );
+  }
+  if (response.statusCode >= 400) {
+    return AppException(
+      'Sunucu geçersiz yanıt döndürdü',
+      code: 'INVALID_RESPONSE',
+      statusCode: response.statusCode,
+    );
+  }
+  return null;
+}
+
+/// Başarısız yanıtın JSON gövdesinden [AppException] üretir.
+/// Yeni format `{"error": {...}}` ve eski format `{"detail": "..."}` desteklenir.
+Never _parseErrorBody(Map<String, dynamic> body, int statusCode) {
+  if (body['error'] is Map) {
+    final error = body['error'] as Map<String, dynamic>;
+    throw AppException(
+      error['message']?.toString() ?? 'Bir hata oluştu',
+      code: error['code']?.toString() ?? 'ERR_$statusCode',
+      statusCode: statusCode,
+    );
+  }
+  throw AppException(
+    body['detail']?.toString() ?? 'Bir hata oluştu',
+    code: 'HTTP_$statusCode',
+    statusCode: statusCode,
+  );
+}
+
 /// Merkezi HTTP istek wrapper'ı.
 ///
 /// Tüm API çağrıları bu fonksiyon üzerinden yapılmalıdır.
@@ -67,48 +108,18 @@ Future<Map<String, dynamic>> apiCall(
       body = jsonDecode(response.body) as Map<String, dynamic>;
     } catch (_) {
       // JSON parse hatası — Nginx 502/503/504 HTML sayfası veya boş yanıt
-      if (response.statusCode == 502 ||
-          response.statusCode == 503 ||
-          response.statusCode == 504) {
-        throw AppException(
-          'Sistemlerimizde anlık bir bakım çalışması var. Lütfen birazdan tekrar deneyin.',
-          code: 'SERVER_DOWN',
-          statusCode: response.statusCode,
-        );
-      }
-      if (response.statusCode >= 400) {
-        throw AppException(
-          'Sunucu geçersiz yanıt döndürdü',
-          code: 'INVALID_RESPONSE',
-          statusCode: response.statusCode,
-        );
-      }
+      final gatewayErr = _parseGatewayError(response);
+      if (gatewayErr != null) throw gatewayErr;
       return {};
     }
 
     if (response.statusCode >= 400) {
       // 401 → refresh dene, bir kez retry yap
       if (response.statusCode == 401 && !retried) {
-        // import döngüsünü kırmak için lazy import
         final refreshed = await _tryRefreshOnce();
         if (refreshed) return apiCall(request, retried: true);
       }
-
-      // Yeni format: {"success": false, "error": {"code": "...", "message": "..."}}
-      if (body['error'] is Map) {
-        final error = body['error'] as Map<String, dynamic>;
-        throw AppException(
-          error['message']?.toString() ?? 'Bir hata oluştu',
-          code: error['code']?.toString() ?? 'ERR_${response.statusCode}',
-          statusCode: response.statusCode,
-        );
-      }
-      // Eski format: {"detail": "..."}
-      throw AppException(
-        body['detail']?.toString() ?? 'Bir hata oluştu',
-        code: 'HTTP_${response.statusCode}',
-        statusCode: response.statusCode,
-      );
+      _parseErrorBody(body, response.statusCode);
     }
 
     return body;

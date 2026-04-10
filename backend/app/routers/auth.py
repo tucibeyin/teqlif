@@ -1,3 +1,4 @@
+import re
 import secrets
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -19,11 +20,30 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
 VERIFY_CODE_TTL = 600          # 10 dakika
 _VERIFY_CODE_MIN = 100_000     # 6 haneli kod alt sınırı
 _VERIFY_CODE_RANGE = 900_000   # üretilecek kod aralığı (100000–999999)
+_USERNAME_RE = re.compile(r"^[a-z0-9_]{3,50}$")
 
 
-@router.post("/register", status_code=status.HTTP_201_CREATED)
-@limiter.limit("5/minute")
-async def register(request: Request, data: UserRegister, db: AsyncSession = Depends(get_db)):
+async def _send_verification_email(request: Request, email: str, full_name: str, code: str) -> None:
+    """Doğrulama e-postasını ARQ kuyruğu üzerinden gönderir; başarısız olursa doğrudan gönderir."""
+    try:
+        await request.app.state.arq_pool.enqueue_job(
+            "send_verification_email_task", email, full_name, code
+        )
+    except Exception as e:
+        logger.warning("ARQ enqueue başarısız, direkt gönderilecek [%s]: %s", email, str(e))
+        try:
+            await send_verification_code(email, full_name, code)
+        except Exception as e2:
+            logger.warning("Doğrulama e-postası gönderilemedi [%s]: %s", email, str(e2))
+            capture_exception(e2)
+
+
+async def _create_user_and_send_code(
+    request: Request, data: UserRegister, db: AsyncSession
+) -> None:
+    """Yeni kullanıcıyı oluşturur, doğrulama kodunu Redis'e kaydeder ve e-posta gönderir."""
+    from app.core.exceptions import ConflictException
+
     result = await db.execute(select(User).where(User.email == data.email))
     if result.scalar_one_or_none():
         raise BadRequestException("Bu e-posta adresi zaten kullanılıyor")
@@ -32,9 +52,7 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
     if result.scalar_one_or_none():
         raise BadRequestException("Bu kullanıcı adı zaten alınmış")
 
-    # ── Opsiyonel telefon numarası ───────────────────────────────────────────
     if data.phone:
-        from app.core.exceptions import ConflictException
         result = await db.execute(select(User).where(User.phone == data.phone))
         if result.scalar_one_or_none():
             raise ConflictException("Bu telefon numarası zaten kayıtlı")
@@ -50,25 +68,16 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
     db.add(user)
     await db.commit()
 
-    # 6 haneli kod üret, Redis'e kaydet
     code = str(_VERIFY_CODE_MIN + secrets.randbelow(_VERIFY_CODE_RANGE))
     redis = await get_redis()
     await redis.setex(f"verify:{data.email}", VERIFY_CODE_TTL, code)
+    await _send_verification_email(request, data.email, data.full_name, code)
 
-    # E-posta kuyruğa alınır — API yanıtı bloklanmaz
-    try:
-        await request.app.state.arq_pool.enqueue_job(
-            "send_verification_email_task", data.email, data.full_name, code
-        )
-    except Exception as e:
-        # ARQ pool erişim hatası — yedek olarak direkt gönder
-        logger.warning("ARQ enqueue başarısız, direkt gönderilecek [%s]: %s", data.email, str(e))
-        try:
-            await send_verification_code(data.email, data.full_name, code)
-        except Exception as e2:
-            logger.warning("Doğrulama e-postası gönderilemedi [%s]: %s", data.email, str(e2))
-            capture_exception(e2)
 
+@router.post("/register", status_code=status.HTTP_201_CREATED)
+@limiter.limit("5/minute")
+async def register(request: Request, data: UserRegister, db: AsyncSession = Depends(get_db)):
+    await _create_user_and_send_code(request, data, db)
     return {"message": "Kayıt başarılı. E-posta adresinize doğrulama kodu gönderdik."}
 
 
@@ -151,8 +160,7 @@ async def resend_code(request: Request, data: ResendCode, db: AsyncSession = Dep
 
 @router.get("/check-username")
 async def check_username(username: str = "", exclude_id: int | None = None, db: AsyncSession = Depends(get_db)):
-    import re
-    if not re.match(r"^[a-z0-9_]{3,50}$", username):
+    if not _USERNAME_RE.match(username):
         return {"available": False, "reason": "format"}
     q = select(User).where(User.username == username)
     if exclude_id is not None:
@@ -180,8 +188,7 @@ async def update_me(
         current_user.full_name = data.full_name
 
     if data.username is not None:
-        import re
-        if not re.match(r"^[a-z0-9_]{3,50}$", data.username):
+        if not _USERNAME_RE.match(data.username):
             raise BadRequestException("Kullanıcı adı 3-50 karakter, sadece küçük harf/rakam/alt çizgi")
         result = await db.execute(
             select(User).where(User.username == data.username, User.id != current_user.id)

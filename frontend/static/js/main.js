@@ -66,51 +66,57 @@ window.onTurnstileExpire = function () {
     _cfToken = null;
 };
 
+// Token hazır olana kadar en fazla 10s bekler; timeout'ta fail-open ile devam eder.
+async function _pollForToken() {
+    if (_cfToken) return;
+    console.warn('[getCaptchaToken] Token yok — en fazla 10s bekleniyor...');
+    await new Promise((resolve) => {
+        const deadline = Date.now() + 10_000;
+        const poll = () => {
+            if (_cfToken) { resolve(); return; }
+            if (Date.now() >= deadline) {
+                console.error('[getCaptchaToken] 10s timeout doldu — fail-open ile devam');
+                resolve();
+                return;
+            }
+            setTimeout(poll, 200);
+        };
+        poll();
+    });
+}
+
+// Bir sonraki işlem için Turnstile widget'ını sıfırlar ve yeni token üretimini tetikler.
+function _resetTurnstile() {
+    try {
+        if (!window.turnstile) {
+            console.warn('[getCaptchaToken] window.turnstile tanımlı değil — SDK yüklenmemiş olabilir');
+            return;
+        }
+        const container = document.querySelector('.cf-turnstile');
+        if (container) {
+            turnstile.reset(container);
+            console.log('[getCaptchaToken] turnstile.reset() tetiklendi');
+        } else {
+            console.warn('[getCaptchaToken] .cf-turnstile container bulunamadı!');
+        }
+    } catch (e) {
+        console.error('[getCaptchaToken] Turnstile reset hatası:', e);
+    }
+}
+
 // Submit anında çağrılır; token hazırsa anında döner, yoksa en fazla 10s bekler (fail-open).
 async function getCaptchaToken() {
     console.log('[getCaptchaToken] Çağrıldı | _cfToken mevcut:', !!_cfToken,
                 '| turnstile yüklü:', typeof turnstile !== 'undefined');
 
-    // Token henüz üretilmediyse bekle (sayfa yeni yüklendi veya önceki token tüketildi)
-    if (!_cfToken) {
-        console.warn('[getCaptchaToken] Token yok — en fazla 10s bekleniyor...');
-        await new Promise((resolve) => {
-            const deadline = Date.now() + 10000;
-            const poll = () => {
-                if (_cfToken) { resolve(); return; }
-                if (Date.now() >= deadline) {
-                    console.error('[getCaptchaToken] 10s timeout doldu — fail-open ile devam');
-                    resolve();
-                    return;
-                }
-                setTimeout(poll, 200);
-            };
-            poll();
-        });
-    }
+    await _pollForToken();
 
     const tok = _cfToken;
     _cfToken = null; // tek kullanımlık
 
     console.log('[getCaptchaToken] Dönen token:', tok ? tok.slice(0, 10) + '...' : 'NULL');
 
-    // Sonraki işlem için hemen yeni token üretimini tetikle
-    try {
-        if (window.turnstile) {
-            const container = document.querySelector('.cf-turnstile');
-            if (container) {
-                turnstile.reset(container);
-                console.log('[getCaptchaToken] turnstile.reset() tetiklendi');
-            } else {
-                console.warn('[getCaptchaToken] .cf-turnstile container bulunamadı!');
-            }
-        } else {
-            console.warn('[getCaptchaToken] window.turnstile tanımlı değil — SDK yüklenmemiş olabilir');
-        }
-    } catch (e) {
-        console.error('[getCaptchaToken] Turnstile reset hatası:', e);
-    }
-
+    _resetTurnstile();
     return tok || null;
 }
 
