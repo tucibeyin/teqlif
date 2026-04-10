@@ -1064,8 +1064,9 @@ class _BidsToggleTab extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 260),
             curve: Curves.easeInOut,
+            clipBehavior: Clip.hardEdge,
             width: isOpen ? 32 : 38,
-            height: isOpen ? _kBidsH / 2 : 88,
+            height: isOpen ? _kBidsH / 2 : 160,
             padding: isOpen ? EdgeInsets.zero : const EdgeInsets.symmetric(vertical: 14),
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(isOpen ? 0.42 : 0.52),
