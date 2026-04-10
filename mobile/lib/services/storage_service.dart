@@ -6,7 +6,7 @@ class StorageService {
   static const _tokenKey = 'teqlif_token';
   static const _refreshTokenKey = 'teqlif_refresh_token';
   // Token ve kimlik bilgileri için güvenli depolama (Keystore/Keychain)
-  static const _secureStorage = FlutterSecureStorage(
+  static final _secureStorage = const FlutterSecureStorage(
     aOptions: AndroidOptions(encryptedSharedPreferences: true),
   );
 
