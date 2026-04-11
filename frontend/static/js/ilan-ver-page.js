@@ -221,3 +221,15 @@
 
     loadCategories();
     loadCities();
+
+// ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    var ilanForm = document.getElementById('ilanForm');
+    if (ilanForm) ilanForm.addEventListener('submit', submitForm);
+
+    var photoDrop = document.getElementById('photoDrop');
+    if (photoDrop) photoDrop.addEventListener('click', function () {
+        var inp = document.getElementById('photoInput');
+        if (inp) inp.click();
+    });
+});

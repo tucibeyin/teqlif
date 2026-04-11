@@ -85,3 +85,11 @@
     }
 
     switchTab(_tab);
+
+// ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    var tabActive = document.getElementById('tabActive');
+    if (tabActive) tabActive.addEventListener('click', function () { switchTab('active'); });
+    var tabPassive = document.getElementById('tabPassive');
+    if (tabPassive) tabPassive.addEventListener('click', function () { switchTab('passive'); });
+});

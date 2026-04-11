@@ -244,3 +244,67 @@
             </tr>`;
         }).join("");
     }
+
+// ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    var adminPasswordInput = document.getElementById('adminPasswordInput');
+    if (adminPasswordInput) adminPasswordInput.addEventListener('keypress', function (e) {
+        if (e.key === 'Enter') verifyPassword();
+    });
+    var btnVerifyPassword = document.getElementById('btnVerifyPassword');
+    if (btnVerifyPassword) btnVerifyPassword.addEventListener('click', verifyPassword);
+
+    var navUsers = document.getElementById('navUsers');
+    if (navUsers) navUsers.addEventListener('click', function () { showPanel('users'); });
+    var navStreams = document.getElementById('navStreams');
+    if (navStreams) navStreams.addEventListener('click', function () { showPanel('streams'); });
+    var navListings = document.getElementById('navListings');
+    if (navListings) navListings.addEventListener('click', function () { showPanel('listings'); });
+    var navReports = document.getElementById('navReports');
+    if (navReports) navReports.addEventListener('click', function () { showPanel('reports'); });
+    var navAnalytics = document.getElementById('navAnalytics');
+    if (navAnalytics) navAnalytics.addEventListener('click', function () { showPanel('analytics'); });
+
+    var btnAdminLogout = document.getElementById('btnAdminLogout');
+    if (btnAdminLogout) btnAdminLogout.addEventListener('click', adminLogout);
+
+    var btnOpenAddUser = document.getElementById('btnOpenAddUser');
+    if (btnOpenAddUser) btnOpenAddUser.addEventListener('click', openAddUserModal);
+
+    var inputSearchUsers = document.getElementById('inputSearchUsers');
+    if (inputSearchUsers) inputSearchUsers.addEventListener('keyup', function () { filterTable('search-users', 'user-table-body'); });
+    var btnLoadUsers = document.getElementById('btnLoadUsers');
+    if (btnLoadUsers) btnLoadUsers.addEventListener('click', loadUsers);
+
+    var inputSearchStreams = document.getElementById('inputSearchStreams');
+    if (inputSearchStreams) inputSearchStreams.addEventListener('keyup', function () { filterTable('search-streams', 'stream-table-body'); });
+    var btnLoadStreams = document.getElementById('btnLoadStreams');
+    if (btnLoadStreams) btnLoadStreams.addEventListener('click', loadStreams);
+
+    var inputSearchListings = document.getElementById('inputSearchListings');
+    if (inputSearchListings) inputSearchListings.addEventListener('keyup', function () { filterTable('search-listings', 'listing-table-body'); });
+    var btnLoadListings = document.getElementById('btnLoadListings');
+    if (btnLoadListings) btnLoadListings.addEventListener('click', loadListings);
+
+    var inputSearchReports = document.getElementById('inputSearchReports');
+    if (inputSearchReports) inputSearchReports.addEventListener('keyup', function () { filterTable('search-reports', 'report-table-body'); });
+    var btnLoadReports = document.getElementById('btnLoadReports');
+    if (btnLoadReports) btnLoadReports.addEventListener('click', loadReports);
+
+    var btnLoadAnalytics = document.getElementById('btnLoadAnalytics');
+    if (btnLoadAnalytics) btnLoadAnalytics.addEventListener('click', loadAnalytics);
+    var inputSearchAnalytics = document.getElementById('inputSearchAnalytics');
+    if (inputSearchAnalytics) inputSearchAnalytics.addEventListener('keyup', function () { filterTable('search-analytics', 'analytics-table-body'); });
+
+    var btnCloseEditModal = document.getElementById('btnCloseEditModal');
+    if (btnCloseEditModal) btnCloseEditModal.addEventListener('click', closeModal);
+    var btnSubmitUserUpdate = document.getElementById('btnSubmitUserUpdate');
+    if (btnSubmitUserUpdate) btnSubmitUserUpdate.addEventListener('click', submitUserUpdate);
+    var btnSubmitPasswordReset = document.getElementById('btnSubmitPasswordReset');
+    if (btnSubmitPasswordReset) btnSubmitPasswordReset.addEventListener('click', submitPasswordReset);
+
+    var btnCloseAddUserModal = document.getElementById('btnCloseAddUserModal');
+    if (btnCloseAddUserModal) btnCloseAddUserModal.addEventListener('click', closeAddUserModal);
+    var btnSubmitNewUser = document.getElementById('btnSubmitNewUser');
+    if (btnSubmitNewUser) btnSubmitNewUser.addEventListener('click', submitNewUser);
+});

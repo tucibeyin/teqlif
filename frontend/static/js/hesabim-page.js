@@ -359,3 +359,31 @@
     document.addEventListener('keydown', e => {
         if (e.key === 'Escape') closeBlockedModal(null);
     });
+
+// ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    var avatarEl = document.getElementById('avatarEl');
+    if (avatarEl) avatarEl.addEventListener('click', function () {
+        var inp = document.getElementById('avatarInput');
+        if (inp) inp.click();
+    });
+    var linkOpenBlocked = document.getElementById('linkOpenBlocked');
+    if (linkOpenBlocked) linkOpenBlocked.addEventListener('click', function (e) { e.preventDefault(); openBlockedModal(); });
+    var linkRestartTour = document.getElementById('linkRestartTour');
+    if (linkRestartTour) linkRestartTour.addEventListener('click', function (e) { e.preventDefault(); restartTeqlifTour(); });
+    var linkLogout = document.getElementById('linkLogout');
+    if (linkLogout) linkLogout.addEventListener('click', function (e) { e.preventDefault(); Auth.logout(); });
+
+    var btnCloseEditModal = document.getElementById('btnCloseEditModal');
+    if (btnCloseEditModal) btnCloseEditModal.addEventListener('click', function () { closeModal('editModal'); });
+    var btnCloseDeleteModal = document.getElementById('btnCloseDeleteModal');
+    if (btnCloseDeleteModal) btnCloseDeleteModal.addEventListener('click', function () { closeModal('deleteModal'); });
+
+    var blockedModalBackdrop = document.getElementById('blockedModalBackdrop');
+    if (blockedModalBackdrop) blockedModalBackdrop.addEventListener('click', closeBlockedModal);
+    var btnCloseBlockedModal = document.getElementById('btnCloseBlockedModal');
+    if (btnCloseBlockedModal) btnCloseBlockedModal.addEventListener('click', function () { closeBlockedModal(null); });
+
+    var btnClosePassModal = document.getElementById('btnClosePassModal');
+    if (btnClosePassModal) btnClosePassModal.addEventListener('click', function () { closeModal('passModal'); });
+});

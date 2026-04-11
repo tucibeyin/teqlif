@@ -799,11 +799,11 @@
     </div>
 
     <!-- Follow list modal -->
-    <div class="follow-modal-backdrop" id="followModalBackdrop" onclick="closeFollowModal(event)">
+    <div class="follow-modal-backdrop" id="followModalBackdrop">
         <div class="follow-modal">
             <div class="follow-modal-header">
                 <span id="followModalTitle">Takipçiler</span>
-                <button class="follow-modal-close" onclick="closeFollowModal(null)" data-track-id="profil-modal-btn-takipci-kapat">×</button>
+                <button class="follow-modal-close" id="btnCloseFollowModal" data-track-id="profil-modal-btn-takipci-kapat">×</button>
             </div>
             <div class="follow-modal-body" id="followModalBody">
                 <div class="follow-modal-loading">Yükleniyor...</div>
@@ -812,11 +812,11 @@
     </div>
 
     <!-- Rating form modal -->
-    <div class="rating-modal-backdrop" id="ratingFormBackdrop" onclick="closeRatingForm(event)">
+    <div class="rating-modal-backdrop" id="ratingFormBackdrop">
         <div class="rating-modal">
             <div class="rating-modal-header">
                 <span id="ratingFormTitle">Puan Ver</span>
-                <button class="rating-modal-close" onclick="closeRatingForm(null)" data-track-id="profil-modal-btn-puan-kapat">×</button>
+                <button class="rating-modal-close" id="btnCloseRatingForm" data-track-id="profil-modal-btn-puan-kapat">×</button>
             </div>
             <div class="rating-modal-body">
                 <div class="star-picker" id="ratingStarPicker">
@@ -831,18 +831,18 @@
                 <div class="rating-char-count"><span id="ratingCharCount">0</span>/500</div>
             </div>
             <div class="rating-modal-footer">
-                <button class="btn-rating-cancel" onclick="closeRatingForm(null)" data-track-id="profil-modal-btn-puan-vazgec">Vazgeç</button>
-                <button class="btn-rating-save" id="ratingSubmitBtn" onclick="submitRating()" data-track-id="profil-modal-btn-puan-kaydet">Kaydet</button>
+                <button class="btn-rating-cancel" id="btnCancelRating" data-track-id="profil-modal-btn-puan-vazgec">Vazgeç</button>
+                <button class="btn-rating-save" id="ratingSubmitBtn" data-track-id="profil-modal-btn-puan-kaydet">Kaydet</button>
             </div>
         </div>
     </div>
 
     <!-- Ratings list modal -->
-    <div class="ratings-list-backdrop" id="ratingsListBackdrop" onclick="closeRatingsList(event)">
+    <div class="ratings-list-backdrop" id="ratingsListBackdrop">
         <div class="ratings-list-modal">
             <div class="ratings-list-header">
                 <span id="ratingsListTitle">Değerlendirmeler</span>
-                <button class="rating-modal-close" onclick="closeRatingsList(null)" data-track-id="profil-modal-btn-degerlendirmeler-kapat">×</button>
+                <button class="rating-modal-close" id="btnCloseRatingsList" data-track-id="profil-modal-btn-degerlendirmeler-kapat">×</button>
             </div>
             <div id="ratingsListSummaryBar"></div>
             <div class="ratings-list-body" id="ratingsListBody">
@@ -852,11 +852,11 @@
     </div>
 
     <!-- Edit profile modal -->
-    <div class="ep-backdrop" id="epBackdrop" onclick="closeEditProfileModal(event)">
+    <div class="ep-backdrop" id="epBackdrop">
         <div class="ep-modal">
             <div class="ep-header">
                 <span>Profili Düzenle</span>
-                <button class="ep-close" onclick="closeEditProfileModal(null)">×</button>
+                <button class="ep-close" id="btnCloseEpModal">×</button>
             </div>
             <div class="ep-body">
                 <div class="ep-field">
@@ -865,13 +865,13 @@
                 </div>
                 <div class="ep-field">
                     <label for="epUsername">Kullanıcı Adı</label>
-                    <input type="text" id="epUsername" maxlength="50" placeholder="kullanici_adi" autocomplete="username" oninput="epUsernameInput(this)">
+                    <input type="text" id="epUsername" maxlength="50" placeholder="kullanici_adi" autocomplete="username" id="epUsernameInputEl">
                     <div class="ep-hint" id="epUsernameHint">Yalnızca küçük harf, rakam ve alt çizgi (_) kullanılabilir.</div>
                 </div>
             </div>
             <div class="ep-footer">
-                <button class="ep-cancel" onclick="closeEditProfileModal(null)">Vazgeç</button>
-                <button class="ep-save" id="epSaveBtn" onclick="submitEditProfile()">Kaydet</button>
+                <button class="ep-cancel" id="btnEpCancel">Vazgeç</button>
+                <button class="ep-save" id="epSaveBtn">Kaydet</button>
             </div>
         </div>
     </div>

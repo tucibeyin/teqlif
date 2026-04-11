@@ -803,10 +803,10 @@
     <div class="tab-bar-wrapper">
         <div class="tab-bar">
             <div class="tab-pills">
-                <button class="tab-btn active" id="tab-canli" onclick="switchTab('canli')" data-track-id="anasayfa-tab-canli-yayinlar">
+                <button class="tab-btn active" id="tab-canli" data-track-id="anasayfa-tab-canli-yayinlar">
                     <span class="live-dot"></span> Canlı Yayınlar
                 </button>
-                <button class="tab-btn" id="tab-ilanlar" onclick="switchTab('ilanlar')" data-track-id="anasayfa-tab-ilanlar">
+                <button class="tab-btn" id="tab-ilanlar" data-track-id="anasayfa-tab-ilanlar">
                     İlanlar
                 </button>
             </div>
@@ -849,19 +849,19 @@
             </div>
             <!-- Tap navigasyon (z-index:2 — üst bar ve butonların altında kalır) -->
             <div style="position:absolute;inset:0;display:flex;z-index:2;">
-                <div style="flex:3" onclick="svNavigate(-1)" ondblclick="svTriggerHeart()"></div>
-                <div style="flex:7" onclick="svNavigate(1)"  ondblclick="svTriggerHeart()"></div>
+                <div style="flex:3" id="svTapLeft"></div>
+                <div style="flex:7" id="svTapRight"></div>
             </div>
             <!-- Kim Gördü? butonu (yalnızca kendi hikayelerinde görünür) -->
             <div id="svViewersBtn" style="display:none;position:absolute;bottom:32px;left:50%;transform:translateX(-50%);z-index:5;">
-                <button onclick="svShowViewers()" style="background:rgba(0,0,0,.55);border:none;border-radius:24px;color:#fff;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;">
+                <button id="svShowViewersBtn" style="background:rgba(0,0,0,.55);border:none;border-radius:24px;color:#fff;padding:9px 18px;font-size:13px;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:7px;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     Kim Gördü?
                 </button>
             </div>
             <!-- Hikaye Beğeni butonu — sağ alt -->
             <div id="svLikeBtn" style="position:absolute;bottom:32px;right:18px;z-index:5;display:none;flex-direction:column;align-items:center;gap:3px;">
-                <button id="svLikeHeart" onclick="svToggleLike()"
+                <button id="svLikeHeart"
                         style="background:none;border:none;cursor:pointer;padding:4px;line-height:1;">
                     <svg id="svLikeIcon" width="28" height="28" viewBox="0 0 24 24" fill="none"
                          stroke="#fff" stroke-width="2" style="filter:drop-shadow(0 1px 4px rgba(0,0,0,.5));">
@@ -878,7 +878,7 @@
                 <div style="display:flex;align-items:center;padding:16px 20px 10px;border-bottom:1px solid var(--color-border,#eee);">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
                     <span style="font-weight:700;font-size:15px;margin-left:8px;" id="svViewersTitle">Kim Gördü?</span>
-                    <button onclick="document.getElementById('storyViewersModal').style.display='none';" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#888;">×</button>
+                    <button id="svViewersCloseBtn" style="margin-left:auto;background:none;border:none;font-size:20px;cursor:pointer;color:#888;">×</button>
                 </div>
                 <div id="svViewersList" style="padding:8px 0;"></div>
             </div>
@@ -891,15 +891,15 @@
 
         <!-- Kategori filtre barı -->
         <div class="stream-cat-bar" id="streamCatBar">
-            <a class="cat-pill active" data-cat="" onclick="filterStreamCat(this, '')" data-track-id="anasayfa-yayin-filtre-tumü">Tümü</a>
-            <a class="cat-pill" data-cat="elektronik" onclick="filterStreamCat(this, 'elektronik')" data-track-id="anasayfa-yayin-filtre-elektronik">📱 Elektronik</a>
-            <a class="cat-pill" data-cat="vasita" onclick="filterStreamCat(this, 'vasita')" data-track-id="anasayfa-yayin-filtre-vasita">🚗 Vasıta</a>
-            <a class="cat-pill" data-cat="emlak" onclick="filterStreamCat(this, 'emlak')" data-track-id="anasayfa-yayin-filtre-emlak">🏠 Emlak</a>
-            <a class="cat-pill" data-cat="giyim" onclick="filterStreamCat(this, 'giyim')" data-track-id="anasayfa-yayin-filtre-giyim">👗 Giyim</a>
-            <a class="cat-pill" data-cat="spor" onclick="filterStreamCat(this, 'spor')" data-track-id="anasayfa-yayin-filtre-spor">⚽ Spor</a>
-            <a class="cat-pill" data-cat="kitap" onclick="filterStreamCat(this, 'kitap')" data-track-id="anasayfa-yayin-filtre-kitap">📚 Kitap & Müzik</a>
-            <a class="cat-pill" data-cat="ev" onclick="filterStreamCat(this, 'ev')" data-track-id="anasayfa-yayin-filtre-ev">🛋 Ev & Bahçe</a>
-            <a class="cat-pill" data-cat="diger" onclick="filterStreamCat(this, 'diger')" data-track-id="anasayfa-yayin-filtre-diger">📦 Diğer</a>
+            <a class="cat-pill active" data-cat=""  data-track-id="anasayfa-yayin-filtre-tumü">Tümü</a>
+            <a class="cat-pill" data-cat="elektronik"  data-track-id="anasayfa-yayin-filtre-elektronik">📱 Elektronik</a>
+            <a class="cat-pill" data-cat="vasita"  data-track-id="anasayfa-yayin-filtre-vasita">🚗 Vasıta</a>
+            <a class="cat-pill" data-cat="emlak"  data-track-id="anasayfa-yayin-filtre-emlak">🏠 Emlak</a>
+            <a class="cat-pill" data-cat="giyim"  data-track-id="anasayfa-yayin-filtre-giyim">👗 Giyim</a>
+            <a class="cat-pill" data-cat="spor"  data-track-id="anasayfa-yayin-filtre-spor">⚽ Spor</a>
+            <a class="cat-pill" data-cat="kitap"  data-track-id="anasayfa-yayin-filtre-kitap">📚 Kitap & Müzik</a>
+            <a class="cat-pill" data-cat="ev"  data-track-id="anasayfa-yayin-filtre-ev">🛋 Ev & Bahçe</a>
+            <a class="cat-pill" data-cat="diger"  data-track-id="anasayfa-yayin-filtre-diger">📦 Diğer</a>
         </div>
         <div class="streams-grid" id="streamsGrid">
             <div class="empty-state" style="grid-column:1/-1" id="loadingState">
@@ -913,39 +913,39 @@
         <!-- Arama -->
         <div class="listing-search">
             <input type="text" id="listingSearch" placeholder="Ne arıyorsunuz? (telefon, araba, ev...)" data-track-id="anasayfa-input-ilan-arama">
-            <button onclick="searchListings()" data-track-id="anasayfa-btn-ilan-ara">Ara</button>
+            <button id="btnSearchListings" data-track-id="anasayfa-btn-ilan-ara">Ara</button>
         </div>
 
         <!-- Kategoriler -->
         <div class="listing-cats">
-            <a class="cat-pill active" data-cat="" onclick="filterCat(this, '')" data-track-id="anasayfa-ilan-filtre-tumu">Tümü</a>
-            <a class="cat-pill" data-cat="elektronik" onclick="filterCat(this, 'elektronik')" data-track-id="anasayfa-ilan-filtre-elektronik">📱 Elektronik</a>
-            <a class="cat-pill" data-cat="vasita" onclick="filterCat(this, 'vasita')" data-track-id="anasayfa-ilan-filtre-vasita">🚗 Vasıta</a>
-            <a class="cat-pill" data-cat="emlak" onclick="filterCat(this, 'emlak')" data-track-id="anasayfa-ilan-filtre-emlak">🏠 Emlak</a>
-            <a class="cat-pill" data-cat="giyim" onclick="filterCat(this, 'giyim')" data-track-id="anasayfa-ilan-filtre-giyim">👗 Giyim</a>
-            <a class="cat-pill" data-cat="spor" onclick="filterCat(this, 'spor')" data-track-id="anasayfa-ilan-filtre-spor">⚽ Spor</a>
-            <a class="cat-pill" data-cat="kitap" onclick="filterCat(this, 'kitap')" data-track-id="anasayfa-ilan-filtre-kitap">📚 Kitap & Müzik</a>
-            <a class="cat-pill" data-cat="ev" onclick="filterCat(this, 'ev')" data-track-id="anasayfa-ilan-filtre-ev">🛋 Ev & Bahçe</a>
-            <a class="cat-pill" data-cat="diger" onclick="filterCat(this, 'diger')" data-track-id="anasayfa-ilan-filtre-diger">📦 Diğer</a>
+            <a class="cat-pill active" data-cat=""  data-track-id="anasayfa-ilan-filtre-tumu">Tümü</a>
+            <a class="cat-pill" data-cat="elektronik"  data-track-id="anasayfa-ilan-filtre-elektronik">📱 Elektronik</a>
+            <a class="cat-pill" data-cat="vasita"  data-track-id="anasayfa-ilan-filtre-vasita">🚗 Vasıta</a>
+            <a class="cat-pill" data-cat="emlak"  data-track-id="anasayfa-ilan-filtre-emlak">🏠 Emlak</a>
+            <a class="cat-pill" data-cat="giyim"  data-track-id="anasayfa-ilan-filtre-giyim">👗 Giyim</a>
+            <a class="cat-pill" data-cat="spor"  data-track-id="anasayfa-ilan-filtre-spor">⚽ Spor</a>
+            <a class="cat-pill" data-cat="kitap"  data-track-id="anasayfa-ilan-filtre-kitap">📚 Kitap & Müzik</a>
+            <a class="cat-pill" data-cat="ev"  data-track-id="anasayfa-ilan-filtre-ev">🛋 Ev & Bahçe</a>
+            <a class="cat-pill" data-cat="diger"  data-track-id="anasayfa-ilan-filtre-diger">📦 Diğer</a>
         </div>
 
         <!-- Toolbar -->
         <div class="listing-toolbar">
             <span class="listing-count" id="listingCount">İlanlar yükleniyor...</span>
             <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;">
-                <select class="listing-sort" id="locationFilter" onchange="filterLocation()" style="min-width:130px;" data-track-id="anasayfa-select-sehir-filtre">
+                <select class="listing-sort" id="locationFilter" style="min-width:130px;" data-track-id="anasayfa-select-sehir-filtre">
                     <option value="">Tüm Şehirler</option>
                 </select>
-                <select class="listing-sort" id="listingSort" onchange="sortListings()" data-track-id="anasayfa-select-siralama">
+                <select class="listing-sort" id="listingSort" data-track-id="anasayfa-select-siralama">
                     <option value="newest">En Yeni</option>
                     <option value="price_asc">Fiyat: Düşükten Yükseğe</option>
                     <option value="price_desc">Fiyat: Yüksekten Düşüğe</option>
                 </select>
                 <div class="view-toggle">
-                    <button id="btnViewList" class="active" onclick="setListingView('list')" title="Liste görünümü">
+                    <button id="btnViewList" class="active" title="Liste görünümü">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
                     </button>
-                    <button id="btnViewGrid" onclick="setListingView('grid')" title="Grid görünümü">
+                    <button id="btnViewGrid" title="Grid görünümü">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>
                     </button>
                 </div>

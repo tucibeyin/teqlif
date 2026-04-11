@@ -230,3 +230,20 @@
             showChat(toId, toName, toHandle);
         }
     })();
+
+// ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    var tabMessages = document.getElementById('tabMessages');
+    if (tabMessages) tabMessages.addEventListener('click', function () { switchTab('messages'); });
+    var tabNotifications = document.getElementById('tabNotifications');
+    if (tabNotifications) tabNotifications.addEventListener('click', function () { switchTab('notifications'); });
+
+    var btnChatBack = document.getElementById('btnChatBack');
+    if (btnChatBack) btnChatBack.addEventListener('click', showList);
+
+    var chatTextarea = document.getElementById('chatTextarea');
+    if (chatTextarea) chatTextarea.addEventListener('keydown', handleKey);
+
+    var btnChatSend = document.getElementById('btnChatSend');
+    if (btnChatSend) btnChatSend.addEventListener('click', sendMsg);
+});

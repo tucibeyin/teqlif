@@ -642,3 +642,36 @@
     });
 
     loadProfile();
+
+// ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    var followModalBackdrop = document.getElementById('followModalBackdrop');
+    if (followModalBackdrop) followModalBackdrop.addEventListener('click', closeFollowModal);
+    var btnCloseFollowModal = document.getElementById('btnCloseFollowModal');
+    if (btnCloseFollowModal) btnCloseFollowModal.addEventListener('click', function () { closeFollowModal(null); });
+
+    var ratingFormBackdrop = document.getElementById('ratingFormBackdrop');
+    if (ratingFormBackdrop) ratingFormBackdrop.addEventListener('click', closeRatingForm);
+    var btnCloseRatingForm = document.getElementById('btnCloseRatingForm');
+    if (btnCloseRatingForm) btnCloseRatingForm.addEventListener('click', function () { closeRatingForm(null); });
+    var btnCancelRating = document.getElementById('btnCancelRating');
+    if (btnCancelRating) btnCancelRating.addEventListener('click', function () { closeRatingForm(null); });
+    var ratingSubmitBtn = document.getElementById('ratingSubmitBtn');
+    if (ratingSubmitBtn) ratingSubmitBtn.addEventListener('click', submitRating);
+
+    var ratingsListBackdrop = document.getElementById('ratingsListBackdrop');
+    if (ratingsListBackdrop) ratingsListBackdrop.addEventListener('click', closeRatingsList);
+    var btnCloseRatingsList = document.getElementById('btnCloseRatingsList');
+    if (btnCloseRatingsList) btnCloseRatingsList.addEventListener('click', function () { closeRatingsList(null); });
+
+    var epBackdrop = document.getElementById('epBackdrop');
+    if (epBackdrop) epBackdrop.addEventListener('click', closeEditProfileModal);
+    var btnCloseEpModal = document.getElementById('btnCloseEpModal');
+    if (btnCloseEpModal) btnCloseEpModal.addEventListener('click', function () { closeEditProfileModal(null); });
+    var epUsernameInputEl = document.getElementById('epUsernameInputEl') || document.getElementById('epUsername');
+    if (epUsernameInputEl) epUsernameInputEl.addEventListener('input', function () { epUsernameInput(this); });
+    var btnEpCancel = document.getElementById('btnEpCancel');
+    if (btnEpCancel) btnEpCancel.addEventListener('click', function () { closeEditProfileModal(null); });
+    var epSaveBtn = document.getElementById('epSaveBtn');
+    if (epSaveBtn) epSaveBtn.addEventListener('click', submitEditProfile);
+});

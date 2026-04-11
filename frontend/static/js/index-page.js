@@ -1038,3 +1038,64 @@
     loadStreams();
     loadFollowedStories();
     setupStoryUpload();
+
+// ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    var tabCanli = document.getElementById('tab-canli');
+    if (tabCanli) tabCanli.addEventListener('click', function () { switchTab('canli'); });
+
+    var tabIlanlar = document.getElementById('tab-ilanlar');
+    if (tabIlanlar) tabIlanlar.addEventListener('click', function () { switchTab('ilanlar'); });
+
+    var svTapLeft = document.getElementById('svTapLeft');
+    if (svTapLeft) {
+        svTapLeft.addEventListener('click', function () { svNavigate(-1); });
+        svTapLeft.addEventListener('dblclick', svTriggerHeart);
+    }
+    var svTapRight = document.getElementById('svTapRight');
+    if (svTapRight) {
+        svTapRight.addEventListener('click', function () { svNavigate(1); });
+        svTapRight.addEventListener('dblclick', svTriggerHeart);
+    }
+
+    var svShowViewersBtn = document.getElementById('svShowViewersBtn');
+    if (svShowViewersBtn) svShowViewersBtn.addEventListener('click', svShowViewers);
+
+    var svLikeHeart = document.getElementById('svLikeHeart');
+    if (svLikeHeart) svLikeHeart.addEventListener('click', svToggleLike);
+
+    var svViewersCloseBtn = document.getElementById('svViewersCloseBtn');
+    if (svViewersCloseBtn) svViewersCloseBtn.addEventListener('click', function () {
+        var m = document.getElementById('storyViewersModal');
+        if (m) m.style.display = 'none';
+    });
+
+    // Stream category pills — event delegation
+    var streamCatBar = document.getElementById('streamCatBar');
+    if (streamCatBar) streamCatBar.addEventListener('click', function (e) {
+        var pill = e.target.closest('.cat-pill');
+        if (pill) filterStreamCat(pill, pill.dataset.cat || '');
+    });
+
+    var btnSearchListings = document.getElementById('btnSearchListings');
+    if (btnSearchListings) btnSearchListings.addEventListener('click', searchListings);
+
+    // Listing category pills — event delegation
+    var listingCatBar = document.querySelector('#section-ilanlar .tab-pills');
+    if (listingCatBar) listingCatBar.addEventListener('click', function (e) {
+        var pill = e.target.closest('.cat-pill');
+        if (pill) filterCat(pill, pill.dataset.cat || '');
+    });
+
+    var locationFilter = document.getElementById('locationFilter');
+    if (locationFilter) locationFilter.addEventListener('change', filterLocation);
+
+    var listingSort = document.getElementById('listingSort');
+    if (listingSort) listingSort.addEventListener('change', sortListings);
+
+    var btnViewList = document.getElementById('btnViewList');
+    if (btnViewList) btnViewList.addEventListener('click', function () { setListingView('list'); });
+
+    var btnViewGrid = document.getElementById('btnViewGrid');
+    if (btnViewGrid) btnViewGrid.addEventListener('click', function () { setListingView('grid'); });
+});

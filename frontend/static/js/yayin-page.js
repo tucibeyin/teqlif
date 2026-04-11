@@ -1663,3 +1663,50 @@
 
     init();
 
+// ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    var mainVideoEl = document.getElementById('mainVideoEl') || document.getElementById('mainVideo');
+    if (mainVideoEl) mainVideoEl.addEventListener('dblclick', _onStreamHeart);
+
+    var streamHeartBtn = document.getElementById('streamHeartBtn');
+    if (streamHeartBtn) streamHeartBtn.addEventListener('click', _onStreamHeart);
+
+    var listingPickerTrigger = document.getElementById('listingPickerTrigger');
+    if (listingPickerTrigger) listingPickerTrigger.addEventListener('click', toggleListingPicker);
+
+    var btnQuickBid100 = document.getElementById('btnQuickBid100');
+    if (btnQuickBid100) btnQuickBid100.addEventListener('click', function () { quickBid(100); });
+
+    var btnQuickBid200 = document.getElementById('btnQuickBid200');
+    if (btnQuickBid200) btnQuickBid200.addEventListener('click', function () { quickBid(200); });
+
+    var btnQuickBid500 = document.getElementById('btnQuickBid500');
+    if (btnQuickBid500) btnQuickBid500.addEventListener('click', function () { quickBid(500); });
+
+    var btnQuickBid1000 = document.getElementById('btnQuickBid1000');
+    if (btnQuickBid1000) btnQuickBid1000.addEventListener('click', function () { quickBid(1000); });
+
+    var pinCloseBtn = document.getElementById('pinCloseBtn');
+    if (pinCloseBtn) pinCloseBtn.addEventListener('click', _hidePinBanner);
+
+    var hostPinToggle = document.getElementById('hostPinToggle');
+    if (hostPinToggle) hostPinToggle.addEventListener('click', _togglePinInput);
+
+    var hostPinClearBtn = document.getElementById('hostPinClearBtn');
+    if (hostPinClearBtn) hostPinClearBtn.addEventListener('click', _clearHostPin);
+
+    var pinCancelBtn = document.getElementById('pinCancelBtn');
+    if (pinCancelBtn) pinCancelBtn.addEventListener('click', _togglePinInput);
+
+    var pinSendBtn = document.getElementById('pinSendBtn');
+    if (pinSendBtn) pinSendBtn.addEventListener('click', _sendHostPin);
+
+    var listingModalOverlay = document.getElementById('listingModalOverlay');
+    if (listingModalOverlay) listingModalOverlay.addEventListener('click', closeListingModal);
+
+    var lmArrowL = document.getElementById('lmArrowL');
+    if (lmArrowL) lmArrowL.addEventListener('click', function () { lmSlide(-1); });
+
+    var lmArrowR = document.getElementById('lmArrowR');
+    if (lmArrowR) lmArrowR.addEventListener('click', function () { lmSlide(1); });
+});

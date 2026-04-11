@@ -312,7 +312,7 @@
         <!-- Profil kartı -->
         <input type="file" id="avatarInput" accept="image/*" style="display:none;">
         <div class="profile-card" id="profileCard" style="display:none;">
-            <div class="profile-avatar" id="avatarEl" onclick="document.getElementById('avatarInput').click()">
+            <div class="profile-avatar" id="avatarEl">
                 <span id="avatarInitial">?</span>
                 <div class="profile-avatar-overlay">
                     <svg viewBox="0 0 24 24">
@@ -422,7 +422,7 @@
                         <path d="M9 18l6-6-6-6" />
                     </svg></span>
             </a>
-            <a href="#" class="menu-item" onclick="openBlockedModal();return false;">
+            <a href="#" class="menu-item" id="linkOpenBlocked">
                 <span class="menu-item-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"/>
@@ -489,7 +489,7 @@
                         <path d="M9 18l6-6-6-6" />
                     </svg></span>
             </a>
-            <a href="#" class="menu-item" onclick="restartTeqlifTour();return false;">
+            <a href="#" class="menu-item" id="linkRestartTour">
                 <span class="menu-item-icon">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                         <circle cx="12" cy="12" r="10"/>
@@ -499,7 +499,7 @@
                 <span class="menu-item-label">Turu Tekrar Başlat</span>
                 <span class="menu-item-chevron"><svg viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></svg></span>
             </a>
-            <a href="#" class="menu-item danger" onclick="Auth.logout();return false;">
+            <a href="#" class="menu-item danger" id="linkLogout">
                 <span class="menu-item-icon">
                     <svg viewBox="0 0 24 24">
                         <path
@@ -530,7 +530,7 @@
                 </div>
                 <div style="display:flex;gap:0.75rem;margin-top:1rem;">
                     <button class="btn btn-primary btn-full" id="btnSaveProfile">Kaydet</button>
-                    <button class="btn btn-outline" onclick="closeModal('editModal')"
+                    <button class="btn btn-outline" id="btnCloseEditModal"
                         style="min-width:90px;">İptal</button>
                 </div>
             </div>
@@ -556,18 +556,18 @@
                         style="background:#ef4444;color:#fff;border:none;border-radius:10px;padding:0.75rem;font-size:0.95rem;font-weight:600;cursor:pointer;">
                         Hesabı Sil
                     </button>
-                    <button class="btn btn-outline" onclick="closeModal('deleteModal')"
+                    <button class="btn btn-outline" id="btnCloseDeleteModal"
                         style="min-width:90px;">İptal</button>
                 </div>
             </div>
         </div>
 
         <!-- Engellenenler modal -->
-        <div class="blocked-modal-backdrop" id="blockedModalBackdrop" onclick="closeBlockedModal(event)">
+        <div class="blocked-modal-backdrop" id="blockedModalBackdrop">
             <div class="blocked-modal">
                 <div class="blocked-modal-header">
                     <span>Engellenen Kullanıcılar</span>
-                    <button class="blocked-modal-close" onclick="closeBlockedModal(null)">×</button>
+                    <button class="blocked-modal-close" id="btnCloseBlockedModal">×</button>
                 </div>
                 <div class="blocked-modal-body" id="blockedModalBody">
                     <div class="blocked-empty">Yükleniyor...</div>
@@ -595,7 +595,7 @@
                 </div>
                 <div style="display:flex;gap:0.75rem;margin-top:1rem;">
                     <button class="btn btn-primary btn-full" id="btnSavePass">Değiştir</button>
-                    <button class="btn btn-outline" onclick="closeModal('passModal')"
+                    <button class="btn btn-outline" id="btnClosePassModal"
                         style="min-width:90px;">İptal</button>
                 </div>
             </div>

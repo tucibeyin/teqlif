@@ -533,3 +533,25 @@
     }
 
     load();
+
+// ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
+document.addEventListener('DOMContentLoaded', function () {
+    var btnCancelReport = document.getElementById('btnCancelReport');
+    if (btnCancelReport) btnCancelReport.addEventListener('click', closeReportModal);
+    var reportSendBtn = document.getElementById('reportSendBtn');
+    if (reportSendBtn) reportSendBtn.addEventListener('click', submitReport);
+
+    var btnCancelDelete = document.getElementById('btnCancelDelete');
+    if (btnCancelDelete) btnCancelDelete.addEventListener('click', closeDeleteModal);
+    var deleteSendBtn = document.getElementById('deleteSendBtn');
+    if (deleteSendBtn) deleteSendBtn.addEventListener('click', confirmDelete);
+
+    var lightbox = document.getElementById('lightbox');
+    if (lightbox) lightbox.addEventListener('click', lbClickOutside);
+    var btnLbClose = document.getElementById('btnLbClose');
+    if (btnLbClose) btnLbClose.addEventListener('click', closeLb);
+    var btnLbPrev = document.getElementById('btnLbPrev');
+    if (btnLbPrev) btnLbPrev.addEventListener('click', function () { lbNav(-1); });
+    var btnLbNext = document.getElementById('btnLbNext');
+    if (btnLbNext) btnLbNext.addEventListener('click', function () { lbNav(1); });
+});

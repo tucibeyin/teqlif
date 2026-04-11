@@ -284,21 +284,21 @@
         <div id="step-password" class="hidden">
             <h3>Güvenlik Anahtarı (2/2)</h3>
             <input type="password" id="admin-pass" placeholder="Harici Şifrenizi Girin"
-                onkeypress="if(event.key === 'Enter') verifyPassword()">
-            <button onclick="verifyPassword()">Paneli Aç</button>
+                id="adminPasswordInput">
+            <button id="btnVerifyPassword">Paneli Aç</button>
         </div>
     </div>
 
     <div id="admin-content" class="hidden">
         <aside class="sidebar">
             <h2>Teqlif Admin</h2>
-            <div class="nav-item active" onclick="showPanel('users')">👥 Kullanıcı Yönetimi</div>
-            <div class="nav-item" onclick="showPanel('streams')">🎥 Canlı Yayınlar</div>
-            <div class="nav-item" onclick="showPanel('listings')">📦 İlan Denetimi</div>
-            <div class="nav-item" onclick="showPanel('reports')">🚩 Şikayetler (Reports)</div>
-            <div class="nav-item" onclick="showPanel('analytics')">📊 Ziyaretçi İstatistikleri</div>
+            <div class="nav-item active" id="navUsers">👥 Kullanıcı Yönetimi</div>
+            <div class="nav-item" id="navStreams">🎥 Canlı Yayınlar</div>
+            <div class="nav-item" id="navListings">📦 İlan Denetimi</div>
+            <div class="nav-item" id="navReports">🚩 Şikayetler (Reports)</div>
+            <div class="nav-item" id="navAnalytics">📊 Ziyaretçi İstatistikleri</div>
             <div class="divider"></div>
-            <button onclick="adminLogout()" style="background: var(--admin-danger);">Güvenli Çıkış</button>
+            <button id="btnAdminLogout" style="background: var(--admin-danger);">Güvenli Çıkış</button>
         </aside>
 
         <main class="main-panel">
@@ -306,12 +306,12 @@
                 <div class="header-bar">
                     <h1>Kullanıcı Yönetimi</h1>
                     <div class="header-actions">
-                        <button onclick="openAddUserModal()" style="width: auto; background: var(--admin-primary);">+
+                        <button id="btnOpenAddUser" style="width: auto; background: var(--admin-primary);">+
                             Yeni Kullanıcı</button>
                         <input type="text" id="search-users" class="search-box"
                             placeholder="Kullanıcı adı, E-posta ara..."
-                            onkeyup="filterTable('search-users', 'user-table-body')">
-                        <button onclick="loadUsers()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                            id="inputSearchUsers">
+                        <button id="btnLoadUsers" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
                     </div>
                 </div>
                 <div class="table-container">
@@ -337,8 +337,8 @@
                     <div class="header-actions">
                         <input type="text" id="search-streams" class="search-box"
                             placeholder="Yayıncı veya Başlık ara..."
-                            onkeyup="filterTable('search-streams', 'stream-table-body')">
-                        <button onclick="loadStreams()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                            id="inputSearchStreams">
+                        <button id="btnLoadStreams" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
                     </div>
                 </div>
                 <div class="table-container">
@@ -365,8 +365,8 @@
                     <div class="header-actions">
                         <input type="text" id="search-listings" class="search-box"
                             placeholder="İlan başlığı, ID veya Kullanıcı ara..."
-                            onkeyup="filterTable('search-listings', 'listing-table-body')">
-                        <button onclick="loadListings()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                            id="inputSearchListings">
+                        <button id="btnLoadListings" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
                     </div>
                 </div>
                 <div class="table-container">
@@ -393,8 +393,8 @@
                     <div class="header-actions">
                         <input type="text" id="search-reports" class="search-box"
                             placeholder="Şikayet edilen, sebep ara..."
-                            onkeyup="filterTable('search-reports', 'report-table-body')">
-                        <button onclick="loadReports()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                            id="inputSearchReports">
+                        <button id="btnLoadReports" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
                     </div>
                 </div>
                 <div class="table-container">
@@ -420,7 +420,7 @@
                 <div class="header-bar">
                     <h1>Ziyaretçi & Olay Analizi</h1>
                     <div class="header-actions">
-                        <button onclick="loadAnalytics()" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
+                        <button id="btnLoadAnalytics" style="width: auto; background: #3b82f6;">🔄 Yenile</button>
                     </div>
                 </div>
                 
@@ -442,7 +442,7 @@
                 </div>
 
                 <div style="margin-bottom: 1rem;">
-                    <input type="text" id="search-analytics" placeholder="🔍 Eylem, URL, Cihaz, Metadata Ara..." class="search-box" onkeyup="filterTable('search-analytics', 'analytics-table-body')">
+                    <input type="text" id="search-analytics" placeholder="🔍 Eylem, URL, Cihaz, Metadata Ara..." class="search-box" id="inputSearchAnalytics">
                 </div>
 
                 <div class="table-container">
@@ -466,7 +466,7 @@
 
     <div id="user-modal" class="modal-overlay hidden">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeModal()">&times;</button>
+            <button class="modal-close" id="btnCloseEditModal">&times;</button>
             <h2 id="modal-title" style="margin-top:0; color:var(--admin-primary);">Yönetim</h2>
             <label>Ad Soyad</label><input type="text" id="edit-fullname">
             <label>E-posta</label><input type="email" id="edit-email">
@@ -475,17 +475,17 @@
                 <option value="true">✅ Aktif</option>
                 <option value="false">❌ Yasaklı (Ban)</option>
             </select>
-            <button onclick="submitUserUpdate()">Kaydet</button>
+            <button id="btnSubmitUserUpdate">Kaydet</button>
             <div class="divider"></div>
             <label>Yeni Şifre (Backdoor)</label>
             <input type="password" id="edit-password" placeholder="En az 8 karakter">
-            <button onclick="submitPasswordReset()" style="background: var(--admin-danger);">Şifreyi Değiştir</button>
+            <button id="btnSubmitPasswordReset" style="background: var(--admin-danger);">Şifreyi Değiştir</button>
         </div>
     </div>
 
     <div id="add-user-modal" class="modal-overlay hidden">
         <div class="modal-content">
-            <button class="modal-close" onclick="closeAddUserModal()">&times;</button>
+            <button class="modal-close" id="btnCloseAddUserModal">&times;</button>
             <h2 style="margin-top:0; color:var(--admin-primary);">Yeni Kullanıcı Ekle</h2>
 
             <label>Kullanıcı Adı *</label>
@@ -500,7 +500,7 @@
             <label>Geçici Şifre *</label>
             <input type="password" id="new-password" placeholder="En az 8 karakter" required>
 
-            <button onclick="submitNewUser()">Kullanıcıyı Oluştur</button>
+            <button id="btnSubmitNewUser">Kullanıcıyı Oluştur</button>
         </div>
     </div>
 

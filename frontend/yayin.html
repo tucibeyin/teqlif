@@ -1327,7 +1327,7 @@
             <div class="video-wrap" id="videoContainer">
 
                 <!-- Medya elementleri -->
-                <video id="mainVideo" autoplay playsinline muted style="display:none;" ondblclick="_onStreamHeart()"></video>
+                <video id="mainVideo" autoplay playsinline muted style="display:none;" id="mainVideoEl"></video>
                 <audio id="remoteAudio" autoplay style="display:none;"></audio>
 
                 <!-- Bağlanıyor spinner -->
@@ -1370,7 +1370,7 @@
                 </div>
 
                 <!-- Kalp butonu (görüntüleyici için sağ alt) -->
-                <button id="streamHeartBtn" onclick="_onStreamHeart()"
+                <button id="streamHeartBtn"
                         style="display:none;position:absolute;bottom:70px;right:16px;z-index:10;background:rgba(0,0,0,.45);border:none;border-radius:50%;width:46px;height:46px;cursor:pointer;align-items:center;justify-content:center;font-size:24px;line-height:1;transition:transform .1s;">
                     ❤️
                 </button>
@@ -1400,7 +1400,7 @@
                         İlanlarımdan</button>
                     <!-- Custom listing picker (listing modda görünür) -->
                     <div id="listingPicker" style="display:none;">
-                        <div id="listingPickerTrigger" onclick="toggleListingPicker()">
+                        <div id="listingPickerTrigger">
                             <span id="listingPickerText">— İlan seçin —</span>
                             <span style="color:#64748b;font-size:10px;">▾</span>
                         </div>
@@ -1429,10 +1429,10 @@
 
                 <!-- VIEWER: teklif butonları -->
                 <div class="auction-viewer-controls" id="viewerControls" style="display:none;">
-                    <button class="btn btn-slate" onclick="quickBid(100)" data-track-id="yayin-btn-hizli-teklif-100">+₺100</button>
-                    <button class="btn btn-slate" onclick="quickBid(200)" data-track-id="yayin-btn-hizli-teklif-200">+₺200</button>
-                    <button class="btn btn-slate" onclick="quickBid(500)" data-track-id="yayin-btn-hizli-teklif-500">+₺500</button>
-                    <button class="btn btn-slate" onclick="quickBid(1000)" data-track-id="yayin-btn-hizli-teklif-1000">+₺1000</button>
+                    <button class="btn btn-slate" id="btnQuickBid100" data-track-id="yayin-btn-hizli-teklif-100">+₺100</button>
+                    <button class="btn btn-slate" id="btnQuickBid200" data-track-id="yayin-btn-hizli-teklif-200">+₺200</button>
+                    <button class="btn btn-slate" id="btnQuickBid500" data-track-id="yayin-btn-hizli-teklif-500">+₺500</button>
+                    <button class="btn btn-slate" id="btnQuickBid1000" data-track-id="yayin-btn-hizli-teklif-1000">+₺1000</button>
                     <input type="text" inputmode="numeric" id="customBidInput" placeholder="Özel (₺)" autocomplete="off" data-track-id="yayin-input-ozel-teklif">
                     <button class="btn btn-green" id="btnCustomBid" data-track-id="yayin-btn-ozel-teklif-ver">Teklif Ver</button>
                     <button class="btn btn-orange" id="btnBuyItNow" style="display:none;" data-track-id="yayin-btn-hemen-al">⚡ Hemen Al</button>
@@ -1470,7 +1470,7 @@
                     <div id="pinBanner">
                         <span class="pin-icon">📌</span>
                         <span class="pin-text" id="pinText"></span>
-                        <span class="pin-close" onclick="_hidePinBanner()">✕</span>
+                        <span class="pin-close" id="pinCloseBtn">✕</span>
                     </div>
                     <div id="chatMessages">
                         <div class="chat-empty" id="chatEmpty">Henüz mesaj yok. İlk mesajı sen gönder!</div>
@@ -1478,10 +1478,10 @@
                     <!-- Host: sabitleme butonu (yalnızca host için gösterilir) -->
                     <div id="hostPinRow">
                         <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
-                            <button id="hostPinToggle" onclick="_togglePinInput()">
+                            <button id="hostPinToggle">
                                 📌 Sabitle
                             </button>
-                            <button id="hostPinClearBtn" onclick="_clearHostPin()" title="Sabitlenen mesajı tüm izleyicilerden kaldır"
+                            <button id="hostPinClearBtn" title="Sabitlenen mesajı tüm izleyicilerden kaldır"
                                 style="background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.2);border-radius:14px;padding:4px 10px;font-size:11px;color:#94a3b8;cursor:pointer;">
                                 ✕ Sabiti Kaldır
                             </button>
@@ -1491,8 +1491,8 @@
                                 placeholder="Tüm izleyicilere gösterilecek mesaj..."></textarea>
                             <div class="pin-send-row">
                                 <span id="pinCharCount">0/120</span>
-                                <button id="pinCancelBtn" onclick="_togglePinInput()">İptal</button>
-                                <button id="pinSendBtn" onclick="_sendHostPin()">📌 Sabitle</button>
+                                <button id="pinCancelBtn">İptal</button>
+                                <button id="pinSendBtn">📌 Sabitle</button>
                             </div>
                         </div>
                     </div>
@@ -1514,14 +1514,13 @@
     </div><!-- /.stream-root -->
 
     <!-- Listing detail modal (viewer: pinlenmiş ilan) -->
-    <div class="listing-modal-overlay" id="listingModalOverlay" style="display:none;"
-        onclick="closeListingModal(event)">
+    <div class="listing-modal-overlay" id="listingModalOverlay" style="display:none;">
         <div class="listing-modal" id="listingModal">
             <div class="listing-modal-handle"></div>
             <div class="lm-slider" id="listingModalSlider" style="display:none;">
                 <div class="lm-track" id="listingModalTrack"></div>
-                <button class="lm-arrow lm-arrow-l" id="lmArrowL" onclick="lmSlide(-1)" data-track-id="yayin-ilan-modal-btn-onceki">‹</button>
-                <button class="lm-arrow lm-arrow-r" id="lmArrowR" onclick="lmSlide(1)" data-track-id="yayin-ilan-modal-btn-sonraki">›</button>
+                <button class="lm-arrow lm-arrow-l" id="lmArrowL" data-track-id="yayin-ilan-modal-btn-onceki">‹</button>
+                <button class="lm-arrow lm-arrow-r" id="lmArrowR" data-track-id="yayin-ilan-modal-btn-sonraki">›</button>
                 <div class="lm-dots" id="lmDots"></div>
             </div>
             <div class="listing-modal-title" id="listingModalTitle"></div>
