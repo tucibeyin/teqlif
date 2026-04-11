@@ -201,9 +201,8 @@
 
             const catLabel = CAT[data.category] || data.category || '';
             const initials = (data.user.full_name || data.user.username || '?')[0].toUpperCase();
-            const token = localStorage.getItem('teqlif_token');
-            const isLoggedIn = !!token;
             const me = Auth.getUser();
+            const isLoggedIn = !!me;
             const isOwner = me && me.id === data.user.id;
             _isActive    = data.is_active !== false;
             _isLiked     = data.is_liked    ?? false;

@@ -1,7 +1,7 @@
     // Giriş yapılmamışsa yönlendir
     (function () {
-        const token = localStorage.getItem('teqlif_token');
-        if (!token) {
+        const user = localStorage.getItem('teqlif_user');
+        if (!user) {
             window.location.href = '/giris.html?next=/ilan-ver.html';
         }
     })();
@@ -77,12 +77,12 @@
     }
 
     // Upload a single file, returns URL string or null
-    async function uploadFile(file, token) {
+    async function uploadFile(file) {
         const fd = new FormData();
         fd.append('file', file);
         const res = await fetch('/api/upload', {
             method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}` },
+            credentials: 'include',
             body: fd,
         });
         if (!res.ok) return null;
@@ -144,8 +144,6 @@
         const location = document.getElementById('location').value.trim() || null;
         const description = document.getElementById('description').value.trim();
 
-        const token = localStorage.getItem('teqlif_token');
-
         try {
             // Upload photos
             const imageUrls = [];
@@ -155,7 +153,7 @@
                 progressWrap.style.display = 'block';
 
                 for (let i = 0; i < selectedFiles.length; i++) {
-                    const url = await uploadFile(selectedFiles[i].file, token);
+                    const url = await uploadFile(selectedFiles[i].file);
                     if (url) imageUrls.push(url);
                     progressBar.style.width = `${Math.round(((i + 1) / selectedFiles.length) * 100)}%`;
                 }

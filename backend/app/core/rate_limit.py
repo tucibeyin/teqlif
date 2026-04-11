@@ -27,13 +27,6 @@ logger = get_logger(__name__)
 
 _REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
 
-limiter = Limiter(
-    key_func=get_remote_address,
-    storage_uri=_REDIS_URL,
-    strategy="fixed-window",
-)
-
-
 def get_user_id_or_ip(request: Request) -> str:
     """
     Rate limit key: authenticated ise 'user:<id>', değilse IP adresi.
@@ -48,6 +41,16 @@ def get_user_id_or_ip(request: Request) -> str:
         if user_id:
             return f"user:{user_id}"
     return get_remote_address(request)
+
+
+limiter = Limiter(
+    key_func=get_user_id_or_ip,
+    storage_uri=_REDIS_URL,
+    strategy="fixed-window",
+)
+
+
+
 
 
 async def rate_limit_exceeded_handler(

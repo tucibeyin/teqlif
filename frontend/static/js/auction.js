@@ -28,7 +28,7 @@ const Auction = (() => {
 
         _ws.onopen = () => {
             // Token varsa gönder (soft auth — yoksa anonim izleyici olarak devam eder)
-            const token = localStorage.getItem('teqlif_token');
+            const token = typeof Auth !== 'undefined' && Auth.getToken ? Auth.getToken() : null;
             if (token) {
                 try { _ws.send(JSON.stringify({ token })); } catch (_) {}
             }
