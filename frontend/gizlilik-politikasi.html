@@ -17,15 +17,7 @@
     <link rel="stylesheet" href="/static/css/main.css">
 
     <script src="https://browser.sentry-cdn.com/8.0.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
-    <script>
-        Sentry.init({
-            dsn: "https://98dfdd738860420a9c221abf4ddf35cb@o4511052861538304.ingest.us.sentry.io/4511053913391104",
-            integrations: [
-                Sentry.browserTracingIntegration(),
-            ],
-            tracesSampleRate: 1.0,
-        });
-    </script>
+    <script src="/static/js/sentry-init.js"></script>
 
     <style>
         .policy-wrap {
@@ -258,9 +250,7 @@
 
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
-    <script>
-        if (typeof Auth !== 'undefined') Auth.updateNav?.();
-    </script>
+    <script src="/static/js/gizlilik-page.js?v=1"></script>
 </body>
 
 </html>

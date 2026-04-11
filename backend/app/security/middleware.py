@@ -48,7 +48,7 @@ async def security_headers(request: Request, call_next):
     response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     response.headers["Content-Security-Policy"] = (
         "default-src 'self'; "
-        "script-src 'self' 'unsafe-inline' https://accounts.google.com https://www.google.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://challenges.cloudflare.com https://www.gstatic.com; "
+        "script-src 'self' https://accounts.google.com https://www.google.com https://browser.sentry-cdn.com https://cdn.jsdelivr.net https://challenges.cloudflare.com https://www.gstatic.com; "
         "style-src 'self' 'unsafe-inline' https://accounts.google.com https://cdn.jsdelivr.net; "
         "img-src 'self' data: https:; "
         "media-src 'self' blob:; "
