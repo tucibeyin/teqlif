@@ -68,8 +68,7 @@ class _Manager:
     def __init__(self):
         self._conns: Dict[int, Set[WebSocket]] = {}
 
-    async def connect(self, ws: WebSocket, stream_id: int):
-        await ws.accept()
+    def connect(self, ws: WebSocket, stream_id: int):
         self._conns.setdefault(stream_id, set()).add(ws)
         total = len(self._conns[stream_id])
         origin = ws.headers.get("origin", "native/mobile")
