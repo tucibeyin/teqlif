@@ -1,13 +1,14 @@
 const API = '/api';
 
 async function apiFetch(path, options = {}, retried = false) {
-    const token = localStorage.getItem('teqlif_token');
     const headers = { 'Content-Type': 'application/json', ...options.headers };
+    // Bearer header: in-memory token varsa gönder (mobile compat + WS için)
+    const token = Auth && Auth.getToken ? Auth.getToken() : null;
     if (token) headers['Authorization'] = `Bearer ${token}`;
 
     let res;
     try {
-        res = await fetch(API + path, { ...options, headers });
+        res = await fetch(API + path, { ...options, headers, credentials: 'include' });
     } catch (networkErr) {
         // VPS tamamen kapalı veya ağ erişimi yok
         console.error('[apiFetch] Ağ hatası:', networkErr);

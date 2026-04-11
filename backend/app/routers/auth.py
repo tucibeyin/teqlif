@@ -1,13 +1,14 @@
 import re
 import secrets
-from fastapi import APIRouter, Depends, Request, status
+from typing import Optional
+from fastapi import APIRouter, Cookie, Depends, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.database import get_db
 from app.models.user import User
 from app.schemas.user import UserRegister, UserLogin, UserOut, TokenOut, VerifyEmail, ResendCode, UserUpdate, ChangePasswordConfirm, NotificationPrefs, DEFAULT_NOTIF_PREFS
-from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, get_current_user
+from app.utils.auth import hash_password, verify_password, create_access_token, create_refresh_token, REFRESH_TOKEN_TTL, REFRESH_COOKIE, get_current_user, set_auth_cookies, clear_auth_cookies
 from app.utils.email import send_verification_code
 from app.utils.redis_client import get_redis
 from app.core.exceptions import NotFoundException, BadRequestException, ForbiddenException, EmailNotVerifiedException, UnauthorizedException, ServiceException, ConflictException
@@ -90,7 +91,7 @@ async def register(request: Request, data: UserRegister, db: AsyncSession = Depe
 
 @router.post("/verify", response_model=TokenOut)
 @limiter.limit("5/minute")
-async def verify(request: Request, data: VerifyEmail, db: AsyncSession = Depends(get_db)):
+async def verify(request: Request, data: VerifyEmail, response: Response, db: AsyncSession = Depends(get_db)):
     redis = await get_redis()
     stored_code = await redis.get(f"verify:{data.email}")
 
@@ -110,12 +111,13 @@ async def verify(request: Request, data: VerifyEmail, db: AsyncSession = Depends
     token = create_access_token(user.id)
     refresh = create_refresh_token()
     await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, str(user.id))
+    set_auth_cookies(response, token, refresh)
     return TokenOut(access_token=token, refresh_token=refresh, user=UserOut.model_validate(user))
 
 
 @router.post("/login", response_model=TokenOut)
 @limiter.limit("5/minute")
-async def login(request: Request, data: UserLogin, db: AsyncSession = Depends(get_db)):
+async def login(request: Request, data: UserLogin, response: Response, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(User).where(User.email == data.email))
     user = result.scalar_one_or_none()
 
@@ -132,6 +134,7 @@ async def login(request: Request, data: UserLogin, db: AsyncSession = Depends(ge
     token = create_access_token(user.id)
     refresh = create_refresh_token()
     await redis.setex(f"refresh:{refresh}", REFRESH_TOKEN_TTL, str(user.id))
+    set_auth_cookies(response, token, refresh)
     return TokenOut(access_token=token, refresh_token=refresh, user=UserOut.model_validate(user))
 
 
@@ -202,8 +205,15 @@ async def update_me(
 
 @router.post("/refresh")
 @limiter.limit("20/minute")
-async def refresh_token(request: Request, payload: dict, db: AsyncSession = Depends(get_db)):
-    token = payload.get("refresh_token", "")
+async def refresh_token(
+    request: Request,
+    response: Response,
+    payload: dict = {},
+    cookie_refresh: Optional[str] = Cookie(default=None, alias=REFRESH_COOKIE),
+    db: AsyncSession = Depends(get_db),
+):
+    # Cookie öncelikli (web), body fallback (mobile)
+    token = cookie_refresh or payload.get("refresh_token", "")
     if not token:
         raise BadRequestException("refresh_token gerekli")
 
@@ -222,8 +232,16 @@ async def refresh_token(request: Request, payload: dict, db: AsyncSession = Depe
     new_access = create_access_token(user.id)
     new_refresh = create_refresh_token()
     await redis.setex(f"refresh:{new_refresh}", REFRESH_TOKEN_TTL, str(user.id))
+    set_auth_cookies(response, new_access, new_refresh)
 
     return {"access_token": new_access, "refresh_token": new_refresh, "token_type": "bearer"}
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    """Cookie'leri temizler. Mobile token'ları frontend tarafından silinir."""
+    clear_auth_cookies(response)
+    return {"message": "Çıkış yapıldı"}
 
 
 @router.post("/change-password/send-code")

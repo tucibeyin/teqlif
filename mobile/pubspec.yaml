@@ -44,6 +44,7 @@ dev_dependencies:
   flutter_lints: ^6.0.0
   flutter_launcher_icons: ^0.14.3
   flutter_native_splash: ^2.4.5
+  sentry_dart_plugin: ^2.3.0
 
 flutter_launcher_icons:
   android: true
@@ -70,3 +71,10 @@ flutter:
   assets:
     - assets/icon.png
     - assets/splash.png
+
+sentry:
+  upload_debug_symbols: true
+  upload_sources: false
+  # org ve project: Sentry dashboard'dan alın
+  # org: your-sentry-org
+  # project: teqlif-mobile

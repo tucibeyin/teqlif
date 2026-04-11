@@ -19,7 +19,7 @@ from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut
 from app.utils.auth import get_current_user, decode_token
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
-from app.core.rate_limit import limiter
+from app.core.rate_limit import limiter, get_user_id_or_ip
 from app.services.auction_service import (
     AuctionService,
     manager,
@@ -81,7 +81,7 @@ async def end_auction(
 
 
 @router.post("/{stream_id}/bid", response_model=AuctionStateOut)
-@limiter.limit("30/minute")
+@limiter.limit("10/minute", key_func=get_user_id_or_ip)
 async def place_bid(
     request: Request,
     stream_id: int,
@@ -93,7 +93,7 @@ async def place_bid(
 
 
 @router.post("/{stream_id}/buy-it-now", response_model=dict)
-@limiter.limit("10/minute")
+@limiter.limit("5/minute", key_func=get_user_id_or_ip)
 async def buy_it_now_request(
     request: Request,
     stream_id: int,

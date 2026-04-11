@@ -34,6 +34,22 @@ limiter = Limiter(
 )
 
 
+def get_user_id_or_ip(request: Request) -> str:
+    """
+    Rate limit key: authenticated ise 'user:<id>', değilse IP adresi.
+    Bu sayede VPN arkasındaki farklı kullanıcılar birbirini bloklamaz,
+    bot/spam teklif saldırıları hesap bazında engellenir.
+    """
+    auth = request.headers.get("Authorization", "")
+    if auth.startswith("Bearer "):
+        # decode_token sync olduğu için burada direkt kullanılabilir
+        from app.utils.auth import decode_token
+        user_id = decode_token(auth[7:])
+        if user_id:
+            return f"user:{user_id}"
+    return get_remote_address(request)
+
+
 async def rate_limit_exceeded_handler(
     request: Request, exc: RateLimitExceeded
 ) -> JSONResponse:

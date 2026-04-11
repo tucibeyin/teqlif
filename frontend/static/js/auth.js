@@ -1,11 +1,16 @@
 const Auth = (() => {
-    const TOKEN_KEY = 'teqlif_token';
-    const REFRESH_KEY = 'teqlif_refresh';
+    // Token'lar artık HttpOnly cookie'de; XSS ile okunamaz.
+    // Sadece user bilgisi (non-sensitive) localStorage'da tutulur.
+    // In-memory token: sayfa yenilenmediği sürece WS auth için kullanılır.
     const USER_KEY = 'teqlif_user';
+    let _memToken = null; // in-memory access token (WS için)
+
+    // Eski localStorage token'larını tek seferlik temizle (migration)
+    localStorage.removeItem('teqlif_token');
+    localStorage.removeItem('teqlif_refresh');
 
     function getToken() {
-        const t = localStorage.getItem(TOKEN_KEY);
-        return t && t !== 'undefined' ? t : null;
+        return _memToken;
     }
 
     function getUser() {
@@ -19,33 +24,35 @@ const Auth = (() => {
     }
 
     function _save(data) {
-        localStorage.setItem(TOKEN_KEY, data.access_token);
-        if (data.refresh_token) localStorage.setItem(REFRESH_KEY, data.refresh_token);
+        // Tokens → cookie (backend tarafından set edildi), buraya kaydetme
+        _memToken = data.access_token || null;
         if (data.user) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     }
 
-    function logout() {
-        localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(REFRESH_KEY);
+    async function logout() {
+        _memToken = null;
         localStorage.removeItem(USER_KEY);
+        // Backend cookie'yi temizler
+        try {
+            await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+        } catch (_) {}
         window.location.href = '/giris.html';
     }
 
     async function tryRefresh() {
-        const rt = localStorage.getItem(REFRESH_KEY);
-        if (!rt) return false;
         try {
+            // Cookie otomatik gider (credentials: 'include'), body gerekmez
             const res = await fetch('/api/auth/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ refresh_token: rt }),
+                credentials: 'include',
+                body: JSON.stringify({}),
             });
-            if (!res.ok) { logout(); return false; }
+            if (!res.ok) { await logout(); return false; }
             let data;
-            try { data = await res.json(); } catch (_) { logout(); return false; }
-            if (!data?.access_token) { logout(); return false; }
-            localStorage.setItem(TOKEN_KEY, data.access_token);
-            localStorage.setItem(REFRESH_KEY, data.refresh_token);
+            try { data = await res.json(); } catch (_) { await logout(); return false; }
+            if (!data?.access_token) { await logout(); return false; }
+            _memToken = data.access_token;
             return true;
         } catch (err) {
             console.error('[Auth] tryRefresh ağ hatası:', err);
@@ -126,12 +133,11 @@ function _updateNavBadge(count) {
 
 // Nav'ı kullanıcı durumuna göre güncelle
 (function updateNav() {
-    const token = Auth.getToken();
     const user = Auth.getUser();
     const navLinks = document.querySelector('.nav-links');
     if (!navLinks) return;
 
-    if (token && user) {
+    if (user) {
         navLinks.innerHTML = `
             <a href="/kesfet.html" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
@@ -151,8 +157,5 @@ function _updateNavBadge(count) {
         getUnreadCount().then(_updateNavBadge);
         // Poll every 60 seconds
         setInterval(() => getUnreadCount().then(_updateNavBadge), 60000);
-    } else if (token && !user) {
-        // Bozuk oturum — temizle
-        Auth.logout();
     }
 })();

@@ -4,7 +4,7 @@ from typing import Optional
 
 from jose import JWTError, jwt
 from passlib.context import CryptContext
-from fastapi import Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, Response, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -13,6 +13,40 @@ from app.config import settings
 from app.database import get_db
 
 REFRESH_TOKEN_TTL = 60 * 60 * 24 * 30  # 30 gün (saniye)
+
+# ── Cookie sabitleri ──────────────────────────────────────────────────────────
+ACCESS_COOKIE   = "access_token"
+REFRESH_COOKIE  = "refresh_token"
+_COOKIE_MAX_AGE = REFRESH_TOKEN_TTL  # 30 gün
+
+
+def set_auth_cookies(response: Response, access_token: str, refresh_token: str) -> None:
+    """access_token ve refresh_token'ı HttpOnly Secure cookie olarak ayarlar."""
+    response.set_cookie(
+        key=ACCESS_COOKIE,
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=_COOKIE_MAX_AGE,
+        path="/",
+    )
+    # refresh_token yalnızca /api/auth/refresh path'ine gönderilir
+    response.set_cookie(
+        key=REFRESH_COOKIE,
+        value=refresh_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=_COOKIE_MAX_AGE,
+        path="/api/auth/refresh",
+    )
+
+
+def clear_auth_cookies(response: Response) -> None:
+    """Oturum cookie'lerini siler (logout)."""
+    response.delete_cookie(ACCESS_COOKIE, path="/")
+    response.delete_cookie(REFRESH_COOKIE, path="/api/auth/refresh")
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 bearer_scheme = HTTPBearer(auto_error=False)
@@ -46,14 +80,17 @@ def decode_token(token: str) -> Optional[int]:
 
 async def get_current_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
+    cookie_token: Optional[str] = Cookie(default=None, alias=ACCESS_COOKIE),
     db: AsyncSession = Depends(get_db),
 ):
     from app.models.user import User
 
-    if not credentials:
+    # Bearer header öncelikli (mobile), sonra cookie (web tarayıcı)
+    raw_token = (credentials.credentials if credentials else None) or cookie_token
+    if not raw_token:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Giriş yapmanız gerekiyor")
 
-    user_id = decode_token(credentials.credentials)
+    user_id = decode_token(raw_token)
     if not user_id:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Geçersiz token")
 
