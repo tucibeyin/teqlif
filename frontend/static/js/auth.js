@@ -2,12 +2,16 @@ const Auth = (() => {
     // Token'lar artık HttpOnly cookie'de; XSS ile okunamaz.
     // Sadece user bilgisi (non-sensitive) localStorage'da tutulur.
     // In-memory token: sayfa yenilenmediği sürece WS auth için kullanılır.
-    const USER_KEY = 'teqlif_user';
-    let _memToken = null; // in-memory access token (WS için)
+    const USER_KEY    = 'teqlif_user';
+    const _TOKEN_KEY  = 'teqlif_token';   // migration: silinecek
+    const _REFRESH_KEY = 'teqlif_refresh'; // migration: silinecek
 
-    // Eski localStorage token'larını tek seferlik temizle (migration)
-    localStorage.removeItem('teqlif_token');
-    localStorage.removeItem('teqlif_refresh');
+    // Geçiş dönemi: eski localStorage token'ı varsa in-memory'e al
+    // Cookie oturumu kurulduktan sonra bu değer null kalacak
+    let _memToken = (() => {
+        const t = localStorage.getItem(_TOKEN_KEY);
+        return t && t !== 'undefined' ? t : null;
+    })();
 
     function getToken() {
         return _memToken;
@@ -24,15 +28,18 @@ const Auth = (() => {
     }
 
     function _save(data) {
-        // Tokens → cookie (backend tarafından set edildi), buraya kaydetme
         _memToken = data.access_token || null;
+        // Cookie kuruldu — artık localStorage token'larına gerek yok
+        localStorage.removeItem(_TOKEN_KEY);
+        localStorage.removeItem(_REFRESH_KEY);
         if (data.user) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     }
 
     async function logout() {
         _memToken = null;
+        localStorage.removeItem(_TOKEN_KEY);
+        localStorage.removeItem(_REFRESH_KEY);
         localStorage.removeItem(USER_KEY);
-        // Backend cookie'yi temizler
         try {
             await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
         } catch (_) {}
@@ -40,19 +47,23 @@ const Auth = (() => {
     }
 
     async function tryRefresh() {
+        // Geçiş dönemi: eski localStorage refresh token'ı varsa body'de gönder
+        const legacyRefresh = localStorage.getItem(_REFRESH_KEY);
         try {
-            // Cookie otomatik gider (credentials: 'include'), body gerekmez
             const res = await fetch('/api/auth/refresh', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({}),
+                body: JSON.stringify(legacyRefresh ? { refresh_token: legacyRefresh } : {}),
             });
             if (!res.ok) { await logout(); return false; }
             let data;
             try { data = await res.json(); } catch (_) { await logout(); return false; }
             if (!data?.access_token) { await logout(); return false; }
             _memToken = data.access_token;
+            // Cookie set edildi — eski localStorage'ı temizle
+            localStorage.removeItem(_TOKEN_KEY);
+            localStorage.removeItem(_REFRESH_KEY);
             return true;
         } catch (err) {
             console.error('[Auth] tryRefresh ağ hatası:', err);
@@ -97,21 +108,15 @@ const Auth = (() => {
 async function getUnreadCount() {
     try {
         const [notifResult, msgResult] = await Promise.allSettled([
-            fetch('/api/notifications/unread-count', {
-                headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
-            }),
-            fetch('/api/messages/unread-count', {
-                headers: { 'Authorization': 'Bearer ' + Auth.getToken() }
-            }),
+            apiFetch('/notifications/unread-count'),
+            apiFetch('/messages/unread-count'),
         ]);
         let total = 0;
-        if (notifResult.status === 'fulfilled' && notifResult.value.ok) {
-            const d = await notifResult.value.json();
-            total += (d.count || 0);
+        if (notifResult.status === 'fulfilled' && notifResult.value) {
+            total += (notifResult.value.count || 0);
         }
-        if (msgResult.status === 'fulfilled' && msgResult.value.ok) {
-            const d = await msgResult.value.json();
-            total += (d.count || 0);
+        if (msgResult.status === 'fulfilled' && msgResult.value) {
+            total += (msgResult.value.count || 0);
         }
         return total;
     } catch (err) {
