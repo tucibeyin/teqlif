@@ -1,3 +1,4 @@
+    const params = new URLSearchParams(location.search);
     const streamIdParam = parseInt(params.get('id'));
     const isHostParam = params.get('host') === '1';
 
