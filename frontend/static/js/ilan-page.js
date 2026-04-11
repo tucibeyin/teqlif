@@ -298,7 +298,7 @@
                             <div class="sec-label" style="margin-bottom:.75rem">Teklif Geçmişi</div>
                             ${!isOwner && isLoggedIn ? `
                             <div class="offer-form-row">
-                                <input type="number" class="offer-input" id="offerInput" placeholder="₺ Teklifinizi girin" min="1" step="1">
+                                <input type="text" inputmode="numeric" class="offer-input" id="offerInput" placeholder="₺ Teklifinizi girin" autocomplete="off">
                                 <button class="btn-offer" id="offerBtn">Teklif Ver</button>
                             </div>
                             <div class="offer-form-error" id="offerError"></div>
@@ -342,6 +342,11 @@
             if (likeBtnEl) likeBtnEl.addEventListener('click', toggleListingLike);
             var offerBtnEl = document.getElementById('offerBtn');
             if (offerBtnEl) offerBtnEl.addEventListener('click', submitOffer);
+            var offerInputEl = document.getElementById('offerInput');
+            if (offerInputEl) offerInputEl.addEventListener('input', function () {
+                var digits = this.value.replace(/\D/g, '');
+                this.value = digits ? Number(digits).toLocaleString('tr-TR') : '';
+            });
 
             loadOffers();
 
@@ -388,7 +393,7 @@
         const btn = document.getElementById('offerBtn');
         if (!input || !errEl || !btn) return;
 
-        const amount = parseFloat(input.value);
+        const amount = parseFloat(input.value.replace(/\./g, '').replace(',', '.'));
         errEl.style.display = 'none';
 
         if (!amount || amount <= 0) {
