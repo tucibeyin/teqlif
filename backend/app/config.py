@@ -37,6 +37,7 @@ class Settings(BaseSettings):
     captcha_enabled: bool = False
     captcha_provider: str = "turnstile"
     captcha_secret_key: str = ""
+    debug: bool = False  # True → localhost CORS origins eklenir (sadece geliştirme ortamı)
 
     class Config:
         env_file = ".env"

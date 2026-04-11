@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../config/api.dart';
 import '../models/auction.dart';
+import '../services/storage_service.dart';
 
 /// Bir [streamId] için açık artırma WebSocket bağlantısını ve [AuctionState]'i
 /// yönetir. Provider dispose edildiğinde soket otomatik kapatılır.
@@ -17,18 +18,23 @@ class AuctionNotifier extends StateNotifier<AuctionState> {
   bool _reconnecting = false;
 
   AuctionNotifier(this.streamId) : super(AuctionState.idle()) {
-    _connect();
+    unawaited(_connect());
   }
 
   String get _wsBaseUrl => kBaseUrl
       .replaceFirst('https://', 'wss://')
       .replaceFirst('http://', 'ws://');
 
-  void _connect() {
+  Future<void> _connect() async {
     _heartbeat?.cancel();
+    final token = await StorageService.getToken();
     try {
       final uri = Uri.parse('$_wsBaseUrl/auction/$streamId/ws');
       _channel = WebSocketChannel.connect(uri);
+      // Soft auth: token varsa gönder, yoksa anonim izleyici olarak devam
+      if (token != null) {
+        _channel!.sink.add(jsonEncode({'token': token}));
+      }
       _sub = _channel!.stream.listen(
         (data) {
           try {
@@ -105,7 +111,7 @@ class AuctionNotifier extends StateNotifier<AuctionState> {
       try {
         _channel?.sink.close();
       } catch (_) {}
-      _connect();
+      unawaited(_connect());
     });
   }
 

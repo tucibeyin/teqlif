@@ -27,6 +27,11 @@ const Auction = (() => {
         _ws = new WebSocket(`${proto}://${location.host}/api/auction/${streamId}/ws`);
 
         _ws.onopen = () => {
+            // Token varsa gönder (soft auth — yoksa anonim izleyici olarak devam eder)
+            const token = localStorage.getItem('teqlif_token');
+            if (token) {
+                try { _ws.send(JSON.stringify({ token })); } catch (_) {}
+            }
             clearInterval(_pingInterval);
             _pingInterval = setInterval(() => {
                 if (_ws && _ws.readyState === WebSocket.OPEN) {

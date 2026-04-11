@@ -16,7 +16,8 @@ import asyncio
 from app.database import get_db
 from app.models.user import User
 from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut
-from app.utils.auth import get_current_user
+from app.utils.auth import get_current_user, decode_token
+from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
 from app.core.rate_limit import limiter
 from app.services.auction_service import (
@@ -26,6 +27,10 @@ from app.services.auction_service import (
     get_auction_state,
 )
 from app.constants import ws_types as WS
+
+_WS_AUTH_TIMEOUT_SECS    = 5.0   # ilk auth mesajı için bekleme süresi
+_WS_RECEIVE_TIMEOUT_SECS = 40.0  # ping timeout
+_WS_CODE_SESSION_LIMIT   = 4008  # eş zamanlı oturum limiti aşıldı
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/auction", tags=["auction"])
@@ -132,7 +137,35 @@ async def accept_bid(
 
 @router.websocket("/{stream_id}/ws")
 async def auction_ws(stream_id: int, websocket: WebSocket):
-    await manager.connect(websocket, stream_id)
+    await websocket.accept()
+
+    # ── Soft auth: token varsa doğrula, yoksa anonim izle ───────────────────
+    user_id: int | None = None
+    try:
+        raw = await asyncio.wait_for(websocket.receive_json(), timeout=_WS_AUTH_TIMEOUT_SECS)
+        token = raw.get("token", "") if isinstance(raw, dict) else ""
+        if token:
+            user_id = decode_token(token)
+    except (asyncio.TimeoutError, Exception):
+        pass  # Token gelmedi veya geçersiz — anonim devam
+
+    # Authenticated kullanıcılar için concurrent session koruması
+    if user_id:
+        session_count = await register_ws_session(user_id)
+        if session_count > MAX_CONCURRENT_SESSIONS:
+            await release_ws_session(user_id)
+            await websocket.close(code=_WS_CODE_SESSION_LIMIT)
+            logger.warning(
+                "[AUCTION WS] Eş zamanlı oturum limiti | stream_id=%s user_id=%s count=%s",
+                stream_id, user_id, session_count,
+            )
+            return
+
+    manager.connect(websocket, stream_id)
+    logger.info(
+        "[AUCTION WS] BAĞLANDI | stream_id=%s user_id=%s",
+        stream_id, user_id or "anonim",
+    )
     try:
         state = await get_auction_state(stream_id)
         logger.info(
@@ -144,13 +177,13 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
         # Bağlantıyı açık tut; client'tan gelen ping mesajlarını yoksay
         while True:
             try:
-                msg = await asyncio.wait_for(websocket.receive(), timeout=40.0)
+                msg = await asyncio.wait_for(websocket.receive(), timeout=_WS_RECEIVE_TIMEOUT_SECS)
             except asyncio.TimeoutError:
                 logger.warning("[AUCTION WS] İstemci ping timeout | stream_id=%s", stream_id)
                 break
             except WebSocketDisconnect:
                 break
-                
+
             if msg.get("type") == "websocket.disconnect":
                 break
     except WebSocketDisconnect:
@@ -159,3 +192,5 @@ async def auction_ws(stream_id: int, websocket: WebSocket):
         logger.error("[WS] BEKLENMEYEN HATA | stream_id=%s | %s", stream_id, exc)
     finally:
         manager.disconnect(websocket, stream_id)
+        if user_id:
+            await release_ws_session(user_id)

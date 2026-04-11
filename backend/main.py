@@ -265,15 +265,17 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 app.add_middleware(AntiBotMiddleware)
 
+_CORS_ORIGINS = [
+    "https://teqlif.com",
+    "https://admin.teqlif.com",
+    "https://www.teqlif.com",
+]
+if settings.debug:
+    _CORS_ORIGINS += ["http://localhost:3000", "http://localhost:8080"]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "https://teqlif.com",
-        "https://admin.teqlif.com", 
-        "https://www.teqlif.com",
-        "http://localhost:3000",
-        "http://localhost:8080",
-    ],
+    allow_origins=_CORS_ORIGINS,
     allow_origin_regex=None,  # WebSocket desteği
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
