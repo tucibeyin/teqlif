@@ -180,7 +180,13 @@ local amount = tonumber(ARGV[1])
 local status = redis.call('hget', key, 'status')
 if status ~= 'active' then return {0, 'not_active'} end
 local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
-if amount <= current then return {0, 'too_low'} end
+
+local increment = 1
+if current >= 1000 then increment = 50
+elseif current >= 500 then increment = 25
+elseif current >= 100 then increment = 10 end
+
+if amount < current + increment then return {0, 'too_low'} end
 return {1, tostring(current)}
 """
 
@@ -194,8 +200,15 @@ local bidder_id = ARGV[2]
 local bidder_name = ARGV[3]
 local status = redis.call('hget', key, 'status')
 if status ~= 'active' then return {0, 'not_active'} end
+
 local current = tonumber(redis.call('hget', key, 'current_bid')) or 0
-if amount <= current then return {0, 'too_low'} end
+local increment = 1
+if current >= 1000 then increment = 50
+elseif current >= 500 then increment = 25
+elseif current >= 100 then increment = 10 end
+
+if amount < current + increment then return {0, 'too_low'} end
+
 redis.call('hset', key,
     'current_bid', tostring(amount),
     'current_bidder_id', bidder_id,
@@ -253,9 +266,10 @@ if status ~= 'buy_it_now_pending' then
 end
 local prev = redis.call('hget', key, 'pre_pending_status') or 'active'
 local buyer_username = redis.call('hget', key, 'bin_buyer_username') or ''
+local buyer_id = redis.call('hget', key, 'bin_buyer_id') or ''
 redis.call('hset', key, 'status', prev)
 redis.call('hdel', key, 'bin_buyer_id', 'bin_buyer_username', 'pre_pending_status')
-return {1, prev, buyer_username}
+return {1, prev, buyer_username, buyer_id}
 """
 
 
@@ -436,6 +450,13 @@ class AuctionService:
     async def place_bid(self, stream_id: int, data: BidIn, user: User) -> dict:
         from app.routers.notifications import push_notification
         from app.routers.moderation import mute_key
+        from app.core.action_guard import check_user_action_rate
+        from app.core.exceptions import TooManyRequestsException
+
+        # Hız sınırı: 3 saniyede 1 teklif kuralı (Bot Spam Koruması)
+        allowed, _ = await check_user_action_rate(user.id, "place_bid", limit=1, window=3)
+        if not allowed:
+            raise TooManyRequestsException("Teklif hızınız çok yüksek. Lütfen bekleyin.")
 
         result = await self.db.execute(select(LiveStream).where(LiveStream.id == stream_id))
         stream = result.scalar_one_or_none()
@@ -551,8 +572,15 @@ class AuctionService:
         if not stream.is_live:
             raise BadRequestException("Yayın aktif değil")
 
+        from app.core.exceptions import TooManyRequestsException
+        
         redis = await get_redis()
         key = auction_key(stream_id)
+
+        # DoS Koruması: Önceki talebi reddedildiyse 60 saniyelik cooldown bloğu.
+        cooldown_key = f"bin_cooldown:{stream_id}:{user.id}"
+        if await redis.get(cooldown_key):
+            raise TooManyRequestsException("Hemen Al talebiniz reddedildiği için kısa bir süre yeni istek gönderemezsiniz.")
 
         if await redis.sismember(mute_key(stream_id), str(user.id)):
             raise ForbiddenException("Bu yayında susturuldunuz. Satın alma yapamazsınız.")
@@ -767,6 +795,12 @@ class AuctionService:
 
         prev_status = val[1]
         buyer_username = val[2]
+        buyer_id = val[3] if len(val) > 3 else None
+        
+        # Hemen al talebini reddettik, kötü niyetli döngü saldırılarını kırmak için
+        # reddedilen kişiye 60 saniye cooldown (işlem engeli) koyuyoruz.
+        if buyer_id and buyer_id != '':
+            await redis.set(f"bin_cooldown:{stream_id}:{buyer_id}", "1", ex=60)
 
         state = await get_auction_state(stream_id)
         await publish_auction(stream_id, {"type": WS.AUCTION_STATE, **state})
