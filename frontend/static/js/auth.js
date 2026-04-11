@@ -150,24 +150,36 @@ function _updateNavBadge(count) {
     if (!navLinks) return;
 
     if (user) {
-        navLinks.innerHTML = `
-            <a href="/kesfet.html" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem;">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
-                Keşfet
-            </a>
-            <a href="/mesajlar.html" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;position:relative;">
-                Mesajlar
-                <span id="navBadge" style="display:none;position:absolute;top:-4px;right:-2px;background:red;color:white;border-radius:50%;min-width:14px;height:14px;font-size:9px;align-items:center;justify-content:center;padding:0 2px;line-height:14px;text-align:center;"></span>
-            </a>
-            <a href="/profil.html?u=${user.username}" style="padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;">
-                @${user.username}
-            </a>
-            <a href="#" onclick="Auth.logout();return false;" class="btn-nav">çıkış</a>
-        `;
+        // onclick yerine addEventListener — CSP unsafe-inline olmadan çalışır
+        const kesfetA = document.createElement('a');
+        kesfetA.href = '/kesfet.html';
+        kesfetA.style.cssText = 'padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;display:inline-flex;align-items:center;gap:0.3rem;';
+        kesfetA.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg> Keşfet';
 
-        // Initial badge fetch
+        const mesajlarA = document.createElement('a');
+        mesajlarA.href = '/mesajlar.html';
+        mesajlarA.style.cssText = 'padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;position:relative;';
+        mesajlarA.textContent = 'Mesajlar';
+        const badge = document.createElement('span');
+        badge.id = 'navBadge';
+        badge.style.cssText = 'display:none;position:absolute;top:-4px;right:-2px;background:red;color:white;border-radius:50%;min-width:14px;height:14px;font-size:9px;align-items:center;justify-content:center;padding:0 2px;line-height:14px;text-align:center;';
+        mesajlarA.appendChild(badge);
+
+        const profilA = document.createElement('a');
+        profilA.href = `/profil.html?u=${user.username}`;
+        profilA.style.cssText = 'padding:0.4rem 0.9rem;font-size:0.9rem;color:var(--text-muted);text-decoration:none;';
+        profilA.textContent = `@${user.username}`;
+
+        const cikisA = document.createElement('a');
+        cikisA.href = '#';
+        cikisA.className = 'btn-nav';
+        cikisA.textContent = 'çıkış';
+        cikisA.addEventListener('click', (e) => { e.preventDefault(); Auth.logout(); });
+
+        navLinks.innerHTML = '';
+        navLinks.append(kesfetA, mesajlarA, profilA, cikisA);
+
         getUnreadCount().then(_updateNavBadge);
-        // Poll every 60 seconds
         setInterval(() => getUnreadCount().then(_updateNavBadge), 60000);
     }
 })();
