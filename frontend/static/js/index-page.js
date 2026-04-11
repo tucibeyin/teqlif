@@ -38,7 +38,7 @@
     let _activeCatStream = '';
 
     function _streamCardHtml(s) {
-        return `<div class="stream-card" onclick="joinStream(${s.id})">
+        return `<div class="stream-card" data-stream-id="${s.id}" style="cursor:pointer">
             <div class="stream-thumb">
                 <span class="live-badge">CANLI</span>
                 <span class="viewer-badge">👁 ${s.viewer_count}</span>
@@ -52,8 +52,8 @@
             </div>
             <div class="stream-info">
                 <div class="stream-title">${escHtml(s.title)}</div>
-                <div class="stream-host"><a href="/profil.html?u=${encodeURIComponent(s.host.username)}" onclick="event.stopPropagation()" style="color:var(--primary);text-decoration:none;">@${escHtml(s.host.username)}</a></div>
-                <button class="btn btn-primary btn-full" onclick="event.stopPropagation();joinStream(${s.id})">Katıl</button>
+                <div class="stream-host"><a href="/profil.html?u=${encodeURIComponent(s.host.username)}" data-stop-propagation="1" style="color:var(--primary);text-decoration:none;">@${escHtml(s.host.username)}</a></div>
+                <button class="btn btn-primary btn-full" data-join-stream="${s.id}">Katıl</button>
             </div>
         </div>`;
     }
@@ -155,12 +155,11 @@
         const myRingStyle = hasMyStories
             ? 'background:linear-gradient(135deg,var(--color-primary,#6366f1) 0%,#7c3aed 100%)'
             : '';
-        const myRingOnclick = hasMyStories ? `onclick="svOpenMine()"` : `onclick="document.getElementById('storyUploadInput').click()"`;
-
         const myStoryHtml = `
             <div class="story-item story-add-btn" id="myStoryBtn"
                  title="${hasMyStories ? 'Hikayeni gör' : 'Video hikayeni paylaş'}"
-                 ${myRingOnclick}>
+                 data-story-action="${hasMyStories ? 'open-mine' : 'upload'}"
+                 style="cursor:pointer">
                 <div class="story-ring-wrap">
                     <div class="story-ring" style="${myRingStyle}">
                         <div class="story-ring-inner" id="myStoryInner">
@@ -168,7 +167,7 @@
                         </div>
                     </div>
                     <div class="story-add-badge" id="myStoryBadge"
-                         onclick="event.stopPropagation();document.getElementById('storyUploadInput').click()">+</div>
+                         data-story-action="upload" data-stop-propagation="1">+</div>
                 </div>
                 <span class="story-username">Hikayen</span>
             </div>`;
@@ -205,17 +204,17 @@
                                border:1px solid #fff;">CANLI</span>`
                 : '';
 
-            let onclickAttr;
+            let storyDataAttr;
             if (hasLive) {
-                onclickAttr = `onclick="joinStream(${liveItem.stream_id})"`;
+                storyDataAttr = `data-story-stream="${liveItem.stream_id}" style="cursor:pointer"`;
             } else if (hasVideo) {
-                onclickAttr = `onclick="svOpenGroup(${gi})"`;
+                storyDataAttr = `data-story-group="${gi}" style="cursor:pointer"`;
             } else {
-                onclickAttr = 'style="cursor:default"';
+                storyDataAttr = 'style="cursor:default"';
             }
 
             return `
-                <div class="story-item" ${onclickAttr}
+                <div class="story-item" ${storyDataAttr}
                      title="${username}${hasLive ? ' — Canlı Yayında' : ''}"
                      data-track-id="story-tray-item-${g.user?.id ?? ''}">
                     <div style="position:relative;width:60px;height:60px;flex-shrink:0;">
@@ -529,9 +528,9 @@
         const initial = (group.user?.username ?? '?').charAt(0).toUpperCase();
         const menuBtn = group.isMine ? `
             <div style="position:relative;margin-left:8px;">
-                <button id="svMenuBtn" onclick="svToggleMenu(event)" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px 6px;text-shadow:0 1px 4px rgba(0,0,0,.5);">⋯</button>
+                <button id="svMenuBtn" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;padding:4px 6px;text-shadow:0 1px 4px rgba(0,0,0,.5);">⋯</button>
                 <div id="svMenuDropdown" style="display:none;position:absolute;top:32px;right:0;background:#fff;border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.18);min-width:150px;z-index:10;overflow:hidden;">
-                    <button onclick="svDeleteStory()" style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;border:none;background:none;color:#e53e3e;font-size:14px;cursor:pointer;font-weight:500;">
+                    <button id="svDeleteBtn" style="display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;border:none;background:none;color:#e53e3e;font-size:14px;cursor:pointer;font-weight:500;">
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6"/><path d="M10 11v6M14 11v6"/><path d="M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2"/></svg>
                         Hikayeyi Sil
                     </button>
@@ -542,8 +541,15 @@
             <span style="margin-left:9px;color:#fff;font-size:13.5px;font-weight:600;text-shadow:0 1px 4px rgba(0,0,0,.5);">${group.user?.username ?? ''}</span>
             <div style="margin-left:auto;display:flex;align-items:center;gap:4px;">
                 ${menuBtn}
-                <button onclick="svClose()" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,.5);">×</button>
+                <button id="svCloseBtn" style="background:none;border:none;color:#fff;font-size:22px;cursor:pointer;line-height:1;text-shadow:0 1px 4px rgba(0,0,0,.5);">×</button>
             </div>`;
+        // Wire up listeners after innerHTML (CSP: no inline onclick)
+        var svMenuBtnEl = document.getElementById('svMenuBtn');
+        if (svMenuBtnEl) svMenuBtnEl.addEventListener('click', svToggleMenu);
+        var svDeleteBtnEl = document.getElementById('svDeleteBtn');
+        if (svDeleteBtnEl) svDeleteBtnEl.addEventListener('click', svDeleteStory);
+        var svCloseBtnEl = document.getElementById('svCloseBtn');
+        if (svCloseBtnEl) svCloseBtnEl.addEventListener('click', svClose);
     }
 
     async function svShowViewers() {
@@ -885,14 +891,14 @@
         list.innerHTML = _filteredListings.map((l, idx) => {
             const ad = (idx > 0 && idx % 5 === 0) ? _adCardHtml : '';
             return ad + `
-            <div class="listing-item" onclick="window.location='/ilan/${l.id}'">
+            <div class="listing-item" data-listing-id="${l.id}" style="cursor:pointer">
                 <div class="listing-img" style="position:relative;">
                     ${l.image_url
                 ? `<img src="${escHtml(l.image_url)}" style="width:100%;height:100%;object-fit:cover;">`
                 : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`
             }
                     <button class="tile-like-chip" id="like-listing-${l.id}"
-                            onclick="event.stopPropagation(); toggleListingLike(${l.id}, this);"
+                            data-like-listing="${l.id}"
                             title="Beğen">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="${l.is_liked ? '#ef4444' : 'none'}"
                              stroke="${l.is_liked ? '#ef4444' : '#fff'}" stroke-width="2.2">
@@ -1068,6 +1074,43 @@ document.addEventListener('DOMContentLoaded', function () {
     if (svViewersCloseBtn) svViewersCloseBtn.addEventListener('click', function () {
         var m = document.getElementById('storyViewersModal');
         if (m) m.style.display = 'none';
+    });
+
+    // Stream cards — event delegation (CSP: no inline onclick)
+    var streamsGrid = document.getElementById('streamsGrid');
+    if (streamsGrid) streamsGrid.addEventListener('click', function (e) {
+        // "Katıl" button
+        var joinBtn = e.target.closest('[data-join-stream]');
+        if (joinBtn) { e.stopPropagation(); joinStream(Number(joinBtn.dataset.joinStream)); return; }
+        // Profile link — let it navigate normally
+        if (e.target.closest('[data-stop-propagation]')) return;
+        // Card click
+        var card = e.target.closest('[data-stream-id]');
+        if (card) joinStream(Number(card.dataset.streamId));
+    });
+
+    // Listing items — event delegation (CSP: no inline onclick)
+    var listingList = document.getElementById('listingList');
+    if (listingList) listingList.addEventListener('click', function (e) {
+        // Like button
+        var likeBtn = e.target.closest('[data-like-listing]');
+        if (likeBtn) { e.stopPropagation(); toggleListingLike(Number(likeBtn.dataset.likeListing), likeBtn); return; }
+        // Listing card
+        var item = e.target.closest('[data-listing-id]');
+        if (item) window.location.href = '/ilan/' + item.dataset.listingId;
+    });
+
+    // Story tray — event delegation (CSP: no inline onclick)
+    var storyTray = document.getElementById('storyTray');
+    if (storyTray) storyTray.addEventListener('click', function (e) {
+        var target = e.target.closest('[data-story-action],[data-story-stream],[data-story-group]');
+        if (!target) return;
+        if (target.dataset.stopPropagation) e.stopPropagation();
+        var action = target.dataset.storyAction;
+        if (action === 'open-mine') { svOpenMine(); return; }
+        if (action === 'upload') { document.getElementById('storyUploadInput').click(); return; }
+        if (target.dataset.storyStream) { joinStream(Number(target.dataset.storyStream)); return; }
+        if (target.dataset.storyGroup !== undefined) { svOpenGroup(Number(target.dataset.storyGroup)); return; }
     });
 
     // Stream category pills — event delegation
