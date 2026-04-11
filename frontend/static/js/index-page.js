@@ -16,6 +16,13 @@
         btnYayınAc.style.display = isCanli ? '' : 'none';
         btnIlanVer.style.display = !isCanli ? '' : 'none';
         if (!isCanli && !_listingsLoaded) { loadListings(); loadCityOptions(); }
+        
+        // URL Hash senkronizasyonu
+        if (!isCanli && window.location.hash !== '#ilanlar') {
+            history.replaceState(null, null, '#ilanlar');
+        } else if (isCanli && window.location.hash === '#ilanlar') {
+            history.replaceState(null, null, window.location.pathname + window.location.search);
+        }
     }
 
     /* ── Canlı yayınlar ─────────────────────────────────────────── */
@@ -1052,6 +1059,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
     var tabIlanlar = document.getElementById('tab-ilanlar');
     if (tabIlanlar) tabIlanlar.addEventListener('click', function () { switchTab('ilanlar'); });
+
+    // Sayfa yüklendiğinde URL'de hash varsa, İlanlar sekmesini otomatik aç (`history.back` senaryosu)
+    if (window.location.hash === '#ilanlar') {
+        switchTab('ilanlar');
+    }
 
     var svTapLeft = document.getElementById('svTapLeft');
     if (svTapLeft) {
