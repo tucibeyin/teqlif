@@ -70,13 +70,22 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       return;
     }
     if (source == ImageSource.gallery) {
-      final picked = await _picker.pickMultiImage(imageQuality: 85);
+      final picked = await _picker.pickMultiImage(
+        imageQuality: 85,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
       if (picked.isEmpty) return;
       final remaining = _maxImages - _images.length;
       final toAdd = picked.take(remaining).map((x) => File(x.path)).toList();
       setState(() => _images.addAll(toAdd));
     } else {
-      final picked = await _picker.pickImage(source: source, imageQuality: 85);
+      final picked = await _picker.pickImage(
+        source: source,
+        imageQuality: 85,
+        maxWidth: 1200,
+        maxHeight: 1200,
+      );
       if (picked == null) return;
       setState(() => _images.add(File(picked.path)));
     }

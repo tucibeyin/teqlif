@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart'; // Lifecycle dinleyicisi için eklendi
 import 'package:web_socket_channel/web_socket_channel.dart';
+import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/api.dart';
 import 'storage_service.dart';
 
@@ -32,6 +33,7 @@ class WsService {
   static Timer? _pingTimer;
   static Timer? _reconnectTimer;
   static bool _shouldStay = false;
+  static StreamSubscription<List<ConnectivityResult>>? _connectivitySub;
 
   // Lifecycle dinleyicisi tanımlamaları
   static final _WsLifecycleObserver _observer = _WsLifecycleObserver();
@@ -51,6 +53,18 @@ class WsService {
       _isObserverRegistered = true;
     }
 
+    _connectivitySub ??= Connectivity().onConnectivityChanged.listen((results) {
+      if (results.contains(ConnectivityResult.none)) {
+        debugPrint('[WS] İnternet bağlantısı kesildi, arka plan denemeleri durduruluyor.');
+        _closeResources();
+      } else {
+        debugPrint('[WS] Ağ bağlantısı aktifleştirildi (${results.first.name}), hızlı yeniden bağlanılıyor...');
+        if (_shouldStay && _channel == null) {
+          _connect();
+        }
+      }
+    });
+
     if (_channel != null) return;
     await _connect();
   }
@@ -64,6 +78,9 @@ class WsService {
       WidgetsBinding.instance.removeObserver(_observer);
       _isObserverRegistered = false;
     }
+
+    _connectivitySub?.cancel();
+    _connectivitySub = null;
     
     _closeResources();
   }
@@ -152,8 +169,14 @@ class WsService {
 
   static void _scheduleReconnect() {
     _reconnectTimer?.cancel();
-    _reconnectTimer = Timer(const Duration(seconds: 3), () {
-      if (_shouldStay) _connect();
+    _reconnectTimer = Timer(const Duration(seconds: 3), () async {
+      if (!_shouldStay) return;
+      final results = await Connectivity().checkConnectivity();
+      if (results.contains(ConnectivityResult.none)) {
+        debugPrint('[WS] (Bekleme) İnternet yok, bağlantı tetiklenmeyecek.');
+        return; // Dinleyici zaten geldiğinde _connect() çağıracak
+      }
+      _connect();
     });
   }
 }
