@@ -1,6 +1,6 @@
 const API = '/api';
 
-async function apiFetch(path, options = {}, _retried = false) {
+async function apiFetch(path, options = {}, retried = false) {
     const token = localStorage.getItem('teqlif_token');
     const headers = { 'Content-Type': 'application/json', ...options.headers };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -22,7 +22,7 @@ async function apiFetch(path, options = {}, _retried = false) {
     }
 
     // 401 → refresh token ile bir kez yenile
-    if (res.status === 401 && !_retried && typeof Auth !== 'undefined') {
+    if (res.status === 401 && !retried && typeof Auth !== 'undefined') {
         const refreshed = await Auth.tryRefresh();
         if (refreshed) return apiFetch(path, options, true);
     }

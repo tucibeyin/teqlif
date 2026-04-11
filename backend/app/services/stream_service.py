@@ -20,7 +20,9 @@ import uuid
 from datetime import datetime, timezone
 from typing import Optional
 
+import aiohttp
 from fastapi import BackgroundTasks, UploadFile
+from livekit.api.room_service import RoomService, DeleteRoomRequest
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -84,8 +86,6 @@ async def _fill_viewer_counts(streams: list, tag: str = "") -> None:
 async def delete_livekit_room(room_name: str) -> None:
     """LiveKit odasını zorla sil (tüm katılımcıları çıkarır)."""
     try:
-        import aiohttp
-        from livekit.api.room_service import RoomService, DeleteRoomRequest
         async with aiohttp.ClientSession() as session:
             svc = RoomService(
                 session,

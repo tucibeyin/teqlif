@@ -17,15 +17,18 @@ Hata Yönetimi:
 """
 import json
 
+import aiohttp
+from livekit.api.room_service import RoomService, RoomParticipantIdentity
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
-from app.models.stream import LiveStream
-from app.models.user import User
-from app.utils.redis_client import get_redis
+from app.config import settings
 from app.core.exceptions import NotFoundException, ForbiddenException, BadRequestException
 from app.core.logger import get_logger
 from app.constants import ws_types as WS
+from app.models.stream import LiveStream
+from app.models.user import User
+from app.utils.redis_client import get_redis
 
 logger = get_logger(__name__)
 
@@ -72,16 +75,12 @@ async def publish_mod_event(
 async def remove_from_livekit(room_name: str, user_id: int) -> None:
     """Katılımcıyı LiveKit odasından zorla çıkar (non-critical)."""
     try:
-        import aiohttp
-        from livekit.api.room_service import RoomService, RoomParticipantIdentity
-        from app.config import settings as _s
-        api_url = _s.livekit_api_base
         logger.info(
             "[MOD] LiveKit katılımcı çıkarılıyor | room=%s user_id=%s identity=%s api_url=%s",
-            room_name, user_id, str(user_id), api_url,
+            room_name, user_id, str(user_id), settings.livekit_api_base,
         )
         async with aiohttp.ClientSession() as session:
-            svc = RoomService(session, api_url, _s.livekit_api_key, _s.livekit_api_secret)
+            svc = RoomService(session, settings.livekit_api_base, settings.livekit_api_key, settings.livekit_api_secret)
             req = RoomParticipantIdentity()
             req.room = room_name
             req.identity = str(user_id)
