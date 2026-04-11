@@ -1,5 +1,5 @@
 class AuctionState {
-  final String status; // idle, active, paused, ended, buy_it_now_pending
+  final String status; // idle, active, paused, ended, buy_it_now_pending, error
   final String? itemName;
   final double? startPrice;
   final double? buyItNowPrice;
@@ -10,6 +10,7 @@ class AuctionState {
   final bool isBoughtItNow;
   final String? buyerUsername;
   final String? pendingBuyerUsername;
+  final String? errorMessage;
 
   const AuctionState({
     required this.status,
@@ -23,9 +24,13 @@ class AuctionState {
     this.isBoughtItNow = false,
     this.buyerUsername,
     this.pendingBuyerUsername,
+    this.errorMessage,
   });
 
   factory AuctionState.idle() => const AuctionState(status: 'idle');
+
+  factory AuctionState.error(String message) =>
+      AuctionState(status: 'error', errorMessage: message);
 
   factory AuctionState.fromJson(Map<String, dynamic> j) => AuctionState(
         status: j['status'] as String? ?? 'idle',
@@ -44,4 +49,5 @@ class AuctionState {
   bool get isIdle => status == 'idle';
   bool get isEnded => status == 'ended';
   bool get isPending => status == 'buy_it_now_pending';
+  bool get isError => status == 'error';
 }

@@ -1,14 +1,16 @@
 /* chat.js — Real-time canlı yayın sohbeti (WebSocket) */
 
 // ── Sabitler ──────────────────────────────────────────────────────────────────
-const CHAT_PING_INTERVAL_MS  = 25_000; // WebSocket keepalive ping aralığı
-const CHAT_RECONNECT_DELAY_MS = 4_000; // bağlantı kopunca yeniden bağlanma gecikmesi
-const CHAT_MAX_MESSAGES      = 50;     // listede tutulacak maksimum mesaj sayısı
+const CHAT_PING_INTERVAL_MS      = 25_000; // WebSocket keepalive ping aralığı
+const CHAT_MAX_MESSAGES          = 50;     // listede tutulacak maksimum mesaj sayısı
+const CHAT_RECONNECT_BASE_MS     = 1_000;  // ilk yeniden bağlanma gecikmesi
+const CHAT_RECONNECT_MAX_MS      = 60_000; // maksimum yeniden bağlanma gecikmesi
 
 const Chat = (() => {
     let _ws = null;
     let _streamId = null;
     let _reconnecting = false;
+    let _reconnectAttempt = 0;
     let _pingInterval = null;
     let _onStreamEnded = null;
     let _onViewerCount = null;
@@ -64,6 +66,7 @@ const Chat = (() => {
 
         _ws.onopen = () => {
             _reconnecting = false;
+            _reconnectAttempt = 0;
             // Token bağlantı açıldıktan sonra ilk mesaj olarak gönderilir (URL'de taşınmaz)
             try { _ws.send(JSON.stringify({ type: 'auth', token })); } catch (_) {}
             clearInterval(_pingInterval);
@@ -133,11 +136,16 @@ const Chat = (() => {
     function _scheduleReconnect() {
         if (_reconnecting || !_streamId) return;
         _reconnecting = true;
+        const delay = Math.min(
+            CHAT_RECONNECT_BASE_MS * Math.pow(1.5, _reconnectAttempt),
+            CHAT_RECONNECT_MAX_MS,
+        );
+        _reconnectAttempt++;
         setTimeout(() => {
             if (!_streamId) return;
             _reconnecting = false;
             _connectWS();
-        }, CHAT_RECONNECT_DELAY_MS);
+        }, delay);
     }
 
     const _PALETTE = [

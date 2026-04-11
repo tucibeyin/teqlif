@@ -17,7 +17,7 @@ Hata Yönetimi:
 """
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 import aiohttp
@@ -101,6 +101,9 @@ async def delete_livekit_room(room_name: str) -> None:
         logger.warning("[STREAMS] LiveKit oda silinemedi | room=%s | %s", room_name, exc)
 
 
+_LIVEKIT_TOKEN_TTL = timedelta(hours=24)  # Uzun yayınlar için yeterli süre
+
+
 def make_livekit_token(room_name: str, user: User, can_publish: bool) -> str:
     """LiveKit JWT token üretir. Hata durumunda yeniden fırlatır (caller yakalar)."""
     try:
@@ -117,6 +120,7 @@ def make_livekit_token(room_name: str, user: User, can_publish: bool) -> str:
             .with_identity(str(user.id))
             .with_name(user.username)
             .with_grants(grant)
+            .with_ttl(_LIVEKIT_TOKEN_TTL)
         )
         return token.to_jwt()
     except Exception:

@@ -20,7 +20,7 @@ class LiveStream(Base):
     ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
-    host: Mapped["User"] = relationship("User", lazy="joined")  # noqa: F821
+    host: Mapped["User"] = relationship("User", lazy="selectin")  # noqa: F821
     likes: Mapped[list["StreamLike"]] = relationship(  # type: ignore[name-defined]
         "StreamLike", cascade="all, delete-orphan", passive_deletes=True
     )

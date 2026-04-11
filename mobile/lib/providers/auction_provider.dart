@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
@@ -16,6 +17,7 @@ class AuctionNotifier extends StateNotifier<AuctionState> {
   StreamSubscription<dynamic>? _sub;
   Timer? _heartbeat;
   bool _reconnecting = false;
+  int _reconnectAttempt = 0;
 
   AuctionNotifier(this.streamId) : super(AuctionState.idle()) {
     unawaited(_connect());
@@ -35,6 +37,7 @@ class AuctionNotifier extends StateNotifier<AuctionState> {
       if (token != null) {
         _channel!.sink.add(jsonEncode({'token': token}));
       }
+      _reconnectAttempt = 0; // başarılı bağlantıda sıfırla
       _sub = _channel!.stream.listen(
         (data) {
           try {
@@ -104,7 +107,17 @@ class AuctionNotifier extends StateNotifier<AuctionState> {
     if (_reconnecting) return;
     _reconnecting = true;
     _heartbeat?.cancel();
-    Future.delayed(const Duration(seconds: 4), () {
+
+    // Exponential backoff: 1s, 1.5s, 2.25s … max 60s
+    final delayMs = (1000 * pow(1.5, _reconnectAttempt)).clamp(1000, 60000).toInt();
+    _reconnectAttempt++;
+
+    if (_reconnectAttempt > 1 && state.status != 'error') {
+      // İlk başarısız denemeden sonra hata durumunu UI'a yansıt
+      state = AuctionState.error('Bağlantı kesildi, yeniden deneniyor…');
+    }
+
+    Future.delayed(Duration(milliseconds: delayMs), () {
       if (!mounted) return;
       _reconnecting = false;
       _sub?.cancel();

@@ -32,47 +32,61 @@ async def list_conversations(
 ):
     uid = current_user.id
 
-    # Get all messages involving current user
-    result = await db.execute(
-        select(DirectMessage)
-        .where(
-            or_(
-                DirectMessage.sender_id == uid,
-                DirectMessage.receiver_id == uid,
-            )
+    # SQL ile konuşma başına en son mesajı bul (tüm mesajları Python'a çekmez)
+    conv_subq = (
+        select(
+            func.least(DirectMessage.sender_id, DirectMessage.receiver_id).label("min_uid"),
+            func.greatest(DirectMessage.sender_id, DirectMessage.receiver_id).label("max_uid"),
+            func.max(DirectMessage.created_at).label("max_at"),
         )
+        .where(
+            or_(DirectMessage.sender_id == uid, DirectMessage.receiver_id == uid)
+        )
+        .group_by(
+            func.least(DirectMessage.sender_id, DirectMessage.receiver_id),
+            func.greatest(DirectMessage.sender_id, DirectMessage.receiver_id),
+        )
+        .subquery()
+    )
+
+    msgs_result = await db.execute(
+        select(DirectMessage)
+        .join(
+            conv_subq,
+            and_(
+                func.least(DirectMessage.sender_id, DirectMessage.receiver_id) == conv_subq.c.min_uid,
+                func.greatest(DirectMessage.sender_id, DirectMessage.receiver_id) == conv_subq.c.max_uid,
+                DirectMessage.created_at == conv_subq.c.max_at,
+            ),
+        )
+        .where(or_(DirectMessage.sender_id == uid, DirectMessage.receiver_id == uid))
         .order_by(DirectMessage.created_at.desc())
     )
-    all_msgs = result.scalars().all()
+    latest_msgs = msgs_result.scalars().all()
 
-    # Build conversation map: other_user_id -> latest message
-    seen: dict = {}
-    for msg in all_msgs:
-        other_id = msg.receiver_id if msg.sender_id == uid else msg.sender_id
-        if other_id not in seen:
-            seen[other_id] = msg
-
-    if not seen:
+    if not latest_msgs:
         return []
 
-    # Fetch user info for each other user
-    other_ids = list(seen.keys())
-    users_result = await db.execute(select(User).where(User.id.in_(other_ids)))
-    users_map = {u.id: u for u in users_result.scalars().all()}
+    other_ids = [m.receiver_id if m.sender_id == uid else m.sender_id for m in latest_msgs]
 
-    # Count unread messages per conversation (sent by other to me, not read)
-    unread_result = await db.execute(
-        select(DirectMessage.sender_id, func.count().label("cnt"))
-        .where(
-            DirectMessage.receiver_id == uid,
-            DirectMessage.is_read == False,  # noqa: E712
-        )
-        .group_by(DirectMessage.sender_id)
+    # Kullanıcı bilgileri ve okunmamış sayıları paralel çek
+    users_result, unread_result = await asyncio.gather(
+        db.execute(select(User).where(User.id.in_(other_ids))),
+        db.execute(
+            select(DirectMessage.sender_id, func.count().label("cnt"))
+            .where(
+                DirectMessage.receiver_id == uid,
+                DirectMessage.is_read == False,  # noqa: E712
+            )
+            .group_by(DirectMessage.sender_id)
+        ),
     )
+    users_map = {u.id: u for u in users_result.scalars().all()}
     unread_map = {row.sender_id: row.cnt for row in unread_result}
 
     conversations = []
-    for other_id, last_msg in seen.items():
+    for msg in latest_msgs:
+        other_id = msg.receiver_id if msg.sender_id == uid else msg.sender_id
         other_user = users_map.get(other_id)
         if not other_user:
             continue
@@ -81,14 +95,12 @@ async def list_conversations(
                 user_id=other_id,
                 username=other_user.username,
                 full_name=other_user.full_name,
-                last_message=last_msg.content,
-                last_at=last_msg.created_at,
+                last_message=msg.content,
+                last_at=msg.created_at,
                 unread_count=unread_map.get(other_id, 0),
             )
         )
 
-    # Sort by last message time descending
-    conversations.sort(key=lambda c: c.last_at, reverse=True)
     return conversations
 
 

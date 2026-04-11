@@ -30,6 +30,7 @@ async def _optional_user_id(
 @router.get("/users")
 async def search_users(
     q: str = "",
+    offset: int = 0,
     current_user_id: Optional[int] = Depends(_optional_user_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -46,6 +47,7 @@ async def search_users(
                 User.full_name.ilike(term),
             ),
         )
+        .offset(offset)
         .limit(20)
     )
 
@@ -140,6 +142,7 @@ async def explore(
 @router.get("/all")
 async def search_all(
     q: str = "",
+    offset: int = 0,
     current_user_id: Optional[int] = Depends(_optional_user_id),
     db: AsyncSession = Depends(get_db),
 ):
@@ -156,6 +159,7 @@ async def search_all(
             User.is_active == True,  # noqa: E712
             or_(User.username.ilike(term), User.full_name.ilike(term)),
         )
+        .offset(offset)
         .limit(10)
     )
     if current_user_id:
@@ -185,6 +189,7 @@ async def search_all(
             Listing.search_vector.op('@@')(tsquery),
         )
         .order_by(rank.desc())
+        .offset(offset)
         .limit(12)
     )
     listings_result = await db.execute(listing_q)

@@ -41,7 +41,9 @@ const Auth = (() => {
                 body: JSON.stringify({ refresh_token: rt }),
             });
             if (!res.ok) { logout(); return false; }
-            const data = await res.json();
+            let data;
+            try { data = await res.json(); } catch (_) { logout(); return false; }
+            if (!data?.access_token) { logout(); return false; }
             localStorage.setItem(TOKEN_KEY, data.access_token);
             localStorage.setItem(REFRESH_KEY, data.refresh_token);
             return true;
