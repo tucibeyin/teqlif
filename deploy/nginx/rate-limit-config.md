@@ -25,18 +25,31 @@ http {
 sudo nano /etc/nginx/sites-available/teqlif
 ```
 
-location /api/ bölümlerine limit_req ekleyin:
+`proxy_pass` olan her `location` bloğuna şu satırları ekleyin:
 
 ```nginx
-location /api/auth {
-    limit_req zone=auth_limit burst=5 nodelay;
-    limit_conn conn_limit 3;
+location /api/ {
+    limit_req zone=api_limit burst=10 nodelay;
+
+    # ── X-Forwarded-For Spoofing Koruması (ZORUNLU) ──────────────────────
+    # İstemcinin gönderebileceği X-Forwarded-For header'ını ezer.
+    # Bu olmazsa kötü niyetli kullanıcı sahte IP göndererek rate limit'i bypass eder.
+    proxy_set_header X-Real-IP        $remote_addr;
+    proxy_set_header X-Forwarded-For  $remote_addr;
+    proxy_set_header Host             $host;
+
     proxy_pass http://127.0.0.1:8000;
     ...
 }
 
-location /api/ {
-    limit_req zone=api_limit burst=10 nodelay;
+location /api/auth {
+    limit_req zone=auth_limit burst=5 nodelay;
+    limit_conn conn_limit 3;
+
+    proxy_set_header X-Real-IP        $remote_addr;
+    proxy_set_header X-Forwarded-For  $remote_addr;
+    proxy_set_header Host             $host;
+
     proxy_pass http://127.0.0.1:8000;
     ...
 }

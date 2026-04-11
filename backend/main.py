@@ -21,6 +21,7 @@ from app.services.auction_service import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
 from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics
 from app.security.middleware import security_headers, SecurityMiddleware
+from app.security.sanitizer import InputSanitizationMiddleware
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
 from app.core.defender import AntiBotMiddleware
 from slowapi.errors import RateLimitExceeded
@@ -264,6 +265,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
 
 
 app.add_middleware(AntiBotMiddleware)
+app.add_middleware(InputSanitizationMiddleware)
 
 _CORS_ORIGINS = [
     "https://teqlif.com",

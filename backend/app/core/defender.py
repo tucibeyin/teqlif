@@ -64,8 +64,24 @@ _BYPASS_PATHS = frozenset({"/health", "/metrics", "/favicon.ico"})
 def _get_client_ip(request: Request) -> str:
     """
     Nginx reverse proxy arkasında çalışırken gerçek istemci IP'sini döner.
-    Önce X-Forwarded-For header'ına, yoksa ASGI scope'a başvurur.
+
+    Öncelik sırası:
+    1. X-Real-IP  — Nginx'in `proxy_set_header X-Real-IP $remote_addr;` ile
+                    eklediği header. $remote_addr Nginx'in gördüğü gerçek IP
+                    olduğundan istemci tarafından spoof edilemez.
+    2. X-Forwarded-For ilk değeri — Nginx'in proxy_set_header ile
+                    $remote_addr'a eşitlendiği durumlarda güvenlidir.
+    3. ASGI client.host  — son çare, genellikle 127.0.0.1 (Nginx lokal).
+
+    ⚠️  Nginx config'de şu satırların bulunması zorunludur:
+        proxy_set_header X-Real-IP        $remote_addr;
+        proxy_set_header X-Forwarded-For  $remote_addr;   # ezmek için
     """
+    # 1. X-Real-IP — Nginx tarafından $remote_addr olarak set edilir
+    real_ip = request.headers.get("x-real-ip")
+    if real_ip:
+        return real_ip.strip()
+    # 2. X-Forwarded-For (Nginx $remote_addr ile eziyorsa güvenli)
     xff = request.headers.get("x-forwarded-for")
     if xff:
         return xff.split(",")[0].strip()
