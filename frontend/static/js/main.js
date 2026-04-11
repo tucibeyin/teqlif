@@ -22,8 +22,8 @@ async function apiFetch(path, options = {}, retried = false) {
         };
     }
 
-    // 401 → refresh token ile bir kez yenile
-    if (res.status === 401 && !retried && typeof Auth !== 'undefined') {
+    // 401 → refresh token ile bir kez yenile (auth endpoint'lerinde değil)
+    if (res.status === 401 && !retried && typeof Auth !== 'undefined' && !path.startsWith('/auth/')) {
         const refreshed = await Auth.tryRefresh();
         if (refreshed) return apiFetch(path, options, true);
     }

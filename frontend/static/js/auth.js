@@ -63,10 +63,10 @@ const Auth = (() => {
                 credentials: 'include',
                 body: JSON.stringify(legacyRefresh ? { refresh_token: legacyRefresh } : {}),
             });
-            if (!res.ok) { await logout(); return false; }
+            if (!res.ok) { return false; }
             let data;
-            try { data = await res.json(); } catch (_) { await logout(); return false; }
-            if (!data?.access_token) { await logout(); return false; }
+            try { data = await res.json(); } catch (_) { return false; }
+            if (!data?.access_token) { return false; }
             _memToken = data.access_token;
             sessionStorage.setItem(_SS_TOKEN, _memToken);
             localStorage.removeItem(_TOKEN_KEY);
