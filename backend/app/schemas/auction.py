@@ -1,4 +1,5 @@
 from typing import Optional
+from datetime import datetime
 from pydantic import BaseModel, field_validator, model_validator
 
 
@@ -47,6 +48,15 @@ class BidIn(BaseModel):
         if v <= 0:
             raise ValueError("Teklif sıfırdan büyük olmalı")
         return v
+
+
+class BidOut(BaseModel):
+    bidder_username: str
+    amount: float
+    created_at: datetime
+
+    class Config:
+        from_attributes = True
 
 
 class AuctionStateOut(BaseModel):

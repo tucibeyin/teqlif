@@ -111,4 +111,15 @@ class AuctionService {
     );
     return AuctionState.fromJson(body);
   }
+
+  /// Teklif geçmişini döner: [{bidder_username, amount, created_at}, ...]
+  static Future<List<Map<String, dynamic>>> fetchBids(int streamId) async {
+    final body = await apiCall(
+      () async => http.get(Uri.parse('$kBaseUrl/auction/$streamId/bids'), headers: await _headers()),
+    );
+    if (body is List) {
+      return body.cast<Map<String, dynamic>>();
+    }
+    return [];
+  }
 }

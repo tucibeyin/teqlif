@@ -146,6 +146,17 @@ async def publish_auction(stream_id: int, payload: dict):
     )
 
 
+async def get_bids(stream_id: int, db: AsyncSession, limit: int = 50) -> list:
+    """Bir stream'in son [limit] teklifini DB'den döner (en yeniden eskiye)."""
+    result = await db.execute(
+        select(Bid)
+        .where(Bid.stream_id == stream_id)
+        .order_by(Bid.created_at.desc())
+        .limit(limit)
+    )
+    return result.scalars().all()
+
+
 async def get_auction_state(stream_id: int) -> dict:
     """Redis'ten mevcut açık artırma durumunu okur."""
     redis = await get_redis()

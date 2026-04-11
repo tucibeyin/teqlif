@@ -15,7 +15,7 @@ import asyncio
 
 from app.database import get_db
 from app.models.user import User
-from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut
+from app.schemas.auction import AuctionStart, BidIn, AuctionStateOut, BidOut
 from app.utils.auth import get_current_user, decode_token
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
 from app.core.logger import get_logger
@@ -25,6 +25,7 @@ from app.services.auction_service import (
     manager,
     pubsub_listener,  # noqa: F401 — main.py bu ismi buradan import eder
     get_auction_state,
+    get_bids,
 )
 from app.constants import ws_types as WS
 
@@ -41,6 +42,16 @@ router = APIRouter(prefix="/api/auction", tags=["auction"])
 @router.get("/{stream_id}", response_model=AuctionStateOut)
 async def get_auction_state_endpoint(stream_id: int):
     return await get_auction_state(stream_id)
+
+
+@router.get("/{stream_id}/bids", response_model=list[BidOut])
+async def get_auction_bids(
+    stream_id: int,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Stream'in teklif geçmişini döner (en yeniden eskiye, max 50)."""
+    return await get_bids(stream_id, db)
 
 
 @router.post("/{stream_id}/start", response_model=AuctionStateOut)

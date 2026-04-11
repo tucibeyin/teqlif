@@ -16,6 +16,7 @@ import '../../utils/username_color.dart';
 import '../../widgets/auction_panel.dart';
 import '../../widgets/chat_panel.dart';
 import '../../services/moderation_service.dart';
+import '../../services/auction_service.dart';
 import '../../widgets/live/floating_hearts.dart';
 import '../../widgets/live/host_top_bar.dart';
 import '../../widgets/live/live_video_player.dart';
@@ -76,6 +77,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
     WakelockPlus.enable();
     _connect();
+    _loadBidHistory();
   }
 
   @override
@@ -215,6 +217,24 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
       }
       _bidGroups.last.bids.insert(0, (bidder: bidder, amount: amount));
     });
+  }
+
+  Future<void> _loadBidHistory() async {
+    try {
+      final bids = await AuctionService.fetchBids(widget.streamToken.streamId);
+      if (!mounted || bids.isEmpty) return;
+      setState(() {
+        for (final b in bids) {
+          final bidder = b['bidder_username'] as String? ?? '';
+          final amount = (b['amount'] as num?)?.toDouble() ?? 0;
+          if (_bidGroups.isEmpty) _bidGroups.add(_BidGroup(title: null));
+          // En yeniden eskiye geliyor; insert(0) tersine çevirir — append kullan
+          _bidGroups.last.bids.add((bidder: bidder, amount: amount));
+        }
+      });
+    } catch (e) {
+      // Geçmiş yüklenemezse sessizce devam et
+    }
   }
 
   void _onAuctionReset() {
