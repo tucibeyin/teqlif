@@ -941,7 +941,7 @@
         (_filteredListings || []).forEach(l => { _listingMap[l.id] = l; });
     }
 
-    async function toggleListingLike(id, btn) {
+    async function toggleListingLike(id) {
         if (!Auth.getToken()) { window.location.href = '/giris.html?next=/'; return; }
         const l = _listingMap[id];
         if (!l) return;
@@ -1124,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btnSearchListings) btnSearchListings.addEventListener('click', searchListings);
 
     // Listing category pills — event delegation
-    var listingCatBar = document.querySelector('#section-ilanlar .tab-pills');
+    var listingCatBar = document.querySelector('#section-ilanlar .listing-cats');
     if (listingCatBar) listingCatBar.addEventListener('click', function (e) {
         var pill = e.target.closest('.cat-pill');
         if (pill) filterCat(pill, pill.dataset.cat || '');

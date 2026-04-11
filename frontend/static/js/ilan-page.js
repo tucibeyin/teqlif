@@ -91,8 +91,8 @@
         ).join('');
 
         const arrows = urls.length > 1 ? `
-            <button class="gallery-arrow prev" onclick="goTo(_cur-1);event.stopPropagation()">‹</button>
-            <button class="gallery-arrow next" onclick="goTo(_cur+1);event.stopPropagation()">›</button>` : '';
+            <button class="gallery-arrow prev" id="galleryPrev">‹</button>
+            <button class="gallery-arrow next" id="galleryNext">›</button>` : '';
 
         const counter = urls.length > 1
             ? `<div class="gallery-counter" id="galleryCounter">1 / ${urls.length}</div>` : '';
@@ -100,12 +100,12 @@
         const thumbs = urls.length > 1 ? `
             <div class="gallery-thumbs">
                 ${urls.map((u, i) =>
-            `<img src="${u}" class="${i === 0 ? 'active' : ''}" onclick="goTo(${i})" alt="">`
+            `<img src="${u}" class="${i === 0 ? 'active' : ''}" data-thumb-idx="${i}" alt="">`
         ).join('')}
             </div>` : '';
 
         return `
-            <div class="gallery-main" onclick="openLb(_cur)" ondblclick="event.stopPropagation();toggleListingLike()">
+            <div class="gallery-main" id="galleryMain">
                 ${imgs}${arrows}${counter}
             </div>
             ${thumbs}`;
@@ -240,7 +240,7 @@
                                 <div class="detail-desc">${esc(data.description)}</div>` : ''}
                                 ${!isOwner && isLoggedIn ? `
                                 <div style="margin-top:1rem;text-align:right;">
-                                    <button class="btn-report" onclick="openReportModal()">
+                                    <button class="btn-report" id="reportBtn">
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" y1="22" x2="4" y2="15"/></svg>
                                         Şikayet Et
                                     </button>
@@ -255,19 +255,19 @@
                             <div class="price-tag">${fmt(data.price)}</div>
                             <div class="price-note">KDV dahil</div>
                             ${isOwner
-                    ? `<button class="btn-toggle ${_isActive ? '' : 'passive'}" id="toggleBtn" onclick="toggleActive()">
+                    ? `<button class="btn-toggle ${_isActive ? '' : 'passive'}" id="toggleBtn">
                                        ${_isActive ? '✓ Aktif — Pasife Al' : '✕ Pasif — Aktif Yap'}
                                    </button>
-                                   <button class="btn-delete" onclick="openDeleteModal()">İlanı Sil</button>
+                                   <button class="btn-delete" id="deleteBtn">İlanı Sil</button>
                                    <div style="display:flex;align-items:center;gap:6px;padding:.5rem 0;color:#e53e3e;font-size:.9rem;">
                                        <svg width="15" height="15" viewBox="0 0 24 24" fill="#e53e3e" stroke="#e53e3e" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                                        <span>${_likesCount} beğeni</span>
                                    </div>`
                     : isLoggedIn
-                        ? `<button class="btn-fav ${_isFavorited ? 'active' : ''}" id="favBtn" onclick="toggleFav()">
+                        ? `<button class="btn-fav ${_isFavorited ? 'active' : ''}" id="favBtn">
                                            ${_isFavorited ? '❤ Favorilerimde' : '♡ Favorilere Ekle'}
                                        </button>
-                                       <button id="likeBtn" onclick="toggleListingLike()" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:.6rem 1rem;border-radius:8px;border:1.5px solid ${_isLiked ? '#e53e3e' : '#e5e7eb'};background:${_isLiked ? '#fef2f2' : 'transparent'};color:${_isLiked ? '#e53e3e' : '#6b7280'};font-size:.9rem;font-weight:600;cursor:pointer;transition:all .15s;">
+                                       <button id="likeBtn" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:.6rem 1rem;border-radius:8px;border:1.5px solid ${_isLiked ? '#e53e3e' : '#e5e7eb'};background:${_isLiked ? '#fef2f2' : 'transparent'};color:${_isLiked ? '#e53e3e' : '#6b7280'};font-size:.9rem;font-weight:600;cursor:pointer;transition:all .15s;">
                                            <svg id="likeIcon" width="16" height="16" viewBox="0 0 24 24" fill="${_isLiked ? '#e53e3e' : 'none'}" stroke="${_isLiked ? '#e53e3e' : 'currentColor'}" stroke-width="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
                                            <span id="likeLabel">${_isLiked ? 'Beğenildi' : 'Beğen'}</span>
                                            ${_likesCount > 0 ? `<span id="likeCnt" style="font-size:.8rem;opacity:.75;">(${_likesCount})</span>` : `<span id="likeCnt" style="font-size:.8rem;opacity:.75;"></span>`}
@@ -299,7 +299,7 @@
                             ${!isOwner && isLoggedIn ? `
                             <div class="offer-form-row">
                                 <input type="number" class="offer-input" id="offerInput" placeholder="₺ Teklifinizi girin" min="1" step="1">
-                                <button class="btn-offer" id="offerBtn" onclick="submitOffer()">Teklif Ver</button>
+                                <button class="btn-offer" id="offerBtn">Teklif Ver</button>
                             </div>
                             <div class="offer-form-error" id="offerError"></div>
                             ` : !isOwner && !isLoggedIn ? `
@@ -314,6 +314,34 @@
                     </div>
 
                 </div>`;
+
+            // ── Wire up dynamic buttons after innerHTML (CSP: no inline onclick) ──
+            var galleryMainEl = document.getElementById('galleryMain');
+            if (galleryMainEl) {
+                galleryMainEl.addEventListener('click', function () { openLb(_cur); });
+                galleryMainEl.addEventListener('dblclick', function (e) { e.stopPropagation(); toggleListingLike(); });
+            }
+            var galleryPrevEl = document.getElementById('galleryPrev');
+            if (galleryPrevEl) galleryPrevEl.addEventListener('click', function (e) { e.stopPropagation(); goTo(_cur - 1); });
+            var galleryNextEl = document.getElementById('galleryNext');
+            if (galleryNextEl) galleryNextEl.addEventListener('click', function (e) { e.stopPropagation(); goTo(_cur + 1); });
+            var galleryThumbsEl = document.querySelector('.gallery-thumbs');
+            if (galleryThumbsEl) galleryThumbsEl.addEventListener('click', function (e) {
+                var img = e.target.closest('[data-thumb-idx]');
+                if (img) goTo(Number(img.dataset.thumbIdx));
+            });
+            var reportBtnEl = document.getElementById('reportBtn');
+            if (reportBtnEl) reportBtnEl.addEventListener('click', openReportModal);
+            var toggleBtnEl = document.getElementById('toggleBtn');
+            if (toggleBtnEl) toggleBtnEl.addEventListener('click', toggleActive);
+            var deleteBtnEl = document.getElementById('deleteBtn');
+            if (deleteBtnEl) deleteBtnEl.addEventListener('click', openDeleteModal);
+            var favBtnEl = document.getElementById('favBtn');
+            if (favBtnEl) favBtnEl.addEventListener('click', toggleFav);
+            var likeBtnEl = document.getElementById('likeBtn');
+            if (likeBtnEl) likeBtnEl.addEventListener('click', toggleListingLike);
+            var offerBtnEl = document.getElementById('offerBtn');
+            if (offerBtnEl) offerBtnEl.addEventListener('click', submitOffer);
 
             loadOffers();
 
@@ -535,6 +563,13 @@
 
 // ── Inline handler'lardan taşınan event listener'lar ─────────────────────────
 document.addEventListener('DOMContentLoaded', function () {
+    var backLinkEl = document.getElementById('backLink');
+    if (backLinkEl) backLinkEl.addEventListener('click', function (e) {
+        e.preventDefault();
+        if (history.length > 1) history.back();
+        else window.location.href = '/';
+    });
+
     var btnCancelReport = document.getElementById('btnCancelReport');
     if (btnCancelReport) btnCancelReport.addEventListener('click', closeReportModal);
     var reportSendBtn = document.getElementById('reportSendBtn');
