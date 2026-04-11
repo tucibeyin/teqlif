@@ -822,7 +822,7 @@
     }
 
     function filterCat(el, cat) {
-        document.querySelectorAll('.listing-cats .cat-pill').forEach(p => p.classList.remove('active'));
+        document.querySelectorAll('#listingCatBar .cat-pill').forEach(p => p.classList.remove('active'));
         el.classList.add('active');
         _activeCat = cat;
         _applyFilters();
@@ -1124,7 +1124,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btnSearchListings) btnSearchListings.addEventListener('click', searchListings);
 
     // Listing category pills — event delegation
-    var listingCatBar = document.querySelector('#section-ilanlar .listing-cats');
+    var listingCatBar = document.getElementById('listingCatBar');
     if (listingCatBar) listingCatBar.addEventListener('click', function (e) {
         var pill = e.target.closest('.cat-pill');
         if (pill) filterCat(pill, pill.dataset.cat || '');
