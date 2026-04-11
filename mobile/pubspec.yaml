@@ -75,6 +75,5 @@ flutter:
 sentry:
   upload_debug_symbols: true
   upload_sources: false
-  # org ve project: Sentry dashboard'dan alın
-  # org: your-sentry-org
-  # project: teqlif-mobile
+  org: teqlif
+  project: teqlif-mobil
