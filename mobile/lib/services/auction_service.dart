@@ -118,7 +118,9 @@ class AuctionService {
       () async => http.get(Uri.parse('$kBaseUrl/auction/$streamId/bids'), headers: await _headers()),
     );
     if (body is List) {
-      return body.cast<Map<String, dynamic>>();
+      return List<Map<String, dynamic>>.from(
+        (body as List).map((e) => Map<String, dynamic>.from(e as Map)),
+      );
     }
     return [];
   }
