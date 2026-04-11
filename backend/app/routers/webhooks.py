@@ -41,6 +41,8 @@ async def livekit_webhook(request: Request):
 
 
 async def _close_stream(db: AsyncSession, room_name: str) -> None:
+    from app.services.auction_service import AuctionService
+
     result = await db.execute(
         select(LiveStream).where(
             LiveStream.room_name == room_name,
@@ -53,6 +55,13 @@ async def _close_stream(db: AsyncSession, room_name: str) -> None:
 
     stream.is_live = False
     stream.ended_at = datetime.now(timezone.utc)
+
+    # Yetim açık artırmayı sistem zorlamasıyla bitir
+    try:
+        auction_svc = AuctionService(db)
+        await auction_svc.end_auction(stream.id, force_system=True)
+    except Exception as exc:
+        logger.error("Webhook: Yetim Müzayede kapatılamadı | stream_id=%s", stream.id, exc_info=True)
 
     try:
         await db.commit()

@@ -17,7 +17,7 @@ import asyncio
 import json
 import uuid
 from datetime import datetime, timezone
-from typing import Dict, Set
+from typing import Dict, Set, Optional
 
 from fastapi import WebSocket
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -390,13 +390,20 @@ class AuctionService:
         return state
 
     # ── Bitir ────────────────────────────────────────────────────────────────
-    async def end_auction(self, stream_id: int, user: User) -> dict:
-        await self._require_host(stream_id, user)
+    async def end_auction(self, stream_id: int, user: Optional[User] = None, force_system: bool = False) -> dict:
+        if not force_system:
+            if not user:
+                from app.core.exceptions import ForbiddenException
+                raise ForbiddenException("Kullanıcı belirtilmedi")
+            await self._require_host(stream_id, user)
+            
         redis = await get_redis()
         key = auction_key(stream_id)
 
         data = await redis.hgetall(key)
         if not data or data.get("status") not in ("active", "paused"):
+            if force_system:
+                return {} # Sistem çağırdıysa sessizce dön
             raise BadRequestException("Aktif açık artırma yok")
 
         winner_id_str = data.get("current_bidder_id", "")
