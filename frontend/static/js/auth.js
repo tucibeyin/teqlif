@@ -2,15 +2,20 @@ const Auth = (() => {
     // Token'lar artık HttpOnly cookie'de; XSS ile okunamaz.
     // Sadece user bilgisi (non-sensitive) localStorage'da tutulur.
     // In-memory token: sayfa yenilenmediği sürece WS auth için kullanılır.
-    const USER_KEY    = 'teqlif_user';
-    const _TOKEN_KEY  = 'teqlif_token';   // migration: silinecek
-    const _REFRESH_KEY = 'teqlif_refresh'; // migration: silinecek
+    const USER_KEY     = 'teqlif_user';
+    const _TOKEN_KEY   = 'teqlif_token';    // eski localStorage key (migration)
+    const _REFRESH_KEY = 'teqlif_refresh';  // eski localStorage key (migration)
+    const _SS_TOKEN    = 'teqlif_ss_token'; // sessionStorage key (tab ömrü boyunca)
 
-    // Geçiş dönemi: eski localStorage token'ı varsa in-memory'e al
-    // Cookie oturumu kurulduktan sonra bu değer null kalacak
+    // Token okuma önceliği:
+    // 1. sessionStorage (sayfa navigi sırasında hayatta kalır, tab kapanınca silinir)
+    // 2. eski localStorage (geçiş dönemi için)
+    // Cookie her request'te credentials:include ile otomatik gider (backup)
     let _memToken = (() => {
-        const t = localStorage.getItem(_TOKEN_KEY);
-        return t && t !== 'undefined' ? t : null;
+        const ss = sessionStorage.getItem(_SS_TOKEN);
+        if (ss && ss !== 'undefined') return ss;
+        const ls = localStorage.getItem(_TOKEN_KEY);
+        return ls && ls !== 'undefined' ? ls : null;
     })();
 
     function getToken() {
@@ -29,7 +34,8 @@ const Auth = (() => {
 
     function _save(data) {
         _memToken = data.access_token || null;
-        // Cookie kuruldu — artık localStorage token'larına gerek yok
+        if (_memToken) sessionStorage.setItem(_SS_TOKEN, _memToken);
+        // Eski localStorage token'larını temizle
         localStorage.removeItem(_TOKEN_KEY);
         localStorage.removeItem(_REFRESH_KEY);
         if (data.user) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
@@ -37,6 +43,7 @@ const Auth = (() => {
 
     async function logout() {
         _memToken = null;
+        sessionStorage.removeItem(_SS_TOKEN);
         localStorage.removeItem(_TOKEN_KEY);
         localStorage.removeItem(_REFRESH_KEY);
         localStorage.removeItem(USER_KEY);
@@ -61,7 +68,7 @@ const Auth = (() => {
             try { data = await res.json(); } catch (_) { await logout(); return false; }
             if (!data?.access_token) { await logout(); return false; }
             _memToken = data.access_token;
-            // Cookie set edildi — eski localStorage'ı temizle
+            sessionStorage.setItem(_SS_TOKEN, _memToken);
             localStorage.removeItem(_TOKEN_KEY);
             localStorage.removeItem(_REFRESH_KEY);
             return true;
