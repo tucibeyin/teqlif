@@ -455,20 +455,13 @@
             _iAmLeadingBidder = !!(_me && state.current_bidder && state.current_bidder === _me);
         }
 
-        // Normal bitiş konfetisi: leading bidder idiysen patlat
+        // Normal bitiş konfetisi: sadece accept_bid (winner_accepted=true) ile bittiyse patlat
         if (state.status === 'ended' && _prevAuctionStatus !== 'ended' && !_isBoughtItNow) {
             const _meNow = Auth.getUser()?.username;
-            // İkili kontrol: flag (active'de takip) VEYA direkt ended state karşılaştırması
             const _isWinner = _iAmLeadingBidder ||
                 !!(_meNow && state.current_bidder && state.current_bidder === _meNow);
-            console.log('[Auction] Bitiş tespiti:', {
-                winner: state.current_bidder,
-                me: _meNow,
-                iAmLeading: _iAmLeadingBidder,
-                isWinner: _isWinner,
-                confettiAvailable: typeof confetti === 'function',
-            });
-            if (_isWinner) {
+            const _wasAccepted = state.winner_accepted === true;
+            if (_isWinner && _wasAccepted) {
                 Auction.fireWinnerConfetti();
             }
             _iAmLeadingBidder = false;
