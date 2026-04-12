@@ -20,7 +20,7 @@
         else { alert("Erişim reddedildi."); }
     }
     async function verifyPassword() {
-        const p = document.getElementById("admin-pass").value;
+        const p = document.getElementById("adminPasswordInput").value;
         const res = await fetch('/api/admin-auth/verify-password', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ password: p }) });
         if (res.ok) { const data = await res.json(); sessionStorage.setItem("teqlif_admin_session", data.access_token); showFinalStep(); }
         else { alert("Hatalı şifre!"); }
@@ -77,8 +77,8 @@
                 <td>${u.is_active ? '<span class="status-pill" style="background:#10b981; color:#0f172a">Aktif</span>' : '<span class="status-pill" style="background:#ef4444; color:white">Yasaklı</span>'}</td>
                 <td>${new Date(u.created_at).toLocaleDateString('tr-TR')}</td>
                 <td>
-                    <button onclick="openModal(${u.id}, '${u.username}', '${u.full_name}', '${u.email}', ${u.is_active})" class="action-btn">Yönet</button>
-                    <button onclick="deleteUser(${u.id}, '${u.username}')" class="action-btn" style="background: var(--admin-danger);">Sil</button>
+                    <button data-open-modal="${u.id}" data-modal-un="${u.username}" data-modal-fn="${(u.full_name||'').replace(/"/g,'&quot;')}" data-modal-email="${u.email}" data-modal-active="${u.is_active}" class="action-btn">Yönet</button>
+                    <button data-delete-user="${u.id}" data-delete-un="${u.username}" class="action-btn" style="background: var(--admin-danger);">Sil</button>
                 </td>
             </tr>`).join("");
         document.getElementById("search-users").value = "";
@@ -163,7 +163,7 @@
                 <td><a href="/profil/${s.host_username}" target="_blank" class="admin-link">@${s.host_username}</a></td>
                 <td>${s.title || '-'}</td><td><span class="status-pill" style="background:#3b82f6; color:white;">👁 ${s.viewer_count}</span></td>
                 <td>${Math.floor((new Date() - new Date(s.started_at)) / 60000)} dk</td>
-                <td><button onclick="endStream(${s.id})" class="action-btn" style="background: var(--admin-danger);">Kapat</button></td>
+                <td><button data-end-stream="${s.id}" class="action-btn" style="background: var(--admin-danger);">Kapat</button></td>
             </tr>`).join("");
         document.getElementById("search-streams").value = "";
     }
@@ -186,8 +186,8 @@
                 <td>${l.price != null ? '₺' + Number(l.price).toLocaleString('tr-TR') : '—'}</td>
                 <td>${l.is_deleted ? '🗑 Silinmiş' : (l.is_active ? '✅ Aktif' : '⏸ Pasif')}</td>
                 <td>
-                    ${!l.is_deleted ? `<button onclick="toggleListing(${l.id})" class="action-btn" style="background: var(--admin-warn);">${l.is_active ? 'Pasife Al' : 'Aktifleştir'}</button>
-                    <button onclick="deleteListing(${l.id})" class="action-btn" style="background: var(--admin-danger);">Sil</button>` : 'İşlem Yok'}
+                    ${!l.is_deleted ? `<button data-toggle-listing="${l.id}" class="action-btn" style="background: var(--admin-warn);">${l.is_active ? 'Pasife Al' : 'Aktifleştir'}</button>
+                    <button data-delete-listing="${l.id}" class="action-btn" style="background: var(--admin-danger);">Sil</button>` : 'İşlem Yok'}
                 </td>
             </tr>`).join("");
         document.getElementById("search-listings").value = "";
@@ -209,7 +209,7 @@
                 <td><a href="${r.target_url}" target="_blank" class="admin-link" style="color: #fca5a5;">${r.target}</a></td>
                 <td>${r.reason}</td>
                 <td>${r.status === 'resolved' ? '<span class="status-pill" style="background:#10b981; color:#0f172a;">Çözüldü</span>' : '<span class="status-pill" style="background:#f59e0b; color:#0f172a;">Bekliyor</span>'}</td>
-                <td>${r.status !== 'resolved' ? `<button onclick="resolveReport(${r.id})" class="action-btn" style="background: var(--admin-primary);">Çözüldü İşaretle</button>` : '-'}</td>
+                <td>${r.status !== 'resolved' ? `<button data-resolve-report="${r.id}" class="action-btn" style="background: var(--admin-primary);">Çözüldü İşaretle</button>` : '-'}</td>
             </tr>`).join("");
         document.getElementById("search-reports").value = "";
     }
@@ -307,4 +307,29 @@ document.addEventListener('DOMContentLoaded', function () {
     if (btnCloseAddUserModal) btnCloseAddUserModal.addEventListener('click', closeAddUserModal);
     var btnSubmitNewUser = document.getElementById('btnSubmitNewUser');
     if (btnSubmitNewUser) btnSubmitNewUser.addEventListener('click', submitNewUser);
+
+    // Dinamik tablo butonları için event delegation
+    document.getElementById('user-table-body').addEventListener('click', function (e) {
+        var openBtn = e.target.closest('[data-open-modal]');
+        if (openBtn) { openModal(Number(openBtn.dataset.openModal), openBtn.dataset.modalUn, openBtn.dataset.modalFn, openBtn.dataset.modalEmail, openBtn.dataset.modalActive === 'true'); return; }
+        var delBtn = e.target.closest('[data-delete-user]');
+        if (delBtn) { deleteUser(Number(delBtn.dataset.deleteUser), delBtn.dataset.deleteUn); }
+    });
+
+    document.getElementById('stream-table-body').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-end-stream]');
+        if (btn) endStream(Number(btn.dataset.endStream));
+    });
+
+    document.getElementById('listing-table-body').addEventListener('click', function (e) {
+        var toggleBtn = e.target.closest('[data-toggle-listing]');
+        if (toggleBtn) { toggleListing(Number(toggleBtn.dataset.toggleListing)); return; }
+        var delBtn = e.target.closest('[data-delete-listing]');
+        if (delBtn) deleteListing(Number(delBtn.dataset.deleteListing));
+    });
+
+    document.getElementById('report-table-body').addEventListener('click', function (e) {
+        var btn = e.target.closest('[data-resolve-report]');
+        if (btn) resolveReport(Number(btn.dataset.resolveReport));
+    });
 });
