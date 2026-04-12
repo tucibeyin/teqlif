@@ -284,10 +284,11 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
       if (prev != null && next.isIdle && !prev.isIdle) {
         widget.onAuctionReset?.call();
       }
-      // Kazanan tespiti: normal bitiş
+      // Kazanan tespiti: sadece accept_bid ile onaylanan bitişte (winnerAccepted=true)
       if (prev != null &&
           !prev.isEnded &&
           next.isEnded &&
+          next.winnerAccepted &&   // end_auction (kesme) ile bitmişse false → konfeti yok
           !next.isBoughtItNow &&
           next.currentBidder != null &&
           widget.myUsername != null &&

@@ -61,6 +61,7 @@ class BidOut(BaseModel):
 
 class AuctionStateOut(BaseModel):
     status: str
+    winner_accepted: bool = False
     item_name: Optional[str] = None
     start_price: Optional[float] = None
     buy_it_now_price: Optional[float] = None

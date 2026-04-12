@@ -11,6 +11,7 @@ class AuctionState {
   final String? buyerUsername;
   final String? pendingBuyerUsername;
   final String? errorMessage;
+  final bool winnerAccepted; // true → accept_bid ile bitti (konfeti); false → end ile kesildi
 
   const AuctionState({
     required this.status,
@@ -25,6 +26,7 @@ class AuctionState {
     this.buyerUsername,
     this.pendingBuyerUsername,
     this.errorMessage,
+    this.winnerAccepted = false,
   });
 
   factory AuctionState.idle() => const AuctionState(status: 'idle');
@@ -42,6 +44,7 @@ class AuctionState {
         bidCount: (j['bid_count'] as num?)?.toInt() ?? 0,
         listingId: (j['listing_id'] as num?)?.toInt(),
         pendingBuyerUsername: j['bin_buyer_username'] as String?,
+        winnerAccepted: j['winner_accepted'] as bool? ?? false,
       );
 
   bool get isActive => status == 'active';

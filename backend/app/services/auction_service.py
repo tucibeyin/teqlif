@@ -959,6 +959,7 @@ class AuctionService:
 
         state = {
             "status": "ended",
+            "winner_accepted": True,   # accept_bid → kazanan onaylandı
             "item_name": item_name,
             "bid_count": int(data.get("bid_count", 0)),
             "current_bid": final_price,
