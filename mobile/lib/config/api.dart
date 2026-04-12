@@ -4,7 +4,7 @@ import '../core/app_exception.dart';
 import '../core/logger_service.dart';
 import '../services/storage_service.dart';
 
-const String kBaseUrl = 'https://teqlif.com/api';
+const String kBaseUrl = 'https://www.teqlif.com/api';
 
 Future<bool> _tryRefreshOnce() async {
   final rt = await StorageService.getRefreshToken();
@@ -26,7 +26,7 @@ Future<bool> _tryRefreshOnce() async {
     return false;
   }
 }
-const String kBaseHost = 'https://teqlif.com';
+const String kBaseHost = 'https://www.teqlif.com';
 
 /// /uploads/... → https://teqlif.com/uploads/...
 String imgUrl(String? path) {

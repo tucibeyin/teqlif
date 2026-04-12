@@ -311,7 +311,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     WidgetSpan(
                                       child: GestureDetector(
                                         key: const Key('register_link_kullanim_sartlari'),
-                                        onTap: () => _openUrl('https://teqlif.com/kullanim-sartlari.html'),
+                                        onTap: () => _openUrl('https://www.teqlif.com/kullanim-sartlari.html'),
                                         child: const Text(
                                           'Kullanım Şartları ve EULA',
                                           style: TextStyle(

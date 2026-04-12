@@ -971,7 +971,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.help_outline,
                 label: l.profileSupportCenter,
                 onTap: () async {
-                  final uri = Uri.parse('https://teqlif.com/support.html');
+                  final uri = Uri.parse('https://www.teqlif.com/support.html');
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
@@ -981,7 +981,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.description_outlined,
                 label: l.profileTerms,
                 onTap: () async {
-                  final uri = Uri.parse('https://teqlif.com/kullanim-sartlari.html');
+                  final uri = Uri.parse('https://www.teqlif.com/kullanim-sartlari.html');
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }
@@ -991,7 +991,7 @@ class _SettingsScreenState extends ConsumerState<_SettingsScreen> {
                 icon: Icons.lock_outline,
                 label: l.profilePrivacy,
                 onTap: () async {
-                  final uri = Uri.parse('https://teqlif.com/gizlilik-politikasi');
+                  final uri = Uri.parse('https://www.teqlif.com/gizlilik-politikasi');
                   if (await canLaunchUrl(uri)) {
                     launchUrl(uri, mode: LaunchMode.externalApplication);
                   }

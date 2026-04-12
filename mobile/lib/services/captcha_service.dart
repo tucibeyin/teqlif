@@ -19,7 +19,7 @@ class CaptchaService {
   // TODO: Cloudflare Dashboard'dan aldığın SITE KEY ile değiştir.
   // Test key (her zaman geçer, prod'da kullanma): '1x00000000000000000000AA'
   static const String _siteKey = '0x4AAAAAACu_Bb1lbiRXqw4Q';
-  static const String _baseUrl = 'https://teqlif.com';
+  static const String _baseUrl = 'https://www.teqlif.com';
   static const Duration _timeout = Duration(seconds: 10);
 
   /// Görünmez Turnstile challenge'ı arka planda çalıştırır ve token döner.
