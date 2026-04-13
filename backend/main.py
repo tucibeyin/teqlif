@@ -413,6 +413,12 @@ async def favicon():
     return FileResponse(path, media_type="image/x-icon")
 
 
+@app.get("/ads.txt", include_in_schema=False)
+async def ads_txt():
+    content = "google.com, pub-2403555634390058, DIRECT, f08c47fec0942fa0\n"
+    return Response(content=content, media_type="text/plain")
+
+
 @app.get("/robots.txt", include_in_schema=False)
 async def robots_txt():
     content = (
