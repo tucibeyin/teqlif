@@ -55,6 +55,7 @@ import app.models.like  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
+from prometheus_fastapi_instrumentator import Instrumentator
 
 logger = setup_logging()
 
@@ -158,6 +159,9 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
+
+# Prometheus metrics — /metrics endpoint'i (sadece iç ağdan erişilmeli)
+Instrumentator().instrument(app).expose(app, include_in_schema=False)
 
 # Security setup
 app.state.limiter = limiter

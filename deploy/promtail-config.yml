@@ -1,0 +1,49 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/promtail-positions.yaml
+
+clients:
+  - url: http://localhost:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: teqlif-backend
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: teqlif-backend
+          env: production
+          __path__: /var/www/teqlif.com/backend/logs/app.log
+
+  - job_name: teqlif-errors
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: teqlif-backend
+          level: error
+          env: production
+          __path__: /var/www/teqlif.com/backend/logs/error.log
+
+  - job_name: nginx-access
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          type: access
+          env: production
+          __path__: /var/log/nginx/access.log
+
+  - job_name: nginx-error
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: nginx
+          type: error
+          env: production
+          __path__: /var/log/nginx/error.log
