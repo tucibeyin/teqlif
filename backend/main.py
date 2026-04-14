@@ -36,6 +36,7 @@ from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 from app.models.listing import Listing
 from app.models.user import User
+from app.models.stream import Stream
 import app.models.auction  # noqa: F401 — tablo kaydı için
 import app.models.bid  # noqa: F401 — tablo kaydı için
 import app.models.notification  # noqa: F401 — tablo kaydı için
@@ -52,6 +53,7 @@ import app.models.analytics  # noqa: F401 — tablo kaydı için
 import app.models.listing_offer  # noqa: F401 — tablo kaydı için
 import app.models.story  # noqa: F401 — tablo kaydı için
 import app.models.like  # noqa: F401 — tablo kaydı için
+import app.models.stream  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
@@ -399,6 +401,25 @@ if os.path.exists(frontend_dir):
     async def serve_privacy_page():
         return FileResponse(os.path.join(frontend_dir, "gizlilik-politikasi.html"))
 
+    @app.get("/yayin/{stream_id}", include_in_schema=False)
+    async def serve_stream_page(request: Request, stream_id: int):
+        async with AsyncSessionLocal() as db:
+            stream = await db.scalar(
+                select(Stream).where(Stream.id == stream_id)
+            )
+        if not stream:
+            return HTMLResponse(
+                "<h1>404 — Yayın bulunamadı</h1>", status_code=404
+            )
+        og_image = stream.thumbnail_url or _DEFAULT_OG_IMAGE
+        context = {
+            "og_title": f"{stream.title} — teqlif Canlı",
+            "og_description": "teqlif'te canlı yayın izle ve açık artırmaya katıl.",
+            "og_image": og_image,
+            "og_url": f"https://teqlif.com/yayin/{stream_id}",
+        }
+        return templates.TemplateResponse(request, "yayin.html", context)
+
     @app.get("/{page}.html", include_in_schema=False)
     async def serve_page(page: str):
         path = os.path.join(frontend_dir, f"{page}.html")
@@ -433,6 +454,39 @@ async def robots_txt():
         "Sitemap: https://teqlif.com/sitemap.xml\n"
     )
     return Response(content=content, media_type="text/plain")
+
+
+@app.get("/.well-known/assetlinks.json", include_in_schema=False)
+async def assetlinks():
+    content = json.dumps([
+        {
+            "relation": ["delegate_permission/common.handle_all_urls"],
+            "target": {
+                "namespace": "android_app",
+                "package_name": "com.teqlif.teqlif_mobile",
+                "sha256_cert_fingerprints": [
+                    "ED:0A:D6:F5:1C:E4:8B:C2:6A:2E:85:E2:20:B8:A1:24:5C:90:1A:5E:5E:69:FB:41:83:A2:39:0F:3E:DC:B0:3A"
+                ]
+            }
+        }
+    ])
+    return Response(content=content, media_type="application/json")
+
+
+@app.get("/.well-known/apple-app-site-association", include_in_schema=False)
+async def apple_app_site_association():
+    content = json.dumps({
+        "applinks": {
+            "apps": [],
+            "details": [
+                {
+                    "appID": "4SUTR2VZVG.teqlif",
+                    "paths": ["/profil/*", "/ilan/*", "/yayin/*"]
+                }
+            ]
+        }
+    })
+    return Response(content=content, media_type="application/json")
 
 
 @app.get("/sitemap.xml", include_in_schema=False)

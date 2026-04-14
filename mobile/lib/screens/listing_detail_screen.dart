@@ -3,6 +3,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:share_plus/share_plus.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
@@ -519,6 +520,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          IconButton(
+            key: const Key('listing_detail_btn_paylasım'),
+            icon: const Icon(Icons.share_outlined),
+            tooltip: 'Paylaş',
+            onPressed: () {
+              final id = listing['id'];
+              Share.share(
+                '${listing['title'] ?? 'İlan'} — teqlif\'te incele: https://www.teqlif.com/ilan/$id',
+              );
+            },
+          ),
           if (isMine) ...[
             IconButton(
               key: const Key('listing_detail_btn_aktif_toggle'),
@@ -1243,6 +1255,56 @@ class _PriceInputFormatter extends TextInputFormatter {
     return TextEditingValue(
       text: formatted,
       selection: TextSelection.collapsed(offset: formatted.length),
+    );
+  }
+}
+
+/// Deep link ile sadece ilan ID'si geldiğinde kullanılır.
+/// API'dan veri çekip [ListingDetailScreen]'e yönlendirir.
+class ListingDeepLinkLoader extends StatefulWidget {
+  final int listingId;
+  const ListingDeepLinkLoader({super.key, required this.listingId});
+
+  @override
+  State<ListingDeepLinkLoader> createState() => _ListingDeepLinkLoaderState();
+}
+
+class _ListingDeepLinkLoaderState extends State<ListingDeepLinkLoader> {
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    try {
+      final token = await StorageService.getToken();
+      final headers = <String, String>{
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings/${widget.listingId}'),
+        headers: headers,
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final listing = jsonDecode(resp.body) as Map<String, dynamic>;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => ListingDetailScreen(listing: listing)),
+        );
+      } else {
+        Navigator.of(context).pop();
+      }
+    } catch (_) {
+      if (mounted) Navigator.of(context).pop();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      body: Center(child: CircularProgressIndicator()),
     );
   }
 }

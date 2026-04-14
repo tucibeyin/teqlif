@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_colors.dart';
 import '../config/theme.dart';
@@ -213,7 +214,20 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     return Scaffold(
-      appBar: AppBar(title: Text('@${widget.username}')),
+      appBar: AppBar(
+        title: Text('@${widget.username}'),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.share_outlined),
+            tooltip: 'Profili Paylaş',
+            onPressed: () {
+              Share.share(
+                '@${widget.username} — teqlif\'te incele: https://www.teqlif.com/profil/${widget.username}',
+              );
+            },
+          ),
+        ],
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator(color: kPrimary))
           : _user == null

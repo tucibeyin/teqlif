@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
 import 'package:app_badge_plus/app_badge_plus.dart';
+import 'package:app_links/app_links.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_native_splash/flutter_native_splash.dart';
@@ -12,6 +13,9 @@ import '../services/biometric_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/storage_service.dart';
 import 'package:http/http.dart' as http;
+import 'listing_detail_screen.dart';
+import 'public_profile_screen.dart';
+import 'live/swipe_live_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -21,10 +25,67 @@ class SplashScreen extends StatefulWidget {
 }
 
 class _SplashScreenState extends State<SplashScreen> {
+  StreamSubscription<Uri>? _linkSub;
+
   @override
   void initState() {
     super.initState();
     _boot();
+  }
+
+  @override
+  void dispose() {
+    _linkSub?.cancel();
+    super.dispose();
+  }
+
+  /// Gelen deep link URL'ini parse edip ilgili ekrana yönlendirir.
+  /// Uygulama açıkken (foreground) ve arka planda beklerken çalışır.
+  void _handleDeepLink(Uri uri) {
+    if (!mounted) return;
+    final segments = uri.pathSegments;
+    if (segments.length < 2) return;
+
+    final type = segments[0];
+    final param = segments[1];
+
+    switch (type) {
+      case 'profil':
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => PublicProfileScreen(username: param),
+        ));
+        break;
+      case 'ilan':
+        final id = int.tryParse(param);
+        if (id != null) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ListingDeepLinkLoader(listingId: id),
+          ));
+        }
+        break;
+      case 'yayin':
+        final id = int.tryParse(param);
+        if (id != null) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => SwipeLiveScreen.single(streamId: id),
+          ));
+        }
+        break;
+    }
+  }
+
+  /// Deep link dinleyiciyi başlatır.
+  /// - getInitialLink: uygulama kapalıyken gelen link (cold start)
+  /// - uriLinkStream: uygulama açıkken gelen link (warm/hot start)
+  Future<void> _startDeepLinkListener() async {
+    final appLinks = AppLinks();
+    // Cold start: uygulama bu link ile açıldıysa
+    final initialUri = await appLinks.getInitialLink();
+    if (initialUri != null) {
+      _handleDeepLink(initialUri);
+    }
+    // Warm/hot start: uygulama açıkken link gelirse
+    _linkSub = appLinks.uriLinkStream.listen(_handleDeepLink);
   }
 
   Future<void> _boot() async {
@@ -70,6 +131,7 @@ class _SplashScreenState extends State<SplashScreen> {
 
     if (!mounted) return;
     PushNotificationService.initialize();
+    await _startDeepLinkListener();
     Navigator.of(context).pushReplacementNamed('/home');
   }
 

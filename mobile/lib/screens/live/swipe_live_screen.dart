@@ -674,6 +674,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
             isCoHost: _isCoHost,
             streamEnded: _streamEnded,
             onLeave: _leave,
+            streamId: widget.stream.id,
           ),
         ),
 

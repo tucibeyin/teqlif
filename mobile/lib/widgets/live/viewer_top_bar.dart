@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
 
 /// Canlı yayın izleyici ekranı — üst bilgi çubuğu.
@@ -13,6 +14,7 @@ class ViewerTopBar extends StatelessWidget {
   final bool isCoHost;
   final bool streamEnded;
   final VoidCallback onLeave;
+  final int? streamId;
 
   const ViewerTopBar({
     super.key,
@@ -23,6 +25,7 @@ class ViewerTopBar extends StatelessWidget {
     required this.isCoHost,
     required this.onLeave,
     this.streamEnded = false,
+    this.streamId,
   });
 
   @override
@@ -103,6 +106,29 @@ class ViewerTopBar extends StatelessWidget {
               ),
 
               const Spacer(),
+
+              // Paylaş butonu
+              if (streamId != null) ...[
+                GestureDetector(
+                  key: const Key('viewer_btn_paylas'),
+                  onTap: () {
+                    Share.share(
+                      '$title — teqlif\'te canlı izle: https://www.teqlif.com/yayin/$streamId',
+                    );
+                  },
+                  child: Container(
+                    width: 36,
+                    height: 36,
+                    decoration: BoxDecoration(
+                      color: Colors.black38,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white24),
+                    ),
+                    child: const Icon(Icons.share_outlined, color: Colors.white, size: 18),
+                  ),
+                ),
+                const SizedBox(width: 8),
+              ],
 
               // MOD rozeti — sadece co-host olduğunda
               if (isCoHost) ...[
