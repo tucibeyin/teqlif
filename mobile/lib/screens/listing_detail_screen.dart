@@ -557,8 +557,8 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
             IconButton(
               key: const Key('listing_detail_btn_favorile'),
               icon: Icon(
-                _isFavorited ? Icons.favorite : Icons.favorite_border,
-                color: _isFavorited ? Colors.red : const Color(0xFF9CA3AF),
+                (_isFavorited || _isLiked) ? Icons.favorite : Icons.favorite_border,
+                color: (_isFavorited || _isLiked) ? Colors.red : const Color(0xFF9CA3AF),
               ),
               tooltip: _isFavorited ? l.btnRemoveFavorite : l.btnRemoveFavorite,
               onPressed: _toggleFavorite,
@@ -604,20 +604,29 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                           ),
                         ),
                       ),
-                      // Fiyat yanı — sadece beğeni sayısını göster (buton aşağıda)
-                      if (_likesCount > 0)
+                      // Fiyat yanı — beğeni sayısı ve kişisel beğeni durumu
+                      if (_likesCount > 0 || _isLiked)
                         Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.favorite,
-                                color: Colors.red.withValues(alpha: 0.8),
-                                size: 16),
+                            Icon(
+                              _isLiked ? Icons.favorite : Icons.favorite_border,
+                              color: _isLiked
+                                  ? Colors.red
+                                  : Colors.red.withValues(alpha: 0.5),
+                              size: 16,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               '$_likesCount',
                               style: TextStyle(
-                                color: AppColors.textSecondary(context),
+                                color: _isLiked
+                                    ? Colors.red
+                                    : AppColors.textSecondary(context),
                                 fontSize: 13,
+                                fontWeight: _isLiked
+                                    ? FontWeight.w600
+                                    : FontWeight.normal,
                               ),
                             ),
                           ],
