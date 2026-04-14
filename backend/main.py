@@ -36,7 +36,7 @@ from app.database import engine, Base, AsyncSessionLocal
 from sqlalchemy import select
 from app.models.listing import Listing
 from app.models.user import User
-from app.models.stream import Stream
+from app.models.stream import LiveStream
 import app.models.auction  # noqa: F401 — tablo kaydı için
 import app.models.bid  # noqa: F401 — tablo kaydı için
 import app.models.notification  # noqa: F401 — tablo kaydı için
@@ -53,7 +53,6 @@ import app.models.analytics  # noqa: F401 — tablo kaydı için
 import app.models.listing_offer  # noqa: F401 — tablo kaydı için
 import app.models.story  # noqa: F401 — tablo kaydı için
 import app.models.like  # noqa: F401 — tablo kaydı için
-import app.models.stream  # noqa: F401 — tablo kaydı için
 import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
@@ -405,7 +404,7 @@ if os.path.exists(frontend_dir):
     async def serve_stream_page(request: Request, stream_id: int):
         async with AsyncSessionLocal() as db:
             stream = await db.scalar(
-                select(Stream).where(Stream.id == stream_id)
+                select(LiveStream).where(LiveStream.id == stream_id)
             )
         if not stream:
             return HTMLResponse(
