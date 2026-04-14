@@ -157,6 +157,9 @@
 
         let actionsHtml = '';
 
+        const _shareSvg = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`;
+        const _shareBtn = `<button class="btn-profile secondary" id="shareProfileBtn">${_shareSvg}Paylaş</button>`;
+
         if (isOwn) {
             actionsHtml = `
                 <div class="profile-actions">
@@ -164,6 +167,7 @@
                         <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                         Profili Düzenle
                     </button>
+                    ${_shareBtn}
                 </div>`;
         } else if (loggedIn) {
             const toName = encodeURIComponent(user.full_name || user.username);
@@ -193,11 +197,13 @@
                     </a>
                     ${rateBtn}
                     ${blockBtn}
+                    ${_shareBtn}
                 </div>`;
         } else {
             actionsHtml = `
                 <div class="profile-actions">
                     <a class="btn-profile primary" href="/giris.html">Mesaj göndermek için giriş yap</a>
+                    ${_shareBtn}
                 </div>`;
         }
 
@@ -244,6 +250,20 @@
                 <div class="listings-title">İlanları (–)</div>
                 <div class="profile-loading" style="padding-top:1rem;">Yükleniyor...</div>
             </div>`;
+
+        const shareProfileBtnEl = document.getElementById('shareProfileBtn');
+        if (shareProfileBtnEl) shareProfileBtnEl.addEventListener('click', function () {
+            const shareUrl = 'https://www.teqlif.com/profil/' + encodeURIComponent(user.username);
+            const shareText = '@' + user.username + ' — teqlif\'te incele: ' + shareUrl;
+            if (navigator.share) {
+                navigator.share({ title: user.full_name || user.username, text: shareText, url: shareUrl }).catch(function(){});
+            } else {
+                navigator.clipboard.writeText(shareUrl).then(function () {
+                    shareProfileBtnEl.textContent = '✓ Link kopyalandı';
+                    setTimeout(function () { shareProfileBtnEl.innerHTML = _shareSvg + 'Paylaş'; }, 2000);
+                }).catch(function () { window.prompt('Linki kopyala:', shareUrl); });
+            }
+        });
     }
 
     async function loadListings(userId) {

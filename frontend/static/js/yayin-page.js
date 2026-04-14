@@ -268,6 +268,23 @@
     }
 
     // Ayrıl (Viewer)
+    document.getElementById('btnShareStream').addEventListener('click', () => {
+        const sid = streamId || streamIdParam;
+        if (!sid) return;
+        const shareUrl = 'https://www.teqlif.com/yayin/' + sid;
+        const title = document.getElementById('metaTitle')?.textContent || 'Canlı Yayın';
+        const shareText = title + ' — teqlif\'te canlı izle: ' + shareUrl;
+        if (navigator.share) {
+            navigator.share({ title: title, text: shareText, url: shareUrl }).catch(() => {});
+        } else {
+            const btn = document.getElementById('btnShareStream');
+            navigator.clipboard.writeText(shareUrl).then(() => {
+                btn.textContent = '✓ Link kopyalandı';
+                setTimeout(() => { btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:middle;margin-right:4px;"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>Paylaş'; }, 2000);
+            }).catch(() => { window.prompt('Linki kopyala:', shareUrl); });
+        }
+    });
+
     document.getElementById('btnLeave').addEventListener('click', async () => {
         const btn = document.getElementById('btnLeave');
         btn.disabled = true;

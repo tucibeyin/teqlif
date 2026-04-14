@@ -280,6 +280,10 @@
                                        <a href="/giris.html?next=/ilan/${listingId}" class="btn-contact">Satıcıya Mesaj Gönder</a>`
                 }
                             ${!isOwner ? `<a href="/profil/${esc(data.user.username)}" class="btn-msg">Profili Gör</a>` : ''}
+                            <button id="shareBtnIlan" style="display:flex;align-items:center;justify-content:center;gap:6px;width:100%;padding:.6rem 1rem;border-radius:8px;border:1.5px solid #e5e7eb;background:transparent;color:#6b7280;font-size:.9rem;font-weight:600;cursor:pointer;margin-top:.4rem;">
+                                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                                Paylaş
+                            </button>
                         </div>
 
                         <div class="seller-block">
@@ -340,6 +344,19 @@
             if (favBtnEl) favBtnEl.addEventListener('click', toggleFav);
             var likeBtnEl = document.getElementById('likeBtn');
             if (likeBtnEl) likeBtnEl.addEventListener('click', toggleListingLike);
+            var shareBtnIlanEl = document.getElementById('shareBtnIlan');
+            if (shareBtnIlanEl) shareBtnIlanEl.addEventListener('click', function () {
+                var shareUrl = 'https://www.teqlif.com/ilan/' + listingId;
+                var shareText = (data.title || 'İlan') + ' — teqlif\'te incele: ' + shareUrl;
+                if (navigator.share) {
+                    navigator.share({ title: data.title || 'İlan', text: shareText, url: shareUrl }).catch(function(){});
+                } else {
+                    navigator.clipboard.writeText(shareUrl).then(function () {
+                        shareBtnIlanEl.textContent = '✓ Link kopyalandı';
+                        setTimeout(function () { shareBtnIlanEl.innerHTML = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg> Paylaş'; }, 2000);
+                    }).catch(function () { window.prompt('Linki kopyala:', shareUrl); });
+                }
+            });
             var offerBtnEl = document.getElementById('offerBtn');
             if (offerBtnEl) offerBtnEl.addEventListener('click', submitOffer);
             var offerInputEl = document.getElementById('offerInput');
