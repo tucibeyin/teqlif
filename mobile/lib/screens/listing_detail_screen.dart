@@ -106,9 +106,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     HapticFeedback.lightImpact();
     final prevLiked = _isLiked;
     final prevCount = _likesCount;
+    final prevFav = _isFavorited;
     setState(() {
       _isLiked = !_isLiked;
       _likesCount += _isLiked ? 1 : -1;
+      // Beğeni ve favori senkron: beğenince favori de güncellenir
+      _isFavorited = _isLiked;
     });
     try {
       final result = await ListingService.toggleLike(widget.listing['id'] as int);
@@ -120,12 +123,17 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         setState(() {
           _likesCount = newCount;
           _isLiked = newLiked;
+          _isFavorited = newLiked;
         });
       }
     } catch (_) {
       widget.listing['likes_count'] = prevCount;
       widget.listing['is_liked'] = prevLiked;
-      if (mounted) setState(() { _isLiked = prevLiked; _likesCount = prevCount; });
+      if (mounted) setState(() {
+        _isLiked = prevLiked;
+        _likesCount = prevCount;
+        _isFavorited = prevFav;
+      });
     }
   }
 
@@ -173,13 +181,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           Uri.parse('$kBaseUrl/favorites/$id'),
           headers: {'Authorization': 'Bearer $token'},
         );
-        if (mounted) setState(() => _isFavorited = false);
+        if (mounted) setState(() { _isFavorited = false; _isLiked = false; });
       } else {
         await http.post(
           Uri.parse('$kBaseUrl/favorites/$id'),
           headers: {'Authorization': 'Bearer $token'},
         );
-        if (mounted) setState(() => _isFavorited = true);
+        if (mounted) setState(() { _isFavorited = true; _isLiked = true; });
       }
     } catch (_) {}
   }
