@@ -217,14 +217,20 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
       appBar: AppBar(
         title: Text('@${widget.username}'),
         actions: [
-          IconButton(
-            icon: const Icon(Icons.share_outlined),
-            tooltip: 'Profili Paylaş',
-            onPressed: () {
-              Share.share(
-                '@${widget.username} — teqlif\'te incele: https://www.teqlif.com/profil/${widget.username}',
-              );
-            },
+          Builder(
+            builder: (btnCtx) => IconButton(
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Profili Paylaş',
+              onPressed: () {
+                final box = btnCtx.findRenderObject() as RenderBox?;
+                Share.share(
+                  '@${widget.username} — teqlif\'te incele: https://www.teqlif.com/profil/${widget.username}',
+                  sharePositionOrigin: box == null
+                      ? Rect.zero
+                      : box.localToGlobal(Offset.zero) & box.size,
+                );
+              },
+            ),
           ),
         ],
       ),

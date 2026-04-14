@@ -109,22 +109,28 @@ class ViewerTopBar extends StatelessWidget {
 
               // Paylaş butonu
               if (streamId != null) ...[
-                GestureDetector(
-                  key: const Key('viewer_btn_paylas'),
-                  onTap: () {
-                    Share.share(
-                      '$title — teqlif\'te canlı izle: https://www.teqlif.com/yayin/$streamId',
-                    );
-                  },
-                  child: Container(
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      color: Colors.black38,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white24),
+                Builder(
+                  builder: (btnCtx) => GestureDetector(
+                    key: const Key('viewer_btn_paylas'),
+                    onTap: () {
+                      final box = btnCtx.findRenderObject() as RenderBox?;
+                      Share.share(
+                        '$title — teqlif\'te canlı izle: https://www.teqlif.com/yayin/$streamId',
+                        sharePositionOrigin: box == null
+                            ? Rect.zero
+                            : box.localToGlobal(Offset.zero) & box.size,
+                      );
+                    },
+                    child: Container(
+                      width: 36,
+                      height: 36,
+                      decoration: BoxDecoration(
+                        color: Colors.black38,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white24),
+                      ),
+                      child: const Icon(Icons.share_outlined, color: Colors.white, size: 18),
                     ),
-                    child: const Icon(Icons.share_outlined, color: Colors.white, size: 18),
                   ),
                 ),
                 const SizedBox(width: 8),

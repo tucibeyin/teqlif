@@ -520,16 +520,22 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          IconButton(
-            key: const Key('listing_detail_btn_paylasım'),
-            icon: const Icon(Icons.share_outlined),
-            tooltip: 'Paylaş',
-            onPressed: () {
-              final id = listing['id'];
-              Share.share(
-                '${listing['title'] ?? 'İlan'} — teqlif\'te incele: https://www.teqlif.com/ilan/$id',
-              );
-            },
+          Builder(
+            builder: (btnCtx) => IconButton(
+              key: const Key('listing_detail_btn_paylasım'),
+              icon: const Icon(Icons.share_outlined),
+              tooltip: 'Paylaş',
+              onPressed: () {
+                final id = listing['id'];
+                final box = btnCtx.findRenderObject() as RenderBox?;
+                Share.share(
+                  '${listing['title'] ?? 'İlan'} — teqlif\'te incele: https://www.teqlif.com/ilan/$id',
+                  sharePositionOrigin: box == null
+                      ? Rect.zero
+                      : box.localToGlobal(Offset.zero) & box.size,
+                );
+              },
+            ),
           ),
           if (isMine) ...[
             IconButton(
