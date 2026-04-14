@@ -3,15 +3,19 @@ import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import '../config/theme.dart';
+import '../services/deep_link_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
 import '../services/push_notification_service.dart';
 import '../services/ws_service.dart';
 import 'home_screen.dart';
+import 'listing_detail_screen.dart';
 import 'profile_screen.dart';
 import 'messages_screen.dart';
+import 'public_profile_screen.dart';
 import 'search_screen.dart';
 import 'live/live_list_screen.dart';
+import 'live/swipe_live_screen.dart';
 import '../l10n/app_localizations.dart';
 import '../widgets/offline_banner.dart';
 
@@ -32,6 +36,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   StreamSubscription<RemoteMessage>? _fcmSub;
   StreamSubscription<Map<String, dynamic>>? _notifStreamSub;
   StreamSubscription<void>? _badgeRefreshSub;
+  StreamSubscription<Uri>? _deepLinkSub;
 
   late final List<Widget> _screens;
 
@@ -56,6 +61,13 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _badgeRefreshSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) {
       _refreshBadges();
     });
+    // Deep link dinleyici — warm/hot start + cold start tüketimi
+    _deepLinkSub = DeepLinkService.uriStream.listen(_handleDeepLink);
+    // Cold-start: Splash'in yakaladığı bekleyen link varsa uygula
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final pending = DeepLinkService.consumePending();
+      if (pending != null) _handleDeepLink(pending);
+    });
   }
 
   @override
@@ -66,6 +78,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _fcmSub?.cancel();
     _notifStreamSub?.cancel();
     _badgeRefreshSub?.cancel();
+    _deepLinkSub?.cancel();
     super.dispose();
   }
 
@@ -107,6 +120,41 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     if (index == 3) {
       PushNotificationService.notificationStream.add({});
       Future.delayed(const Duration(milliseconds: 300), _refreshBadges);
+    }
+  }
+
+  /// Deep link URL'ini parse ederek ilgili ekrana yönlendirir.
+  /// Hem cold-start (pending) hem warm/hot start (uriStream) için kullanılır.
+  void _handleDeepLink(Uri uri) {
+    if (!mounted) return;
+    final segments = uri.pathSegments;
+    if (segments.length < 2) return;
+
+    final type = segments[0];
+    final param = segments[1];
+
+    switch (type) {
+      case 'profil':
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => PublicProfileScreen(username: param),
+        ));
+        break;
+      case 'ilan':
+        final id = int.tryParse(param);
+        if (id != null) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => ListingDeepLinkLoader(listingId: id),
+          ));
+        }
+        break;
+      case 'yayin':
+        final id = int.tryParse(param);
+        if (id != null) {
+          Navigator.of(context).push(MaterialPageRoute(
+            builder: (_) => SwipeLiveScreen.single(streamId: id),
+          ));
+        }
+        break;
     }
   }
 
