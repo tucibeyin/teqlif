@@ -2,6 +2,11 @@
     const streamIdParam = parseInt(params.get('id'));
     const isHostParam = params.get('host') === '1';
 
+    // Mobil ziyaretçilere "Uygulamada Aç" banner'ı göster
+    if (streamIdParam && typeof teqlifAppRedirect === 'function') {
+        teqlifAppRedirect('yayin/' + streamIdParam);
+    }
+
     const mainVideo = document.getElementById('mainVideo');
     const remoteAudio = document.getElementById('remoteAudio');
     const connectingOverlay = document.getElementById('connectingOverlay');

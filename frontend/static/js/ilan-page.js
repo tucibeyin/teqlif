@@ -1,4 +1,10 @@
     const listingId = parseInt(location.pathname.split('/').pop(), 10);
+
+    // Mobil ziyaretçilere "Uygulamada Aç" banner'ı göster
+    if (listingId && typeof teqlifAppRedirect === 'function') {
+        teqlifAppRedirect('ilan/' + listingId);
+    }
+
     let _urls = [];
     let _cur = 0;
     let _isFavorited = false;

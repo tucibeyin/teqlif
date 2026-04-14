@@ -4,6 +4,11 @@
     const username = _pathMatch ? decodeURIComponent(_pathMatch[1]) : params.get('u');
     if (!username) window.location.href = '/';
 
+    // Mobil ziyaretçilere "Uygulamada Aç" banner'ı göster
+    if (username && typeof teqlifAppRedirect === 'function') {
+        teqlifAppRedirect('profil/' + encodeURIComponent(username));
+    }
+
     let _profileUser = null;
 
     function escHtml(str) {
