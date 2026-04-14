@@ -455,7 +455,7 @@ async def robots_txt():
     return Response(content=content, media_type="text/plain")
 
 
-@app.get("/.well-known/assetlinks.json", include_in_schema=False)
+@app.api_route("/.well-known/assetlinks.json", methods=["GET", "HEAD"], include_in_schema=False)
 async def assetlinks():
     content = json.dumps([
         {
@@ -472,15 +472,19 @@ async def assetlinks():
     return Response(content=content, media_type="application/json")
 
 
-@app.get("/.well-known/apple-app-site-association", include_in_schema=False)
+@app.api_route("/.well-known/apple-app-site-association", methods=["GET", "HEAD"], include_in_schema=False)
 async def apple_app_site_association():
+    # Hem eski format (iOS 12-) hem yeni format (iOS 13+) — ikisi birlikte çalışır
     content = json.dumps({
         "applinks": {
-            "apps": [],
             "details": [
                 {
-                    "appID": "4SUTR2VZVG.teqlif",
-                    "paths": ["/profil/*", "/ilan/*", "/yayin/*"]
+                    "appIDs": ["4SUTR2VZVG.teqlif"],
+                    "components": [
+                        { "/": "/profil/*" },
+                        { "/": "/ilan/*" },
+                        { "/": "/yayin/*" }
+                    ]
                 }
             ]
         }

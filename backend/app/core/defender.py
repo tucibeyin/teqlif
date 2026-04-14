@@ -56,8 +56,14 @@ _SESSION_TTL        = 7200  # 2 saat — zombie-bağlantı güvenlik ağı
 _IP_RATE_KEY_PREFIX = "ipr:"
 _IP_BLOCK_KEY_PREFIX = "ipblk:"
 
-# Bu path'ler hız sınırı dışında tutulur (health check, favicon vb.)
-_BYPASS_PATHS = frozenset({"/health", "/metrics", "/favicon.ico"})
+# Bu path'ler hız sınırı dışında tutulur (health check, favicon, Apple/Google doğrulama vb.)
+_BYPASS_PATHS = frozenset({
+    "/health",
+    "/metrics",
+    "/favicon.ico",
+    "/.well-known/apple-app-site-association",
+    "/.well-known/assetlinks.json",
+})
 
 
 # ── Yardımcı: Gerçek IP ─────────────────────────────────────────────────────
