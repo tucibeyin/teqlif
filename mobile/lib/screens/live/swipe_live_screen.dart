@@ -675,6 +675,7 @@ class _SwipeLivePageState extends State<_SwipeLivePage> {
             streamEnded: _streamEnded,
             onLeave: _leave,
             streamId: widget.stream.id,
+            thumbnailUrl: widget.stream.thumbnailUrl,
           ),
         ),
 

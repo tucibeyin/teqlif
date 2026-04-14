@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
+import '../services/share_service.dart';
 import 'package:http/http.dart' as http;
 import '../config/app_colors.dart';
 import '../config/theme.dart';
@@ -223,11 +223,16 @@ class _PublicProfileScreenState extends State<PublicProfileScreen> {
               tooltip: 'Profili Paylaş',
               onPressed: () {
                 final box = btnCtx.findRenderObject() as RenderBox?;
-                Share.share(
-                  '@${widget.username} — teqlif\'te incele: https://www.teqlif.com/profil/${widget.username}',
-                  sharePositionOrigin: box == null
-                      ? Rect.zero
-                      : box.localToGlobal(Offset.zero) & box.size,
+                final origin = box == null
+                    ? Rect.zero
+                    : box.localToGlobal(Offset.zero) & box.size;
+                final imageUrl = _user?['profile_image_url'] as String?;
+                ShareService.show(
+                  btnCtx,
+                  url: 'https://www.teqlif.com/profil/${widget.username}',
+                  text: '@${widget.username} — teqlif\'te incele',
+                  imageUrl: imageUrl,
+                  origin: origin,
                 );
               },
             ),

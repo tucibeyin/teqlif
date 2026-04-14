@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:share_plus/share_plus.dart';
 import '../../l10n/app_localizations.dart';
+import '../../services/share_service.dart';
 
 /// Canlı yayın izleyici ekranı — üst bilgi çubuğu.
 ///
@@ -15,6 +15,7 @@ class ViewerTopBar extends StatelessWidget {
   final bool streamEnded;
   final VoidCallback onLeave;
   final int? streamId;
+  final String? thumbnailUrl;
 
   const ViewerTopBar({
     super.key,
@@ -26,6 +27,7 @@ class ViewerTopBar extends StatelessWidget {
     required this.onLeave,
     this.streamEnded = false,
     this.streamId,
+    this.thumbnailUrl,
   });
 
   @override
@@ -114,11 +116,15 @@ class ViewerTopBar extends StatelessWidget {
                     key: const Key('viewer_btn_paylas'),
                     onTap: () {
                       final box = btnCtx.findRenderObject() as RenderBox?;
-                      Share.share(
-                        '$title — teqlif\'te canlı izle: https://www.teqlif.com/yayin/$streamId',
-                        sharePositionOrigin: box == null
-                            ? Rect.zero
-                            : box.localToGlobal(Offset.zero) & box.size,
+                      final origin = box == null
+                          ? Rect.zero
+                          : box.localToGlobal(Offset.zero) & box.size;
+                      ShareService.show(
+                        btnCtx,
+                        url: 'https://www.teqlif.com/yayin/$streamId',
+                        text: '$title — teqlif\'te canlı izle',
+                        imageUrl: thumbnailUrl,
+                        origin: origin,
                       );
                     },
                     child: Container(

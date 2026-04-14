@@ -3,8 +3,8 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
-import 'package:share_plus/share_plus.dart';
 import '../config/api.dart';
+import '../services/share_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../models/listing_offer.dart';
@@ -536,11 +536,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
               onPressed: () {
                 final id = listing['id'];
                 final box = btnCtx.findRenderObject() as RenderBox?;
-                Share.share(
-                  '${listing['title'] ?? 'İlan'} — teqlif\'te incele: https://www.teqlif.com/ilan/$id',
-                  sharePositionOrigin: box == null
-                      ? Rect.zero
-                      : box.localToGlobal(Offset.zero) & box.size,
+                final origin = box == null
+                    ? Rect.zero
+                    : box.localToGlobal(Offset.zero) & box.size;
+                final imageUrl = (_images.isNotEmpty) ? _images.first : null;
+                ShareService.show(
+                  btnCtx,
+                  url: 'https://www.teqlif.com/ilan/$id',
+                  text: '${listing['title'] ?? 'İlan'} — teqlif\'te incele',
+                  imageUrl: imageUrl,
+                  origin: origin,
                 );
               },
             ),
