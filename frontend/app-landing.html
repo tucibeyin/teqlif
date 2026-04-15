@@ -122,36 +122,41 @@
       }
 
       // ── Mobil ─────────────────────────────────────────────────────────
-      // Universal Links uygulamayı zaten açıyor.
-      // Bu sayfa sadece uygulama kurulu olmadığında veya IAB'de gösteriliyor.
-      // autoOpen() KALDIRILDI — iOS sistem dialogunu tetikliyordu.
+      // WhatsApp, Universal Link ile uygulamayı açarken aynı anda IAB'ini
+      // de açıyor. IAB öne geldiğinde konfüze edici içerik göstermemek için:
+      // 1. Hemen teqlif:// tetikle (uygulama zaten açıksa sadece öne geçer)
+      // 2. 1.2s sonra sayfayı minimal mesaja dönüştür
+      //    - Uygulama açıldıysa: "Uygulama açıldı"
+      //    - Açılmadıysa (kurulu değil): store linkleri
 
-      // "Uygulamada Aç" butonuna tıklanınca: scheme dene, 2.5s sonra kurulu
-      // değilse store'a git.
-      btnOpen.addEventListener('click', function (e) {
-        e.preventDefault();
-        status.textContent = 'Açılıyor…';
-
-        var appOpened = false;
-        document.addEventListener('visibilitychange', function onVis() {
-          if (document.hidden) {
-            appOpened = true;
-            btnOpen.textContent = 'Uygulamaya Geri Dön';
-            status.textContent  = '';
-            document.removeEventListener('visibilitychange', onVis);
-          }
-        });
-
-        try { window.location = appScheme; } catch (e2) {}
-
-        setTimeout(function () {
-          if (!appOpened && !document.hidden) {
-            btnOpen.textContent = 'Uygulamayı İndir';
-            btnOpen.href        = storeUrl;
-            status.textContent  = 'Uygulama bulunamadı.';
-          }
-        }, 2500);
+      var appOpened = false;
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) appOpened = true;
       });
+
+      // Scheme'i tetikle — uygulama kuruluysa açar/öne geçer
+      try { window.location.href = appScheme; } catch (_) {}
+
+      // 1.2s sonra sayfayı değiştir
+      setTimeout(function () {
+        var opened = appOpened || document.hidden;
+        document.body.innerHTML =
+          '<div style="height:100vh;display:flex;align-items:center;justify-content:center;' +
+          'background:#0f172a;font-family:-apple-system,sans-serif;padding:24px;box-sizing:border-box">' +
+          '<div style="text-align:center;color:#f1f5f9;max-width:320px">' +
+          (opened
+            ? '<div style="font-size:48px;margin-bottom:16px">✅</div>' +
+              '<p style="font-size:18px;font-weight:700;margin:0 0 8px">Uygulama açıldı</p>' +
+              '<p style="font-size:14px;color:#94a3b8;margin:0">teqlif uygulamasına geri dönebilirsiniz.</p>'
+            : '<div style="font-size:48px;margin-bottom:16px">📲</div>' +
+              '<p style="font-size:18px;font-weight:700;margin:0 0 8px">teqlif uygulamasını indirin</p>' +
+              '<p style="font-size:14px;color:#94a3b8;margin:0 0 24px">Canlı yayınları izlemek için uygulamayı yükleyin.</p>' +
+              '<a href="' + storeUrl + '" style="display:inline-block;background:#06b6d4;color:#fff;' +
+              'padding:12px 28px;border-radius:20px;font-weight:700;font-size:15px;text-decoration:none">' +
+              (isIOS ? 'App Store\'dan İndir' : 'Google Play\'den İndir') + '</a>'
+          ) +
+          '</div></div>';
+      }, 1200);
     })();
   </script>
 </body>
