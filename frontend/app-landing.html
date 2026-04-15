@@ -90,10 +90,9 @@
       </div>
       <div class="title">{{ og_title }}</div>
       <div class="desc">{{ og_description }}</div>
-      <!-- href doğrudan custom scheme — WKWebView/WebView'da window.location'dan daha güvenilir -->
       <a class="btn-open" href="{{ app_scheme }}" id="btnOpen">Uygulamada Aç</a>
       <a class="btn-web" href="{{ web_url }}" id="btnWeb">Web'de Devam Et</a>
-      <div class="status" id="status"></div>
+      <div class="status" id="status">Açılıyor…</div>
     </div>
   </div>
 
@@ -113,44 +112,67 @@
       var btnOpen  = document.getElementById('btnOpen');
       var btnWeb   = document.getElementById('btnWeb');
 
+      // ── Masaüstü ──────────────────────────────────────────────────────
       if (!isMobile) {
         btnOpen.style.display    = 'none';
         btnWeb.style.color       = '#06b6d4';
         btnWeb.style.borderColor = '#06b6d4';
+        status.textContent       = '';
         return;
       }
 
-      /**
-       * Butona tıklandığında:
-       * 1. <a href="teqlif://..."> tarayıcı tarafından takip edilir (en güvenilir yöntem)
-       * 2. Aynı anda bir de fallback timer başlatılır
-       * 3. Sayfa gizlenirse (uygulama açıldı) timer iptal edilir
-       * 4. 2s içinde sayfa hâlâ görünürdeyse → uygulama yok → store'a git
-       */
-      btnOpen.addEventListener('click', function () {
-        status.textContent = 'Uygulama açılıyor…';
+      // ── Mobil ─────────────────────────────────────────────────────────
+      // Durum makinesi: opening → opened | notfound
+      var state = 'opening';
 
-        var appOpened = false;
-
-        function onHide() {
-          if (document.hidden) {
-            appOpened = true;
-            document.removeEventListener('visibilitychange', onHide);
-          }
+      function setState(s) {
+        state = s;
+        if (s === 'opened') {
+          // Uygulama açıldı — butonu "Uygulamaya Geri Dön" olarak güncelle
+          btnOpen.textContent    = 'Uygulamaya Geri Dön';
+          btnOpen.href           = appScheme;
+          status.textContent     = 'Uygulama açıldı.';
+        } else if (s === 'notfound') {
+          btnOpen.textContent    = 'Uygulamayı İndir';
+          btnOpen.href           = storeUrl;
+          status.textContent     = 'teqlif uygulaması bulunamadı.';
         }
-        document.addEventListener('visibilitychange', onHide);
+      }
 
-        // Ek güvenlik: bazı WebView'larda href yetmez, window.location da dene
+      // Sayfa gizlenirse → uygulama açıldı
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden && state === 'opening') {
+          setState('opened');
+        }
+      });
+
+      // Sayfa odağını yitirirse (bazı tarayıcılarda hidden yerine blur gelir)
+      window.addEventListener('blur', function () {
+        if (state === 'opening') setState('opened');
+      });
+
+      // Otomatik açma — kullanıcı müdahalesi beklenmeksizin hemen dene.
+      // <a href> native olarak takip edilir; window.location ek güvence.
+      function autoOpen() {
         try { window.location = appScheme; } catch (e) {}
 
+        // 2.5s sonra hâlâ açılmadıysa → uygulama kurulu değil
         setTimeout(function () {
-          document.removeEventListener('visibilitychange', onHide);
-          if (!appOpened && !document.hidden) {
-            status.textContent = 'Uygulama bulunamadı, mağazaya yönlendiriliyor…';
-            setTimeout(function () { window.location = storeUrl; }, 700);
-          }
-        }, 2000);
+          if (state === 'opening') setState('notfound');
+        }, 2500);
+      }
+
+      // Buton tıklaması da aynı mantığı çalıştırır (ek deneme)
+      btnOpen.addEventListener('click', function (e) {
+        if (state === 'notfound') return; // store linkine gidecek, engelleme
+        e.preventDefault();
+        state = 'opening';
+        status.textContent = 'Açılıyor…';
+        autoOpen();
       });
+
+      // Sayfa yüklenince otomatik tetikle
+      autoOpen();
     })();
   </script>
 </body>
