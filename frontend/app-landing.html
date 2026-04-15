@@ -90,7 +90,8 @@
       </div>
       <div class="title">{{ og_title }}</div>
       <div class="desc">{{ og_description }}</div>
-      <button class="btn-open" id="btnOpen">Uygulamada Aç</button>
+      <!-- href doğrudan custom scheme — WKWebView/WebView'da window.location'dan daha güvenilir -->
+      <a class="btn-open" href="{{ app_scheme }}" id="btnOpen">Uygulamada Aç</a>
       <a class="btn-web" href="{{ web_url }}" id="btnWeb">Web'de Devam Et</a>
       <div class="status" id="status"></div>
     </div>
@@ -100,7 +101,7 @@
     (function () {
       var IOS_STORE     = 'https://apps.apple.com/tr/app/teqlif/id6744777483';
       var ANDROID_STORE = 'https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile';
-      var appScheme     = '{{ app_scheme }}';   // teqlif://yayin/123 vb.
+      var appScheme     = '{{ app_scheme }}';
 
       var ua        = navigator.userAgent || '';
       var isIOS     = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
@@ -113,49 +114,43 @@
       var btnWeb   = document.getElementById('btnWeb');
 
       if (!isMobile) {
-        // Masaüstü: "Uygulamada Aç" butonu gizle, sadece web link göster
-        btnOpen.style.display = 'none';
-        btnWeb.style.color    = '#06b6d4';
+        btnOpen.style.display    = 'none';
+        btnWeb.style.color       = '#06b6d4';
         btnWeb.style.borderColor = '#06b6d4';
         return;
       }
 
-      // Mobil: otomatik olarak uygulama açmayı dene
-      function tryOpenApp() {
+      /**
+       * Butona tıklandığında:
+       * 1. <a href="teqlif://..."> tarayıcı tarafından takip edilir (en güvenilir yöntem)
+       * 2. Aynı anda bir de fallback timer başlatılır
+       * 3. Sayfa gizlenirse (uygulama açıldı) timer iptal edilir
+       * 4. 2s içinde sayfa hâlâ görünürdeyse → uygulama yok → store'a git
+       */
+      btnOpen.addEventListener('click', function () {
+        status.textContent = 'Uygulama açılıyor…';
+
         var appOpened = false;
 
-        document.addEventListener('visibilitychange', function onVis() {
+        function onHide() {
           if (document.hidden) {
             appOpened = true;
-            document.removeEventListener('visibilitychange', onVis);
+            document.removeEventListener('visibilitychange', onHide);
           }
-        });
+        }
+        document.addEventListener('visibilitychange', onHide);
 
-        window.location = appScheme;
+        // Ek güvenlik: bazı WebView'larda href yetmez, window.location da dene
+        try { window.location = appScheme; } catch (e) {}
 
         setTimeout(function () {
+          document.removeEventListener('visibilitychange', onHide);
           if (!appOpened && !document.hidden) {
-            // Uygulama kurulu değil → store'a yönlendir
-            status.textContent = 'Uygulama bulunamadı, mağazaya yönlendiriliyor...';
-            setTimeout(function () { window.location = storeUrl; }, 600);
+            status.textContent = 'Uygulama bulunamadı, mağazaya yönlendiriliyor…';
+            setTimeout(function () { window.location = storeUrl; }, 700);
           }
-        }, 1500);
-      }
-
-      btnOpen.addEventListener('click', function () {
-        status.textContent = 'Uygulama açılıyor...';
-        tryOpenApp();
+        }, 2000);
       });
-
-      // Sayfa yüklenince otomatik dene (kullanıcı etkileşimi olmadan
-      // custom scheme açmak bazı tarayıcılarda engellenir, bu yüzden
-      // btn.click() ile simüle ediyoruz)
-      // Sadece sayfa arka planda değilse dene
-      if (!document.hidden) {
-        setTimeout(function () {
-          btnOpen.click();
-        }, 400);
-      }
     })();
   </script>
 </body>
