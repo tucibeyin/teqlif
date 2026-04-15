@@ -92,7 +92,7 @@
       <div class="desc">{{ og_description }}</div>
       <a class="btn-open" href="{{ app_scheme }}" id="btnOpen">Uygulamada Aç</a>
       <a class="btn-web" href="{{ web_url }}" id="btnWeb">Web'de Devam Et</a>
-      <div class="status" id="status">Açılıyor…</div>
+      <div class="status" id="status"></div>
     </div>
   </div>
 
@@ -122,57 +122,36 @@
       }
 
       // ── Mobil ─────────────────────────────────────────────────────────
-      // Durum makinesi: opening → opened | notfound
-      var state = 'opening';
+      // Universal Links uygulamayı zaten açıyor.
+      // Bu sayfa sadece uygulama kurulu olmadığında veya IAB'de gösteriliyor.
+      // autoOpen() KALDIRILDI — iOS sistem dialogunu tetikliyordu.
 
-      function setState(s) {
-        state = s;
-        if (s === 'opened') {
-          // Uygulama açıldı — butonu "Uygulamaya Geri Dön" olarak güncelle
-          btnOpen.textContent    = 'Uygulamaya Geri Dön';
-          btnOpen.href           = appScheme;
-          status.textContent     = 'Uygulama açıldı.';
-        } else if (s === 'notfound') {
-          btnOpen.textContent    = 'Uygulamayı İndir';
-          btnOpen.href           = storeUrl;
-          status.textContent     = 'teqlif uygulaması bulunamadı.';
-        }
-      }
-
-      // Sayfa gizlenirse → uygulama açıldı
-      document.addEventListener('visibilitychange', function () {
-        if (document.hidden && state === 'opening') {
-          setState('opened');
-        }
-      });
-
-      // Sayfa odağını yitirirse (bazı tarayıcılarda hidden yerine blur gelir)
-      window.addEventListener('blur', function () {
-        if (state === 'opening') setState('opened');
-      });
-
-      // Otomatik açma — kullanıcı müdahalesi beklenmeksizin hemen dene.
-      // <a href> native olarak takip edilir; window.location ek güvence.
-      function autoOpen() {
-        try { window.location = appScheme; } catch (e) {}
-
-        // 2.5s sonra hâlâ açılmadıysa → uygulama kurulu değil
-        setTimeout(function () {
-          if (state === 'opening') setState('notfound');
-        }, 2500);
-      }
-
-      // Buton tıklaması da aynı mantığı çalıştırır (ek deneme)
+      // "Uygulamada Aç" butonuna tıklanınca: scheme dene, 2.5s sonra kurulu
+      // değilse store'a git.
       btnOpen.addEventListener('click', function (e) {
-        if (state === 'notfound') return; // store linkine gidecek, engelleme
         e.preventDefault();
-        state = 'opening';
         status.textContent = 'Açılıyor…';
-        autoOpen();
-      });
 
-      // Sayfa yüklenince otomatik tetikle
-      autoOpen();
+        var appOpened = false;
+        document.addEventListener('visibilitychange', function onVis() {
+          if (document.hidden) {
+            appOpened = true;
+            btnOpen.textContent = 'Uygulamaya Geri Dön';
+            status.textContent  = '';
+            document.removeEventListener('visibilitychange', onVis);
+          }
+        });
+
+        try { window.location = appScheme; } catch (e2) {}
+
+        setTimeout(function () {
+          if (!appOpened && !document.hidden) {
+            btnOpen.textContent = 'Uygulamayı İndir';
+            btnOpen.href        = storeUrl;
+            status.textContent  = 'Uygulama bulunamadı.';
+          }
+        }, 2500);
+      });
     })();
   </script>
 </body>
