@@ -1,5 +1,10 @@
     const _nextUrl = new URLSearchParams(location.search).get('next') || '/';
-    if (Auth.getToken()) window.location.href = _nextUrl;
+    if (Auth.getToken()) { window.location.href = _nextUrl; }
+    else if (Auth.getUser()) {
+        // Kullanıcı adı localStorage'da var ama token yok → oturum sona ermiş.
+        // Refresh cookie hâlâ geçerliyse sessizce yenile ve devam et.
+        Auth.tryRefresh().then(ok => { if (ok) window.location.href = _nextUrl; });
+    }
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
