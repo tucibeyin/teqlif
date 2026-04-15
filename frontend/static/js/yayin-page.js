@@ -40,32 +40,31 @@
     }
 
     async function init() {
-        if (!Auth.getToken()) {
-            const refreshed = await Auth.tryRefresh();
-            if (!refreshed) {
-                window.location.href = '/giris.html?next=' + encodeURIComponent(window.location.href);
-                return;
-            }
-        }
-
         let info = Stream.load();
 
         // Session'da bilgi yoksa ya da ID uyuşmuyorsa — direkt URL ile gelen viewer
+        // getToken() kontrolü YOK: apiFetch credentials:include ile HttpOnly cookie'yi
+        // otomatik gönderir; 401 alırsa tryRefresh() + retry yapar.
         if ((!info || (streamIdParam && info.stream_id !== streamIdParam)) && streamIdParam) {
             try {
                 setStatus('Yayına bağlanılıyor...');
                 await Stream.joinStream(streamIdParam);
                 info = Stream.load();
             } catch (err) {
-                setStatus('Yayına katılınamadı: ' + (err?.message || 'Bilinmeyen hata'), true);
-                setTimeout(() => window.location.href = '/', 2000);
+                // joinStream 401 → apiFetch tryRefresh başarısız → kullanıcı giriş yapmalı
+                window.location.href = '/giris.html?next=' + encodeURIComponent(window.location.href);
                 return;
             }
         }
 
+        // streamIdParam olmadan gelindi ama session da yok → giriş gerekli
         if (!info) {
-            setStatus('Oturum bilgisi bulunamadı. Yeniden yönlendiriliyor...', true);
-            setTimeout(() => window.location.href = '/', 2000);
+            if (!Auth.getToken()) {
+                window.location.href = '/giris.html?next=' + encodeURIComponent(window.location.href);
+            } else {
+                setStatus('Oturum bilgisi bulunamadı. Yeniden yönlendiriliyor...', true);
+                setTimeout(() => window.location.href = '/', 2000);
+            }
             return;
         }
 
