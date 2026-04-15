@@ -34,9 +34,12 @@ const Auth = (() => {
 
     function _save(data) {
         _memToken = data.access_token || null;
-        if (_memToken) sessionStorage.setItem(_SS_TOKEN, _memToken);
-        // Eski localStorage token'larını temizle
-        localStorage.removeItem(_TOKEN_KEY);
+        if (_memToken) {
+            sessionStorage.setItem(_SS_TOKEN, _memToken);
+            // localStorage'a da yaz: yeni tab / WhatsApp IAB gibi
+            // sessionStorage'ın boş geldiği bağlamlarda token bulunabilsin
+            localStorage.setItem(_TOKEN_KEY, _memToken);
+        }
         localStorage.removeItem(_REFRESH_KEY);
         if (data.user) localStorage.setItem(USER_KEY, JSON.stringify(data.user));
     }
@@ -69,7 +72,7 @@ const Auth = (() => {
             if (!data?.access_token) { return false; }
             _memToken = data.access_token;
             sessionStorage.setItem(_SS_TOKEN, _memToken);
-            localStorage.removeItem(_TOKEN_KEY);
+            localStorage.setItem(_TOKEN_KEY, _memToken);
             localStorage.removeItem(_REFRESH_KEY);
             return true;
         } catch (err) {
