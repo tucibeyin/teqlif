@@ -127,6 +127,11 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   /// Hem cold-start (pending) hem warm/hot start (uriStream) için kullanılır.
   void _handleDeepLink(Uri uri) {
     if (!mounted) return;
+
+    // Aynı URI kısa sürede tekrar geldiyse (WhatsApp IAB + Universal Link
+    // çakışması gibi durumlarda) ikinci işlemi yoksay.
+    if (!DeepLinkService.shouldHandle(uri)) return;
+
     final segments = uri.pathSegments;
     if (segments.length < 2) return;
 
@@ -150,9 +155,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       case 'yayin':
         final id = int.tryParse(param);
         if (id != null) {
-          Navigator.of(context).push(MaterialPageRoute(
-            builder: (_) => SwipeLiveScreen.single(streamId: id),
-          ));
+          // Stack'teki mevcut SwipeLiveScreen'leri temizle, yenisini push et.
+          // Böylece aynı yayına birden fazla kez girildiğinde çakışma olmaz.
+          Navigator.of(context).pushAndRemoveUntil(
+            MaterialPageRoute(
+              builder: (_) => SwipeLiveScreen.single(streamId: id),
+            ),
+            (route) => route.settings.name == '/home' || route.isFirst,
+          );
         }
         break;
     }
