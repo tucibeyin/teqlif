@@ -51,8 +51,16 @@
                 await Stream.joinStream(streamIdParam);
                 info = Stream.load();
             } catch (err) {
-                // joinStream 401 → apiFetch tryRefresh başarısız → kullanıcı giriş yapmalı
-                window.location.href = '/giris.html?next=' + encodeURIComponent(window.location.href);
+                console.error('[yayin] joinStream hatası:', err);
+                const status = err?.status ?? err?.error?.status;
+                const code   = err?.error?.code ?? err?.code ?? '';
+                const isAuth = status === 401 || code === 'UNAUTHORIZED' || code === 'NOT_AUTHENTICATED';
+                if (isAuth) {
+                    window.location.href = '/giris.html?next=' + encodeURIComponent(window.location.href);
+                } else {
+                    setStatus('Yayına katılınamadı: ' + (err?.error?.message ?? err?.message ?? JSON.stringify(err)), true);
+                    setTimeout(() => window.location.href = '/', 3000);
+                }
                 return;
             }
         }
