@@ -1,4 +1,5 @@
-    if (Auth.getToken()) window.location.href = '/';
+    const _nextUrl = new URLSearchParams(location.search).get('next') || '/';
+    if (Auth.getToken()) window.location.href = _nextUrl;
 
     document.getElementById('loginForm').addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -14,7 +15,7 @@
                 document.getElementById('email').value,
                 document.getElementById('password').value
             );
-            window.location.href = '/';
+            window.location.href = _nextUrl;
         } catch (err) {
             if (err.error?.code === 'EMAIL_NOT_VERIFIED') {
                 const email = document.getElementById('email').value.trim();
