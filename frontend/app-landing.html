@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>{{ og_title }}</title>
+
+  <!-- OpenGraph / Sosyal Medya Meta -->
+  <meta property="og:type"        content="website">
+  <meta property="og:site_name"   content="teqlif">
+  <meta property="og:locale"      content="tr_TR">
+  <meta property="og:title"       content="{{ og_title }}">
+  <meta property="og:description" content="{{ og_description }}">
+  <meta property="og:image"       content="{{ og_image }}">
+  <meta property="og:url"         content="{{ og_url }}">
+  <meta name="twitter:card"       content="summary_large_image">
+  <meta name="twitter:title"      content="{{ og_title }}">
+  <meta name="twitter:description" content="{{ og_description }}">
+  <meta name="twitter:image"      content="{{ og_image }}">
+  <meta name="description"        content="{{ og_description }}">
+
+  <link rel="icon" type="image/x-icon" href="/static/icons/favicon.ico">
+  <link rel="apple-touch-icon"    href="/static/icons/icon-192.png">
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body {
+      height: 100%;
+      background: #0f172a;
+      color: #f1f5f9;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .card {
+      max-width: 400px; width: 90%;
+      background: #1e293b;
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 24px 64px rgba(0,0,0,.5);
+    }
+    .thumb {
+      width: 100%; aspect-ratio: 16/9; object-fit: cover;
+      background: #334155;
+      display: block;
+    }
+    .thumb-placeholder {
+      width: 100%; aspect-ratio: 16/9;
+      background: linear-gradient(135deg, #0891b2 0%, #7c3aed 100%);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 48px;
+    }
+    .body { padding: 24px; }
+    .brand {
+      display: flex; align-items: center; gap: 8px;
+      margin-bottom: 16px;
+    }
+    .brand img { width: 28px; height: 28px; border-radius: 7px; }
+    .brand span { font-size: 13px; color: #94a3b8; font-weight: 600; letter-spacing: .5px; text-transform: uppercase; }
+    .title { font-size: 18px; font-weight: 700; line-height: 1.35; margin-bottom: 8px; }
+    .desc  { font-size: 13px; color: #94a3b8; line-height: 1.5; margin-bottom: 24px;
+             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+    .btn-open {
+      display: block; width: 100%; padding: 14px;
+      background: #06b6d4; color: #fff; border: none; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer; text-align: center;
+      text-decoration: none; margin-bottom: 10px;
+      transition: background .15s;
+    }
+    .btn-open:active { background: #0891b2; }
+    .btn-web {
+      display: block; width: 100%; padding: 13px;
+      background: transparent; color: #64748b; border: 1.5px solid #334155; border-radius: 12px;
+      font-size: 14px; font-weight: 600; cursor: pointer; text-align: center;
+      text-decoration: none;
+    }
+    .status { font-size: 12px; color: #475569; text-align: center; margin-top: 12px; min-height: 18px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    {% if og_image %}
+    <img class="thumb" src="{{ og_image }}" alt="{{ og_title }}" onerror="this.style.display='none'">
+    {% else %}
+    <div class="thumb-placeholder">📦</div>
+    {% endif %}
+    <div class="body">
+      <div class="brand">
+        <img src="/static/icons/icon-192.png" alt="teqlif">
+        <span>teqlif</span>
+      </div>
+      <div class="title">{{ og_title }}</div>
+      <div class="desc">{{ og_description }}</div>
+      <button class="btn-open" id="btnOpen">Uygulamada Aç</button>
+      <a class="btn-web" href="{{ web_url }}" id="btnWeb">Web'de Devam Et</a>
+      <div class="status" id="status"></div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var IOS_STORE     = 'https://apps.apple.com/tr/app/teqlif/id6744777483';
+      var ANDROID_STORE = 'https://play.google.com/store/apps/details?id=com.teqlif.teqlif_mobile';
+      var appScheme     = '{{ app_scheme }}';   // teqlif://yayin/123 vb.
+
+      var ua        = navigator.userAgent || '';
+      var isIOS     = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+      var isAndroid = /Android/i.test(ua);
+      var isMobile  = isIOS || isAndroid;
+
+      var storeUrl = isIOS ? IOS_STORE : ANDROID_STORE;
+      var status   = document.getElementById('status');
+      var btnOpen  = document.getElementById('btnOpen');
+      var btnWeb   = document.getElementById('btnWeb');
+
+      if (!isMobile) {
+        // Masaüstü: "Uygulamada Aç" butonu gizle, sadece web link göster
+        btnOpen.style.display = 'none';
+        btnWeb.style.color    = '#06b6d4';
+        btnWeb.style.borderColor = '#06b6d4';
+        return;
+      }
+
+      // Mobil: otomatik olarak uygulama açmayı dene
+      function tryOpenApp() {
+        var appOpened = false;
+
+        document.addEventListener('visibilitychange', function onVis() {
+          if (document.hidden) {
+            appOpened = true;
+            document.removeEventListener('visibilitychange', onVis);
+          }
+        });
+
+        window.location = appScheme;
+
+        setTimeout(function () {
+          if (!appOpened && !document.hidden) {
+            // Uygulama kurulu değil → store'a yönlendir
+            status.textContent = 'Uygulama bulunamadı, mağazaya yönlendiriliyor...';
+            setTimeout(function () { window.location = storeUrl; }, 600);
+          }
+        }, 1500);
+      }
+
+      btnOpen.addEventListener('click', function () {
+        status.textContent = 'Uygulama açılıyor...';
+        tryOpenApp();
+      });
+
+      // Sayfa yüklenince otomatik dene (kullanıcı etkileşimi olmadan
+      // custom scheme açmak bazı tarayıcılarda engellenir, bu yüzden
+      // btn.click() ile simüle ediyoruz)
+      // Sadece sayfa arka planda değilse dene
+      if (!document.hidden) {
+        setTimeout(function () {
+          btnOpen.click();
+        }, 400);
+      }
+    })();
+  </script>
+</body>
+</html>

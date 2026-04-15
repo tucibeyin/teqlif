@@ -370,9 +370,10 @@ if os.path.exists(frontend_dir):
             return HTMLResponse(
                 "<h1>404 — İlan bulunamadı</h1>", status_code=404
             )
-        return templates.TemplateResponse(
-            request, "ilan.html", _listing_og(listing, listing_id)
-        )
+        ctx = _listing_og(listing, listing_id)
+        ctx["app_scheme"] = f"teqlif://ilan/{listing_id}"
+        ctx["web_url"]    = f"/ilan.html?id={listing_id}"
+        return templates.TemplateResponse(request, "app-landing.html", ctx)
 
     @app.get("/profil/{username}", include_in_schema=False)
     async def serve_profile_page(request: Request, username: str):
@@ -384,9 +385,10 @@ if os.path.exists(frontend_dir):
             return HTMLResponse(
                 "<h1>404 — Kullanıcı bulunamadı</h1>", status_code=404
             )
-        return templates.TemplateResponse(
-            request, "profil.html", _user_og(user)
-        )
+        ctx = _user_og(user)
+        ctx["app_scheme"] = f"teqlif://profil/{user.username}"
+        ctx["web_url"]    = f"/profil.html?u={user.username}"
+        return templates.TemplateResponse(request, "app-landing.html", ctx)
 
     @app.get("/mesajlar", include_in_schema=False)
     async def serve_messages_page():
@@ -411,13 +413,15 @@ if os.path.exists(frontend_dir):
                 "<h1>404 — Yayın bulunamadı</h1>", status_code=404
             )
         og_image = stream.thumbnail_url or _DEFAULT_OG_IMAGE
-        context = {
-            "og_title": f"{stream.title} — teqlif Canlı",
+        ctx = {
+            "og_title":       f"{stream.title} — teqlif Canlı",
             "og_description": "teqlif'te canlı yayın izle ve açık artırmaya katıl.",
-            "og_image": og_image,
-            "og_url": f"https://teqlif.com/yayin/{stream_id}",
+            "og_image":        og_image,
+            "og_url":         f"https://www.teqlif.com/yayin/{stream_id}",
+            "app_scheme":     f"teqlif://yayin/{stream_id}",
+            "web_url":        f"/yayin.html?id={stream_id}",
         }
-        return templates.TemplateResponse(request, "yayin.html", context)
+        return templates.TemplateResponse(request, "app-landing.html", ctx)
 
     @app.get("/{page}.html", include_in_schema=False)
     async def serve_page(page: str):
