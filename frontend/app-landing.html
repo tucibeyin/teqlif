@@ -114,10 +114,7 @@
 
       // ── Masaüstü ──────────────────────────────────────────────────────
       if (!isMobile) {
-        btnOpen.style.display    = 'none';
-        btnWeb.style.color       = '#06b6d4';
-        btnWeb.style.borderColor = '#06b6d4';
-        status.textContent       = '';
+        window.location.replace(btnWeb.href);
         return;
       }
 

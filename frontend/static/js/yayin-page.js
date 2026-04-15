@@ -41,14 +41,29 @@
 
     async function init() {
         if (!Auth.getToken()) {
-            window.location.href = '/giris.html';
-            return;
+            const refreshed = await Auth.tryRefresh();
+            if (!refreshed) {
+                window.location.href = '/giris.html?next=' + encodeURIComponent(window.location.href);
+                return;
+            }
         }
 
-        const info = Stream.load();
+        let info = Stream.load();
 
-        // Session'da bilgi yoksa ya da ID uyuşmuyorsa
-        if (!info || (streamIdParam && info.stream_id !== streamIdParam)) {
+        // Session'da bilgi yoksa ya da ID uyuşmuyorsa — direkt URL ile gelen viewer
+        if ((!info || (streamIdParam && info.stream_id !== streamIdParam)) && streamIdParam) {
+            try {
+                setStatus('Yayına bağlanılıyor...');
+                await Stream.joinStream(streamIdParam);
+                info = Stream.load();
+            } catch (err) {
+                setStatus('Yayına katılınamadı: ' + (err?.message || 'Bilinmeyen hata'), true);
+                setTimeout(() => window.location.href = '/', 2000);
+                return;
+            }
+        }
+
+        if (!info) {
             setStatus('Oturum bilgisi bulunamadı. Yeniden yönlendiriliyor...', true);
             setTimeout(() => window.location.href = '/', 2000);
             return;
