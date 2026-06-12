@@ -11,6 +11,7 @@ import '../core/logger_service.dart';
 import '../l10n/app_localizations.dart';
 import '../models/chat.dart';
 import '../screens/public_profile_screen.dart';
+import '../services/auth_service.dart';
 import '../services/storage_service.dart';
 import '../utils/username_color.dart';
 
@@ -23,7 +24,7 @@ class _ChatWsManager {
   final String wsUrl;
   final String token;
   final void Function(dynamic data) onData;
-  final void Function() onDone;
+  final void Function(int? closeCode) onDone;
 
   WebSocketChannel? _channel;
   StreamSubscription? _sub;
@@ -67,9 +68,10 @@ class _ChatWsManager {
   }
 
   void _handleDisconnect() {
+    final closeCode = _channel?.closeCode;
     _heartbeat?.cancel();
     _sub?.cancel();
-    onDone();
+    onDone(closeCode);
   }
 
   void send(Map<String, dynamic> payload) {
@@ -336,12 +338,13 @@ class ChatPanelState extends State<ChatPanel> {
   }
 
   void _connectWS() {
-    if (!mounted || _token == null) return;
+    if (!mounted) return;
+    if (_token == null) return;
     _ws?.dispose();
     _ws = _ChatWsManager(
       wsUrl: '$_wsBaseUrl/chat/${widget.streamId}/ws',
       token: _token!,
-      onDone: _scheduleReconnect,
+      onDone: (closeCode) => _scheduleReconnect(closeCode: closeCode),
       onData: (data) {
         if (!mounted) return;
           String? _eventType;
@@ -504,12 +507,36 @@ class ChatPanelState extends State<ChatPanel> {
     _ws!.connect();
   }
 
-  void _scheduleReconnect() {
+  void _scheduleReconnect({int? closeCode}) {
     if (_streamEnded || !mounted) return;
+    if (closeCode == 4001) {
+      _reconnectAfterAuthError();
+      return;
+    }
     _ws?.scheduleReconnect(
       shouldReconnect: () => mounted && !_streamEnded,
       reconnect: _connectWS,
     );
+  }
+
+  Future<void> _reconnectAfterAuthError() async {
+    // WsService muhtemelen token'ı yeniliyordur — biraz bekle
+    await Future.delayed(const Duration(seconds: 2));
+    if (!mounted || _streamEnded) return;
+    final freshToken = await StorageService.getToken();
+    if (freshToken == null) return;
+    if (freshToken == _token) {
+      // WsService yenileyemediyse biz deneyelim
+      final ok = await AuthService.tryRefresh();
+      if (!ok) {
+        debugPrint('[CHAT WS] Token yenilenemedi');
+        return;
+      }
+      _token = await StorageService.getToken();
+    } else {
+      _token = freshToken;
+    }
+    if (mounted && !_streamEnded) _connectWS();
   }
 
   void _sendMessage() {

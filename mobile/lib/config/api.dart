@@ -2,30 +2,12 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../core/app_exception.dart';
 import '../core/logger_service.dart';
-import '../services/storage_service.dart';
+import '../services/auth_service.dart';
 
 const String kBaseUrl = 'https://www.teqlif.com/api';
 
-Future<bool> _tryRefreshOnce() async {
-  final rt = await StorageService.getRefreshToken();
-  if (rt == null) return false;
-  try {
-    final resp = await http.post(
-      Uri.parse('$kBaseUrl/auth/refresh'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({'refresh_token': rt}),
-    );
-    if (resp.statusCode != 200) return false;
-    final body = jsonDecode(resp.body) as Map<String, dynamic>;
-    await Future.wait([
-      StorageService.saveToken(body['access_token'] as String),
-      StorageService.saveRefreshToken(body['refresh_token'] as String),
-    ]);
-    return true;
-  } catch (_) {
-    return false;
-  }
-}
+// AuthService.tryRefresh() mutex'ini kullanarak çift refresh'i önler
+Future<bool> _tryRefreshOnce() => AuthService.tryRefresh();
 const String kBaseHost = 'https://www.teqlif.com';
 
 /// /uploads/... → https://teqlif.com/uploads/...

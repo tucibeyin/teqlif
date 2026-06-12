@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
@@ -8,6 +9,8 @@ import 'storage_service.dart';
 final _log = LoggerService.instance;
 
 class AuthService {
+  // Aynı anda birden fazla refresh isteği olmasın (race condition önlemi)
+  static Completer<bool>? _refreshInProgress;
   static Future<Map<String, String>> _headers({bool auth = false}) async {
     final headers = {'Content-Type': 'application/json'};
     if (auth) {
@@ -105,25 +108,41 @@ class AuthService {
   }
 
   /// Access token süresi dolduğunda yeni token çifti alır.
+  /// Aynı anda birden fazla çağrı olursa ilk çağrının sonucunu beklerler (mutex).
   /// Başarısız olursa false döner (logout gerekli).
   static Future<bool> tryRefresh() async {
+    // Halihazırda refresh yapılıyorsa sonucunu bekle
+    if (_refreshInProgress != null) {
+      return _refreshInProgress!.future;
+    }
+
     final rt = await StorageService.getRefreshToken();
     if (rt == null) return false;
+
+    _refreshInProgress = Completer<bool>();
     try {
       final resp = await http.post(
         Uri.parse('$kBaseUrl/auth/refresh'),
         headers: {'Content-Type': 'application/json'},
         body: jsonEncode({'refresh_token': rt}),
       );
-      if (resp.statusCode != 200) return false;
+      if (resp.statusCode != 200) {
+        _refreshInProgress!.complete(false);
+        _refreshInProgress = null;
+        return false;
+      }
       final body = jsonDecode(resp.body) as Map<String, dynamic>;
       await Future.wait([
         StorageService.saveToken(body['access_token'] as String),
         StorageService.saveRefreshToken(body['refresh_token'] as String),
       ]);
+      _refreshInProgress!.complete(true);
+      _refreshInProgress = null;
       return true;
     } catch (e, st) {
       _log.captureException(e, stackTrace: st, tag: 'AuthService.tryRefresh');
+      _refreshInProgress!.complete(false);
+      _refreshInProgress = null;
       return false;
     }
   }

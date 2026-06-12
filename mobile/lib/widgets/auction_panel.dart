@@ -65,6 +65,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   bool _iAmBinBuyer = false;
   // Hızlı açık artırma sayacı — her yayın oturumunda Ürün 1, 2, 3... üretir
   int _quickAuctionCount = 0;
+  bool _quickAuctionLoading = false;
 
   @override
   void dispose() {
@@ -89,6 +90,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
   }
 
   Future<void> _startQuickAuction() async {
+    if (_quickAuctionLoading) return;
+    setState(() => _quickAuctionLoading = true);
     _quickAuctionCount++;
     try {
       await AuctionService.startAuction(
@@ -96,9 +99,12 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
         itemName: 'Ürün $_quickAuctionCount',
         startPrice: 1.0,
       );
+      _setMsg('Açık artırma başlatıldı');
     } catch (e) {
       _quickAuctionCount--;
       _setMsg(_cleanErr(e), error: true);
+    } finally {
+      if (mounted) setState(() => _quickAuctionLoading = false);
     }
   }
 
@@ -621,7 +627,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     final l = AppLocalizations.of(context)!;
     if (state.isIdle || state.isEnded) {
       return Row(mainAxisSize: MainAxisSize.min, children: [
-        _pillIconBtn(Icons.bolt_rounded, 'Hızlı', Colors.orange, _startQuickAuction),
+        _pillIconBtn(Icons.bolt_rounded, 'Hızlı', _quickAuctionLoading ? Colors.orange.withAlpha(100) : Colors.orange, _quickAuctionLoading ? null : _startQuickAuction),
         const SizedBox(width: 6),
         _pillBtn(l.auctionStartBtn, Colors.green, _showStartDialog),
       ]);
@@ -961,7 +967,7 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     );
   }
 
-  Widget _pillIconBtn(IconData icon, String label, Color color, VoidCallback onTap) {
+  Widget _pillIconBtn(IconData icon, String label, Color color, VoidCallback? onTap) {
     return GestureDetector(
       onTap: onTap,
       child: Container(

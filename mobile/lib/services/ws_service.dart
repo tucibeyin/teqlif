@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart'; // Lifecycle dinleyicisi için eklendi
 import 'package:web_socket_channel/web_socket_channel.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
 import '../config/api.dart';
+import 'auth_service.dart';
 import 'storage_service.dart';
 
 /// Uygulamanın arka plan/ön plan durumunu dinleyen özel sınıf
@@ -160,11 +161,28 @@ class WsService {
   }
 
   static void _onDisconnected() {
+    final closeCode = _channel?.closeCode;
     _pingTimer?.cancel();
     _channelSub?.cancel();
     _channel = null;
-    debugPrint('[WS] Bağlantı kesildi');
-    if (_shouldStay) _scheduleReconnect();
+    debugPrint('[WS] Bağlantı kesildi (code: $closeCode)');
+    if (!_shouldStay) return;
+    if (closeCode == 4001) {
+      _refreshAndReconnect();
+    } else {
+      _scheduleReconnect();
+    }
+  }
+
+  static Future<void> _refreshAndReconnect() async {
+    final ok = await AuthService.tryRefresh();
+    if (ok) {
+      debugPrint('[WS] Token yenilendi, yeniden bağlanılıyor');
+      _scheduleReconnect();
+    } else {
+      debugPrint('[WS] Token yenilenemedi, yeniden bağlanılmayacak');
+      _shouldStay = false;
+    }
   }
 
   static void _scheduleReconnect() {
