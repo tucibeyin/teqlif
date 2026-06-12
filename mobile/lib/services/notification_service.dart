@@ -41,9 +41,9 @@ class NotificationService {
 
   /// Bildirim listesi — ağ hatası durumunda boş liste döner (graceful degrade).
   static Future<List<dynamic>> getNotifications() async {
-    final resp = await http.get(Uri.parse('$kBaseUrl/notifications/'), headers: await _headers());
-    if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
-    throw Exception('getNotifications HTTP ${resp.statusCode}');
+    return apiCallList(
+      () async => http.get(Uri.parse('$kBaseUrl/notifications/'), headers: await _headers()),
+    );
   }
 
   /// Tümünü okundu işaretle — sessizce başarısız olabilir (background işlem).
@@ -59,20 +59,21 @@ class NotificationService {
 
   /// Konuşma listesi — hata durumunda exception fırlatır (SWR caller yakalar).
   static Future<List<dynamic>> getConversations() async {
-    final resp = await http.get(Uri.parse('$kBaseUrl/messages/conversations'), headers: await _headers());
-    if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
-    throw Exception('getConversations HTTP ${resp.statusCode}');
+    return apiCallList(
+      () async => http.get(Uri.parse('$kBaseUrl/messages/conversations'), headers: await _headers()),
+    );
   }
 
   /// Mesaj geçmişi — ağ hatası durumunda boş liste döner (graceful degrade).
   static Future<List<dynamic>> getMessages(int otherUserId) async {
     try {
-      final resp = await http.get(Uri.parse('$kBaseUrl/messages/$otherUserId'), headers: await _headers());
-      if (resp.statusCode == 200) return jsonDecode(resp.body) as List;
+      return await apiCallList(
+        () async => http.get(Uri.parse('$kBaseUrl/messages/$otherUserId'), headers: await _headers()),
+      );
     } catch (e) {
       LoggerService.instance.warning('NotificationService', 'Mesajlar alınamadı: $e');
+      return [];
     }
-    return [];
   }
 
   /// Kullanıcı bilgisi — ağ hatası durumunda null döner (graceful degrade).

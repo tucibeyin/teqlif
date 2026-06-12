@@ -121,3 +121,54 @@ Future<Map<String, dynamic>> apiCall(
     );
   }
 }
+
+/// Liste döndüren endpoint'ler için [apiCall] muadili.
+/// 401 → token yenile → bir kez retry mekanizması dahildir.
+Future<List<dynamic>> apiCallList(
+  Future<http.Response> Function() request, {
+  bool retried = false,
+}) async {
+  try {
+    final response = await request();
+
+    if (response.statusCode == 401 && !retried) {
+      final refreshed = await _tryRefreshOnce();
+      if (refreshed) return apiCallList(request, retried: true);
+    }
+
+    if (response.statusCode >= 400) {
+      try {
+        final body = jsonDecode(response.body) as Map<String, dynamic>;
+        _parseErrorBody(body, response.statusCode); // her zaman throw eder
+      } catch (e) {
+        if (e is AppException) rethrow;
+        final gatewayErr = _parseGatewayError(response);
+        if (gatewayErr != null) throw gatewayErr;
+        throw AppException(
+          'Sunucu geçersiz yanıt döndürdü',
+          code: 'INVALID_RESPONSE',
+          statusCode: response.statusCode,
+        );
+      }
+    }
+
+    try {
+      return jsonDecode(response.body) as List<dynamic>;
+    } catch (_) {
+      return [];
+    }
+  } on AppException {
+    rethrow;
+  } catch (e, stack) {
+    LoggerService.instance.captureException(
+      e,
+      stackTrace: stack,
+      tag: 'apiCallList',
+    );
+    throw AppException(
+      'Sunucuya ulaşılamıyor veya internet bağlantınız kopuk. Lütfen daha sonra tekrar deneyin.',
+      code: 'NETWORK_ERROR',
+      statusCode: 0,
+    );
+  }
+}
