@@ -94,11 +94,12 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     setState(() => _quickAuctionLoading = true);
     _quickAuctionCount++;
     try {
-      await AuctionService.startAuction(
+      final newState = await AuctionService.startAuction(
         widget.streamId,
         itemName: 'Ürün $_quickAuctionCount',
         startPrice: 1.0,
       );
+      ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
       _setMsg('Açık artırma başlatıldı');
     } catch (e) {
       _quickAuctionCount--;
@@ -116,13 +117,14 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
     if (result == null) return;
     try {
-      await AuctionService.startAuction(
+      final newState = await AuctionService.startAuction(
         widget.streamId,
         itemName: result['item'] as String?,
         startPrice: result['price'] as double?,
         listingId: result['listing_id'] as int?,
         buyItNowPrice: result['bin_price'] as double?,
       );
+      ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
     }
@@ -130,7 +132,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Future<void> _pauseAuction() async {
     try {
-      await AuctionService.pauseAuction(widget.streamId);
+      final newState = await AuctionService.pauseAuction(widget.streamId);
+      ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
     }
@@ -138,7 +141,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
 
   Future<void> _resumeAuction() async {
     try {
-      await AuctionService.resumeAuction(widget.streamId);
+      final newState = await AuctionService.resumeAuction(widget.streamId);
+      ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
     }
@@ -223,7 +227,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     );
     if (ok != true) return;
     try {
-      await AuctionService.acceptBid(widget.streamId);
+      final newState = await AuctionService.acceptBid(widget.streamId);
+      ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
       _setMsg(l.auctionAccepted);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
@@ -259,7 +264,8 @@ class _AuctionPanelState extends ConsumerState<AuctionPanel> {
     );
     if (ok != true) return;
     try {
-      await AuctionService.endAuction(widget.streamId);
+      final newState = await AuctionService.endAuction(widget.streamId);
+      ref.read(auctionProvider(widget.streamId).notifier).applyState(newState);
     } catch (e) {
       _setMsg(_cleanErr(e), error: true);
     }

@@ -128,6 +128,12 @@ class AuctionNotifier extends StateNotifier<AuctionState> {
     });
   }
 
+  /// Host aksiyonu (start/pause/resume/end/accept) başarıyla döndüğünde
+  /// WS broadcast beklenmeden state'i anında günceller.
+  void applyState(AuctionState newState) {
+    state = newState;
+  }
+
   @override
   void dispose() {
     _reconnecting = false;
