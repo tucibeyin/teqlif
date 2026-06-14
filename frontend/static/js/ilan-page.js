@@ -1,4 +1,6 @@
-    const listingId = parseInt(location.pathname.split('/').pop(), 10);
+    // /ilan/8 veya /ilan.html?id=8 her iki URL formatını destekle
+    const _pathId = parseInt(location.pathname.split('/').pop(), 10);
+    const listingId = _pathId || parseInt(new URLSearchParams(location.search).get('id') || '0', 10);
 
     // Mobil ziyaretçilere "Uygulamada Aç" banner'ı göster
     if (listingId && typeof teqlifAppRedirect === 'function') {

@@ -353,6 +353,17 @@ def _user_og(user: User) -> dict:
     }
 
 
+def _is_desktop_browser(request: Request) -> bool:
+    """Masaüstü tarayıcı mı? Bot ve mobil cihazlar için False döner."""
+    ua = request.headers.get("user-agent", "").lower()
+    mobile_kw = ("android", "iphone", "ipad", "ipod", "mobile", "webos", "blackberry", "windows phone")
+    bot_kw = (
+        "bot", "crawl", "spider", "facebookexternalhit", "twitterbot", "whatsapp",
+        "slack", "telegram", "discordbot", "linkedinbot", "pinterest", "curl", "python-requests",
+    )
+    return not any(kw in ua for kw in mobile_kw) and not any(kw in ua for kw in bot_kw)
+
+
 if os.path.exists(frontend_dir):
     app.mount("/static", StaticFiles(directory=os.path.join(frontend_dir, "static")), name="static")
 
@@ -370,6 +381,10 @@ if os.path.exists(frontend_dir):
             return HTMLResponse(
                 "<h1>404 — İlan bulunamadı</h1>", status_code=404
             )
+        # Masaüstü tarayıcılar için doğrudan ilan sayfasına yönlendir
+        if _is_desktop_browser(request):
+            from fastapi.responses import RedirectResponse
+            return RedirectResponse(url=f"/ilan.html?id={listing_id}", status_code=302)
         ctx = _listing_og(listing, listing_id)
         ctx["app_scheme"] = f"teqlif://ilan/{listing_id}"
         ctx["web_url"]    = f"/ilan.html?id={listing_id}"
