@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:app_badge_plus/app_badge_plus.dart';
 import '../config/theme.dart';
+import '../services/auth_service.dart';
 import '../services/deep_link_service.dart';
 import '../services/notification_service.dart';
 import '../services/storage_service.dart';
@@ -37,6 +38,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
   StreamSubscription<Map<String, dynamic>>? _notifStreamSub;
   StreamSubscription<void>? _badgeRefreshSub;
   StreamSubscription<Uri>? _deepLinkSub;
+  StreamSubscription<void>? _authFailedSub;
 
   late final List<Widget> _screens;
 
@@ -55,9 +57,14 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _refreshBadges();
     _badgeTimer = Timer.periodic(const Duration(seconds: 30), (_) => _refreshBadges());
     _fcmSub = FirebaseMessaging.onMessage.listen((_) => _refreshBadges());
-    _notifStreamSub = PushNotificationService.notificationStream.stream.listen((_) {
+    _notifStreamSub = PushNotificationService.notificationStream.stream.listen((data) {
       _refreshBadges();
+      // FCM mesaj bildirimine tıklanınca direkt konuşmaya git
+      if (data['type'] == 'message' && data['sender_id'] != null) {
+        WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToDirectChat(data));
+      }
     });
+    _authFailedSub = AuthService.authFailedStream.stream.listen((_) => _handleAuthFailed());
     _badgeRefreshSub = PushNotificationService.badgeRefreshNeeded.stream.listen((_) {
       _refreshBadges();
     });
@@ -79,6 +86,7 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
     _notifStreamSub?.cancel();
     _badgeRefreshSub?.cancel();
     _deepLinkSub?.cancel();
+    _authFailedSub?.cancel();
     super.dispose();
   }
 
@@ -121,6 +129,29 @@ class _MainScreenState extends State<MainScreen> with WidgetsBindingObserver {
       PushNotificationService.notificationStream.add({});
       Future.delayed(const Duration(milliseconds: 300), _refreshBadges);
     }
+  }
+
+  /// Mesaj FCM bildirimine tıklanınca direkt DirectChatScreen'e git.
+  void _navigateToDirectChat(Map<String, dynamic> data) {
+    if (!mounted) return;
+    final senderId = int.tryParse(data['sender_id']?.toString() ?? '');
+    if (senderId == null) return;
+    final senderUsername = data['sender_username'] as String? ?? '';
+    setState(() => _currentIndex = 3);
+    Navigator.of(context).push(MaterialPageRoute(
+      builder: (_) => DirectChatScreen(
+        otherUserId: senderId,
+        displayName: senderUsername.isNotEmpty ? senderUsername : 'Kullanıcı',
+        otherHandle: senderUsername,
+      ),
+    ));
+  }
+
+  /// Her iki token da geçersizleştiğinde kullanıcıyı çıkış yaptır.
+  Future<void> _handleAuthFailed() async {
+    await AuthService.logout();
+    if (!mounted) return;
+    Navigator.of(context).pushNamedAndRemoveUntil('/login', (_) => false);
   }
 
   /// Deep link URL'ini parse ederek ilgili ekrana yönlendirir.

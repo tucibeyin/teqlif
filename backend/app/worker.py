@@ -56,6 +56,8 @@ async def send_push_notification_task(
     body: str | None = None,
     badge: int | None = None,
     notif_type: str | None = None,
+    extra_data: dict[str, str] | None = None,
+    image_url: str | None = None,
 ) -> None:
     """
     FCM üzerinden push bildirimi gönderir.
@@ -66,7 +68,7 @@ async def send_push_notification_task(
         return
     try:
         from app.services.firebase_service import send_push, InvalidFCMTokenError
-        await send_push(fcm_token, title, body, badge=badge, notif_type=notif_type)
+        await send_push(fcm_token, title, body, badge=badge, notif_type=notif_type, extra_data=extra_data, image_url=image_url)
         logger.info("[Worker] Push bildirimi gönderildi | token=%s…", fcm_token[:12])
     except InvalidFCMTokenError:
         # Token geçersiz/silinmiş — DB'den temizle, retry yapma

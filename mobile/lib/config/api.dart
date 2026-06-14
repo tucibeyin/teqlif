@@ -100,6 +100,8 @@ Future<Map<String, dynamic>> apiCall(
       if (response.statusCode == 401 && !retried) {
         final refreshed = await _tryRefreshOnce();
         if (refreshed) return apiCall(request, retried: true);
+        // Her iki token da geçersiz → global logout sinyali
+        AuthService.authFailedStream.add(null);
       }
       _parseErrorBody(body, response.statusCode);
     }
@@ -134,6 +136,8 @@ Future<List<dynamic>> apiCallList(
     if (response.statusCode == 401 && !retried) {
       final refreshed = await _tryRefreshOnce();
       if (refreshed) return apiCallList(request, retried: true);
+      // Her iki token da geçersiz → global logout sinyali
+      AuthService.authFailedStream.add(null);
     }
 
     if (response.statusCode >= 400) {

@@ -147,8 +147,8 @@ async def get_messages(
     )
     messages = result.scalars().all()
 
-    # Mark received messages as read
-    await db.execute(
+    # Mark received messages as read and notify the sender
+    result_update = await db.execute(
         update(DirectMessage)
         .where(
             DirectMessage.sender_id == other_user_id,
@@ -156,8 +156,12 @@ async def get_messages(
             DirectMessage.is_read == False,  # noqa: E712
         )
         .values(is_read=True)
+        .returning(DirectMessage.id)
     )
+    read_ids = [row[0] for row in result_update.fetchall()]
     await db.commit()
+    if read_ids:
+        await _broadcast_dm(other_user_id, {"type": "messages_read", "by_user_id": uid})
 
     # Build sender username map
     sender_ids = {m.sender_id for m in messages}
@@ -252,6 +256,8 @@ async def send_message(
             "title": f"@{current_user.username} size mesaj gönderdi",
             "body": data.content[:100],
             "related_id": uid,
+            "sender_username": current_user.username,
+            "sender_image_url": current_user.profile_image_thumb_url,
         },
         pref_key="messages",
     )
@@ -318,6 +324,19 @@ async def messages_ws(websocket: WebSocket):
                 text = await asyncio.wait_for(websocket.receive_text(), timeout=40.0)
                 if text.strip() == "ping":
                     await websocket.send_text("pong")
+                else:
+                    try:
+                        import json as _json
+                        msg = _json.loads(text)
+                        if isinstance(msg, dict) and msg.get("type") == "typing":
+                            target_id = msg.get("target_user_id")
+                            if isinstance(target_id, int):
+                                await _broadcast_dm(target_id, {
+                                    "type": "typing",
+                                    "sender_id": user_id,
+                                })
+                    except (ValueError, TypeError):
+                        pass
             except asyncio.TimeoutError:
                 logger.warning("[DM WS] İstemci ping timeout | user_id=%s", user_id)
                 break

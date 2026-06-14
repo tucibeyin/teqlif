@@ -21,18 +21,42 @@ class StorageService {
   static const cacheStories       = 'cache_stories';
   static const cacheMyStories     = 'cache_my_stories';
 
-  /// [data] (List veya Map) → JSON String olarak sakla.
-  static Future<void> cacheData(String key, dynamic data) async {
+  /// [data] (List veya Map) → TTL sarmalayıcısıyla JSON olarak sakla.
+  /// [ttl]: varsayılan 5 dakika. Mesajlar için 2 dakika kullanılabilir.
+  static Future<void> cacheData(
+    String key,
+    dynamic data, {
+    Duration ttl = const Duration(minutes: 5),
+  }) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, jsonEncode(data));
+    final wrapper = {
+      '_d': data,
+      '_t': DateTime.now().millisecondsSinceEpoch,
+      '_x': ttl.inMilliseconds,
+    };
+    await prefs.setString(key, jsonEncode(wrapper));
   }
 
-  /// Saklanan JSON String'i decode ederek döner; yoksa null.
+  /// Saklanan veriyi döner. TTL aşılmışsa null döner (sanki hiç yokmuş gibi).
   static Future<dynamic> getCachedData(String key) async {
     final prefs = await SharedPreferences.getInstance();
     final raw = prefs.getString(key);
     if (raw == null) return null;
-    return jsonDecode(raw);
+    try {
+      final decoded = jsonDecode(raw);
+      // Yeni TTL formatı: {"_d": data, "_t": savedAt, "_x": ttlMs}
+      if (decoded is Map && decoded.containsKey('_t') && decoded.containsKey('_d')) {
+        final savedAt = (decoded['_t'] as num).toInt();
+        final ttlMs = (decoded['_x'] as num?)?.toInt() ?? 300000;
+        final age = DateTime.now().millisecondsSinceEpoch - savedAt;
+        if (age > ttlMs) return null; // süresi dolmuş
+        return decoded['_d'];
+      }
+      // Eski format (TTL'siz) — geçerli kabul et, bir sonraki yazımda yeni formata geçer
+      return decoded;
+    } catch (_) {
+      return null;
+    }
   }
   static const _userEmailKey = 'teqlif_user_email';
   static const _userNameKey = 'teqlif_user_name';

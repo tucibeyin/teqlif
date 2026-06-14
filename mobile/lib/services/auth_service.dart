@@ -9,6 +9,10 @@ import 'storage_service.dart';
 final _log = LoggerService.instance;
 
 class AuthService {
+  // Her iki token da geçersizleştiğinde login ekranına yönlendirme sinyali
+  static final StreamController<void> authFailedStream =
+      StreamController<void>.broadcast();
+
   // Aynı anda birden fazla refresh isteği olmasın (race condition önlemi)
   static Completer<bool>? _refreshInProgress;
   static Future<Map<String, String>> _headers({bool auth = false}) async {

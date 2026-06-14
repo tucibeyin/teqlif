@@ -69,6 +69,18 @@ async def push_notification(user_id: int, notif: dict, pref_key: str | None = No
                 )
             ) or 0
             badge = unread_notifs + unread_msgs
+
+            # Ek data payload: sender bilgisi ve profil fotoğrafı
+            extra_data: dict[str, str] = {}
+            if notif.get("related_id") is not None:
+                extra_data["sender_id"] = str(notif["related_id"])
+            if notif.get("sender_username"):
+                extra_data["sender_username"] = str(notif["sender_username"])
+
+            image_url: str | None = notif.get("sender_image_url")
+            if image_url and not image_url.startswith("http"):
+                image_url = f"https://www.teqlif.com{image_url}"
+
             # FCM push kuyruğa alınır — push_notification bloklanmaz
             pool = get_pool()
             if pool:
@@ -79,10 +91,16 @@ async def push_notification(user_id: int, notif: dict, pref_key: str | None = No
                     notif.get("body"),
                     badge,
                     notif.get("type"),
+                    extra_data or None,
+                    image_url,
                 )
             else:
                 # Worker başlatılmamışsa (geliştirme ortamı) direkt gönder
-                await send_push(user.fcm_token, notif.get("title", ""), notif.get("body"), badge=badge, notif_type=notif.get("type"))
+                await send_push(
+                    user.fcm_token, notif.get("title", ""), notif.get("body"),
+                    badge=badge, notif_type=notif.get("type"),
+                    extra_data=extra_data or None, image_url=image_url,
+                )
 
     # Push to WS connections — GlobalWSManager ile paralel fan-out
     notif_payload = {

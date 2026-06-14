@@ -64,16 +64,11 @@ class NotificationService {
     );
   }
 
-  /// Mesaj geçmişi — ağ hatası durumunda boş liste döner (graceful degrade).
-  static Future<List<dynamic>> getMessages(int otherUserId) async {
-    try {
-      return await apiCallList(
-        () async => http.get(Uri.parse('$kBaseUrl/messages/$otherUserId'), headers: await _headers()),
-      );
-    } catch (e) {
-      LoggerService.instance.warning('NotificationService', 'Mesajlar alınamadı: $e');
-      return [];
-    }
+  /// Mesaj geçmişi — hata durumunda exception fırlatır; çağıran hata durumunu göstermelidir.
+  static Future<List<dynamic>> getMessages(int otherUserId) {
+    return apiCallList(
+      () async => http.get(Uri.parse('$kBaseUrl/messages/$otherUserId'), headers: await _headers()),
+    );
   }
 
   /// Kullanıcı bilgisi — ağ hatası durumunda null döner (graceful degrade).

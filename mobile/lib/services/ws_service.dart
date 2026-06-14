@@ -41,6 +41,8 @@ class WsService {
   static bool _isObserverRegistered = false;
 
   /// Gelen WS mesajlarını tüm dinleyicilere iletir.
+  /// Özel dahili event'ler de bu stream üzerinden gider:
+  ///   {"type": "connected"}  — WS başarıyla (yeniden) bağlandı
   static final StreamController<Map<String, dynamic>> messageStream =
       StreamController<Map<String, dynamic>>.broadcast();
 
@@ -68,6 +70,13 @@ class WsService {
 
     if (_channel != null) return;
     await _connect();
+  }
+
+  /// WS üzerinden JSON mesajı gönderir (typing event gibi).
+  static void sendJson(Map<String, dynamic> data) {
+    try {
+      _channel?.sink.add(jsonEncode(data));
+    } catch (_) {}
   }
 
   /// Kullanıcı çıkış yaptığında çağrılır.
@@ -153,6 +162,8 @@ class WsService {
         } catch (_) {}
       });
 
+      // Dinleyicilere "bağlandı" sinyali — DirectChatScreen kaçırılan mesajları çeker
+      messageStream.add({'type': 'connected'});
       debugPrint('[WS] Bağlandı');
     } catch (_) {
       _channel = null;

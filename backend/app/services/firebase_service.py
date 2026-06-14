@@ -38,6 +38,8 @@ async def send_push(
     body: str | None = None,
     badge: int | None = None,
     notif_type: str | None = None,
+    extra_data: dict[str, str] | None = None,
+    image_url: str | None = None,
 ) -> None:
     if not token:
         logger.error("[FCM] send_push çağrıldı ama token boş")
@@ -53,11 +55,16 @@ async def send_push(
         data: dict[str, str] = {}
         if notif_type:
             data["type"] = notif_type
+        if extra_data:
+            data.update(extra_data)
         msg = messaging.Message(
-            notification=messaging.Notification(title=title, body=body),
+            notification=messaging.Notification(title=title, body=body, image=image_url),
             data=data,
             token=token,
-            android=messaging.AndroidConfig(priority="high"),
+            android=messaging.AndroidConfig(
+                priority="high",
+                notification=messaging.AndroidNotification(image=image_url) if image_url else None,
+            ),
             apns=messaging.APNSConfig(
                 headers={"apns-priority": "10"},
                 payload=messaging.APNSPayload(

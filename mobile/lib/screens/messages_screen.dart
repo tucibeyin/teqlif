@@ -123,19 +123,21 @@ class _MessagesTab extends StatefulWidget {
 class _MessagesTabState extends State<_MessagesTab> {
   List<dynamic> _conversations = [];
   bool _loading = true;
+  bool _loadInProgress = false;
+  bool _hasError = false;
+  int? _myUserId;
   StreamSubscription<Map<String, dynamic>>? _fcmSub;
   StreamSubscription<Map<String, dynamic>>? _wsSub;
 
   @override
   void initState() {
     super.initState();
+    _loadMyUserId();
     _load();
-    // FCM / app-resume olayları (arka plan → ön plan geçişi)
     _fcmSub = PushNotificationService.notificationStream.stream.listen((_) => _load(silent: true));
-    // WebSocket: yeni mesaj gelince anında güncelle
     _wsSub = WsService.messageStream.stream.listen((data) {
       if (data['type'] == 'message') {
-        _load(silent: true);
+        _updateConversationInMemory(data);
         PushNotificationService.badgeRefreshNeeded.add(null);
       }
     });
@@ -148,7 +150,14 @@ class _MessagesTabState extends State<_MessagesTab> {
     super.dispose();
   }
 
+  Future<void> _loadMyUserId() async {
+    final info = await StorageService.getUserInfo();
+    if (mounted) setState(() => _myUserId = info?['id'] as int?);
+  }
+
   Future<void> _load({bool silent = false}) async {
+    if (_loadInProgress) return;
+    _loadInProgress = true;
     // ── A: Kasa kontrolü ───────────────────────────────────────────────────
     final cached = await StorageService.getCachedData(StorageService.cacheMessages);
     if (cached != null && mounted) {
@@ -163,16 +172,53 @@ class _MessagesTabState extends State<_MessagesTab> {
     // ── B: Arka planda API ─────────────────────────────────────────────────
     try {
       final data = await NotificationService.getConversations();
-      // ── C: Başarı → kasa güncelle, UI yenile ──────────────────────────
       await StorageService.cacheData(StorageService.cacheMessages, data);
-      if (mounted) setState(() { _conversations = data; _loading = false; });
+      if (mounted) setState(() { _conversations = data; _loading = false; _hasError = false; });
     } catch (e) {
-      // ── D: Hata → kasa doluysa yut, boşsa boş ekran göster ───────────
-      if (cached == null && mounted) {
-        setState(() => _loading = false); // boş liste göster
+      if (mounted) {
+        setState(() {
+          _hasError = true;
+          if (cached == null) _loading = false;
+        });
       }
-      debugPrint('[MessagesTab] API hatası (cache=${ cached != null }): $e');
+      debugPrint('[MessagesTab] API hatası: $e');
+    } finally {
+      _loadInProgress = false;
     }
+  }
+
+  /// WS üzerinden gelen mesajı HTTP isteği atmadan anında listeye yansıtır.
+  /// Bilinmeyen gönderici (yeni konuşma) varsa API'ya fallback yapar.
+  void _updateConversationInMemory(Map<String, dynamic> data) {
+    final senderId = data['sender_id'] as int?;
+    final receiverId = data['receiver_id'] as int?;
+    final content = data['content'] as String?;
+    final createdAt = data['created_at'] as String?;
+    final otherId = senderId == _myUserId ? receiverId : senderId;
+
+    if (otherId == null || _myUserId == null) {
+      _load(silent: true);
+      return;
+    }
+
+    final idx = _conversations.indexWhere((c) => (c['user_id'] as int?) == otherId);
+    if (idx < 0) {
+      // Yeni konuşma — tam bilgi için API'ya git
+      _load(silent: true);
+      return;
+    }
+
+    final updated = List<dynamic>.from(_conversations);
+    final conv = Map<String, dynamic>.from(updated[idx] as Map);
+    conv['last_message'] = content;
+    conv['last_at'] = createdAt;
+    if (senderId != _myUserId) {
+      conv['unread_count'] = ((conv['unread_count'] as int?) ?? 0) + 1;
+    }
+    updated
+      ..removeAt(idx)
+      ..insert(0, conv);
+    if (mounted) setState(() => _conversations = updated);
   }
 
   String _timeAgo(String? isoStr) {
@@ -196,32 +242,36 @@ class _MessagesTabState extends State<_MessagesTab> {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
     if (_conversations.isEmpty) {
-      return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.chat_bubble_outline, size: 64, color: Color(0xFFD1D5DB)),
-            const SizedBox(height: 16),
-            Text(
-              l.msgNoMessages,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+      return Column(
+        children: [
+          if (_hasError) _buildErrorBanner(),
+          Expanded(
+            child: Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(Icons.chat_bubble_outline, size: 64, color: Color(0xFFD1D5DB)),
+                  const SizedBox(height: 16),
+                  Text(
+                    l.msgNoMessages,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(l.msgNoMessagesDesc, textAlign: TextAlign.center),
+                ],
               ),
             ),
-            const SizedBox(height: 8),
-            Text(
-              l.msgNoMessagesDesc,
-              textAlign: TextAlign.center,
-            ),
-          ],
-        ),
+          ),
+        ],
       );
     }
-    return RefreshIndicator(
-      color: kPrimary,
-      onRefresh: _load,
-      child: ListView.separated(
+    return Column(
+      children: [
+        if (_hasError) _buildErrorBanner(),
+        Expanded(child: RefreshIndicator(
+          color: kPrimary,
+          onRefresh: _load,
+          child: ListView.separated(
         itemCount: _conversations.length,
         separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
         itemBuilder: (context, i) {
@@ -303,6 +353,35 @@ class _MessagesTabState extends State<_MessagesTab> {
             },
           );
         },
+      ),
+        )),
+      ],
+    );
+  }
+
+  Widget _buildErrorBanner() {
+    return Material(
+      color: Colors.orange.withOpacity(0.12),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+        child: Row(
+          children: [
+            const Icon(Icons.warning_amber_rounded, size: 16, color: Colors.orange),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text('Güncellenemedi', style: TextStyle(fontSize: 12, color: Colors.orange)),
+            ),
+            TextButton(
+              onPressed: _load,
+              style: TextButton.styleFrom(
+                padding: EdgeInsets.zero,
+                minimumSize: const Size(0, 0),
+                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+              ),
+              child: const Text('Yenile', style: TextStyle(fontSize: 12)),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -498,19 +577,30 @@ class DirectChatScreen extends StatefulWidget {
   State<DirectChatScreen> createState() => _DirectChatScreenState();
 }
 
-class _DirectChatScreenState extends State<DirectChatScreen> {
+class _DirectChatScreenState extends State<DirectChatScreen>
+    with WidgetsBindingObserver {
   final _textCtrl = TextEditingController();
   final _scrollCtrl = ScrollController();
   List<Map<String, dynamic>> _messages = [];
   bool _loading = true;
   bool _sending = false;
+  bool _error = false;
+  bool _isOtherTyping = false;
   StreamSubscription<Map<String, dynamic>>? _wsSub;
   int? _myUserId;
+  Timer? _typingDebounce;
+  Timer? _typingHideTimer;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _initScreen();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) _loadMessages();
   }
 
   Future<void> _initScreen() async {
@@ -521,20 +611,58 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
   }
 
   Future<void> _loadMessages() async {
-    setState(() => _loading = true);
-    final data = await NotificationService.getMessages(widget.otherUserId);
-    if (mounted) {
-      setState(() {
-        _messages = data.map((m) => Map<String, dynamic>.from(m as Map)).toList();
-        _loading = false;
-      });
-      _scrollToBottom();
+    if (mounted) setState(() { _loading = true; _error = false; });
+    try {
+      final data = await NotificationService.getMessages(widget.otherUserId);
+      if (mounted) {
+        setState(() {
+          _messages = data.map((m) => Map<String, dynamic>.from(m as Map)).toList();
+          _loading = false;
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) setState(() { _loading = false; _error = true; });
     }
   }
 
   void _listenWs() {
     _wsSub = WsService.messageStream.stream.listen((data) {
-      if (data['type'] != 'message') return;
+      final type = data['type'] as String?;
+
+      if (type == 'connected') {
+        _loadMessages();
+        return;
+      }
+
+      if (type == 'messages_read') {
+        final byUserId = data['by_user_id'] as int?;
+        if (byUserId == widget.otherUserId && mounted) {
+          setState(() {
+            _messages = _messages.map((m) {
+              if ((m['sender_id'] as int?) == _myUserId) {
+                return {...m, 'is_read': true};
+              }
+              return m;
+            }).toList();
+          });
+        }
+        return;
+      }
+
+      if (type == 'typing') {
+        final senderId = data['sender_id'] as int?;
+        if (senderId == widget.otherUserId && mounted) {
+          setState(() => _isOtherTyping = true);
+          _typingHideTimer?.cancel();
+          _typingHideTimer = Timer(const Duration(seconds: 3), () {
+            if (mounted) setState(() => _isOtherTyping = false);
+          });
+        }
+        return;
+      }
+
+      if (type != 'message') return;
       final senderId = data['sender_id'] as int?;
       final receiverId = data['receiver_id'] as int?;
       if ((senderId == _myUserId && receiverId == widget.otherUserId) ||
@@ -554,6 +682,14 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
           _scrollToBottom();
         }
       }
+    });
+  }
+
+  void _onTextChanged(String text) {
+    if (text.isEmpty) return;
+    _typingDebounce?.cancel();
+    _typingDebounce = Timer(const Duration(milliseconds: 500), () {
+      WsService.sendJson({'type': 'typing', 'target_user_id': widget.otherUserId});
     });
   }
 
@@ -616,7 +752,10 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _wsSub?.cancel();
+    _typingDebounce?.cancel();
+    _typingHideTimer?.cancel();
     _textCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
@@ -635,79 +774,127 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
           Expanded(
             child: _loading
                 ? const Center(child: CircularProgressIndicator(color: kPrimary))
-                : _messages.isEmpty
+                : _error
                     ? Center(
-                        child: Text(
-                          l.msgNoChat,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(color: Color(0xFF9CA3AF)),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.wifi_off_rounded, size: 48, color: Color(0xFF9CA3AF)),
+                            const SizedBox(height: 12),
+                            const Text('Mesajlar yüklenemedi',
+                                style: TextStyle(color: Color(0xFF9CA3AF))),
+                            const SizedBox(height: 12),
+                            ElevatedButton(
+                              onPressed: _loadMessages,
+                              child: const Text('Tekrar Dene'),
+                            ),
+                          ],
                         ),
                       )
-                    : ListView.builder(
-                        controller: _scrollCtrl,
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 12, vertical: 12),
-                        itemCount: _messages.length,
-                        itemBuilder: (context, i) {
-                          final msg = _messages[i];
-                          final senderId = msg['sender_id'] as int?;
-                          final isMe = senderId == _myUserId;
-                          final content = msg['content'] as String? ?? '';
-                          final time = _timeLabel(msg['created_at'] as String?);
+                    : _messages.isEmpty
+                        ? Center(
+                            child: Text(
+                              l.msgNoChat,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(color: Color(0xFF9CA3AF)),
+                            ),
+                          )
+                        : ListView.builder(
+                            controller: _scrollCtrl,
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 12, vertical: 12),
+                            itemCount: _messages.length,
+                            itemBuilder: (context, i) {
+                              final msg = _messages[i];
+                              final senderId = msg['sender_id'] as int?;
+                              final isMe = senderId == _myUserId;
+                              final content = msg['content'] as String? ?? '';
+                              final time = _timeLabel(msg['created_at'] as String?);
+                              final isRead = (msg['is_read'] as bool?) ?? false;
 
-                          return Align(
-                            alignment: isMe
-                                ? Alignment.centerRight
-                                : Alignment.centerLeft,
-                            child: Container(
-                              margin: const EdgeInsets.symmetric(vertical: 3),
-                              padding: const EdgeInsets.symmetric(
-                                  horizontal: 12, vertical: 8),
-                              constraints: BoxConstraints(
-                                maxWidth:
-                                    MediaQuery.of(context).size.width * 0.72,
-                              ),
-                              decoration: BoxDecoration(
-                                color: isMe
-                                    ? kPrimary
-                                    : AppColors.card(context),
-                                borderRadius: BorderRadius.only(
-                                  topLeft: const Radius.circular(16),
-                                  topRight: const Radius.circular(16),
-                                  bottomLeft: isMe
-                                      ? const Radius.circular(16)
-                                      : const Radius.circular(4),
-                                  bottomRight: isMe
-                                      ? const Radius.circular(4)
-                                      : const Radius.circular(16),
-                                ),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  _MessageText(
-                                    content: content,
-                                    isMe: isMe,
+                              return Align(
+                                alignment: isMe
+                                    ? Alignment.centerRight
+                                    : Alignment.centerLeft,
+                                child: Container(
+                                  margin: const EdgeInsets.symmetric(vertical: 3),
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 12, vertical: 8),
+                                  constraints: BoxConstraints(
+                                    maxWidth:
+                                        MediaQuery.of(context).size.width * 0.72,
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    time,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      color: isMe
-                                          ? Colors.white.withOpacity(0.75)
-                                          : const Color(0xFF9CA3AF),
+                                  decoration: BoxDecoration(
+                                    color: isMe
+                                        ? kPrimary
+                                        : AppColors.card(context),
+                                    borderRadius: BorderRadius.only(
+                                      topLeft: const Radius.circular(16),
+                                      topRight: const Radius.circular(16),
+                                      bottomLeft: isMe
+                                          ? const Radius.circular(16)
+                                          : const Radius.circular(4),
+                                      bottomRight: isMe
+                                          ? const Radius.circular(4)
+                                          : const Radius.circular(16),
                                     ),
                                   ),
-                                ],
-                              ),
-                            ),
-                          );
-                        },
-                      ),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children: [
+                                      _MessageText(content: content, isMe: isMe),
+                                      const SizedBox(height: 2),
+                                      Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(
+                                            time,
+                                            style: TextStyle(
+                                              fontSize: 10,
+                                              color: isMe
+                                                  ? Colors.white.withOpacity(0.75)
+                                                  : const Color(0xFF9CA3AF),
+                                            ),
+                                          ),
+                                          if (isMe) ...[
+                                            const SizedBox(width: 3),
+                                            Icon(
+                                              isRead ? Icons.done_all : Icons.done,
+                                              size: 12,
+                                              color: isRead
+                                                  ? Colors.blue.shade200
+                                                  : Colors.white.withOpacity(0.6),
+                                            ),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
           ),
-          Builder(
-            builder: (context) => Container(
+          // Yazıyor göstergesi
+          if (_isOtherTyping)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 4, 16, 0),
+              child: Row(
+                children: [
+                  const _TypingIndicator(),
+                  const SizedBox(width: 8),
+                  Text(
+                    'yazıyor...',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: AppColors.textSecondary(context),
+                      fontStyle: FontStyle.italic,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Container(
             padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
             decoration: BoxDecoration(
               color: AppColors.surface(context),
@@ -724,6 +911,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                       textCapitalization: TextCapitalization.sentences,
                       textInputAction: TextInputAction.newline,
                       maxLines: null,
+                      onChanged: _onTextChanged,
                       decoration: InputDecoration(
                         hintText: l.msgWriteHint,
                         hintStyle:
@@ -764,7 +952,7 @@ class _DirectChatScreenState extends State<DirectChatScreen> {
                 ],
               ),
             ),
-          ),),
+          ),
         ],
       ),
     );
@@ -846,6 +1034,59 @@ class _MessageText extends StatelessWidget {
     }
 
     return RichText(text: TextSpan(children: spans));
+  }
+}
+
+// ── Yazıyor animasyonu ────────────────────────────────────────────────────────
+
+class _TypingIndicator extends StatefulWidget {
+  const _TypingIndicator();
+  @override
+  State<_TypingIndicator> createState() => _TypingIndicatorState();
+}
+
+class _TypingIndicatorState extends State<_TypingIndicator>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 900),
+    )..repeat();
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: _ctrl,
+      builder: (_, __) {
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(3, (i) {
+            final phase = (((_ctrl.value * 3) - i) % 3) / 3;
+            final opacity = (phase < 0.5 ? phase * 2 : (1 - phase) * 2).clamp(0.25, 1.0);
+            return Container(
+              margin: const EdgeInsets.only(right: 3),
+              width: 6,
+              height: 6,
+              decoration: BoxDecoration(
+                color: kPrimary.withOpacity(opacity),
+                shape: BoxShape.circle,
+              ),
+            );
+          }),
+        );
+      },
+    );
   }
 }
 
