@@ -8,6 +8,7 @@
     }
 
     let _urls = [];
+    let _videoUrl = null;
     let _cur = 0;
     let _isFavorited = false;
     let _isActive = true;
@@ -42,21 +43,31 @@
     };
 
     /* ── Gallery ── */
+    function _mediaTotal() { return _urls.length + (_videoUrl ? 1 : 0); }
+
     function goTo(idx) {
-        _cur = (idx + _urls.length) % _urls.length;
-        document.querySelectorAll('.gallery-main img').forEach((img, i) => {
-            img.classList.toggle('active', i === _cur);
+        const total = _mediaTotal();
+        if (!total) return;
+        _cur = (idx + total) % total;
+        document.querySelectorAll('.gallery-main .gallery-item').forEach((el, i) => {
+            const active = i === _cur;
+            el.classList.toggle('active', active);
+            if (el.tagName === 'VIDEO' && !active) el.pause();
         });
-        document.querySelectorAll('.gallery-thumbs img').forEach((img, i) => {
-            img.classList.toggle('active', i === _cur);
-            if (i === _cur) img.scrollIntoView({ inline: 'nearest', behavior: 'smooth' });
+        document.querySelectorAll('.gallery-thumbs .gallery-thumb').forEach((el, i) => {
+            el.classList.toggle('active', i === _cur);
+            if (i === _cur) el.scrollIntoView({ inline: 'nearest', behavior: 'smooth' });
         });
-        const el = document.getElementById('galleryCounter');
-        if (el) el.textContent = `${_cur + 1} / ${_urls.length}`;
+        const counterEl = document.getElementById('galleryCounter');
+        if (counterEl) counterEl.textContent = `${_cur + 1} / ${total}`;
+        const mainEl = document.getElementById('galleryMain');
+        if (mainEl) mainEl.style.cursor = (_videoUrl && _cur === 0) ? 'default' : 'zoom-in';
     }
 
     /* ── Lightbox ── */
     function openLb(idx) {
+        if (!_urls.length) return;
+        if (_videoUrl && idx === 0) return; // video sayfasında lightbox açılmaz
         _cur = idx;
         document.getElementById('lightbox').classList.add('open');
         lbRefresh();
@@ -69,12 +80,15 @@
     }
 
     function lbRefresh() {
-        document.getElementById('lbImg').src = _urls[_cur];
-        document.getElementById('lbCounter').textContent = `${_cur + 1} / ${_urls.length}`;
+        const imgIdx = _videoUrl ? _cur - 1 : _cur;
+        document.getElementById('lbImg').src = _urls[imgIdx];
+        document.getElementById('lbCounter').textContent = `${imgIdx + 1} / ${_urls.length}`;
     }
 
     function lbNav(dir) {
-        _cur = (_cur + dir + _urls.length) % _urls.length;
+        const currentImgIdx = _videoUrl ? _cur - 1 : _cur;
+        const nextImgIdx = (currentImgIdx + dir + _urls.length) % _urls.length;
+        _cur = _videoUrl ? nextImgIdx + 1 : nextImgIdx;
         lbRefresh();
         goTo(_cur);
     }
@@ -90,31 +104,44 @@
     }
 
     /* ── Build gallery HTML ── */
-    function buildGallery(urls) {
-        if (!urls.length) {
+    function buildGallery(urls, videoUrl) {
+        const total = urls.length + (videoUrl ? 1 : 0);
+        if (!total) {
             return `<div class="gallery-main" style="cursor:default"><div class="no-photo">📷</div></div>`;
         }
-        const imgs = urls.map((u, i) =>
-            `<img src="${u}" class="${i === 0 ? 'active' : ''}" alt="Fotoğraf ${i + 1}" loading="lazy">`
+
+        let items = '';
+        if (videoUrl) {
+            items += `<video src="${esc(videoUrl)}" class="gallery-item active" preload="metadata" playsinline controls></video>`;
+        }
+        items += urls.map((u, i) =>
+            `<img src="${u}" class="gallery-item${!videoUrl && i === 0 ? ' active' : ''}" alt="Fotoğraf ${i + 1}" loading="lazy">`
         ).join('');
 
-        const arrows = urls.length > 1 ? `
+        const arrows = total > 1 ? `
             <button class="gallery-arrow prev" id="galleryPrev">‹</button>
             <button class="gallery-arrow next" id="galleryNext">›</button>` : '';
 
-        const counter = urls.length > 1
-            ? `<div class="gallery-counter" id="galleryCounter">1 / ${urls.length}</div>` : '';
+        const counter = total > 1
+            ? `<div class="gallery-counter" id="galleryCounter">1 / ${total}</div>` : '';
 
-        const thumbs = urls.length > 1 ? `
+        let thumbItems = '';
+        if (videoUrl) {
+            thumbItems += `<div class="gallery-thumb gallery-video-thumb active" data-thumb-idx="0">▶</div>`;
+        }
+        thumbItems += urls.map((u, i) => {
+            const idx = videoUrl ? i + 1 : i;
+            return `<img src="${u}" class="gallery-thumb${!videoUrl && i === 0 ? ' active' : ''}" data-thumb-idx="${idx}" alt="">`;
+        }).join('');
+
+        const thumbs = total > 1 ? `
             <div class="gallery-thumbs">
-                ${urls.map((u, i) =>
-            `<img src="${u}" class="${i === 0 ? 'active' : ''}" data-thumb-idx="${i}" alt="">`
-        ).join('')}
+                ${thumbItems}
             </div>` : '';
 
         return `
-            <div class="gallery-main" id="galleryMain">
-                ${imgs}${arrows}${counter}
+            <div class="gallery-main" id="galleryMain" style="${videoUrl ? 'cursor:default' : ''}">
+                ${items}${arrows}${counter}
             </div>
             ${thumbs}`;
     }
@@ -154,6 +181,7 @@
             _urls = (data.image_urls && data.image_urls.length > 0)
                 ? data.image_urls
                 : data.image_url ? [data.image_url] : [];
+            _videoUrl = data.video_url || null;
             _cur = 0;
 
             document.title = `${data.title} — teqlif`;
@@ -230,8 +258,7 @@
                     <!-- LEFT -->
                     <div style="display:flex;flex-direction:column;gap:1rem">
                         <div class="card">
-                            ${data.video_url ? `<div style="background:#000;border-radius:8px 8px 0 0;overflow:hidden"><video src="${esc(data.video_url)}" controls preload="metadata" style="width:100%;max-height:320px;display:block"></video></div>` : ''}
-                            ${buildGallery(_urls)}
+                            ${buildGallery(_urls, _videoUrl)}
                             <div class="detail-body">
                                 <div class="detail-meta">
                                     ${catLabel ? `<span class="cat-badge">${catLabel}</span>` : ''}

@@ -89,7 +89,8 @@
             cursor: zoom-in;
         }
 
-        .gallery-main img {
+        .gallery-main img,
+        .gallery-main video {
             width: 100%;
             height: 100%;
             object-fit: contain;
@@ -97,7 +98,8 @@
             user-select: none;
         }
 
-        .gallery-main img.active {
+        .gallery-main img.active,
+        .gallery-main video.active {
             display: block;
         }
 
@@ -181,6 +183,28 @@
         }
 
         .gallery-thumbs img.active {
+            border-color: var(--primary, #06b6d4);
+            opacity: 1;
+        }
+
+        .gallery-video-thumb {
+            width: 64px;
+            height: 64px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: 2px solid transparent;
+            flex-shrink: 0;
+            opacity: .7;
+            transition: opacity .15s, border-color .15s;
+            background: #1a1a1a;
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.4rem;
+        }
+
+        .gallery-video-thumb.active {
             border-color: var(--primary, #06b6d4);
             opacity: 1;
         }
@@ -824,7 +848,7 @@
 
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
-    <script src="/static/js/ilan-page.js?v=4"></script>
+    <script src="/static/js/ilan-page.js?v=5"></script>
 </body>
 
 </html>

@@ -603,7 +603,6 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (_videoInitialized && _videoCtrl != null) _buildVideoPlayer(),
             _buildGallery(),
 
             // Başlık & Fiyat
@@ -986,6 +985,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       onTap: () => setState(() {
         ctrl.value.isPlaying ? ctrl.pause() : ctrl.play();
       }),
+      onDoubleTap: _triggerHeartAnimation,
       child: Container(
         color: Colors.black,
         width: double.infinity,
@@ -1012,7 +1012,10 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   Widget _buildGallery() {
-    if (_images.isEmpty) {
+    final bool hasVideo = _videoUrl != null;
+    final int total = _images.length + (hasVideo ? 1 : 0);
+
+    if (total == 0) {
       return Builder(
         builder: (context) => Container(
           height: 260,
@@ -1031,55 +1034,67 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           height: 280,
           child: PageView.builder(
             controller: _pageCtrl,
-            itemCount: _images.length,
-            onPageChanged: (i) => setState(() => _currentImg = i),
-            itemBuilder: (context, i) => GestureDetector(
-              onTap: () => _openFullscreen(i),
-              onDoubleTap: _triggerHeartAnimation,
-              child: CachedNetworkImage(
-                imageUrl: _images[i],
-                fit: BoxFit.cover,
-                width: double.infinity,
-                placeholder: (_, __) => const ShimmerBox(),
-                errorWidget: (ctx, url, err) {
-                  debugPrint('IMG HATA [$url]: $err');
-                  return Container(
-                    color: AppColors.surfaceVariant(ctx),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(Icons.broken_image_outlined,
-                            size: 48, color: AppColors.border(ctx)),
-                        const SizedBox(height: 8),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 8),
-                          child: Text(
-                            _images[i],
-                            style: TextStyle(
-                                fontSize: 9, color: AppColors.textTertiary(ctx)),
-                            textAlign: TextAlign.center,
-                            maxLines: 3,
+            itemCount: total,
+            onPageChanged: (i) {
+              setState(() => _currentImg = i);
+              if (hasVideo && i != 0) _videoCtrl?.pause();
+            },
+            itemBuilder: (context, i) {
+              if (hasVideo && i == 0) {
+                if (_videoInitialized && _videoCtrl != null) {
+                  return _buildVideoPlayer();
+                }
+                return const ShimmerBox();
+              }
+              final imgIdx = hasVideo ? i - 1 : i;
+              return GestureDetector(
+                onTap: () => _openFullscreen(imgIdx),
+                onDoubleTap: _triggerHeartAnimation,
+                child: CachedNetworkImage(
+                  imageUrl: _images[imgIdx],
+                  fit: BoxFit.cover,
+                  width: double.infinity,
+                  placeholder: (_, __) => const ShimmerBox(),
+                  errorWidget: (ctx, url, err) {
+                    debugPrint('IMG HATA [$url]: $err');
+                    return Container(
+                      color: AppColors.surfaceVariant(ctx),
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.broken_image_outlined,
+                              size: 48, color: AppColors.border(ctx)),
+                          const SizedBox(height: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 8),
+                            child: Text(
+                              _images[imgIdx],
+                              style: TextStyle(
+                                  fontSize: 9, color: AppColors.textTertiary(ctx)),
+                              textAlign: TextAlign.center,
+                              maxLines: 3,
+                            ),
                           ),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
-            ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              );
+            },
           ),
         ),
-        if (_images.length > 1 && _currentImg > 0)
+        if (total > 1 && _currentImg > 0)
           Positioned(
             left: 8, top: 0, bottom: 0,
             child: Center(child: _arrowBtn(Icons.chevron_left, -1)),
           ),
-        if (_images.length > 1 && _currentImg < _images.length - 1)
+        if (total > 1 && _currentImg < total - 1)
           Positioned(
             right: 8, top: 0, bottom: 0,
             child: Center(child: _arrowBtn(Icons.chevron_right, 1)),
           ),
-        if (_images.length > 1)
+        if (total > 1)
           Positioned(
             bottom: 10, right: 12,
             child: Container(
@@ -1089,7 +1104,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 borderRadius: BorderRadius.circular(12),
               ),
               child: Text(
-                '${_currentImg + 1}/${_images.length}',
+                '${_currentImg + 1}/$total',
                 style: const TextStyle(color: Colors.white, fontSize: 12),
               ),
             ),
