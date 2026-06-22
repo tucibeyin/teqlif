@@ -200,29 +200,36 @@ class ListingService:
         logger.info("[LISTINGS] İlan oluşturuldu | user_id=%s listing_id=%s", uid, listing.id)
 
         # Takipçilere new_listing bildirimi (non-blocking, fire-and-forget)
+        # Follower ID'leri commit sonrası burada çekiliyor; background task session'a dokunmuyor.
         import asyncio as _asyncio
         from app.models.follow import Follow
         from app.routers.notifications import push_notification
 
+        try:
+            follower_ids = list(await self.db.scalars(
+                select(Follow.follower_id).where(Follow.followed_id == uid)
+            ))
+        except Exception:
+            follower_ids = []
+
+        notif_payload = {
+            "type": "new_listing",
+            "title": f"@{current_user.username} yeni ilan ekledi",
+            "body": listing.title or None,
+            "related_id": listing.id,
+        }
+
         async def _notify_followers():
-            try:
-                followers = await self.db.scalars(
-                    select(Follow.follower_id).where(Follow.followed_id == uid)
-                )
-                for follower_id in followers:
-                    _asyncio.create_task(push_notification(
+            for follower_id in follower_ids:
+                try:
+                    await push_notification(
                         user_id=follower_id,
-                        notif={
-                            "type": "new_listing",
-                            "title": f"@{current_user.username} yeni ilan ekledi",
-                            "body": listing.title or None,
-                            "related_id": listing.id,
-                        },
+                        notif=notif_payload,
                         pref_key="new_listing",
-                    ))
-            except Exception as exc:
-                logger.error("[LISTINGS] Takipçi bildirimi gönderilemedi | user_id=%s", uid, exc_info=True)
-                capture_exception(exc)
+                    )
+                except Exception as exc:
+                    logger.error("[LISTINGS] Takipçi bildirimi gönderilemedi | user_id=%s", follower_id, exc_info=True)
+                    capture_exception(exc)
 
         _asyncio.create_task(_notify_followers())
         return {"id": listing.id}
