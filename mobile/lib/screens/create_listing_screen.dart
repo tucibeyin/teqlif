@@ -36,8 +36,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   final List<File> _images = [];
   final _picker = ImagePicker();
   File? _video;
-  VideoPlayerController? _videoPreviewCtrl;
-  bool _videoPreviewReady = false;
   String? _videoUploadUrl;
   bool _videoUploading = false;
 
@@ -65,7 +63,6 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
-    _videoPreviewCtrl?.dispose();
     super.dispose();
   }
 
@@ -99,15 +96,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
       }
     }
 
-    // Önizleme controller
-    _videoPreviewCtrl?.dispose();
-    final previewCtrl = VideoPlayerController.file(file);
-    await previewCtrl.initialize();
-
     setState(() {
       _video = file;
-      _videoPreviewCtrl = previewCtrl;
-      _videoPreviewReady = true;
       _videoUploadUrl = null;
     });
 
@@ -130,11 +120,8 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   }
 
   void _removeVideo() {
-    _videoPreviewCtrl?.dispose();
     setState(() {
       _video = null;
-      _videoPreviewCtrl = null;
-      _videoPreviewReady = false;
       _videoUploadUrl = null;
       _videoUploading = false;
     });
@@ -485,49 +472,35 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                         ),
                     ],
                   ),
-                  if (_videoUploading) ...[
+                  if (_video != null) ...[
                     const SizedBox(height: 8),
-                    const Row(
+                    Row(
                       children: [
-                        SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
-                        SizedBox(width: 8),
-                        Text('Video yükleniyor...', style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      ],
-                    ),
-                  ],
-                  if (_video != null && _videoPreviewReady && _videoPreviewCtrl != null) ...[
-                    const SizedBox(height: 8),
-                    Stack(
-                      children: [
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: AspectRatio(
-                            aspectRatio: _videoPreviewCtrl!.value.aspectRatio,
-                            child: VideoPlayer(_videoPreviewCtrl!),
+                        Container(
+                          width: 36,
+                          height: 36,
+                          decoration: BoxDecoration(
+                            color: Colors.black87,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: _videoUploading
+                              ? const Padding(
+                                  padding: EdgeInsets.all(8),
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                )
+                              : const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 22),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            _videoUploading ? 'Yükleniyor...' : 'Video hazır',
+                            style: const TextStyle(fontSize: 13),
                           ),
                         ),
-                        Positioned(
-                          top: 6,
-                          right: 6,
-                          child: GestureDetector(
-                            onTap: _removeVideo,
-                            child: Container(
-                              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
-                              padding: const EdgeInsets.all(4),
-                              child: const Icon(Icons.close, color: Colors.white, size: 16),
-                            ),
-                          ),
+                        GestureDetector(
+                          onTap: _removeVideo,
+                          child: const Icon(Icons.close, size: 18, color: Colors.grey),
                         ),
-                        if (_videoUploadUrl != null)
-                          Positioned(
-                            bottom: 6,
-                            left: 6,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                              decoration: BoxDecoration(color: Colors.green.shade700, borderRadius: BorderRadius.circular(4)),
-                              child: const Text('Hazır', style: TextStyle(color: Colors.white, fontSize: 10)),
-                            ),
-                          ),
                       ],
                     ),
                   ],

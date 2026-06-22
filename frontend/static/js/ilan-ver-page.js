@@ -17,7 +17,6 @@
     const videoInput   = document.getElementById('videoInput');
     const videoAddBtn  = document.getElementById('videoAddBtn');
     const videoPreview = document.getElementById('videoPreview');
-    const videoEl      = document.getElementById('videoEl');
     const videoRemBtn  = document.getElementById('videoRemoveBtn');
     const videoProg    = document.getElementById('videoProgress');
     const videoPBar    = document.getElementById('videoProgressBar');
@@ -65,7 +64,6 @@
             }
             const data = await res.json();
             _videoUrl = data.video_url;
-            videoEl.src = _videoUrl;
             videoProg.style.display   = 'none';
             videoPreview.style.display = 'block';
         } catch (err) {
@@ -77,7 +75,6 @@
 
     videoRemBtn.addEventListener('click', () => {
         _videoUrl = null;
-        videoEl.src = '';
         videoPreview.style.display = 'none';
         videoAddBtn.style.display  = '';
     });
@@ -248,7 +245,6 @@
             selectedFiles = [];
             renderPreviews();
             _videoUrl = null;
-            if (videoEl) videoEl.src = '';
             if (videoPreview) videoPreview.style.display = 'none';
             if (videoAddBtn) videoAddBtn.style.display = '';
             setTimeout(() => window.location.href = '/?tab=ilanlar', 1500);
