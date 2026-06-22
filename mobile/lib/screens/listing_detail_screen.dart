@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:video_player/video_player.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
@@ -34,6 +35,11 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   bool _isFavorited = false;
   bool _isActive = true;
 
+  // Video player
+  String? _videoUrl;
+  VideoPlayerController? _videoCtrl;
+  bool _videoInitialized = false;
+
   // Beğeni state'i
   late int _likesCount;
   late bool _isLiked;
@@ -59,6 +65,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     _isActive = widget.listing['is_active'] as bool? ?? true;
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
     _isLiked = widget.listing['is_liked'] as bool? ?? false;
+    _videoUrl = widget.listing['video_url'] as String?;
+    if (_videoUrl != null) {
+      _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(imgUrl(_videoUrl!)));
+      _videoCtrl!.initialize().then((_) {
+        if (mounted) setState(() => _videoInitialized = true);
+      });
+    }
     _loadMyId();
     _loadOffers();
   }
@@ -217,6 +230,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   void dispose() {
     _heartAnimCtrl?.stop();
     _heartAnimCtrl?.dispose();
+    _videoCtrl?.dispose();
     _pageCtrl.dispose();
     _offerCtrl.dispose();
     _offersNotifier.dispose();
@@ -589,6 +603,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (_videoInitialized && _videoCtrl != null) _buildVideoPlayer(),
             _buildGallery(),
 
             // Başlık & Fiyat
@@ -962,6 +977,37 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
                 ),
               ),
             ),
+    );
+  }
+
+  Widget _buildVideoPlayer() {
+    final ctrl = _videoCtrl!;
+    return GestureDetector(
+      onTap: () => setState(() {
+        ctrl.value.isPlaying ? ctrl.pause() : ctrl.play();
+      }),
+      child: Container(
+        color: Colors.black,
+        width: double.infinity,
+        child: Stack(
+          alignment: Alignment.center,
+          children: [
+            AspectRatio(
+              aspectRatio: ctrl.value.aspectRatio,
+              child: VideoPlayer(ctrl),
+            ),
+            if (!ctrl.value.isPlaying)
+              Container(
+                decoration: const BoxDecoration(
+                  color: Colors.black38,
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(12),
+                child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 48),
+              ),
+          ],
+        ),
+      ),
     );
   }
 

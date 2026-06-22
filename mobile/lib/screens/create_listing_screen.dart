@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:video_player/video_player.dart';
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
@@ -34,8 +35,14 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   bool _submitting = false;
   final List<File> _images = [];
   final _picker = ImagePicker();
+  File? _video;
+  VideoPlayerController? _videoPreviewCtrl;
+  bool _videoPreviewReady = false;
+  String? _videoUploadUrl;
+  bool _videoUploading = false;
 
   static const int _maxImages = 10;
+  static const int _maxVideoDurationSecs = 15;
 
   @override
   void initState() {
@@ -58,7 +65,108 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _titleCtrl.dispose();
     _descCtrl.dispose();
     _priceCtrl.dispose();
+    _videoPreviewCtrl?.dispose();
     super.dispose();
+  }
+
+  Future<void> _pickVideo(ImageSource source) async {
+    XFile? picked;
+    if (source == ImageSource.camera) {
+      picked = await _picker.pickVideo(
+        source: ImageSource.camera,
+        maxDuration: const Duration(seconds: _maxVideoDurationSecs),
+      );
+    } else {
+      picked = await _picker.pickVideo(source: ImageSource.gallery);
+    }
+    if (picked == null || !mounted) return;
+
+    final file = File(picked.path);
+
+    // Galeri seçiminde süre kontrolü
+    if (source == ImageSource.gallery) {
+      final ctrl = VideoPlayerController.file(file);
+      await ctrl.initialize();
+      final dur = ctrl.value.duration;
+      await ctrl.dispose();
+      if (dur.inSeconds > _maxVideoDurationSecs) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Video $_maxVideoDurationSecs saniyeyi geçemez (${dur.inSeconds}s).')),
+          );
+        }
+        return;
+      }
+    }
+
+    // Önizleme controller
+    _videoPreviewCtrl?.dispose();
+    final previewCtrl = VideoPlayerController.file(file);
+    await previewCtrl.initialize();
+
+    setState(() {
+      _video = file;
+      _videoPreviewCtrl = previewCtrl;
+      _videoPreviewReady = true;
+      _videoUploadUrl = null;
+    });
+
+    // Arka planda yükle
+    setState(() => _videoUploading = true);
+    try {
+      final result = await UploadService.uploadVideo(file);
+      if (mounted) setState(() => _videoUploadUrl = result.videoUrl);
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Video yüklenemedi: $e')),
+        );
+        _removeVideo();
+        return;
+      }
+    } finally {
+      if (mounted) setState(() => _videoUploading = false);
+    }
+  }
+
+  void _removeVideo() {
+    _videoPreviewCtrl?.dispose();
+    setState(() {
+      _video = null;
+      _videoPreviewCtrl = null;
+      _videoPreviewReady = false;
+      _videoUploadUrl = null;
+      _videoUploading = false;
+    });
+  }
+
+  void _showVideoSourceSheet() {
+    showModalBottomSheet(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.photo_library_outlined),
+              title: const Text('Galeriden seç'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickVideo(ImageSource.gallery);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.videocam_outlined),
+              title: const Text('Kamera ile çek (maks 15 sn)'),
+              onTap: () {
+                Navigator.pop(context);
+                _pickVideo(ImageSource.camera);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Future<void> _pickImages(ImageSource source) async {
@@ -123,6 +231,12 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
 
   Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    if (_videoUploading) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Video henüz yükleniyor, lütfen bekleyin.')),
+      );
+      return;
+    }
     setState(() => _submitting = true);
     try {
       final token = await StorageService.getToken();
@@ -173,6 +287,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
             'image_urls': imageUrls,
             if (imageUrls.isNotEmpty) 'image_url': imageUrls.first,
             if (thumbnailUrl != null) 'thumbnail_url': thumbnailUrl,
+            if (_videoUploadUrl != null) 'video_url': _videoUploadUrl,
           }),
         ),
       );
@@ -350,6 +465,70 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                           ),
                         ),
                       ),),
+                    ),
+                  ],
+                ],
+              ),
+              const SizedBox(height: 12),
+              // Video section
+              _SectionCard(
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text('Video (maks 15 sn)', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                      if (_video == null && !_videoUploading)
+                        TextButton.icon(
+                          onPressed: _showVideoSourceSheet,
+                          icon: const Icon(Icons.videocam_outlined, size: 18),
+                          label: const Text('Ekle'),
+                        ),
+                    ],
+                  ),
+                  if (_videoUploading) ...[
+                    const SizedBox(height: 8),
+                    const Row(
+                      children: [
+                        SizedBox(width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2)),
+                        SizedBox(width: 8),
+                        Text('Video yükleniyor...', style: TextStyle(fontSize: 12, color: Colors.grey)),
+                      ],
+                    ),
+                  ],
+                  if (_video != null && _videoPreviewReady && _videoPreviewCtrl != null) ...[
+                    const SizedBox(height: 8),
+                    Stack(
+                      children: [
+                        ClipRRect(
+                          borderRadius: BorderRadius.circular(8),
+                          child: AspectRatio(
+                            aspectRatio: _videoPreviewCtrl!.value.aspectRatio,
+                            child: VideoPlayer(_videoPreviewCtrl!),
+                          ),
+                        ),
+                        Positioned(
+                          top: 6,
+                          right: 6,
+                          child: GestureDetector(
+                            onTap: _removeVideo,
+                            child: Container(
+                              decoration: const BoxDecoration(color: Colors.black54, shape: BoxShape.circle),
+                              padding: const EdgeInsets.all(4),
+                              child: const Icon(Icons.close, color: Colors.white, size: 16),
+                            ),
+                          ),
+                        ),
+                        if (_videoUploadUrl != null)
+                          Positioned(
+                            bottom: 6,
+                            left: 6,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                              decoration: BoxDecoration(color: Colors.green.shade700, borderRadius: BorderRadius.circular(4)),
+                              child: const Text('Hazır', style: TextStyle(color: Colors.white, fontSize: 10)),
+                            ),
+                          ),
+                      ],
                     ),
                   ],
                 ],

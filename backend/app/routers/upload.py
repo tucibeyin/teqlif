@@ -1,5 +1,7 @@
+import asyncio
 import io
 import os
+import shutil
 import uuid
 from fastapi import APIRouter, Depends, UploadFile, File
 from PIL import Image
@@ -13,8 +15,10 @@ logger = get_logger(__name__)
 
 router = APIRouter(prefix="/api/upload", tags=["upload"])
 
-MAX_SIZE = 10 * 1024 * 1024  # 10 MB
-_THUMB_SIZE = (400, 400)      # Hem profil hem ilan için yeterli
+MAX_SIZE = 10 * 1024 * 1024          # 10 MB (resim)
+MAX_VIDEO_SIZE = 200 * 1024 * 1024  # 200 MB (video)
+MAX_VIDEO_DURATION = 15.0            # saniye
+_THUMB_SIZE = (400, 400)             # Hem profil hem ilan için yeterli
 
 
 def _detect_image_type(data: bytes) -> str | None:
@@ -63,6 +67,120 @@ def _make_thumbnail(data: bytes, ext: str) -> bytes:
     fmt = "JPEG" if ext in ("jpg", "webp", "gif") else "PNG"
     img.save(buf, format=fmt, quality=85, optimize=True)
     return buf.getvalue()
+
+
+def _detect_video_type(data: bytes) -> str | None:
+    """Magic bytes ile gerçek video türünü tespit et."""
+    if len(data) >= 12 and data[4:8] == b'ftyp':
+        return 'mp4'
+    if data[:4] == b'\x1a\x45\xdf\xa3':
+        return 'webm'
+    return None
+
+
+async def _get_video_duration(path: str) -> float | None:
+    if not shutil.which("ffprobe"):
+        return None
+    try:
+        proc = await asyncio.create_subprocess_exec(
+            "ffprobe", "-v", "error",
+            "-show_entries", "format=duration",
+            "-of", "default=noprint_wrappers=1:nokey=1",
+            path,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.DEVNULL,
+        )
+        stdout, _ = await asyncio.wait_for(proc.communicate(), timeout=30)
+        return float(stdout.decode().strip())
+    except Exception:
+        return None
+
+
+async def _process_listing_video(src: str, out_dir: str) -> tuple[str, str | None]:
+    """ffmpeg ile sıkıştır + ilk kareden thumbnail üret. Sıkıştırma başarısız olursa orijinali kullanır."""
+    video_name = f"{uuid.uuid4().hex}.mp4"
+    thumb_name = f"{uuid.uuid4().hex}_vthumb.jpg"
+    video_path = os.path.join(out_dir, video_name)
+    thumb_path = os.path.join(out_dir, thumb_name)
+
+    if shutil.which("ffmpeg"):
+        compress_cmd = [
+            "ffmpeg", "-y", "-i", src,
+            "-vf", "scale=-2:720",
+            "-c:v", "libx264", "-crf", "23", "-preset", "fast",
+            "-c:a", "aac", "-b:a", "128k",
+            "-movflags", "+faststart",
+            "-t", str(int(MAX_VIDEO_DURATION)),
+            video_path,
+        ]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *compress_cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=120)
+            if proc.returncode != 0 or not os.path.exists(video_path):
+                raise RuntimeError("ffmpeg başarısız")
+        except Exception:
+            # Sıkıştırma başarısız — orijinal mp4'ü kopyala
+            shutil.copy2(src, video_path)
+
+        thumb_cmd = [
+            "ffmpeg", "-y", "-i", video_path,
+            "-ss", "0", "-frames:v", "1", "-q:v", "2",
+            thumb_path,
+        ]
+        try:
+            proc = await asyncio.create_subprocess_exec(
+                *thumb_cmd,
+                stdout=asyncio.subprocess.DEVNULL,
+                stderr=asyncio.subprocess.DEVNULL,
+            )
+            await asyncio.wait_for(proc.communicate(), timeout=30)
+        except Exception:
+            pass
+    else:
+        shutil.copy2(src, video_path)
+
+    thumb_url = f"/uploads/{thumb_name}" if os.path.exists(thumb_path) else None
+    return f"/uploads/{video_name}", thumb_url
+
+
+@router.post("/listing-video")
+async def upload_listing_video(
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+):
+    data = await file.read()
+    if len(data) > MAX_VIDEO_SIZE:
+        raise BadRequestException("Video boyutu 200 MB'ı geçemez")
+
+    if _detect_video_type(data) is None:
+        raise BadRequestException("Sadece MP4, MOV veya WebM video yüklenebilir")
+
+    os.makedirs(settings.upload_dir, exist_ok=True)
+
+    # Geçici dosyaya yaz (ffprobe okumak için)
+    tmp_name = f"tmp_{uuid.uuid4().hex}.mp4"
+    tmp_path = os.path.join(settings.upload_dir, tmp_name)
+    try:
+        with open(tmp_path, "wb") as f:
+            f.write(data)
+
+        duration = await _get_video_duration(tmp_path)
+        if duration is not None and duration > MAX_VIDEO_DURATION:
+            raise BadRequestException(f"Video süresi {MAX_VIDEO_DURATION:.0f} saniyeyi geçemez (süre: {duration:.1f}s)")
+
+        video_url, thumb_url = await _process_listing_video(tmp_path, settings.upload_dir)
+    finally:
+        try:
+            os.remove(tmp_path)
+        except OSError:
+            pass
+
+    logger.info("[UPLOAD] İlan videosu yüklendi | user_id=%s | video=%s", current_user.id, video_url)
+    return {"video_url": video_url, "thumb_url": thumb_url}
 
 
 @router.post("")

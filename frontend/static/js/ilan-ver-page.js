@@ -10,6 +10,78 @@
     const MAX_PHOTOS = 10;
     let selectedFiles = []; // {file, objectUrl}
 
+    // --- Video management ---
+    const MAX_VIDEO_DURATION_S = 15;
+    let _videoUrl = null; // yükleme sonrası backend URL
+
+    const videoInput   = document.getElementById('videoInput');
+    const videoAddBtn  = document.getElementById('videoAddBtn');
+    const videoPreview = document.getElementById('videoPreview');
+    const videoEl      = document.getElementById('videoEl');
+    const videoRemBtn  = document.getElementById('videoRemoveBtn');
+    const videoProg    = document.getElementById('videoProgress');
+    const videoPBar    = document.getElementById('videoProgressBar');
+
+    videoAddBtn.addEventListener('click', () => videoInput.click());
+
+    videoInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        videoInput.value = '';
+
+        // Client-side süre kontrolü
+        const objUrl = URL.createObjectURL(file);
+        const tmpVid = document.createElement('video');
+        tmpVid.preload = 'metadata';
+        tmpVid.src = objUrl;
+        await new Promise(res => { tmpVid.onloadedmetadata = res; tmpVid.onerror = res; });
+        const dur = tmpVid.duration;
+        URL.revokeObjectURL(objUrl);
+
+        if (dur && isFinite(dur) && dur > MAX_VIDEO_DURATION_S) {
+            showAlert(`Video süresi ${MAX_VIDEO_DURATION_S} saniyeyi geçemez (seçilen: ${Math.ceil(dur)}s).`, 'error');
+            return;
+        }
+
+        // Upload
+        videoAddBtn.style.display = 'none';
+        videoProg.style.display   = 'block';
+        videoPBar.style.width     = '30%';
+
+        try {
+            const fd = new FormData();
+            fd.append('file', file);
+            const token = localStorage.getItem('teqlif_token');
+            const res = await fetch('/api/upload/listing-video', {
+                method: 'POST',
+                credentials: 'include',
+                headers: token ? { 'Authorization': `Bearer ${token}` } : {},
+                body: fd,
+            });
+            videoPBar.style.width = '100%';
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err.detail || 'Video yüklenemedi');
+            }
+            const data = await res.json();
+            _videoUrl = data.video_url;
+            videoEl.src = _videoUrl;
+            videoProg.style.display   = 'none';
+            videoPreview.style.display = 'block';
+        } catch (err) {
+            videoProg.style.display  = 'none';
+            videoAddBtn.style.display = '';
+            showAlert(err.message || 'Video yüklenirken hata oluştu.', 'error');
+        }
+    });
+
+    videoRemBtn.addEventListener('click', () => {
+        _videoUrl = null;
+        videoEl.src = '';
+        videoPreview.style.display = 'none';
+        videoAddBtn.style.display  = '';
+    });
+
     const photoInput = document.getElementById('photoInput');
     const photoPreviews = document.getElementById('photoPreviews');
     const photoCount = document.getElementById('photoCount');
@@ -167,6 +239,7 @@
                     title, category, price, location, description,
                     image_urls: imageUrls,
                     ...(imageUrls.length > 0 ? { image_url: imageUrls[0] } : {}),
+                    ...(_videoUrl ? { video_url: _videoUrl } : {}),
                 }),
                 headers: captchaToken ? { 'X-Captcha-Token': captchaToken } : {},
             });
@@ -174,6 +247,10 @@
             document.getElementById('ilanForm').reset();
             selectedFiles = [];
             renderPreviews();
+            _videoUrl = null;
+            if (videoEl) videoEl.src = '';
+            if (videoPreview) videoPreview.style.display = 'none';
+            if (videoAddBtn) videoAddBtn.style.display = '';
             setTimeout(() => window.location.href = '/?tab=ilanlar', 1500);
         } catch (err) {
             const errCode = err?.error?.code;

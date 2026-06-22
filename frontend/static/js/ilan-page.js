@@ -230,6 +230,7 @@
                     <!-- LEFT -->
                     <div style="display:flex;flex-direction:column;gap:1rem">
                         <div class="card">
+                            ${data.video_url ? `<div style="background:#000;border-radius:8px 8px 0 0;overflow:hidden"><video src="${esc(data.video_url)}" controls preload="metadata" style="width:100%;max-height:320px;display:block"></video></div>` : ''}
                             ${buildGallery(_urls)}
                             <div class="detail-body">
                                 <div class="detail-meta">

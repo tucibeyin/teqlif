@@ -52,6 +52,7 @@ def _row_dict(
         "image_url": listing.image_url,
         "image_urls": json.loads(listing.image_urls) if listing.image_urls else [],
         "thumbnail_url": listing.thumbnail_url,
+        "video_url": listing.video_url,
         "created_at": listing.created_at.isoformat() if listing.created_at else None,
         "is_active": listing.is_active,
         "user": {"id": user.id, "username": user.username, "full_name": user.full_name},
@@ -178,6 +179,7 @@ class ListingService:
             image_url=payload.get("image_url"),
             image_urls=json.dumps(payload.get("image_urls") or []),
             thumbnail_url=payload.get("thumbnail_url"),
+            video_url=payload.get("video_url"),
         )
         self.db.add(listing)
         try:
