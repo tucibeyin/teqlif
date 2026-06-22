@@ -112,7 +112,12 @@
 
         let items = '';
         if (videoUrl) {
-            items += `<video src="${esc(videoUrl)}" class="gallery-item active" preload="metadata" playsinline controls></video>`;
+            items += `<video src="${esc(videoUrl)}" class="gallery-item active" preload="metadata" playsinline id="galleryVideo"></video>`;
+            items += `<div id="galleryVideoOverlay" style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:1;transition:opacity .15s">
+                <div style="background:rgba(0,0,0,.5);border-radius:50%;width:56px;height:56px;display:flex;align-items:center;justify-content:center">
+                    <svg width="26" height="26" viewBox="0 0 24 24" fill="white"><path d="M8 5v14l11-7z"/></svg>
+                </div>
+            </div>`;
         }
         items += urls.map((u, i) =>
             `<img src="${u}" class="gallery-item${!videoUrl && i === 0 ? ' active' : ''}" alt="Fotoğraf ${i + 1}" loading="lazy">`
@@ -358,8 +363,22 @@
             // ── Wire up dynamic buttons after innerHTML (CSP: no inline onclick) ──
             var galleryMainEl = document.getElementById('galleryMain');
             if (galleryMainEl) {
-                galleryMainEl.addEventListener('click', function () { openLb(_cur); });
+                galleryMainEl.addEventListener('click', function () {
+                    if (_videoUrl && _cur === 0) {
+                        var vid = document.getElementById('galleryVideo');
+                        if (vid) { vid.paused ? vid.play() : vid.pause(); }
+                        return;
+                    }
+                    openLb(_cur);
+                });
                 galleryMainEl.addEventListener('dblclick', function (e) { e.stopPropagation(); toggleListingLike(); });
+            }
+            var galleryVideoEl = document.getElementById('galleryVideo');
+            if (galleryVideoEl) {
+                var _overlay = document.getElementById('galleryVideoOverlay');
+                galleryVideoEl.addEventListener('play', function () { if (_overlay) _overlay.style.opacity = '0'; });
+                galleryVideoEl.addEventListener('pause', function () { if (_overlay) _overlay.style.opacity = '1'; });
+                galleryVideoEl.addEventListener('ended', function () { if (_overlay) _overlay.style.opacity = '1'; });
             }
             var galleryPrevEl = document.getElementById('galleryPrev');
             if (galleryPrevEl) galleryPrevEl.addEventListener('click', function (e) { e.stopPropagation(); goTo(_cur - 1); });
