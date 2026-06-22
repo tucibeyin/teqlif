@@ -89,8 +89,7 @@
             cursor: zoom-in;
         }
 
-        .gallery-main img,
-        .gallery-main video {
+        .gallery-main img {
             width: 100%;
             height: 100%;
             object-fit: contain;
@@ -98,7 +97,20 @@
             user-select: none;
         }
 
-        .gallery-main img.active,
+        .gallery-main img.active {
+            display: block;
+        }
+
+        .gallery-main video {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+
         .gallery-main video.active {
             display: block;
         }
@@ -848,7 +860,7 @@
 
     <script src="/static/js/main.js"></script>
     <script src="/static/js/auth.js"></script>
-    <script src="/static/js/ilan-page.js?v=6"></script>
+    <script src="/static/js/ilan-page.js?v=7"></script>
 </body>
 
 </html>
