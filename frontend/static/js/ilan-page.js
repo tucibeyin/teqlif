@@ -62,6 +62,8 @@
         if (counterEl) counterEl.textContent = `${_cur + 1} / ${total}`;
         const mainEl = document.getElementById('galleryMain');
         if (mainEl) mainEl.style.cursor = (_videoUrl && _cur === 0) ? 'default' : 'zoom-in';
+        const overlayEl = document.getElementById('galleryVideoOverlay');
+        if (overlayEl) overlayEl.style.display = (_videoUrl && _cur === 0) ? '' : 'none';
     }
 
     /* ── Lightbox ── */
