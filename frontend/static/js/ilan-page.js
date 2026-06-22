@@ -260,16 +260,12 @@
             }
 
             document.getElementById('content').innerHTML = `
-                <!-- Galeri: grid'in üstünde tam genişlik -->
-                <div class="card" style="margin-bottom:1.25rem">
-                    ${buildGallery(_urls, _videoUrl)}
-                </div>
-
                 <div class="detail-grid">
 
                     <!-- LEFT -->
                     <div style="display:flex;flex-direction:column;gap:1rem">
                         <div class="card">
+                            ${buildGallery(_urls, _videoUrl)}
                             <div class="detail-body">
                                 <div class="detail-meta">
                                     ${catLabel ? `<span class="cat-badge">${catLabel}</span>` : ''}
