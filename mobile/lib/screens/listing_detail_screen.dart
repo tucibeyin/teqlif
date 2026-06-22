@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:chewie/chewie.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
@@ -38,6 +39,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   // Video player
   String? _videoUrl;
   VideoPlayerController? _videoCtrl;
+  ChewieController? _chewieCtrl;
   bool _videoInitialized = false;
 
   // Beğeni state'i
@@ -69,7 +71,16 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     if (_videoUrl != null) {
       _videoCtrl = VideoPlayerController.networkUrl(Uri.parse(imgUrl(_videoUrl!)));
       _videoCtrl!.initialize().then((_) {
-        if (mounted) setState(() => _videoInitialized = true);
+        if (!mounted) return;
+        _chewieCtrl = ChewieController(
+          videoPlayerController: _videoCtrl!,
+          autoPlay: false,
+          looping: false,
+          allowFullScreen: true,
+          allowMuting: true,
+          showControls: true,
+        );
+        setState(() => _videoInitialized = true);
       });
     }
     _loadMyId();
@@ -230,6 +241,7 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   void dispose() {
     _heartAnimCtrl?.stop();
     _heartAnimCtrl?.dispose();
+    _chewieCtrl?.dispose();
     _videoCtrl?.dispose();
     _pageCtrl.dispose();
     _offerCtrl.dispose();
@@ -980,34 +992,9 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   }
 
   Widget _buildVideoPlayer() {
-    final ctrl = _videoCtrl!;
     return GestureDetector(
-      onTap: () => setState(() {
-        ctrl.value.isPlaying ? ctrl.pause() : ctrl.play();
-      }),
       onDoubleTap: _triggerHeartAnimation,
-      child: Container(
-        color: Colors.black,
-        width: double.infinity,
-        child: Stack(
-          alignment: Alignment.center,
-          children: [
-            AspectRatio(
-              aspectRatio: ctrl.value.aspectRatio,
-              child: VideoPlayer(ctrl),
-            ),
-            if (!ctrl.value.isPlaying)
-              Container(
-                decoration: const BoxDecoration(
-                  color: Colors.black38,
-                  shape: BoxShape.circle,
-                ),
-                padding: const EdgeInsets.all(12),
-                child: const Icon(Icons.play_arrow_rounded, color: Colors.white, size: 48),
-              ),
-          ],
-        ),
-      ),
+      child: Chewie(controller: _chewieCtrl!),
     );
   }
 
