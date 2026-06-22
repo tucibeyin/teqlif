@@ -307,7 +307,7 @@
                     ? `<img src="${escHtml(imgSrc)}" alt="${escHtml(l.title)}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\\'listing-square-placeholder\\'><svg viewBox=\\'0 0 24 24\\'><rect x=\\'2\\' y=\\'7\\' width=\\'20\\' height=\\'14\\' rx=\\'2\\'/></svg></div>'">`
                     : `<div class="listing-square-placeholder"><svg viewBox="0 0 24 24" fill="none" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 00-4 0v2"/></svg></div>`;
                 html += `
-                    <div class="listing-square" onclick="location.href='/ilan/${l.id}'">
+                    <div class="listing-square" data-listing-id="${l.id}">
                         ${imgHtml}
                         <div class="listing-square-overlay">
                             ${price ? `<div class="listing-square-price">${escHtml(price)}</div>` : ''}
@@ -319,6 +319,9 @@
         }
 
         section.innerHTML = html;
+        section.querySelectorAll('.listing-square[data-listing-id]').forEach(el => {
+            el.addEventListener('click', () => { location.href = '/ilan/' + el.dataset.listingId; });
+        });
     }
 
     async function toggleFollow(userId, currentlyFollowing) {
