@@ -3,7 +3,7 @@ import logging
 from fastapi import APIRouter, Depends, Request, BackgroundTasks
 from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import Optional
+from typing import Any, Dict, Optional
 
 from app.database import get_db
 from app.models.analytics import AnalyticsEvent
@@ -22,6 +22,8 @@ class InteractionPayload(BaseModel):
     item_type: str = Field(max_length=20)
     interaction_type: str = Field(max_length=30)
     duration_seconds: Optional[float] = None
+    price_point: Optional[float] = None
+    metadata: Optional[Dict[str, Any]] = None
 
 async def _save_event_async(data: AnalyticsEventCreate, user_id: int | None, ip_address: str | None, db: AsyncSession):
     try:
@@ -99,6 +101,8 @@ async def track_interaction(
         "item_type": payload.item_type,
         "interaction_type": payload.interaction_type,
         "duration_seconds": payload.duration_seconds,
+        "price_point": payload.price_point,
+        "metadata": payload.metadata,
     }
 
     try:

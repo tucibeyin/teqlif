@@ -1348,6 +1348,10 @@ class _BidSheetContentState extends ConsumerState<_BidSheetContent> {
                 ? '${_fmt(_selectedBid.toDouble())} ₺ Teklif Ver'
                 : 'Teklif Ver',
             isLoading: _loading,
+            itemId: liveState.listingId,
+            pricePoint: _selectedBid > 0
+                ? _selectedBid.toDouble()
+                : (liveState.currentBid ?? liveState.startPrice),
             onSwipeComplete: () {
               if (_selectedBid > 0) _placeBid(_selectedBid.toDouble());
             },

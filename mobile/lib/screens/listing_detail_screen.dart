@@ -6,6 +6,7 @@ import 'package:chewie/chewie.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import '../config/api.dart';
+import '../services/analytics_service.dart';
 import '../services/share_service.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
@@ -55,9 +56,13 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
   bool _isLoggedIn = false; // token var mı (form gösterimi için)
   final _offerCtrl = TextEditingController();
 
+  // Dwell süresi ölçümü
+  late final DateTime _enteredAt;
+
   @override
   void initState() {
     super.initState();
+    _enteredAt = DateTime.now();
     _pageCtrl = PageController();
     final imgs = widget.listing['image_urls'] as List? ?? [];
     _images = imgs.cast<String>().map(imgUrl).toList();
@@ -239,6 +244,19 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
 
   @override
   void dispose() {
+    final durationSec = DateTime.now().difference(_enteredAt).inSeconds.toDouble();
+    final listingId = widget.listing['id'] as int?;
+    final rawPrice = widget.listing['price'];
+    final pricePoint = rawPrice != null ? (rawPrice as num).toDouble() : null;
+    if (listingId != null && durationSec >= 2) {
+      AnalyticsService.logInteraction(
+        itemId: listingId,
+        itemType: 'listing',
+        interactionType: 'view',
+        durationSeconds: durationSec,
+        pricePoint: pricePoint,
+      );
+    }
     _heartAnimCtrl?.stop();
     _heartAnimCtrl?.dispose();
     _chewieCtrl?.dispose();

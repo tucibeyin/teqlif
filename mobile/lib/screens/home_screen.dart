@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
@@ -6,6 +7,7 @@ import 'package:http/http.dart' as http;
 import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
+import '../services/analytics_service.dart';
 import '../services/city_service.dart';
 import '../services/listing_service.dart';
 import '../services/storage_service.dart';
@@ -40,6 +42,11 @@ class _HomeScreenState extends State<HomeScreen> {
   String? _selectedCity;
   List<String> _cities = [];
   final ScrollController _scrollCtrl = ScrollController();
+
+  // ForYou yatay scroll — dwell tracking
+  final ScrollController _forYouScrollCtrl = ScrollController();
+  Timer? _dwellTimer;
+  static const double _cardWidth = 130.0; // 120px kart + 10px margin
 
   static const _categoryMeta = [
     {'slug': 'elektronik', 'icon': Icons.devices_outlined},
@@ -77,8 +84,31 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   void dispose() {
+    _dwellTimer?.cancel();
+    _forYouScrollCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
+  }
+
+  void _onForYouScrollEnd() {
+    _dwellTimer?.cancel();
+    if (_forYouListings.isEmpty) return;
+    final offset = _forYouScrollCtrl.offset;
+    final index = (offset / _cardWidth).round().clamp(0, _forYouListings.length - 1);
+    final item = _forYouListings[index] as Map<String, dynamic>;
+    final itemId = item['id'] as int?;
+    if (itemId == null) return;
+    _dwellTimer = Timer(const Duration(seconds: 3), () {
+      final rawPrice = item['price'];
+      AnalyticsService.logInteraction(
+        itemId: itemId,
+        itemType: 'listing',
+        interactionType: 'dwell',
+        durationSeconds: 3.0,
+        pricePoint: rawPrice != null ? (rawPrice as num).toDouble() : null,
+        metadata: {'source': 'for_you_feed'},
+      );
+    });
   }
 
   void _onScroll() {
@@ -689,20 +719,30 @@ class _HomeScreenState extends State<HomeScreen> {
                           ? const SizedBox.shrink()
                           : SizedBox(
                               height: 190,
-                              child: ListView.builder(
-                                scrollDirection: Axis.horizontal,
-                                padding: const EdgeInsets.symmetric(horizontal: 16),
-                                itemCount: _forYouListings.length,
-                                itemBuilder: (ctx, i) {
-                                  final item = _forYouListings[i] as Map<String, dynamic>;
-                                  return _HorizontalListingCard(
-                                    listing: item,
-                                    onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                                      builder: (_) => ListingDetailScreen(
-                                          listing: Map<String, dynamic>.from(item)),
-                                    )),
-                                  );
+                              child: NotificationListener<ScrollEndNotification>(
+                                onNotification: (_) {
+                                  _onForYouScrollEnd();
+                                  return false;
                                 },
+                                child: ListView.builder(
+                                  controller: _forYouScrollCtrl,
+                                  scrollDirection: Axis.horizontal,
+                                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                                  itemCount: _forYouListings.length,
+                                  itemBuilder: (ctx, i) {
+                                    final item = _forYouListings[i] as Map<String, dynamic>;
+                                    return _HorizontalListingCard(
+                                      listing: item,
+                                      onTap: () {
+                                        _dwellTimer?.cancel();
+                                        Navigator.push(ctx, MaterialPageRoute(
+                                          builder: (_) => ListingDetailScreen(
+                                              listing: Map<String, dynamic>.from(item)),
+                                        ));
+                                      },
+                                    );
+                                  },
+                                ),
                               ),
                             ),
                 ),

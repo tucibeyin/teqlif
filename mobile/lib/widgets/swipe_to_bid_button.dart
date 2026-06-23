@@ -2,17 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:flutter/physics.dart';
 import 'package:flutter/services.dart';
 import '../config/theme.dart';
+import '../services/analytics_service.dart';
 
 class SwipeToBidButton extends StatefulWidget {
   final String text;
   final VoidCallback onSwipeComplete;
   final bool isLoading;
+  final int? itemId;
+  final double? pricePoint;
 
   const SwipeToBidButton({
     super.key,
     required this.text,
     required this.onSwipeComplete,
     this.isLoading = false,
+    this.itemId,
+    this.pricePoint,
   });
 
   @override
@@ -32,6 +37,8 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
   bool _isDragging = false;
   bool _completed = false;
   int _lastHapticStep = -1;
+  // Kullanıcının o pan hareketi sırasında ulaştığı en yüksek ilerleme
+  double _peakProgress = 0.0;
 
   // Spring-back için unbounded controller
   late final AnimationController _springCtrl;
@@ -74,6 +81,7 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
     if (widget.isLoading || _completed) return;
     _springCtrl.stop();
     _isDragging = true;
+    _peakProgress = _dragProgress;
     _lastHapticStep = (_dragProgress * 10).floor();
   }
 
@@ -90,6 +98,7 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
       HapticFeedback.selectionClick();
     }
 
+    if (newProgress > _peakProgress) _peakProgress = newProgress;
     setState(() => _dragProgress = newProgress);
 
     if (newProgress >= _completeThreshold) {
@@ -101,6 +110,18 @@ class _SwipeToBidButtonState extends State<SwipeToBidButton>
     if (!_isDragging) return;
     _isDragging = false;
     if (_completed) return;
+
+    // Kullanıcı sürüklemeye başlayıp (>15%) tamamlamadan bıraktı → kararsızlık sinyali
+    if (_peakProgress >= 0.15 && widget.itemId != null) {
+      AnalyticsService.logInteraction(
+        itemId: widget.itemId!,
+        itemType: 'listing',
+        interactionType: 'bid_hesitation',
+        pricePoint: widget.pricePoint,
+        metadata: {'peak_progress': double.parse(_peakProgress.toStringAsFixed(2))},
+      );
+    }
+    _peakProgress = 0.0;
     _springBack(velocity: details.velocity.pixelsPerSecond.dx / _maxDrag);
   }
 

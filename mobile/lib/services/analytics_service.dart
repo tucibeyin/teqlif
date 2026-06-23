@@ -58,6 +58,36 @@ class AnalyticsService {
     }
   }
 
+  /// Mobil etkileşim sinyali → `/api/analytics/interaction`. Fire-and-forget.
+  static Future<void> logInteraction({
+    required int itemId,
+    required String itemType,
+    required String interactionType,
+    double? durationSeconds,
+    double? pricePoint,
+    Map<String, dynamic>? metadata,
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      final headers = {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
+      final body = <String, dynamic>{
+        'item_id': itemId,
+        'item_type': itemType,
+        'interaction_type': interactionType,
+        if (durationSeconds != null) 'duration_seconds': durationSeconds,
+        if (pricePoint != null) 'price_point': pricePoint,
+        if (metadata != null) 'metadata': metadata,
+      };
+      http
+          .post(Uri.parse('$kBaseUrl/analytics/interaction'),
+              headers: headers, body: jsonEncode(body))
+          .catchError((_) => http.Response('', 500));
+    } catch (_) {}
+  }
+
   static Future<void> trackEvent(String eventType, [Map<String, dynamic>? metadata]) async {
     if (_consentAccepted != true || _sessionId == null) return;
 
