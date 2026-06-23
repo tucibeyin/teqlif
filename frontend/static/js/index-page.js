@@ -794,11 +794,54 @@
     let _activeCat = '';
     let _activeLocation = '';
 
+    const AD_SLOTS = [2, 7, 12];
+    let _impressionObserver = null;
+
+    function _trackImpression(campaignId) {
+        apiFetch('/ads/impression/' + campaignId, { method: 'POST' }).catch(function () {});
+    }
+
+    function _observeSponsored() {
+        if (_impressionObserver) _impressionObserver.disconnect();
+        _impressionObserver = new IntersectionObserver(function (entries) {
+            entries.forEach(function (e) {
+                if (e.isIntersecting) {
+                    const cid = e.target.dataset.campaignId;
+                    if (cid) {
+                        _trackImpression(cid);
+                        _impressionObserver.unobserve(e.target);
+                    }
+                }
+            });
+        }, { threshold: 0.5 });
+        document.querySelectorAll('.listing-item[data-campaign-id]').forEach(function (el) {
+            if (el.dataset.campaignId) _impressionObserver.observe(el);
+        });
+    }
+
+    function _injectSponsored(organic, sponsored) {
+        if (!sponsored.length) return organic;
+        const result = [...organic];
+        const existingIds = new Set(organic.map(function (l) { return l.id; }));
+        let inserted = 0;
+        for (let si = 0; si < sponsored.length && inserted < AD_SLOTS.length; si++) {
+            const ad = sponsored[si];
+            if (existingIds.has(ad.id)) continue;
+            const pos = AD_SLOTS[inserted];
+            result.splice(pos + inserted, 0, ad);
+            inserted++;
+        }
+        return result;
+    }
+
     async function loadListings() {
         _listingsLoaded = true;
         try {
-            const data = await apiFetch('/listings');
-            _allListings = data;
+            const [data, sponsored] = await Promise.all([
+                apiFetch('/listings'),
+                apiFetch('/ads/sponsored').catch(function () { return []; }),
+            ]);
+            _allListings = _injectSponsored(data, sponsored);
             _applyFilters();
         } catch (_) {
             _allListings = [];
@@ -931,6 +974,7 @@
         // Yeni eklenen adsbygoogle ins elementlerini başlat
         (window.adsbygoogle = window.adsbygoogle || []).push({});
         _rebuildListingMap();
+        _observeSponsored();
     }
 
     function formatDate(dateStr) {

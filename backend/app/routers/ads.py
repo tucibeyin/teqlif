@@ -186,6 +186,20 @@ async def record_impression(
     return {"status": "queued"}
 
 
+# ── Sponsorlu İlanlar ────────────────────────────────────────────────────────
+
+@router.get("/sponsored")
+async def get_sponsored_listings(
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Aktif kampanyalardan sponsorlu ilanları döndürür.
+    Web feed'ine enjekte etmek için kullanılır.
+    """
+    from app.services.feed_service import _get_sponsored_listings
+    return await _get_sponsored_listings(db)
+
+
 # ── Kampanya Performans Raporu ─────────────────────────────────────────────────
 
 @router.get("/campaigns/{campaign_id}/report")
