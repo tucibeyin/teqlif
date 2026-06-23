@@ -25,6 +25,7 @@ class LiveListScreen extends ConsumerStatefulWidget {
 }
 
 const _kCatLabels = {
+  'sohbet': '🗣 Canlı Sohbet',
   'elektronik': '📱 Elektronik',
   'giyim': '👗 Giyim',
   'ev': '🏠 Ev & Yaşam',

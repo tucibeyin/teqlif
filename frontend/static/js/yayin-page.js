@@ -139,8 +139,12 @@
 
             document.getElementById('viewerCountText').textContent = `👁 ${info.viewer_count ?? 0}`;
 
-            // Açık artırmayı başlat
-            initAuction(streamId, isHost);
+            // Açık artırmayı başlat (Canlı Sohbet kategorisinde gizle)
+            if (info.category !== 'sohbet') {
+                initAuction(streamId, isHost);
+            } else {
+                document.getElementById('auctionPanel').style.display = 'none';
+            }
 
             // Sohbeti başlat
             initChat(streamId, isHost);

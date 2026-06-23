@@ -31,6 +31,7 @@
     const streamCatBar = document.getElementById('streamCatBar');
 
     const STREAM_CAT_LABELS = {
+        sohbet: '🗣 Canlı Sohbet',
         elektronik: '📱 Elektronik',
         giyim: '👗 Giyim',
         ev: '🏠 Ev & Yaşam',

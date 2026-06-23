@@ -621,13 +621,14 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                         ],
                       ),
                     ),
-                    // Açık artırma şeridi (altta sabit)
-                    AuctionPanel(
-                      streamId: widget.streamToken.streamId,
-                      isHost: true,
-                      onBidAdded: _onBidAdded,
-                      onAuctionReset: _onAuctionReset,
-                    ),
+                    // Açık artırma şeridi — Canlı Sohbet kategorisinde gizle
+                    if (widget.streamToken.category != 'sohbet')
+                      AuctionPanel(
+                        streamId: widget.streamToken.streamId,
+                        isHost: true,
+                        onBidAdded: _onBidAdded,
+                        onAuctionReset: _onAuctionReset,
+                      ),
                     const SizedBox(height: 4),
                   ],
                 ),

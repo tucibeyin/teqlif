@@ -69,12 +69,14 @@ class StreamTokenOut {
   final String roomName;
   final String livekitUrl;
   final String token;
+  final String category;
 
   StreamTokenOut({
     required this.streamId,
     required this.roomName,
     required this.livekitUrl,
     required this.token,
+    required this.category,
   });
 
   factory StreamTokenOut.fromJson(Map<String, dynamic> json) => StreamTokenOut(
@@ -82,6 +84,7 @@ class StreamTokenOut {
         roomName: json['room_name'],
         livekitUrl: json['livekit_url'],
         token: json['token'],
+        category: json['category'] ?? 'diger',
       );
 }
 
@@ -91,6 +94,7 @@ class JoinTokenOut {
   final String livekitUrl;
   final String token;
   final String title;
+  final String category;
   final String hostUsername;
   final String hostLivekitIdentity;  // LiveKit identity = str(host.id)
 
@@ -100,6 +104,7 @@ class JoinTokenOut {
     required this.livekitUrl,
     required this.token,
     required this.title,
+    required this.category,
     required this.hostUsername,
     required this.hostLivekitIdentity,
   });
@@ -110,6 +115,7 @@ class JoinTokenOut {
         livekitUrl: json['livekit_url'],
         token: json['token'],
         title: json['title'],
+        category: json['category'] ?? 'diger',
         hostUsername: json['host_username'],
         hostLivekitIdentity: json['host_livekit_identity'],
       );

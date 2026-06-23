@@ -22,6 +22,7 @@ class CategoryService {
     }
     // Fallback: sunucu cevap vermezse ya da parse edilemezse hardcoded liste
     _cache ??= const [
+      ('sohbet', '🗣 Canlı Sohbet'),
       ('elektronik', '📱 Elektronik'),
       ('vasita', '🚗 Vasıta'),
       ('emlak', '🏠 Emlak'),

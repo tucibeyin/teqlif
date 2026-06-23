@@ -268,6 +268,7 @@ class StreamService:
             room_name=room_name,
             livekit_url=settings.livekit_url,
             token=token,
+            category=data.category,
         )
 
     # ── Yayın Sonlandır ──────────────────────────────────────────────────────
@@ -376,6 +377,7 @@ class StreamService:
             livekit_url=settings.livekit_url,
             token=token,
             title=stream.title,
+            category=stream.category,
             host_username=stream.host.username,
             host_livekit_identity=str(stream.host_id),
         )
@@ -565,6 +567,7 @@ class StreamService:
             room_name=stream.room_name,
             livekit_url=settings.livekit_url,
             token=token,
+            category=stream.category,
         )
 
     # ── Co-Host: Sahneden Kaldır ─────────────────────────────────────────────

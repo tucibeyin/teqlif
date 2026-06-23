@@ -4,7 +4,7 @@ from pydantic import BaseModel, field_validator
 
 
 VALID_CATEGORIES = {
-    "elektronik", "giyim", "ev", "vasita", "spor", "kitap", "emlak", "diger"
+    "elektronik", "giyim", "ev", "vasita", "spor", "kitap", "emlak", "diger", "sohbet"
 }
 
 
@@ -56,6 +56,7 @@ class StreamTokenOut(BaseModel):
     room_name: str
     livekit_url: str
     token: str
+    category: str
 
 
 class JoinTokenOut(BaseModel):
@@ -64,5 +65,6 @@ class JoinTokenOut(BaseModel):
     livekit_url: str
     token: str
     title: str
+    category: str
     host_username: str
     host_livekit_identity: str  # LiveKit token identity = str(host.id)
