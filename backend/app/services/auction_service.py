@@ -110,29 +110,44 @@ manager = _Manager()
 
 
 async def pubsub_listener():
-    """Her worker için tek seferlik başlatılan arka plan görevi."""
+    """Her worker için tek seferlik başlatılan arka plan görevi.
+
+    Redis bağlantısı koptuğunda otomatik olarak yeniden bağlanır.
+    """
     import redis.asyncio as aioredis
     from app.config import settings
 
-    r = aioredis.from_url(settings.redis_url, decode_responses=True)
-    pubsub = r.pubsub()
-    await pubsub.subscribe(_PUBSUB_CHANNEL)
-    logger.info("[PUBSUB] Dinleyici başladı (worker)")
-    try:
-        async for message in pubsub.listen():
-            if message["type"] != "message":
-                continue
+    delay = 1.0
+    while True:
+        r = aioredis.from_url(settings.redis_url, decode_responses=True)
+        pubsub = r.pubsub()
+        try:
+            await pubsub.subscribe(_PUBSUB_CHANNEL)
+            logger.info("[PUBSUB] Dinleyici başladı (worker)")
+            delay = 1.0  # başarılı bağlantıda sıfırla
+            async for message in pubsub.listen():
+                if message["type"] != "message":
+                    continue
+                try:
+                    data = json.loads(message["data"])
+                    stream_id = data.pop("_stream_id")
+                    await manager.local_broadcast(stream_id, data)
+                except Exception as exc:
+                    logger.error("[PUBSUB] Mesaj işleme hatası: %s", exc)
+        except asyncio.CancelledError:
+            await pubsub.unsubscribe(_PUBSUB_CHANNEL)
+            await r.aclose()
+            return
+        except Exception as exc:
+            logger.error("[PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
+        finally:
             try:
-                data = json.loads(message["data"])
-                stream_id = data.pop("_stream_id")
-                await manager.local_broadcast(stream_id, data)
-            except Exception as exc:
-                logger.error("[PUBSUB] Mesaj işleme hatası: %s", exc)
-    except asyncio.CancelledError:
-        pass
-    finally:
-        await pubsub.unsubscribe(_PUBSUB_CHANNEL)
-        await r.aclose()
+                await pubsub.unsubscribe(_PUBSUB_CHANNEL)
+                await r.aclose()
+            except Exception:
+                pass
+        await asyncio.sleep(delay)
+        delay = min(delay * 2, 30.0)  # exponential backoff, max 30s
 
 
 async def publish_auction(stream_id: int, payload: dict):
@@ -788,11 +803,11 @@ class AuctionService:
         if listing_id:
             chat_msg["url"] = f"/ilan/{listing_id}"
         _CHAT_KEY = f"chat:{stream_id}:messages"
-        _CHAT_PUBSUB = "chat_broadcast"
         await redis.rpush(_CHAT_KEY, json.dumps(chat_msg))
         await redis.ltrim(_CHAT_KEY, -50, -1)
         await redis.expire(_CHAT_KEY, 24 * 3600)
-        await redis.publish(_CHAT_PUBSUB, json.dumps({"_stream_id": stream_id, **chat_msg}))
+        from app.services.chat_service import publish_chat
+        await publish_chat(stream_id, chat_msg)
 
         logger.info(
             "[HEMEN AL KABUL] TAMAMLANDI | stream_id=%s buyer=%s price=%s",
