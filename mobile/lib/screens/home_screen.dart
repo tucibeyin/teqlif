@@ -857,11 +857,25 @@ class _HomeScreenState extends State<HomeScreen> {
 }
 
 // ── Yatay scroll ilan kartı (Sana Özel) ────────────────────────────────────
-class _HorizontalListingCard extends StatelessWidget {
+class _HorizontalListingCard extends StatefulWidget {
   final Map<String, dynamic> listing;
   final VoidCallback onTap;
 
   const _HorizontalListingCard({required this.listing, required this.onTap});
+
+  @override
+  State<_HorizontalListingCard> createState() => _HorizontalListingCardState();
+}
+
+class _HorizontalListingCardState extends State<_HorizontalListingCard> {
+  @override
+  void initState() {
+    super.initState();
+    if (widget.listing['is_sponsored'] == true) {
+      final cid = widget.listing['campaign_id'];
+      if (cid != null) AnalyticsService.trackAdImpression(cid as int);
+    }
+  }
 
   String _fmt(dynamic price) {
     if (price == null) return '';
@@ -876,13 +890,13 @@ class _HorizontalListingCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final imgs = listing['image_urls'] as List? ?? [];
-    final raw = imgs.isNotEmpty ? imgs[0] as String : listing['image_url'] as String?;
+    final imgs = widget.listing['image_urls'] as List? ?? [];
+    final raw = imgs.isNotEmpty ? imgs[0] as String : widget.listing['image_url'] as String?;
     final photo = raw != null ? imgUrl(raw) : null;
-    final price = _fmt(listing['price']);
+    final price = _fmt(widget.listing['price']);
 
     return GestureDetector(
-      onTap: onTap,
+      onTap: widget.onTap,
       child: Container(
         width: 120,
         margin: const EdgeInsets.only(right: 10),
@@ -905,7 +919,7 @@ class _HorizontalListingCard extends StatelessWidget {
                           color: AppColors.surfaceVariant(context),
                           child: Center(child: Icon(Icons.image_outlined, color: AppColors.border(context))),
                         ),
-                  if (listing['is_sponsored'] == true)
+                  if (widget.listing['is_sponsored'] == true)
                     Positioned(
                       top: 5,
                       left: 5,
@@ -930,7 +944,7 @@ class _HorizontalListingCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    listing['title'] as String? ?? '',
+                    widget.listing['title'] as String? ?? '',
                     style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
                         color: AppColors.textPrimary(context)),
                     maxLines: 2, overflow: TextOverflow.ellipsis,
@@ -1007,6 +1021,10 @@ class _GridItemState extends State<_GridItem> {
     super.initState();
     _likesCount = widget.listing['likes_count'] as int? ?? 0;
     _isLiked = widget.listing['is_liked'] as bool? ?? false;
+    if (widget.listing['is_sponsored'] == true) {
+      final cid = widget.listing['campaign_id'];
+      if (cid != null) AnalyticsService.trackAdImpression(cid as int);
+    }
   }
 
   @override
@@ -1016,6 +1034,10 @@ class _GridItemState extends State<_GridItem> {
     if (oldWidget.listing['id'] != widget.listing['id']) {
       _likesCount = widget.listing['likes_count'] as int? ?? 0;
       _isLiked = widget.listing['is_liked'] as bool? ?? false;
+      if (widget.listing['is_sponsored'] == true) {
+        final cid = widget.listing['campaign_id'];
+        if (cid != null) AnalyticsService.trackAdImpression(cid as int);
+      }
     }
   }
 
