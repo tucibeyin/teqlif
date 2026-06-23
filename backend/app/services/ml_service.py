@@ -13,7 +13,9 @@ Model: sentence-transformers/all-MiniLM-L6-v2
 
 from __future__ import annotations
 
+import os
 import threading
+from pathlib import Path
 from typing import TYPE_CHECKING
 
 from app.core.logger import get_logger
@@ -23,7 +25,13 @@ if TYPE_CHECKING:
 
 logger = get_logger(__name__)
 
-MODEL_NAME = "all-MiniLM-L6-v2"
+MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
+
+# Cache dizinini proje içine yönlendir — /var/www/.cache izin sorunu olmaz
+_CACHE_DIR = Path(__file__).resolve().parents[3] / ".model_cache"
+_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+os.environ.setdefault("HF_HOME", str(_CACHE_DIR / "huggingface"))
+os.environ.setdefault("SENTENCE_TRANSFORMERS_HOME", str(_CACHE_DIR / "sentence_transformers"))
 
 _model: "SentenceTransformer | None" = None
 _model_lock = threading.Lock()
@@ -36,8 +44,11 @@ def _get_model() -> "SentenceTransformer":
         with _model_lock:
             if _model is None:
                 from sentence_transformers import SentenceTransformer
-                logger.info("[ML] %s yükleniyor…", MODEL_NAME)
-                _model = SentenceTransformer(MODEL_NAME)
+                logger.info("[ML] %s yükleniyor… cache=%s", MODEL_NAME, _CACHE_DIR)
+                _model = SentenceTransformer(
+                    MODEL_NAME,
+                    cache_folder=str(_CACHE_DIR / "sentence_transformers"),
+                )
                 logger.info("[ML] Model yüklendi.")
     return _model
 
