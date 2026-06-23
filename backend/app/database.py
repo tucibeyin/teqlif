@@ -23,9 +23,13 @@ class Base(DeclarativeBase):
 
 
 async def init_extensions() -> None:
-    """pgvector extension'ını aktifleştirir. Uygulama startup'ında bir kez çalışır."""
-    async with engine.begin() as conn:
-        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    """pgvector extension'ını aktifleştirir. Uygulama startup'ında bir kez çalışır.
+    DB kullanıcısının superuser yetkisi yoksa sessizce geçer (extension zaten kurulu olmalı)."""
+    try:
+        async with engine.begin() as conn:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
+    except Exception:
+        pass
 
 
 async def get_db():
