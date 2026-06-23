@@ -27,7 +27,9 @@ class _SearchScreenState extends State<SearchScreen> {
 
   List<Map<String, dynamic>> _userResults = [];
   List<Map<String, dynamic>> _listingResults = [];
+  List<StreamOut> _streamResults = [];
   bool _isSemanticSearch = false;
+  bool _showAllUsers = false;
   bool _searching = false;
   bool _hasQuery = false;
 
@@ -76,7 +78,9 @@ class _SearchScreenState extends State<SearchScreen> {
         _hasQuery = false;
         _userResults = [];
         _listingResults = [];
+        _streamResults = [];
         _isSemanticSearch = false;
+        _showAllUsers = false;
       });
       return;
     }
@@ -178,45 +182,30 @@ class _SearchScreenState extends State<SearchScreen> {
     });
   }
 
-  // Kullanıcı + ilan aramasını paralel olarak başlatır; 500ms debounce'tan tetiklenir.
+  // /search/all → kullanıcı + ilan + canlı yayın; tek çağrı; 500ms debounce.
   Future<void> _search(String q) async {
     setState(() => _searching = true);
     try {
       final token = await StorageService.getToken();
       final headers = token != null ? {'Authorization': 'Bearer $token'} : <String, String>{};
-      final qParam = {'q': q};
-
-      final results = await Future.wait([
-        http.get(
-          Uri.parse('$kBaseUrl/search/users').replace(queryParameters: qParam),
-          headers: headers,
-        ),
-        http.get(
-          Uri.parse('$kBaseUrl/search/listings').replace(queryParameters: qParam),
-          headers: headers,
-        ),
-      ]);
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/search/all').replace(queryParameters: {'q': q}),
+        headers: headers,
+      );
       if (!mounted) return;
-
-      final usersResp = results[0];
-      final listingsResp = results[1];
-
-      final users = usersResp.statusCode == 200
-          ? (jsonDecode(usersResp.body) as List).cast<Map<String, dynamic>>()
-          : <Map<String, dynamic>>[];
-
-      var listings = <Map<String, dynamic>>[];
-      var isSemantic = false;
-      if (listingsResp.statusCode == 200) {
-        final data = jsonDecode(listingsResp.body) as Map<String, dynamic>;
-        listings = (data['listings'] as List).cast<Map<String, dynamic>>();
-        isSemantic = data['search_type'] == 'semantic';
+      if (resp.statusCode != 200) {
+        setState(() => _searching = false);
+        return;
       }
-
+      final data = jsonDecode(resp.body) as Map<String, dynamic>;
       setState(() {
-        _userResults = users;
-        _listingResults = listings;
-        _isSemanticSearch = isSemantic;
+        _userResults = (data['users'] as List).cast<Map<String, dynamic>>();
+        _listingResults = (data['listings'] as List).cast<Map<String, dynamic>>();
+        _streamResults = (data['streams'] as List)
+            .map((s) => StreamOut.fromJson(s as Map<String, dynamic>))
+            .toList();
+        _isSemanticSearch = data['search_type'] == 'semantic';
+        _showAllUsers = false;
         _searching = false;
       });
     } catch (_) {
@@ -261,7 +250,7 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
             // ── İçerik ───────────────────────────────────────────────
             Expanded(
-              child: _hasQuery ? _buildUserResults(l) : _buildExplore(l),
+              child: _hasQuery ? _buildSearchResults(l) : _buildExplore(l),
             ),
           ],
         ),
@@ -269,37 +258,46 @@ class _SearchScreenState extends State<SearchScreen> {
     );
   }
 
-  Widget _buildUserResults(AppLocalizations l) {
+  Widget _buildSearchResults(AppLocalizations l) {
     if (_searching) {
       return const Center(child: CircularProgressIndicator(color: kPrimary));
     }
+
     final hasUsers = _userResults.isNotEmpty;
     final hasListings = _listingResults.isNotEmpty;
+    final hasStreams = _streamResults.isNotEmpty;
 
-    if (!hasUsers && !hasListings) {
+    if (!hasUsers && !hasListings && !hasStreams) {
       return Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
             const Icon(Icons.search_off_outlined, size: 56, color: Color(0xFFD1D5DB)),
             const SizedBox(height: 12),
-            Text(l.searchNoUser, style: const TextStyle(color: Color(0xFF6B7280))),
+            const Text('Sonuç bulunamadı',
+                style: TextStyle(color: Color(0xFF6B7280), fontSize: 15)),
           ],
         ),
       );
     }
 
+    // Max 5 kullanıcı göster; fazlası için "Hepsini gör" satırı
+    final visibleUsers =
+        _showAllUsers ? _userResults : _userResults.take(5).toList();
+    final hasMoreUsers = !_showAllUsers && _userResults.length > 5;
+
     return CustomScrollView(
       slivers: [
-        // ── Akıllı Sonuçlar rozeti ──────────────────────────────────────────
+        // ── Akıllı Sonuçlar rozeti ──────────────────────────────────
         if (_isSemanticSearch)
           SliverToBoxAdapter(
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 2),
               child: Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                     decoration: BoxDecoration(
                       color: kPrimary.withValues(alpha: 0.12),
                       borderRadius: BorderRadius.circular(20),
@@ -313,10 +311,9 @@ class _SearchScreenState extends State<SearchScreen> {
                         Text(
                           'Akıllı Sonuçlar',
                           style: TextStyle(
-                            color: kPrimary,
-                            fontSize: 12,
-                            fontWeight: FontWeight.w600,
-                          ),
+                              color: kPrimary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600),
                         ),
                       ],
                     ),
@@ -326,42 +323,44 @@ class _SearchScreenState extends State<SearchScreen> {
             ),
           ),
 
-        // ── Kullanıcı sonuçları ─────────────────────────────────────────────
+        // ── 1. Kullanıcılar ──────────────────────────────────────────
         if (hasUsers) ...[
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 4),
-              child: Text(
-                'Kullanıcılar',
-                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13,
-                    color: Color(0xFF6B7280)),
-              ),
+            child: _SectionHeader(
+              icon: Icons.person_outline_rounded,
+              label: 'Kullanıcılar',
             ),
           ),
           SliverList(
             delegate: SliverChildBuilderDelegate(
               (ctx, i) {
-                final u = _userResults[i];
+                final u = visibleUsers[i];
                 final imgRaw = u['profile_image_url'] as String?;
-                final img = imgRaw != null && imgRaw.isNotEmpty ? imgUrl(imgRaw) : null;
+                final img =
+                    imgRaw != null && imgRaw.isNotEmpty ? imgUrl(imgRaw) : null;
                 return Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
                     ListTile(
                       leading: CircleAvatar(
                         radius: 22,
                         backgroundColor: kPrimary,
-                        backgroundImage: img != null ? NetworkImage(img) : null,
+                        backgroundImage:
+                            img != null ? NetworkImage(img) : null,
                         child: img == null
                             ? Text(
-                                (u['full_name'] as String? ?? '?')[0].toUpperCase(),
+                                (u['full_name'] as String? ?? '?')[0]
+                                    .toUpperCase(),
                                 style: const TextStyle(
-                                    color: Colors.white, fontWeight: FontWeight.w600),
+                                    color: Colors.white,
+                                    fontWeight: FontWeight.w600),
                               )
                             : null,
                       ),
                       title: Text(
                         u['full_name'] as String? ?? '',
-                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                        style: const TextStyle(
+                            fontWeight: FontWeight.w600, fontSize: 14),
                       ),
                       subtitle: Text(
                         '@${u['username']}',
@@ -370,45 +369,61 @@ class _SearchScreenState extends State<SearchScreen> {
                       onTap: () => Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (_) =>
-                              PublicProfileScreen(username: u['username'] as String),
+                          builder: (_) => PublicProfileScreen(
+                              username: u['username'] as String),
                         ),
                       ),
                     ),
-                    if (i < _userResults.length - 1)
+                    if (i < visibleUsers.length - 1)
                       const Divider(height: 1, indent: 72),
                   ],
                 );
               },
-              childCount: _userResults.length,
+              childCount: visibleUsers.length,
             ),
           ),
+          // "Tüm hesapları gör" satırı
+          if (hasMoreUsers)
+            SliverToBoxAdapter(
+              child: InkWell(
+                onTap: () => setState(() => _showAllUsers = true),
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(72, 4, 16, 8),
+                  child: Row(
+                    children: [
+                      Text(
+                        'Tüm hesapları gör (${_userResults.length})',
+                        style: TextStyle(
+                            color: kPrimary,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 4),
+                      Icon(Icons.chevron_right_rounded,
+                          color: kPrimary, size: 18),
+                    ],
+                  ),
+                ),
+              ),
+            ),
         ],
 
-        // ── İlan sonuçları ──────────────────────────────────────────────────
+        // ── 2. İlanlar ───────────────────────────────────────────────
         if (hasListings) ...[
           SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(16, 16, 16, 6),
-              child: Row(
-                children: [
-                  Text(
-                    'İlanlar',
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13,
-                        color: Color(0xFF6B7280)),
-                  ),
-                  if (_isSemanticSearch) ...[
-                    const SizedBox(width: 6),
-                    Icon(Icons.auto_awesome_rounded, size: 13, color: kPrimary),
-                  ],
-                ],
-              ),
+            child: _SectionHeader(
+              icon: _isSemanticSearch
+                  ? Icons.auto_awesome_rounded
+                  : Icons.grid_view_rounded,
+              label: 'İlanlar',
+              iconColor: _isSemanticSearch ? kPrimary : null,
             ),
           ),
           SliverPadding(
             padding: const EdgeInsets.symmetric(horizontal: 2),
             sliver: SliverGrid(
-              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              gridDelegate:
+                  const SliverGridDelegateWithFixedCrossAxisCount(
                 crossAxisCount: 3,
                 crossAxisSpacing: 2,
                 mainAxisSpacing: 2,
@@ -424,7 +439,8 @@ class _SearchScreenState extends State<SearchScreen> {
                       Navigator.push(
                         ctx,
                         MaterialPageRoute(
-                          builder: (_) => ListingDetailScreen(listing: listing),
+                          builder: (_) =>
+                              ListingDetailScreen(listing: listing),
                         ),
                       );
                     },
@@ -436,7 +452,40 @@ class _SearchScreenState extends State<SearchScreen> {
           ),
         ],
 
-        const SliverToBoxAdapter(child: SizedBox(height: 20)),
+        // ── 3. Canlı Yayınlar ────────────────────────────────────────
+        if (hasStreams) ...[
+          SliverToBoxAdapter(
+            child: _SectionHeader(
+              icon: Icons.fiber_manual_record,
+              label: 'Canlı Yayınlar',
+              iconColor: Colors.red,
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 168,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                itemCount: _streamResults.length,
+                itemBuilder: (_, i) => _StreamCard(
+                  stream: _streamResults[i],
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => SwipeLiveScreen(
+                        streams: _streamResults,
+                        initialIndex: i,
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
+
+        const SliverToBoxAdapter(child: SizedBox(height: 24)),
       ],
     );
   }
@@ -616,6 +665,34 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
             ),
+        ],
+      ),
+    );
+  }
+}
+
+// ── Bölüm başlığı ──────────────────────────────────────────────────────────
+class _SectionHeader extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final Color? iconColor;
+  const _SectionHeader({required this.icon, required this.label, this.iconColor});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 8),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: iconColor ?? const Color(0xFF6B7280)),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 14,
+                color: Color(0xFF374151)),
+          ),
         ],
       ),
     );
