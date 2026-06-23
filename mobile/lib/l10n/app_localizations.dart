@@ -134,12 +134,6 @@ abstract class AppLocalizations {
   /// **'Profilim'**
   String get navProfile;
 
-  /// No description provided for @navForYou.
-  ///
-  /// In tr, this message translates to:
-  /// **'Sana Özel'**
-  String get navForYou;
-
   /// No description provided for @navSettings.
   ///
   /// In tr, this message translates to:
