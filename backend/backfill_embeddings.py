@@ -26,6 +26,27 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from sqlalchemy import select, update as sa_update, func
 
+# Tüm modeller import edilmeli — SQLAlchemy relationship çözümü için
+import app.models.like
+import app.models.user
+import app.models.auction
+import app.models.bid
+import app.models.block
+import app.models.category
+import app.models.favorite
+import app.models.follow
+import app.models.listing_impression
+import app.models.listing_offer
+import app.models.message
+import app.models.notification
+import app.models.purchase
+import app.models.rating
+import app.models.report
+import app.models.story
+import app.models.stream
+import app.models.user_interest
+import app.models.analytics
+
 from app.database import AsyncSessionLocal
 from app.models.listing import Listing
 from app.services.ml_service import generate_embedding
