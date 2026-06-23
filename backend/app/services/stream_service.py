@@ -44,6 +44,7 @@ from app.core.exceptions import (
 )
 from app.core.action_guard import check_user_action_rate, acquire_action_lock, release_action_lock
 from app.core.logger import get_logger, capture_exception
+from app.core.task_queue import get_pool
 from app.constants import ws_types as WS
 
 logger = get_logger(__name__)
@@ -254,6 +255,13 @@ class StreamService:
             stream_title=stream.title,
             stream_id=stream.id,
         )
+
+        # Akıllı kitle bildirimi — ARQ worker'a kuyruğa alınır (web process'i bloklamaz)
+        pool = get_pool()
+        if pool:
+            await pool.enqueue_job("send_smart_auction_alerts", stream.id)
+        else:
+            logger.warning("[STREAMS] ARQ pool yok — send_smart_auction_alerts kuyruğa alınamadı")
 
         return StreamTokenOut(
             stream_id=stream.id,

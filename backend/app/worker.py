@@ -725,6 +725,156 @@ async def cleanup_old_impressions_task(ctx: dict) -> None:
         raise
 
 
+async def send_smart_auction_alerts(ctx: dict, stream_id: int) -> None:
+    """
+    Yeni yayın başladığında ilgili kitlenin FCM tokenlarına akıllı bildirim gönderir.
+
+    Algoritma:
+      1. Stream + aktif auction + listing (embedding, start_price) çek
+      2. listing.embedding varsa →
+            preference_embedding <=> listing_vec < 0.4 (cosine distance)
+            AND (max_budget IS NULL OR max_budget * 1.2 >= start_price)
+      3. Embedding yoksa → user_interests kategori eşleşmesi (fallback)
+      4. Max 200 kullanıcı, 10'luk batch'ler hâlinde, host hariç
+      5. pref_key="stream_started" kontrolü push_notification içinde yapılır
+    """
+    import asyncio as _asyncio
+    from sqlalchemy import text as sa_text
+    from app.database import AsyncSessionLocal
+    from app.models.stream import LiveStream
+    from app.models.auction import Auction
+    from app.models.listing import Listing
+    from app.routers.notifications import push_notification
+
+    COSINE_THRESHOLD = 0.40
+    MAX_USERS = 200
+    BATCH_SIZE = 10
+
+    try:
+        async with AsyncSessionLocal() as db:
+            # ── 1. Yayını getir ───────────────────────────────────────────────
+            from sqlalchemy import select
+            stream = await db.scalar(select(LiveStream).where(LiveStream.id == stream_id))
+            if stream is None:
+                logger.warning("[SmartAlert] stream_id=%s bulunamadı, atlanıyor.", stream_id)
+                return
+
+            host_id = stream.host_id
+            stream_title = stream.title
+            stream_category = stream.category
+            thumbnail = stream.thumbnail_url
+
+            # ── 2. Aktif auction + listing çek (opsiyonel) ───────────────────
+            auction = await db.scalar(
+                select(Auction).where(
+                    Auction.stream_id == stream_id,
+                    Auction.status == "active",
+                ).order_by(Auction.id.desc())
+            )
+
+            listing_embedding: list | None = None
+            start_price: float | None = None
+            listing_title: str | None = None
+
+            if auction:
+                start_price = auction.start_price
+                if auction.listing_id:
+                    listing = await db.scalar(
+                        select(Listing).where(Listing.id == auction.listing_id)
+                    )
+                    if listing:
+                        listing_embedding = listing.embedding
+                        listing_title = listing.title
+
+            # ── 3. Kullanıcıları çek ─────────────────────────────────────────
+            budget_clause = (
+                "AND (u.max_budget IS NULL OR u.max_budget * 1.2 >= :start_price)"
+                if start_price is not None else ""
+            )
+            params: dict = {"host_id": host_id, "lim": MAX_USERS}
+
+            if listing_embedding is not None:
+                # pgvector cosine distance — embedding'e yakın kullanıcılar
+                vec_str = "[" + ",".join(f"{x:.8f}" for x in listing_embedding) + "]"
+                params["vec"] = vec_str
+                params["threshold"] = COSINE_THRESHOLD
+                if start_price is not None:
+                    params["start_price"] = start_price
+                rows = await db.execute(sa_text(f"""
+                    SELECT u.id, u.fcm_token, u.notification_prefs, u.username
+                    FROM users u
+                    WHERE u.is_active = TRUE
+                      AND u.fcm_token IS NOT NULL
+                      AND u.preference_embedding IS NOT NULL
+                      AND u.id != :host_id
+                      AND u.preference_embedding <=> :vec::vector < :threshold
+                      {budget_clause}
+                    ORDER BY u.preference_embedding <=> :vec::vector ASC
+                    LIMIT :lim
+                """), params)
+            else:
+                # Fallback: kategori ilgisine göre kullanıcılar
+                if start_price is not None:
+                    params["start_price"] = start_price
+                params["category"] = stream_category
+                rows = await db.execute(sa_text(f"""
+                    SELECT u.id, u.fcm_token, u.notification_prefs, u.username
+                    FROM users u
+                    INNER JOIN user_interests ui
+                        ON ui.user_id = u.id AND ui.category = :category
+                    WHERE u.is_active = TRUE
+                      AND u.fcm_token IS NOT NULL
+                      AND u.id != :host_id
+                      {budget_clause}
+                    ORDER BY ui.score DESC
+                    LIMIT :lim
+                """), params)
+
+            users = rows.fetchall()
+
+        if not users:
+            logger.info("[SmartAlert] stream_id=%s için uygun kullanıcı bulunamadı.", stream_id)
+            return
+
+        logger.info("[SmartAlert] stream_id=%s → %d kullanıcıya bildirim gönderiliyor.",
+                    stream_id, len(users))
+
+        # ── 4. Kişiselleştirilmiş bildirim metni ─────────────────────────────
+        display_title = listing_title or stream_title
+        price_str = f" ({int(start_price):,} ₺'den başlayan fiyatlarla)".replace(",", ".") if start_price else ""
+        notif_body = f"{display_title}{price_str}"
+
+        # ── 5. Batch FCM gönderimi ────────────────────────────────────────────
+        async def _notify(user_row) -> None:
+            try:
+                await push_notification(
+                    user_id=user_row.id,
+                    notif={
+                        "type": "stream_started",
+                        "title": "Tam sana göre bir yayın başladı! 🎯",
+                        "body": notif_body,
+                        "related_id": stream_id,
+                        "sender_image_url": thumbnail or "",
+                    },
+                    pref_key="smart_alert",
+                )
+            except Exception as e:
+                logger.warning("[SmartAlert] user_id=%s bildirim hatası: %s", user_row.id, e)
+
+        for i in range(0, len(users), BATCH_SIZE):
+            batch = users[i: i + BATCH_SIZE]
+            await _asyncio.gather(*[_notify(u) for u in batch])
+
+        logger.info("[SmartAlert] stream_id=%s bildirim tamamlandı | gönderilen=%d",
+                    stream_id, len(users))
+
+    except Exception as exc:
+        logger.error("[Worker] send_smart_auction_alerts başarısız | stream_id=%s | %s",
+                     stream_id, str(exc), exc_info=True)
+        capture_exception(exc)
+        raise
+
+
 async def calculate_user_budgets_task(ctx: dict) -> None:
     """
     Her gece 02:00'da çalışır.
@@ -766,6 +916,7 @@ class WorkerSettings:
         flush_interactions_to_db,
         update_user_preference_embedding,
         calculate_user_budgets_task,
+        send_smart_auction_alerts,
     ]
 
     cron_jobs = [

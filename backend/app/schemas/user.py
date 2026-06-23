@@ -84,6 +84,7 @@ DEFAULT_NOTIF_PREFS = {
     "new_listing": True,
     "new_bid": True,
     "outbid": True,
+    "smart_alert": True,
 }
 
 
@@ -95,6 +96,7 @@ class NotificationPrefs(BaseModel):
     new_listing: bool = True
     new_bid: bool = True
     outbid: bool = True
+    smart_alert: bool = True
 
 
 class ChangePasswordConfirm(BaseModel):
