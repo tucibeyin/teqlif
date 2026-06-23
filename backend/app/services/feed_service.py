@@ -27,6 +27,7 @@ from app.services.listing_service import _row_dict
 from app.services.like_service import LikeService
 from app.models.listing import Listing
 from app.models.user import User
+from app.models.ad_campaign import AdCampaign
 from sqlalchemy import select
 
 logger = logging.getLogger(__name__)
@@ -34,6 +35,9 @@ logger = logging.getLogger(__name__)
 PAGE_SIZE = 20
 FEED_CACHE_TTL = 300   # 5 dakika
 INTEREST_CACHE_TTL = 900  # 15 dakika
+
+# Sponsored ilan pozisyonları (0-indexed) — 3., 8., 13. slot
+AD_SLOTS = [2, 7, 12]
 
 
 # ── Kategori ağırlık hesabı ───────────────────────────────────────────────────
@@ -329,6 +333,14 @@ async def get_foryou_feed(user_id: int, page: int, db: AsyncSession) -> list[dic
         listing, user = rows[lid]
         result.append(_row_dict(listing, user, counts.get(lid, 0), lid in liked_set))
 
+    # Sponsored ilan enjeksiyonu — sadece ilk sayfa
+    if page == 0:
+        try:
+            ad_items = await _get_sponsored_listings(db)
+            result = _inject_ads(result, ad_items)
+        except Exception as exc:
+            logger.warning("[Feed] Sponsored enjeksiyonu atlandı: %s", exc)
+
     return result
 
 
@@ -369,6 +381,65 @@ async def _compute_foryou_ids(user_id: int, db: AsyncSession, limit: int) -> lis
     )
     ids = [r.id for r in result]
     return ids if ids else await _popular_feed(0, limit, db)
+
+
+# ── Sponsored İlan Enjeksiyonu ────────────────────────────────────────────────
+
+async def _get_sponsored_listings(db: AsyncSession) -> list[dict]:
+    """
+    Redis'teki aktif kampanyalardan rastgele en fazla AD_SLOTS adet
+    sponsored ilan çeker. Bütçesi kalmayan kampanyaların key'leri
+    zaten Redis'te olmadığından otomatik olarak filtre dışı kalır.
+    """
+    redis = await get_redis()
+
+    campaign_ids: list[int] = []
+    async for key in redis.scan_iter("ad_campaign_budget:*", count=100):
+        try:
+            campaign_ids.append(int(key.split(":")[-1]))
+        except (ValueError, IndexError):
+            continue
+        if len(campaign_ids) >= 50:  # tarama limiti
+            break
+
+    if not campaign_ids:
+        return []
+
+    selected = random.sample(campaign_ids, min(len(AD_SLOTS), len(campaign_ids)))
+
+    result = await db.execute(
+        select(AdCampaign, Listing, User)
+        .join(Listing, Listing.id == AdCampaign.listing_id)
+        .join(User, User.id == Listing.user_id)
+        .where(
+            AdCampaign.id.in_(selected),
+            AdCampaign.status == "active",
+            Listing.is_active == True,   # noqa: E712
+            Listing.is_deleted == False,  # noqa: E712
+        )
+    )
+    return [
+        _row_dict(listing, user, 0, False, is_sponsored=True, campaign_id=campaign.id)
+        for campaign, listing, user in result.all()
+    ]
+
+
+def _inject_ads(organic: list[dict], ads: list[dict]) -> list[dict]:
+    """
+    Sponsored item'ları organik feed'e AD_SLOTS pozisyonlarına enjekte eder.
+    Her insert önceki insertlerin yarattığı kaymayı hesaba katar.
+    Organik eleman sayısı değişmez — toplam eleman sayısı ad sayısı kadar artar.
+    """
+    if not ads:
+        return organic
+    result = list(organic)
+    for i, ad in enumerate(ads):
+        if i >= len(AD_SLOTS):
+            break
+        # i adet önceki insert, hedef pozisyonu i kadar sağa kaydırdı
+        pos = min(AD_SLOTS[i] + i, len(result))
+        result.insert(pos, ad)
+    return result
 
 
 # ── Cache invalidation ────────────────────────────────────────────────────────

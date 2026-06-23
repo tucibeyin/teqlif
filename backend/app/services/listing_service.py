@@ -41,6 +41,8 @@ def _row_dict(
     user: User,
     likes_count: int = 0,
     is_liked: bool = False,
+    is_sponsored: bool = False,
+    campaign_id: Optional[int] = None,
 ) -> dict:
     return {
         "id": listing.id,
@@ -58,6 +60,8 @@ def _row_dict(
         "user": {"id": user.id, "username": user.username, "full_name": user.full_name},
         "likes_count": likes_count,
         "is_liked": is_liked,
+        "is_sponsored": is_sponsored,
+        "campaign_id": campaign_id,
     }
 
 

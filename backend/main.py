@@ -57,6 +57,7 @@ import sentry_sdk
 from app.routers import admin_auth
 from app.routers import admin_data
 from app.routers import feed
+from app.routers import ads
 from prometheus_fastapi_instrumentator import Instrumentator
 
 logger = setup_logging()
@@ -322,6 +323,7 @@ app.include_router(moderation.router)
 app.include_router(analytics.router)
 app.include_router(stories.router)
 app.include_router(feed.router)
+app.include_router(ads.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):
