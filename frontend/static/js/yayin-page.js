@@ -176,8 +176,15 @@
                     popup.innerHTML = '<div class="viewer-popup-empty">Henüz izleyici yok</div>';
                 } else {
                     popup.innerHTML = viewers.map(u =>
-                        `<div class="viewer-popup-item">@${u}</div>`
+                        `<div class="viewer-popup-item clickable" data-username="${u}" style="cursor:pointer;">@${u}</div>`
                     ).join('');
+                    popup.querySelectorAll('.viewer-popup-item[data-username]').forEach(item => {
+                        item.addEventListener('click', (e) => {
+                            e.stopPropagation();
+                            popup.classList.remove('open');
+                            _showModModal(item.dataset.username);
+                        });
+                    });
                 }
             } catch (_) {
                 popup.innerHTML = '<div class="viewer-popup-empty">Yüklenemedi</div>';
