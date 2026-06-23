@@ -281,11 +281,46 @@ async def flush_interactions_to_db(ctx: dict) -> None:
         if not rows:
             return
 
+        # ── PostgreSQL insert ──────────────────────────────────────────────────
         from sqlalchemy import insert as sa_insert
         from app.models.analytics import UserInteraction
         async with AsyncSessionLocal() as db:
             await db.execute(sa_insert(UserInteraction), rows)
             await db.commit()
+
+        # ── ClickHouse bulk insert ─────────────────────────────────────────────
+        try:
+            from app.database_clickhouse import get_clickhouse_client
+            ch = await get_clickhouse_client()
+            ch_data = [
+                [
+                    r["user_id"],                    # Nullable(UInt32)
+                    r["item_id"],                    # UInt32
+                    r["item_type"],                  # LowCardinality(String)
+                    r["interaction_type"],           # event_type
+                    None,                            # price_point — şimdilik NULL
+                    r["duration_seconds"],           # Nullable(Float64)
+                    r["created_at"],                 # DateTime
+                ]
+                for r in rows
+            ]
+            await ch.insert(
+                "user_events",
+                ch_data,
+                column_names=[
+                    "user_id", "item_id", "item_type",
+                    "event_type", "price_point",
+                    "duration_seconds", "timestamp",
+                ],
+            )
+            logger.info(
+                "[Worker] ClickHouse user_events insert tamamlandı | kayıt=%d", len(ch_data)
+            )
+        except Exception as ch_exc:
+            # ClickHouse hatası PostgreSQL akışını engellememeli
+            logger.warning(
+                "[Worker] ClickHouse insert başarısız (PostgreSQL etkilenmedi) | %s", ch_exc
+            )
 
         logger.info(
             "[Worker] flush_interactions_to_db tamamlandı | kayıt=%d", len(rows)

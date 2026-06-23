@@ -30,3 +30,4 @@ better-profanity==0.7.0
 prometheus-fastapi-instrumentator==7.0.0
 pgvector==0.4.2
 sentence-transformers==3.4.1
+clickhouse-connect==0.8.15

@@ -1,0 +1,93 @@
+"""
+ClickHouse bağlantı katmanı — bare-metal, Docker yok.
+
+Singleton pattern: uygulama ömrü boyunca tek bir AsyncClient örneği tutulur.
+Startup'ta init_clickhouse() çağrılır; tablo yoksa oluşturulur.
+
+Graceful degradation: ClickHouse kapalıysa sadece uyarı loglanır,
+PostgreSQL akışı kesintisiz devam eder.
+"""
+
+import logging
+from typing import Optional
+
+import clickhouse_connect
+from clickhouse_connect.driver.asyncclient import AsyncClient
+
+logger = logging.getLogger(__name__)
+
+# ── Singleton ─────────────────────────────────────────────────────────────────
+
+_client: Optional[AsyncClient] = None
+
+# ── Tablo DDL ─────────────────────────────────────────────────────────────────
+
+_CREATE_USER_EVENTS_TABLE = """
+CREATE TABLE IF NOT EXISTS user_events
+(
+    user_id          Nullable(UInt32),
+    item_id          UInt32,
+    item_type        LowCardinality(String),
+    event_type       LowCardinality(String),
+    price_point      Nullable(Float64),
+    duration_seconds Nullable(Float64),
+    timestamp        DateTime DEFAULT now()
+)
+ENGINE = MergeTree()
+PARTITION BY toYYYYMM(timestamp)
+ORDER BY (timestamp, item_id)
+SETTINGS index_granularity = 8192
+"""
+
+
+# ── Public API ────────────────────────────────────────────────────────────────
+
+async def get_clickhouse_client() -> AsyncClient:
+    """
+    Singleton ClickHouse async istemcisini döndürür.
+    İlk çağrıda bağlantıyı kurar (localhost:8123, HTTP arayüzü).
+    """
+    global _client
+    if _client is None:
+        _client = await clickhouse_connect.get_async_client(
+            host="localhost",
+            port=8123,
+            connect_timeout=5,
+            send_receive_timeout=30,
+        )
+    return _client
+
+
+async def init_clickhouse() -> None:
+    """
+    Uygulama başlangıcında çağrılır:
+      1. Bağlantıyı test eder
+      2. user_events tablosunu (yoksa) oluşturur
+    ClickHouse erişilemezse uyarı loglar, uygulamayı durdurmaz.
+    """
+    global _client
+    try:
+        _client = await clickhouse_connect.get_async_client(
+            host="localhost",
+            port=8123,
+            connect_timeout=5,
+            send_receive_timeout=30,
+        )
+        await _client.command(_CREATE_USER_EVENTS_TABLE)
+        logger.info("[ClickHouse] Bağlantı kuruldu, user_events tablosu hazır.")
+    except Exception as exc:
+        logger.warning(
+            "[ClickHouse] Başlatma başarısız — servis kapalı olabilir. "
+            "PostgreSQL akışı etkilenmez. Hata: %s",
+            exc,
+        )
+        _client = None
+
+
+async def close_clickhouse() -> None:
+    """Uygulama kapanırken bağlantıyı temizler."""
+    global _client
+    if _client is not None:
+        await _client.close()
+        _client = None
+        logger.info("[ClickHouse] Bağlantı kapatıldı.")

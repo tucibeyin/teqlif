@@ -135,11 +135,13 @@ async def _seed_cities():
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     from app.database import init_extensions
+    from app.database_clickhouse import init_clickhouse, close_clickhouse
     await init_extensions()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _seed_categories()
     await _seed_cities()
+    await init_clickhouse()
     # FastAPI Cache — Redis backend (decode_responses=False: JsonCoder bytes bekler)
     _cache_redis = aioredis.from_url(settings.redis_url, decode_responses=False)
     FastAPICache.init(RedisBackend(_cache_redis), prefix="teqlif:cache")
@@ -160,6 +162,7 @@ async def lifespan(app: FastAPI):
     await ws_manager.shutdown()
     await arq_pool.close()
     clear_pool()
+    await close_clickhouse()
 
 
 app = FastAPI(title="Teqlif API", version="0.1.0", lifespan=lifespan)
