@@ -10,6 +10,7 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 import '../../config/theme.dart';
 import '../../models/stream.dart';
+import '../../services/analytics_service.dart';
 import '../../services/stream_service.dart';
 import 'seller_report_screen.dart';
 import '../../utils/price_formatter.dart';
@@ -69,6 +70,9 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   String? _coHostUsername;
   double? _pipTop;
   double? _pipLeft;
+  int _audienceSize = 0;
+  double _audienceCost = 0.0;
+  bool _blastSending = false;
   final _chatKey = GlobalKey<ChatPanelState>();
   final _heartsKey = GlobalKey<FloatingHeartsState>();
 
@@ -79,6 +83,77 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     WakelockPlus.enable();
     _connect();
     if (widget.streamToken.category != 'sohbet') _loadBidHistory();
+    _loadAudienceSize();
+  }
+
+  Future<void> _loadAudienceSize() async {
+    final result = await AnalyticsService.getAudienceSize(
+      title: widget.title,
+      category: widget.streamToken.category,
+    );
+    if (!mounted || result == null) return;
+    final size = result['audience_size'] as int? ?? 0;
+    final cost = (result['estimated_cost'] as num?)?.toDouble() ?? 0.0;
+    if (size > 0) setState(() { _audienceSize = size; _audienceCost = cost; });
+  }
+
+  Future<void> _sendLeadBlast() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (_) => AlertDialog(
+        backgroundColor: const Color(0xFF1E293B),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Bildirim Gönder', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+        content: Text(
+          '$_audienceSize hazır alıcıya bildirim gönderilecek.\n\nToplam ücret: ${_audienceCost.toStringAsFixed(2)} ₺',
+          style: const TextStyle(color: Color(0xFF94A3B8), height: 1.5),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Vazgeç', style: TextStyle(color: Color(0xFF64748B))),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: const Color(0xFFEF4444)),
+            child: const Text('Gönder', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _blastSending = true);
+    try {
+      final result = await AnalyticsService.sendLeadBlast(
+        title: widget.title,
+        category: widget.streamToken.category,
+        estimatedCost: _audienceCost,
+      );
+      if (!mounted) return;
+      if (result != null && result['error'] == null) {
+        final sent = result['sent'] as int? ?? _audienceSize;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('🎯 $sent kişiye bildirim gönderildi!'),
+            backgroundColor: const Color(0xFF22C55E),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+        setState(() { _audienceSize = 0; _audienceCost = 0.0; });
+      } else {
+        final errMsg = result?['error'] as String? ?? 'Bildirim gönderilemedi.';
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(errMsg),
+            backgroundColor: const Color(0xFFEF4444),
+            behavior: SnackBarBehavior.floating,
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _blastSending = false);
+    }
   }
 
   @override
@@ -621,6 +696,78 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                         ],
                       ),
                     ),
+                    // ── Lead blast butonu ──────────────────────────────────
+                    if (_audienceSize > 0)
+                      Padding(
+                        padding: const EdgeInsets.fromLTRB(12, 4, 12, 4),
+                        child: GestureDetector(
+                          onTap: _blastSending ? null : _sendLeadBlast,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(
+                                horizontal: 14, vertical: 10),
+                            decoration: BoxDecoration(
+                              gradient: _blastSending
+                                  ? null
+                                  : const LinearGradient(
+                                      colors: [
+                                        Color(0xFFDC2626),
+                                        Color(0xFFEF4444)
+                                      ],
+                                    ),
+                              color: _blastSending
+                                  ? const Color(0x661E293B)
+                                  : null,
+                              borderRadius: BorderRadius.circular(14),
+                              boxShadow: _blastSending
+                                  ? null
+                                  : [
+                                      BoxShadow(
+                                        color: const Color(0xFFEF4444)
+                                            .withValues(alpha: 0.4),
+                                        blurRadius: 12,
+                                        offset: const Offset(0, 4),
+                                      ),
+                                    ],
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: _blastSending
+                                  ? const [
+                                      SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                          color: Colors.white54,
+                                        ),
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text(
+                                        'Gönderiliyor…',
+                                        style: TextStyle(
+                                          color: Colors.white54,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                    ]
+                                  : [
+                                      const Text('🎯',
+                                          style: TextStyle(fontSize: 14)),
+                                      const SizedBox(width: 6),
+                                      Text(
+                                        '$_audienceSize Hazır Alıcı Bekliyor — Bildirim Gönder (${_audienceCost.toStringAsFixed(0)} ₺)',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w800,
+                                        ),
+                                      ),
+                                    ],
+                            ),
+                          ),
+                        ),
+                      ),
                     // Açık artırma şeridi — Canlı Sohbet kategorisinde gizle
                     if (widget.streamToken.category != 'sohbet')
                       AuctionPanel(

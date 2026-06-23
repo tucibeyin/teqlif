@@ -19,7 +19,7 @@ from app.core.logger import capture_exception
 from app.routers import auth, streams, webhooks, auction, chat, moderation, stories
 from app.services.auction_service import pubsub_listener
 from app.routers.chat import chat_pubsub_listener, moderation_pubsub_listener
-from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics
+from app.routers import notifications, messages, users, listings, follows, categories, upload, cities, reports, favorites, search, ratings, analytics, leads
 from app.security.middleware import security_headers, SecurityMiddleware
 from app.security.sanitizer import InputSanitizationMiddleware
 from app.core.rate_limit import limiter, rate_limit_exceeded_handler
@@ -324,6 +324,7 @@ app.include_router(analytics.router)
 app.include_router(stories.router)
 app.include_router(feed.router)
 app.include_router(ads.router)
+app.include_router(leads.router)
 
 # Upload klasörü varsa static olarak sun
 if os.path.exists(settings.upload_dir):

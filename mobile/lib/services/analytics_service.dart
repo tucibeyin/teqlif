@@ -58,6 +58,67 @@ class AnalyticsService {
     }
   }
 
+  /// Kitle büyüklüğü tahmini → `GET /api/leads/audience-size`
+  static Future<Map<String, dynamic>?> getAudienceSize({
+    required String title,
+    String category = '',
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final uri = Uri.parse('$kBaseUrl/leads/audience-size').replace(
+        queryParameters: {
+          'title': title,
+          if (category.isNotEmpty) 'category': category,
+        },
+      );
+      final resp = await http.get(
+        uri,
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  /// Lead blast gönder → `POST /api/leads/send-blast`
+  static Future<Map<String, dynamic>?> sendLeadBlast({
+    required String title,
+    required String category,
+    required double estimatedCost,
+    int? listingId,
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/leads/send-blast'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'title': title,
+          'category': category,
+          'estimated_cost': estimatedCost,
+          if (listingId != null) 'listing_id': listingId,
+        }),
+      );
+      if (resp.statusCode == 202) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      // Yetersiz bütçe veya başka hata — mesajı döndür
+      try {
+        final body = jsonDecode(resp.body) as Map<String, dynamic>;
+        return {'error': body['detail'] ?? 'Blast gönderilemedi.'};
+      } catch (_) {}
+      return {'error': 'Blast gönderilemedi.'};
+    } catch (_) {}
+    return null;
+  }
+
   /// Yapay Zeka fiyatlama tahmini → `POST /api/analytics/price-estimate`
   static Future<Map<String, dynamic>?> getPriceEstimate({
     required String title,
