@@ -663,10 +663,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       (ctx, i) => _GridItem(
                         key: Key('home_listing_filtered_${_recentListings[i]['id']}'),
                         listing: _recentListings[i],
-                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                          builder: (_) => ListingDetailScreen(
-                              listing: Map<String, dynamic>.from(_recentListings[i])),
-                        )),
+                        onTap: () {
+                          if (_recentListings[i]['is_sponsored'] == true) {
+                            final cid = _recentListings[i]['campaign_id'];
+                            if (cid != null) AnalyticsService.trackAdClick(cid as int);
+                          }
+                          Navigator.push(ctx, MaterialPageRoute(
+                            builder: (_) => ListingDetailScreen(
+                                listing: Map<String, dynamic>.from(_recentListings[i])),
+                          ));
+                        },
                       ),
                       childCount: _recentListings.length,
                     ),
@@ -735,6 +741,10 @@ class _HomeScreenState extends State<HomeScreen> {
                                       listing: item,
                                       onTap: () {
                                         _dwellTimer?.cancel();
+                                        if (item['is_sponsored'] == true) {
+                                          final cid = item['campaign_id'];
+                                          if (cid != null) AnalyticsService.trackAdClick(cid as int);
+                                        }
                                         Navigator.push(ctx, MaterialPageRoute(
                                           builder: (_) => ListingDetailScreen(
                                               listing: Map<String, dynamic>.from(item)),
@@ -814,10 +824,16 @@ class _HomeScreenState extends State<HomeScreen> {
                       (ctx, i) => _GridItem(
                         key: Key('home_listing_item_${_recentListings[i]['id']}'),
                         listing: _recentListings[i],
-                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
-                          builder: (_) => ListingDetailScreen(
-                              listing: Map<String, dynamic>.from(_recentListings[i])),
-                        )),
+                        onTap: () {
+                          if (_recentListings[i]['is_sponsored'] == true) {
+                            final cid = _recentListings[i]['campaign_id'];
+                            if (cid != null) AnalyticsService.trackAdClick(cid as int);
+                          }
+                          Navigator.push(ctx, MaterialPageRoute(
+                            builder: (_) => ListingDetailScreen(
+                                listing: Map<String, dynamic>.from(_recentListings[i])),
+                          ));
+                        },
                       ),
                       childCount: _recentListings.length,
                     ),
@@ -880,12 +896,33 @@ class _HorizontalListingCard extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Expanded(
-              child: photo != null
-                  ? CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, width: double.infinity)
-                  : Container(
-                      color: AppColors.surfaceVariant(context),
-                      child: Center(child: Icon(Icons.image_outlined, color: AppColors.border(context))),
+              child: Stack(
+                fit: StackFit.expand,
+                children: [
+                  photo != null
+                      ? CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, width: double.infinity)
+                      : Container(
+                          color: AppColors.surfaceVariant(context),
+                          child: Center(child: Icon(Icons.image_outlined, color: AppColors.border(context))),
+                        ),
+                  if (listing['is_sponsored'] == true)
+                    Positioned(
+                      top: 5,
+                      left: 5,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.62),
+                          borderRadius: BorderRadius.circular(5),
+                        ),
+                        child: const Text(
+                          'Sponsorlu',
+                          style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
+                        ),
+                      ),
                     ),
+                ],
+              ),
             ),
             Padding(
               padding: const EdgeInsets.fromLTRB(6, 5, 6, 6),
@@ -1068,6 +1105,23 @@ class _GridItemState extends State<_GridItem> {
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ),
+          // Sponsorlu rozeti — sol üst köşe
+          if (widget.listing['is_sponsored'] == true)
+            Positioned(
+              top: 6,
+              left: 6,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.62),
+                  borderRadius: BorderRadius.circular(5),
+                ),
+                child: const Text(
+                  'Sponsorlu',
+                  style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w600),
                 ),
               ),
             ),

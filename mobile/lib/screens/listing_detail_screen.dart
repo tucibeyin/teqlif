@@ -439,6 +439,78 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     }
   }
 
+  Future<void> _boostListing(BuildContext ctx) async {
+    final confirmed = await showDialog<bool>(
+      context: ctx,
+      builder: (dlgCtx) => AlertDialog(
+        title: const Text('İlanı Öne Çıkar', style: TextStyle(fontWeight: FontWeight.w700)),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Kampanya planı:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+            const SizedBox(height: 10),
+            const _BoostRow(icon: Icons.account_balance_wallet_outlined, label: 'Toplam Bütçe', value: '100 ₺'),
+            const _BoostRow(icon: Icons.ads_click, label: 'Tıklama Başı Maliyet', value: '1 ₺'),
+            const _BoostRow(icon: Icons.touch_app_outlined, label: 'Tahmini Tıklama', value: '~100 tıklama'),
+            const SizedBox(height: 12),
+            Text(
+              'İlanınız "Sana Özel" akışında öne çıkarılacak.',
+              style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(dlgCtx, false), child: const Text('İptal')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(dlgCtx, true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFF97316),
+              foregroundColor: Colors.white,
+            ),
+            child: const Text('Başlat'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      final token = await StorageService.getToken();
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/ads/campaigns'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'listing_id': widget.listing['id'],
+          'total_budget': 100.0,
+          'cpc_bid': 1.0,
+        }),
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 201) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('🔥 İlanınız öne çıkarıldı!'),
+            backgroundColor: Color(0xFFF97316),
+          ),
+        );
+      } else {
+        final msg = (jsonDecode(resp.body) as Map<String, dynamic>)['detail'] ?? 'Kampanya başlatılamadı.';
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg.toString())));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Bağlantı hatası. Lütfen tekrar deneyin.')),
+        );
+      }
+    }
+  }
+
   void _openReport(BuildContext context) {
     final l = AppLocalizations.of(context)!;
     String? selectedReason;
@@ -937,7 +1009,23 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
         ),
       ),
       bottomNavigationBar: isMine
-          ? null
+          ? SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(12),
+                child: ElevatedButton.icon(
+                  onPressed: () => _boostListing(context),
+                  icon: const Text('🔥', style: TextStyle(fontSize: 16)),
+                  label: const Text('İlanı Öne Çıkar'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFFF97316),
+                    foregroundColor: Colors.white,
+                    minimumSize: const Size(double.infinity, 50),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                  ),
+                ),
+              ),
+            )
           : SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
@@ -1399,6 +1487,32 @@ class _ListingDeepLinkLoaderState extends State<ListingDeepLinkLoader> {
   Widget build(BuildContext context) {
     return const Scaffold(
       body: Center(child: CircularProgressIndicator()),
+    );
+  }
+}
+
+// ── Yardımcı widget ───────────────────────────────────────────────────────────
+
+class _BoostRow extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _BoostRow({required this.icon, required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          Icon(icon, size: 16, color: const Color(0xFFF97316)),
+          const SizedBox(width: 8),
+          Text(label, style: const TextStyle(fontSize: 13)),
+          const Spacer(),
+          Text(value, style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w700)),
+        ],
+      ),
     );
   }
 }

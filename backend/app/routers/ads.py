@@ -1,7 +1,8 @@
 """
-Reklam İzleme Endpointleri.
+Reklam Ağı Endpointleri.
 
-POST /api/ads/click/{campaign_id}      — tıklama → bütçe düşer
+POST /api/ads/campaigns               — kampanya oluştur (satıcı)
+POST /api/ads/click/{campaign_id}     — tıklama → bütçe düşer
 POST /api/ads/impression/{campaign_id} — gösterim → ClickHouse'a log
 """
 from __future__ import annotations
@@ -9,13 +10,86 @@ from __future__ import annotations
 import logging
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, BackgroundTasks, Request
+from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, Request
+from pydantic import BaseModel, Field
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
 
-from app.utils.auth import bearer_scheme, decode_token
+from app.database import get_db
+from app.models.ad_campaign import AdCampaign
+from app.models.listing import Listing
+from app.models.user import User
+from app.utils.auth import bearer_scheme, decode_token, get_current_user
 
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/api/ads", tags=["ads"])
+
+
+# ── Şemalar ───────────────────────────────────────────────────────────────────
+
+class CampaignCreate(BaseModel):
+    listing_id: int
+    total_budget: float = Field(gt=0)
+    cpc_bid: float = Field(gt=0)
+
+
+# ── Kampanya Oluştur ──────────────────────────────────────────────────────────
+
+@router.post("/campaigns", status_code=201)
+async def create_campaign(
+    body: CampaignCreate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Satıcı kendi ilanı için reklam kampanyası başlatır.
+
+    - İlanın sahibi olduğu doğrulanır.
+    - AdCampaign kaydı oluşturulur (status='active').
+    - Redis bütçe engine'ine yüklenir (anında aktif hale gelir).
+    """
+    # İlanın bu kullanıcıya ait olduğunu doğrula
+    listing = await db.scalar(
+        select(Listing).where(
+            Listing.id == body.listing_id,
+            Listing.user_id == current_user.id,
+            Listing.is_deleted == False,  # noqa: E712
+        )
+    )
+    if not listing:
+        raise HTTPException(status_code=404, detail="İlan bulunamadı veya size ait değil")
+
+    campaign = AdCampaign(
+        listing_id=body.listing_id,
+        seller_id=current_user.id,
+        total_budget=body.total_budget,
+        spent_budget=0.0,
+        cpc_bid=body.cpc_bid,
+        status="active",
+    )
+    db.add(campaign)
+    await db.commit()
+    await db.refresh(campaign)
+
+    # Redis'e anında yükle — cron'u beklemeye gerek yok
+    try:
+        from app.services.ad_service import load_active_campaigns_to_redis
+        await load_active_campaigns_to_redis()
+    except Exception as exc:
+        logger.warning("[Ads] Redis yükleme atlandı: %s", exc)
+
+    logger.info(
+        "[Ads] Yeni kampanya oluşturuldu | id=%d listing_id=%d seller_id=%d budget=%.2f",
+        campaign.id, body.listing_id, current_user.id, body.total_budget,
+    )
+    return {
+        "id": campaign.id,
+        "listing_id": campaign.listing_id,
+        "status": campaign.status,
+        "total_budget": campaign.total_budget,
+        "cpc_bid": campaign.cpc_bid,
+    }
 
 
 def _user_id_from_request(request: Request) -> int | None:

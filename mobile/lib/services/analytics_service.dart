@@ -107,6 +107,21 @@ class AnalyticsService {
     } catch (_) {}
   }
 
+  static Future<void> trackAdClick(int campaignId) async {
+    try {
+      final token = await StorageService.getToken();
+      http
+          .post(
+            Uri.parse('$kBaseUrl/ads/click/$campaignId'),
+            headers: {
+              'Content-Type': 'application/json',
+              if (token != null) 'Authorization': 'Bearer $token',
+            },
+          )
+          .catchError((_) => http.Response('', 500));
+    } catch (_) {}
+  }
+
   static Future<void> trackEvent(String eventType, [Map<String, dynamic>? metadata]) async {
     if (_consentAccepted != true || _sessionId == null) return;
 
