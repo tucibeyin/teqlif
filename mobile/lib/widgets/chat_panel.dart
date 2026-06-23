@@ -179,6 +179,9 @@ class ChatPanel extends StatefulWidget {
   /// Bir kullanıcı co-host davetini kabul ettiğinde tüm odaya gelir.
   final void Function(String username)? onCoHostAccepted;
 
+  /// Sadece host alır — yüksek harcamalı kullanıcı yayına katıldığında tetiklenir.
+  final void Function(String username, String tier)? onWhaleAlert;
+
   /// true ise pin banner mesaj input'unun altında gösterilir (host ekranı için).
   final bool pinAtBottom;
 
@@ -210,6 +213,7 @@ class ChatPanel extends StatefulWidget {
     this.onCoHostInvite,
     this.onCoHostRemoved,
     this.onCoHostAccepted,
+    this.onWhaleAlert,
   });
 
   @override
@@ -437,6 +441,10 @@ class ChatPanelState extends State<ChatPanel> {
             } else if (json['type'] == 'cohost_accepted') {
               final username = json['username'] as String? ?? '';
               _eventType = 'cohost_accepted:$username';
+            } else if (json['type'] == 'WHALE_ALERT') {
+              final username = json['username'] as String? ?? '';
+              final tier = json['tier'] as String? ?? 'VIP';
+              _eventType = 'whale_alert:$username:$tier';
             }
           } catch (e) {
             debugPrint('[CHAT] JSON parse hatası: $e');
@@ -501,6 +509,13 @@ class ChatPanelState extends State<ChatPanel> {
           if (_eventType != null && _eventType!.startsWith('cohost_accepted:')) {
             final username = _eventType!.substring('cohost_accepted:'.length);
             widget.onCoHostAccepted?.call(username);
+          }
+          if (_eventType != null && _eventType!.startsWith('whale_alert:')) {
+            final rest  = _eventType!.substring('whale_alert:'.length);
+            final colon = rest.indexOf(':');
+            final username = colon >= 0 ? rest.substring(0, colon) : rest;
+            final tier     = colon >= 0 ? rest.substring(colon + 1) : 'VIP';
+            widget.onWhaleAlert?.call(username, tier);
           }
       },
     );

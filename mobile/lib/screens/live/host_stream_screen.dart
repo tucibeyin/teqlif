@@ -76,6 +76,10 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   final _chatKey = GlobalKey<ChatPanelState>();
   final _heartsKey = GlobalKey<FloatingHeartsState>();
 
+  // Balina Radarı HUD
+  OverlayEntry? _whaleHudEntry;
+  Timer? _whaleHudTimer;
+
   @override
   void initState() {
     super.initState();
@@ -84,6 +88,23 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
     _connect();
     if (widget.streamToken.category != 'sohbet') _loadBidHistory();
     _loadAudienceSize();
+  }
+
+  void _showWhaleHud(String username, String tier) {
+    if (!mounted) return;
+    _whaleHudTimer?.cancel();
+    _whaleHudEntry?.remove();
+    _whaleHudEntry = null;
+
+    final overlay = Overlay.of(context);
+    _whaleHudEntry = OverlayEntry(
+      builder: (_) => _WhaleHud(username: username, tier: tier),
+    );
+    overlay.insert(_whaleHudEntry!);
+    _whaleHudTimer = Timer(const Duration(seconds: 4), () {
+      _whaleHudEntry?.remove();
+      _whaleHudEntry = null;
+    });
   }
 
   Future<void> _loadAudienceSize() async {
@@ -159,6 +180,8 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
   @override
   void dispose() {
     _thumbTimer?.cancel();
+    _whaleHudTimer?.cancel();
+    _whaleHudEntry?.remove();
     WakelockPlus.disable();
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.edgeToEdge);
     _listener?.dispose();
@@ -633,6 +656,7 @@ class _HostStreamScreenState extends State<HostStreamScreen> {
                           setState(() => _coHostUsername = username),
                       onCoHostRemoved: (_) =>
                           setState(() => _coHostUsername = null),
+                      onWhaleAlert: _showWhaleHud,
                       pinAtBottom: true,
                       pinDismissible: true,
                     ),
@@ -1767,6 +1791,127 @@ class _PinInputSheetState extends State<_PinInputSheet> {
                 ],
               ),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ── Balina Radarı HUD ─────────────────────────────────────────────────────────
+class _WhaleHud extends StatefulWidget {
+  final String username;
+  final String tier;
+
+  const _WhaleHud({required this.username, required this.tier});
+
+  @override
+  State<_WhaleHud> createState() => _WhaleHudState();
+}
+
+class _WhaleHudState extends State<_WhaleHud>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _ctrl;
+  late Animation<double> _opacity;
+  late Animation<Offset> _slide;
+
+  @override
+  void initState() {
+    super.initState();
+    _ctrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 400),
+    );
+    _opacity = CurvedAnimation(parent: _ctrl, curve: Curves.easeOut);
+    _slide   = Tween<Offset>(
+      begin: const Offset(0, -0.3),
+      end:   Offset.zero,
+    ).animate(CurvedAnimation(parent: _ctrl, curve: Curves.easeOut));
+
+    _ctrl.forward();
+
+    // 3.3s sonra fade-out başlat
+    Future.delayed(const Duration(milliseconds: 3300), () {
+      if (mounted) _ctrl.reverse();
+    });
+  }
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      top: MediaQuery.of(context).padding.top + 12,
+      left: 16,
+      right: 16,
+      child: SlideTransition(
+        position: _slide,
+        child: FadeTransition(
+          opacity: _opacity,
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFFB8860B), Color(0xFFFFD700), Color(0xFFB8860B)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+                borderRadius: BorderRadius.circular(14),
+                boxShadow: [
+                  BoxShadow(
+                    color: const Color(0xFFFFD700).withValues(alpha: 0.5),
+                    blurRadius: 16,
+                    spreadRadius: 2,
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  const Text('🐳', style: TextStyle(fontSize: 28)),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          '${widget.tier} Alıcı Odada',
+                          style: const TextStyle(
+                            color: Color(0xFF3B2A00),
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            letterSpacing: 0.5,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          '@${widget.username}',
+                          style: const TextStyle(
+                            color: Color(0xFF1A1200),
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        const Text(
+                          'Kaliteli ürünleri çıkarma vakti!',
+                          style: TextStyle(
+                            color: Color(0xFF3B2A00),
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
           ),
         ),
       ),

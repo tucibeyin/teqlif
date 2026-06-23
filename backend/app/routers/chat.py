@@ -11,9 +11,10 @@ Geriye dönük uyumluluk re-exportları:
 """
 import asyncio
 import json
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
-from sqlalchemy import select
+from sqlalchemy import select, func, text as sql_text
 
 from app.constants import ws_types as WS
 from app.core.defender import register_ws_session, release_ws_session, MAX_CONCURRENT_SESSIONS
@@ -22,6 +23,7 @@ from app.core.ws_manager import ws_manager, safe_send_json
 from app.database import AsyncSessionLocal
 from app.models.user import User
 from app.models.stream import LiveStream
+from app.models.purchase import Purchase
 from app.services.chat_service import (
     ChatService,
     publish_chat,
@@ -47,6 +49,66 @@ _WS_CODE_SERVER_ERROR    = 1011  # beklenmeyen sunucu hatası
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/api/chat", tags=["chat"])
+
+# ── Balina Radarı ─────────────────────────────────────────────────────────────
+_WHALE_THRESHOLD_TL  = 5_000.0   # Son 30 gün harcama eşiği
+_WHALE_LOOKBACK_DAYS = 30
+_WHALE_CACHE_TTL     = 3_600     # Aynı (kullanıcı, yayın) için tekrar uyarı engeli (saniye)
+
+
+async def _check_whale_status(
+    user_id: int,
+    username: str,
+    stream_id: int,
+    host_id: int,
+) -> None:
+    """
+    Kullanıcı bir yayına katıldığında arka planda çalışır.
+    Son 30 günlük satın alma toplamı eşiği geçiyorsa, yalnızca yayın sahibine
+    WHALE_ALERT WebSocket eventi gönderir.
+    KVKK: net tutar gönderilmez, yalnızca tier (VIP) bilgisi iletilir.
+    """
+    try:
+        redis = await get_redis()
+        cache_key = f"whale_alerted:{stream_id}:{user_id}"
+        if await redis.exists(cache_key):
+            return
+    except Exception:
+        pass  # Redis yoksa devam et, duplicate gönderim kabul edilebilir
+
+    try:
+        cutoff = datetime.now(timezone.utc) - timedelta(days=_WHALE_LOOKBACK_DAYS)
+        async with AsyncSessionLocal() as db:
+            result = await db.execute(
+                select(func.coalesce(func.sum(Purchase.price), 0.0)).where(
+                    Purchase.buyer_id == user_id,
+                    Purchase.created_at >= cutoff,
+                )
+            )
+            total: float = float(result.scalar() or 0.0)
+
+        if total < _WHALE_THRESHOLD_TL:
+            return
+
+        tier = "VIP"
+        host_topic = f"chat:{stream_id}:u{host_id}"
+        await ws_manager.broadcast_local(host_topic, {
+            "type": WS.WHALE_ALERT,
+            "username": username,
+            "tier": tier,
+        })
+        logger.info(
+            "[WHALE] Alert gönderildi | stream=%s user=%s tier=%s total=%.0f",
+            stream_id, username, tier, total,
+        )
+
+        try:
+            redis = await get_redis()
+            await redis.setex(cache_key, _WHALE_CACHE_TTL, "1")
+        except Exception:
+            pass
+    except Exception as exc:
+        logger.warning("[WHALE] Kontrol başarısız | user=%s | %s", user_id, exc)
 
 
 async def _handle_ws_message(
@@ -164,6 +226,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
     room_name = None
     username: str | None = None
     profile_image_url: str | None = None
+    host_id: int | None = None
 
     try:
         async with AsyncSessionLocal() as db:
@@ -182,6 +245,7 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
             if stream:
                 is_host = stream.host_id == user_id
                 room_name = stream.room_name
+                host_id = stream.host_id
     except Exception as exc:
         logger.error(
             "[CHAT WS] DB doğrulama hatası | stream_id=%s user_id=%s | %s",
@@ -239,6 +303,10 @@ async def chat_ws(stream_id: int, websocket: WebSocket):
         if not is_host and room_name:
             await svc.add_viewer(stream_id, room_name, username)
             await publish_chat(stream_id, {"type": WS.SYSTEM_JOIN, "username": username})
+            if host_id:
+                asyncio.create_task(
+                    _check_whale_status(user_id, username, stream_id, host_id)
+                )
 
         # ── 8. Geçmiş mesajlar, mevcut izleyici sayısı ve mod durumu ─────────
         try:
