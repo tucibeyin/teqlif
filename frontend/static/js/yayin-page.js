@@ -255,6 +255,8 @@
         const modal = document.getElementById('streamReportModal');
         if (!modal) { window.location.href = '/'; return; }
         modal.style.display = 'flex';
+        const homeBtn = document.getElementById('reportHomeBtn');
+        if (homeBtn) homeBtn.addEventListener('click', function () { window.location.href = '/'; });
 
         try {
             const r = await apiFetch('/analytics/seller-report/' + sid);
