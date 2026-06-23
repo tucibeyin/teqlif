@@ -22,6 +22,7 @@ from app.security.captcha import verify_captcha_token
 from app.services.listing_service import ListingService
 from app.services.like_service import LikeService
 from app.schemas.listing import ListingOfferCreate
+from app.core.task_queue import get_pool
 
 router = APIRouter(prefix="/api/listings", tags=["listings"])
 
@@ -72,7 +73,11 @@ async def create_listing(
     db: AsyncSession = Depends(get_db),
     _captcha: None = Depends(verify_captcha_token),
 ):
-    return await ListingService(db).create_listing(payload, current_user)
+    result = await ListingService(db).create_listing(payload, current_user)
+    pool = get_pool()
+    if pool:
+        await pool.enqueue_job("generate_listing_embedding_task", result["id"])
+    return result
 
 
 @router.patch("/{listing_id}/toggle")

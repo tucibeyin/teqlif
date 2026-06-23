@@ -433,6 +433,62 @@ async def compute_user_interests_task(ctx: dict) -> None:
         raise
 
 
+# ── Task: İlan Embedding Üretimi ─────────────────────────────────────────────
+
+async def generate_listing_embedding_task(ctx: dict, listing_id: int) -> None:
+    """
+    Yeni/güncellenen ilan için sentence-transformer ile 384 boyutlu embedding üretir
+    ve listings.embedding kolonuna yazar.
+
+    Tetiklenir: ilan oluşturulduğunda veya başlık/açıklama/kategori değiştiğinde.
+    Model ilk çağrıda yüklenir, sonraki çağrılarda önbellekten kullanılır.
+    """
+    try:
+        from sqlalchemy import select, update as sa_update
+        from app.database import AsyncSessionLocal
+        from app.models.listing import Listing
+        from app.services.ml_service import generate_embedding
+
+        async with AsyncSessionLocal() as db:
+            listing = await db.scalar(
+                select(Listing).where(Listing.id == listing_id)
+            )
+            if not listing:
+                logger.warning(
+                    "[Worker] generate_listing_embedding: listing bulunamadı | id=%d", listing_id
+                )
+                return
+
+            parts = [listing.title or ""]
+            if listing.description:
+                parts.append(listing.description)
+            if listing.category:
+                parts.append(listing.category)
+            text = " ".join(parts).strip()
+
+            embedding = generate_embedding(text)
+
+            await db.execute(
+                sa_update(Listing)
+                .where(Listing.id == listing_id)
+                .values(embedding=embedding)
+            )
+            await db.commit()
+
+        logger.info(
+            "[Worker] İlan embedding güncellendi | listing_id=%d | dim=%d",
+            listing_id, len(embedding)
+        )
+
+    except Exception as exc:
+        logger.error(
+            "[Worker] generate_listing_embedding başarısız | listing_id=%d | %s",
+            listing_id, str(exc), exc_info=True
+        )
+        capture_exception(exc)
+        raise
+
+
 # ── Task: Eski İmpressionları Temizle ────────────────────────────────────────
 
 async def cleanup_old_impressions_task(ctx: dict) -> None:
@@ -476,6 +532,7 @@ class WorkerSettings:
         cleanup_hidden_messages_task,
         compute_user_interests_task,
         cleanup_old_impressions_task,
+        generate_listing_embedding_task,
     ]
 
     cron_jobs = [
