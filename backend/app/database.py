@@ -1,3 +1,4 @@
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 
@@ -19,6 +20,12 @@ AsyncSessionLocal = sessionmaker(
 
 class Base(DeclarativeBase):
     pass
+
+
+async def init_extensions() -> None:
+    """pgvector extension'ını aktifleştirir. Uygulama startup'ında bir kez çalışır."""
+    async with engine.begin() as conn:
+        await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
 
 
 async def get_db():

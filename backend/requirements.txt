@@ -28,3 +28,4 @@ itsdangerous==2.2.0
 jinja2==3.1.4
 better-profanity==0.7.0
 prometheus-fastapi-instrumentator==7.0.0
+pgvector==0.4.2

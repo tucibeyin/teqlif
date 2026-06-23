@@ -3,6 +3,7 @@ from typing import Any, Optional
 from sqlalchemy import String, Float, DateTime, ForeignKey, Boolean, Text, Index, func
 from sqlalchemy.dialects.postgresql import TSVECTOR
 from sqlalchemy.orm import Mapped, mapped_column, relationship
+from pgvector.sqlalchemy import Vector
 from app.database import Base
 
 
@@ -28,6 +29,7 @@ class Listing(Base):
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     search_vector: Mapped[Optional[Any]] = mapped_column(TSVECTOR, nullable=True)
+    embedding: Mapped[Optional[Any]] = mapped_column(Vector(384), nullable=True)
 
     likes: Mapped[list["ListingLike"]] = relationship(  # type: ignore[name-defined]
         "ListingLike", cascade="all, delete-orphan", passive_deletes=True

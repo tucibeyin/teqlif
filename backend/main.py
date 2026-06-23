@@ -134,6 +134,8 @@ async def _seed_cities():
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    from app.database import init_extensions
+    await init_extensions()
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
     await _seed_categories()

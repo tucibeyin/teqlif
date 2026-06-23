@@ -1,6 +1,8 @@
 from datetime import datetime
+from typing import Any, Optional
 from sqlalchemy import String, Boolean, DateTime, JSON, func
 from sqlalchemy.orm import Mapped, mapped_column
+from pgvector.sqlalchemy import Vector
 
 from app.database import Base
 
@@ -23,3 +25,4 @@ class User(Base):
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     is_shadowbanned: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    preference_embedding: Mapped[Optional[Any]] = mapped_column(Vector(384), nullable=True)
