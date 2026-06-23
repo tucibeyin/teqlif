@@ -73,48 +73,114 @@ async def update_viewer_count(room_name: str, stream_id: int, delta: int) -> Non
 
 # ── Pub/Sub dinleyicileri (arka plan görevleri) ──────────────────────────────
 async def chat_pubsub_listener() -> None:
-    """Her worker için tek seferlik başlatılan chat pub/sub dinleyicisi."""
-    r = aioredis.from_url(settings.redis_url, decode_responses=True)
-    pubsub = r.pubsub()
-    await pubsub.subscribe(_CHAT_CHANNEL)
-    logger.info("[CHAT PUBSUB] Dinleyici başladı (worker)")
-    try:
-        async for message in pubsub.listen():
-            if message["type"] != "message":
-                continue
+    """Her worker için tek seferlik başlatılan chat pub/sub dinleyicisi.
+
+    Redis bağlantısı koptuğunda otomatik olarak yeniden bağlanır.
+    """
+    delay = 1.0
+    while True:
+        r = aioredis.from_url(settings.redis_url, decode_responses=True, socket_keepalive=True)
+        pubsub = r.pubsub()
+        keepalive_task: asyncio.Task | None = None
+        try:
+            await pubsub.subscribe(_CHAT_CHANNEL)
+            logger.info("[CHAT PUBSUB] Dinleyici başladı (worker)")
+            delay = 1.0
+
+            async def _keepalive(ps: aioredis.client.PubSub) -> None:
+                while True:
+                    await asyncio.sleep(3)
+                    try:
+                        await ps.ping()
+                    except Exception:
+                        break
+
+            keepalive_task = asyncio.create_task(_keepalive(pubsub))
+
+            async for message in pubsub.listen():
+                if message["type"] in ("pong", "subscribe", "unsubscribe"):
+                    continue
+                if message["type"] != "message":
+                    continue
+                try:
+                    data = json.loads(message["data"])
+                    topic = data.pop("_topic")
+                    asyncio.create_task(ws_manager.broadcast_local(topic, data))
+                except Exception as exc:
+                    logger.warning("[CHAT PUBSUB] Mesaj işleme hatası: %s", exc)
+        except asyncio.CancelledError:
+            if keepalive_task:
+                keepalive_task.cancel()
+            await pubsub.unsubscribe(_CHAT_CHANNEL)
+            await r.aclose()
+            return
+        except Exception as exc:
+            logger.error("[CHAT PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
+        finally:
+            if keepalive_task and not keepalive_task.done():
+                keepalive_task.cancel()
             try:
-                data = json.loads(message["data"])
-                topic = data.pop("_topic")
-                asyncio.create_task(ws_manager.broadcast_local(topic, data))
-            except Exception as exc:
-                logger.warning("[CHAT PUBSUB] Mesaj işleme hatası: %s", exc)
-    except asyncio.CancelledError:
-        pass
-    finally:
-        await pubsub.unsubscribe(_CHAT_CHANNEL)
-        await r.aclose()
+                await pubsub.unsubscribe(_CHAT_CHANNEL)
+                await r.aclose()
+            except Exception:
+                pass
+        await asyncio.sleep(delay)
+        delay = min(delay * 2, 30.0)
 
 
 async def moderation_pubsub_listener() -> None:
-    """Her worker için moderasyon event dinleyicisi (muted/kicked/unmuted/promoted/demoted)."""
-    r = aioredis.from_url(settings.redis_url, decode_responses=True)
-    pubsub = r.pubsub()
-    await pubsub.subscribe(MOD_CHANNEL)
-    logger.info("[MOD PUBSUB] Dinleyici başladı (worker)")
-    try:
-        async for message in pubsub.listen():
-            if message["type"] != "message":
-                continue
+    """Her worker için moderasyon event dinleyicisi.
+
+    Redis bağlantısı koptuğunda otomatik olarak yeniden bağlanır.
+    """
+    delay = 1.0
+    while True:
+        r = aioredis.from_url(settings.redis_url, decode_responses=True, socket_keepalive=True)
+        pubsub = r.pubsub()
+        keepalive_task: asyncio.Task | None = None
+        try:
+            await pubsub.subscribe(MOD_CHANNEL)
+            logger.info("[MOD PUBSUB] Dinleyici başladı (worker)")
+            delay = 1.0
+
+            async def _keepalive(ps: aioredis.client.PubSub) -> None:
+                while True:
+                    await asyncio.sleep(3)
+                    try:
+                        await ps.ping()
+                    except Exception:
+                        break
+
+            keepalive_task = asyncio.create_task(_keepalive(pubsub))
+
+            async for message in pubsub.listen():
+                if message["type"] in ("pong", "subscribe", "unsubscribe"):
+                    continue
+                if message["type"] != "message":
+                    continue
+                try:
+                    data = json.loads(message["data"])
+                    await _dispatch_mod_event(data)
+                except Exception as exc:
+                    logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
+        except asyncio.CancelledError:
+            if keepalive_task:
+                keepalive_task.cancel()
+            await pubsub.unsubscribe(MOD_CHANNEL)
+            await r.aclose()
+            return
+        except Exception as exc:
+            logger.error("[MOD PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
+        finally:
+            if keepalive_task and not keepalive_task.done():
+                keepalive_task.cancel()
             try:
-                data = json.loads(message["data"])
-                await _dispatch_mod_event(data)
-            except Exception as exc:
-                logger.warning("[MOD PUBSUB] Mesaj işleme hatası: %s", exc)
-    except asyncio.CancelledError:
-        pass
-    finally:
-        await pubsub.unsubscribe(MOD_CHANNEL)
-        await r.aclose()
+                await pubsub.unsubscribe(MOD_CHANNEL)
+                await r.aclose()
+            except Exception:
+                pass
+        await asyncio.sleep(delay)
+        delay = min(delay * 2, 30.0)
 
 
 async def _dispatch_mod_event(data: dict) -> None:

@@ -119,13 +119,28 @@ async def pubsub_listener():
 
     delay = 1.0
     while True:
-        r = aioredis.from_url(settings.redis_url, decode_responses=True)
+        r = aioredis.from_url(settings.redis_url, decode_responses=True, socket_keepalive=True)
         pubsub = r.pubsub()
+        keepalive_task: asyncio.Task | None = None
         try:
             await pubsub.subscribe(_PUBSUB_CHANNEL)
             logger.info("[PUBSUB] Dinleyici başladı (worker)")
             delay = 1.0  # başarılı bağlantıda sıfırla
+
+            # Redis'in idle timeout'unu önlemek için periyodik PING gönder
+            async def _keepalive(ps: aioredis.client.PubSub) -> None:
+                while True:
+                    await asyncio.sleep(3)
+                    try:
+                        await ps.ping()
+                    except Exception:
+                        break
+
+            keepalive_task = asyncio.create_task(_keepalive(pubsub))
+
             async for message in pubsub.listen():
+                if message["type"] in ("pong", "subscribe", "unsubscribe"):
+                    continue
                 if message["type"] != "message":
                     continue
                 try:
@@ -135,12 +150,16 @@ async def pubsub_listener():
                 except Exception as exc:
                     logger.error("[PUBSUB] Mesaj işleme hatası: %s", exc)
         except asyncio.CancelledError:
+            if keepalive_task:
+                keepalive_task.cancel()
             await pubsub.unsubscribe(_PUBSUB_CHANNEL)
             await r.aclose()
             return
         except Exception as exc:
             logger.error("[PUBSUB] Bağlantı hatası, %ss sonra yeniden denenecek: %s", delay, exc)
         finally:
+            if keepalive_task and not keepalive_task.done():
+                keepalive_task.cancel()
             try:
                 await pubsub.unsubscribe(_PUBSUB_CHANNEL)
                 await r.aclose()
