@@ -1,8 +1,9 @@
 import json
 import logging
+import asyncio
 from fastapi import APIRouter, Depends, HTTPException, Request, BackgroundTasks
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, text as sql_text
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Any, Dict, Optional
 
@@ -293,4 +294,116 @@ async def get_seller_report(
         "hesitation_count": hesitation_count,
         "recommendation": recommendation,
         "auction_summary": auction_summary,
+    }
+
+
+# ── Yapay Zeka Fiyatlama Danışmanı ───────────────────────────────────────────
+
+class PriceEstimateRequest(BaseModel):
+    title: str = Field(min_length=2, max_length=200)
+    description: str = Field(default="", max_length=2000)
+    category: str = Field(default="")  # category key (e.g. "elektronik")
+
+
+@router.post("/price-estimate")
+async def price_estimate(
+    body: PriceEstimateRequest,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Başlık + açıklama metninden embedding üretir, pgvector ile satılmış benzer
+    ilanları bulur ve istatistiksel fiyat tahmini üretir.
+    """
+    from app.services.ml_service import generate_embedding
+
+    # 1. CPU-blocking embedding işini executor'da çalıştır
+    combined = f"{body.title.strip()} {body.description.strip()}".strip()
+    loop = asyncio.get_event_loop()
+    embedding: list[float] = await loop.run_in_executor(None, generate_embedding, combined)
+
+    # pgvector literal: '[0.1,0.2,...]'
+    emb_str = "[" + ",".join(f"{v:.6f}" for v in embedding) + "]"
+
+    # 2. Benzer satılmış ilanları bul (auction winner'ı olan = satıldı)
+    q = sql_text("""
+        WITH similar AS (
+            SELECT
+                a.start_price,
+                a.final_price,
+                (l.embedding <=> CAST(:emb AS vector)) AS dist
+            FROM listings l
+            JOIN auctions a ON a.listing_id = l.id
+            WHERE a.winner_username IS NOT NULL
+              AND l.embedding IS NOT NULL
+              AND (l.embedding <=> CAST(:emb AS vector)) < 0.4
+            ORDER BY dist
+            LIMIT 50
+        )
+        SELECT
+            COUNT(*)                                                 AS cnt,
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY start_price) AS median_start,
+            PERCENTILE_CONT(0.5) WITHIN GROUP (ORDER BY final_price)  AS median_final,
+            AVG(start_price)                                         AS avg_start,
+            AVG(final_price)                                         AS avg_final,
+            MIN(final_price)                                         AS min_final,
+            MAX(final_price)                                         AS max_final
+        FROM similar
+    """)
+
+    result = await db.execute(q, {"emb": emb_str})
+    row = result.fetchone()
+    cnt = int(row.cnt or 0)
+
+    if cnt == 0:
+        return {
+            "found_similar": 0,
+            "suggested_start_price": None,
+            "estimated_close_price": None,
+            "min_close_price": None,
+            "max_close_price": None,
+            "confidence": "low",
+            "advice": (
+                "Henüz yeterli benzer ürün verisi bulunamadı. "
+                "Platforma eklendikçe tahminler daha isabetli hale gelecek. "
+                "Piyasa araştırması yaparak fiyatınızı belirleyebilirsiniz."
+            ),
+        }
+
+    suggested_start = round(float(row.median_start or row.avg_start or 0), 2)
+    estimated_close = round(float(row.median_final or row.avg_final or 0), 2)
+    min_close = round(float(row.min_final), 2) if row.min_final else None
+    max_close = round(float(row.max_final), 2) if row.max_final else None
+
+    confidence = "high" if cnt >= 20 else ("medium" if cnt >= 5 else "low")
+
+    # 3. Tavsiye metni üret
+    cat = body.category.strip() or "ürün"
+    close_fmt = f"{int(estimated_close):,}".replace(",", ".")
+    start_fmt = f"{int(suggested_start):,}".replace(",", ".")
+
+    advice = (
+        f"Benzer {cnt} ürün satış verisi analiz edildi. "
+        f"Önerilen başlangıç fiyatı {start_fmt} ₺, "
+        f"nihai kapanış ortalama {close_fmt} ₺ bandında gerçekleşti."
+    )
+    if estimated_close > suggested_start * 1.35:
+        advice += (
+            " Bu kategoride teklif rekabeti yüksek — "
+            "düşük başlangıç fiyatı daha fazla katılımcı çekebilir."
+        )
+    elif estimated_close < suggested_start * 0.9:
+        advice += (
+            " Başlangıç fiyatını biraz daha gerçekçi tutmak "
+            "satış hızınızı artırabilir."
+        )
+
+    return {
+        "found_similar": cnt,
+        "suggested_start_price": suggested_start,
+        "estimated_close_price": estimated_close,
+        "min_close_price": min_close,
+        "max_close_price": max_close,
+        "confidence": confidence,
+        "advice": advice,
     }

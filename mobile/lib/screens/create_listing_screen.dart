@@ -9,6 +9,7 @@ import '../config/api.dart';
 import '../config/app_colors.dart';
 import '../config/theme.dart';
 import '../core/app_exception.dart';
+import '../services/analytics_service.dart';
 import '../services/captcha_service.dart';
 import '../services/category_service.dart';
 import '../services/city_service.dart';
@@ -33,6 +34,7 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
   List<(String, String)> _categories = [];
   List<String> _cities = [];
   bool _submitting = false;
+  bool _aiLoading = false;
   final List<File> _images = [];
   final _picker = ImagePicker();
   File? _video;
@@ -64,6 +66,239 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
     _descCtrl.dispose();
     _priceCtrl.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchAiPriceEstimate() async {
+    final title = _titleCtrl.text.trim();
+    final desc = _descCtrl.text.trim();
+    if (title.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Önce ilan başlığını giriniz.')),
+      );
+      return;
+    }
+    setState(() => _aiLoading = true);
+    try {
+      final result = await AnalyticsService.getPriceEstimate(
+        title: title,
+        description: desc,
+        category: _selectedCategory ?? '',
+      );
+      if (!mounted) return;
+      if (result == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Fiyat tahmini alınamadı. Lütfen tekrar deneyin.')),
+        );
+        return;
+      }
+      _showPriceEstimateSheet(result);
+    } finally {
+      if (mounted) setState(() => _aiLoading = false);
+    }
+  }
+
+  void _showPriceEstimateSheet(Map<String, dynamic> data) {
+    final suggested = data['suggested_start_price'] as double?;
+    final estimated = data['estimated_close_price'] as double?;
+    final minClose = data['min_close_price'] as double?;
+    final maxClose = data['max_close_price'] as double?;
+    final advice = data['advice'] as String? ?? '';
+    final confidence = data['confidence'] as String? ?? 'low';
+    final foundSimilar = data['found_similar'] as int? ?? 0;
+
+    String fmt(double? v) {
+      if (v == null || v <= 0) return '—';
+      return '${v.toInt().toString().replaceAllMapped(RegExp(r'(\d)(?=(\d{3})+$)'), (m) => '${m[1]}.')} ₺';
+    }
+
+    Color confidenceColor = confidence == 'high'
+        ? const Color(0xFF22C55E)
+        : confidence == 'medium'
+            ? const Color(0xFFF59E0B)
+            : const Color(0xFF64748B);
+
+    String confidenceLabel = confidence == 'high'
+        ? '● Yüksek güven'
+        : confidence == 'medium'
+            ? '● Orta güven'
+            : '● Düşük güven';
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => DraggableScrollableSheet(
+        initialChildSize: 0.6,
+        minChildSize: 0.4,
+        maxChildSize: 0.88,
+        builder: (_, controller) => Container(
+          decoration: const BoxDecoration(
+            color: Color(0xFF0F172A),
+            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+          ),
+          child: ListView(
+            controller: controller,
+            padding: const EdgeInsets.fromLTRB(20, 0, 20, 32),
+            children: [
+              // Handle
+              Center(
+                child: Container(
+                  margin: const EdgeInsets.only(top: 12, bottom: 20),
+                  width: 40,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF334155),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              // Header
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF6366F1), Color(0xFF8B5CF6)],
+                      ),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text('✨', style: TextStyle(fontSize: 20)),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Yapay Zeka Fiyat Tahmini',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 16,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          '$foundSimilar benzer ürün analiz edildi',
+                          style: const TextStyle(color: Color(0xFF64748B), fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: confidenceColor.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Text(
+                      confidenceLabel,
+                      style: TextStyle(color: confidenceColor, fontSize: 11, fontWeight: FontWeight.w700),
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 20),
+              // Metrik kartları
+              Row(
+                children: [
+                  Expanded(
+                    child: _PriceMetricCard(
+                      icon: '🎯',
+                      label: 'Önerilen Başlangıç',
+                      value: fmt(suggested),
+                      accent: const Color(0xFF6366F1),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: _PriceMetricCard(
+                      icon: '🏆',
+                      label: 'Beklenen Kapanış',
+                      value: fmt(estimated),
+                      accent: const Color(0xFF22C55E),
+                    ),
+                  ),
+                ],
+              ),
+              if (minClose != null && maxClose != null) ...[
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1E293B),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _MiniStat(label: 'En Düşük', value: fmt(minClose), color: const Color(0xFFEF4444)),
+                      Container(width: 1, height: 32, color: const Color(0xFF334155)),
+                      _MiniStat(label: 'Ortalama', value: fmt(estimated), color: const Color(0xFF94A3B8)),
+                      Container(width: 1, height: 32, color: const Color(0xFF334155)),
+                      _MiniStat(label: 'En Yüksek', value: fmt(maxClose), color: const Color(0xFF22C55E)),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 14),
+              // Tavsiye metni
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF6366F1).withValues(alpha: 0.08),
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: const Color(0xFF6366F1).withValues(alpha: 0.2)),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('💡', style: TextStyle(fontSize: 16)),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Text(
+                        advice,
+                        style: const TextStyle(
+                          color: Color(0xFFCBD5E1),
+                          fontSize: 13,
+                          height: 1.55,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              // Uygula butonu
+              if (suggested != null && suggested > 0)
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton(
+                    onPressed: () {
+                      final intVal = suggested.toInt();
+                      final formatted = intVal.toString().replaceAllMapped(
+                        RegExp(r'(\d)(?=(\d{3})+$)'),
+                        (m) => '${m[1]}.',
+                      );
+                      _priceCtrl.text = formatted;
+                      Navigator.pop(context);
+                    },
+                    style: FilledButton.styleFrom(
+                      backgroundColor: const Color(0xFF6366F1),
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    child: const Text(
+                      'Önerilen Fiyatı Uygula',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                    ),
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _pickVideo(ImageSource source) async {
@@ -542,6 +777,11 @@ class _CreateListingScreenState extends State<CreateListingScreen> {
                     validator: (v) =>
                         v == null || v.isEmpty ? l.fieldPriceHint : null,
                   ),
+                  const SizedBox(height: 10),
+                  _AiPriceButton(
+                    loading: _aiLoading,
+                    onTap: _fetchAiPriceEstimate,
+                  ),
                   const SizedBox(height: 14),
                   DropdownButtonFormField<String>(
                     key: const Key('create_listing_select_konum'),
@@ -622,6 +862,140 @@ class _ThousandSeparatorFormatter extends TextInputFormatter {
     return buf.toString();
   }
 }
+
+// ── AI Fiyat Butonu ──────────────────────────────────────────────────────────
+
+class _AiPriceButton extends StatelessWidget {
+  final bool loading;
+  final VoidCallback onTap;
+  const _AiPriceButton({required this.loading, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: loading ? null : onTap,
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        decoration: BoxDecoration(
+          gradient: loading
+              ? null
+              : const LinearGradient(
+                  colors: [Color(0xFF4F46E5), Color(0xFF7C3AED)],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
+          color: loading ? const Color(0xFF1E293B) : null,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: loading
+                ? const Color(0xFF334155)
+                : const Color(0xFF6366F1).withValues(alpha: 0.5),
+          ),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: loading
+              ? [
+                  const SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation(Color(0xFF6366F1)),
+                    ),
+                  ),
+                  const SizedBox(width: 10),
+                  const Text(
+                    'Analiz ediliyor…',
+                    style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w600),
+                  ),
+                ]
+              : [
+                  const Text('✨', style: TextStyle(fontSize: 15)),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Yapay Zeka ile Fiyat Belirle',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── AI Fiyat Metrik Kartı ─────────────────────────────────────────────────────
+
+class _PriceMetricCard extends StatelessWidget {
+  final String icon;
+  final String label;
+  final String value;
+  final Color accent;
+  const _PriceMetricCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+    required this.accent,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1E293B),
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: accent.withValues(alpha: 0.25)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Text(icon, style: const TextStyle(fontSize: 18)),
+              const SizedBox(width: 6),
+              Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 11)),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: TextStyle(
+              color: accent,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  final String label;
+  final String value;
+  final Color color;
+  const _MiniStat({required this.label, required this.value, required this.color});
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(label, style: const TextStyle(color: Color(0xFF64748B), fontSize: 10)),
+        const SizedBox(height: 3),
+        Text(value, style: TextStyle(color: color, fontSize: 12, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
+}
+
+// ── Section Card ──────────────────────────────────────────────────────────────
 
 class _SectionCard extends StatelessWidget {
   final List<Widget> children;

@@ -58,6 +58,34 @@ class AnalyticsService {
     }
   }
 
+  /// Yapay Zeka fiyatlama tahmini → `POST /api/analytics/price-estimate`
+  static Future<Map<String, dynamic>?> getPriceEstimate({
+    required String title,
+    required String description,
+    required String category,
+  }) async {
+    try {
+      final token = await StorageService.getToken();
+      if (token == null) return null;
+      final resp = await http.post(
+        Uri.parse('$kBaseUrl/analytics/price-estimate'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': 'Bearer $token',
+        },
+        body: jsonEncode({
+          'title': title,
+          'description': description,
+          'category': category,
+        }),
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+    } catch (_) {}
+    return null;
+  }
+
   /// Yayın sonu satıcı raporu → `GET /api/analytics/seller-report/{streamId}`
   static Future<Map<String, dynamic>?> getSellerReport(int streamId) async {
     try {
