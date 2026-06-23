@@ -105,20 +105,40 @@ def _user_id_from_request(request: Request) -> int | None:
 
 # ── Tıklama ───────────────────────────────────────────────────────────────────
 
+async def _log_click_to_clickhouse(campaign_id: int, user_id: int) -> None:
+    """ClickHouse'a ad_click event'i yazar. BackgroundTask olarak çalışır."""
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        now = datetime.now(timezone.utc).replace(tzinfo=None)
+        await ch.insert(
+            "user_events",
+            [[user_id, campaign_id, "ad_campaign", "ad_click", None, None, now]],
+            column_names=[
+                "user_id", "item_id", "item_type",
+                "event_type", "price_point", "duration_seconds", "timestamp",
+            ],
+        )
+    except Exception as exc:
+        logger.warning("[Ads] ClickHouse click log başarısız | campaign=%d | %s", campaign_id, exc)
+
+
 @router.post("/click/{campaign_id}", status_code=202)
-async def record_click(campaign_id: int, request: Request):
+async def record_click(campaign_id: int, request: Request, background_tasks: BackgroundTasks):
     """
     Kullanıcı sponsored ilana tıkladığında çağrılır.
 
     - ad_service.record_ad_click() → Redis'ten atomik bütçe düşer.
     - Bütçe tükenirse kampanya PostgreSQL'de 'completed' yapılır.
-    - Fire-and-forget: 202 hemen döner, iş arka planda biter.
+    - ClickHouse'a ad_click logu atılır (rapor için).
     """
     user_id = _user_id_from_request(request) or 0
 
     try:
         from app.services.ad_service import record_ad_click
         recorded = await record_ad_click(campaign_id, user_id)
+        if recorded:
+            background_tasks.add_task(_log_click_to_clickhouse, campaign_id, user_id)
         return {"recorded": recorded}
     except Exception as exc:
         logger.error("[Ads] click kaydı başarısız | campaign=%d | %s", campaign_id, exc)
@@ -164,3 +184,78 @@ async def record_impression(
     user_id = _user_id_from_request(request)
     background_tasks.add_task(_log_impression_to_clickhouse, campaign_id, user_id)
     return {"status": "queued"}
+
+
+# ── Kampanya Performans Raporu ─────────────────────────────────────────────────
+
+@router.get("/campaigns/{campaign_id}/report")
+async def get_campaign_report(
+    campaign_id: int,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """
+    Satıcıya ait kampanyanın performans raporunu döndürür.
+
+    PostgreSQL: bütçe, durum, cpc
+    Redis:      gerçek zamanlı kalan bütçe (aktif kampanyalar için)
+    ClickHouse: gösterim (ad_impression) + tıklama (ad_click) sayıları
+    Hesaplama:  CTR = clicks / impressions × 100
+    """
+    campaign = await db.scalar(
+        select(AdCampaign).where(
+            AdCampaign.id == campaign_id,
+            AdCampaign.seller_id == current_user.id,
+        )
+    )
+    if not campaign:
+        raise HTTPException(status_code=404, detail="Kampanya bulunamadı")
+
+    # Redis: aktif kampanya için gerçek zamanlı kalan bütçe
+    remaining_budget = max(0.0, campaign.total_budget - campaign.spent_budget)
+    try:
+        from app.utils.redis_client import get_redis
+        redis = await get_redis()
+        budget_str = await redis.get(f"ad_campaign_budget:{campaign_id}")
+        if budget_str is not None:
+            remaining_budget = max(0.0, float(budget_str))
+    except Exception as exc:
+        logger.warning("[Ads] Redis bütçe okuması başarısız: %s", exc)
+
+    actual_spent = round(max(0.0, campaign.total_budget - remaining_budget), 2)
+
+    # ClickHouse: gösterim + tıklama sayıları
+    impressions = 0
+    clicks = 0
+    try:
+        from app.database_clickhouse import get_clickhouse_client
+        ch = await get_clickhouse_client()
+        result = await ch.query(f"""
+            SELECT
+                countIf(event_type = 'ad_impression') AS impressions,
+                countIf(event_type = 'ad_click')      AS clicks
+            FROM user_events
+            WHERE item_id    = {campaign_id}
+              AND item_type  = 'ad_campaign'
+        """)
+        row = result.result_rows[0] if result.result_rows else (0, 0)
+        impressions = int(row[0] or 0)
+        clicks = int(row[1] or 0)
+    except Exception as exc:
+        logger.warning("[Ads] ClickHouse rapor sorgusu başarısız: %s", exc)
+
+    ctr = round(clicks / impressions * 100, 2) if impressions > 0 else 0.0
+
+    return {
+        "campaign_id": campaign.id,
+        "listing_id": campaign.listing_id,
+        "status": campaign.status,
+        "total_budget": campaign.total_budget,
+        "spent_budget": actual_spent,
+        "remaining_budget": round(remaining_budget, 2),
+        "cpc_bid": campaign.cpc_bid,
+        "impressions": impressions,
+        "clicks": clicks,
+        "ctr": ctr,
+        "created_at": campaign.created_at.isoformat() if campaign.created_at else None,
+    }

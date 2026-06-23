@@ -107,6 +107,25 @@ class AnalyticsService {
     } catch (_) {}
   }
 
+  static Future<Map<String, dynamic>?> getCampaignReport(int campaignId) async {
+    try {
+      final token = await StorageService.getToken();
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/ads/campaigns/$campaignId/report'),
+        headers: {
+          'Content-Type': 'application/json',
+          if (token != null) 'Authorization': 'Bearer $token',
+        },
+      );
+      if (resp.statusCode == 200) {
+        return jsonDecode(resp.body) as Map<String, dynamic>;
+      }
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
   static Future<void> trackAdClick(int campaignId) async {
     try {
       final token = await StorageService.getToken();

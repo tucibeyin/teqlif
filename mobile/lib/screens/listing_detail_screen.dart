@@ -19,6 +19,7 @@ import '../services/auth_service.dart';
 import 'profile_screen.dart';
 import 'public_profile_screen.dart';
 import 'messages_screen.dart';
+import 'ad_report_screen.dart';
 
 class ListingDetailScreen extends StatefulWidget {
   final Map<String, dynamic> listing;
@@ -439,6 +440,20 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
     }
   }
 
+  void _openAdReport(BuildContext context) {
+    final campaignId = widget.listing['campaign_id'] as int?;
+    if (campaignId == null) return;
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => AdReportScreen(
+          campaignId: campaignId,
+          listingTitle: widget.listing['title'] as String? ?? 'İlan',
+        ),
+      ),
+    );
+  }
+
   Future<void> _boostListing(BuildContext ctx) async {
     final confirmed = await showDialog<bool>(
       context: ctx,
@@ -492,6 +507,12 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
       );
       if (!mounted) return;
       if (resp.statusCode == 201) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        // Butonu hemen "Performansı Gör"e çevir — yeniden açmaya gerek yok
+        setState(() {
+          widget.listing['campaign_id'] = data['id'];
+          widget.listing['is_sponsored'] = true;
+        });
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('🔥 İlanınız öne çıkarıldı!'),
@@ -1012,18 +1033,31 @@ class _ListingDetailScreenState extends State<ListingDetailScreen>
           ? SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(12),
-                child: ElevatedButton.icon(
-                  onPressed: () => _boostListing(context),
-                  icon: const Text('🔥', style: TextStyle(fontSize: 16)),
-                  label: const Text('İlanı Öne Çıkar'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFF97316),
-                    foregroundColor: Colors.white,
-                    minimumSize: const Size(double.infinity, 50),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
-                  ),
-                ),
+                child: listing['campaign_id'] != null
+                    ? ElevatedButton.icon(
+                        onPressed: () => _openAdReport(context),
+                        icon: const Text('📊', style: TextStyle(fontSize: 16)),
+                        label: const Text('Reklam Performansını Gör'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF6366F1),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                      )
+                    : ElevatedButton.icon(
+                        onPressed: () => _boostListing(context),
+                        icon: const Text('🔥', style: TextStyle(fontSize: 16)),
+                        label: const Text('İlanı Öne Çıkar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFF97316),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size(double.infinity, 50),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                          textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                        ),
+                      ),
               ),
             )
           : SafeArea(
