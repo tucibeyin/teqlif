@@ -493,16 +493,22 @@
         return Number(val).toLocaleString('tr-TR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' ₺';
     }
 
-    async function boostListing() {
-        if (!confirm('İlanınızı 100 ₺ bütçe ve 1 ₺ TBM (Tıklama Başı Maliyet) ile öne çıkarmak istiyor musunuz?')) return;
+    function boostListing() {
+        var modal = document.getElementById('boostConfirmModal');
+        if (modal) modal.classList.add('open');
+    }
+
+    async function _runBoostCampaign() {
+        var modal = document.getElementById('boostConfirmModal');
+        var confirmBtn = document.getElementById('btnBoostConfirm');
         var btn = document.getElementById('boostBtn');
-        if (btn) { btn.disabled = true; btn.textContent = 'İşleniyor…'; }
+        if (confirmBtn) { confirmBtn.disabled = true; confirmBtn.textContent = 'İşleniyor…'; }
         try {
             var result = await apiFetch('/ads/campaigns', {
                 method: 'POST',
                 body: JSON.stringify({ listing_id: listingId, total_budget: 100.0, cpc_bid: 1.0 })
             });
-            // Butonu "Performansı Gör"e çevir
+            if (modal) modal.classList.remove('open');
             if (btn) {
                 var newCampaignId = result.id;
                 btn.id = 'adReportBtn';
@@ -511,11 +517,46 @@
                 btn.disabled = false;
                 btn.addEventListener('click', function () { openAdReportModal(newCampaignId); });
             }
-            alert('🔥 İlanınız öne çıkarıldı!');
+            _showBoostSuccess();
         } catch (e) {
+            if (modal) modal.classList.remove('open');
             if (btn) { btn.disabled = false; btn.textContent = '🔥 İlanı Öne Çıkar'; }
-            alert((e && e.error && e.error.message) || 'Kampanya başlatılamadı.');
+            if (confirmBtn) { confirmBtn.disabled = false; confirmBtn.textContent = 'Öne Çıkar'; }
+            _showToast((e && e.detail) || 'Kampanya başlatılamadı.', 'error');
         }
+    }
+
+    function _showBoostSuccess() {
+        var toast = document.createElement('div');
+        toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:#111827;color:#fff;padding:12px 20px;border-radius:12px;font-size:.88rem;font-weight:600;display:flex;align-items:center;gap:8px;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transition:all .3s;white-space:nowrap;';
+        toast.innerHTML = '<span style="font-size:1.1rem;">🔥</span> İlanınız öne çıkarıldı!';
+        document.body.appendChild(toast);
+        requestAnimationFrame(function () {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+        });
+        setTimeout(function () {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(20px)';
+            setTimeout(function () { toast.remove(); }, 300);
+        }, 3000);
+    }
+
+    function _showToast(msg, type) {
+        var toast = document.createElement('div');
+        var bg = type === 'error' ? '#dc2626' : '#111827';
+        toast.style.cssText = 'position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(20px);background:' + bg + ';color:#fff;padding:12px 20px;border-radius:12px;font-size:.88rem;font-weight:600;z-index:9999;box-shadow:0 8px 24px rgba(0,0,0,.25);opacity:0;transition:all .3s;white-space:nowrap;';
+        toast.textContent = msg;
+        document.body.appendChild(toast);
+        requestAnimationFrame(function () {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(-50%) translateY(0)';
+        });
+        setTimeout(function () {
+            toast.style.opacity = '0';
+            toast.style.transform = 'translateX(-50%) translateY(20px)';
+            setTimeout(function () { toast.remove(); }, 300);
+        }, 3500);
     }
 
     async function openAdReportModal(campaignId) {
@@ -813,6 +854,17 @@ document.addEventListener('DOMContentLoaded', function () {
     var adReportBackdrop = document.getElementById('adReportModal');
     if (adReportBackdrop) adReportBackdrop.addEventListener('click', function (e) {
         if (e.target === adReportBackdrop) adReportBackdrop.classList.remove('open');
+    });
+
+    var btnBoostConfirm = document.getElementById('btnBoostConfirm');
+    if (btnBoostConfirm) btnBoostConfirm.addEventListener('click', _runBoostCampaign);
+    var btnBoostCancel = document.getElementById('btnBoostCancel');
+    if (btnBoostCancel) btnBoostCancel.addEventListener('click', function () {
+        document.getElementById('boostConfirmModal').classList.remove('open');
+    });
+    var boostConfirmBackdrop = document.getElementById('boostConfirmModal');
+    if (boostConfirmBackdrop) boostConfirmBackdrop.addEventListener('click', function (e) {
+        if (e.target === boostConfirmBackdrop) boostConfirmBackdrop.classList.remove('open');
     });
     var deleteSendBtn = document.getElementById('deleteSendBtn');
     if (deleteSendBtn) deleteSendBtn.addEventListener('click', confirmDelete);

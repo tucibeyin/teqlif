@@ -948,7 +948,7 @@
                 ? `<img src="${escHtml(l.image_url)}" style="width:100%;height:100%;object-fit:cover;">`
                 : `<svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>`
             }
-                    ${l.is_sponsored ? '<span class="sponsored-badge" style="position:absolute;top:6px;left:6px;background:rgba(0,0,0,.62);color:#fff;font-size:.68rem;font-weight:700;padding:2px 7px;border-radius:5px;pointer-events:none;">Sponsorlu</span>' : ''}
+                    ${l.is_sponsored ? '<span class="sponsored-badge" style="position:absolute;top:7px;left:7px;background:linear-gradient(135deg,#f97316,#ea580c);color:#fff;font-size:.65rem;font-weight:800;padding:3px 8px;border-radius:6px;pointer-events:none;letter-spacing:.4px;box-shadow:0 2px 6px rgba(249,115,22,.45);">✦ Sponsorlu</span>' : ''}
                     <button class="tile-like-chip" id="like-listing-${l.id}"
                             data-like-listing="${l.id}"
                             title="Beğen">
