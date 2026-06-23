@@ -891,6 +891,21 @@ async def calculate_user_budgets_task(ctx: dict) -> None:
         # ClickHouse erişilemezse sessizce geçilebilir (kritik değil)
 
 
+async def sync_ad_campaigns_task(ctx: dict) -> None:
+    """
+    Her 10 dakikada çalışır.
+    PostgreSQL'deki aktif reklam kampanyalarını Redis'e yükler.
+    Yeni eklenen kampanyaları Redis'e tanıtır ve PostgreSQL-Redis
+    bütçe sapmasını düzeltir.
+    """
+    try:
+        from app.services.ad_service import load_active_campaigns_to_redis
+        count = await load_active_campaigns_to_redis()
+        logger.info("[Worker] sync_ad_campaigns_task tamamlandı | kampanya=%d", count)
+    except Exception as exc:
+        logger.error("[Worker] sync_ad_campaigns_task başarısız | %s", str(exc), exc_info=True)
+
+
 # ── Worker Ayarları ──────────────────────────────────────────────────────────
 
 class WorkerSettings:
@@ -918,6 +933,7 @@ class WorkerSettings:
         update_user_preference_embedding,
         calculate_user_budgets_task,
         send_smart_auction_alerts,
+        sync_ad_campaigns_task,
     ]
 
     cron_jobs = [
@@ -939,6 +955,8 @@ class WorkerSettings:
         cron(cleanup_old_impressions_task, hour=5, minute=0),
         # Her 5 dakikada Redis interaction kuyruğunu DB'ye yaz
         cron(flush_interactions_to_db, minute={0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55}),
+        # Her 10 dakikada PostgreSQL → Redis kampanya bütçe senkronizasyonu
+        cron(sync_ad_campaigns_task, minute={0, 10, 20, 30, 40, 50}),
     ]
 
     redis_settings = RedisSettings.from_dsn(settings.redis_url)
