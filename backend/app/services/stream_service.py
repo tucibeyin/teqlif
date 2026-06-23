@@ -606,6 +606,22 @@ class StreamService:
         return {"message": "Sahneden ayrıldınız"}
 
     # ── Aktif Yayınlar ───────────────────────────────────────────────────────
+    async def get_recommended_streams(self, user_id: int) -> list:
+        """Kullanıcının category affinity'sine göre sıralanmış aktif yayınlar (max 8)."""
+        from app.services.feed_service import get_user_interests
+
+        all_streams = await self.get_active_streams(user_id)
+        if not all_streams:
+            return []
+
+        interests = await get_user_interests(user_id, self.db)
+        if not interests:
+            return all_streams[:8]
+
+        top_cats = set(list(interests.keys())[:4])
+        matching = [s for s in all_streams if s.category in top_cats]
+        return matching[:8] if matching else all_streams[:8]
+
     async def get_active_streams(self, current_user_id: Optional[int]) -> list:
         query = (
             select(LiveStream)

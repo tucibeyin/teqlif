@@ -34,6 +34,22 @@ class StreamService {
     return result;
   }
 
+  static Future<List<StreamOut>> getRecommendedStreams() async {
+    final headers = await _headers();
+    final token = await StorageService.getToken();
+    if (token == null) return [];
+    final resp = await http.get(Uri.parse('$kBaseUrl/streams/recommended'), headers: headers);
+    if (resp.statusCode >= 400) return [];
+    final list = _tryDecodeList(resp.body);
+    final result = <StreamOut>[];
+    for (final e in list) {
+      try {
+        result.add(StreamOut.fromJson(e as Map<String, dynamic>));
+      } catch (_) {}
+    }
+    return result;
+  }
+
   static Future<List<StreamOut>> getFollowedLiveStreams() async {
     final headers = await _headers();
     final resp = await http.get(

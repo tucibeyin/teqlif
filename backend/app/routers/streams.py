@@ -161,6 +161,15 @@ async def get_followed_live_streams(
     return await StreamService(db).get_followed_live_streams(current_user.id)
 
 
+@router.get("/recommended", response_model=list[StreamOut])
+async def get_recommended_streams(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+):
+    """Category affinity'ye göre kişiselleştirilmiş aktif yayınlar (max 8)."""
+    return await StreamService(db).get_recommended_streams(current_user.id)
+
+
 @router.get("/active", response_model=list[StreamOut])
 async def get_active_streams(
     current_user_id: Optional[int] = Depends(_optional_user_id),

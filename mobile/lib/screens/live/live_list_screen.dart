@@ -36,16 +36,16 @@ const _kCatLabels = {
 };
 
 class LiveListScreenState extends ConsumerState<LiveListScreen> {
-  List<StreamOut> _streams = [];
+  List<StreamOut> _streams = [];        // tüm aktif yayınlar (En Son)
+  List<StreamOut> _recommended = [];    // kişiselleştirilmiş (Sana Özel)
   bool _loading = true;
+  bool _isLoggedIn = false;
   String? _selectedCategory; // null = Tümü
   String? _error;
 
   @override
   void initState() {
     super.initState();
-    // ref ve context (Riverpod, l10n) initState tamamlanmadan kullanılamaz.
-    // addPostFrameCallback ilk frame'den sonra çağırır — widget tam bağlı olur.
     WidgetsBinding.instance.addPostFrameCallback((_) => _load());
   }
 
@@ -54,24 +54,36 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
   Future<void> _load() async {
     if (!mounted) return;
     setState(() => _loading = true);
-    // Hikayeleri de yenile
     ref.invalidate(storyGroupsProvider);
     ref.invalidate(myStoriesProvider);
+
+    final token = await StorageService.getToken();
+    if (mounted) setState(() => _isLoggedIn = token != null);
+
     try {
-      final streams = await StreamService.getActiveStreams();
-      debugPrint('[LiveList] Yüklenen yayın sayısı: ${streams.length}');
+      // Tüm yayınlar + kişisel yayınlar paralel yükle
+      final allFuture = StreamService.getActiveStreams();
+      final recFuture = token != null
+          ? StreamService.getRecommendedStreams()
+          : Future.value(<StreamOut>[]);
+
+      final results = await Future.wait([allFuture, recFuture]);
       if (!mounted) return;
+
       setState(() {
-        _streams = streams;
+        _streams = results[0];
+        _recommended = results[1];
         _loading = false;
         _error = null;
       });
     } catch (e, st) {
-      debugPrint('[LiveList] getActiveStreams hatası: $e\n$st');
+      debugPrint('[LiveList] _load hatası: $e\n$st');
       if (!mounted) return;
       setState(() {
         _loading = false;
-        _error = e is AppException ? e.message : (mounted ? AppLocalizations.of(context)!.liveStreamsLoadError : 'error');
+        _error = e is AppException
+            ? e.message
+            : AppLocalizations.of(context)!.liveStreamsLoadError;
       });
     }
   }
@@ -244,6 +256,11 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
       ? _streams
       : _streams.where((s) => s.category == _selectedCategory).toList();
 
+  // Sana Özel: kategori filtresi de uygulanır
+  List<StreamOut> get _filteredRecommended => _selectedCategory == null
+      ? _recommended
+      : _recommended.where((s) => s.category == _selectedCategory).toList();
+
   @override
   Widget build(BuildContext context) {
     final l = AppLocalizations.of(context)!;
@@ -322,24 +339,7 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
                       ? _ErrorState(message: _error!)
                       : filtered.isEmpty
                           ? const _EmptyState()
-                          : _selectedCategory != null || cats.length < 2
-                              // Tek kategori veya filtre seçili: düz grid
-                              ? GridView.builder(
-                                  padding: const EdgeInsets.all(12),
-                                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                                    crossAxisCount: 2,
-                                    crossAxisSpacing: 10,
-                                    mainAxisSpacing: 10,
-                                    childAspectRatio: 0.78,
-                                  ),
-                                  itemCount: filtered.length,
-                                  itemBuilder: (_, i) => _StreamGridTile(
-                                    stream: filtered[i],
-                                    onTap: () => _joinStream(filtered[i]),
-                                  ),
-                                )
-                              // Tümü seçili + birden fazla kategori: section'lara böl
-                              : _buildSectioned(cats, filtered),
+                          : _buildContent(l, filtered),
             ),
           ),
         ],
@@ -347,49 +347,126 @@ class LiveListScreenState extends ConsumerState<LiveListScreen> {
     );
   }
 
-  Widget _buildSectioned(List<String> cats, List<StreamOut> all) {
-    final groups = {for (var c in cats) c: all.where((s) => s.category == c).toList()};
+  Widget _buildContent(AppLocalizations l, List<StreamOut> filtered) {
+    final rec = _filteredRecommended;
+    final hasRec = _isLoggedIn && rec.isNotEmpty;
+    final cats = _categories;
 
     return CustomScrollView(
+      physics: const AlwaysScrollableScrollPhysics(),
       slivers: [
-        for (final c in cats)
-          if (groups[c]!.isNotEmpty) ...[
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
-                child: Text(
-                  _kCatLabels[c] ?? c,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w700,
-                    fontSize: 13,
-                    color: Color(0xFF6B7280),
-                    letterSpacing: 0.3,
+        // ── Sana Özel Yayınlar ─────────────────────────────────
+        if (hasRec) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 12, 12, 6),
+              child: Row(
+                children: [
+                  const Icon(Icons.auto_awesome, color: kPrimary, size: 15),
+                  const SizedBox(width: 6),
+                  const Text('Sana Özel Yayınlar',
+                      style: TextStyle(fontWeight: FontWeight.w700, fontSize: 13)),
+                ],
+              ),
+            ),
+          ),
+          SliverToBoxAdapter(
+            child: SizedBox(
+              height: 200,
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                itemCount: rec.length,
+                itemBuilder: (_, i) => SizedBox(
+                  width: 150,
+                  child: Padding(
+                    padding: const EdgeInsets.only(right: 10),
+                    child: _StreamGridTile(
+                      stream: rec[i],
+                      onTap: () => _joinStream(rec[i]),
+                    ),
                   ),
                 ),
               ),
             ),
-            SliverPadding(
-              padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
-              sliver: SliverGrid(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 2,
-                  crossAxisSpacing: 10,
-                  mainAxisSpacing: 10,
-                  childAspectRatio: 0.78,
+          ),
+          const SliverToBoxAdapter(child: Divider(height: 1, indent: 12, endIndent: 12)),
+        ],
+
+        // ── En Son Canlı Yayınlar ──────────────────────────────
+        SliverToBoxAdapter(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+            child: Row(
+              children: [
+                Container(width: 7, height: 7,
+                    decoration: const BoxDecoration(color: Colors.red, shape: BoxShape.circle)),
+                const SizedBox(width: 6),
+                Text(
+                  _selectedCategory != null
+                      ? (_kCatLabels[_selectedCategory!] ?? _selectedCategory!) + ' Yayınları'
+                      : 'En Son Canlı Yayınlar',
+                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                 ),
-                delegate: SliverChildBuilderDelegate(
-                  (ctx, i) => _StreamGridTile(
-                    stream: groups[c]![i],
-                    onTap: () => _joinStream(groups[c]![i]),
-                  ),
-                  childCount: groups[c]!.length,
-                ),
+              ],
+            ),
+          ),
+        ),
+
+        // Düz grid veya section'lı — kategori seçiliyse düz
+        if (_selectedCategory != null || cats.length < 2)
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10,
+                childAspectRatio: 0.78,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (_, i) => _StreamGridTile(stream: filtered[i], onTap: () => _joinStream(filtered[i])),
+                childCount: filtered.length,
               ),
             ),
-          ],
+          )
+        else
+          ..._buildSectionedSlivers(cats, filtered),
       ],
     );
   }
+
+  List<Widget> _buildSectionedSlivers(List<String> cats, List<StreamOut> all) {
+    final groups = {for (var c in cats) c: all.where((s) => s.category == c).toList()};
+    return [
+      for (final c in cats)
+        if (groups[c]!.isNotEmpty) ...[
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(12, 10, 12, 6),
+              child: Text(
+                _kCatLabels[c] ?? c,
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13,
+                    color: Color(0xFF6B7280), letterSpacing: 0.3),
+              ),
+            ),
+          ),
+          SliverPadding(
+            padding: const EdgeInsets.fromLTRB(12, 0, 12, 4),
+            sliver: SliverGrid(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2, crossAxisSpacing: 10, mainAxisSpacing: 10,
+                childAspectRatio: 0.78,
+              ),
+              delegate: SliverChildBuilderDelegate(
+                (ctx, i) => _StreamGridTile(
+                    stream: groups[c]![i], onTap: () => _joinStream(groups[c]![i])),
+                childCount: groups[c]!.length,
+              ),
+            ),
+          ),
+        ],
+    ];
+  }
+
 }
 
 class _CategoryChip extends StatelessWidget {

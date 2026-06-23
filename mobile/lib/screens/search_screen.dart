@@ -30,7 +30,10 @@ class _SearchScreenState extends State<SearchScreen> {
   bool _hasQuery = false;
 
   // Explore data
+  // Sana Özel (for-you, personalized)
   List<dynamic> _exploreListings = [];
+  // En Son İlanlar (recent, /api/listings)
+  List<dynamic> _recentListings = [];
   List<StreamOut> _exploreStreams = [];
   bool _exploreLoading = true;
   bool _isLoggedIn = false;
@@ -82,6 +85,7 @@ class _SearchScreenState extends State<SearchScreen> {
     setState(() {
       _exploreLoading = true;
       _exploreListings = [];
+      _recentListings = [];
       _forYouPage = 0;
       _forYouExhausted = false;
     });
@@ -91,24 +95,31 @@ class _SearchScreenState extends State<SearchScreen> {
       final headers = loggedIn ? {'Authorization': 'Bearer $token'} : <String, String>{};
 
       final streamsFuture = StreamService.getActiveStreams();
-      final listingsFuture = loggedIn
+      // Sana Özel (login) veya Son İlanlar (misafir)
+      final forYouFuture = loggedIn
           ? http.get(Uri.parse('$kBaseUrl/feed/for-you?page=0'), headers: headers)
           : http.get(Uri.parse('$kBaseUrl/listings'), headers: headers);
+      // En Son İlanlar (her zaman)
+      final recentFuture = http.get(Uri.parse('$kBaseUrl/listings'), headers: headers);
 
       final streams = await streamsFuture;
-      final listingsResp = await listingsFuture;
+      final forYouResp = await forYouFuture;
+      final recentResp = loggedIn ? await recentFuture : forYouResp;
 
       if (!mounted) return;
       setState(() {
         _isLoggedIn = loggedIn;
         _exploreStreams = streams.take(4).toList();
-        if (listingsResp.statusCode == 200) {
-          final data = jsonDecode(listingsResp.body) as List;
+        if (forYouResp.statusCode == 200) {
+          final data = jsonDecode(forYouResp.body) as List;
           _exploreListings = data;
           if (loggedIn) {
             _forYouPage = 1;
             if (data.length < 20) _forYouExhausted = true;
           }
+        }
+        if (loggedIn && recentResp.statusCode == 200) {
+          _recentListings = (jsonDecode(recentResp.body) as List).take(12).toList();
         }
         _exploreLoading = false;
       });
@@ -159,7 +170,7 @@ class _SearchScreenState extends State<SearchScreen> {
           'item_type': 'listing',
           'interaction_type': 'click',
         }),
-      ).catchError((_) {});
+      ).catchError((_) => http.Response('', 200));
     });
   }
 
@@ -398,6 +409,45 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
               ),
           ],
+
+          // ── En Son İlanlar (login, /api/listings) ─────────────────
+          if (_isLoggedIn && _recentListings.isNotEmpty) ...[
+            const SliverToBoxAdapter(child: Divider(height: 1, indent: 16, endIndent: 16)),
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                child: Row(
+                  children: [
+                    const Icon(Icons.access_time_outlined, size: 16, color: Colors.grey),
+                    const SizedBox(width: 6),
+                    Text(l.homeRecentListings,
+                        style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
+                  ],
+                ),
+              ),
+            ),
+            SliverPadding(
+              padding: const EdgeInsets.symmetric(horizontal: 2),
+              sliver: SliverGrid(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
+                ),
+                delegate: SliverChildBuilderDelegate(
+                  (ctx, i) {
+                    final listing = _recentListings[i] as Map<String, dynamic>;
+                    return _ListingTile(
+                      listing: listing,
+                      onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                        builder: (_) => ListingDetailScreen(listing: listing),
+                      )),
+                    );
+                  },
+                  childCount: _recentListings.length,
+                ),
+              ),
+            ),
+          ],
+
           // ── Boş durum ────────────────────────────────────────────
           if (_exploreStreams.isEmpty && _exploreListings.isEmpty)
             SliverFillRemaining(

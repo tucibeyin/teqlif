@@ -22,12 +22,19 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<dynamic> _listings = [];
-  bool _loading = true;
-  bool _loadingMore = false;
-  bool _feedExhausted = false;
-  int _feedPage = 0;
-  final String _feedSeed = DateTime.now().millisecondsSinceEpoch.toRadixString(36);
+  // Kişiselleştirilmiş (Sana Özel) — yatay scroll, giriş yapanlar için
+  List<dynamic> _forYouListings = [];
+  bool _forYouLoading = false;
+
+  // En Son Eklenenler — dikey grid, sonsuz scroll
+  List<dynamic> _recentListings = [];
+  bool _recentLoading = true;
+  bool _recentLoadingMore = false;
+  bool _recentExhausted = false;
+  int _recentPage = 0;
+
+  // Filtreli sonuçlar (filtre aktifken _recentListings'in yerine geçer)
+  bool _isLoggedIn = false;
   String? _error;
   String? _selectedCategory;
   String? _selectedCity;
@@ -76,104 +83,144 @@ class _HomeScreenState extends State<HomeScreen> {
 
   void _onScroll() {
     if (_scrollCtrl.position.pixels >= _scrollCtrl.position.maxScrollExtent - 300) {
-      _loadMore();
+      _loadMoreRecent();
     }
   }
 
-  Future<void> _loadMore() async {
-    if (_loadingMore || _feedExhausted || _hasFilter) return;
-    setState(() => _loadingMore = true);
+  // ── Ana yükleme ────────────────────────────────────────────────────────────
+
+  Future<void> _load() async {
+    _error = null;
+    _recentPage = 0;
+    _recentExhausted = false;
+
+    final token = await StorageService.getToken();
+    final loggedIn = token != null;
+    if (mounted) setState(() => _isLoggedIn = loggedIn);
+
+    if (_hasFilter) {
+      // Filtre modunda: sadece filtrelenmiş sonuçlar
+      await _loadFiltered(token);
+    } else {
+      // Normal mod: Sana Özel + En Son paralel yükle
+      if (loggedIn) _loadForYou(token!);
+      await _loadRecent(token);
+    }
+  }
+
+  // ── Sana Özel (yatay, for-you endpoint) ───────────────────────────────────
+
+  Future<void> _loadForYou(String token) async {
+    if (!mounted) return;
+    setState(() => _forYouLoading = true);
+    try {
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/feed/for-you?page=0'),
+        headers: {'Authorization': 'Bearer $token'},
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as List;
+        setState(() => _forYouListings = data.take(8).toList());
+      }
+    } catch (_) {
+    } finally {
+      if (mounted) setState(() => _forYouLoading = false);
+    }
+  }
+
+  // ── En Son Eklenenler (dikey grid, /api/listings) ─────────────────────────
+
+  Future<void> _loadRecent(String? token) async {
+    if (!mounted) return;
+    setState(() { _recentLoading = true; _recentListings = []; });
+    try {
+      // Önce önbellekten göster
+      if (!_hasFilter) {
+        final cached = await StorageService.getCachedData(StorageService.cacheFeed);
+        if (cached != null && mounted) {
+          setState(() { _recentListings = cached as List; _recentLoading = false; });
+        }
+      }
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings'),
+        headers: token != null ? {'Authorization': 'Bearer $token'} : null,
+      );
+      if (!mounted) return;
+      if (resp.statusCode == 200) {
+        final fresh = jsonDecode(resp.body) as List;
+        await StorageService.cacheData(StorageService.cacheFeed, fresh);
+        setState(() { _recentListings = fresh; _recentLoading = false; _recentPage = 1; });
+      } else {
+        if (_recentListings.isEmpty) {
+          final l = AppLocalizations.of(context)!;
+          setState(() { _error = l.errorListingsLoad; _recentLoading = false; });
+        } else {
+          setState(() => _recentLoading = false);
+        }
+      }
+    } catch (e) {
+      debugPrint('[HomeScreen] _loadRecent: $e');
+      if (mounted && _recentListings.isEmpty) {
+        final l = AppLocalizations.of(context)!;
+        setState(() { _error = l.errorConnection; _recentLoading = false; });
+      } else if (mounted) {
+        setState(() => _recentLoading = false);
+      }
+    }
+  }
+
+  Future<void> _loadMoreRecent() async {
+    if (_recentLoadingMore || _recentExhausted || _hasFilter) return;
+    setState(() => _recentLoadingMore = true);
     try {
       final token = await StorageService.getToken();
-      if (token == null) { setState(() => _loadingMore = false); return; }
-      final uri = Uri.parse('$kBaseUrl/feed').replace(
-        queryParameters: {'page': (_feedPage + 1).toString(), 'seed': _feedSeed},
+      final resp = await http.get(
+        Uri.parse('$kBaseUrl/listings?page=$_recentPage'),
+        headers: token != null ? {'Authorization': 'Bearer $token'} : null,
       );
-      final resp = await http.get(uri, headers: {'Authorization': 'Bearer $token'});
       if (!mounted) return;
       if (resp.statusCode == 200) {
         final more = jsonDecode(resp.body) as List;
         if (more.isEmpty) {
-          setState(() { _feedExhausted = true; _loadingMore = false; });
+          setState(() { _recentExhausted = true; _recentLoadingMore = false; });
         } else {
           setState(() {
-            _listings = [..._listings, ...more];
-            _feedPage++;
-            _loadingMore = false;
+            _recentListings = [..._recentListings, ...more];
+            _recentPage++;
+            _recentLoadingMore = false;
           });
         }
       } else {
-        setState(() => _loadingMore = false);
+        setState(() => _recentLoadingMore = false);
       }
     } catch (_) {
-      if (mounted) setState(() => _loadingMore = false);
+      if (mounted) setState(() => _recentLoadingMore = false);
     }
   }
 
-  Future<void> _load() async {
-    _error = null;
-    _feedPage = 0;
-    _feedExhausted = false;
+  // ── Filtrelenmiş sonuçlar ──────────────────────────────────────────────────
 
-    // ── A: Kasa kontrolü (yalnızca filtresiz istek için) ──────────────────
-    if (!_hasFilter) {
-      final cached = await StorageService.getCachedData(StorageService.cacheFeed);
-      if (cached != null && mounted) {
-        setState(() { _listings = cached as List; _loading = false; });
-      } else if (mounted) {
-        setState(() => _loading = true);
-      }
-    } else {
-      if (mounted) setState(() => _loading = true);
-    }
-
-    // ── B: Arka planda API ─────────────────────────────────────────────────
+  Future<void> _loadFiltered(String? token) async {
+    if (!mounted) return;
+    setState(() { _recentLoading = true; _recentListings = []; _forYouListings = []; });
     try {
-      final token = await StorageService.getToken();
-      final Uri uri;
-
-      if (!_hasFilter && token != null) {
-        // Giriş yapmış, filtre yok → kişiselleştirilmiş feed
-        uri = Uri.parse('$kBaseUrl/feed').replace(
-          queryParameters: {'page': '0', 'seed': _feedSeed},
-        );
-      } else {
-        // Filtre var veya misafir → standart listing endpoint
-        final params = <String, String>{};
-        if (_selectedCategory != null) params['category'] = _selectedCategory!;
-        if (_selectedCity != null) params['location'] = _selectedCity!;
-        uri = Uri.parse('$kBaseUrl/listings')
-            .replace(queryParameters: params.isEmpty ? null : params);
-      }
-
+      final params = <String, String>{};
+      if (_selectedCategory != null) params['category'] = _selectedCategory!;
+      if (_selectedCity != null) params['location'] = _selectedCity!;
+      final uri = Uri.parse('$kBaseUrl/listings').replace(queryParameters: params);
       final resp = await http.get(
         uri,
         headers: token != null ? {'Authorization': 'Bearer $token'} : null,
       );
       if (!mounted) return;
       if (resp.statusCode == 200) {
-        final fresh = jsonDecode(resp.body) as List;
-        // ── C: Başarı → filtresizse kasa güncelle ────────────────────────
-        if (!_hasFilter) {
-          await StorageService.cacheData(StorageService.cacheFeed, fresh);
-        }
-        if (mounted) setState(() { _listings = fresh; _loading = false; });
+        setState(() { _recentListings = jsonDecode(resp.body) as List; _recentLoading = false; });
       } else {
-        if (_listings.isEmpty && mounted) {
-          final l = AppLocalizations.of(context)!;
-          setState(() { _error = l.errorListingsLoad; _loading = false; });
-        } else if (mounted) {
-          setState(() => _loading = false);
-        }
+        setState(() { _recentLoading = false; });
       }
-    } catch (e) {
-      debugPrint('[HomeScreen] API hatası: $e');
-      if (_listings.isEmpty && mounted) {
-        final l = AppLocalizations.of(context)!;
-        setState(() { _error = l.errorConnection; _loading = false; });
-      } else if (mounted) {
-        setState(() => _loading = false);
-      }
+    } catch (_) {
+      if (mounted) setState(() => _recentLoading = false);
     }
   }
 
@@ -183,6 +230,11 @@ class _HomeScreenState extends State<HomeScreen> {
       _selectedCity = null;
     });
     _load();
+  }
+
+  String _filteredHeader(AppLocalizations l) {
+    if (_recentLoading) return l.homeSearchingHeader;
+    return l.homeResultsCount(_recentListings.length);
   }
 
   void _showCityPicker() {
@@ -275,12 +327,6 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
       ),
     );
-  }
-
-  String _sectionHeader(AppLocalizations l) {
-    if (!_hasFilter) return l.homeRecentListings;
-    if (_loading) return l.homeSearchingHeader;
-    return l.homeResultsCount(_listings.length);
   }
 
   @override
@@ -527,70 +573,45 @@ class _HomeScreenState extends State<HomeScreen> {
                     ),
                   ),
 
-                  // ── Başlık ───────────────────────────────────────
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
-                    child: Text(
-                      _sectionHeader(l),
-                      style: const TextStyle(
-                          fontSize: 16, fontWeight: FontWeight.w700),
-                    ),
-                  ),
                 ],
               ),
             ),
 
-            // ── İlan grid ───────────────────────────────────────────
-            if (_loading)
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                sliver: SliverGrid(
-                  gridDelegate:
-                      const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 2,
-                    mainAxisSpacing: 2,
-                    childAspectRatio: 0.78,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (_, __) => const ShimmerGridCard(),
-                    childCount: 9,
+            // ══════════════════════════════════════════════════════════
+            // FİLTRE MODU: sadece filtrelenmiş grid
+            // ══════════════════════════════════════════════════════════
+            if (_hasFilter) ...[
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                  child: Text(
+                    _filteredHeader(l),
+                    style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
                   ),
                 ),
-              )
-            else if (_error != null)
-              SliverFillRemaining(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(_error!,
-                          style: const TextStyle(color: Colors.grey)),
-                      const SizedBox(height: 12),
-                      TextButton(
-                          key: const Key('home_btn_tekrar_dene'),
-                          onPressed: _load,
-                          child: Text(l.btnRetry)),
-                    ],
+              ),
+              if (_recentLoading)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
+                      childAspectRatio: 0.78,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (_, __) => const ShimmerGridCard(), childCount: 9,
+                    ),
                   ),
-                ),
-              )
-            else if (_listings.isEmpty)
-              SliverFillRemaining(
-                child: Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Icon(Icons.search_off_outlined,
-                          size: 56, color: AppColors.border(context)),
-                      const SizedBox(height: 12),
-                      Text(
-                        _hasFilter
-                            ? l.emptyFilteredListings
-                            : l.emptyListings,
-                        style: const TextStyle(color: Colors.grey),
-                      ),
-                      if (_hasFilter) ...[
+                )
+              else if (_recentListings.isEmpty)
+                SliverFillRemaining(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(Icons.search_off_outlined, size: 56, color: AppColors.border(context)),
+                        const SizedBox(height: 12),
+                        Text(l.emptyFilteredListings, style: const TextStyle(color: Colors.grey)),
                         const SizedBox(height: 8),
                         TextButton(
                           key: const Key('home_btn_filtreleri_temizle_bos'),
@@ -598,44 +619,252 @@ class _HomeScreenState extends State<HomeScreen> {
                           child: Text(l.btnClearFilters),
                         ),
                       ],
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) => _GridItem(
+                        key: Key('home_listing_filtered_${_recentListings[i]['id']}'),
+                        listing: _recentListings[i],
+                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                          builder: (_) => ListingDetailScreen(
+                              listing: Map<String, dynamic>.from(_recentListings[i])),
+                        )),
+                      ),
+                      childCount: _recentListings.length,
+                    ),
+                  ),
+                ),
+            ],
+
+            // ══════════════════════════════════════════════════════════
+            // NORMAL MOD: Sana Özel (yatay) + En Son (dikey grid)
+            // ══════════════════════════════════════════════════════════
+            if (!_hasFilter) ...[
+
+              // ── Sana Özel ─────────────────────────────────────────
+              if (_isLoggedIn) ...[
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.auto_awesome, color: kPrimary, size: 16),
+                        const SizedBox(width: 6),
+                        const Text('Sana Özel',
+                            style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                        const Spacer(),
+                        if (_forYouLoading)
+                          const SizedBox(
+                            width: 14, height: 14,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: kPrimary),
+                          ),
+                      ],
+                    ),
+                  ),
+                ),
+                SliverToBoxAdapter(
+                  child: _forYouLoading && _forYouListings.isEmpty
+                      ? SizedBox(
+                          height: 180,
+                          child: ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            itemCount: 4,
+                            itemBuilder: (_, __) => Container(
+                              width: 120,
+                              margin: const EdgeInsets.only(right: 8),
+                              child: const ShimmerBox(),
+                            ),
+                          ),
+                        )
+                      : _forYouListings.isEmpty
+                          ? const SizedBox.shrink()
+                          : SizedBox(
+                              height: 190,
+                              child: ListView.builder(
+                                scrollDirection: Axis.horizontal,
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                itemCount: _forYouListings.length,
+                                itemBuilder: (ctx, i) {
+                                  final item = _forYouListings[i] as Map<String, dynamic>;
+                                  return _HorizontalListingCard(
+                                    listing: item,
+                                    onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                                      builder: (_) => ListingDetailScreen(
+                                          listing: Map<String, dynamic>.from(item)),
+                                    )),
+                                  );
+                                },
+                              ),
+                            ),
+                ),
+              ],
+
+              // ── En Son Eklenenler ──────────────────────────────────
+              SliverToBoxAdapter(
+                child: Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.access_time_outlined, size: 16, color: Colors.grey),
+                      const SizedBox(width: 6),
+                      Text(l.homeRecentListings,
+                          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
                     ],
                   ),
                 ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 2),
-                sliver: SliverGrid(
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    crossAxisSpacing: 2,
-                    mainAxisSpacing: 2,
-                  ),
-                  delegate: SliverChildBuilderDelegate(
-                    (context, i) => _GridItem(
-                      key: Key('home_listing_item_${_listings[i]['id']}'),
-                      listing: _listings[i],
-                      onTap: () => Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => ListingDetailScreen(
-                              listing:
-                                  Map<String, dynamic>.from(_listings[i])),
-                        ),
-                      ),
+              ),
+              if (_recentLoading && _recentListings.isEmpty)
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
+                      childAspectRatio: 0.78,
                     ),
-                    childCount: _listings.length,
+                    delegate: SliverChildBuilderDelegate(
+                      (_, __) => const ShimmerGridCard(), childCount: 9,
+                    ),
+                  ),
+                )
+              else if (_error != null && _recentListings.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(_error!, style: const TextStyle(color: Colors.grey)),
+                        const SizedBox(height: 12),
+                        TextButton(
+                          key: const Key('home_btn_tekrar_dene'),
+                          onPressed: _load,
+                          child: Text(l.btnRetry),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
+              else if (_recentListings.isEmpty)
+                SliverToBoxAdapter(
+                  child: Padding(
+                    padding: const EdgeInsets.all(32),
+                    child: Center(
+                      child: Text(l.emptyListings,
+                          style: const TextStyle(color: Colors.grey)),
+                    ),
+                  ),
+                )
+              else
+                SliverPadding(
+                  padding: const EdgeInsets.symmetric(horizontal: 2),
+                  sliver: SliverGrid(
+                    gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 3, crossAxisSpacing: 2, mainAxisSpacing: 2,
+                    ),
+                    delegate: SliverChildBuilderDelegate(
+                      (ctx, i) => _GridItem(
+                        key: Key('home_listing_item_${_recentListings[i]['id']}'),
+                        listing: _recentListings[i],
+                        onTap: () => Navigator.push(ctx, MaterialPageRoute(
+                          builder: (_) => ListingDetailScreen(
+                              listing: Map<String, dynamic>.from(_recentListings[i])),
+                        )),
+                      ),
+                      childCount: _recentListings.length,
+                    ),
                   ),
                 ),
-              ),
-            // ── Sonsuz scroll yükleniyor göstergesi ─────────────────
-            if (_loadingMore)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.all(20),
-                  child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+
+              // ── Sonsuz scroll yükleniyor göstergesi ───────────────
+              if (_recentLoadingMore)
+                const SliverToBoxAdapter(
+                  child: Padding(
+                    padding: EdgeInsets.all(20),
+                    child: Center(child: CircularProgressIndicator(strokeWidth: 2)),
+                  ),
                 ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ── Yatay scroll ilan kartı (Sana Özel) ────────────────────────────────────
+class _HorizontalListingCard extends StatelessWidget {
+  final Map<String, dynamic> listing;
+  final VoidCallback onTap;
+
+  const _HorizontalListingCard({required this.listing, required this.onTap});
+
+  String _fmt(dynamic price) {
+    if (price == null) return '';
+    final s = (price as num).toInt().toString();
+    final buf = StringBuffer();
+    for (int i = 0; i < s.length; i++) {
+      if (i > 0 && (s.length - i) % 3 == 0) buf.write('.');
+      buf.write(s[i]);
+    }
+    return '${buf.toString()} ₺';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final imgs = listing['image_urls'] as List? ?? [];
+    final raw = imgs.isNotEmpty ? imgs[0] as String : listing['image_url'] as String?;
+    final photo = raw != null ? imgUrl(raw) : null;
+    final price = _fmt(listing['price']);
+
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 120,
+        margin: const EdgeInsets.only(right: 10),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(10),
+          color: AppColors.card(context),
+          boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.07), blurRadius: 6, offset: const Offset(0, 2))],
+        ),
+        clipBehavior: Clip.antiAlias,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: photo != null
+                  ? CachedNetworkImage(imageUrl: photo, fit: BoxFit.cover, width: double.infinity)
+                  : Container(
+                      color: AppColors.surfaceVariant(context),
+                      child: Center(child: Icon(Icons.image_outlined, color: AppColors.border(context))),
+                    ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(6, 5, 6, 6),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    listing['title'] as String? ?? '',
+                    style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600,
+                        color: AppColors.textPrimary(context)),
+                    maxLines: 2, overflow: TextOverflow.ellipsis,
+                  ),
+                  if (price.isNotEmpty) ...[
+                    const SizedBox(height: 3),
+                    Text(price, style: const TextStyle(fontSize: 11, color: kPrimary, fontWeight: FontWeight.w700)),
+                  ],
+                ],
               ),
+            ),
           ],
         ),
       ),
